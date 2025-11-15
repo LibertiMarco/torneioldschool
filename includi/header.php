@@ -21,7 +21,7 @@ if (session_status() === PHP_SESSION_NONE) {
     <!-- NAVIGAZIONE DESKTOP + MOBILE -->
     <nav class="header-nav" id="mainNav">
         <a href="/torneioldschool/tornei.php">Tornei</a>
-        <a href="/torneioldschool/chisiamo.html">Chi siamo</a>
+        <a href="/torneioldschool/chisiamo.php">Chi siamo</a>
         <a href="/torneioldschool/blog.php">Blog</a>
         <a href="/torneioldschool/contatti.php">Contatti</a>
     </nav>
@@ -54,6 +54,7 @@ if (session_status() === PHP_SESSION_NONE) {
     </div>
 
 </header>
+<div class="header-spacer" aria-hidden="true"></div>
 
 <style>
 /* ----- STRUTTURA BASE ----- */
@@ -63,7 +64,18 @@ if (session_status() === PHP_SESSION_NONE) {
     justify-content: space-between;
     background: #15293e;
     padding: 10px 18px;
-    position: relative;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 4000;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.header-spacer {
+    height: 74px;
+    width: 100%;
 }
 
 /* LOGO NITIDO */
@@ -172,3 +184,18 @@ if (session_status() === PHP_SESSION_NONE) {
     }
 }
 </style>
+
+<script>
+(function () {
+    if (window.__HEADER_INTERACTIONS_SCRIPT__) {
+        return;
+    }
+
+    window.__HEADER_INTERACTIONS_SCRIPT__ = true;
+
+    const script = document.createElement("script");
+    script.src = "/torneioldschool/includi/header-interactions.js";
+    script.defer = true;
+    document.head.appendChild(script);
+})();
+</script>

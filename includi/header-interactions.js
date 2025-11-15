@@ -1,0 +1,121 @@
+(function () {
+  if (window.__HEADER_INTERACTIONS_INITIALIZED__) {
+    return;
+  }
+
+  window.__HEADER_INTERACTIONS_INITIALIZED__ = true;
+
+  const headerStates = new Map();
+  let globalListenersReady = false;
+
+  function closeMenus(header, state) {
+    if (!state) {
+      return;
+    }
+
+    if (state.mainNav) {
+      state.mainNav.classList.remove("open");
+    }
+
+    if (state.userMenu) {
+      state.userMenu.classList.remove("open");
+    }
+  }
+
+  function handleDocumentClick(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) {
+      return;
+    }
+
+    headerStates.forEach((state, header) => {
+      if (!header.contains(target)) {
+        closeMenus(header, state);
+      }
+    });
+  }
+
+  function handleResize() {
+    if (window.innerWidth > 768) {
+      headerStates.forEach((state, header) => {
+        closeMenus(header, state);
+      });
+    }
+  }
+
+  function ensureGlobalListeners() {
+    if (globalListenersReady) {
+      return;
+    }
+
+    document.addEventListener("click", handleDocumentClick);
+    window.addEventListener("resize", handleResize);
+    globalListenersReady = true;
+  }
+
+  function setupHeader(header) {
+    if (!header || headerStates.has(header)) {
+      return;
+    }
+
+    const mobileBtn = header.querySelector("#mobileMenuBtn");
+    const mainNav = header.querySelector("#mainNav");
+    const userBtn = header.querySelector("#userBtn");
+    const userMenu = header.querySelector("#userMenu");
+
+    const state = { mainNav, userMenu };
+    headerStates.set(header, state);
+
+    if (mobileBtn && mainNav) {
+      mobileBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const isOpen = mainNav.classList.toggle("open");
+        if (isOpen && userMenu) {
+          userMenu.classList.remove("open");
+        }
+      });
+    }
+
+    if (userBtn && userMenu) {
+      userBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const isOpen = userMenu.classList.toggle("open");
+        if (isOpen && mainNav) {
+          mainNav.classList.remove("open");
+        }
+      });
+    }
+  }
+
+  function resolveScope(root) {
+    if (root && typeof root.querySelectorAll === "function") {
+      return root;
+    }
+
+    return document;
+  }
+
+  function initHeaderInteractions(root) {
+    const scope = resolveScope(root);
+    const headers = scope.querySelectorAll(".site-header");
+
+    if (!headers.length) {
+      return;
+    }
+
+    headers.forEach(setupHeader);
+    ensureGlobalListeners();
+  }
+
+  window.initHeaderInteractions = initHeaderInteractions;
+
+  if (document.readyState !== "loading") {
+    initHeaderInteractions(document);
+  } else {
+    document.addEventListener("DOMContentLoaded", () => initHeaderInteractions(document));
+  }
+})();

@@ -57,5 +57,9 @@ if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
             <button class="logout-btn" type="submit">Esci dal pannello</button>
         </form><br><br>
     </main>
+    <script src="/torneioldschool/includi/header-interactions.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", initHeaderInteractions);
+    </script>
 </body>
 </html>
