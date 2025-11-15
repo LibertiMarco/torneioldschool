@@ -18,7 +18,7 @@ $isLogged = isset($_SESSION['user_id']);
 <style>
 .article-layout {
     max-width: 1200px;
-    margin: 40px auto 60px;
+    margin: 80px auto 60px;
     padding: 0 20px;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 320px;
@@ -168,7 +168,7 @@ $isLogged = isset($_SESSION['user_id']);
     display: flex;
     gap: 14px;
     border-bottom: 1px solid #ecf0fb;
-    padding: 18px 0;
+    padding: 16px 0;
 }
 
 .comment-item:last-child {
@@ -176,8 +176,8 @@ $isLogged = isset($_SESSION['user_id']);
 }
 
 .comment-avatar {
-    width: 48px;
-    height: 48px;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
     overflow: hidden;
     background: #e5ebff;
@@ -200,7 +200,7 @@ $isLogged = isset($_SESSION['user_id']);
 }
 
 .comment-date {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: #9aa3ba;
 }
 
@@ -234,6 +234,70 @@ $isLogged = isset($_SESSION['user_id']);
 
 .comment-form button:hover {
     transform: translateY(-2px);
+}
+
+.reply-info {
+    background: #eef2ff;
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+}
+
+.reply-cancel {
+    border: none;
+    background: transparent;
+    color: #c2410c;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.reply-cancel:hover {
+    text-decoration: underline;
+}
+
+.reply-action {
+    border: none;
+    background: transparent;
+    color: #1d4ed8;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0;
+}
+
+.reply-action:hover {
+    text-decoration: underline;
+}
+
+.mention-tag {
+    display: inline-block;
+    background: #eef2ff;
+    color: #1d4ed8;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.comment-replies {
+    margin-top: 12px;
+    margin-left: 30px;
+    border-left: 2px solid #eef2ff;
+    padding-left: 16px;
+}
+
+.comment-replies .comment-avatar {
+    width: 36px;
+    height: 36px;
+}
+
+.comment-replies .comment-text {
+    font-size: 0.95rem;
 }
 
 .comments-hint {
@@ -312,6 +376,10 @@ $isLogged = isset($_SESSION['user_id']);
 
       <?php if ($isLogged): ?>
         <form class="comment-form" id="commentForm">
+          <div class="reply-info" id="replyInfo" hidden style="display:none;">
+            Rispondi a <strong id="replyName"></strong>
+            <button type="button" class="reply-cancel" id="replyCancel">Annulla</button>
+          </div>
           <label for="commento">Lascia il tuo commento</label>
           <textarea id="commento" name="commento" placeholder="Condividi il tuo punto di vista..." required></textarea>
           <button type="submit">Pubblica</button>
@@ -342,7 +410,13 @@ const commentsList = document.getElementById('commentsList');
 const commentForm = document.getElementById('commentForm');
 const commentField = document.getElementById('commento');
 const commentFeedback = document.getElementById('commentFeedback');
+const replyInfo = document.getElementById('replyInfo');
+const replyName = document.getElementById('replyName');
+const replyCancelBtn = document.getElementById('replyCancel');
 const defaultAvatar = '/torneioldschool/img/icone/user.png';
+const canReply = <?= $isLogged ? 'true' : 'false' ?>;
+let replyTarget = null;
+let replyMention = '';
 
 function setFeedback(message, type = '') {
     if (!commentFeedback) {
@@ -350,6 +424,40 @@ function setFeedback(message, type = '') {
     }
     commentFeedback.textContent = message;
     commentFeedback.className = `feedback-message ${type}`.trim();
+}
+
+function setReplyTarget(commentId, author) {
+    if (!canReply) {
+        return;
+    }
+    replyTarget = commentId;
+    replyMention = `@${(author || 'Utente').trim()}`;
+    if (replyInfo && replyName) {
+        replyName.textContent = author || 'Utente';
+        replyInfo.hidden = false;
+        replyInfo.style.display = 'inline-flex';
+    }
+    if (commentField) {
+        const mentionRegex = new RegExp(`^${escapeRegex(replyMention)}\\s*`, 'i');
+        const withoutMention = commentField.value.replace(mentionRegex, '').trimStart();
+        commentField.value = `${replyMention} ${withoutMention}`.trim() + ' ';
+        commentField.focus();
+        commentField.setSelectionRange(commentField.value.length, commentField.value.length);
+    }
+}
+
+function resetReplyTarget() {
+    const previousMention = replyMention;
+    replyTarget = null;
+    replyMention = '';
+    if (replyInfo) {
+        replyInfo.hidden = true;
+        replyInfo.style.display = 'none';
+    }
+    if (commentField && previousMention) {
+        const mentionRegex = new RegExp(`^${escapeRegex(previousMention)}\\s*`, 'i');
+        commentField.value = commentField.value.replace(mentionRegex, '');
+    }
 }
 
 function escapeHTML(value = '') {
@@ -360,6 +468,10 @@ function escapeHTML(value = '') {
         '"': '&quot;',
         "'": '&#39;'
     }[char] || char));
+}
+
+function escapeRegex(str = '') {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function formatContent(text = '') {
@@ -429,24 +541,40 @@ async function loadRelated() {
     }
 }
 
+function buildCommentHTML(comment, isChild = false, rootId = null, threadAuthor = null) {
+    const topId = rootId ?? comment.id;
+    const rootAuthor = threadAuthor ?? comment.autore;
+    const avatarSrc = comment.avatar
+        ? `/torneioldschool/${comment.avatar.replace(/^\/+/, '')}`
+        : defaultAvatar;
+    const replies = Array.isArray(comment.replies) ? comment.replies : [];
+
+    return `
+        <div class="comment-item">
+            <div class="comment-avatar">
+                <img src="${avatarSrc}" alt="${escapeHTML(comment.autore || 'Utente')}">
+            </div>
+            <div class="comment-body">
+                <div class="comment-author">${escapeHTML(comment.autore || 'Utente')}</div>
+                <div class="comment-date">${escapeHTML(comment.data || '')}</div>
+                ${isChild && rootAuthor ? `<div class="mention-tag">@${escapeHTML(rootAuthor)}</div>` : ''}
+                <div class="comment-text">${escapeHTML(comment.commento || '')}</div>
+                ${canReply ? `<button class="reply-action" type="button" data-target="${topId}" data-author="${escapeHTML(comment.autore || 'Utente')}">Rispondi</button>` : ''}
+                ${replies.length ? `<div class="comment-replies">
+                    ${replies.map(reply => buildCommentHTML(reply, true, topId, rootAuthor)).join('')}
+                </div>` : ''}
+            </div>
+        </div>
+    `;
+}
+
 function renderComments(comments) {
     if (!comments.length) {
         commentsList.innerHTML = '<p class="comments-hint">Ancora nessun commento. Sii il primo a rompere il ghiaccio!</p>';
         return;
     }
 
-    commentsList.innerHTML = comments.map(comment => `
-        <div class="comment-item">
-            <div class="comment-avatar">
-                <img src="${comment.avatar ? '/torneioldschool/' + comment.avatar.replace(/^\/+/, '') : defaultAvatar}" alt="${escapeHTML(comment.autore || 'Utente')}">
-            </div>
-            <div class="comment-body">
-                <div class="comment-author">${escapeHTML(comment.autore || 'Utente')}</div>
-                <div class="comment-date">${escapeHTML(comment.data || '')}</div>
-                <div class="comment-text">${escapeHTML(comment.commento || '')}</div>
-            </div>
-        </div>
-    `).join('');
+    commentsList.innerHTML = comments.map(comment => buildCommentHTML(comment, false, comment.id, comment.autore)).join('');
 }
 
 async function fetchComments() {
@@ -476,7 +604,7 @@ async function submitComment(event) {
         const { data, ok } = await fetchJSON('/torneioldschool/api/blog.php?azione=commenti_salva', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ post_id: articleId, commento: text })
+            body: JSON.stringify({ post_id: articleId, commento: text, parent_id: replyTarget })
         });
 
         if (!ok || data?.error) {
@@ -485,6 +613,7 @@ async function submitComment(event) {
 
         setFeedback('Commento pubblicato!', 'success');
         commentField.value = '';
+        resetReplyTarget();
         fetchComments();
     } catch (err) {
         setFeedback(err.message, 'error');
@@ -493,6 +622,24 @@ async function submitComment(event) {
 
 if (isLogged && commentForm) {
     commentForm.addEventListener('submit', submitComment);
+}
+
+if (canReply) {
+    commentsList?.addEventListener('click', event => {
+        const btn = event.target.closest('.reply-action');
+        if (!btn) {
+            return;
+        }
+        const targetId = Number(btn.dataset.target);
+        const author = btn.dataset.author;
+        if (targetId > 0) {
+            setReplyTarget(targetId, author);
+        }
+    });
+
+    replyCancelBtn?.addEventListener('click', () => {
+        resetReplyTarget();
+    });
 }
 
 loadArticle();

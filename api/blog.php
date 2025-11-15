@@ -88,14 +88,16 @@ if ($azione === 'commenti' && isset($_GET['id'])) {
 
     $stmt = $conn->prepare(
         "SELECT c.id,
+                c.utente_id,
                 CONCAT_WS(' ', u.nome, u.cognome) AS autore,
                 c.commento,
                 DATE_FORMAT(c.creato_il, '%d/%m/%Y %H:%i') AS data,
-                COALESCE(u.avatar, '') AS avatar
+                COALESCE(u.avatar, '') AS avatar,
+                c.parent_id
          FROM blog_commenti c
          INNER JOIN utenti u ON u.id = c.utente_id
          WHERE c.post_id = ?
-         ORDER BY c.creato_il DESC"
+         ORDER BY c.creato_il ASC"
     );
 
     if (!$stmt) {
@@ -105,8 +107,33 @@ if ($azione === 'commenti' && isset($_GET['id'])) {
     $stmt->bind_param('i', $postId);
     $stmt->execute();
     $result = $stmt->get_result();
+    $rows = $result->fetch_all(MYSQLI_ASSOC);
 
-    json_response($result->fetch_all(MYSQLI_ASSOC));
+    $lookup = [];
+
+    foreach ($rows as $row) {
+        $row['replies'] = [];
+        $row['parent_id'] = $row['parent_id'] ? (int)$row['parent_id'] : null;
+        $lookup[$row['id']] = $row;
+    }
+
+    foreach ($lookup as $id => &$comment) {
+        if ($comment['parent_id'] && isset($lookup[$comment['parent_id']])) {
+            $lookup[$comment['parent_id']]['replies'][] = $comment;
+        }
+    }
+    unset($comment);
+
+    $root = [];
+    foreach ($lookup as &$comment) {
+        unset($comment['utente_id']);
+        if (!$comment['parent_id']) {
+            $root[] = $comment;
+        }
+    }
+    unset($comment);
+
+    json_response($root);
 }
 
 // Salva commento
@@ -118,6 +145,7 @@ if ($azione === 'commenti_salva' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $payload = json_decode(file_get_contents('php://input'), true) ?? [];
     $postId = isset($payload['post_id']) ? (int)$payload['post_id'] : 0;
     $commento = trim($payload['commento'] ?? '');
+    $parentId = isset($payload['parent_id']) ? (int)$payload['parent_id'] : null;
 
     if ($postId <= 0 || $commento === '') {
         json_response(['error' => 'Commento non valido.'], 400);
@@ -137,9 +165,31 @@ if ($azione === 'commenti_salva' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         json_response(['error' => 'Articolo inesistente.'], 404);
     }
 
+    $parentOwnerId = null;
+    if ($parentId) {
+        $parentCheck = $conn->prepare(
+            "SELECT id, parent_id, utente_id FROM blog_commenti WHERE id = ? AND post_id = ?"
+        );
+        $parentCheck->bind_param('ii', $parentId, $postId);
+        $parentCheck->execute();
+        $parentResult = $parentCheck->get_result()->fetch_assoc();
+
+        if (!$parentResult) {
+            json_response(['error' => 'Commento principale inesistente.'], 400);
+        }
+
+        if (!empty($parentResult['parent_id'])) {
+            json_response(['error' => 'Puoi rispondere solo ai commenti principali.'], 400);
+        }
+
+        $parentOwnerId = (int)$parentResult['utente_id'];
+    } else {
+        $parentId = null;
+    }
+
     $stmt = $conn->prepare(
-        "INSERT INTO blog_commenti (post_id, utente_id, commento, creato_il)
-         VALUES (?, ?, ?, NOW())"
+        "INSERT INTO blog_commenti (post_id, utente_id, commento, parent_id, creato_il)
+         VALUES (?, ?, ?, ?, NOW())"
     );
 
     if (!$stmt) {
@@ -147,9 +197,20 @@ if ($azione === 'commenti_salva' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $userId = (int)$_SESSION['user_id'];
-    $stmt->bind_param('iis', $postId, $userId, $commento);
+    $stmt->bind_param('iisi', $postId, $userId, $commento, $parentId);
 
     if ($stmt->execute()) {
+        $newCommentId = $stmt->insert_id;
+
+        if ($parentOwnerId && $parentOwnerId !== $userId) {
+            $notifSql = "INSERT INTO notifiche_commenti (utente_id, commento_id, post_id, creato_il)
+                         VALUES (?, ?, ?, NOW())";
+            if ($notifStmt = $conn->prepare($notifSql)) {
+                $notifStmt->bind_param('iii', $parentOwnerId, $newCommentId, $postId);
+                $notifStmt->execute();
+            }
+        }
+
         json_response(['success' => true, 'message' => 'Commento pubblicato con successo.']);
     }
 

@@ -31,8 +31,8 @@ if (!empty($sessionAvatar)) {
     <!-- NAVIGAZIONE DESKTOP + MOBILE -->
     <nav class="header-nav" id="mainNav">
         <a href="/torneioldschool/tornei.php">Tornei</a>
-        <a href="/torneioldschool/chisiamo.php">Chi siamo</a>
         <a href="/torneioldschool/blog.php">Blog</a>
+        <a href="/torneioldschool/chisiamo.php">Chi siamo</a>
         <a href="/torneioldschool/contatti.php">Contatti</a>
     </nav>
 
