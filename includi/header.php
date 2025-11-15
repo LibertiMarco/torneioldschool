@@ -82,6 +82,9 @@ if (session_status() === PHP_SESSION_NONE) {
     color: white;
     text-decoration: none;
     font-weight: 600;
+    letter-spacing: 0.6px;
+    font-kerning: none;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .header-nav a:hover {
@@ -135,31 +138,33 @@ if (session_status() === PHP_SESSION_NONE) {
     }
 
     .header-nav {
-        position: fixed;
-        left: 0;
-        top: 0;
-        height: 100%;
-        width: 70%;
-        max-width: 270px;
-        background: rgba(21, 41, 62, 0.95);
-        backdrop-filter: blur(4px);
-        padding-top: 80px;
-        display: flex;
+        position: absolute;
+        left: 15px;
+        right: auto;
+        top: 60px;
+        width: auto;
+        max-width: 220px;
+        background: rgba(21, 41, 62, 0.8);
+        padding: 12px 16px;
+        display: none;
         flex-direction: column;
-        gap: 20px;
-        padding-left: 25px;
-        transform: translateX(-100%);
-        transition: 0.35s ease;
+        gap: 10px;
+        align-items: flex-start;
+        border-radius: 12px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
         z-index: 2000;
     }
 
     .header-nav.open {
-        transform: translateX(0);
+        display: flex;
     }
 
     .header-nav a {
         color: #fff;
-        font-size: 18px;
+        font-size: 16px;
+        white-space: nowrap;
+        padding: 6px 0;
+        text-align: left;
     }
 
     .site-header {
@@ -167,28 +172,3 @@ if (session_status() === PHP_SESSION_NONE) {
     }
 }
 </style>
-
-<script>
-// MENU MOBILE
-document.addEventListener("click", function(e){
-    const menu = document.getElementById("mainNav");
-    const btn = document.getElementById("mobileMenuBtn");
-
-    if (btn.contains(e.target)) {
-        menu.classList.toggle("open");
-    } 
-});
-
-// MENU UTENTE
-document.getElementById("userBtn").addEventListener("click", function(e){
-    e.stopPropagation();
-    document.getElementById("userMenu").classList.toggle("open");
-});
-
-document.addEventListener("click", function(e){
-    const menu = document.getElementById("userMenu");
-    if (!menu.contains(e.target) && e.target.id !== "userBtn") {
-        menu.classList.remove("open");
-    }
-});
-</script>

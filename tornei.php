@@ -340,6 +340,7 @@ if ($result && $result->num_rows > 0) {
   <div id="footer-container"></div>
 
   <!-- SCRIPTS FOOTER + HEADER -->
+  <script src="/torneioldschool/includi/header-interactions.js"></script>
   <script>
     fetch("/torneioldschool/includi/footer.html")
       .then(r => r.text())
@@ -348,7 +349,10 @@ if ($result && $result->num_rows > 0) {
     document.addEventListener("DOMContentLoaded", () => {
       fetch("/torneioldschool/includi/header.php")
         .then(r => r.text())
-        .then(d => document.getElementById("header-container").innerHTML = d);
+        .then(d => {
+          document.getElementById("header-container").innerHTML = d;
+          initHeaderInteractions();
+        });
     });
   </script>
 </body>

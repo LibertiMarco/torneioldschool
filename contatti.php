@@ -215,6 +215,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
   <div id="footer-container"></div>
 
+  <script src="/torneioldschool/includi/header-interactions.js"></script>
   <script>
     // FOOTER
     fetch("/torneioldschool/includi/footer.html")
@@ -226,6 +227,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       .then(r => r.text())
       .then(html => {
         document.getElementById("header-container").innerHTML = html;
+        initHeaderInteractions();
         const header = document.querySelector(".site-header");
         window.addEventListener("scroll", () => {
           header?.classList.toggle("scrolled", window.scrollY > 50);

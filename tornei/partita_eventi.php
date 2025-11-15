@@ -35,11 +35,15 @@
   <div id="footer-container"></div>
 
   <!-- SCRIPT: HEADER -->
+  <script src="/torneioldschool/includi/header-interactions.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       fetch("/torneioldschool/includi/header.php")
         .then(r => r.text())
-        .then(html => { document.getElementById("header-container").innerHTML = html; })
+                .then(html => {
+          document.getElementById("header-container").innerHTML = html;
+          initHeaderInteractions();
+        })
         .catch(e => console.error("Errore header:", e));
     });
   </script>

@@ -103,12 +103,14 @@ loadNews();
 </script>
 
   <!-- SCRIPT HEADER -->
+  <script src="/torneioldschool/includi/header-interactions.js"></script>
   <script>
   document.addEventListener("DOMContentLoaded", () => {
     fetch("/torneioldschool/includi/header.php")
       .then(response => response.text())
       .then(data => {
         document.getElementById("header-container").innerHTML = data;
+        initHeaderInteractions();
 
         // Effetto scroll header
         const header = document.querySelector(".site-header");
@@ -133,31 +135,6 @@ loadNews();
             if (!dropdown.contains(e.target)) {
               dropdown.classList.remove("open");
               if (menu) menu.style.display = "none";
-            }
-          });
-        }
-
-        // Menu mobile
-        const mobileBtn = document.getElementById("mobileMenuBtn");
-        const mainNav = document.getElementById("mainNav");
-        if (mobileBtn && mainNav) {
-          mobileBtn.addEventListener("click", () => mainNav.classList.toggle("open"));
-          document.addEventListener("click", (e) => {
-            if (!mainNav.contains(e.target) && !mobileBtn.contains(e.target))
-              mainNav.classList.remove("open");
-          });
-        }
-
-        // Menu utente (icona user)
-        const userDropdown = document.querySelector(".user-dropdown");
-        const userBtn = document.getElementById("userBtn");
-        if (userBtn && userDropdown) {
-          document.addEventListener("click", (e) => {
-            if (userBtn.contains(e.target)) {
-              e.preventDefault();
-              userDropdown.classList.toggle("open");
-            } else if (!userDropdown.contains(e.target)) {
-              userDropdown.classList.remove("open");
             }
           });
         }

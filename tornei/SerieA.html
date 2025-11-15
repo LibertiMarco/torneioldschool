@@ -170,6 +170,7 @@
   <div id="footer-container"></div>
 
   <!-- SCRIPT: HEADER -->
+  <script src="/torneioldschool/includi/header-interactions.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
 
@@ -196,6 +197,7 @@
         .then(response => response.text())
         .then(data => {
           document.getElementById("header-container").innerHTML = data;
+          initHeaderInteractions();
 
           const header = document.querySelector(".site-header");
           window.addEventListener("scroll", () => {

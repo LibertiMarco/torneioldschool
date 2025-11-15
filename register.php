@@ -205,68 +205,70 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
   <div id="footer-container"></div>
 
-<script>
-  // FOOTER e HEADER
-  fetch("/torneioldschool/includi/footer.html")
-    .then(r => r.text())
-    .then(html => document.getElementById("footer-container").innerHTML = html);
-  fetch("/torneioldschool/includi/header.php")
-    .then(r => r.text())
-    .then(html => {
-      document.getElementById("header-container").innerHTML = html;
-      const header = document.querySelector(".site-header");
-      window.addEventListener("scroll", () => {
-        header?.classList.toggle("scrolled", window.scrollY > 50);
+  <script src="/torneioldschool/includi/header-interactions.js"></script>
+  <script>
+    // FOOTER e HEADER
+    fetch("/torneioldschool/includi/footer.html")
+      .then(r => r.text())
+      .then(html => document.getElementById("footer-container").innerHTML = html);
+    fetch("/torneioldschool/includi/header.php")
+      .then(r => r.text())
+      .then(html => {
+        document.getElementById("header-container").innerHTML = html;
+        initHeaderInteractions();
+        const header = document.querySelector(".site-header");
+        window.addEventListener("scroll", () => {
+          header?.classList.toggle("scrolled", window.scrollY > 50);
+        });
       });
+
+    // ✅ Controllo forza password
+    const passwordInput = document.getElementById('password');
+    const passwordMessage = document.getElementById('passwordMessage');
+    const passwordCheck = document.getElementById('passwordCheck');
+
+    passwordInput.addEventListener('input', function() {
+      const password = passwordInput.value;
+      const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+
+      if (regex.test(password)) {
+        passwordMessage.style.color = 'green';
+        passwordCheck.textContent = '✓';
+        passwordCheck.style.color = 'green';
+      } else {
+        passwordMessage.style.color = 'red';
+        passwordCheck.textContent = '✗';
+        passwordCheck.style.color = 'red';
+      }
     });
 
-  // ✅ Controllo forza password
-  const passwordInput = document.getElementById('password');
-  const passwordMessage = document.getElementById('passwordMessage');
-  const passwordCheck = document.getElementById('passwordCheck');
+    // ✅ Controllo conferma password
+    const confirmInput = document.getElementById('confirm_password');
+    const confirmMessage = document.getElementById('confirmMessage');
+    const confirmCheck = document.getElementById('confirmCheck');
 
-  passwordInput.addEventListener('input', function() {
-    const password = passwordInput.value;
-    const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+    function checkConfirmPassword() {
+      if (confirmInput.value === '') {
+        confirmCheck.textContent = '';
+        confirmMessage.textContent = '';
+        return;
+      }
 
-    if (regex.test(password)) {
-      passwordMessage.style.color = 'green';
-      passwordCheck.textContent = '✓';
-      passwordCheck.style.color = 'green';
-    } else {
-      passwordMessage.style.color = 'red';
-      passwordCheck.textContent = '✗';
-      passwordCheck.style.color = 'red';
-    }
-  });
-
-  // ✅ Controllo conferma password
-  const confirmInput = document.getElementById('confirm_password');
-  const confirmMessage = document.getElementById('confirmMessage');
-  const confirmCheck = document.getElementById('confirmCheck');
-
-  function checkConfirmPassword() {
-    if (confirmInput.value === '') {
-      confirmCheck.textContent = '';
-      confirmMessage.textContent = '';
-      return;
+      if (confirmInput.value === passwordInput.value) {
+        confirmMessage.style.color = 'green';
+        confirmMessage.textContent = 'Le password coincidono.';
+        confirmCheck.textContent = '✓';
+        confirmCheck.style.color = 'green';
+      } else {
+        confirmMessage.style.color = 'red';
+        confirmMessage.textContent = 'Le password non coincidono.';
+        confirmCheck.textContent = '✗';
+        confirmCheck.style.color = 'red';
+      }
     }
 
-    if (confirmInput.value === passwordInput.value) {
-      confirmMessage.style.color = 'green';
-      confirmMessage.textContent = 'Le password coincidono.';
-      confirmCheck.textContent = '✓';
-      confirmCheck.style.color = 'green';
-    } else {
-      confirmMessage.style.color = 'red';
-      confirmMessage.textContent = 'Le password non coincidono.';
-      confirmCheck.textContent = '✗';
-      confirmCheck.style.color = 'red';
-    }
-  }
-
-  passwordInput.addEventListener('input', checkConfirmPassword);
-  confirmInput.addEventListener('input', checkConfirmPassword);
-</script>
+    passwordInput.addEventListener('input', checkConfirmPassword);
+    confirmInput.addEventListener('input', checkConfirmPassword);
+  </script>
 </body>
 </html>
