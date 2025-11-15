@@ -3,6 +3,7 @@ session_start();
 require_once __DIR__ . '/includi/db.php';
 
 $error = "";
+$avatarPath = null;
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nome = trim($_POST['nome']);
@@ -33,21 +34,62 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if ($result->num_rows > 0) {
                 $error = "Esiste già un account con questa email.";
             } else {
-                // Crittografia password
-                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                // Gestione avatar (opzionale)
+                if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] !== UPLOAD_ERR_NO_FILE) {
+                    if ($_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+                        $maxSize = 2 * 1024 * 1024; // 2MB
+                        if ($_FILES['avatar']['size'] > $maxSize) {
+                            $error = "La foto deve essere inferiore a 2MB.";
+                        } else {
+                            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                            $mime = finfo_file($finfo, $_FILES['avatar']['tmp_name']);
+                            finfo_close($finfo);
+                            $allowed = [
+                                'image/jpeg' => 'jpg',
+                                'image/png'  => 'png',
+                                'image/gif'  => 'gif',
+                                'image/webp' => 'webp'
+                            ];
 
-                // Inserimento con ruolo "utente"
-                $ruolo = 'utente';
-                $sql = "INSERT INTO utenti (nome, cognome, email, password, ruolo) VALUES (?, ?, ?, ?, ?)";
-                $stmt = $conn->prepare($sql);
-                $stmt->bind_param("sssss", $nome, $cognome, $email, $hashed_password, $ruolo);
+                            if (!isset($allowed[$mime])) {
+                                $error = "Formato immagine non valido. Usa JPG, PNG, GIF o WEBP.";
+                            } else {
+                                $uploadDir = __DIR__ . '/img/utenti';
+                                if (!is_dir($uploadDir)) {
+                                    mkdir($uploadDir, 0775, true);
+                                }
+                                $filename = uniqid('avatar_', true) . '.' . $allowed[$mime];
+                                $destination = $uploadDir . '/' . $filename;
 
-                if ($stmt->execute()) {
-                    // Redirect diretto alla login
-                    header("Location: login.php");
-                    exit;
-                } else {
-                    $error = "Errore durante la registrazione. Riprova.";
+                                if (move_uploaded_file($_FILES['avatar']['tmp_name'], $destination)) {
+                                    $avatarPath = 'img/utenti/' . $filename;
+                                } else {
+                                    $error = "Impossibile salvare la foto. Riprova.";
+                                }
+                            }
+                        }
+                    } else {
+                        $error = "Errore nel caricamento dell'immagine.";
+                    }
+                }
+
+                if (!$error) {
+                    // Crittografia password
+                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+                    // Inserimento con ruolo "utente"
+                    $ruolo = 'utente';
+                    $sql = "INSERT INTO utenti (nome, cognome, email, password, ruolo, avatar) VALUES (?, ?, ?, ?, ?, ?)";
+                    $stmt = $conn->prepare($sql);
+                    $stmt->bind_param("ssssss", $nome, $cognome, $email, $hashed_password, $ruolo, $avatarPath);
+
+                    if ($stmt->execute()) {
+                        // Redirect diretto alla login
+                        header("Location: login.php");
+                        exit;
+                    } else {
+                        $error = "Errore durante la registrazione. Riprova.";
+                    }
                 }
             }
         }
@@ -161,7 +203,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   <div class="register-container">
     <div class="register-box">
       <h2>Registrati</h2>
-      <form class="register-form" method="POST" action="">
+      <form class="register-form" method="POST" action="" enctype="multipart/form-data">
         <label for="nome">Nome</label>
         <input type="text" id="nome" name="nome" required>
 
@@ -183,6 +225,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <label for="confirm_password">Conferma Password</label>
         <input type="password" id="confirm_password" name="confirm_password" required>
+
+        <label for="avatar">Foto profilo (opzionale)</label>
+        <input type="file" id="avatar" name="avatar" accept="image/*">
+        <small style="color:#666;">File JPG, PNG, GIF o WEBP - max 2MB.</small>
 
         <!-- Controllo conferma password -->
         <div style="display: flex; align-items: center; margin-top: 5px;">

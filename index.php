@@ -90,9 +90,10 @@ async function loadNews() {
     }
 
     posts.forEach(p => {
+        const imageSrc = p.immagine ? p.immagine : '/torneioldschool/img/blog/placeholder.jpg';
         box.innerHTML += `
         <article onclick="location.href='/torneioldschool/articolo.php?id=${p.id}'" style="cursor:pointer">
-            <img src="/torneioldschool/img/blog/${p.immagine}" alt="">
+            <img src="${imageSrc}" alt="">
             <h3>${p.titolo}</h3>
             <p>${p.data}</p>
         </article>`;

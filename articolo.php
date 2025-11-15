@@ -1,27 +1,283 @@
-<?php $id = (int)($_GET['id'] ?? 0); ?>
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$id = (int)($_GET['id'] ?? 0);
+$isLogged = isset($_SESSION['user_id']);
+?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Articolo</title>
+<title>Articolo - Tornei Old School</title>
+<link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
 <link rel="stylesheet" href="/torneioldschool/style.css">
 
 <style>
-.article-container {
-    max-width:900px;
-    margin:40px auto;
-    padding:20px;
+.article-layout {
+    max-width: 1200px;
+    margin: 40px auto 60px;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    column-gap: 30px;
+    row-gap: 30px;
 }
-.article-container img {
-    width:100%;
-    max-height:400px;
-    object-fit:cover;
-    border-radius:10px;
+
+.article-panel {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 30px 70px rgba(15, 23, 42, 0.1);
 }
-.article-container h1 { font-size:32px; margin-top:20px; }
-.article-date { margin:12px 0; color:#777; }
-.article-content { margin-top:20px; font-size:18px; line-height:1.6; }
+
+.article-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: center;
+    color: #6a738b;
+    font-size: 0.95rem;
+}
+
+.article-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(255,255,255,0.15);
+    padding: 8px 18px;
+    border-radius: 999px;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.article-badge:hover {
+    background: rgba(255,255,255,0.25);
+}
+
+.article-panel h2 {
+    font-size: 2.3rem;
+    margin: 12px 0 6px;
+    color: #0f172a;
+}
+
+.article-subtitle {
+    color: #5c657c;
+    margin: 0 0 8px;
+}
+
+.article-cover {
+    margin: 28px 0;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #dfe6f6;
+}
+
+.article-cover img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.article-content {
+    color: #1e2433;
+    font-size: 1.1rem;
+    line-height: 1.8;
+}
+
+.article-content p {
+    margin-bottom: 18px;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    border: 0;
+}
+
+.article-sidebar {
+    background: #fff;
+    border-radius: 20px;
+    padding: 26px;
+    box-shadow: 0 25px 50px rgba(15, 23, 42, 0.08);
+    align-self: flex-start;
+    position: sticky;
+    top: 140px;
+}
+
+.article-sidebar h3 {
+    margin-top: 0;
+}
+
+.related-post {
+    display: block;
+    padding: 14px 0;
+    border-bottom: 1px solid #e5ecfb;
+    text-decoration: none;
+    color: inherit;
+}
+
+.related-post:last-child {
+    border-bottom: none;
+}
+
+.related-post span {
+    display: block;
+    color: #9ca4bb;
+    font-size: 0.8rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+}
+
+.related-post strong {
+    display: block;
+    margin-top: 6px;
+    color: #111c2f;
+}
+
+.comments-wrapper {
+    grid-column: 1 / 2;
+    margin: 0 0 40px;
+    padding: 0;
+}
+
+.comments-card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 32px;
+    box-shadow: 0 25px 50px rgba(15, 23, 42, 0.08);
+}
+
+.comments-card h3 {
+    margin-top: 0;
+}
+
+.comment-item {
+    display: flex;
+    gap: 14px;
+    border-bottom: 1px solid #ecf0fb;
+    padding: 18px 0;
+}
+
+.comment-item:last-child {
+    border-bottom: none;
+}
+
+.comment-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #e5ebff;
+    flex-shrink: 0;
+}
+
+.comment-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.comment-body {
+    flex: 1;
+}
+
+.comment-author {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.comment-date {
+    font-size: 0.85rem;
+    color: #9aa3ba;
+}
+
+.comment-text {
+    margin-top: 8px;
+    white-space: pre-wrap;
+    color: #1f2533;
+}
+
+.comment-form textarea {
+    width: 100%;
+    border-radius: 14px;
+    border: 1px solid #d7def2;
+    padding: 12px;
+    resize: vertical;
+    min-height: 130px;
+    font-size: 1rem;
+}
+
+.comment-form button {
+    background: #1d2f4b;
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 28px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 16px;
+    transition: transform 0.2s;
+}
+
+.comment-form button:hover {
+    transform: translateY(-2px);
+}
+
+.comments-hint {
+    color: #6d7386;
+    font-size: 0.95rem;
+}
+
+.feedback-message {
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+.feedback-message.error {
+    color: #c2410c;
+}
+
+.feedback-message.success {
+    color: #15803d;
+}
+
+@media (max-width: 1024px) {
+    .article-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .article-panel {
+        order: 1;
+    }
+
+    .comments-wrapper {
+        order: 2;
+    }
+
+    .article-sidebar {
+        position: static;
+        order: 3;
+    }
+}
+
+@media (max-width: 640px) {
+    .article-panel {
+        padding: 26px;
+    }
+}
 </style>
 </head>
 
@@ -29,22 +285,219 @@
 
 <?php include __DIR__ . '/includi/header.php'; ?>
 
-<div class="article-container" id="articleBox">Caricamento...</div>
+<main class="article-layout">
+  <article class="article-panel" id="articlePanel">
+    <div class="article-meta">
+      <a class="article-badge" href="/torneioldschool/blog.php" aria-label="Torna al blog">
+        <span aria-hidden="true">⟵</span> Blog
+      </a>
+      <span id="articleDate" class="sr-only">--/--/----</span>
+    </div>
+    <h2 id="articleTitle">Caricamento...</h2>
+    <p class="article-subtitle" id="articleSubtitle">Recuperiamo i dettagli e li inquadriamo al meglio.</p>
+    <div class="article-cover" id="articleCover"></div>
+    <div class="article-content" id="articleContent">Un attimo di pazienza…</div>
+  </article>
+
+  <aside class="article-sidebar">
+    <h3>Da leggere dopo</h3>
+    <p class="comments-hint">Altri articoli dal nostro staff.</p>
+    <div id="relatedList">Caricamento...</div>
+  </aside>
+
+  <section class="comments-wrapper">
+    <div class="comments-card">
+      <h3>Commenti della community</h3>
+      <div id="commentsList">Caricamento dei commenti...</div>
+
+      <?php if ($isLogged): ?>
+        <form class="comment-form" id="commentForm">
+          <label for="commento">Lascia il tuo commento</label>
+          <textarea id="commento" name="commento" placeholder="Condividi il tuo punto di vista..." required></textarea>
+          <button type="submit">Pubblica</button>
+          <div class="feedback-message" id="commentFeedback"></div>
+        </form>
+      <?php else: ?>
+        <p class="comments-hint">
+          Vuoi dire la tua? <a href="/torneioldschool/login.php">Accedi</a> o <a href="/torneioldschool/register.php">registrati</a> per lasciare un commento.
+        </p>
+      <?php endif; ?>
+    </div>
+  </section>
+</main>
+
+<?php include __DIR__ . '/includi/footer.html'; ?>
 
 <script>
-async function loadArticle() {
-    const r = await fetch('/torneioldschool/api/blog.php?azione=articolo&id=<?= $id ?>');
-    const a = await r.json();
+const articleId = <?= $id ?>;
+const isLogged = <?= $isLogged ? 'true' : 'false' ?>;
 
-    document.getElementById("articleBox").innerHTML = `
-        <img src="/torneioldschool/img/blog/${a.immagine}">
-        <h1>${a.titolo}</h1>
-        <div class="article-date">${a.data}</div>
-        <div class="article-content">${a.contenuto.replace(/\n/g,'<br>')}</div>
-    `;
+const articleTitle = document.getElementById('articleTitle');
+const articleSubtitle = document.getElementById('articleSubtitle');
+const articleDate = document.getElementById('articleDate');
+const articleCover = document.getElementById('articleCover');
+const articleContent = document.getElementById('articleContent');
+const relatedList = document.getElementById('relatedList');
+const commentsList = document.getElementById('commentsList');
+const commentForm = document.getElementById('commentForm');
+const commentField = document.getElementById('commento');
+const commentFeedback = document.getElementById('commentFeedback');
+const defaultAvatar = '/torneioldschool/img/icone/user.png';
+
+function setFeedback(message, type = '') {
+    if (!commentFeedback) {
+        return;
+    }
+    commentFeedback.textContent = message;
+    commentFeedback.className = `feedback-message ${type}`.trim();
+}
+
+function escapeHTML(value = '') {
+    return value.replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char] || char));
+}
+
+function formatContent(text = '') {
+    if (!text) {
+        return '<p>Non abbiamo trovato il contenuto di questo articolo.</p>';
+    }
+
+    return text
+        .split(/\n{2,}/)
+        .map(paragraph => `<p>${paragraph.replace(/\n/g, '<br>')}</p>`)
+        .join('');
+}
+
+async function fetchJSON(url, options = {}) {
+    const res = await fetch(url, options);
+    const text = await res.text();
+
+    try {
+        const data = JSON.parse(text);
+        return { data, ok: res.ok, status: res.status };
+    } catch (error) {
+        const clean = text.replace(/<[^>]+>/g, '').trim();
+        throw new Error(clean || 'Risposta non valida dal server.');
+    }
+}
+
+async function loadArticle() {
+    try {
+        const { data, ok } = await fetchJSON(`/torneioldschool/api/blog.php?azione=articolo&id=${articleId}`);
+        if (!ok) {
+            throw new Error(data?.error || 'Articolo non trovato.');
+        }
+
+        document.title = `${data.titolo} - Tornei Old School`;
+        articleTitle.textContent = data.titolo;
+        articleSubtitle.textContent = 'Pubblicato il ' + data.data;
+        articleDate.textContent = data.data;
+        articleCover.innerHTML = data.immagine
+            ? `<img src="${encodeURI(data.immagine)}" alt="${escapeHTML(data.titolo)}">`
+            : '';
+        articleContent.innerHTML = formatContent(data.contenuto || '');
+    } catch (err) {
+        articleContent.innerHTML = `<p>${escapeHTML(err.message)}</p>`;
+    }
+}
+
+async function loadRelated() {
+    try {
+        const { data: posts } = await fetchJSON('/torneioldschool/api/blog.php?azione=ultimi');
+
+        if (!Array.isArray(posts) || !posts.length) {
+            relatedList.innerHTML = '<p>Nessun articolo correlato al momento.</p>';
+            return;
+        }
+
+        relatedList.innerHTML = posts
+            .filter(post => Number(post.id) !== articleId)
+            .slice(0, 4)
+            .map(post => `
+                <a class="related-post" href="/torneioldschool/articolo.php?id=${post.id}">
+                    <span>${escapeHTML(post.data || '')}</span>
+                    <strong>${escapeHTML(post.titolo)}</strong>
+                </a>
+            `).join('');
+    } catch (err) {
+        relatedList.innerHTML = `<p>${escapeHTML(err.message)}</p>`;
+    }
+}
+
+function renderComments(comments) {
+    if (!comments.length) {
+        commentsList.innerHTML = '<p class="comments-hint">Ancora nessun commento. Sii il primo a rompere il ghiaccio!</p>';
+        return;
+    }
+
+    commentsList.innerHTML = comments.map(comment => `
+        <div class="comment-item">
+            <div class="comment-avatar">
+                <img src="${comment.avatar ? '/torneioldschool/' + comment.avatar.replace(/^\/+/, '') : defaultAvatar}" alt="${escapeHTML(comment.autore || 'Utente')}">
+            </div>
+            <div class="comment-body">
+                <div class="comment-author">${escapeHTML(comment.autore || 'Utente')}</div>
+                <div class="comment-date">${escapeHTML(comment.data || '')}</div>
+                <div class="comment-text">${escapeHTML(comment.commento || '')}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function fetchComments() {
+    try {
+        const { data } = await fetchJSON(`/torneioldschool/api/blog.php?azione=commenti&id=${articleId}`);
+        renderComments(Array.isArray(data) ? data : []);
+    } catch (err) {
+        commentsList.innerHTML = `<p class="feedback-message error">${escapeHTML(err.message)}</p>`;
+    }
+}
+
+async function submitComment(event) {
+    event.preventDefault();
+    if (!commentField) {
+        return;
+    }
+
+    const text = commentField.value.trim();
+    if (!text) {
+        setFeedback('Scrivi qualcosa prima di pubblicare.', 'error');
+        return;
+    }
+
+    setFeedback('Pubblicazione in corso...');
+
+    try {
+        const { data, ok } = await fetchJSON('/torneioldschool/api/blog.php?azione=commenti_salva', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ post_id: articleId, commento: text })
+        });
+
+        if (!ok || data?.error) {
+            throw new Error(data.error || 'Errore inatteso.');
+        }
+
+        setFeedback('Commento pubblicato!', 'success');
+        commentField.value = '';
+        fetchComments();
+    } catch (err) {
+        setFeedback(err.message, 'error');
+    }
+}
+
+if (isLogged && commentForm) {
+    commentForm.addEventListener('submit', submitComment);
 }
 
 loadArticle();
+loadRelated();
+fetchComments();
 </script>
 
 </body>

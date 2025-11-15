@@ -2,6 +2,16 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+$sessionAvatar = $_SESSION['avatar'] ?? '';
+$avatarUrl = '/torneioldschool/img/icone/user.png';
+if (!empty($sessionAvatar)) {
+    if (preg_match('#^https?://#i', $sessionAvatar)) {
+        $avatarUrl = $sessionAvatar;
+    } else {
+        $avatarUrl = '/torneioldschool/' . ltrim($sessionAvatar, '/');
+    }
+}
 ?>
 
 <header class="site-header">
@@ -29,7 +39,7 @@ if (session_status() === PHP_SESSION_NONE) {
     <!-- MENU UTENTE -->
     <div class="user-dropdown">
         <button id="userBtn" class="user-btn">
-            <img src="/torneioldschool/img/icone/user.png" alt="Utente">
+            <img src="<?= htmlspecialchars($avatarUrl) ?>" alt="Profilo utente">
         </button>
 
         <div id="userMenu" class="user-menu">
@@ -105,7 +115,12 @@ if (session_status() === PHP_SESSION_NONE) {
 
 /* USER BTN */
 .user-btn img {
-    width: 32px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255,255,255,0.45);
+    background: #0f1f33;
 }
 
 /* USER DROPDOWN */

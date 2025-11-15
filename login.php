@@ -9,7 +9,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = trim($_POST['password']);
 
     // query di selezione
-    $sql = "SELECT id, email, nome, cognome, ruolo, password FROM utenti WHERE email = ?";
+    $sql = "SELECT id, email, nome, cognome, ruolo, password, avatar FROM utenti WHERE email = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -26,6 +26,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['nome'] = $row['nome'];
             $_SESSION['cognome'] = $row['cognome'];
             $_SESSION['ruolo'] = $row['ruolo']; // "admin" oppure "user"
+            $_SESSION['avatar'] = $row['avatar'] ?? null;
 
             // salva la sessione e poi reindirizza
             session_write_close();
