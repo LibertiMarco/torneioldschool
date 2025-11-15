@@ -26,6 +26,22 @@
         </div>
       </section>
 
+      <!-- ULTIME NOTIZIE -->
+      <section class="home-news">
+        <div class="home-news__header">
+          <div>
+            <p class="home-news__eyebrow">Dal mondo dei nostri tornei</p>
+            <h2>Ultime Notizie</h2>
+            <p>Annunci dei nuovi bracket, risultati in tempo reale e storie dai nostri eventi.</p>
+          </div>
+          <a href="blog.php" class="hero-btn hero-btn--ghost">Vai al blog</a>
+        </div>
+
+        <div id="newsGrid" class="news-grid">
+          <!-- Caricamento automatico via JS -->
+        </div>
+      </section>
+
       <!-- CHI SIAMO -->
       <section class="chisiamo-hero">
         <div class="hero-overlay">
@@ -50,15 +66,6 @@
           <h1>Iscriviti ai Tornei Old School</h1>
           <p>Accedi alle classifiche, scopri le squadre e ricevi via email gli aggiornamenti sui nuovi tornei!</p>
           <a href="register.php" class="hero-btn">Iscriviti Ora</a>
-        </div>
-      </section>
-
-      <!-- NEWS -->
-      <section class="home-news">
-        <h2>Ultime Notizie</h2>
-
-        <div id="newsGrid" class="news-grid">
-            <!-- Caricamento automatico via JS -->
         </div>
       </section>
 
