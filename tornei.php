@@ -54,6 +54,10 @@ if ($result && $result->num_rows > 0) {
   <link rel="stylesheet" href="style.css">
   <link rel="icon" type="image/png" href="img/logo_old_school.png">
   <style>
+    .content {
+      margin-top: 30px;
+      padding-top: 10px;
+    }
     /* Popup accesso */
     .popup-accesso {
       position: fixed;

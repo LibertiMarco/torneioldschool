@@ -18,10 +18,22 @@ foreach ($squadre as $sq) {
     $stmt_squadra->execute();
 }
 $stmt_squadra->close();
-echo "✅ Inserite " . count($squadre) . " squadre<br>";
+echo "�o. Inserite " . count($squadre) . " squadre<br>";
+
+// Recupera ID squadre
+$mapSquadre = [];
+$stmt_ids = $conn->prepare("SELECT id, nome FROM squadre WHERE torneo = ?");
+$stmt_ids->bind_param("s", $torneo);
+$stmt_ids->execute();
+$res_ids = $stmt_ids->get_result();
+while ($row = $res_ids->fetch_assoc()) {
+    $mapSquadre[$row['nome']] = (int)$row['id'];
+}
+$stmt_ids->close();
 
 // --- INSERISCI ROSE ---
 $stmt_giocatore = $conn->prepare("INSERT INTO giocatori (nome, cognome, ruolo) VALUES (?, ?, ?)");
+$stmt_pivot = $conn->prepare("INSERT INTO squadre_giocatori (squadra_id, giocatore_id) VALUES (?, ?)");
 foreach ($squadre as $sq) {
     for ($i = 0; $i < 10; $i++) { // 10 giocatori per squadra
         $nome = $nomi[array_rand($nomi)];
@@ -29,10 +41,17 @@ foreach ($squadre as $sq) {
         $ruolo = $ruoli[array_rand($ruoli)];
         $stmt_giocatore->bind_param("sss", $nome, $cognome, $ruolo);
         $stmt_giocatore->execute();
+
+        if (!empty($mapSquadre[$sq])) {
+            $giocatoreId = $conn->insert_id;
+            $stmt_pivot->bind_param("ii", $mapSquadre[$sq], $giocatoreId);
+            $stmt_pivot->execute();
+        }
     }
 }
 $stmt_giocatore->close();
-echo "✅ Inseriti " . (count($squadre) * 10) . " giocatori<br>";
+$stmt_pivot->close();
+echo "�o. Inseriti " . (count($squadre) * 10) . " giocatori<br>";
 
 // --- CREA PARTITE CASUALI ---
 $stmt_partita = $conn->prepare("
@@ -56,7 +75,7 @@ foreach ($squadre as $i => $squadra_casa) {
 }
 $stmt_partita->close();
 
-echo "✅ Inserite partite casuali per tutte le squadre<br>";
+echo "�o. Inserite partite casuali per tutte le squadre<br>";
 
 $conn->close();
 ?>

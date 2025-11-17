@@ -51,5 +51,12 @@ public function getTornei() {
     return $this->conn->query("SELECT DISTINCT torneo FROM {$this->table} ORDER BY torneo ASC");
 }
 
+public function getByNomeETorneo($nome, $torneo) {
+    $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE nome = ? AND torneo = ? LIMIT 1");
+    $stmt->bind_param("ss", $nome, $torneo);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc();
+}
+
 }
 ?>

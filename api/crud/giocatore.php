@@ -10,7 +10,20 @@ class Giocatore {
 
     // ✅ GET ALL
     public function getAll() {
-        $sql = "SELECT * FROM {$this->table} ORDER BY cognome, nome";
+        $sql = "
+            SELECT g.*, sg_data.squadre_assoc, sg_data.tornei_assoc
+            FROM {$this->table} g
+            LEFT JOIN (
+                SELECT 
+                    sg.giocatore_id,
+                    GROUP_CONCAT(DISTINCT s.nome ORDER BY s.nome SEPARATOR ', ') AS squadre_assoc,
+                    GROUP_CONCAT(DISTINCT s.torneo ORDER BY s.torneo SEPARATOR ', ') AS tornei_assoc
+                FROM squadre_giocatori sg
+                JOIN squadre s ON s.id = sg.squadra_id
+                GROUP BY sg.giocatore_id
+            ) AS sg_data ON sg_data.giocatore_id = g.id
+            ORDER BY g.cognome, g.nome
+        ";
         return $this->conn->query($sql);
     }
 
@@ -30,6 +43,8 @@ class Giocatore {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
+        $media_voti = $media_voti === '' ? null : $media_voti;
+
         $stmt->bind_param(
             "sssssiiiids",
             $nome,
@@ -45,8 +60,11 @@ class Giocatore {
             $foto
         );
 
+        if ($stmt->execute()) {
+            return $this->conn->insert_id;
+        }
 
-        return $stmt->execute();
+        return false;
     }
 
     // ✅ AGGIORNA GIOCATORE
@@ -58,8 +76,10 @@ class Giocatore {
             WHERE id = ?
         ");
 
+        $media_voti = $media_voti === '' ? null : $media_voti;
+
         $stmt->bind_param(
-            "sssssiiisssi",
+            "sssssiiiidsi",
             $nome,
             $cognome,
             $ruolo,
@@ -74,7 +94,6 @@ class Giocatore {
             $id
         );
 
-
         return $stmt->execute();
     }
 
@@ -87,7 +106,16 @@ class Giocatore {
 
     // ✅ TORNEI ESISTENTI
     public function getTornei() {
-        $sql = "SELECT DISTINCT torneo FROM {$this->table} ORDER BY torneo";
+        $sql = "
+            SELECT torneo FROM (
+                SELECT DISTINCT torneo FROM {$this->table} WHERE torneo IS NOT NULL AND torneo <> ''
+                UNION
+                SELECT DISTINCT s.torneo
+                FROM squadre_giocatori sg
+                JOIN squadre s ON s.id = sg.squadra_id
+            ) AS tornei
+            ORDER BY torneo
+        ";
         return $this->conn->query($sql);
     }
 
@@ -100,13 +128,32 @@ class Giocatore {
     }
 
     // ✅ GIOCATORI PER SQUADRA E TORNEO
-    public function getGiocatoriBySquadra($squadra, $torneo) {
-        $stmt = $this->conn->prepare("
-            SELECT * FROM {$this->table}
-            WHERE squadra = ? AND torneo = ?
-            ORDER BY cognome, nome
-        ");
-        $stmt->bind_param("ss", $squadra, $torneo);
+    public function getGiocatoriBySquadra($squadra = null, $torneo = null, $squadraId = null) {
+        if ($squadraId) {
+            $sql = "
+                SELECT g.*, s.nome AS squadra, s.torneo,
+                       COALESCE(sg.foto, g.foto) AS foto_squadra
+                FROM squadre_giocatori sg
+                JOIN giocatori g ON g.id = sg.giocatore_id
+                JOIN squadre s ON s.id = sg.squadra_id
+                WHERE s.id = ?
+                ORDER BY g.cognome, g.nome
+            ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("i", $squadraId);
+        } else {
+            $sql = "
+                SELECT g.*, s.nome AS squadra, s.torneo,
+                       COALESCE(sg.foto, g.foto) AS foto_squadra
+                FROM squadre_giocatori sg
+                JOIN giocatori g ON g.id = sg.giocatore_id
+                JOIN squadre s ON s.id = sg.squadra_id
+                WHERE s.nome = ? AND s.torneo = ?
+                ORDER BY g.cognome, g.nome
+            ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("ss", $squadra, $torneo);
+        }
         $stmt->execute();
         return $stmt->get_result();
     }

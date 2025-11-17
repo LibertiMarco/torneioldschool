@@ -51,7 +51,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     .page-wrapper {
-      padding-top: 100px;
+      padding-top: 30px;
     }
 
     .banner {

@@ -21,7 +21,7 @@ class partitagiocatore {
                 pg.giocatore_id,
                 g.nome,
                 g.cognome,
-                g.squadra,
+                s.nome AS squadra,
                 pg.presenza,
                 pg.goal,
                 pg.assist,
@@ -30,6 +30,9 @@ class partitagiocatore {
                 pg.voto
             FROM partita_giocatore pg
             JOIN giocatori g ON g.id = pg.giocatore_id
+            JOIN partite p ON p.id = pg.partita_id
+            JOIN squadre s ON s.torneo = p.torneo AND s.nome IN (p.squadra_casa, p.squadra_ospite)
+            JOIN squadre_giocatori sg ON sg.squadra_id = s.id AND sg.giocatore_id = g.id
             WHERE pg.partita_id = ?
             ORDER BY g.cognome, g.nome
         ";

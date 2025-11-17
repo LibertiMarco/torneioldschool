@@ -52,10 +52,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     .login-container {
       display: flex;
       justify-content: center;
-      align-items: center;
-      min-height: 100vh;
+      align-items: flex-start;
+      min-height: calc(100vh - 80px);
       background-color: #f4f4f4;
-      padding: 20px;
+      padding: 30px 20px 60px;
     }
     .login-box {
       background-color: #ffffff;

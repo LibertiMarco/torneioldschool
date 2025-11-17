@@ -19,14 +19,17 @@ if ($azione === 'list') {
                 pg.giocatore_id,
                 g.nome,
                 g.cognome,
-                g.squadra,
+                s.nome AS squadra,
                 pg.goal,
                 pg.assist,
                 pg.cartellino_giallo,
                 pg.cartellino_rosso,
                 pg.voto
             FROM partita_giocatore pg
-            LEFT JOIN giocatori g ON g.id = pg.giocatore_id
+            JOIN giocatori g ON g.id = pg.giocatore_id
+            JOIN partite p ON p.id = pg.partita_id
+            JOIN squadre s ON s.torneo = p.torneo AND s.nome IN (p.squadra_casa, p.squadra_ospite)
+            JOIN squadre_giocatori sg ON sg.squadra_id = s.id AND sg.giocatore_id = g.id
             WHERE pg.partita_id = ?
             ORDER BY g.cognome, g.nome";
 
@@ -62,16 +65,19 @@ if ($azione === 'list_giocatori') {
     if (!$p) { echo json_encode([]); exit; }
 
     // giocatori NON ancora inseriti
-    $sql = "SELECT g.id, g.nome, g.cognome, g.squadra
-            FROM giocatori g
-            WHERE g.squadra IN (?, ?)
+    $sql = "SELECT DISTINCT g.id, g.nome, g.cognome, s.nome AS squadra
+            FROM partite p
+            JOIN squadre s ON s.torneo = p.torneo AND s.nome IN (p.squadra_casa, p.squadra_ospite)
+            JOIN squadre_giocatori sg ON sg.squadra_id = s.id
+            JOIN giocatori g ON g.id = sg.giocatore_id
+            WHERE p.id = ?
             AND g.id NOT IN (
                 SELECT giocatore_id FROM partita_giocatore WHERE partita_id = ?
             )
             ORDER BY g.cognome, g.nome";
 
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssi", $p['squadra_casa'], $p['squadra_ospite'], $partita_id);
+    $stmt->bind_param("ii", $partita_id, $partita_id);
     $stmt->execute();
 
     $res = $stmt->get_result();

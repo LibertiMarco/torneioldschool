@@ -20,7 +20,7 @@
 
     /* Spazio per header */
     .page-wrapper {
-      padding-top: 100px;
+      padding-top: 30px;
     }
 
     .about-container {

@@ -62,6 +62,20 @@ $sql_rose = "CREATE TABLE IF NOT EXISTS giocatori (
 
 crea_tabella($conn, $sql_rose, "giocatori");
 
+// --- Query 4 ---
+$sql_squadre_giocatori = "CREATE TABLE IF NOT EXISTS squadre_giocatori (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    squadra_id INT NOT NULL,
+    giocatore_id INT NOT NULL,
+    foto VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_squadra_giocatore (squadra_id, giocatore_id),
+    CONSTRAINT fk_sg_squadra FOREIGN KEY (squadra_id) REFERENCES squadre(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sg_giocatore FOREIGN KEY (giocatore_id) REFERENCES giocatori(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+crea_tabella($conn, $sql_squadre_giocatori, "squadre_giocatori");
+
 echo "<br>📦 Controllo tabelle presenti nel DB:<br>";
 
 $res = $conn->query("SHOW TABLES");

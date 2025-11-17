@@ -6,11 +6,25 @@ if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
 }
 
 require_once __DIR__ . '/crud/Giocatore.php';
+require_once __DIR__ . '/crud/Squadra.php';
+require_once __DIR__ . '/crud/SquadraGiocatore.php';
 $giocatore = new Giocatore();
+$squadraModel = new Squadra();
+$pivot = new SquadraGiocatore();
+
+$tornei = [];
+$torneiResult = $squadraModel->getTornei();
+if ($torneiResult) {
+    while ($row = $torneiResult->fetch_assoc()) {
+        if (!empty($row['torneo'])) {
+            $tornei[] = $row['torneo'];
+        }
+    }
+}
 
 // --- CREA ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
-    $giocatore->crea(
+    $nuovoId = $giocatore->crea(
         trim($_POST['nome']),
         trim($_POST['cognome']),
         trim($_POST['ruolo']),
@@ -23,6 +37,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
         trim($_POST['media_voti']),
         trim($_POST['foto'])
     );
+    $squadraNome = trim($_POST['squadra']);
+    $torneo = trim($_POST['torneo']);
+
+    if ($nuovoId && $squadraNome !== '' && $torneo !== '') {
+        $team = $squadraModel->getByNomeETorneo($squadraNome, $torneo);
+        if ($team) {
+            $pivot->assegna($nuovoId, (int)$team['id'], trim($_POST['foto']));
+        }
+    }
+
     header("Location: gestione_giocatori.php");
     exit;
 }
@@ -43,6 +67,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
         trim($_POST['media_voti']),
         trim($_POST['foto'])
     );
+    $squadraNome = trim($_POST['squadra']);
+    $torneo = trim($_POST['torneo']);
+
+    if ($squadraNome !== '' && $torneo !== '') {
+        $team = $squadraModel->getByNomeETorneo($squadraNome, $torneo);
+        if ($team) {
+            $pivot->assegna((int)$_POST['id'], (int)$team['id'], trim($_POST['foto']));
+        }
+    }
+
+    header("Location: gestione_giocatori.php");
+    exit;
+}
+
+// --- ASSOCIA GIOCATORE A SQUADRA ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['associa_squadra'])) {
+    $giocatoreAssoc = (int)($_POST['giocatore_associa'] ?? 0);
+    $squadraAssoc = (int)($_POST['squadra_associa'] ?? 0);
+    $fotoAssoc = trim($_POST['foto_associazione'] ?? '');
+
+    if ($giocatoreAssoc && $squadraAssoc) {
+        $pivot->assegna($giocatoreAssoc, $squadraAssoc, $fotoAssoc === '' ? null : $fotoAssoc);
+    }
+
+    header("Location: gestione_giocatori.php");
+    exit;
+}
+
+// --- DISSOCIA ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dissocia_squadra'])) {
+    $giocatoreId = (int)($_POST['giocatore_rimozione'] ?? 0);
+    $squadraId = (int)($_POST['squadra_rimozione'] ?? 0);
+
+    if ($giocatoreId && $squadraId) {
+        $pivot->dissocia($giocatoreId, $squadraId);
+    }
+
     header("Location: gestione_giocatori.php");
     exit;
 }
@@ -54,7 +115,13 @@ if (isset($_GET['elimina'])) {
     exit;
 }
 
-$lista = $giocatore->getAll();
+$listaResult = $giocatore->getAll();
+$giocatori = [];
+if ($listaResult) {
+    while ($row = $listaResult->fetch_assoc()) {
+        $giocatori[] = $row;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -138,13 +205,11 @@ $lista = $giocatore->getAll();
     <label>Seleziona Torneo</label>
     <select id="selectTorneoFiltro" required>
         <option value="">-- Seleziona un torneo --</option>
-        <?php
-        $tornei = $giocatore->getTornei();
-        while ($row = $tornei->fetch_assoc()): ?>
-            <option value="<?= htmlspecialchars($row['torneo']) ?>"><?= htmlspecialchars($row['torneo']) ?></option>
-        <?php endwhile; ?>
-    </select>
-</div>
+            <?php foreach ($tornei as $torneoVal): ?>
+            <option value="<?= htmlspecialchars($torneoVal) ?>"><?= htmlspecialchars($torneoVal) ?></option>
+            <?php endforeach; ?>
+            </select>
+        </div>
 
 <!-- FILTRO SQUADRA -->
 <div class="form-group">
@@ -183,6 +248,75 @@ $lista = $giocatore->getAll();
 </form>
 
 <!-- ✅ SEZIONE ELIMINA -->
+<!-- GESTIONE ASSOCIAZIONI -->
+<section class="admin-associazioni">
+<form method="POST" class="admin-form form-associa">
+    <h2>Associa Giocatore a una Squadra</h2>
+    <div class="form-group">
+        <label>Seleziona Torneo</label>
+        <select id="assocTorneo" required>
+            <option value="">-- Seleziona un torneo --</option>
+            <?php foreach ($tornei as $torneoVal): ?>
+            <option value="<?= htmlspecialchars($torneoVal) ?>"><?= htmlspecialchars($torneoVal) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Seleziona Squadra</label>
+        <select name="squadra_associa" id="assocSquadra" required disabled>
+            <option value="">-- Seleziona una squadra --</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Giocatore</label>
+        <select name="giocatore_associa" required>
+            <option value="">-- Seleziona un giocatore --</option>
+            <?php foreach ($giocatori as $g): ?>
+            <option value="<?= $g['id'] ?>"><?= htmlspecialchars($g['cognome'] . ' ' . $g['nome']) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Foto specifica (opzionale)</label>
+        <input type="text" name="foto_associazione" placeholder="Percorso foto per questa squadra">
+    </div>
+
+    <button type="submit" name="associa_squadra" class="btn-primary">Associa / aggiorna foto</button>
+</form>
+
+<form method="POST" class="admin-form form-dissocia">
+    <h2>Rimuovi Giocatore dalla Squadra</h2>
+    <div class="form-group">
+        <label>Seleziona Torneo</label>
+        <select id="remTorneo" required>
+            <option value="">-- Seleziona un torneo --</option>
+            <?php foreach ($tornei as $torneoVal): ?>
+            <option value="<?= htmlspecialchars($torneoVal) ?>"><?= htmlspecialchars($torneoVal) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Seleziona Squadra</label>
+        <select name="squadra_rimozione" id="remSquadra" required disabled>
+            <option value="">-- Seleziona una squadra --</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Giocatore</label>
+        <select name="giocatore_rimozione" id="remGiocatore" required disabled>
+            <option value="">-- Seleziona un giocatore --</option>
+        </select>
+    </div>
+
+    <button type="submit" name="dissocia_squadra" class="btn-danger">Rimuovi associazione</button>
+</form>
+</section>
+
 <section class="admin-table-section form-elimina hidden">
 <h2>Elimina Giocatore</h2>
 <input type="text" id="search" placeholder="Cerca giocatore..." class="search-input">
@@ -199,18 +333,18 @@ $lista = $giocatore->getAll();
 </tr>
 </thead>
 <tbody>
-<?php while ($row = $lista->fetch_assoc()): ?>
+<?php foreach ($giocatori as $row): ?>
 <tr>
     <td><?= htmlspecialchars($row['nome']) ?></td>
     <td><?= htmlspecialchars($row['cognome']) ?></td>
     <td><?= htmlspecialchars($row['ruolo']) ?></td>
-    <td><?= htmlspecialchars($row['squadra']) ?></td>
-    <td><?= htmlspecialchars($row['torneo']) ?></td>
+    <td><?= htmlspecialchars($row['squadre_assoc'] ?? $row['squadra'] ?? '-') ?></td>
+    <td><?= htmlspecialchars($row['tornei_assoc'] ?? $row['torneo'] ?? '-') ?></td>
     <td>
         <a href="?elimina=<?= $row['id'] ?>" class="btn-danger" onclick="return confirm('Eliminare questo giocatore?')">Elimina</a>
     </td>
 </tr>
-<?php endwhile; ?>
+<?php endforeach; ?>
 </tbody>
 </table>
 </section>
@@ -235,70 +369,116 @@ selectAzione.addEventListener('change', e => mostraSezione(e.target.value));
 </script>
 
 <script>
-// ✅ TORNEO → SQUADRE
-const selectTorneoFiltro = document.getElementById('selectTorneoFiltro');
-const selectSquadraFiltro = document.getElementById('selectSquadraFiltro');
-const selectGiocatore = document.getElementById('selectGiocatore');
+const selectTorneoFiltro = document.getElementById("selectTorneoFiltro");
+const selectSquadraFiltro = document.getElementById("selectSquadraFiltro");
+const selectGiocatore = document.getElementById("selectGiocatore");
+const assocTorneo = document.getElementById("assocTorneo");
+const assocSquadra = document.getElementById("assocSquadra");
+const remTorneo = document.getElementById("remTorneo");
+const remSquadra = document.getElementById("remSquadra");
+const remGiocatore = document.getElementById("remGiocatore");
 
-selectTorneoFiltro.addEventListener('change', async () => {
+const API_SQUADRE_TORNEO = "/torneioldschool/api/get_squadre_torneo.php";
+const API_GIOCATORI_SQUADRA = "/torneioldschool/api/get_giocatori_squadra.php";
+
+function resetSelect(select, placeholder, disable = true) {
+    if (!select) return;
+    select.innerHTML = placeholder ? `<option value="">${placeholder}</option>` : "";
+    select.disabled = disable;
+}
+
+async function loadSquadre(select, torneo, placeholder = "-- Seleziona una squadra --") {
+    resetSelect(select, placeholder);
+    if (!select || !torneo) return [];
+
+    try {
+        const res = await fetch(`${API_SQUADRE_TORNEO}?torneo=${encodeURIComponent(torneo)}`);
+        const data = await res.json();
+        if (!Array.isArray(data) || !data.length) return [];
+
+        select.disabled = false;
+        select.innerHTML = placeholder ? `<option value="">${placeholder}</option>` : "";
+        data.forEach(s => {
+            const opt = document.createElement("option");
+            opt.value = s.id;
+            opt.textContent = s.nome;
+            select.appendChild(opt);
+        });
+        return data;
+    } catch (err) {
+        console.error("Errore nel caricamento squadre:", err);
+        return [];
+    }
+}
+
+async function loadGiocatori(select, squadraId, torneo, placeholder = "-- Seleziona un giocatore --") {
+    resetSelect(select, placeholder);
+    if (!select || !squadraId) return [];
+
+    try {
+        const res = await fetch(`${API_GIOCATORI_SQUADRA}?squadra_id=${squadraId}&torneo=${encodeURIComponent(torneo || "")}`);
+        const data = await res.json();
+        if (!Array.isArray(data) || !data.length) return [];
+
+        select.disabled = false;
+        select.innerHTML = placeholder ? `<option value="">${placeholder}</option>` : "";
+        data.forEach(g => {
+            const opt = document.createElement("option");
+            opt.value = g.id;
+            opt.textContent = `${g.nome} ${g.cognome}`;
+            select.appendChild(opt);
+        });
+        return data;
+    } catch (err) {
+        console.error("Errore nel caricamento giocatori:", err);
+        return [];
+    }
+}
+
+selectTorneoFiltro?.addEventListener("change", async () => {
     const torneo = selectTorneoFiltro.value;
-    selectSquadraFiltro.innerHTML = "";
-    selectSquadraFiltro.disabled = true;
-
-    const res = await fetch(`/torneioldschool/api/get_squadre_torneo.php?torneo=${torneo}`);
-    const data = await res.json();
-
-    if (!data.length) return;
-
-    selectSquadraFiltro.disabled = false;
-    selectSquadraFiltro.innerHTML = '<option value="">-- Seleziona una squadra --</option>';
-
-    data.forEach(s => {
-        selectSquadraFiltro.innerHTML += `<option value="${s.nome}">${s.nome}</option>`;
-    });
+    await loadSquadre(selectSquadraFiltro, torneo);
+    resetSelect(selectGiocatore, "-- Seleziona un giocatore --");
 });
 
-// ✅ SQUADRA → GIOCATORI
-selectSquadraFiltro.addEventListener('change', async () => {
-    const squadra = selectSquadraFiltro.value;
+selectSquadraFiltro?.addEventListener("change", async () => {
+    const squadraId = selectSquadraFiltro.value;
     const torneo = selectTorneoFiltro.value;
-
-    selectGiocatore.innerHTML = "";
-    selectGiocatore.disabled = true;
-
-    const res = await fetch(`/torneioldschool/api/get_giocatori_squadra.php?squadra=${squadra}&torneo=${torneo}`);
-    const data = await res.json();
-
-    if (!data.length) return;
-
-    selectGiocatore.disabled = false;
-    selectGiocatore.innerHTML = '<option value="">-- Seleziona un giocatore --</option>';
-
-    data.forEach(g => {
-        selectGiocatore.innerHTML += `<option value="${g.id}">${g.nome} ${g.cognome}</option>`;
-    });
+    await loadGiocatori(selectGiocatore, squadraId, torneo);
 });
 
-// ✅ CARICA DATI GIOCATORE
-selectGiocatore.addEventListener('change', async e => {
+assocTorneo?.addEventListener("change", async () => {
+    await loadSquadre(assocSquadra, assocTorneo.value);
+});
+
+remTorneo?.addEventListener("change", async () => {
+    await loadSquadre(remSquadra, remTorneo.value);
+    resetSelect(remGiocatore, "-- Seleziona un giocatore --");
+});
+
+remSquadra?.addEventListener("change", async () => {
+    await loadGiocatori(remGiocatore, remSquadra.value, remTorneo.value);
+});
+
+selectGiocatore?.addEventListener("change", async e => {
     const id = e.target.value;
+    if (!id) return;
 
     const res = await fetch(`/torneioldschool/api/get_giocatore.php?id=${id}`);
     const data = await res.json();
-
     if (!data) return;
 
-    document.getElementById('mod_nome').value       = data.nome;
-    document.getElementById('mod_cognome').value    = data.cognome;
-    document.getElementById('mod_ruolo').value      = data.ruolo;
-    document.getElementById('mod_squadra').value    = data.squadra;
-    document.getElementById('mod_torneo').value     = data.torneo;
-    document.getElementById('mod_presenze').value   = data.presenze;
-    document.getElementById('mod_reti').value       = data.reti;
-    document.getElementById('mod_gialli').value     = data.gialli;
-    document.getElementById('mod_rossi').value      = data.rossi;
-    document.getElementById('mod_media').value      = data.media_voti;
-    document.getElementById('mod_foto').value       = data.foto;
+    document.getElementById("mod_nome").value       = data.nome;
+    document.getElementById("mod_cognome").value    = data.cognome;
+    document.getElementById("mod_ruolo").value      = data.ruolo;
+    document.getElementById("mod_squadra").value    = data.squadra;
+    document.getElementById("mod_torneo").value     = data.torneo;
+    document.getElementById("mod_presenze").value   = data.presenze;
+    document.getElementById("mod_reti").value       = data.reti;
+    document.getElementById("mod_gialli").value     = data.gialli;
+    document.getElementById("mod_rossi").value      = data.rossi;
+    document.getElementById("mod_media").value      = data.media_voti;
+    document.getElementById("mod_foto").value       = data.foto;
 });
 </script>
 <script>

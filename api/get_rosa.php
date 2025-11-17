@@ -8,7 +8,17 @@ require_once __DIR__ . '/../includi/db.php';
 $torneo=$_GET['torneo']??''; $squadra=$_GET['squadra']??'';
 if(!$torneo || !$squadra){ echo json_encode(['error'=>'Parametri mancanti']); exit; }
 
-$sql="SELECT id, nome, cognome, ruolo, presenze, reti, gialli, rossi, media_voti, foto FROM giocatori WHERE torneo=? AND squadra=? ORDER BY cognome, nome";
+$sql = "
+    SELECT 
+        g.id, g.nome, g.cognome, g.ruolo,
+        g.presenze, g.reti, g.gialli, g.rossi, g.media_voti,
+        COALESCE(sg.foto, g.foto) AS foto
+    FROM squadre s
+    JOIN squadre_giocatori sg ON sg.squadra_id = s.id
+    JOIN giocatori g ON g.id = sg.giocatore_id
+    WHERE s.torneo = ? AND s.nome = ?
+    ORDER BY g.cognome, g.nome
+";
 $st=$conn->prepare($sql); $st->bind_param("ss",$torneo,$squadra); $st->execute(); $res=$st->get_result();
 $out=[]; while($r=$res->fetch_assoc()) $out[]=$r;
 echo json_encode($out, JSON_UNESCAPED_UNICODE);
