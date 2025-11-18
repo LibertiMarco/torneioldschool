@@ -3,13 +3,14 @@ session_start();
 require_once __DIR__ . '/includi/db.php';
 
 $error = "";
+$needsVerificationResend = null;
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = trim($_POST['email']);
     $password = trim($_POST['password']);
 
     // query di selezione
-    $sql = "SELECT id, email, nome, cognome, ruolo, password, avatar FROM utenti WHERE email = ?";
+    $sql = "SELECT id, email, nome, cognome, ruolo, password, avatar, email_verificata FROM utenti WHERE email = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -20,6 +21,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // verifica password (usa password_hash() in fase di registrazione)
         if (password_verify($password, $row['password'])) {
+            if (isset($row['email_verificata']) && (int)$row['email_verificata'] !== 1) {
+                $error = "Per accedere devi prima confermare l'indirizzo email. Controlla la tua casella di posta.";
+                $needsVerificationResend = $email;
+            } else {
             // imposta le variabili di sessione
             $_SESSION['user_id'] = $row['id'];
             $_SESSION['email'] = $row['email'];
@@ -32,6 +37,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             session_write_close();
             header("Location: tornei.php");
             exit;
+            }
         } else {
             $error = "Password errata.";
         }
@@ -52,10 +58,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     .login-container {
       display: flex;
       justify-content: center;
-      align-items: flex-start;
-      min-height: calc(100vh - 80px);
+      align-items: center;
+      min-height: calc(100vh - 160px);
       background-color: #f4f4f4;
-      padding: 30px 20px 60px;
+      padding: 30px 20px 30px;
     }
     .login-box {
       background-color: #ffffff;
@@ -145,7 +151,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <button type="submit" class="login-btn">Entra</button>
 
         <?php if ($error): ?>
-          <div class="error-message"><?= htmlspecialchars($error) ?></div>
+          <div class="error-message">
+            <?= htmlspecialchars($error) ?>
+            <?php if ($needsVerificationResend): ?>
+              <br>
+              <a href="resend_verification.php?email=<?= urlencode($needsVerificationResend) ?>" style="color:#15293e;text-decoration:underline;font-weight:bold;">Reinvia email di conferma</a>
+            <?php endif; ?>
+          </div>
         <?php endif; ?>
       </form>
 

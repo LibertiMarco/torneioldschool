@@ -1,9 +1,28 @@
 <?php
 session_start();
 require_once __DIR__ . '/includi/db.php';
+require_once __DIR__ . '/includi/mail_helper.php';
 
 $error = "";
+$successMessage = "";
 $avatarPath = null;
+
+function generaNomeAvatar($nome, $cognome, $estensione, $uploadDir) {
+    $nomeSan = preg_replace('/[^A-Za-z0-9]/', '', ucwords(strtolower($nome)));
+    $cognomeSan = preg_replace('/[^A-Za-z0-9]/', '', ucwords(strtolower($cognome)));
+    $base = $nomeSan . $cognomeSan;
+    if ($base === '') {
+        $base = 'avatar';
+    }
+
+    $filename = $base . '.' . $estensione;
+    $counter = 2;
+    while (file_exists($uploadDir . '/' . $filename)) {
+        $filename = $base . $counter . '.' . $estensione;
+        $counter++;
+    }
+    return $filename;
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nome = trim($_POST['nome']);
@@ -58,7 +77,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 if (!is_dir($uploadDir)) {
                                     mkdir($uploadDir, 0775, true);
                                 }
-                                $filename = uniqid('avatar_', true) . '.' . $allowed[$mime];
+                                $estensione = $allowed[$mime];
+                                $filename = generaNomeAvatar($nome, $cognome, $estensione, $uploadDir);
                                 $destination = $uploadDir . '/' . $filename;
 
                                 if (move_uploaded_file($_FILES['avatar']['tmp_name'], $destination)) {
@@ -74,19 +94,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }
 
                 if (!$error) {
-                    // Crittografia password
-                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    try {
+                        $tokenVerifica = bin2hex(random_bytes(32));
+                    } catch (Exception $e) {
+                        $error = "Errore tecnico nella generazione del token. Riprova più tardi.";
+                    }
+                }
 
-                    // Inserimento con ruolo "utente"
+                if (!$error) {
+                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                     $ruolo = 'utente';
-                    $sql = "INSERT INTO utenti (nome, cognome, email, password, ruolo, avatar) VALUES (?, ?, ?, ?, ?, ?)";
+                    $tokenScadenza = (new DateTime('+1 day'))->format('Y-m-d H:i:s');
+
+                    $sql = "INSERT INTO utenti (nome, cognome, email, password, ruolo, avatar, token_verifica, token_verifica_scadenza)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                     $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("ssssss", $nome, $cognome, $email, $hashed_password, $ruolo, $avatarPath);
+                    $stmt->bind_param("ssssssss", $nome, $cognome, $email, $hashed_password, $ruolo, $avatarPath, $tokenVerifica, $tokenScadenza);
 
                     if ($stmt->execute()) {
-                        // Redirect diretto alla login
-                        header("Location: login.php");
-                        exit;
+                        if (inviaEmailVerifica($email, $nome, $tokenVerifica)) {
+                            $successMessage = "Registrazione completata! Ti abbiamo inviato una email di conferma a {$email}.";
+                        } else {
+                            $successMessage = "Registrazione riuscita, ma non è stato possibile inviare l'email di conferma. Contattaci per ricevere assistenza.";
+                        }
+                        $_POST = [];
                     } else {
                         $error = "Errore durante la registrazione. Riprova.";
                     }
@@ -105,22 +136,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   <title>Registrati - Tornei Old School</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    .register-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
+    .register-page {
       background-color: #f4f4f4;
-      padding: 20px;
+      padding: 24px 20px;
+    }
+    .register-container {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 0;
+      min-height: auto;
+      background: transparent;
+      display: block;
     }
     .register-box {
       background-color: #ffffff;
-      padding: 40px 50px;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      padding: 48px 56px;
+      border-radius: 18px;
+      box-shadow: 0 35px 70px rgba(15,23,42,0.12);
       text-align: center;
-      max-width: 450px;
+      max-width: 500px;
       width: 100%;
+      border: 1px solid rgba(21,41,62,0.08);
     }
     .register-box h2 {
       color: #15293e;
@@ -171,6 +208,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       margin-top: 10px;
       font-weight: 500;
     }
+    .success-message {
+      margin-top: 20px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      background: #e6f6ed;
+      color: #0b5d2c;
+      font-weight: 600;
+      border: 1px solid #b8e4c7;
+      text-align: left;
+    }
     .register-footer {
       margin-top: 20px;
       font-size: 0.9rem;
@@ -184,6 +231,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     .register-footer a:hover {
       text-decoration: underline;
     }
+    .file-upload {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding: 12px 16px;
+      border: 1px dashed #bfc7d4;
+      border-radius: 10px;
+      background: #f7f9fc;
+    }
+    .file-upload input[type="file"] {
+      display: none;
+    }
+    .file-upload .file-btn {
+      background: #15293e;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .file-upload .file-btn:hover {
+      background: #0e1d2e;
+      transform: translateY(-1px);
+    }
+    .file-upload .file-name {
+      font-size: 0.9rem;
+      color: #5f6b7b;
+    }
     #passwordMessage, #confirmMessage {
       font-size: 0.9rem;
       display: block;
@@ -194,15 +275,52 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       font-size: 18px;
       margin-right: 5px;
     }
+    .password-field {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .password-field input {
+      padding-right: 42px;
+    }
+    .toggle-password {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      font-size: 0;
+    }
+    .toggle-password:focus {
+      outline: none;
+    }
+    .toggle-password::after {
+      content: "👁️";
+      font-size: 1.1rem;
+      color: #5c667a;
+      display: inline-block;
+      line-height: 1;
+    }
+    .toggle-password.visible::after {
+      content: "🙈";
+    }
   </style>
 </head>
 <body>
   <div id="header-container"></div>
-  <br><br><br>
 
-  <div class="register-container">
-    <div class="register-box">
+  <main class="register-page">
+    <div class="register-container">
+      <div class="register-box">
       <h2>Registrati</h2>
+      <?php if ($successMessage): ?>
+        <div class="success-message"><?= htmlspecialchars($successMessage) ?></div>
+      <?php endif; ?>
       <form class="register-form" method="POST" action="" enctype="multipart/form-data">
         <label for="nome">Nome</label>
         <input type="text" id="nome" name="nome" required>
@@ -214,7 +332,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <input type="email" id="email" name="email" required>
 
         <label for="password">Password</label>
-        <input type="password" id="password" name="password" required>
+        <div class="password-field">
+          <input type="password" id="password" name="password" required>
+          <button type="button" class="toggle-password" data-target="password" data-visible="false" aria-label="Mostra password"></button>
+        </div>
 
         <div style="display: flex; align-items: center; margin-top: 5px;">
           <span id="passwordCheck"></span>
@@ -224,17 +345,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
 
         <label for="confirm_password">Conferma Password</label>
-        <input type="password" id="confirm_password" name="confirm_password" required>
+        <div class="password-field">
+          <input type="password" id="confirm_password" name="confirm_password" required>
+          <button type="button" class="toggle-password" data-target="confirm_password" data-visible="false" aria-label="Mostra conferma password"></button>
+        </div>
 
-        <label for="avatar">Foto profilo (opzionale)</label>
-        <input type="file" id="avatar" name="avatar" accept="image/*">
-        <small style="color:#666;">File JPG, PNG, GIF o WEBP - max 2MB.</small>
-
-        <!-- Controllo conferma password -->
         <div style="display: flex; align-items: center; margin-top: 5px;">
           <span id="confirmCheck"></span>
-          <small id="confirmMessage" style="color: red;"></small>
+          <small id="confirmMessage" style="color: red;">Le password devono coincidere.</small>
         </div>
+
+        <label for="avatar">Foto profilo (opzionale)</label>
+        <div class="file-upload">
+          <input type="file" id="avatar" name="avatar" accept="image/*">
+          <label for="avatar" class="file-btn">
+            <span>📸</span> Scegli foto
+          </label>
+          <span class="file-name" id="avatarName">Nessun file selezionato</span>
+        </div>
+        <small style="color:#666;">File JPG, PNG, GIF o WEBP - max 2MB.</small>
 
         <button type="submit" class="register-btn">Crea Account</button>
 
@@ -243,78 +372,106 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <?php endif; ?>
       </form>
 
-      <div class="register-footer">
-        <p>Hai già un account? <a href="login.php">Accedi</a></p>
+        <div class="register-footer">
+          <p>Hai già un account? <a href="login.php">Accedi</a></p>
+        </div>
       </div>
     </div>
-  </div>
+  </main>
 
   <div id="footer-container"></div>
 
   <script src="/torneioldschool/includi/header-interactions.js"></script>
   <script>
-    // FOOTER e HEADER
-    fetch("/torneioldschool/includi/footer.html")
-      .then(r => r.text())
-      .then(html => document.getElementById("footer-container").innerHTML = html);
-    fetch("/torneioldschool/includi/header.php")
-      .then(r => r.text())
-      .then(html => {
-        document.getElementById("header-container").innerHTML = html;
-        initHeaderInteractions();
-        const header = document.querySelector(".site-header");
-        window.addEventListener("scroll", () => {
-          header?.classList.toggle("scrolled", window.scrollY > 50);
+    document.addEventListener('DOMContentLoaded', () => {
+      fetch("/torneioldschool/includi/footer.html")
+        .then(r => r.text())
+        .then(html => document.getElementById("footer-container").innerHTML = html);
+      fetch("/torneioldschool/includi/header.php")
+        .then(r => r.text())
+        .then(html => {
+          document.getElementById("header-container").innerHTML = html;
+          if (typeof initHeaderInteractions === 'function') {
+            initHeaderInteractions();
+          }
+        });
+
+      const avatarInput = document.getElementById('avatar');
+      const avatarName = document.getElementById('avatarName');
+      if (avatarInput && avatarName) {
+        avatarInput.addEventListener('change', () => {
+          const file = avatarInput.files && avatarInput.files[0] ? avatarInput.files[0] : null;
+          avatarName.textContent = file ? file.name : 'Nessun file selezionato';
+        });
+      }
+
+      document.querySelectorAll('.toggle-password').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const targetId = btn.getAttribute('data-target');
+          const target = document.getElementById(targetId);
+          if (!target) return;
+
+          const currentlyVisible = btn.classList.contains('visible');
+          target.type = currentlyVisible ? 'password' : 'text';
+          btn.classList.toggle('visible', !currentlyVisible);
+          btn.setAttribute('data-visible', currentlyVisible ? 'false' : 'true');
+          btn.setAttribute('aria-label', currentlyVisible ? 'Mostra password' : 'Nascondi password');
         });
       });
 
-    // ✅ Controllo forza password
-    const passwordInput = document.getElementById('password');
-    const passwordMessage = document.getElementById('passwordMessage');
-    const passwordCheck = document.getElementById('passwordCheck');
+      const passwordInput = document.getElementById('password');
+      const passwordMessage = document.getElementById('passwordMessage');
+      const passwordCheck = document.getElementById('passwordCheck');
+      const confirmInput = document.getElementById('confirm_password');
+      const confirmMessage = document.getElementById('confirmMessage');
+      const confirmCheck = document.getElementById('confirmCheck');
 
-    passwordInput.addEventListener('input', function() {
-      const password = passwordInput.value;
-      const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+      if (passwordInput && passwordMessage && passwordCheck) {
+        passwordInput.addEventListener('input', () => {
+          const password = passwordInput.value;
+          const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
 
-      if (regex.test(password)) {
-        passwordMessage.style.color = 'green';
-        passwordCheck.textContent = '✓';
-        passwordCheck.style.color = 'green';
-      } else {
-        passwordMessage.style.color = 'red';
-        passwordCheck.textContent = '✗';
-        passwordCheck.style.color = 'red';
+          if (regex.test(password)) {
+            passwordMessage.style.color = 'green';
+            passwordCheck.textContent = '✓';
+            passwordCheck.style.color = 'green';
+          } else {
+            passwordMessage.style.color = 'red';
+            passwordCheck.textContent = '✗';
+            passwordCheck.style.color = 'red';
+          }
+        });
+      }
+
+      function checkConfirmPassword() {
+        if (!passwordInput || !confirmInput || !confirmMessage || !confirmCheck) {
+          return;
+        }
+        if (confirmInput.value === '') {
+          confirmCheck.textContent = '';
+          confirmMessage.textContent = '';
+          return;
+        }
+        if (confirmInput.value === passwordInput.value) {
+          confirmMessage.style.color = 'green';
+          confirmMessage.textContent = 'Le password coincidono.';
+          confirmCheck.textContent = '✓';
+          confirmCheck.style.color = 'green';
+        } else {
+          confirmMessage.style.color = 'red';
+          confirmMessage.textContent = 'Le password non coincidono.';
+          confirmCheck.textContent = '✗';
+          confirmCheck.style.color = 'red';
+        }
+      }
+
+      if (passwordInput) {
+        passwordInput.addEventListener('input', checkConfirmPassword);
+      }
+      if (confirmInput) {
+        confirmInput.addEventListener('input', checkConfirmPassword);
       }
     });
-
-    // ✅ Controllo conferma password
-    const confirmInput = document.getElementById('confirm_password');
-    const confirmMessage = document.getElementById('confirmMessage');
-    const confirmCheck = document.getElementById('confirmCheck');
-
-    function checkConfirmPassword() {
-      if (confirmInput.value === '') {
-        confirmCheck.textContent = '';
-        confirmMessage.textContent = '';
-        return;
-      }
-
-      if (confirmInput.value === passwordInput.value) {
-        confirmMessage.style.color = 'green';
-        confirmMessage.textContent = 'Le password coincidono.';
-        confirmCheck.textContent = '✓';
-        confirmCheck.style.color = 'green';
-      } else {
-        confirmMessage.style.color = 'red';
-        confirmMessage.textContent = 'Le password non coincidono.';
-        confirmCheck.textContent = '✗';
-        confirmCheck.style.color = 'red';
-      }
-    }
-
-    passwordInput.addEventListener('input', checkConfirmPassword);
-    confirmInput.addEventListener('input', checkConfirmPassword);
   </script>
 </body>
 </html>
