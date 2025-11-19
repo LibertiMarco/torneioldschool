@@ -376,9 +376,7 @@ $lista = $torneo->getAll();
                                 <td><?= htmlspecialchars($row['stato']) ?></td>
                                 <td><?= htmlspecialchars($row['categoria']) ?></td>
                                 <td>
-                                    <a href="?elimina=<?= $row['id'] ?>" class="btn-danger" onclick="return confirm('Eliminare questo torneo?')">
-                                        Elimina
-                                    </a>
+                                      <a href="#" class="btn-danger delete-btn" data-id="<?= $row['id'] ?>" data-label="<?= htmlspecialchars($row['nome']) ?>" data-type="torneo">Elimina</a>
                                 </td>
                             </tr>
                         <?php endwhile; ?>
@@ -387,10 +385,12 @@ $lista = $torneo->getAll();
             </section>
 
 
-        </section>
-    </main>
+      </section>
+  </main>
 
-    <div id="footer-container"></div>
+  <div id="footer-container"></div>
+
+  <?php include __DIR__ . '/../includi/delete_modal.php'; ?>
 
     <script>
         const selectAzione = document.getElementById('azione');
@@ -533,6 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     .catch(err => console.error('Errore caricamento footer:', err));
 });
 </script>
+<script src="/torneioldschool/includi/delete-modal.js"></script>
 
 </body>
 </html>

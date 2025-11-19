@@ -293,18 +293,20 @@ $lista = $squadra->getAll();
               <tr>
                 <td data-label="Nome"><?= htmlspecialchars($row['nome']) ?></td>
                 <td data-label="Torneo"><?= htmlspecialchars($row['torneo']) ?></td>
-                <td data-label="Azioni">
-                  <a href="?elimina=<?= $row['id'] ?>" class="btn-danger" onclick="return confirm('Eliminare questa squadra?')">Elimina</a>
-                </td>
+                  <td data-label="Azioni">
+                    <a href="#" class="btn-danger delete-btn" data-id="<?= $row['id'] ?>" data-label="<?= htmlspecialchars($row['nome']) ?>" data-type="squadra">Elimina</a>
+                  </td>
               </tr>
             <?php endwhile; ?>
           </tbody>
         </table>
       </section>
     </section>
-  </main>
+    </main>
 
-  <div id="footer-container"></div>
+    <div id="footer-container"></div>
+
+    <?php include __DIR__ . '/../includi/delete_modal.php'; ?>
 
   <!-- SCRIPT SWITCH SEZIONI -->
   <script>
@@ -445,11 +447,11 @@ $lista = $squadra->getAll();
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      document.querySelectorAll('.file-upload').forEach(wrapper => {
-        const input = wrapper.querySelector('input[type="file"]');
-        const button = wrapper.querySelector('.file-btn');
-        const nameLabel = wrapper.querySelector('.file-name');
-        if (button && input) {
+  document.querySelectorAll('.file-upload').forEach(wrapper => {
+    const input = wrapper.querySelector('input[type="file"]');
+    const button = wrapper.querySelector('.file-btn');
+    const nameLabel = wrapper.querySelector('.file-name');
+    if (button && input) {
           button.addEventListener('click', (e) => {
             e.preventDefault();
             input.click();
@@ -461,9 +463,10 @@ $lista = $squadra->getAll();
             nameLabel.textContent = file ? file.name : 'Nessun file selezionato';
           });
         }
-      });
     });
-  </script>
+  });
+</script>
+  <script src="/torneioldschool/includi/delete-modal.js"></script>
 
 </body>
 </html>

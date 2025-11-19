@@ -353,9 +353,9 @@ $lista = $utente->getAll();
                   <td><?= htmlspecialchars($row['cognome']) ?></td>
                   <td><?= htmlspecialchars($row['email']) ?></td>
                   <td><?= htmlspecialchars($row['ruolo']) ?></td>
-                  <td>
-                    <a href="?elimina=<?= $row['id'] ?>" class="btn-danger" onclick="return confirm('Eliminare questo utente?')">Elimina</a>
-                  </td>
+                    <td>
+                      <a href="#" class="btn-danger delete-btn" data-id="<?= $row['id'] ?>" data-label="<?= htmlspecialchars($row['nome'] . ' ' . $row['cognome']) ?>" data-type="utente">Elimina</a>
+                    </td>
                 </tr>
               <?php endwhile; ?>
             </tbody>
@@ -364,12 +364,14 @@ $lista = $utente->getAll();
       </section>
 
     </section>
-  </main>
+    </main>
 
-  <div id="footer-container"></div>
+    <div id="footer-container"></div>
 
-  <!-- SCRIPT SWITCH SEZIONI -->
-  <script>
+    <?php include __DIR__ . '/../includi/delete_modal.php'; ?>
+
+    <!-- SCRIPT SWITCH SEZIONI -->
+    <script>
     const selectAzione = document.getElementById('azione');
     const formCrea = document.querySelector('.form-crea');
     const formModifica = document.querySelector('.form-modifica');
@@ -549,11 +551,12 @@ $lista = $utente->getAll();
     document.addEventListener('DOMContentLoaded', () => {
       const footerContainer = document.getElementById('footer-container');
       if (!footerContainer) return;
-      fetch('/torneioldschool/includi/footer.html')
-        .then(response => response.text())
-        .then(html => footerContainer.innerHTML = html)
-        .catch(err => console.error('Errore nel caricamento del footer:', err));
-    });
-  </script>
+  fetch('/torneioldschool/includi/footer.html')
+    .then(response => response.text())
+    .then(html => footerContainer.innerHTML = html)
+    .catch(err => console.error('Errore nel caricamento del footer:', err));
+});
+</script>
+<script src="/torneioldschool/includi/delete-modal.js"></script>
 </body>
 </html>

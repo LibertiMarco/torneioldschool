@@ -368,9 +368,9 @@ if (isset($_GET['elimina'])) {
           <td><?= htmlspecialchars($r['squadra_ospite']) ?></td>
           <td><?= htmlspecialchars($r['data_partita']) ?></td>
           <td><?= htmlspecialchars($r['ora_partita']) ?></td>
-          <td>
-            <a href="?elimina=<?= $r['id'] ?>" class="btn-danger" onclick="return confirm('Eliminare questa partita?')">Elimina</a>
-          </td>
+            <td>
+              <a href="#" class="btn-danger delete-btn" data-id="<?= $r['id'] ?>" data-label="<?= htmlspecialchars($r['squadra_casa'] . ' - ' . $r['squadra_ospite']) ?>" data-type="partita">Elimina</a>
+            </td>
         </tr>
         <?php endwhile; ?>
       </tbody>
@@ -468,6 +468,8 @@ if (isset($_GET['elimina'])) {
 
 </section>
 </main>
+
+<?php include __DIR__ . '/../includi/delete_modal.php'; ?>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -570,6 +572,7 @@ modP.addEventListener('change', async() => {
 
 });
 </script>
+<script src="/torneioldschool/includi/delete-modal.js"></script>
 
 </body>
 </html>

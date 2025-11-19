@@ -2676,6 +2676,65 @@ body.admin-page #footer-container .site-footer {
   margin-bottom: 40px;
 }
 
+.admin-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 12, 19, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 20px;
+}
+
+.admin-modal.hidden {
+  display: none;
+}
+
+.admin-modal__content {
+  background: #fff;
+  border-radius: 18px;
+  padding: 28px 34px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 45px rgba(21, 41, 62, 0.25);
+  text-align: center;
+}
+
+.admin-modal__content h3 {
+  margin-bottom: 10px;
+  color: #15293e;
+}
+
+.admin-modal__content p {
+  color: #4a566a;
+  margin-bottom: 24px;
+}
+
+.admin-modal__actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.admin-modal__actions .btn-secondary,
+.admin-modal__actions .btn-danger {
+  border-radius: 999px;
+  padding: 10px 22px;
+  min-width: 130px;
+}
+
+.admin-modal__actions .btn-secondary {
+  background: transparent;
+  border: 1px solid rgba(21, 41, 62, 0.2);
+  color: #15293e;
+}
+
+.admin-modal__actions .btn-secondary:hover {
+  border-color: #15293e;
+}
+
+
 /* --- FORM --- */
 .admin-form {
   display: flex;
@@ -2694,6 +2753,56 @@ body.admin-page #footer-container .site-footer {
 .admin-form .form-group {
   display: flex;
   flex-direction: column;
+}
+
+.remove-photo-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-weight: 600;
+  color: #15293e;
+}
+
+.filterable-select {
+  width: 100%;
+}
+
+.search-input.miniature {
+  width: 100%;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  padding: 8px 10px;
+}
+
+.remove-photo-flag input {
+  accent-color: #15293e;
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 600px) {
+  .remove-photo-flag {
+    font-size: 0.95rem;
+    padding: 10px 14px;
+    border: 1px solid rgba(21, 41, 62, 0.15);
+    border-radius: 12px;
+    justify-content: flex-start;
+    align-self: flex-start;
+    width: auto;
+    text-align: left;
+  }
+
+  .remove-photo-flag input {
+    width: 20px;
+    height: 20px;
+    order: 0;
+  }
+
+  .remove-photo-flag span {
+    order: 1;
+    white-space: nowrap;
+  }
 }
 
 .admin-form label {
@@ -4896,6 +5005,16 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
     #tabellaGiocatori td {
         padding: 5px 6px;
         font-size: 14px;
+    }
+}
+
+/* Desktop: tabella full width */
+@media (min-width: 769px) {
+    #tabellaGiocatori {
+        display: table;
+        width: 100%;
+        min-width: 100%;
+        white-space: normal;
     }
 }
 

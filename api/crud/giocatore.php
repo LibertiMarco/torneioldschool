@@ -117,7 +117,13 @@ class Giocatore {
         if ($squadraId) {
             $sql = "
                 SELECT g.*, s.nome AS squadra, s.torneo,
-                       COALESCE(sg.foto, g.foto) AS foto_squadra
+                       COALESCE(sg.foto, g.foto) AS foto_squadra,
+                       sg.presenze AS presenze_squadra,
+                       sg.reti AS reti_squadra,
+                       sg.assist AS assist_squadra,
+                       sg.gialli AS gialli_squadra,
+                       sg.rossi AS rossi_squadra,
+                       sg.media_voti AS media_squadra
                 FROM squadre_giocatori sg
                 JOIN giocatori g ON g.id = sg.giocatore_id
                 JOIN squadre s ON s.id = sg.squadra_id
@@ -129,7 +135,13 @@ class Giocatore {
         } else {
             $sql = "
                 SELECT g.*, s.nome AS squadra, s.torneo,
-                       COALESCE(sg.foto, g.foto) AS foto_squadra
+                       COALESCE(sg.foto, g.foto) AS foto_squadra,
+                       sg.presenze AS presenze_squadra,
+                       sg.reti AS reti_squadra,
+                       sg.assist AS assist_squadra,
+                       sg.gialli AS gialli_squadra,
+                       sg.rossi AS rossi_squadra,
+                       sg.media_voti AS media_squadra
                 FROM squadre_giocatori sg
                 JOIN giocatori g ON g.id = sg.giocatore_id
                 JOIN squadre s ON s.id = sg.squadra_id
@@ -141,6 +153,23 @@ class Giocatore {
         }
         $stmt->execute();
         return $stmt->get_result();
+    }
+
+    // �o. CHECK ESISTENZA PER NOME E COGNOME
+    public function esistePerNomeCognome($nome, $cognome) {
+        $stmt = $this->conn->prepare("
+            SELECT id
+            FROM {$this->table}
+            WHERE LOWER(nome) = LOWER(?) AND LOWER(cognome) = LOWER(?)
+            LIMIT 1
+        ");
+        $stmt->bind_param("ss", $nome, $cognome);
+        $stmt->execute();
+        $stmt->store_result();
+        $exists = $stmt->num_rows > 0;
+        $stmt->close();
+
+        return $exists;
     }
 }
 ?>

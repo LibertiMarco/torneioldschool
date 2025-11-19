@@ -24,7 +24,13 @@ while ($row = $result->fetch_assoc()) {
         "cognome" => $row["cognome"],
         "squadra" => $row["squadra"],
         "torneo" => $row["torneo"],
-        "foto" => $row["foto_squadra"] ?? $row["foto"] ?? null
+        "foto" => $row["foto_squadra"] ?? $row["foto"] ?? '/torneioldschool/img/giocatori/unknown.jpg',
+        "presenze" => (int)($row["presenze_squadra"] ?? 0),
+        "reti" => (int)($row["reti_squadra"] ?? 0),
+        "assist" => (int)($row["assist_squadra"] ?? 0),
+        "gialli" => (int)($row["gialli_squadra"] ?? 0),
+        "rossi" => (int)($row["rossi_squadra"] ?? 0),
+        "media_voti" => isset($row["media_squadra"]) ? $row["media_squadra"] : null
     ];
 }
 
