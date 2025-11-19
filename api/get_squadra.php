@@ -19,6 +19,7 @@ if (!$dati) {
 echo json_encode([
     'nome'            => $dati['nome'],
     'torneo'          => $dati['torneo'],
+    'logo'            => $dati['logo'],
     'punti'           => $dati['punti'],
     'giocate'         => $dati['giocate'],
     'vinte'           => $dati['vinte'],

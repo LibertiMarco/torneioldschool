@@ -21,7 +21,7 @@ if (empty($torneo)) {
 
 // --- QUERY CLASSIFICA ---
 $sql = "
-  SELECT nome, torneo, punti, giocate, vinte, pareggiate, perse, 
+  SELECT nome, torneo, logo, punti, giocate, vinte, pareggiate, perse, 
          gol_fatti, gol_subiti, differenza_reti
   FROM squadre
   WHERE torneo = '$torneo'

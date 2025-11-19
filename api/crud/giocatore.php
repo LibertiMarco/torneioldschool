@@ -36,22 +36,20 @@ class Giocatore {
     }
 
     // ✅ CREA GIOCATORE
-    public function crea($nome, $cognome, $ruolo, $squadra, $torneo, $presenze, $reti, $gialli, $rossi, $media_voti, $foto) {
+    public function crea($nome, $cognome, $ruolo, $presenze, $reti, $gialli, $rossi, $media_voti, $foto) {
         $stmt = $this->conn->prepare("
             INSERT INTO {$this->table}
-            (nome, cognome, ruolo, squadra, torneo, presenze, reti, gialli, rossi, media_voti, foto)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (nome, cognome, ruolo, presenze, reti, gialli, rossi, media_voti, foto)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
         $media_voti = $media_voti === '' ? null : $media_voti;
 
         $stmt->bind_param(
-            "sssssiiiids",
+            "sssiiiids",
             $nome,
             $cognome,
             $ruolo,
-            $squadra,
-            $torneo,
             $presenze,
             $reti,
             $gialli,
@@ -68,10 +66,10 @@ class Giocatore {
     }
 
     // ✅ AGGIORNA GIOCATORE
-    public function aggiorna($id, $nome, $cognome, $ruolo, $squadra, $torneo, $presenze, $reti, $gialli, $rossi, $media_voti, $foto) {
+    public function aggiorna($id, $nome, $cognome, $ruolo, $presenze, $reti, $gialli, $rossi, $media_voti, $foto) {
         $stmt = $this->conn->prepare("
             UPDATE {$this->table}
-            SET nome = ?, cognome = ?, ruolo = ?, squadra = ?, torneo = ?,
+            SET nome = ?, cognome = ?, ruolo = ?,
                 presenze = ?, reti = ?, gialli = ?, rossi = ?, media_voti = ?, foto = ?
             WHERE id = ?
         ");
@@ -79,12 +77,10 @@ class Giocatore {
         $media_voti = $media_voti === '' ? null : $media_voti;
 
         $stmt->bind_param(
-            "sssssiiiidsi",
+            "sssiiiidsi",
             $nome,
             $cognome,
             $ruolo,
-            $squadra,
-            $torneo,
             $presenze,
             $reti,
             $gialli,
@@ -103,25 +99,14 @@ class Giocatore {
         $stmt->bind_param("i", $id);
         return $stmt->execute();
     }
-
     // ✅ TORNEI ESISTENTI
     public function getTornei() {
-        $sql = "
-            SELECT torneo FROM (
-                SELECT DISTINCT torneo FROM {$this->table} WHERE torneo IS NOT NULL AND torneo <> ''
-                UNION
-                SELECT DISTINCT s.torneo
-                FROM squadre_giocatori sg
-                JOIN squadre s ON s.id = sg.squadra_id
-            ) AS tornei
-            ORDER BY torneo
-        ";
-        return $this->conn->query($sql);
+        return $this->conn->query("SELECT DISTINCT torneo FROM squadre WHERE torneo <> '' ORDER BY torneo");
     }
 
     // ✅ SQUADRE PER TORNEO
     public function getSquadre($torneo) {
-        $stmt = $this->conn->prepare("SELECT DISTINCT squadra FROM {$this->table} WHERE torneo = ? ORDER BY squadra");
+        $stmt = $this->conn->prepare("SELECT nome AS squadra FROM squadre WHERE torneo = ? ORDER BY nome");
         $stmt->bind_param("s", $torneo);
         $stmt->execute();
         return $stmt->get_result();

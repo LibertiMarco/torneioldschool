@@ -7,6 +7,16 @@ require_once __DIR__ . '/../includi/db.php';
 $torneo = $_GET['torneo'] ?? '';
 if(!$torneo){ echo json_encode(["error"=>"Parametro 'torneo' mancante."]); exit; }
 
+$logoMap = [];
+$logoStmt = $conn->prepare("SELECT nome, logo FROM squadre WHERE torneo=?");
+$logoStmt->bind_param("s", $torneo);
+$logoStmt->execute();
+$logoRes = $logoStmt->get_result();
+while ($logoRow = $logoRes->fetch_assoc()) {
+  $logoMap[$logoRow['nome']] = $logoRow['logo'];
+}
+$logoStmt->close();
+
 $q = "SELECT * FROM partite WHERE torneo=? ORDER BY giornata ASC, data_partita ASC, ora_partita ASC";
 $st=$conn->prepare($q); $st->bind_param("s",$torneo); $st->execute(); $r=$st->get_result();
 
@@ -18,6 +28,8 @@ while($row=$r->fetch_assoc()){
     "id"=>$row['id'],
     "squadra_casa"=>$row['squadra_casa'],
     "squadra_ospite"=>$row['squadra_ospite'],
+    "logo_casa"=>$logoMap[$row['squadra_casa']] ?? null,
+    "logo_ospite"=>$logoMap[$row['squadra_ospite']] ?? null,
     "gol_casa"=>$row['gol_casa'],
     "gol_ospite"=>$row['gol_ospite'],
     "data_partita"=>$row['data_partita'],

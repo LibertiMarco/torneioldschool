@@ -12,7 +12,8 @@ $sql = "
     SELECT 
         g.id, g.nome, g.cognome, g.ruolo,
         g.presenze, g.reti, g.gialli, g.rossi, g.media_voti,
-        COALESCE(sg.foto, g.foto) AS foto
+        COALESCE(sg.foto, g.foto) AS foto,
+        s.logo AS logo_squadra
     FROM squadre s
     JOIN squadre_giocatori sg ON sg.squadra_id = s.id
     JOIN giocatori g ON g.id = sg.giocatore_id

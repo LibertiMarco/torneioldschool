@@ -1,4 +1,5 @@
 <?php
+
 class Utente {
     private $conn;
     private $table = "utenti";
@@ -20,46 +21,42 @@ class Utente {
         return $stmt->get_result()->fetch_assoc();
     }
 
-    public function crea($email, $username, $password, $ruolo) {
-        // 🔹 Controlla se email o username esistono già
-        $check = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} WHERE email = ? OR username = ?");
-        $check->bind_param("ss", $email, $username);
+    public function crea($email, $nome, $cognome, $password, $ruolo) {
+        $check = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} WHERE email = ?");
+        $check->bind_param("s", $email);
         $check->execute();
         $check->bind_result($count);
         $check->fetch();
         $check->close();
-    
+
         if ($count > 0) {
-            return ['error' => 'Email o username già registrati'];
+            return ['error' => 'Email già registrata'];
         }
-    
-        // 🔹 Controlla complessità password
-        if (!preg_match('/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/', $password)) {
-            return ['error' => 'La password deve contenere almeno 8 caratteri, una maiuscola, un numero e un simbolo speciale (può includere anche il punto).'];
+
+        $pattern = '/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};\'":\\|,.<>\/?]).{8,}$/';
+        if (!preg_match($pattern, $password)) {
+            return ['error' => 'La password deve contenere almeno 8 caratteri, una maiuscola, un numero e un simbolo speciale.'];
         }
-    
-        // 🔹 Crea nuovo utente
+
         $hashed = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $this->conn->prepare("INSERT INTO {$this->table} (email, username, password, ruolo) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("ssss", $email, $username, $hashed, $ruolo);
-    
+        $stmt = $this->conn->prepare("INSERT INTO {$this->table} (nome, cognome, email, password, ruolo) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssss", $nome, $cognome, $email, $hashed, $ruolo);
+
         if ($stmt->execute()) {
             return ['success' => true];
-        } else {
-            return ['error' => 'Errore durante la creazione dell’utente'];
         }
+
+        return ['error' => 'Errore durante la creazione dell’utente'];
     }
 
-
-
-    public function aggiorna($id, $email, $username, $password, $ruolo) {
-        if ($password) {
+    public function aggiorna($id, $email, $nome, $cognome, $password, $ruolo) {
+        if (!empty($password)) {
             $hashed = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $this->conn->prepare("UPDATE {$this->table} SET email=?, username=?, password=?, ruolo=? WHERE id=?");
-            $stmt->bind_param("ssssi", $email, $username, $hashed, $ruolo, $id);
+            $stmt = $this->conn->prepare("UPDATE {$this->table} SET email=?, nome=?, cognome=?, password=?, ruolo=? WHERE id=?");
+            $stmt->bind_param("sssssi", $email, $nome, $cognome, $hashed, $ruolo, $id);
         } else {
-            $stmt = $this->conn->prepare("UPDATE {$this->table} SET email=?, username=?, ruolo=? WHERE id=?");
-            $stmt->bind_param("sssi", $email, $username, $ruolo, $id);
+            $stmt = $this->conn->prepare("UPDATE {$this->table} SET email=?, nome=?, cognome=?, ruolo=? WHERE id=?");
+            $stmt->bind_param("ssssi", $email, $nome, $cognome, $ruolo, $id);
         }
         return $stmt->execute();
     }
@@ -70,4 +67,5 @@ class Utente {
         return $stmt->execute();
     }
 }
+
 ?>

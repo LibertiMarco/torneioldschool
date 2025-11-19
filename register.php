@@ -103,7 +103,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 if (!$error) {
                     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                    $ruolo = 'utente';
+                    $ruolo = 'user';
                     $tokenScadenza = (new DateTime('+1 day'))->format('Y-m-d H:i:s');
 
                     $sql = "INSERT INTO utenti (nome, cognome, email, password, ruolo, avatar, token_verifica, token_verifica_scadenza)
@@ -285,29 +285,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
     .toggle-password {
       position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
+      right: 12px;
+      background: none;
       border: none;
-      background: transparent;
       cursor: pointer;
-      width: 32px;
-      height: 32px;
       padding: 0;
-      font-size: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #555;
     }
-    .toggle-password:focus {
-      outline: none;
+    .toggle-password:focus-visible {
+      outline: 2px solid #15293e;
+      outline-offset: 2px;
     }
-    .toggle-password::after {
-      content: "👁️";
-      font-size: 1.1rem;
-      color: #5c667a;
-      display: inline-block;
-      line-height: 1;
+    .toggle-password svg {
+      width: 22px;
+      height: 22px;
     }
-    .toggle-password.visible::after {
-      content: "🙈";
+    .toggle-password .icon-eye-off {
+      display: none;
+    }
+    .toggle-password.is-visible .icon-eye {
+      display: none;
+    }
+    .toggle-password.is-visible .icon-eye-off {
+      display: block;
     }
   </style>
 </head>
@@ -334,7 +338,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <label for="password">Password</label>
         <div class="password-field">
           <input type="password" id="password" name="password" required>
-          <button type="button" class="toggle-password" data-target="password" data-visible="false" aria-label="Mostra password"></button>
+          <button type="button" class="toggle-password" data-target="password" aria-label="Mostra password">
+            <svg class="icon-eye" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M12 5c-5 0-9 4.5-10 7 1 2.5 5 7 10 7s9-4.5 10-7c-1-2.5-5-7-10-7zm0 12c-2.7 0-5-2.3-5-5s2.3-5 5-5 5 2.3 5 5-2.3 5-5 5zm0-8a3 3 0 100 6 3 3 0 000-6z"/>
+            </svg>
+            <svg class="icon-eye-off" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M2.3 3.7l2 2A12.7 12.7 0 002 12c1 2.5 5 7 10 7 1.7 0 3.3-.5 4.8-1.4l2.2 2.2 1.4-1.4-17-17-1.3 1.3zm7.1 7.1l1.9 1.9a1 1 0 01-1.9-1.9zm3.5 3.5l1.9 1.9a3 3 0 01-3.8-3.8l1.9 1.9zm8.8-.3c.5-.8.8-1.5.8-2.1-1-2.5-5-7-10-7-1.2 0-2.5.3-3.6.8l1.6 1.6a6 6 0 017.4 7.4l1.5 1.5a13.5 13.5 0 002.3-2.2z"/>
+            </svg>
+          </button>
         </div>
 
         <div style="display: flex; align-items: center; margin-top: 5px;">
@@ -347,7 +358,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <label for="confirm_password">Conferma Password</label>
         <div class="password-field">
           <input type="password" id="confirm_password" name="confirm_password" required>
-          <button type="button" class="toggle-password" data-target="confirm_password" data-visible="false" aria-label="Mostra conferma password"></button>
+          <button type="button" class="toggle-password" data-target="confirm_password" aria-label="Mostra conferma password">
+            <svg class="icon-eye" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M12 5c-5 0-9 4.5-10 7 1 2.5 5 7 10 7s9-4.5 10-7c-1-2.5-5-7-10-7zm0 12c-2.7 0-5-2.3-5-5s2.3-5 5-5 5 2.3 5 5-2.3 5-5 5zm0-8a3 3 0 100 6 3 3 0 000-6z"/>
+            </svg>
+            <svg class="icon-eye-off" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M2.3 3.7l2 2A12.7 12.7 0 002 12c1 2.5 5 7 10 7 1.7 0 3.3-.5 4.8-1.4l2.2 2.2 1.4-1.4-17-17-1.3 1.3zm7.1 7.1l1.9 1.9a1 1 0 01-1.9-1.9zm3.5 3.5l1.9 1.9a3 3 0 01-3.8-3.8l1.9 1.9zm8.8-.3c.5-.8.8-1.5.8-2.1-1-2.5-5-7-10-7-1.2 0-2.5.3-3.6.8l1.6 1.6a6 6 0 017.4 7.4l1.5 1.5a13.5 13.5 0 002.3-2.2z"/>
+            </svg>
+          </button>
         </div>
 
         <div style="display: flex; align-items: center; margin-top: 5px;">
@@ -411,11 +429,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           const target = document.getElementById(targetId);
           if (!target) return;
 
-          const currentlyVisible = btn.classList.contains('visible');
-          target.type = currentlyVisible ? 'password' : 'text';
-          btn.classList.toggle('visible', !currentlyVisible);
-          btn.setAttribute('data-visible', currentlyVisible ? 'false' : 'true');
-          btn.setAttribute('aria-label', currentlyVisible ? 'Mostra password' : 'Nascondi password');
+          const shouldShow = target.type === 'password';
+          target.type = shouldShow ? 'text' : 'password';
+          btn.classList.toggle('is-visible', shouldShow);
+          const labelBase = btn.getAttribute('aria-label')?.includes('conferma') ? 'conferma password' : 'password';
+          btn.setAttribute('aria-label', shouldShow ? `Nascondi ${labelBase}` : `Mostra ${labelBase}`);
         });
       });
 
@@ -475,3 +493,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   </script>
 </body>
 </html>
+
+

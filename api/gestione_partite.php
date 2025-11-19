@@ -149,6 +149,7 @@ if (isset($_GET['elimina'])) {
 
 <main class="admin-wrapper">
 <section class="admin-container">
+<a class="admin-back-link" href="/torneioldschool/admin_dashboard.php">Torna alla dashboard</a>
 <h1 class="admin-title">Gestione Partite</h1>
 
 <?php if ($errore): ?>

@@ -15,7 +15,7 @@ if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
     <link rel="stylesheet" href="/torneioldschool/style.css">
     <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
 </head>
-<body>
+<body class="admin-page">
     <?php include __DIR__ . '/includi/header.php'; ?>
 
     <main class="admin-dashboard">
@@ -53,13 +53,24 @@ if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
             </div>
         </div>
 
-        <form action="logout.php" method="post">
-            <button class="logout-btn" type="submit">Esci dal pannello</button>
-        </form><br><br>
+        <a class="logout-btn" href="index.php">Esci dal pannello</a>
     </main>
+    <div id="footer-container"></div>
     <script src="/torneioldschool/includi/header-interactions.js"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", initHeaderInteractions);
+      document.addEventListener("DOMContentLoaded", () => {
+        fetch("/torneioldschool/includi/footer.html")
+          .then(r => r.text())
+          .then(html => {
+            const footer = document.getElementById("footer-container");
+            if (footer) footer.innerHTML = html;
+          })
+          .catch(err => console.error("Errore nel caricamento del footer:", err));
+
+        if (typeof initHeaderInteractions === "function") {
+          initHeaderInteractions();
+        }
+      });
     </script>
 </body>
 </html>

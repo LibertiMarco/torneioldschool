@@ -134,6 +134,45 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     .login-footer a:hover {
       text-decoration: underline;
     }
+    .password-field {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .password-field input {
+      padding-right: 40px;
+    }
+    .toggle-password {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #555;
+      font-size: 0.95rem;
+    }
+    .toggle-password:focus-visible {
+      outline: 2px solid #15293e;
+      outline-offset: 2px;
+    }
+    .toggle-password svg {
+      width: 22px;
+      height: 22px;
+    }
+    .toggle-password .icon-eye-off {
+      display: none;
+    }
+    .toggle-password.is-visible .icon-eye {
+      display: none;
+    }
+    .toggle-password.is-visible .icon-eye-off {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -146,7 +185,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <input type="email" id="email" name="email" required>
 
         <label for="password">Password</label>
-        <input type="password" id="password" name="password" required>
+        <div class="password-field">
+          <input type="password" id="password" name="password" required>
+          <button type="button" class="toggle-password" aria-label="Mostra password" id="togglePassword">
+            <svg class="icon-eye" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M12 5c-5 0-9 4.5-10 7 1 2.5 5 7 10 7s9-4.5 10-7c-1-2.5-5-7-10-7zm0 12c-2.7 0-5-2.3-5-5s2.3-5 5-5 5 2.3 5 5-2.3 5-5 5zm0-8a3 3 0 100 6 3 3 0 000-6z"/>
+            </svg>
+            <svg class="icon-eye-off" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M2.3 3.7l2 2A12.7 12.7 0 002 12c1 2.5 5 7 10 7 1.7 0 3.3-.5 4.8-1.4l2.2 2.2 1.4-1.4-17-17-1.3 1.3zm7.1 7.1l1.9 1.9a1 1 0 01-1.9-1.9zm3.5 3.5l1.9 1.9a3 3 0 01-3.8-3.8l1.9 1.9zm8.8-.3c.5-.8.8-1.5.8-2.1-1-2.5-5-7-10-7-1.2 0-2.5.3-3.6.8l1.6 1.6a6 6 0 017.4 7.4l1.5 1.5a13.5 13.5 0 002.3-2.2z"/>
+            </svg>
+          </button>
+        </div>
 
         <button type="submit" class="login-btn">Entra</button>
 
@@ -186,6 +235,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           header?.classList.toggle("scrolled", window.scrollY > 50);
         });
       });
+
+    // Toggle password visibility
+    (function () {
+      const passwordInput = document.getElementById("password");
+      const toggleButton = document.getElementById("togglePassword");
+      if (!passwordInput || !toggleButton) return;
+
+      toggleButton.addEventListener("click", () => {
+        const isHidden = passwordInput.type === "password";
+        passwordInput.type = isHidden ? "text" : "password";
+        toggleButton.classList.toggle("is-visible", isHidden);
+        toggleButton.setAttribute("aria-label", isHidden ? "Nascondi password" : "Mostra password");
+      });
+    })();
   </script>
 </body>
 </html>

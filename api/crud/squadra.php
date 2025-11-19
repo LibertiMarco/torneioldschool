@@ -19,18 +19,31 @@ class squadra {
         return $stmt->get_result()->fetch_assoc();
     }
 
-    public function crea($nome, $torneo) {
-        $stmt = $this->conn->prepare("INSERT INTO {$this->table} (nome, torneo) VALUES (?, ?)");
-        $stmt->bind_param("ss", $nome, $torneo);
+    public function crea($nome, $torneo, $logo = null) {
+        $stmt = $this->conn->prepare("INSERT INTO {$this->table} (nome, torneo, logo) VALUES (?, ?, ?)");
+        $stmt->bind_param("sss", $nome, $torneo, $logo);
         return $stmt->execute();
     }
 
-    public function aggiorna($id, $nome, $torneo, $punti, $giocate, $vinte, $pareggiate, $perse, $gol_fatti, $gol_subiti, $differenza_reti) {
+    public function aggiorna($id, $nome, $torneo, $punti, $giocate, $vinte, $pareggiate, $perse, $gol_fatti, $gol_subiti, $differenza_reti, $logo = null) {
+        $fields = "nome=?, torneo=?, punti=?, giocate=?, vinte=?, pareggiate=?, perse=?, gol_fatti=?, gol_subiti=?, differenza_reti=?";
+        $types = "ssiiiiiiii";
+        $params = [$nome, $torneo, $punti, $giocate, $vinte, $pareggiate, $perse, $gol_fatti, $gol_subiti, $differenza_reti];
+
+        if ($logo !== null) {
+            $fields = "nome=?, torneo=?, logo=?, punti=?, giocate=?, vinte=?, pareggiate=?, perse=?, gol_fatti=?, gol_subiti=?, differenza_reti=?";
+            $types = "sssiiiiiiii";
+            array_splice($params, 2, 0, $logo);
+        }
+
+        $params[] = $id;
+
         $stmt = $this->conn->prepare("
             UPDATE {$this->table}
-            SET nome=?, torneo=?, punti=?, giocate=?, vinte=?, pareggiate=?, perse=?, gol_fatti=?, gol_subiti=?, differenza_reti=?
-            WHERE id=?");
-        $stmt->bind_param("ssiiiiiiiii", $nome, $torneo, $punti, $giocate, $vinte, $pareggiate, $perse, $gol_fatti, $gol_subiti, $differenza_reti, $id);
+            SET $fields
+            WHERE id=?
+        ");
+        $stmt->bind_param($types . "i", ...$params);
         return $stmt->execute();
     }
 
@@ -41,22 +54,30 @@ class squadra {
     }
 
     public function getByTorneo($torneo) {
-    $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE torneo = ?");
-    $stmt->bind_param("s", $torneo);
-    $stmt->execute();
-    return $stmt->get_result();
-}
+        $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE torneo = ?");
+        $stmt->bind_param("s", $torneo);
+        $stmt->execute();
+        return $stmt->get_result();
+    }
 
-public function getTornei() {
-    return $this->conn->query("SELECT DISTINCT torneo FROM {$this->table} ORDER BY torneo ASC");
-}
+    public function getTornei() {
+        return $this->conn->query("SELECT DISTINCT torneo FROM {$this->table} ORDER BY torneo ASC");
+    }
 
-public function getByNomeETorneo($nome, $torneo) {
-    $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE nome = ? AND torneo = ? LIMIT 1");
-    $stmt->bind_param("ss", $nome, $torneo);
-    $stmt->execute();
-    return $stmt->get_result()->fetch_assoc();
-}
+    public function getByNomeETorneo($nome, $torneo) {
+        $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE nome = ? AND torneo = ? LIMIT 1");
+        $stmt->bind_param("ss", $nome, $torneo);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_assoc();
+    }
 
+    public function eliminaByTorneo($torneo) {
+        if ($torneo === '') {
+            return;
+        }
+        $stmt = $this->conn->prepare("DELETE FROM {$this->table} WHERE torneo = ?");
+        $stmt->bind_param("s", $torneo);
+        $stmt->execute();
+    }
 }
 ?>

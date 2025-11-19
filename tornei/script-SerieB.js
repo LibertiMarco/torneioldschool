@@ -1,4 +1,4 @@
-const TORNEO = "SerieA"; // Nome base del torneo nel DB (fase girone)
+const TORNEO = "SerieB"; // Nome base del torneo nel DB (fase girone)
 const teamLogos = {};
 
 function normalizeLogoName(name = "") {
@@ -193,7 +193,7 @@ async function caricaCalendario(giornataSelezionata = "") {
         const golOspite = partita.giocata == 1 ? partita.gol_ospite : null;
         const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
         const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
-
+      
         partitaDiv.innerHTML = `
           <div class="match-header">
             <span>
@@ -295,7 +295,6 @@ async function caricaPlayoff(tipoCoppa) {
         const giocata = partita.giocata == 1;
         const golCasa = giocata ? partita.gol_casa : null;
         const golOspite = giocata ? partita.gol_ospite : null;
-
         const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
         const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
 
@@ -483,23 +482,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const coppaSelect = document.getElementById("coppaSelect");
   const classificaWrapper = document.getElementById("classificaWrapper");
   const playoffContainer = document.getElementById("playoffContainer");
-  const heroImg = document.getElementById("torneoHeroImg");
-  const torneoTitle = document.querySelector(".torneo-title .titolo");
 
   // carico subito la parte girone
   caricaClassifica();
   caricaCalendario();
   caricaSquadrePerRosa();
-  if (heroImg) {
-    fetch(`/torneioldschool/api/get_torneo_by_slug.php?slug=${encodeURIComponent(TORNEO)}`)
-      .then(res => res.json())
-      .then(data => {
-        if (!data || data.error) return;
-        heroImg.src = data.img || "/torneioldschool/img/tornei/pallone.png";
-        if (torneoTitle && data.nome) torneoTitle.textContent = data.nome;
-      })
-      .catch(err => console.error("Errore recupero info torneo:", err));
-  }
 
   // filtro calendario giornate
   const giornataSelect = document.getElementById("giornataSelect");

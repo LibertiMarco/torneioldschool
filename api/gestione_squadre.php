@@ -6,13 +6,77 @@ if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
 }
 
 require_once __DIR__ . '/crud/Squadra.php';
+require_once __DIR__ . '/crud/Torneo.php';
 $squadra = new Squadra();
+$torneoModel = new Torneo();
+
+function sanitizeTorneoSlugValue($value) {
+    $value = preg_replace('/\.html$/i', '', $value);
+    $value = preg_replace('/[^A-Za-z0-9_-]/', '', $value);
+    return $value;
+}
+
+function salvaScudetto($nomeSquadra, $torneoSlug, $fieldName) {
+    if (!isset($_FILES[$fieldName]) || $_FILES[$fieldName]['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+    if ($_FILES[$fieldName]['error'] !== UPLOAD_ERR_OK) {
+        return null;
+    }
+
+    $maxSize = 2 * 1024 * 1024;
+    if ($_FILES[$fieldName]['size'] > $maxSize) {
+        return null;
+    }
+
+    $allowed = [
+        'image/jpeg' => 'jpg',
+        'image/png'  => 'png',
+        'image/webp' => 'webp',
+        'image/gif'  => 'gif'
+    ];
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = finfo_file($finfo, $_FILES[$fieldName]['tmp_name']);
+    finfo_close($finfo);
+    if (!isset($allowed[$mime])) {
+        return null;
+    }
+
+    $baseDir = realpath(__DIR__ . '/../img/scudetti');
+    if (!$baseDir) {
+        return null;
+    }
+
+    $slugSquadra = strtolower(preg_replace('/[^a-z0-9]/i', '', $nomeSquadra));
+    if ($slugSquadra === '') {
+        $slugSquadra = 'squadra';
+    }
+    $slugTorneo = strtolower(preg_replace('/[^a-z0-9]/i', '', $torneoSlug));
+    if ($slugTorneo === '') {
+        $slugTorneo = 'torneo';
+    }
+
+    $extension = $allowed[$mime];
+    $filename = "{$slugSquadra}-{$slugTorneo}.{$extension}";
+    $counter = 2;
+    while (file_exists($baseDir . '/' . $filename)) {
+        $filename = "{$slugSquadra}-{$slugTorneo}_{$counter}.{$extension}";
+        $counter++;
+    }
+
+    if (!move_uploaded_file($_FILES[$fieldName]['tmp_name'], $baseDir . '/' . $filename)) {
+        return null;
+    }
+
+    return '/torneioldschool/img/scudetti/' . $filename;
+}
 
 // --- CREA ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     $nome = trim($_POST['nome']);
-    $torneo = trim($_POST['torneo']);
-    $squadra->crea($nome, $torneo);
+    $torneo = sanitizeTorneoSlugValue(trim($_POST['torneo']));
+    $logo = salvaScudetto($nome, $torneo, 'scudetto');
+    $squadra->crea($nome, $torneo, $logo);
     header("Location: gestione_squadre.php");
     exit;
 }
@@ -21,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $id = (int)$_POST['id'];
     $nome = trim($_POST['nome']);
-    $torneo = trim($_POST['torneo']);
+    $torneo = sanitizeTorneoSlugValue(trim($_POST['torneo']));
     $punti = (int)$_POST['punti'];
     $giocate = (int)$_POST['giocate'];
     $vinte = (int)$_POST['vinte'];
@@ -30,8 +94,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $gol_fatti = (int)$_POST['gol_fatti'];
     $gol_subiti = (int)$_POST['gol_subiti'];
     $diff = $gol_fatti - $gol_subiti;
+    $logo = salvaScudetto($nome, $torneo, 'scudetto_mod');
 
-    $squadra->aggiorna($id, $nome, $torneo, $punti, $giocate, $vinte, $pareggiate, $perse, $gol_fatti, $gol_subiti, $diff);
+    $squadra->aggiorna($id, $nome, $torneo, $punti, $giocate, $vinte, $pareggiate, $perse, $gol_fatti, $gol_subiti, $diff, $logo);
     header("Location: gestione_squadre.php");
     exit;
 }
@@ -54,12 +119,65 @@ $lista = $squadra->getAll();
   <title>Gestione Squadre</title>
   <link rel="stylesheet" href="/torneioldschool/style.css">
   <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    main.admin-wrapper {
+      flex: 1 0 auto;
+    }
+    #footer-container {
+      margin-top: 20px;
+    }
+
+    .file-upload {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      border: 1px dashed #d4d9e2;
+      border-radius: 10px;
+      background: #f7f9fc;
+    }
+
+    .file-upload input[type="file"] {
+      display: none;
+    }
+
+    .file-upload .file-btn {
+      background: #15293e;
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border: none;
+    }
+
+    .file-upload .file-btn:hover {
+      background: #0e1d2e;
+      transform: translateY(-1px);
+    }
+
+    .file-upload .file-name {
+      font-size: 0.9rem;
+      color: #5f6b7b;
+    }
+  </style>
 </head>
 <body>
   <?php include __DIR__ . '/../includi/header.php'; ?>
 
   <main class="admin-wrapper">
     <section class="admin-container">
+      <a class="admin-back-link" href="/torneioldschool/admin_dashboard.php">Torna alla dashboard</a>
       <h1 class="admin-title">Gestione Squadre</h1>
 
       <!-- PICKLIST -->
@@ -73,15 +191,38 @@ $lista = $squadra->getAll();
       </div>
 
       <!-- FORM CREA -->
-      <form method="POST" class="admin-form form-crea">
+      <form method="POST" class="admin-form form-crea" enctype="multipart/form-data">
         <h2>Aggiungi Squadra</h2>
         <div class="form-group"><label>Nome</label><input type="text" name="nome" required></div>
-        <div class="form-group"><label>Torneo</label><input type="text" name="torneo" required></div>
+        <div class="form-group">
+          <label>Torneo</label>
+          <select name="torneo" required>
+            <option value="">-- Seleziona un torneo --</option>
+            <?php
+            $torneiCreate = $torneoModel->getAll();
+            while ($torneoRow = $torneiCreate->fetch_assoc()): ?>
+              <?php
+                $slugValue = sanitizeTorneoSlugValue($torneoRow['filetorneo'] ?? $torneoRow['nome']);
+                $label = $torneoRow['nome'];
+              ?>
+              <option value="<?= htmlspecialchars($slugValue) ?>"><?= htmlspecialchars($label) ?></option>
+            <?php endwhile; ?>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Immagine / Scudetto</label>
+          <div class="file-upload">
+            <input type="file" name="scudetto" id="scudettoUpload" accept="image/png,image/jpeg,image/webp,image/gif">
+            <button type="button" class="file-btn" data-target="scudettoUpload">Scegli immagine</button>
+            <span class="file-name" id="scudettoUploadName">Nessun file selezionato</span>
+          </div>
+          <small>PNG, JPG, WEBP o GIF - max 2MB.</small>
+        </div>
         <button type="submit" name="crea" class="btn-primary">Crea Squadra</button>
       </form>
 
       <!-- FORM MODIFICA -->
-      <form method="POST" class="admin-form form-modifica hidden" id="formModifica">
+      <form method="POST" class="admin-form form-modifica hidden" id="formModifica" enctype="multipart/form-data">
         <h2>Modifica Squadra</h2>
 
         <!-- FILTRO TORNEO -->
@@ -107,6 +248,15 @@ $lista = $squadra->getAll();
 
         <div class="form-group"><label>Nome</label><input type="text" name="nome" id="mod_nome"></div>
         <div class="form-group"><label>Torneo</label><input type="text" name="torneo" id="mod_torneo"></div>
+        <div class="form-group">
+          <label>Nuovo scudetto</label>
+          <div class="file-upload">
+            <input type="file" name="scudetto_mod" id="scudettoUploadMod" accept="image/png,image/jpeg,image/webp,image/gif">
+            <button type="button" class="file-btn" data-target="scudettoUploadMod">Scegli immagine</button>
+            <span class="file-name" id="scudettoUploadModName">Nessun file selezionato</span>
+          </div>
+          <small>Lascia vuoto per mantenere l'immagine attuale.</small>
+        </div>
         <div class="form-row">
           <div class="form-group half"><label>Punti</label><input type="number" name="punti" id="mod_punti"></div>
           <div class="form-group half"><label>Giocate</label><input type="number" name="giocate" id="mod_giocate"></div>
@@ -153,6 +303,8 @@ $lista = $squadra->getAll();
       </section>
     </section>
   </main>
+
+  <div id="footer-container"></div>
 
   <!-- SCRIPT SWITCH SEZIONI -->
   <script>
@@ -276,6 +428,39 @@ $lista = $squadra->getAll();
           const testo = tr.textContent.toLowerCase();
           tr.style.display = testo.includes(filtro) ? "" : "none";
         });
+      });
+    });
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const footer = document.getElementById('footer-container');
+      if (!footer) return;
+      fetch('/torneioldschool/includi/footer.html')
+        .then(r => r.text())
+        .then(html => footer.innerHTML = html)
+        .catch(err => console.error('Errore footer:', err));
+    });
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.file-upload').forEach(wrapper => {
+        const input = wrapper.querySelector('input[type="file"]');
+        const button = wrapper.querySelector('.file-btn');
+        const nameLabel = wrapper.querySelector('.file-name');
+        if (button && input) {
+          button.addEventListener('click', (e) => {
+            e.preventDefault();
+            input.click();
+          });
+        }
+        if (input && nameLabel) {
+          input.addEventListener('change', () => {
+            const file = input.files && input.files[0];
+            nameLabel.textContent = file ? file.name : 'Nessun file selezionato';
+          });
+        }
       });
     });
   </script>
