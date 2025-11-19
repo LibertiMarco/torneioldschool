@@ -8,6 +8,7 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS notifiche_commenti;
+DROP TABLE IF EXISTS blog_media;
 DROP TABLE IF EXISTS blog_commenti;
 DROP TABLE IF EXISTS blog_post;
 DROP TABLE IF EXISTS partita_giocatore;
@@ -92,6 +93,9 @@ CREATE TABLE IF NOT EXISTS giocatori (
 CREATE TABLE IF NOT EXISTS partite (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     torneo VARCHAR(255) NOT NULL,
+    fase ENUM('REGULAR','GOLD','SILVER') NOT NULL DEFAULT 'REGULAR',
+    fase_round ENUM('OTTAVI','QUARTI','SEMIFINALE','FINALE') DEFAULT NULL,
+    fase_leg ENUM('ANDATA','RITORNO','UNICA') DEFAULT NULL,
     squadra_casa VARCHAR(255) NOT NULL,
     squadra_ospite VARCHAR(255) NOT NULL,
     gol_casa INT DEFAULT NULL,
@@ -99,13 +103,13 @@ CREATE TABLE IF NOT EXISTS partite (
     data_partita DATE NOT NULL,
     ora_partita TIME NOT NULL,
     campo VARCHAR(255) NOT NULL,
-    giornata TINYINT UNSIGNED NOT NULL,
+    giornata TINYINT UNSIGNED DEFAULT NULL,
     giocata TINYINT(1) NOT NULL DEFAULT 0,
     link_youtube VARCHAR(255) DEFAULT NULL,
     link_instagram VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     KEY idx_partite_torneo (torneo),
-    KEY idx_partite_giornata (torneo, giornata)
+    KEY idx_partite_giornata (torneo, fase, giornata)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Pivot squadre/giocatori (api/crud/SquadraGiocatore.php, api/get_rosa.php)
@@ -154,6 +158,17 @@ CREATE TABLE IF NOT EXISTS blog_post (
     data_pubblicazione DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     KEY idx_blog_data (data_pubblicazione)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Media collegati agli articoli del blog (immagini e video per caroselli)
+CREATE TABLE IF NOT EXISTS blog_media (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    post_id INT UNSIGNED NOT NULL,
+    tipo ENUM('image','video') NOT NULL DEFAULT 'image',
+    file_path VARCHAR(255) NOT NULL,
+    ordine INT UNSIGNED NOT NULL DEFAULT 1,
+    creato_il TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_media_post FOREIGN KEY (post_id) REFERENCES blog_post(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Commenti blog (api/blog.php, articolo.php)

@@ -629,8 +629,9 @@ function updateFeatured(post) {
     setFeaturedMeta(`Aggiornato ${post.data}`);
     const preview = formatPreview(post.anteprima || '');
     const safeTitle = escapeHTML(post.titolo || 'Articolo in evidenza');
-    const imageMarkup = post.immagine
-        ? `<img src="${encodeURI(post.immagine)}" alt="${safeTitle}">`
+    const cover = post.cover || post.immagine || '';
+    const imageMarkup = cover
+        ? `<img src="${encodeURI(cover)}" alt="${safeTitle}">`
         : '';
 
     featuredBox.innerHTML = `
@@ -649,8 +650,9 @@ function updateFeatured(post) {
 function createCard(post) {
     const preview = formatPreview(post.anteprima || '');
     const safeTitle = escapeHTML(post.titolo || 'Articolo');
-    const imageMarkup = post.immagine
-        ? `<img src="${encodeURI(post.immagine)}" alt="${safeTitle}" loading="lazy">`
+    const cover = post.cover || post.immagine || '';
+    const imageMarkup = cover
+        ? `<img src="${encodeURI(cover)}" alt="${safeTitle}" loading="lazy">`
         : '';
 
     return `
@@ -680,23 +682,30 @@ function renderGrid(posts) {
     cardGrid.innerHTML = posts.map(createCard).join('');
 }
 
-function renderMiniList(posts) {
-    if (!posts.length) {
+function renderMiniList(posts, excludeId = null) {
+    const suggestions = Array.isArray(posts)
+        ? posts.filter(post => post.id !== excludeId)
+        : [];
+
+    if (!suggestions.length) {
         miniList.innerHTML = '<p>Ancora nessun consiglio disponibile.</p>';
         return;
     }
 
-    miniList.innerHTML = posts.slice(0, 5).map(post => `
+    miniList.innerHTML = suggestions.slice(0, 5).map(post => {
+        const cover = post.cover || post.immagine || '';
+        return `
         <a class="mini-card" href="/torneioldschool/articolo.php?id=${post.id}">
             <div class="mini-thumb">
-                ${post.immagine ? `<img src="${encodeURI(post.immagine)}" alt="${escapeHTML(post.titolo)}">` : ''}
+                ${cover ? `<img src="${encodeURI(cover)}" alt="${escapeHTML(post.titolo)}">` : ''}
             </div>
             <div>
                 <div class="mini-date">${escapeHTML(post.data)}</div>
                 <div class="mini-title">${escapeHTML(post.titolo)}</div>
             </div>
         </a>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function filterPosts(term) {
@@ -741,7 +750,8 @@ async function loadBlog() {
 
         updateFeatured(cachedPosts[0]);
         renderGrid(cachedPosts.slice(1));
-        renderMiniList(cachedPosts);
+        const featuredId = cachedPosts[0]?.id ?? null;
+        renderMiniList(cachedPosts, featuredId);
         updateArchiveCounters(cachedPosts.length, cachedPosts.length);
         emptyState.hidden = cachedPosts.length > 0;
     } catch (error) {

@@ -9,7 +9,17 @@ class Partita {
     }
 
     public function getAll() {
-        $sql = "SELECT * FROM {$this->table} ORDER BY data_partita, ora_partita";
+        $ordineFase = "
+            CASE 
+                WHEN fase = 'REGULAR' THEN COALESCE(giornata, 0)
+                WHEN fase_round = 'OTTAVI' THEN 1
+                WHEN fase_round = 'QUARTI' THEN 2
+                WHEN fase_round = 'SEMIFINALE' THEN 3
+                WHEN fase_round = 'FINALE' THEN 4
+                ELSE 5
+            END
+        ";
+        $sql = "SELECT * FROM {$this->table} ORDER BY torneo, fase, {$ordineFase}, data_partita, ora_partita";
         return $this->conn->query($sql);
     }
 
@@ -31,19 +41,23 @@ class Partita {
         $campo,
         $giornata,
         $torneo,
+        $fase = 'REGULAR',
+        $fase_round = null,
+        $fase_leg = null,
         $link_youtube = null,
         $link_instagram = null
     ) {
         $stmt = $this->conn->prepare("
             INSERT INTO {$this->table}
             (squadra_casa, squadra_ospite, gol_casa, gol_ospite,
-             data_partita, ora_partita, campo, giornata, torneo,
+             data_partita, ora_partita, campo, giornata, torneo, fase,
+             fase_round, fase_leg,
              link_youtube, link_instagram)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
         $stmt->bind_param(
-            "ssiisssisss",
+            "ssiisssissssss",
             $squadra_casa,
             $squadra_ospite,
             $gol_casa,
@@ -53,6 +67,9 @@ class Partita {
             $campo,
             $giornata,
             $torneo,
+            strtoupper($fase),
+            $fase_round,
+            $fase_leg,
             $link_youtube,
             $link_instagram
         );
@@ -72,20 +89,23 @@ class Partita {
         $campo,
         $giornata,
         $torneo,
+        $fase = 'REGULAR',
+        $fase_round = null,
+        $fase_leg = null,
         $link_youtube = null,
         $link_instagram = null
     ) {
         $stmt = $this->conn->prepare("
             UPDATE {$this->table}
             SET squadra_casa = ?, squadra_ospite = ?, gol_casa = ?, gol_ospite = ?,
-                data_partita = ?, ora_partita = ?, campo = ?, giornata = ?, torneo = ?,
+                data_partita = ?, ora_partita = ?, campo = ?, giornata = ?, torneo = ?, fase = ?,
+                fase_round = ?, fase_leg = ?,
                 link_youtube = ?, link_instagram = ?
             WHERE id = ?
         ");
 
-        // ss i i ss s i s s s i  
         $stmt->bind_param(
-            "ssiisssisssi",
+            "ssiisssissssssi",
             $squadra_casa,
             $squadra_ospite,
             $gol_casa,
@@ -95,6 +115,9 @@ class Partita {
             $campo,
             $giornata,
             $torneo,
+            strtoupper($fase),
+            $fase_round,
+            $fase_leg,
             $link_youtube,
             $link_instagram,
             $id
@@ -126,10 +149,11 @@ class Partita {
 
 
     // 🔥 LOGICA CLASSIFICA (non modificata)
-    public function aggiornaClassifica($torneo, $squadraCasa, $squadraOspite, $golCasa, $golOspite, $vecchiDati = null) {
-        if (str_ends_with($torneo, '_gold') || str_ends_with($torneo, '_silver')) return;
+    public function aggiornaClassifica($torneo, $squadraCasa, $squadraOspite, $golCasa, $golOspite, $vecchiDati = null, $fase = 'REGULAR') {
+        $faseCorrente = strtoupper($fase ?? 'REGULAR');
 
-        if ($vecchiDati) {
+        $vecchiaFase = strtoupper($vecchiDati['fase'] ?? 'REGULAR');
+        if ($vecchiDati && $vecchiaFase === 'REGULAR') {
             $this->annullaVecchioRisultato(
                 $vecchiDati['torneo'],
                 $vecchiDati['squadra_casa'],
@@ -137,6 +161,14 @@ class Partita {
                 $vecchiDati['gol_casa'],
                 $vecchiDati['gol_ospite']
             );
+        }
+
+        if (
+            $faseCorrente !== 'REGULAR' ||
+            str_ends_with($torneo, '_gold') ||
+            str_ends_with($torneo, '_silver')
+        ) {
+            return;
         }
 
         $this->aggiornaStatistiche($torneo, $squadraCasa, $golCasa, $golOspite);

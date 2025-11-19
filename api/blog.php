@@ -7,6 +7,7 @@ require_once __DIR__ . '/../includi/db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 $azione = $_GET['azione'] ?? '';
+$mediaBasePath = '/torneioldschool/img/blog_media/';
 
 function json_response($data, int $status = 200): void {
     http_response_code($status);
@@ -14,14 +15,26 @@ function json_response($data, int $status = 200): void {
     exit;
 }
 
+function build_cover_query(string $alias = 'cover'): string {
+    global $mediaBasePath;
+    return "COALESCE(
+                (SELECT CONCAT('{$mediaBasePath}', file_path)
+                 FROM blog_media
+                 WHERE post_id = blog_post.id AND tipo = 'image'
+                 ORDER BY ordine ASC, id ASC
+                 LIMIT 1),
+                CASE
+                    WHEN immagine IS NULL OR immagine = '' THEN ''
+                    ELSE CONCAT('/torneioldschool/img/blog/', immagine)
+                END
+            ) AS {$alias}";
+}
+
 // Ultimi 4 articoli
 if ($azione === 'ultimi') {
     $sql = "SELECT id,
                    titolo,
-                   CASE
-                       WHEN immagine IS NULL OR immagine = '' THEN ''
-                       ELSE CONCAT('/torneioldschool/img/blog/', immagine)
-                   END AS immagine,
+                   " . build_cover_query('cover') . ",
                    SUBSTRING(contenuto, 1, 180) AS anteprima,
                    DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data
             FROM blog_post
@@ -29,7 +42,12 @@ if ($azione === 'ultimi') {
             LIMIT 4";
 
     if ($result = $conn->query($sql)) {
-        json_response($result->fetch_all(MYSQLI_ASSOC));
+        $rows = $result->fetch_all(MYSQLI_ASSOC);
+        foreach ($rows as &$row) {
+            $row['immagine'] = $row['cover'] ?? '';
+        }
+        unset($row);
+        json_response($rows);
     }
 
     json_response(['error' => 'Impossibile recuperare gli articoli'], 500);
@@ -39,17 +57,19 @@ if ($azione === 'ultimi') {
 if ($azione === 'lista') {
     $sql = "SELECT id,
                    titolo,
-                   CASE
-                       WHEN immagine IS NULL OR immagine = '' THEN ''
-                       ELSE CONCAT('/torneioldschool/img/blog/', immagine)
-                   END AS immagine,
+                   " . build_cover_query('cover') . ",
                    SUBSTRING(contenuto, 1, 220) AS anteprima,
                    DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data
             FROM blog_post
             ORDER BY data_pubblicazione DESC";
 
     if ($result = $conn->query($sql)) {
-        json_response($result->fetch_all(MYSQLI_ASSOC));
+        $rows = $result->fetch_all(MYSQLI_ASSOC);
+        foreach ($rows as &$row) {
+            $row['immagine'] = $row['cover'] ?? '';
+        }
+        unset($row);
+        json_response($rows);
     }
 
     json_response(['error' => 'Impossibile recuperare la lista'], 500);
@@ -62,10 +82,7 @@ if ($azione === 'articolo' && isset($_GET['id'])) {
     $stmt = $conn->prepare(
         "SELECT titolo,
                 contenuto,
-                CASE
-                    WHEN immagine IS NULL OR immagine = '' THEN ''
-                    ELSE CONCAT('/torneioldschool/img/blog/', immagine)
-                END AS immagine,
+                " . build_cover_query('cover') . ",
                 DATE_FORMAT(data_pubblicazione, '%d/%m/%Y %H:%i') AS data
          FROM blog_post
          WHERE id = ?"
@@ -76,6 +93,31 @@ if ($azione === 'articolo' && isset($_GET['id'])) {
     $result = $stmt->get_result();
 
     if ($articolo = $result->fetch_assoc()) {
+        $mediaStmt = $conn->prepare(
+            "SELECT id, tipo, file_path, ordine
+             FROM blog_media
+             WHERE post_id = ?
+             ORDER BY ordine ASC, id ASC"
+        );
+
+        $mediaItems = [];
+        if ($mediaStmt) {
+            $mediaStmt->bind_param('i', $id);
+            $mediaStmt->execute();
+            $mediaRes = $mediaStmt->get_result();
+            while ($row = $mediaRes->fetch_assoc()) {
+                $mediaItems[] = [
+                    'id' => (int)$row['id'],
+                    'tipo' => $row['tipo'],
+                    'url' => $row['file_path'] ? $mediaBasePath . ltrim($row['file_path'], '/') : '',
+                    'ordine' => (int)$row['ordine']
+                ];
+            }
+            $mediaStmt->close();
+        }
+
+        $articolo['media'] = $mediaItems;
+        $articolo['immagine'] = $articolo['cover'] ?? '';
         json_response($articolo);
     }
 

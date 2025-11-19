@@ -5,6 +5,8 @@ header("Content-Type: application/json; charset=UTF-8");
 require_once __DIR__ . '/../includi/db.php';
 
 $torneo = $_GET['torneo'] ?? '';
+$fase = strtoupper($_GET['fase'] ?? '');
+$fasiAmmesse = ['REGULAR','GOLD','SILVER'];
 if(!$torneo){ echo json_encode(["error"=>"Parametro 'torneo' mancante."]); exit; }
 
 $logoMap = [];
@@ -17,14 +19,44 @@ while ($logoRow = $logoRes->fetch_assoc()) {
 }
 $logoStmt->close();
 
-$q = "SELECT * FROM partite WHERE torneo=? ORDER BY giornata ASC, data_partita ASC, ora_partita ASC";
-$st=$conn->prepare($q); $st->bind_param("s",$torneo); $st->execute(); $r=$st->get_result();
+$query = "SELECT * FROM partite WHERE torneo=?";
+$types = "s";
+$params = [$torneo];
+if ($fase && in_array($fase, $fasiAmmesse, true)) {
+  $query .= " AND fase=?";
+  $types .= "s";
+  $params[] = $fase;
+}
+$query .= " ORDER BY 
+  CASE 
+    WHEN fase = 'REGULAR' THEN COALESCE(giornata, 0)
+    WHEN fase_round = 'OTTAVI' THEN 1
+    WHEN fase_round = 'QUARTI' THEN 2
+    WHEN fase_round = 'SEMIFINALE' THEN 3
+    WHEN fase_round = 'FINALE' THEN 4
+    ELSE 5
+  END,
+  data_partita ASC,
+  ora_partita ASC";
+$st=$conn->prepare($query); $st->bind_param($types, ...$params); $st->execute(); $r=$st->get_result();
 
 $giornate=[];
+$roundOrder = [
+  'FINALE' => 1,
+  'SEMIFINALE' => 2,
+  'QUARTI' => 3,
+  'OTTAVI' => 4
+];
 while($row=$r->fetch_assoc()){
-  $g=$row['giornata'];
-  if(!isset($giornate[$g])) $giornate[$g]=[];
-  $giornate[$g][]=[
+  $key = $row['giornata'];
+  if ($row['fase'] !== 'REGULAR') {
+    $faseRound = strtoupper($row['fase_round'] ?? '');
+    $key = $roundOrder[$faseRound] ?? $faseRound ?: 'KO';
+  } elseif ($key === null) {
+    $key = 0;
+  }
+  if(!isset($giornate[$key])) $giornate[$key]=[];
+  $giornate[$key][]=[
     "id"=>$row['id'],
     "squadra_casa"=>$row['squadra_casa'],
     "squadra_ospite"=>$row['squadra_ospite'],
@@ -36,6 +68,9 @@ while($row=$r->fetch_assoc()){
     "ora_partita"=>$row['ora_partita'],
     "campo"=>$row['campo'],
     "giornata"=>$row['giornata'],
+    "fase"=>$row['fase'],
+    "fase_round"=>$row['fase_round'],
+    "fase_leg"=>$row['fase_leg'],
     "link_youtube"=>$row['link_youtube'],
     "link_instagram"=>$row['link_instagram']
   ];

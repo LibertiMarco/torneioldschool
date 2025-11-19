@@ -46,14 +46,20 @@ if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
                 <a href="api/gestione_partite.php">Apri</a>
             </div>
 
-            <div class="admin-card">
-                <h3>Utenti & Iscrizioni</h3>
-                <p>Controlla gli utenti registrati e le loro iscrizioni.</p><br>
-                <a href="api/gestione_utenti.php">Visualizza</a>
-            </div>
-        </div>
+      <div class="admin-card">
+          <h3>Utenti & Iscrizioni</h3>
+          <p>Controlla gli utenti registrati e le loro iscrizioni.</p><br>
+          <a href="api/gestione_utenti.php">Visualizza</a>
+      </div>
 
-        <a class="logout-btn" href="index.php">Esci dal pannello</a>
+      <div class="admin-card">
+        <h3>Gestione Blog</h3>
+        <p>Pubblica nuovi articoli e tieni aggiornato il blog.</p><br>
+        <a href="api/gestione_blog.php">Crea articoli</a>
+      </div>
+    </div>
+
+    <a class="logout-btn" href="index.php">Esci dal pannello</a>
     </main>
     <div id="footer-container"></div>
     <script src="/torneioldschool/includi/header-interactions.js"></script>

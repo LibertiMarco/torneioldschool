@@ -25,6 +25,9 @@ if(!$dati){
 echo json_encode([
     "id"             => (int)$dati['id'],
     "torneo"         => $dati['torneo'],
+    "fase"           => $dati['fase'],
+    "fase_round"     => $dati['fase_round'],
+    "fase_leg"       => $dati['fase_leg'],
     "squadra_casa"   => $dati['squadra_casa'],
     "squadra_ospite" => $dati['squadra_ospite'],
     "gol_casa"       => (int)$dati['gol_casa'],
@@ -32,7 +35,7 @@ echo json_encode([
     "data_partita"   => $dati['data_partita'],
     "ora_partita"    => $dati['ora_partita'],
     "campo"          => $dati['campo'],
-    "giornata"       => (int)$dati['giornata'],
+    "giornata"       => $dati['giornata'] !== null ? (int)$dati['giornata'] : null,
     "link_youtube"   => $dati['link_youtube'] ?? null,
     "link_instagram" => $dati['link_instagram'] ?? null
 ], JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT);

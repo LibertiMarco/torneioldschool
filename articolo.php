@@ -73,17 +73,88 @@ $isLogged = isset($_SESSION['user_id']);
     margin: 0 0 8px;
 }
 
-.article-cover {
+.article-media {
+    position: relative;
     margin: 28px 0;
     border-radius: 18px;
     overflow: hidden;
-    background: #dfe6f6;
+    background: #0f172a;
+    min-height: 260px;
 }
 
-.article-cover img {
+.article-media.hidden {
+    display: none;
+}
+
+.media-stage {
     width: 100%;
-    height: auto;
+    height: 100%;
+    min-height: 260px;
+}
+
+.media-stage img,
+.media-stage video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
     display: block;
+}
+
+.media-stage video {
+    background: #000;
+}
+
+.carousel-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.55);
+    border: none;
+    color: #fff;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+}
+
+.carousel-nav:hover {
+    background: rgba(0,0,0,0.75);
+}
+
+.carousel-nav.prev {
+    left: 14px;
+}
+
+.carousel-nav.next {
+    right: 14px;
+}
+
+.media-dots {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+}
+
+.media-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.45);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.media-dot.active {
+    background: #fff;
 }
 
 .article-content {
@@ -359,7 +430,12 @@ $isLogged = isset($_SESSION['user_id']);
     </div>
     <h2 id="articleTitle">Caricamento...</h2>
     <p class="article-subtitle" id="articleSubtitle">Recuperiamo i dettagli e li inquadriamo al meglio.</p>
-    <div class="article-cover" id="articleCover"></div>
+<div class="article-media hidden" id="articleMedia">
+    <button class="carousel-nav prev" id="mediaPrev" aria-label="Media precedente">‹</button>
+    <div class="media-stage" id="mediaStage"></div>
+    <button class="carousel-nav next" id="mediaNext" aria-label="Media successivo">›</button>
+    <div class="media-dots" id="mediaDots"></div>
+</div>
     <div class="article-content" id="articleContent">Un attimo di pazienza…</div>
   </article>
 
@@ -403,7 +479,11 @@ const isLogged = <?= $isLogged ? 'true' : 'false' ?>;
 const articleTitle = document.getElementById('articleTitle');
 const articleSubtitle = document.getElementById('articleSubtitle');
 const articleDate = document.getElementById('articleDate');
-const articleCover = document.getElementById('articleCover');
+const mediaContainer = document.getElementById('articleMedia');
+const mediaStage = document.getElementById('mediaStage');
+const mediaDots = document.getElementById('mediaDots');
+const mediaPrev = document.getElementById('mediaPrev');
+const mediaNext = document.getElementById('mediaNext');
 const articleContent = document.getElementById('articleContent');
 const relatedList = document.getElementById('relatedList');
 const commentsList = document.getElementById('commentsList');
@@ -470,6 +550,76 @@ function escapeHTML(value = '') {
     }[char] || char));
 }
 
+let carouselItems = [];
+let currentMediaIndex = 0;
+let mediaTitle = '';
+
+function renderMediaCarousel(items = [], fallbackCover = '', title = '') {
+    if (!mediaContainer || !mediaStage || !mediaDots) {
+        return;
+    }
+    mediaTitle = title || '';
+    carouselItems = Array.isArray(items) ? items.filter(item => item && item.url) : [];
+    if (!carouselItems.length && fallbackCover) {
+        carouselItems = [{ tipo: 'image', url: fallbackCover }];
+    }
+    currentMediaIndex = 0;
+    if (!carouselItems.length) {
+        mediaContainer.classList.add('hidden');
+        mediaStage.innerHTML = '';
+        mediaDots.innerHTML = '';
+        if (mediaPrev) mediaPrev.hidden = true;
+        if (mediaNext) mediaNext.hidden = true;
+        return;
+    }
+    mediaContainer.classList.remove('hidden');
+    const hasMultiple = carouselItems.length > 1;
+    if (mediaPrev) mediaPrev.hidden = !hasMultiple;
+    if (mediaNext) mediaNext.hidden = !hasMultiple;
+    updateMediaStage();
+}
+
+function updateMediaStage() {
+    if (!mediaStage) return;
+    const current = carouselItems[currentMediaIndex];
+    if (!current) {
+        mediaStage.innerHTML = '';
+        return;
+    }
+    if (current.tipo === 'video') {
+        mediaStage.innerHTML = `<video controls src="${encodeURI(current.url)}"></video>`;
+    } else {
+        mediaStage.innerHTML = `<img src="${encodeURI(current.url)}" alt="${escapeHTML(mediaTitle)}">`;
+    }
+    renderMediaDots();
+}
+
+function renderMediaDots() {
+    if (!mediaDots) return;
+    if (carouselItems.length <= 1) {
+        mediaDots.innerHTML = '';
+        return;
+    }
+    mediaDots.innerHTML = carouselItems.map((_, idx) => `
+        <button class="media-dot${idx === currentMediaIndex ? ' active' : ''}" data-index="${idx}" aria-label="Mostra media ${idx + 1}"></button>
+    `).join('');
+}
+
+function goToMedia(index) {
+    if (!carouselItems.length) return;
+    const count = carouselItems.length;
+    currentMediaIndex = ((index % count) + count) % count;
+    updateMediaStage();
+}
+
+function showPrevMedia() {
+    goToMedia(currentMediaIndex - 1);
+}
+
+function showNextMedia() {
+    goToMedia(currentMediaIndex + 1);
+}
+
 function escapeRegex(str = '') {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -509,9 +659,7 @@ async function loadArticle() {
         articleTitle.textContent = data.titolo;
         articleSubtitle.textContent = 'Pubblicato il ' + data.data;
         articleDate.textContent = data.data;
-        articleCover.innerHTML = data.immagine
-            ? `<img src="${encodeURI(data.immagine)}" alt="${escapeHTML(data.titolo)}">`
-            : '';
+        renderMediaCarousel(data.media || [], data.cover || '', data.titolo || '');
         articleContent.innerHTML = formatContent(data.contenuto || '');
     } catch (err) {
         articleContent.innerHTML = `<p>${escapeHTML(err.message)}</p>`;
@@ -645,6 +793,17 @@ if (canReply) {
 loadArticle();
 loadRelated();
 fetchComments();
+
+mediaPrev?.addEventListener('click', showPrevMedia);
+mediaNext?.addEventListener('click', showNextMedia);
+mediaDots?.addEventListener('click', event => {
+    const btn = event.target.closest('.media-dot');
+    if (!btn) return;
+    const index = Number(btn.dataset.index);
+    if (!Number.isNaN(index)) {
+        goToMedia(index);
+    }
+});
 </script>
 
 </body>
