@@ -63,6 +63,32 @@ function salvaFotoGiocatore($nome, $cognome, $fieldName, $fotoEsistente = null) 
     return '/torneioldschool/img/giocatori/' . $filename;
 }
 
+function cancellaFotoGiocatore($fotoPath) {
+    if (!$fotoPath) {
+        return;
+    }
+    $fotoPath = str_replace('\\', '/', $fotoPath);
+    $defaultFoto = '/torneioldschool/img/giocatori/unknown.jpg';
+    if ($fotoPath === $defaultFoto) {
+        return;
+    }
+    if (strpos($fotoPath, '/torneioldschool/img/giocatori/') !== 0) {
+        return;
+    }
+
+    $uploadsDir = realpath(__DIR__ . '/../img/giocatori');
+    if (!$uploadsDir) {
+        return;
+    }
+
+    $filename = basename($fotoPath);
+    $absolutePath = $uploadsDir . DIRECTORY_SEPARATOR . $filename;
+
+    if (is_file($absolutePath)) {
+        @unlink($absolutePath);
+    }
+}
+
 $tornei = [];
 $torneiResult = $squadraModel->getTornei();
 if ($torneiResult) {
@@ -77,6 +103,10 @@ if ($torneiResult) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     $nome = trim($_POST['nome']);
     $cognome = trim($_POST['cognome']);
+    if ($giocatore->esistePerNomeCognome($nome, $cognome)) {
+        header("Location: gestione_giocatori.php?duplicate=1");
+        exit;
+    }
     $fotoPath = salvaFotoGiocatore($nome, $cognome, 'foto_upload');
     $nuovoId = $giocatore->crea(
         $nome,
@@ -162,7 +192,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dissocia_squadra'])) 
 
 // --- ELIMINA ---
 if (isset($_GET['elimina'])) {
-    $giocatore->elimina((int)$_GET['elimina']);
+    $idElimina = (int)$_GET['elimina'];
+    $recordElimina = $giocatore->getById($idElimina);
+    if ($giocatore->elimina($idElimina) && $recordElimina && isset($recordElimina['foto'])) {
+        cancellaFotoGiocatore($recordElimina['foto']);
+    }
     header("Location: gestione_giocatori.php");
     exit;
 }
@@ -235,6 +269,96 @@ if ($listaResult) {
             font-size: 0.9rem;
             color: #5f6b7b;
         }
+
+        .admin-alert {
+            margin: 1rem 0;
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .admin-alert.error {
+            background: #ffe3e3;
+            color: #a30000;
+            border: 1px solid #ff6b6b;
+        }
+
+        .btn-secondary {
+            background: #ffffff;
+            color: #15293e;
+            border: 1px solid #d4d9e2;
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: #f1f3f7;
+            color: #0e1d2e;
+            transform: translateY(-1px);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.65);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.hidden {
+            display: none;
+        }
+
+        .modal-window {
+            display: block;
+            background: #fff;
+            padding: 32px;
+            border-radius: 16px;
+            width: min(420px, 90%);
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15);
+            text-align: center;
+        }
+
+        .modal-window h3 {
+            margin-top: 0;
+            color: #15293e;
+            font-size: 1.3rem;
+        }
+
+        .modal-window p {
+            color: #5f6b7b;
+            margin: 12px 0 24px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: nowrap;
+        }
+
+        .modal-actions button {
+            flex: 1 1 0;
+            min-width: 120px;
+        }
+
+        @media (max-width: 600px) {
+            .modal-window {
+                padding: 24px;
+            }
+            .modal-actions {
+                flex-wrap: nowrap;
+                flex-direction: row;
+            }
+        }
     </style>
 </head>
 
@@ -246,14 +370,18 @@ if ($listaResult) {
 <a class="admin-back-link" href="/torneioldschool/admin_dashboard.php">Torna alla dashboard</a>
 <h1 class="admin-title">Gestione Giocatori</h1>
 
+<?php if (isset($_GET['duplicate']) && $_GET['duplicate'] === '1'): ?>
+<div class="admin-alert error" id="duplicateAlert">Giocatore già esistente</div>
+<?php endif; ?>
+
 <!-- PICKLIST -->
 <div class="admin-select-action">
     <label for="azione">Seleziona azione:</label>
         <select id="azione" class="operation-picker">
           <option value="crea" selected>Aggiungi Giocatore</option>
+          <option value="associazioni">Associazione Calciatore-Squadra</option>
           <option value="modifica">Modifica Giocatore</option>
           <option value="elimina">Elimina Giocatore</option>
-          <option value="associazioni">Associazione Calciatore-Squadra</option>
         </select>
       </div>
 
@@ -300,28 +428,19 @@ if ($listaResult) {
 <form method="POST" class="admin-form form-modifica hidden" id="formModifica" enctype="multipart/form-data">
 <h2>Modifica Giocatore</h2>
 
-<!-- FILTRO TORNEO -->
 <div class="form-group">
-    <label>Seleziona Torneo</label>
-    <select id="selectTorneoFiltro" required>
-        <option value="">-- Seleziona un torneo --</option>
-            <?php foreach ($tornei as $torneoVal): ?>
-            <option value="<?= htmlspecialchars($torneoVal) ?>"><?= htmlspecialchars($torneoVal) ?></option>
-            <?php endforeach; ?>
-            </select>
-        </div>
-
-<!-- FILTRO SQUADRA -->
-<div class="form-group">
-    <label>Seleziona Squadra</label>
-    <select id="selectSquadraFiltro" required disabled></select>
+    <label>Cerca giocatore</label>
+    <input type="search" id="searchGiocatore" placeholder="Digita nome o cognome">
 </div>
 
-<!-- FILTRO GIOCATORE -->
+<!-- SELEZIONE GIOCATORE -->
 <div class="form-group">
     <label>Seleziona Giocatore</label>
-    <select name="id" id="selectGiocatore" required disabled>
+    <select name="id" id="selectGiocatore" required>
         <option value="">-- Seleziona un giocatore --</option>
+        <?php foreach ($giocatori as $g): ?>
+        <option value="<?= $g['id'] ?>"><?= htmlspecialchars($g['cognome'] . ' ' . $g['nome']) ?></option>
+        <?php endforeach; ?>
     </select>
 </div>
 
@@ -473,8 +592,6 @@ if ($listaResult) {
     <th data-col="nome">Nome</th>
     <th data-col="cognome">Cognome</th>
     <th data-col="ruolo">Ruolo</th>
-    <th data-col="squadra">Squadra</th>
-    <th data-col="torneo">Torneo</th>
     <th>Azioni</th>
 </tr>
 </thead>
@@ -484,10 +601,13 @@ if ($listaResult) {
     <td><?= htmlspecialchars($row['nome']) ?></td>
     <td><?= htmlspecialchars($row['cognome']) ?></td>
     <td><?= htmlspecialchars($row['ruolo']) ?></td>
-    <td><?= htmlspecialchars($row['squadre_assoc'] ?? '-') ?></td>
-    <td><?= htmlspecialchars($row['tornei_assoc'] ?? '-') ?></td>
     <td>
-        <a href="?elimina=<?= $row['id'] ?>" class="btn-danger" onclick="return confirm('Eliminare questo giocatore?')">Elimina</a>
+        <button type="button"
+                class="btn-danger btn-delete"
+                data-id="<?= $row['id'] ?>"
+                data-name="<?= htmlspecialchars($row['nome'] . ' ' . $row['cognome']) ?>">
+            Elimina
+        </button>
     </td>
 </tr>
 <?php endforeach; ?>
@@ -497,6 +617,17 @@ if ($listaResult) {
 
 </section>
 </main>
+
+<div class="modal-overlay hidden" id="confirmModal">
+    <div class="modal-window">
+        <h3>Confermi eliminazione?</h3>
+        <p id="confirmMessage">Sei sicuro di voler eliminare questo giocatore?</p>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="cancelDeleteBtn">Annulla</button>
+            <button type="button" class="btn-danger" id="confirmDeleteBtn">Elimina</button>
+        </div>
+    </div>
+</div>
 
 <div id="footer-container"></div>
 
@@ -508,6 +639,7 @@ const formCrea = document.querySelector('.form-crea');
 const formModifica = document.querySelector('.form-modifica');
 const formElimina = document.querySelector('.form-elimina');
 const formAssociazioni = document.querySelector('.form-associazioni');
+const duplicateAlert = document.getElementById('duplicateAlert');
 
 function mostraSezione(val) {
     [formCrea, formModifica, formElimina, formAssociazioni].forEach(f => f && f.classList.add('hidden'));
@@ -518,13 +650,74 @@ function mostraSezione(val) {
 }
 
 mostraSezione(selectAzione.value);
-selectAzione.addEventListener('change', e => mostraSezione(e.target.value));
+function dismissDuplicateAlert() {
+    if (duplicateAlert && duplicateAlert.parentElement) {
+        duplicateAlert.parentElement.removeChild(duplicateAlert);
+    }
+}
+
+function resetModificaGiocatoreForm() {
+    if (searchGiocatoreInput) {
+        searchGiocatoreInput.value = "";
+    }
+    if (selectGiocatore) {
+        Array.from(selectGiocatore.options).forEach(opt => {
+            opt.hidden = false;
+        });
+        selectGiocatore.value = "";
+    }
+    const fields = [
+        "mod_nome",
+        "mod_cognome",
+        "mod_ruolo",
+        "mod_presenze",
+        "mod_reti",
+        "mod_gialli",
+        "mod_rossi",
+        "mod_media"
+    ];
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
+    const fotoInput = document.getElementById("foto_upload_mod");
+    if (fotoInput) fotoInput.value = "";
+    const fotoLabel = document.getElementById("foto_upload_mod_name");
+    if (fotoLabel) fotoLabel.textContent = "Nessun file selezionato";
+}
+
+if (duplicateAlert) {
+    try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('duplicate')) {
+            url.searchParams.delete('duplicate');
+            const newUrl = url.pathname + (url.search ? url.search : '') + url.hash;
+            window.history.replaceState({}, document.title, newUrl);
+        }
+    } catch (err) {
+        console.warn('Impossibile aggiornare URL:', err);
+    }
+}
+
+selectAzione.addEventListener('change', e => {
+    mostraSezione(e.target.value);
+    dismissDuplicateAlert();
+    resetModificaGiocatoreForm();
+});
 </script>
 
 <script>
-const selectTorneoFiltro = document.getElementById("selectTorneoFiltro");
-const selectSquadraFiltro = document.getElementById("selectSquadraFiltro");
+const searchGiocatoreInput = document.getElementById("searchGiocatore");
 const selectGiocatore = document.getElementById("selectGiocatore");
+const searchEliminaInput = document.getElementById("search");
+const tabellaGiocatori = document.getElementById("tabellaGiocatori");
+const confirmModal = document.getElementById("confirmModal");
+const confirmMessage = document.getElementById("confirmMessage");
+const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
+let pendingDeleteId = null;
+let pendingDeleteName = "";
+
 const assocTorneo = document.getElementById("assocTorneo");
 const assocSquadra = document.getElementById("assocSquadra");
 const assocGiocatore = document.getElementById("assocGiocatore");
@@ -596,17 +789,102 @@ async function loadGiocatori(select, squadraId, torneo, placeholder = "-- Selezi
     }
 }
 
-selectTorneoFiltro?.addEventListener("change", async () => {
-    const torneo = selectTorneoFiltro.value;
-    await loadSquadre(selectSquadraFiltro, torneo);
-    resetSelect(selectGiocatore, "-- Seleziona un giocatore --");
+function filterGiocatori(term) {
+    if (!selectGiocatore) return;
+    const normalized = term.trim().toLowerCase();
+    Array.from(selectGiocatore.options).forEach(opt => {
+        if (!opt.value) {
+            opt.hidden = false;
+            return;
+        }
+        const text = opt.textContent.toLowerCase();
+        opt.hidden = normalized !== "" && !text.includes(normalized);
+    });
+    if (
+        normalized &&
+        selectGiocatore.selectedOptions.length &&
+        selectGiocatore.selectedOptions[0].hidden
+    ) {
+        selectGiocatore.value = "";
+    }
+}
+
+searchGiocatoreInput?.addEventListener("input", e => filterGiocatori(e.target.value));
+
+function filterTabella(term) {
+    if (!tabellaGiocatori) return;
+    const normalized = term.trim().toLowerCase();
+    tabellaGiocatori.querySelectorAll("tbody tr").forEach(row => {
+        const testo = row.textContent.toLowerCase();
+        row.style.display = normalized === "" || testo.includes(normalized) ? "" : "none";
+    });
+}
+
+function openConfirmModal(id, name) {
+    pendingDeleteId = id;
+    pendingDeleteName = name || "";
+    if (confirmMessage) {
+        confirmMessage.textContent = pendingDeleteName
+            ? `Sei sicuro di voler eliminare ${pendingDeleteName}?`
+            : "Sei sicuro di voler eliminare questo giocatore?";
+    }
+    if (confirmModal) {
+        confirmModal.classList.remove("hidden");
+    }
+}
+
+function closeConfirmModal() {
+    pendingDeleteId = null;
+    pendingDeleteName = "";
+    if (confirmModal) {
+        confirmModal.classList.add("hidden");
+    }
+}
+
+if (searchEliminaInput) {
+    searchEliminaInput.addEventListener("input", e => filterTabella(e.target.value));
+}
+
+document.addEventListener("click", event => {
+    let btn = null;
+    if (typeof event.target.closest === "function") {
+        btn = event.target.closest(".btn-delete");
+    } else {
+        let node = event.target;
+        while (node && node !== document) {
+            if (node.classList && node.classList.contains("btn-delete")) {
+                btn = node;
+                break;
+            }
+            node = node.parentElement;
+        }
+    }
+    if (!btn) return;
+
+    event.preventDefault();
+    const giocatoreId = btn.getAttribute("data-id");
+    const giocatoreName = btn.getAttribute("data-name");
+    openConfirmModal(giocatoreId, giocatoreName);
 });
 
-selectSquadraFiltro?.addEventListener("change", async () => {
-    const squadraId = selectSquadraFiltro.value;
-    const torneo = selectTorneoFiltro.value;
-    await loadGiocatori(selectGiocatore, squadraId, torneo);
-});
+if (confirmDeleteBtn) {
+    confirmDeleteBtn.addEventListener("click", () => {
+        if (!pendingDeleteId) return;
+        window.location.href = `?elimina=${encodeURIComponent(pendingDeleteId)}`;
+    });
+}
+
+if (cancelDeleteBtn) {
+    cancelDeleteBtn.addEventListener("click", () => closeConfirmModal());
+}
+
+if (confirmModal) {
+    confirmModal.addEventListener("click", e => {
+        if (e.target === confirmModal) {
+            closeConfirmModal();
+        }
+    });
+}
 
 assocTorneo?.addEventListener("change", async () => {
     await loadSquadre(assocSquadra, assocTorneo.value);
@@ -731,6 +1009,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
-
 </body>
 </html>
