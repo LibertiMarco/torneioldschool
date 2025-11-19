@@ -10,7 +10,20 @@ require_once __DIR__ . '/crud/Torneo.php';
 
 $partita = new Partita();
 $torneoRepo = new Torneo();
+$fasiDisponibili = ['REGULAR', 'GOLD', 'SILVER'];
+$fasiEliminazione = ['OTTAVI', 'QUARTI', 'SEMIFINALE', 'FINALE'];
+$tipiAndataRitorno = ['ANDATA', 'RITORNO', 'UNICA'];
 $errore = '';
+
+function sanitizeFasePartita(?string $value, array $allowed): string {
+  $fase = strtoupper(trim((string)$value));
+  return in_array($fase, $allowed, true) ? $fase : 'REGULAR';
+}
+
+function sanitizeEnumValue(?string $value, array $allowed): ?string {
+  $val = strtoupper(trim((string)$value));
+  return in_array($val, $allowed, true) ? $val : null;
+}
 
 /* ============================================================
    CREA PARTITA
@@ -18,6 +31,7 @@ $errore = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
   $dati = [
     'torneo'         => trim($_POST['torneo']),
+    'fase'           => sanitizeFasePartita($_POST['fase'] ?? 'REGULAR', $fasiDisponibili),
     'squadra_casa'   => trim($_POST['squadra_casa']),
     'squadra_ospite' => trim($_POST['squadra_ospite']),
     'gol_casa'       => (int)($_POST['gol_casa'] ?? 0),
@@ -25,17 +39,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     'data_partita'   => $_POST['data_partita'] ?? '',
     'ora_partita'    => $_POST['ora_partita'] ?? '',
     'campo'          => trim($_POST['campo'] ?? ''),
-    'giornata'       => (int)($_POST['giornata'] ?? 0),
+    'giornata'       => (($_POST['giornata'] ?? '') !== '' ? (int)$_POST['giornata'] : null),
+    'fase_round'     => sanitizeEnumValue($_POST['fase_round'] ?? null, $fasiEliminazione),
+    'fase_leg'       => sanitizeEnumValue($_POST['fase_leg'] ?? null, $tipiAndataRitorno),
   ];
 
   if (
     empty($dati['torneo']) || empty($dati['squadra_casa']) || empty($dati['squadra_ospite']) ||
     empty($dati['data_partita']) || empty($dati['ora_partita']) ||
-    empty($dati['campo']) || empty($dati['giornata'])
+    empty($dati['campo'])
   ) {
     $errore = 'Tutti i campi sono obbligatori.';
   } elseif ($dati['squadra_casa'] === $dati['squadra_ospite']) {
     $errore = 'Le due squadre non possono coincidere.';
+  }
+
+  if (empty($errore)) {
+    if ($dati['fase'] === 'REGULAR') {
+      if ($dati['giornata'] === null || $dati['giornata'] <= 0) {
+        $errore = 'La giornata è obbligatoria per la Regular Season.';
+      }
+      $dati['fase_round'] = null;
+      $dati['fase_leg'] = null;
+    } else {
+      $dati['giornata'] = null;
+      if (!$dati['fase_round'] || !$dati['fase_leg']) {
+        $errore = 'Per le fasi GOLD/SILVER seleziona fase eliminazione e tipologia gara.';
+      }
+    }
   }
 
   if (empty($errore)) {
@@ -48,7 +79,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
       $dati['ora_partita'],
       $dati['campo'],
       $dati['giornata'],
-      $dati['torneo']
+      $dati['torneo'],
+      $dati['fase'],
+      $dati['fase_round'],
+      $dati['fase_leg']
     );
 
     $partita->aggiornaClassifica(
@@ -56,7 +90,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
       $dati['squadra_casa'],
       $dati['squadra_ospite'],
       $dati['gol_casa'],
-      $dati['gol_ospite']
+      $dati['gol_ospite'],
+      null,
+      $dati['fase']
     );
 
     header("Location: gestione_partite.php");
@@ -71,6 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
   $id = (int)$_POST['id'];
   $dati = [
     'torneo'         => trim($_POST['torneo']),
+    'fase'           => sanitizeFasePartita($_POST['fase'] ?? 'REGULAR', $fasiDisponibili),
     'squadra_casa'   => trim($_POST['squadra_casa']),
     'squadra_ospite' => trim($_POST['squadra_ospite']),
     'gol_casa'       => (int)$_POST['gol_casa'],
@@ -78,11 +115,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     'data_partita'   => $_POST['data_partita'],
     'ora_partita'    => $_POST['ora_partita'],
     'campo'          => trim($_POST['campo']),
-    'giornata'       => (int)$_POST['giornata']
+    'giornata'       => (($_POST['giornata'] ?? '') !== '' ? (int)$_POST['giornata'] : null),
+    'fase_round'     => sanitizeEnumValue($_POST['fase_round'] ?? null, $fasiEliminazione),
+    'fase_leg'       => sanitizeEnumValue($_POST['fase_leg'] ?? null, $tipiAndataRitorno)
   ];
 
   if ($dati['squadra_casa'] === $dati['squadra_ospite']) {
     $errore = 'Le due squadre non possono coincidere.';
+  }
+
+  if (empty($errore)) {
+    if ($dati['fase'] === 'REGULAR') {
+      if ($dati['giornata'] === null || $dati['giornata'] <= 0) {
+        $errore = 'La giornata è obbligatoria per la Regular Season.';
+      }
+      $dati['fase_round'] = null;
+      $dati['fase_leg'] = null;
+    } else {
+      $dati['giornata'] = null;
+      if (!$dati['fase_round'] || !$dati['fase_leg']) {
+        $errore = 'Per le fasi GOLD/SILVER seleziona fase eliminazione e tipologia gara.';
+      }
+    }
   }
 
   if (empty($errore)) {
@@ -98,7 +152,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
       $dati['ora_partita'],
       $dati['campo'],
       $dati['giornata'],
-      $dati['torneo']
+      $dati['torneo'],
+      $dati['fase'],
+      $dati['fase_round'],
+      $dati['fase_leg']
     );
 
     $partita->aggiornaClassifica(
@@ -107,7 +164,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
       $dati['squadra_ospite'],
       $dati['gol_casa'],
       $dati['gol_ospite'],
-      $vecchia
+      $vecchia,
+      $dati['fase']
     );
 
     header("Location: gestione_partite.php");
@@ -127,7 +185,8 @@ if (isset($_GET['elimina'])) {
       $vecchia['squadra_casa'],
       $vecchia['squadra_ospite'],
       0, 0,
-      $vecchia
+      $vecchia,
+      $vecchia['fase'] ?? 'REGULAR'
     );
   }
   $partita->elimina($id);
@@ -143,6 +202,20 @@ if (isset($_GET['elimina'])) {
 <title>Gestione Partite</title>
 <link rel="stylesheet" href="/torneioldschool/style.css">
 <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+<style>
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+main.admin-wrapper {
+  flex: 1 0 auto;
+}
+#footer-container {
+  margin-top: auto;
+  padding-top: 40px;
+}
+</style>
 </head>
 <body>
 <?php include __DIR__ . '/../includi/header.php'; ?>
@@ -158,16 +231,17 @@ if (isset($_GET['elimina'])) {
 
 <!-- Selettore azione -->
 <div class="admin-select-action">
-  <label>Seleziona azione:</label>
+  <label for="azione">Seleziona azione:</label>
   <select id="azione">
     <option value="crea" selected>Aggiungi Partita</option>
     <option value="modifica">Modifica Partita</option>
     <option value="elimina">Elimina Partita</option>
+    <option value="statistiche">Statistiche Partita</option>
   </select>
 </div>
 
 <!-- CREA -->
-<form method="POST" class="admin-form form-crea">
+<form method="POST" class="admin-form form-crea" data-action-section="crea">
   <h2>Aggiungi Partita</h2>
 
   <label>Torneo</label>
@@ -180,6 +254,13 @@ if (isset($_GET['elimina'])) {
     ?>
     <option value="<?= htmlspecialchars($slug) ?>"><?= htmlspecialchars($t['nome'] ?? $slug) ?></option>
     <?php endwhile; ?>
+  </select>
+
+  <label>Fase</label>
+  <select name="fase" id="selectFaseCrea" required>
+    <?php foreach ($fasiDisponibili as $fase): ?>
+      <option value="<?= htmlspecialchars($fase) ?>"><?= htmlspecialchars($fase) ?></option>
+    <?php endforeach; ?>
   </select>
 
   <label>Squadra Casa</label>
@@ -210,9 +291,30 @@ if (isset($_GET['elimina'])) {
     </select>
   </div>
 
-  <div class="form-group">
+  <div class="form-group" id="creaGiornataGroup">
     <label>Giornata</label>
-    <input type="number" name="giornata" min="1" required>
+    <input type="number" name="giornata" id="crea_giornata" min="1" required>
+  </div>
+
+  <div class="form-row hidden" id="creaKnockoutGroup">
+    <div class="form-group half">
+      <label>Fase eliminazione</label>
+      <select name="fase_round" id="crea_fase_round" disabled>
+        <option value="">-- Seleziona fase --</option>
+        <?php foreach ($fasiEliminazione as $round): ?>
+          <option value="<?= htmlspecialchars($round) ?>"><?= ucfirst(strtolower($round)) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="form-group half">
+      <label>Tipologia partita</label>
+      <select name="fase_leg" id="crea_fase_leg" disabled>
+        <option value="">-- Seleziona tipologia --</option>
+        <?php foreach ($tipiAndataRitorno as $tipo): ?>
+          <option value="<?= htmlspecialchars($tipo) ?>"><?= ucfirst(strtolower($tipo)) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
   </div>
 
   <button type="submit" name="crea" class="btn-primary">Aggiungi Partita</button>
@@ -220,14 +322,14 @@ if (isset($_GET['elimina'])) {
 
 
 <!-- ===== FORM MODIFICA ===== -->
-<form method="POST" class="admin-form form-modifica hidden" id="formModifica">
+<form method="POST" class="admin-form form-modifica hidden" id="formModifica" data-action-section="modifica">
   <h2>Modifica Partita</h2>
 
-  <!-- 1) Seleziona torneo -->
-  <div class="form-group">
-    <label>Torneo</label>
-    <select id="modSelectTorneo" required>
-      <option value="">-- Seleziona torneo --</option>
+    <!-- 1) Seleziona torneo -->
+    <div class="form-group">
+      <label>Torneo</label>
+      <select id="modSelectTorneo" required>
+        <option value="">-- Seleziona torneo --</option>
       <?php
         $tornei_all = $torneoRepo->getAll();
         while ($t = $tornei_all->fetch_assoc()):
@@ -236,18 +338,28 @@ if (isset($_GET['elimina'])) {
         <option value="<?= htmlspecialchars($slug) ?>"><?= htmlspecialchars($t['nome'] ?? $slug) ?></option>
       <?php endwhile; ?>
     </select>
-  </div>
+    </div>
+  
+    <!-- Torneo nascosto per POST -->
+    <input type="hidden" name="torneo" id="torneoHiddenMod">
 
-  <!-- Torneo nascosto per POST -->
-  <input type="hidden" name="torneo" id="torneoHiddenMod">
+    <div class="form-group">
+      <label>Fase</label>
+      <select id="modSelectFase" required disabled>
+        <option value="">-- Seleziona torneo prima --</option>
+        <?php foreach ($fasiDisponibili as $fase): ?>
+          <option value="<?= htmlspecialchars($fase) ?>"><?= htmlspecialchars($fase) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
 
   <!-- 2) Seleziona giornata -->
-  <div class="form-group">
-    <label>Giornata</label>
-    <select id="modSelectGiornata" required disabled>
-      <option value="">-- Seleziona torneo prima --</option>
-    </select>
-  </div>
+    <div class="form-group">
+      <label>Giornata / Fase</label>
+      <select id="modSelectGiornata" required disabled>
+        <option value="">-- Seleziona torneo prima --</option>
+      </select>
+    </div>
 
   <!-- 3) Seleziona partita -->
   <div class="form-group">
@@ -272,12 +384,21 @@ if (isset($_GET['elimina'])) {
       </select>
     </div>
 
-    <div class="form-group">
-      <label>Squadra Ospite</label>
-      <select name="squadra_ospite" id="squadraOspiteMod" required>
-        <option value="">-- Seleziona torneo prima --</option>
-      </select>
-    </div>
+      <div class="form-group">
+        <label>Squadra Ospite</label>
+        <select name="squadra_ospite" id="squadraOspiteMod" required>
+          <option value="">-- Seleziona torneo prima --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Fase</label>
+        <select name="fase" id="mod_fase" required>
+          <?php foreach ($fasiDisponibili as $fase): ?>
+            <option value="<?= htmlspecialchars($fase) ?>"><?= htmlspecialchars($fase) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
 
     <div class="form-row">
       <div class="form-group half">
@@ -313,10 +434,31 @@ if (isset($_GET['elimina'])) {
       </select>
     </div>
 
-    <div class="form-group">
-      <label>Giornata</label>
-      <input type="number" name="giornata" id="mod_giornata" min="1" required>
-    </div>
+      <div class="form-group" id="modGiornataGroup">
+        <label>Giornata</label>
+        <input type="number" name="giornata" id="mod_giornata" min="1" required>
+      </div>
+
+      <div class="form-row hidden" id="modKnockoutGroup">
+        <div class="form-group half">
+          <label>Fase eliminazione</label>
+          <select name="fase_round" id="mod_fase_round" disabled>
+            <option value="">-- Seleziona fase --</option>
+            <?php foreach ($fasiEliminazione as $round): ?>
+              <option value="<?= htmlspecialchars($round) ?>"><?= ucfirst(strtolower($round)) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="form-group half">
+          <label>Tipologia partita</label>
+          <select name="fase_leg" id="mod_fase_leg" disabled>
+            <option value="">-- Seleziona tipologia --</option>
+            <?php foreach ($tipiAndataRitorno as $tipo): ?>
+              <option value="<?= htmlspecialchars($tipo) ?>"><?= ucfirst(strtolower($tipo)) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+      </div>
 
     <div class="form-row">
       <div class="form-group half">
@@ -336,7 +478,7 @@ if (isset($_GET['elimina'])) {
 
 
 <!-- ===== SEZIONE ELIMINA ===== -->
-<section class="admin-table-section form-elimina hidden">
+<section class="admin-table-section form-elimina hidden" data-action-section="elimina">
   <h2>Elimina Partita</h2>
 
   <div class="search-wrapper">
@@ -348,7 +490,10 @@ if (isset($_GET['elimina'])) {
       <thead>
         <tr>
           <th data-col="torneo">Torneo</th>
+          <th data-col="fase">Fase</th>
           <th data-col="giornata">Giornata</th>
+          <th data-col="fase_round">Fase KO</th>
+          <th data-col="fase_leg">Tipologia</th>
           <th data-col="squadra_casa">Casa</th>
           <th data-col="squadra_ospite">Ospite</th>
           <th data-col="data_partita">Data</th>
@@ -363,7 +508,10 @@ if (isset($_GET['elimina'])) {
         ?>
         <tr>
           <td><?= htmlspecialchars($r['torneo']) ?></td>
+          <td><?= htmlspecialchars($r['fase']) ?></td>
           <td><?= htmlspecialchars($r['giornata']) ?></td>
+          <td><?= htmlspecialchars($r['fase_round'] ?? '') ?></td>
+          <td><?= htmlspecialchars($r['fase_leg'] ?? '') ?></td>
           <td><?= htmlspecialchars($r['squadra_casa']) ?></td>
           <td><?= htmlspecialchars($r['squadra_ospite']) ?></td>
           <td><?= htmlspecialchars($r['data_partita']) ?></td>
@@ -380,7 +528,7 @@ if (isset($_GET['elimina'])) {
 
 
 <!-- ===== SEZIONE STATISTICHE ===== -->
-<section class="admin-table-section form-statistiche hidden">
+<section class="admin-table-section form-statistiche hidden" data-action-section="statistiche">
   <h2>Statistiche Partita</h2>
 
   <!-- Selezione Partita -->
@@ -399,7 +547,7 @@ if (isset($_GET['elimina'])) {
   </div>
 
   <div class="form-group">
-    <label>Giornata</label>
+    <label>Giornata / Fase</label>
     <select id="statSelectGiornata" required disabled>
       <option value="">-- Seleziona torneo prima --</option>
     </select>
@@ -471,108 +619,79 @@ if (isset($_GET['elimina'])) {
 
 <?php include __DIR__ . '/../includi/delete_modal.php'; ?>
 
+<div id="footer-container"></div>
+
 <script>
+console.log("JS caricato correttamente: INIZIO");
+
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("DOMContentLoaded OK");
 
-const selectAzione = document.getElementById('azione');
-const formCrea = document.querySelector('.form-crea');
-const formMod = document.querySelector('.form-modifica');
-const formElimina = document.querySelector('.form-elimina');
-const formStatistiche = document.querySelector('.form-statistiche');
+  const selectAzione = document.getElementById("azione");
+  if (!selectAzione) console.error("ERRORE: selectAzione non trovato");
 
-function mostra(val){
-    [formCrea, formMod, formElimina, formStatistiche].forEach(f => f.classList.add('hidden'));
-    if(val === 'crea') formCrea.classList.remove('hidden');
-    if(val === 'modifica') formMod.classList.remove('hidden');
-    if(val === 'elimina') formElimina.classList.remove('hidden');
-    if(val === 'statistiche') formStatistiche.classList.remove('hidden');
-}
+  const forms = {
+    crea: document.querySelector(".form-crea"),
+    modifica: document.querySelector(".form-modifica"),
+    elimina: document.querySelector(".form-elimina"),
+    statistiche: document.querySelector(".form-statistiche")
+  };
 
-selectAzione.addEventListener('change', e => mostra(e.target.value));
+  function mostraForm(nome) {
+    console.log("Cambio form:", nome);
+    const target = nome || "crea";
+    Object.entries(forms).forEach(([key, form]) => {
+      if (!form) return;
+      form.classList.toggle("hidden", key !== target);
+    });
+  }
 
+  mostraForm(selectAzione ? selectAzione.value : "crea");
 
-// ======== CARICA SQUADRE ========
-async function caricaSquadre(slug, idCasa, idOspite, selCasa='', selOspite=''){
+  if (selectAzione) {
+    selectAzione.addEventListener("change", e => mostraForm(e.target.value));
+  }
+
+  async function caricaSquadre(slug, idCasa, idOspite, selCasa = "", selOspite = "") {
+    console.log("Carico squadre per torneo:", slug);
     if (!slug) return;
-    const r = await fetch(`/torneioldschool/api/get_squadre.php?torneo=${slug}`);
-    const d = await r.json();
-    const casa = document.getElementById(idCasa),
-          osp = document.getElementById(idOspite);
+    try {
+      const url = "/torneioldschool/api/get_squadre.php?torneo=" + encodeURIComponent(slug);
+      const r = await fetch(url);
+      if (!r.ok) console.error("ERRORE fetch get_squadre:", r.status);
+      const d = await r.json();
+      const casa = document.getElementById(idCasa);
+      const osp = document.getElementById(idOspite);
+      if (!casa || !osp) return console.error("Select squadre non trovate");
 
-    casa.innerHTML = osp.innerHTML = '<option>-- Seleziona --</option>';
-
-    d.forEach(n => {
+      casa.innerHTML = osp.innerHTML = '<option>-- Seleziona --</option>';
+      d.forEach(n => {
         casa.add(new Option(n, n));
         osp.add(new Option(n, n));
-    });
+      });
 
-    casa.value = selCasa;
-    osp.value = selOspite;
-}
+      casa.value = selCasa;
+      osp.value = selOspite;
 
-document.getElementById('selectTorneo').addEventListener('change', () =>
-    caricaSquadre(selectTorneo.value, 'squadraCasa', 'squadraOspite')
-);
+      console.log("Squadre caricate:", d);
+    } catch (err) {
+      console.error("Errore caricamento squadre:", err);
+    }
+  }
 
-
-// ======== MODIFICA PARTITA ========
-const modT = document.getElementById('modSelectTorneo');
-const modG = document.getElementById('modSelectGiornata');
-const modP = document.getElementById('modSelectPartita');
-const modForm = document.getElementById('modFormDati');
-const torneoHidden = document.getElementById('torneoHiddenMod');
-
-modT.addEventListener('change', async() => {
-    torneoHidden.value = modT.value;
-
-    const res = await fetch(`/torneioldschool/api/get_giornate.php?torneo=${modT.value}`);
-    const giornate = await res.json();
-
-    modG.innerHTML = '<option>-- Seleziona giornata --</option>';
-    giornate.forEach(g => modG.innerHTML += `<option value="${g}">${g}</option>`);
-    modG.disabled = false;
-});
-
-modG.addEventListener('change', async() => {
-    const res = await fetch(`/torneioldschool/api/get_partite_by_giornata.php?torneo=${modT.value}&giornata=${modG.value}`);
-    const partite = await res.json();
-
-    modP.innerHTML = '<option>-- Seleziona partita --</option>';
-    partite.forEach(p => modP.innerHTML += `<option value="${p.id}">${p.squadra_casa} - ${p.squadra_ospite}</option>`);
-
-    modP.disabled = false;
-});
-
-modP.addEventListener('change', async() => {
-
-    const id = modP.value;
-    if (!id) return;
-
-    // CARICA DETTAGLI PARTITA
-    const res = await fetch(`/torneioldschool/api/get_partita.php?id=${id}`);
-    const p = await res.json();
-
-    modForm.classList.remove('hidden');
-    document.getElementById('mod_gol_casa').value = p.gol_casa;
-    document.getElementById('mod_gol_ospite').value = p.gol_ospite;
-    document.getElementById('mod_data_partita').value = p.data_partita;
-    document.getElementById('mod_ora_partita').value = p.ora_partita;
-    document.getElementById('mod_campo').value = p.campo;
-    document.getElementById('mod_giornata').value = p.giornata;
-
-    await caricaSquadre(p.torneo, 'squadraCasaMod', 'squadraOspiteMod', p.squadra_casa, p.squadra_ospite);
-
-    // ===== MOSTRA BOTTONE STATISTICHE QUI 🚀 =====
-    const btn = document.getElementById("btn_statistiche");
-    btn.style.display = "block";
-    btn.onclick = () => {
-        window.location.href = `/torneioldschool/api/statistiche_partita.php?partitaid=${id}`;
-    };
-});
+  const torneoSelect = document.getElementById("selectTorneo");
+  if (torneoSelect) {
+    torneoSelect.addEventListener("change", () =>
+      caricaSquadre(torneoSelect.value, "squadraCasa", "squadraOspite")
+    );
+  }
 
 });
 </script>
+
 <script src="/torneioldschool/includi/delete-modal.js"></script>
+
 
 </body>
 </html>
+
