@@ -59,10 +59,25 @@ class SquadraGiocatore {
     }
 
     public function dissocia($giocatoreId, $squadraId) {
-        $stmt = $this->conn->prepare("DELETE FROM {$this->table} WHERE giocatore_id = ? AND squadra_id = ?");
+        $foto = null;
+        $stmt = $this->conn->prepare("SELECT foto FROM {$this->table} WHERE giocatore_id = ? AND squadra_id = ? LIMIT 1");
         $stmt->bind_param("ii", $giocatoreId, $squadraId);
-        $result = $stmt->execute();
+        $stmt->execute();
+        $stmt->bind_result($fotoDb);
+        if ($stmt->fetch()) {
+            $foto = $fotoDb;
+        }
         $stmt->close();
+
+        $deleteStmt = $this->conn->prepare("DELETE FROM {$this->table} WHERE giocatore_id = ? AND squadra_id = ?");
+        $deleteStmt->bind_param("ii", $giocatoreId, $squadraId);
+        $result = $deleteStmt->execute();
+        $deleteStmt->close();
+
+        if ($result && $foto) {
+            $this->cancellaFotoAssociazione($foto);
+        }
+
         $this->aggiornaTotaliGiocatore($giocatoreId);
         return $result;
     }
@@ -155,5 +170,31 @@ class SquadraGiocatore {
         $stmt->bind_param("ii", $giocatoreId, $giocatoreId);
         $stmt->execute();
         $stmt->close();
+    }
+
+    private function cancellaFotoAssociazione($fotoPath) {
+        if (!$fotoPath) {
+            return;
+        }
+        $fotoPath = str_replace('\\', '/', $fotoPath);
+        $defaultFoto = '/torneioldschool/img/giocatori/unknown.jpg';
+        if ($fotoPath === $defaultFoto) {
+            return;
+        }
+        if (strpos($fotoPath, '/torneioldschool/img/giocatori/') !== 0) {
+            return;
+        }
+
+        $uploadsDir = realpath(__DIR__ . '/../../img/giocatori');
+        if (!$uploadsDir) {
+            return;
+        }
+
+        $filename = basename($fotoPath);
+        $absolutePath = $uploadsDir . DIRECTORY_SEPARATOR . $filename;
+
+        if (is_file($absolutePath)) {
+            @unlink($absolutePath);
+        }
     }
 }

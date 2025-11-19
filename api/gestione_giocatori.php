@@ -11,6 +11,20 @@ require_once __DIR__ . '/crud/SquadraGiocatore.php';
 $giocatore = new Giocatore();
 $squadraModel = new Squadra();
 $pivot = new SquadraGiocatore();
+$currentAction = $_GET['action'] ?? 'crea';
+
+function redirectGestione($action = null, $extraParams = []) {
+    $params = [];
+    if ($action) {
+        $params['action'] = $action;
+    }
+    foreach ($extraParams as $key => $value) {
+        $params[$key] = $value;
+    }
+    $query = $params ? '?' . http_build_query($params) : '';
+    header("Location: gestione_giocatori.php{$query}");
+    exit;
+}
 
 function salvaFotoGiocatore($nome, $cognome, $fieldName, $fotoEsistente = null) {
     if (!isset($_FILES[$fieldName]) || $_FILES[$fieldName]['error'] === UPLOAD_ERR_NO_FILE) {
@@ -89,13 +103,71 @@ function cancellaFotoGiocatore($fotoPath) {
     }
 }
 
+function salvaFotoAssociazione($nome, $cognome, $fieldName, $fotoEsistente = null) {
+    if (!isset($_FILES[$fieldName]) || $_FILES[$fieldName]['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+    if ($_FILES[$fieldName]['error'] !== UPLOAD_ERR_OK) {
+        return null;
+    }
+
+    $maxSize = 2 * 1024 * 1024;
+    if ($_FILES[$fieldName]['size'] > $maxSize) {
+        return null;
+    }
+
+    $allowed = [
+        'image/jpeg' => 'jpg',
+        'image/png'  => 'png',
+        'image/webp' => 'webp',
+        'image/gif'  => 'gif'
+    ];
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = finfo_file($finfo, $_FILES[$fieldName]['tmp_name']);
+    finfo_close($finfo);
+    if (!isset($allowed[$mime])) {
+        return null;
+    }
+
+    $baseDir = realpath(__DIR__ . '/../img/giocatori');
+    if (!$baseDir) {
+        return null;
+    }
+
+    $slugBase = strtolower(preg_replace('/[^a-z0-9]/i', '', $nome . $cognome));
+    if ($slugBase === '') {
+        $slugBase = 'associazione';
+    }
+    $slugNome = "{$slugBase}_assoc";
+
+    $extension = $allowed[$mime];
+    $filename = "{$slugNome}.{$extension}";
+    $counter = 2;
+    while (file_exists($baseDir . '/' . $filename)) {
+        $filename = "{$slugNome}_{$counter}.{$extension}";
+        $counter++;
+    }
+
+    if (!move_uploaded_file($_FILES[$fieldName]['tmp_name'], $baseDir . '/' . $filename)) {
+        return null;
+    }
+
+    if ($fotoEsistente && strpos($fotoEsistente, '/torneioldschool/img/giocatori/') === 0 && $fotoEsistente !== '/torneioldschool/img/giocatori/unknown.jpg') {
+        cancellaFotoGiocatore($fotoEsistente);
+    }
+
+    return '/torneioldschool/img/giocatori/' . $filename;
+}
+
 $tornei = [];
 $torneiResult = $squadraModel->getTornei();
 if ($torneiResult) {
-    while ($row = $torneiResult->fetch_assoc()) {
-        if (!empty($row['torneo'])) {
-            $tornei[] = $row['torneo'];
+    if ($torneiResult instanceof mysqli_result) {
+        while ($row = $torneiResult->fetch_assoc()) {
+            $tornei[] = $row;
         }
+    } elseif (is_array($torneiResult)) {
+        $tornei = $torneiResult;
     }
 }
 
@@ -104,8 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     $nome = trim($_POST['nome']);
     $cognome = trim($_POST['cognome']);
     if ($giocatore->esistePerNomeCognome($nome, $cognome)) {
-        header("Location: gestione_giocatori.php?duplicate=1");
-        exit;
+        redirectGestione('crea', ['duplicate' => 1]);
     }
     $fotoPath = salvaFotoGiocatore($nome, $cognome, 'foto_upload');
     $nuovoId = $giocatore->crea(
@@ -120,8 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
         $fotoPath
     );
 
-    header("Location: gestione_giocatori.php");
-    exit;
+    redirectGestione('crea');
 }
 
 // --- AGGIORNA ---
@@ -146,48 +216,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
         $fotoPath
     );
 
-    header("Location: gestione_giocatori.php");
-    exit;
+    redirectGestione('modifica');
 }
 
 // --- ASSOCIA GIOCATORE A SQUADRA ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['associa_squadra'])) {
     $giocatoreAssoc = (int)($_POST['giocatore_associa'] ?? 0);
     $squadraAssoc = (int)($_POST['squadra_associa'] ?? 0);
-    $fotoAssoc = trim($_POST['foto_associazione'] ?? '');
-
     if ($giocatoreAssoc && $squadraAssoc) {
-        $pivot->assegna($giocatoreAssoc, $squadraAssoc, $fotoAssoc === '' ? null : $fotoAssoc);
+        if ($pivot->esisteAssociazione($giocatoreAssoc, $squadraAssoc)) {
+            redirectGestione('associazioni', ['assoc_exists' => 1]);
+        }
+        $giocatoreRecord = $giocatore->getById($giocatoreAssoc);
+        $associazioneAttuale = $pivot->getAssociazione($giocatoreAssoc, $squadraAssoc);
+        $fotoAttuale = $associazioneAttuale['foto'] ?? null;
+        $fotoUpload = $giocatoreRecord
+            ? salvaFotoAssociazione($giocatoreRecord['nome'] ?? '', $giocatoreRecord['cognome'] ?? '', 'foto_associazione_upload', $fotoAttuale)
+            : null;
+        $fotoAssoc = $fotoUpload ?? $fotoAttuale;
+        $pivot->assegna($giocatoreAssoc, $squadraAssoc, $fotoAssoc);
     }
 
-    header("Location: gestione_giocatori.php");
-    exit;
+    redirectGestione('associazioni');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['modifica_associazione'])) {
     $giocatoreAssoc = (int)($_POST['mod_assoc_giocatore'] ?? 0);
     $squadraAssoc = (int)($_POST['mod_assoc_squadra'] ?? 0);
-    $fotoAssoc = trim($_POST['mod_assoc_foto'] ?? '');
-
     if ($giocatoreAssoc && $squadraAssoc) {
-        $pivot->assegna($giocatoreAssoc, $squadraAssoc, $fotoAssoc === '' ? null : $fotoAssoc);
+        $giocatoreRecord = $giocatore->getById($giocatoreAssoc);
+        $associazioneAttuale = $pivot->getAssociazione($giocatoreAssoc, $squadraAssoc);
+        $fotoEsistente = $associazioneAttuale['foto'] ?? null;
+        $removeFoto = isset($_POST['mod_assoc_remove_foto']) && $_POST['mod_assoc_remove_foto'] === '1';
+        $mediaPost = isset($_POST['mod_assoc_media']) ? trim($_POST['mod_assoc_media']) : '';
+        $stats = [
+            'presenze' => (int)($_POST['mod_assoc_presenze'] ?? 0),
+            'reti' => (int)($_POST['mod_assoc_reti'] ?? 0),
+            'assist' => (int)($_POST['mod_assoc_assist'] ?? 0),
+            'gialli' => (int)($_POST['mod_assoc_gialli'] ?? 0),
+            'rossi' => (int)($_POST['mod_assoc_rossi'] ?? 0),
+            'media_voti' => $mediaPost === '' ? null : (float)$mediaPost
+        ];
+        $fotoUpload = (!$removeFoto && $giocatoreRecord)
+            ? salvaFotoAssociazione($giocatoreRecord['nome'] ?? '', $giocatoreRecord['cognome'] ?? '', 'mod_assoc_foto_upload', $fotoEsistente)
+            : null;
+        $fotoAssoc = $removeFoto ? null : ($fotoUpload ?? $fotoEsistente);
+        $pivot->assegna($giocatoreAssoc, $squadraAssoc, $fotoAssoc, $stats, $removeFoto);
     }
 
-    header("Location: gestione_giocatori.php");
-    exit;
+    redirectGestione('associazioni');
 }
 
 // --- DISSOCIA ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dissocia_squadra'])) {
-    $giocatoreId = (int)($_POST['giocatore_rimozione'] ?? 0);
-    $squadraId = (int)($_POST['squadra_rimozione'] ?? 0);
+    $giocatoreId = (int)($_POST['giocatore_rimozione'] ?? $_POST['giocatore_rimozione_hidden'] ?? 0);
+    $squadraId = (int)($_POST['squadra_rimozione'] ?? $_POST['squadra_rimozione_hidden'] ?? 0);
 
     if ($giocatoreId && $squadraId) {
         $pivot->dissocia($giocatoreId, $squadraId);
     }
 
-    header("Location: gestione_giocatori.php");
-    exit;
+    redirectGestione('associazioni');
 }
 
 // --- ELIMINA ---
@@ -197,8 +286,7 @@ if (isset($_GET['elimina'])) {
     if ($giocatore->elimina($idElimina) && $recordElimina && isset($recordElimina['foto'])) {
         cancellaFotoGiocatore($recordElimina['foto']);
     }
-    header("Location: gestione_giocatori.php");
-    exit;
+    redirectGestione('elimina');
 }
 
 $listaResult = $giocatore->getAll();
@@ -350,6 +438,92 @@ if ($listaResult) {
             min-width: 120px;
         }
 
+        .modal-actions .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border: none;
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .modal-actions .btn-secondary {
+            background: #fff;
+            border: 1px solid #d4d9e2;
+            color: #1f2937;
+        }
+
+        .btn-remove-assoc {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border: none;
+            color: #fff;
+            padding: 0.9rem 1.8rem;
+            border-radius: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 12px 24px rgba(239, 68, 68, 0.25);
+        }
+
+        .btn-remove-assoc:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 32px rgba(239, 68, 68, 0.35);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toggle-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .toggle-control input {
+            display: none;
+        }
+
+        .toggle-track {
+            width: 46px;
+            height: 24px;
+            background: #d4d9e2;
+            border-radius: 999px;
+            position: relative;
+            transition: background 0.2s ease;
+            box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.2);
+        }
+
+        .toggle-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ffffff;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s ease;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+        }
+
+        .toggle-control input:checked + .toggle-track {
+            background: linear-gradient(135deg, #f87171, #dc2626);
+        }
+
+        .toggle-control input:checked + .toggle-track .toggle-thumb {
+            transform: translateX(22px);
+        }
+
+        .toggle-label {
+            font-weight: 600;
+            color: #1f2937;
+        }
+
         @media (max-width: 600px) {
             .modal-window {
                 padding: 24px;
@@ -372,18 +546,21 @@ if ($listaResult) {
 
 <?php if (isset($_GET['duplicate']) && $_GET['duplicate'] === '1'): ?>
 <div class="admin-alert error" id="duplicateAlert">Giocatore già esistente</div>
+<?php elseif (isset($_GET['assoc_exists']) && $_GET['assoc_exists'] === '1'): ?>
+<div class="admin-alert error" id="assocAlert">Il giocatore fa già parte di questa squadra</div>
 <?php endif; ?>
 
 <!-- PICKLIST -->
 <div class="admin-select-action">
     <label for="azione">Seleziona azione:</label>
         <select id="azione" class="operation-picker">
-          <option value="crea" selected>Aggiungi Giocatore</option>
-          <option value="associazioni">Associazione Calciatore-Squadra</option>
-          <option value="modifica">Modifica Giocatore</option>
-          <option value="elimina">Elimina Giocatore</option>
+          <option value="crea" <?php if(($currentAction ?? 'crea') === 'crea') echo 'selected'; ?>>Aggiungi Giocatore</option>
+          <option value="associazioni" <?php if(($currentAction ?? '') === 'associazioni') echo 'selected'; ?>>Associazione Calciatore-Squadra</option>
+          <option value="modifica" <?php if(($currentAction ?? '') === 'modifica') echo 'selected'; ?>>Modifica Giocatore</option>
+          <option value="elimina" <?php if(($currentAction ?? '') === 'elimina') echo 'selected'; ?>>Elimina Giocatore</option>
         </select>
       </div>
+<input type="hidden" id="currentAction" value="<?= htmlspecialchars($currentAction) ?>">
 
 <!-- ✅ FORM CREA -->
 <form method="POST" class="admin-form form-crea" enctype="multipart/form-data">
@@ -478,19 +655,22 @@ if ($listaResult) {
   <div class="admin-select-action">
     <label for="assocOperation">Operazione:</label>
     <select id="assocOperation" class="operation-picker">
-      <option value="aggiungi" selected>Aggiungi Giocatore a Squadra</option>
+      <option value="aggiungi" selected>Aggiungi Associazione</option>
       <option value="modifica">Modifica Associazione</option>
       <option value="rimuovi">Elimina Associazione</option>
     </select>
   </div>
 
   <form method="POST" class="admin-form assoc-form assoc-form-add" enctype="multipart/form-data">
+      <input type="hidden" name="action" value="associazioni">
       <div class="form-group">
           <label>Seleziona Torneo</label>
           <select id="assocTorneo" required>
               <option value="">-- Seleziona un torneo --</option>
               <?php foreach ($tornei as $torneoVal): ?>
-              <option value="<?= htmlspecialchars($torneoVal) ?>"><?= htmlspecialchars($torneoVal) ?></option>
+              <option value="<?= htmlspecialchars($torneoVal['id']) ?>">
+                  <?= htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo') ?>
+              </option>
               <?php endforeach; ?>
           </select>
       </div>
@@ -514,19 +694,27 @@ if ($listaResult) {
 
       <div class="form-group">
           <label>Foto specifica (opzionale)</label>
-          <input type="text" name="foto_associazione" placeholder="Percorso foto per questa squadra">
+          <div class="file-upload">
+              <input type="file" name="foto_associazione_upload" id="foto_associazione_upload" accept="image/png,image/jpeg,image/webp,image/gif">
+              <button type="button" class="file-btn" data-target="foto_associazione_upload">Scegli immagine</button>
+              <span class="file-name" id="foto_associazione_upload_name">Nessun file selezionato</span>
+          </div>
+          <small>Se non carichi nulla verrà usata la foto del giocatore.</small>
       </div>
 
-      <button type="submit" name="associa_squadra" class="btn-primary">Associa / aggiorna foto</button>
+      <button type="submit" name="associa_squadra" class="btn-primary">Aggiungi associazione</button>
   </form>
 
-  <form method="POST" class="admin-form assoc-form assoc-form-edit hidden">
+  <form method="POST" class="admin-form assoc-form assoc-form-edit hidden" enctype="multipart/form-data">
+      <input type="hidden" name="action" value="associazioni">
       <div class="form-group">
           <label>Seleziona Torneo</label>
           <select id="modAssocTorneo" required>
               <option value="">-- Seleziona un torneo --</option>
               <?php foreach ($tornei as $torneoVal): ?>
-              <option value="<?= htmlspecialchars($torneoVal) ?>"><?= htmlspecialchars($torneoVal) ?></option>
+              <option value="<?= htmlspecialchars($torneoVal['id']) ?>">
+                  <?= htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo') ?>
+              </option>
               <?php endforeach; ?>
           </select>
       </div>
@@ -545,21 +733,73 @@ if ($listaResult) {
           </select>
       </div>
 
+      <div class="form-row">
+          <div class="form-group half">
+              <label>Presenze</label>
+              <input type="number" name="mod_assoc_presenze" id="mod_assoc_presenze" min="0" value="0">
+          </div>
+          <div class="form-group half">
+              <label>Reti</label>
+              <input type="number" name="mod_assoc_reti" id="mod_assoc_reti" min="0" value="0">
+          </div>
+      </div>
+
+      <div class="form-row">
+          <div class="form-group half">
+              <label>Assist</label>
+              <input type="number" name="mod_assoc_assist" id="mod_assoc_assist" min="0" value="0">
+          </div>
+          <div class="form-group half">
+              <label>Gialli</label>
+              <input type="number" name="mod_assoc_gialli" id="mod_assoc_gialli" min="0" value="0">
+          </div>
+      </div>
+
+      <div class="form-row">
+          <div class="form-group half">
+              <label>Rossi</label>
+              <input type="number" name="mod_assoc_rossi" id="mod_assoc_rossi" min="0" value="0">
+          </div>
+          <div class="form-group half">
+              <label>Media voti</label>
+              <input type="number" name="mod_assoc_media" id="mod_assoc_media" step="0.01" min="0">
+          </div>
+      </div>
+
       <div class="form-group">
           <label>Nuova foto (opzionale)</label>
-          <input type="text" name="mod_assoc_foto" placeholder="Percorso foto per questa squadra">
+          <div class="file-upload">
+              <input type="file" name="mod_assoc_foto_upload" id="mod_assoc_foto_upload" accept="image/png,image/jpeg,image/webp,image/gif">
+              <button type="button" class="file-btn" data-target="mod_assoc_foto_upload">Scegli immagine</button>
+              <span class="file-name" id="mod_assoc_foto_upload_name">Nessun file selezionato</span>
+          </div>
+          <small>Lascia vuoto per mantenere la foto attuale.</small>
+      </div>
+
+      <div class="form-group checkbox-group">
+          <label class="toggle-control">
+              <input type="checkbox" name="mod_assoc_remove_foto" id="mod_assoc_remove_foto" value="1">
+              <span class="toggle-track">
+                  <span class="toggle-thumb"></span>
+              </span>
+              <span class="toggle-label">Rimuovi foto dalla squadra</span>
+          </label>
       </div>
 
       <button type="submit" name="modifica_associazione" class="btn-primary">Modifica associazione</button>
   </form>
 
   <form method="POST" class="admin-form assoc-form assoc-form-remove hidden">
+      <input type="hidden" name="action" value="associazioni">
+      <input type="hidden" name="dissocia_squadra" value="1">
       <div class="form-group">
           <label>Seleziona Torneo</label>
           <select id="remTorneo" required>
               <option value="">-- Seleziona un torneo --</option>
               <?php foreach ($tornei as $torneoVal): ?>
-              <option value="<?= htmlspecialchars($torneoVal) ?>"><?= htmlspecialchars($torneoVal) ?></option>
+              <option value="<?= htmlspecialchars($torneoVal['id']) ?>">
+                  <?= htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo') ?>
+              </option>
               <?php endforeach; ?>
           </select>
       </div>
@@ -578,7 +818,9 @@ if ($listaResult) {
           </select>
       </div>
 
-      <button type="submit" name="dissocia_squadra" class="btn-danger">Rimuovi associazione</button>
+      <input type="hidden" name="squadra_rimozione_hidden" id="remSquadraHidden">
+      <input type="hidden" name="giocatore_rimozione_hidden" id="remGiocatoreHidden">
+      <button type="button" class="btn-danger btn-remove-assoc">Rimuovi associazione</button>
   </form>
 </section>
 
@@ -629,17 +871,30 @@ if ($listaResult) {
     </div>
 </div>
 
+<div class="modal-overlay hidden" id="removeAssocModal">
+    <div class="modal-window">
+        <h3>Rimuovere l'associazione?</h3>
+        <p id="removeAssocMessage">Confermi di voler rimuovere il giocatore da questa squadra?</p>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="cancelRemoveAssoc">Annulla</button>
+            <button type="button" class="btn-danger" id="confirmRemoveAssoc">Rimuovi</button>
+        </div>
+    </div>
+</div>
+
 <div id="footer-container"></div>
 
 
 <!-- ✅ SCRIPTS -->
 <script>
 const selectAzione = document.getElementById('azione');
+const currentActionInput = document.getElementById('currentAction');
 const formCrea = document.querySelector('.form-crea');
 const formModifica = document.querySelector('.form-modifica');
 const formElimina = document.querySelector('.form-elimina');
 const formAssociazioni = document.querySelector('.form-associazioni');
 const duplicateAlert = document.getElementById('duplicateAlert');
+const assocAlert = document.getElementById('assocAlert');
 
 function mostraSezione(val) {
     [formCrea, formModifica, formElimina, formAssociazioni].forEach(f => f && f.classList.add('hidden'));
@@ -647,13 +902,18 @@ function mostraSezione(val) {
     if (val === 'modifica' && formModifica) formModifica.classList.remove('hidden');
     if (val === 'elimina' && formElimina) formElimina.classList.remove('hidden');
     if (val === 'associazioni' && formAssociazioni) formAssociazioni.classList.remove('hidden');
+    if (currentActionInput) currentActionInput.value = val;
+    if (selectAzione) selectAzione.value = val;
 }
 
-mostraSezione(selectAzione.value);
-function dismissDuplicateAlert() {
-    if (duplicateAlert && duplicateAlert.parentElement) {
-        duplicateAlert.parentElement.removeChild(duplicateAlert);
-    }
+const initialAction = currentActionInput?.value || selectAzione?.value || 'crea';
+mostraSezione(initialAction);
+function dismissAlerts() {
+    [duplicateAlert, assocAlert].forEach(alertEl => {
+        if (alertEl && alertEl.parentElement) {
+            alertEl.parentElement.removeChild(alertEl);
+        }
+    });
 }
 
 function resetModificaGiocatoreForm() {
@@ -686,11 +946,11 @@ function resetModificaGiocatoreForm() {
     if (fotoLabel) fotoLabel.textContent = "Nessun file selezionato";
 }
 
-if (duplicateAlert) {
+function clearAlertParam(param) {
     try {
         const url = new URL(window.location.href);
-        if (url.searchParams.has('duplicate')) {
-            url.searchParams.delete('duplicate');
+        if (url.searchParams.has(param)) {
+            url.searchParams.delete(param);
             const newUrl = url.pathname + (url.search ? url.search : '') + url.hash;
             window.history.replaceState({}, document.title, newUrl);
         }
@@ -699,9 +959,16 @@ if (duplicateAlert) {
     }
 }
 
+if (duplicateAlert) {
+    clearAlertParam('duplicate');
+}
+if (assocAlert) {
+    clearAlertParam('assoc_exists');
+}
+
 selectAzione.addEventListener('change', e => {
     mostraSezione(e.target.value);
-    dismissDuplicateAlert();
+    dismissAlerts();
     resetModificaGiocatoreForm();
 });
 </script>
@@ -715,6 +982,10 @@ const confirmModal = document.getElementById("confirmModal");
 const confirmMessage = document.getElementById("confirmMessage");
 const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
 const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
+const removeAssocModal = document.getElementById("removeAssocModal");
+const removeAssocMessage = document.getElementById("removeAssocMessage");
+const confirmRemoveAssocBtn = document.getElementById("confirmRemoveAssoc");
+const cancelRemoveAssocBtn = document.getElementById("cancelRemoveAssoc");
 let pendingDeleteId = null;
 let pendingDeleteName = "";
 
@@ -724,13 +995,23 @@ const assocGiocatore = document.getElementById("assocGiocatore");
 const remTorneo = document.getElementById("remTorneo");
 const remSquadra = document.getElementById("remSquadra");
 const remGiocatore = document.getElementById("remGiocatore");
+const remSquadraHidden = document.getElementById("remSquadraHidden");
+const remGiocatoreHidden = document.getElementById("remGiocatoreHidden");
 const modAssocTorneo = document.getElementById("modAssocTorneo");
 const modAssocSquadra = document.getElementById("modAssocSquadra");
 const modAssocGiocatore = document.getElementById("modAssocGiocatore");
+const modAssocPresenze = document.getElementById("mod_assoc_presenze");
+const modAssocReti = document.getElementById("mod_assoc_reti");
+const modAssocAssist = document.getElementById("mod_assoc_assist");
+const modAssocGialli = document.getElementById("mod_assoc_gialli");
+const modAssocRossi = document.getElementById("mod_assoc_rossi");
+const modAssocMedia = document.getElementById("mod_assoc_media");
+const modAssocRemoveFoto = document.getElementById("mod_assoc_remove_foto");
 const assocOperationSelect = document.getElementById("assocOperation");
 const assocFormAdd = document.querySelector(".assoc-form-add");
 const assocFormEdit = document.querySelector(".assoc-form-edit");
 const assocFormRemove = document.querySelector(".assoc-form-remove");
+const removeAssocButtons = document.querySelectorAll(".btn-remove-assoc");
 
 const API_SQUADRE_TORNEO = "/torneioldschool/api/get_squadre_torneo.php";
 const API_GIOCATORI_SQUADRA = "/torneioldschool/api/get_giocatori_squadra.php";
@@ -741,6 +1022,31 @@ function resetSelect(select, placeholder, disable = true) {
     select.disabled = disable;
 }
 
+function clearModAssocStatsFields() {
+    if (!modAssocPresenze) return;
+    const fields = [modAssocPresenze, modAssocReti, modAssocAssist, modAssocGialli, modAssocRossi];
+    fields.forEach(field => {
+        if (field) field.value = "0";
+    });
+    if (modAssocMedia) modAssocMedia.value = "";
+    if (modAssocRemoveFoto) modAssocRemoveFoto.checked = false;
+}
+
+function populateModAssocStatsFromOption(option) {
+    if (!option || !modAssocPresenze) {
+        clearModAssocStatsFields();
+        return;
+    }
+    const ds = option.dataset;
+    if (modAssocPresenze) modAssocPresenze.value = ds.presenze ?? "0";
+    if (modAssocReti) modAssocReti.value = ds.reti ?? "0";
+    if (modAssocAssist) modAssocAssist.value = ds.assist ?? "0";
+    if (modAssocGialli) modAssocGialli.value = ds.gialli ?? "0";
+    if (modAssocRossi) modAssocRossi.value = ds.rossi ?? "0";
+    if (modAssocMedia) modAssocMedia.value = ds.media ?? "";
+    if (modAssocRemoveFoto) modAssocRemoveFoto.checked = false;
+}
+
 async function loadSquadre(select, torneo, placeholder = "-- Seleziona una squadra --") {
     resetSelect(select, placeholder);
     if (!select || !torneo) return [];
@@ -749,6 +1055,12 @@ async function loadSquadre(select, torneo, placeholder = "-- Seleziona una squad
         const res = await fetch(`${API_SQUADRE_TORNEO}?torneo=${encodeURIComponent(torneo)}`);
         const data = await res.json();
         if (!Array.isArray(data) || !data.length) return [];
+
+        data.sort((a, b) => {
+            const nameA = (a.nome || '').toLowerCase();
+            const nameB = (b.nome || '').toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
 
         select.disabled = false;
         select.innerHTML = placeholder ? `<option value="">${placeholder}</option>` : "";
@@ -780,6 +1092,16 @@ async function loadGiocatori(select, squadraId, torneo, placeholder = "-- Selezi
             const opt = document.createElement("option");
             opt.value = g.id;
             opt.textContent = `${g.nome} ${g.cognome}`;
+            if (typeof g.presenze !== "undefined") opt.dataset.presenze = g.presenze;
+            if (typeof g.reti !== "undefined") opt.dataset.reti = g.reti;
+            if (typeof g.assist !== "undefined") opt.dataset.assist = g.assist;
+            if (typeof g.gialli !== "undefined") opt.dataset.gialli = g.gialli;
+            if (typeof g.rossi !== "undefined") opt.dataset.rossi = g.rossi;
+            if (typeof g.media_voti !== "undefined" && g.media_voti !== null) {
+                opt.dataset.media = g.media_voti;
+            } else {
+                delete opt.dataset.media;
+            }
             select.appendChild(opt);
         });
         return data;
@@ -886,6 +1208,56 @@ if (confirmModal) {
     });
 }
 
+function openRemoveAssocModal() {
+    removeAssocModal?.classList.remove("hidden");
+}
+
+function closeRemoveAssocModal() {
+    removeAssocModal?.classList.add("hidden");
+}
+
+removeAssocButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+        if (!remSquadra || !remGiocatore) return;
+        if (!remSquadra.value || !remGiocatore.value) {
+            alert("Seleziona sia la squadra sia il giocatore da rimuovere.");
+            return;
+        }
+        if (remSquadraHidden) remSquadraHidden.value = remSquadra.value;
+        if (remGiocatoreHidden) remGiocatoreHidden.value = remGiocatore.value;
+        const squadraName = remSquadra.selectedOptions[0]?.textContent?.trim() || "questa squadra";
+        const giocatoreName = remGiocatore.selectedOptions[0]?.textContent?.trim() || "questo giocatore";
+        if (removeAssocMessage) {
+            removeAssocMessage.textContent = `Vuoi rimuovere ${giocatoreName} da ${squadraName}?`;
+        }
+        openRemoveAssocModal();
+    });
+});
+
+if (confirmRemoveAssocBtn) {
+    confirmRemoveAssocBtn.addEventListener("click", () => {
+        if (!assocFormRemove) return;
+        closeRemoveAssocModal();
+        if (typeof assocFormRemove.requestSubmit === "function") {
+            assocFormRemove.requestSubmit();
+        } else {
+            assocFormRemove.submit();
+        }
+    });
+}
+
+if (cancelRemoveAssocBtn) {
+    cancelRemoveAssocBtn.addEventListener("click", () => closeRemoveAssocModal());
+}
+
+if (removeAssocModal) {
+    removeAssocModal.addEventListener("click", e => {
+        if (e.target === removeAssocModal) {
+            closeRemoveAssocModal();
+        }
+    });
+}
+
 assocTorneo?.addEventListener("change", async () => {
     await loadSquadre(assocSquadra, assocTorneo.value);
 });
@@ -902,10 +1274,17 @@ remSquadra?.addEventListener("change", async () => {
 modAssocTorneo?.addEventListener("change", async () => {
     await loadSquadre(modAssocSquadra, modAssocTorneo.value);
     resetSelect(modAssocGiocatore, "-- Seleziona un giocatore --");
+    clearModAssocStatsFields();
 });
 
 modAssocSquadra?.addEventListener("change", async () => {
     await loadGiocatori(modAssocGiocatore, modAssocSquadra.value, modAssocTorneo.value);
+    clearModAssocStatsFields();
+});
+
+modAssocGiocatore?.addEventListener("change", () => {
+    const opt = modAssocGiocatore.selectedOptions && modAssocGiocatore.selectedOptions[0];
+    populateModAssocStatsFromOption(opt);
 });
 
 function mostraFormAssoc(val) {

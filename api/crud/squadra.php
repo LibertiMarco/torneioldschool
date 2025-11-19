@@ -61,7 +61,15 @@ class squadra {
     }
 
     public function getTornei() {
-        return $this->conn->query("SELECT DISTINCT torneo FROM {$this->table} ORDER BY torneo ASC");
+        $result = $this->conn->query("SELECT DISTINCT torneo FROM {$this->table} WHERE torneo <> '' ORDER BY torneo ASC");
+        if (!$result) {
+            return false;
+        }
+        $rows = [];
+        while ($row = $result->fetch_assoc()) {
+            $rows[] = ['id' => $row['torneo'], 'nome' => $row['torneo']];
+        }
+        return $rows;
     }
 
     public function getByNomeETorneo($nome, $torneo) {
