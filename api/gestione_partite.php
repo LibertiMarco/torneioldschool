@@ -1,233 +1,224 @@
-<?php
+﻿<?php
 session_start();
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
   header("Location: /torneioldschool/index.php");
   exit;
 }
 
-require_once __DIR__ . '/crud/partita.php';
-require_once __DIR__ . '/crud/torneo.php';
-
-$partita = new Partita();
-$torneoRepo = new Torneo();
-
-$fasiDisponibili = ['REGULAR', 'GOLD', 'SILVER'];
-$fasiEliminazione = ['OTTAVI', 'QUARTI', 'SEMIFINALE', 'FINALE'];
-$tipiAndataRitorno = ['ANDATA', 'RITORNO', 'UNICA'];
+require_once __DIR__ . '/../includi/db.php';
 
 $errore = '';
 $successo = '';
+$torneiDisponibili = [];
+$squadrePerTorneo = [];
+$fasiAmmesse = ['REGULAR', 'GOLD', 'SILVER'];
+$roundMap = [
+  'TRENTADUESIMI' => 6,
+  'SEDICESIMI' => 5,
+  'OTTAVI' => 4,
+  'QUARTI' => 3,
+  'SEMIFINALE' => 2,
+  'FINALE' => 1,
+];
 
-if (isset($_SESSION['flash_successo'])) {
-  $successo = $_SESSION['flash_successo'];
-  unset($_SESSION['flash_successo']);
-}
-
-function sanitizeFase(?string $value, array $allowed): string {
-  $fase = strtoupper(trim((string)$value));
-  return in_array($fase, $allowed, true) ? $fase : 'REGULAR';
-}
-
-function sanitizeEnum(?string $value, array $allowed): ?string {
-  $val = strtoupper(trim((string)$value));
-  return in_array($val, $allowed, true) ? $val : null;
-}
-
-function setSuccessAndRedirect(string $message): void {
-  $_SESSION['flash_successo'] = $message;
-  header('Location: gestione_partite.php');
-  exit;
-}
-
-/* ============================================================
-   CREA PARTITA
-============================================================ */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
-  $dati = [
-    'torneo'         => trim($_POST['torneo'] ?? ''),
-    'fase'           => sanitizeFase($_POST['fase'] ?? 'REGULAR', $fasiDisponibili),
-    'squadra_casa'   => trim($_POST['squadra_casa'] ?? ''),
-    'squadra_ospite' => trim($_POST['squadra_ospite'] ?? ''),
-    'gol_casa'       => (int)($_POST['gol_casa'] ?? 0),
-    'gol_ospite'     => (int)($_POST['gol_ospite'] ?? 0),
-    'data_partita'   => trim($_POST['data_partita'] ?? ''),
-    'ora_partita'    => trim($_POST['ora_partita'] ?? ''),
-    'campo'          => trim($_POST['campo'] ?? ''),
-    'giornata'       => (($_POST['giornata'] ?? '') !== '' ? (int)$_POST['giornata'] : null),
-    'fase_round'     => sanitizeEnum($_POST['fase_round'] ?? null, $fasiEliminazione),
-    'fase_leg'       => sanitizeEnum($_POST['fase_leg'] ?? null, $tipiAndataRitorno),
-    'link_youtube'   => trim($_POST['link_youtube'] ?? ''),
-    'link_instagram' => trim($_POST['link_instagram'] ?? ''),
-  ];
-
-  if (
-    $dati['torneo'] === '' || $dati['squadra_casa'] === '' || $dati['squadra_ospite'] === '' ||
-    $dati['data_partita'] === '' || $dati['ora_partita'] === '' || $dati['campo'] === ''
-  ) {
-    $errore = 'Compila tutti i campi obbligatori.';
-  } elseif ($dati['squadra_casa'] === $dati['squadra_ospite']) {
-    $errore = 'Le due squadre non possono coincidere.';
-  }
-
-  if ($errore === '') {
-    if ($dati['fase'] === 'REGULAR') {
-      if ($dati['giornata'] === null || $dati['giornata'] <= 0) {
-        $errore = 'La giornata è obbligatoria per la Regular Season.';
-      }
-      $dati['fase_round'] = null;
-      $dati['fase_leg'] = null;
-    } else {
-      $dati['giornata'] = null;
-      if (!$dati['fase_round'] || !$dati['fase_leg']) {
-        $errore = 'Seleziona fase eliminazione e tipologia per GOLD/SILVER.';
-      }
-    }
-  }
-
-  if ($errore === '') {
-    $partita->crea(
-      $dati['squadra_casa'],
-      $dati['squadra_ospite'],
-      $dati['gol_casa'],
-      $dati['gol_ospite'],
-      $dati['data_partita'],
-      $dati['ora_partita'],
-      $dati['campo'],
-      $dati['giornata'],
-      $dati['torneo'],
-      $dati['fase'],
-      $dati['fase_round'],
-      $dati['fase_leg'],
-      $dati['link_youtube'] !== '' ? $dati['link_youtube'] : null,
-      $dati['link_instagram'] !== '' ? $dati['link_instagram'] : null
-    );
-
-    $partita->aggiornaClassifica(
-      $dati['torneo'],
-      $dati['squadra_casa'],
-      $dati['squadra_ospite'],
-      $dati['gol_casa'],
-      $dati['gol_ospite'],
-      null,
-      $dati['fase']
-    );
-
-    setSuccessAndRedirect('Partita creata con successo.');
-  }
-}
-
-/* ============================================================
-   AGGIORNA PARTITA
-============================================================ */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
-  $id = (int)($_POST['id'] ?? 0);
-  $vecchia = $partita->getById($id);
-
-  if (!$vecchia) {
-    $errore = 'Partita non trovata.';
-  } else {
-    $dati = [
-      'torneo'         => trim($_POST['torneo'] ?? ''),
-      'fase'           => sanitizeFase($_POST['fase'] ?? 'REGULAR', $fasiDisponibili),
-      'squadra_casa'   => trim($_POST['squadra_casa'] ?? ''),
-      'squadra_ospite' => trim($_POST['squadra_ospite'] ?? ''),
-      'gol_casa'       => (int)($_POST['gol_casa'] ?? 0),
-      'gol_ospite'     => (int)($_POST['gol_ospite'] ?? 0),
-      'data_partita'   => trim($_POST['data_partita'] ?? ''),
-      'ora_partita'    => trim($_POST['ora_partita'] ?? ''),
-      'campo'          => trim($_POST['campo'] ?? ''),
-      'giornata'       => (($_POST['giornata'] ?? '') !== '' ? (int)$_POST['giornata'] : null),
-      'fase_round'     => sanitizeEnum($_POST['fase_round'] ?? null, $fasiEliminazione),
-      'fase_leg'       => sanitizeEnum($_POST['fase_leg'] ?? null, $tipiAndataRitorno),
-      'link_youtube'   => trim($_POST['link_youtube'] ?? ''),
-      'link_instagram' => trim($_POST['link_instagram'] ?? ''),
+$torneiRes = $conn->query("SELECT nome, filetorneo FROM tornei WHERE stato <> 'terminato' ORDER BY nome ASC");
+if ($torneiRes) {
+  while ($row = $torneiRes->fetch_assoc()) {
+    $slug = preg_replace('/\.html$/i', '', $row['filetorneo'] ?? '');
+    $torneiDisponibili[] = [
+      'nome' => $row['nome'] ?: $slug,
+      'slug' => $slug,
     ];
+  }
+}
 
-    if (
-      $dati['torneo'] === '' || $dati['squadra_casa'] === '' || $dati['squadra_ospite'] === '' ||
-      $dati['data_partita'] === '' || $dati['ora_partita'] === '' || $dati['campo'] === ''
-    ) {
-      $errore = 'Compila tutti i campi obbligatori.';
-    } elseif ($dati['squadra_casa'] === $dati['squadra_ospite']) {
-      $errore = 'Le due squadre non possono coincidere.';
+if (!empty($torneiDisponibili)) {
+  $slugs = array_column($torneiDisponibili, 'slug');
+  $placeholders = implode(',', array_fill(0, count($slugs), '?'));
+  $types = str_repeat('s', count($slugs));
+  $sq = $conn->prepare("SELECT nome, torneo FROM squadre WHERE torneo IN ($placeholders) ORDER BY nome ASC");
+  if ($sq) {
+    $sq->bind_param($types, ...$slugs);
+    $sq->execute();
+    $resSq = $sq->get_result();
+    while ($r = $resSq->fetch_assoc()) {
+      $slug = $r['torneo'] ?? '';
+      if (!isset($squadrePerTorneo[$slug])) {
+        $squadrePerTorneo[$slug] = [];
+      }
+      $squadrePerTorneo[$slug][] = $r['nome'];
     }
+    $sq->close();
+  }
+}
 
-    if ($errore === '') {
-      if ($dati['fase'] === 'REGULAR') {
-        if ($dati['giornata'] === null || $dati['giornata'] <= 0) {
-          $errore = 'La giornata è obbligatoria per la Regular Season.';
+function sanitize_text(?string $v): string {
+  return trim((string)$v);
+}
+
+function sanitize_int(?string $v): int {
+  return (int)($v === '' || $v === null ? 0 : $v);
+}
+
+function sanitize_fase(?string $v, array $allowed): string {
+  $val = strtoupper(trim((string)$v));
+  return in_array($val, $allowed, true) ? $val : 'REGULAR';
+}
+
+function round_to_giornata(?string $roundLabel, array $map): ?int {
+  if ($roundLabel === null) return null;
+  $key = strtoupper(trim($roundLabel));
+  return $map[$key] ?? null;
+}
+
+function giornata_to_roundLabel(?int $giornata, array $map): ?string {
+  if ($giornata === null) return null;
+  $flip = array_flip($map);
+  return $flip[$giornata] ?? null;
+}
+
+// ===== OPERAZIONI CRUD =====
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $azione = $_POST['azione'] ?? '';
+
+  if ($azione === 'crea') {
+    $torneo = sanitize_text($_POST['torneo'] ?? '');
+    $fase = sanitize_fase($_POST['fase'] ?? '', $fasiAmmesse);
+    $casa = sanitize_text($_POST['squadra_casa'] ?? '');
+    $ospite = sanitize_text($_POST['squadra_ospite'] ?? '');
+    $data = sanitize_text($_POST['data_partita'] ?? '');
+    $ora = sanitize_text($_POST['ora_partita'] ?? '');
+    $campo = sanitize_text($_POST['campo'] ?? '');
+    $roundSelezionato = sanitize_text($_POST['round_eliminazione'] ?? '');
+    $giornata = sanitize_int($_POST['giornata'] ?? '');
+    $giocata = isset($_POST['giocata']) ? 1 : 0;
+    $gol_casa = sanitize_int($_POST['gol_casa'] ?? '0');
+    $gol_ospite = sanitize_int($_POST['gol_ospite'] ?? '0');
+    $link_youtube = sanitize_text($_POST['link_youtube'] ?? '');
+    $link_instagram = sanitize_text($_POST['link_instagram'] ?? '');
+
+    if ($torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($fase !== 'REGULAR' && $roundSelezionato === '')) {
+      $errore = 'Compila tutti i campi obbligatori.';
+    } elseif ($casa === $ospite) {
+      $errore = 'Le due squadre non possono coincidere.';
+    } else {
+      if ($fase !== 'REGULAR') {
+        $giornata = round_to_giornata($roundSelezionato, $roundMap) ?? 0;
+      }
+      $stmt = $conn->prepare("INSERT INTO partite (torneo, fase, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
+      if ($stmt) {
+        $stmt->bind_param(
+          'ssssiisssiiss',
+          $torneo,
+          $fase,
+          $casa,
+          $ospite,
+          $gol_casa,
+          $gol_ospite,
+          $data,
+          $ora,
+          $campo,
+          $giornata,
+          $giocata,
+          $link_youtube,
+          $link_instagram
+        );
+        if ($stmt->execute()) {
+          $successo = 'Partita creata correttamente.';
+        } else {
+          $errore = 'Inserimento non riuscito.';
         }
-        $dati['fase_round'] = null;
-        $dati['fase_leg'] = null;
+        $stmt->close();
       } else {
-        $dati['giornata'] = null;
-        if (!$dati['fase_round'] || !$dati['fase_leg']) {
-          $errore = 'Seleziona fase eliminazione e tipologia per GOLD/SILVER.';
-        }
+        $errore = 'Errore interno durante la creazione.';
       }
     }
+  }
 
-    if ($errore === '') {
-      $partita->aggiorna(
-        $id,
-        $dati['squadra_casa'],
-        $dati['squadra_ospite'],
-        $dati['gol_casa'],
-        $dati['gol_ospite'],
-        $dati['data_partita'],
-        $dati['ora_partita'],
-        $dati['campo'],
-        $dati['giornata'],
-        $dati['torneo'],
-        $dati['fase'],
-        $dati['fase_round'],
-        $dati['fase_leg'],
-        $dati['link_youtube'] !== '' ? $dati['link_youtube'] : null,
-        $dati['link_instagram'] !== '' ? $dati['link_instagram'] : null
-      );
+  if ($azione === 'modifica') {
+    $id = (int)($_POST['partita_id'] ?? 0);
+    $torneo = sanitize_text($_POST['torneo_mod'] ?? '');
+    $fase = sanitize_fase($_POST['fase_mod'] ?? '', $fasiAmmesse);
+    $casa = sanitize_text($_POST['squadra_casa_mod'] ?? '');
+    $ospite = sanitize_text($_POST['squadra_ospite_mod'] ?? '');
+    $data = sanitize_text($_POST['data_partita_mod'] ?? '');
+    $ora = sanitize_text($_POST['ora_partita_mod'] ?? '');
+    $campo = sanitize_text($_POST['campo_mod'] ?? '');
+    $roundSelezionato = sanitize_text($_POST['round_eliminazione_mod'] ?? '');
+    $giornata = sanitize_int($_POST['giornata_mod'] ?? '');
+    $giocata = isset($_POST['giocata_mod']) ? 1 : 0;
+    $gol_casa = sanitize_int($_POST['gol_casa_mod'] ?? '0');
+    $gol_ospite = sanitize_int($_POST['gol_ospite_mod'] ?? '0');
+    $link_youtube = sanitize_text($_POST['link_youtube_mod'] ?? '');
+    $link_instagram = sanitize_text($_POST['link_instagram_mod'] ?? '');
 
-      $partita->aggiornaClassifica(
-        $dati['torneo'],
-        $dati['squadra_casa'],
-        $dati['squadra_ospite'],
-        $dati['gol_casa'],
-        $dati['gol_ospite'],
-        $vecchia,
-        $dati['fase']
-      );
+    if ($id <= 0 || $torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($fase !== 'REGULAR' && $roundSelezionato === '')) {
+      $errore = 'Seleziona una partita e compila i campi obbligatori.';
+    } elseif ($casa === $ospite) {
+      $errore = 'Le due squadre non possono coincidere.';
+    } else {
+      if ($fase !== 'REGULAR') {
+        $giornata = round_to_giornata($roundSelezionato, $roundMap) ?? 0;
+      }
+      $stmt = $conn->prepare("UPDATE partite SET torneo=?, fase=?, squadra_casa=?, squadra_ospite=?, gol_casa=?, gol_ospite=?, data_partita=?, ora_partita=?, campo=?, giornata=?, giocata=?, link_youtube=?, link_instagram=? WHERE id=?");
+      if ($stmt) {
+        $stmt->bind_param(
+          'ssssiisssiissi',
+          $torneo,
+          $fase,
+          $casa,
+          $ospite,
+          $gol_casa,
+          $gol_ospite,
+          $data,
+          $ora,
+          $campo,
+          $giornata,
+          $giocata,
+          $link_youtube,
+          $link_instagram,
+          $id
+        );
+        if ($stmt->execute()) {
+          $successo = 'Partita aggiornata correttamente.';
+        } else {
+          $errore = 'Aggiornamento non riuscito.';
+        }
+        $stmt->close();
+      } else {
+        $errore = 'Errore interno durante l\'aggiornamento.';
+      }
+    }
+  }
 
-      setSuccessAndRedirect('Partita aggiornata correttamente.');
+  if ($azione === 'elimina') {
+    $id = (int)($_POST['partita_id'] ?? 0);
+    if ($id <= 0) {
+      $errore = 'Seleziona una partita valida da eliminare.';
+    } else {
+      $stmt = $conn->prepare("DELETE FROM partite WHERE id=?");
+      if ($stmt) {
+        $stmt->bind_param('i', $id);
+        if ($stmt->execute()) {
+          $successo = 'Partita eliminata.';
+        } else {
+          $errore = 'Eliminazione non riuscita.';
+        }
+        $stmt->close();
+      } else {
+        $errore = 'Errore interno durante l\'eliminazione.';
+      }
     }
   }
 }
 
-/* ============================================================
-   ELIMINA PARTITA
-============================================================ */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['elimina'])) {
-  $id = (int)($_POST['id_da_eliminare'] ?? 0);
-  $vecchia = $partita->getById($id);
-
-  if (!$vecchia) {
-    $errore = 'Partita non trovata.';
-  } else {
-    $partita->aggiornaClassifica(
-      $vecchia['torneo'],
-      $vecchia['squadra_casa'],
-      $vecchia['squadra_ospite'],
-      0,
-      0,
-      $vecchia,
-      $vecchia['fase'] ?? 'REGULAR'
-    );
-
-    $partita->elimina($id);
-    setSuccessAndRedirect('Partita eliminata.');
+$partite = [];
+$res = $conn->query("SELECT id, torneo, fase, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, link_youtube, link_instagram, created_at FROM partite ORDER BY data_partita DESC, ora_partita DESC, id DESC");
+if ($res) {
+  while ($row = $res->fetch_assoc()) {
+    $partite[] = $row;
   }
 }
-
-$tornei = $torneoRepo->getAll();
-$partite = $partita->getAll();
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -238,691 +229,602 @@ $partite = $partita->getAll();
   <link rel="stylesheet" href="/torneioldschool/style.css">
   <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
   <style>
-    body {
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
+    body { display: flex; flex-direction: column; min-height: 100vh; background: #f7f9fc; }
+    main.admin-wrapper { flex: 1 0 auto; }
+    .tab-buttons { display: flex; gap: 12px; margin: 10px 0 20px; flex-wrap: wrap; }
+    .tab-buttons button { padding: 12px 16px; border: 1px solid #cbd5e1; background: #ecf1f7; cursor: pointer; border-radius: 10px; font-weight: 600; color: #1c2a3a; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: all .2s; }
+    .tab-buttons button:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+    .tab-buttons button.active { background: linear-gradient(135deg, #15293e, #1f3f63); color: #fff; border-color: #15293e; box-shadow: 0 8px 20px rgba(21,41,62,0.25); }
 
-    main.admin-wrapper {
-      flex: 1 0 auto;
-    }
+    .form-card { background: #fff; border: 1px solid #e5eaf0; border-radius: 14px; padding: 18px 18px 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.06); margin-bottom: 20px; }
+    .form-card h3 { margin: 0 0 14px; color: #15293e; font-size: 1.1rem; }
 
-    .admin-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 20px;
-      margin-bottom: 30px;
-    }
+    .admin-form.inline { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 18px; }
+    .admin-form.inline .full { grid-column: 1 / -1; }
+    .admin-form.inline label { font-weight: 600; color: #1c2a3a; }
+    .admin-form.inline input,
+    .admin-form.inline select { border-radius: 10px; border: 1px solid #d5dbe4; background: #fafbff; transition: border-color .2s, box-shadow .2s; width: 100%; display: block; }
+    .admin-form.inline input:focus,
+    .admin-form.inline select:focus { border-color: #15293e; box-shadow: 0 0 0 3px rgba(21,41,62,0.15); outline: none; }
 
-    .admin-card-block {
-      background: #0f1624;
-      border: 1px solid #233554;
-      border-radius: 12px;
-      padding: 18px;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    }
-
-    .admin-card-block h2 {
-      margin-top: 0;
-      margin-bottom: 12px;
-      color: #fff;
-    }
-
-    .admin-card-block form label {
-      font-weight: 600;
-      color: #c3d1e4;
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 10px;
-    }
-
-    .hidden { display: none; }
-
-    .table-responsive {
-      overflow-x: auto;
-      border-radius: 12px;
-      border: 1px solid #233554;
-    }
-
-    .btn-secondary {
-      display: inline-block;
-      background: #233554;
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
-      border: none;
-      cursor: pointer;
-    }
-
-    .btn-secondary:hover { background: #1b2a42; }
-
-    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
+    .table-scroll { overflow-x: auto; background: #fff; border: 1px solid #e5eaf0; border-radius: 14px; padding: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
     #footer-container { margin-top: auto; padding-top: 40px; }
+
+    .modern-danger { background: linear-gradient(135deg, #d72638, #b1172a); border: none; color: #fff; padding: 12px 18px; border-radius: 12px; box-shadow: 0 10px 25px rgba(183, 23, 42, 0.3); transition: transform .15s, box-shadow .15s; font-weight: 700; letter-spacing: 0.2px; }
+    .modern-danger:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(183, 23, 42, 0.4); }
+
+    .confirm-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(2px);
+      z-index: 9999;
+    }
+    .confirm-modal.active { display: flex; }
+    .confirm-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 22px;
+      width: min(420px, 90vw);
+      box-shadow: 0 18px 34px rgba(0,0,0,0.15);
+      border: 1px solid #e5eaf0;
+    }
+    .confirm-card h4 { margin: 0 0 8px; color: #15293e; }
+    .confirm-card p { margin: 0 0 16px; color: #345; }
+    .confirm-actions { display: flex; gap: 12px; justify-content: center; }
+    .confirm-actions button { flex: 1 1 0; min-width: 140px; text-align: center; }
+    .btn-ghost { border: 1px solid #d5dbe4; background: #fff; color: #1c2a3a; border-radius: 10px; padding: 12px 14px; cursor: pointer; font-weight: 700; }
+    .btn-ghost:hover { border-color: #15293e; color: #15293e; }
+    .btn-secondary-modern { border: 1px solid #cbd5e1; background: #f5f7fb; color: #15293e; border-radius: 10px; padding: 10px 14px; font-weight: 700; box-shadow: 0 6px 14px rgba(0,0,0,0.08); transition: transform .15s, box-shadow .15s; }
+    .btn-secondary-modern:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.12); }
   </style>
 </head>
 <body>
-  <?php include __DIR__ . '/../includi/header.php'; ?>
+<?php include __DIR__ . '/../includi/header.php'; ?>
 
-  <main class="admin-wrapper">
-    <section class="admin-container">
-      <a class="admin-back-link" href="/torneioldschool/admin_dashboard.php">Torna alla dashboard</a>
-      <h1 class="admin-title">Gestione Partite</h1>
+<main class="admin-wrapper">
+  <section class="admin-container">
+    <a class="admin-back-link" href="/torneioldschool/admin_dashboard.php">Torna alla dashboard</a>
+    <h1 class="admin-title">Gestione Partite</h1>
 
-      <?php if ($errore): ?>
-        <div class="alert-error"><?= htmlspecialchars($errore) ?></div>
-      <?php endif; ?>
-      <?php if ($successo): ?>
-        <div class="alert-success"><?= htmlspecialchars($successo) ?></div>
-      <?php endif; ?>
+    <?php if ($errore): ?>
+      <div class="alert-error"><?= htmlspecialchars($errore) ?></div>
+    <?php endif; ?>
+    <?php if ($successo): ?>
+      <div class="alert-success"><?= htmlspecialchars($successo) ?></div>
+    <?php endif; ?>
 
-      <div class="admin-grid">
-        <div class="admin-card-block">
-          <h2>Crea partita</h2>
-          <form method="POST" id="formCrea" class="admin-form">
-            <input type="hidden" name="crea" value="1">
+    <div class="tab-buttons">
+      <button type="button" data-tab="crea" class="active">Crea</button>
+      <button type="button" data-tab="modifica">Modifica</button>
+      <button type="button" data-tab="elimina">Elimina</button>
+    </div>
 
-            <label>Torneo</label>
-            <select name="torneo" id="create_torneo" required>
-              <option value="">-- Seleziona torneo --</option>
-              <?php while ($t = $tornei->fetch_assoc()): $slug = preg_replace('/\.html$/i', '', $t['filetorneo']); ?>
-                <option value="<?= htmlspecialchars($slug) ?>"><?= htmlspecialchars($t['nome'] ?? $slug) ?></option>
-              <?php endwhile; ?>
-            </select>
-
-            <label>Fase</label>
-            <select name="fase" id="create_fase" required>
-              <?php foreach ($fasiDisponibili as $f): ?>
-                <option value="<?= htmlspecialchars($f) ?>"><?= htmlspecialchars($f) ?></option>
-              <?php endforeach; ?>
-            </select>
-
-            <div class="form-row">
-              <div>
-                <label>Squadra Casa</label>
-                <select name="squadra_casa" id="create_casa" required></select>
-              </div>
-              <div>
-                <label>Squadra Ospite</label>
-                <select name="squadra_ospite" id="create_ospite" required></select>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div>
-                <label>Gol Casa</label>
-                <input type="number" name="gol_casa" min="0" value="0" required>
-              </div>
-              <div>
-                <label>Gol Ospite</label>
-                <input type="number" name="gol_ospite" min="0" value="0" required>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div>
-                <label>Data</label>
-                <input type="date" name="data_partita" required>
-              </div>
-              <div>
-                <label>Ora</label>
-                <input type="time" name="ora_partita" required>
-              </div>
-            </div>
-
-            <label>Campo</label>
-            <select name="campo" required>
-              <option value="">-- Seleziona Campo --</option>
-              <option value="Sporting Club San Francesco, Napoli">Sporting Club San Francesco, Napoli</option>
-              <option value="Centro Sportivo La Paratina, Napoli">Centro Sportivo La Paratina, Napoli</option>
-              <option value="Sporting S.Antonio, Napoli">Sporting S.Antonio, Napoli</option>
-              <option value="La Boutique del Calcio, Napoli">La Boutique del Calcio, Napoli</option>
-              <option value="Campo Centrale del Parco Corto Maltese, Napoli">Campo Centrale del Parco Corto Maltese, Napoli</option>
-            </select>
-
-            <div id="create_regular_group">
-              <label>Giornata</label>
-              <input type="number" name="giornata" id="create_giornata" min="1">
-            </div>
-
-            <div id="create_knockout_group" class="hidden">
-              <div class="form-row">
-                <div>
-                  <label>Fase eliminazione</label>
-                  <select name="fase_round" id="create_fase_round">
-                    <option value="">-- Seleziona fase --</option>
-                    <?php foreach ($fasiEliminazione as $round): ?>
-                      <option value="<?= htmlspecialchars($round) ?>"><?= ucfirst(strtolower($round)) ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
-                <div>
-                  <label>Tipologia partita</label>
-                  <select name="fase_leg" id="create_fase_leg">
-                    <option value="">-- Seleziona tipologia --</option>
-                    <?php foreach ($tipiAndataRitorno as $tipo): ?>
-                      <option value="<?= htmlspecialchars($tipo) ?>"><?= ucfirst(strtolower($tipo)) ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div>
-                <label>Link YouTube (opzionale)</label>
-                <input type="url" name="link_youtube" placeholder="https://youtube.com/...">
-              </div>
-              <div>
-                <label>Link Instagram (opzionale)</label>
-                <input type="url" name="link_instagram" placeholder="https://instagram.com/...">
-              </div>
-            </div>
-
-            <button type="submit" class="btn-primary" style="margin-top:12px;">Aggiungi partita</button>
-          </form>
+    <!-- CREA -->
+    <section class="tab-section active" data-tab="crea">
+      <div class="form-card">
+        <h3>Crea partita</h3>
+        <form class="admin-form inline" method="POST">
+        <input type="hidden" name="azione" value="crea">
+        <div>
+          <label>Torneo</label>
+          <select name="torneo" id="torneoCrea" required>
+            <option value="">-- Seleziona torneo --</option>
+            <?php foreach ($torneiDisponibili as $t): ?>
+              <option value="<?= htmlspecialchars($t['slug']) ?>"><?= htmlspecialchars($t['nome']) ?></option>
+            <?php endforeach; ?>
+          </select>
         </div>
-
-        <div class="admin-card-block">
-          <h2>Modifica partita</h2>
-          <form method="POST" id="formModifica" class="admin-form">
-            <input type="hidden" name="aggiorna" value="1">
-            <input type="hidden" name="id" id="edit_id">
-
-            <label>Torneo</label>
-            <select name="torneo" id="edit_torneo" required>
-              <option value="">-- Seleziona torneo --</option>
-              <?php $torneiMod = $torneoRepo->getAll(); while ($t = $torneiMod->fetch_assoc()): $slug = preg_replace('/\.html$/i', '', $t['filetorneo']); ?>
-                <option value="<?= htmlspecialchars($slug) ?>"><?= htmlspecialchars($t['nome'] ?? $slug) ?></option>
-              <?php endwhile; ?>
-            </select>
-
-            <label>Fase</label>
-            <select name="fase" id="edit_fase" required>
-              <?php foreach ($fasiDisponibili as $f): ?>
-                <option value="<?= htmlspecialchars($f) ?>"><?= htmlspecialchars($f) ?></option>
-              <?php endforeach; ?>
-            </select>
-
-            <div class="form-row">
-              <div>
-                <label>Squadra Casa</label>
-                <select name="squadra_casa" id="edit_casa" required></select>
-              </div>
-              <div>
-                <label>Squadra Ospite</label>
-                <select name="squadra_ospite" id="edit_ospite" required></select>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div>
-                <label>Gol Casa</label>
-                <input type="number" name="gol_casa" id="edit_gol_casa" min="0" required>
-              </div>
-              <div>
-                <label>Gol Ospite</label>
-                <input type="number" name="gol_ospite" id="edit_gol_ospite" min="0" required>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div>
-                <label>Data</label>
-                <input type="date" name="data_partita" id="edit_data" required>
-              </div>
-              <div>
-                <label>Ora</label>
-                <input type="time" name="ora_partita" id="edit_ora" required>
-              </div>
-            </div>
-
-            <label>Campo</label>
-            <select name="campo" id="edit_campo" required>
-              <option value="">-- Seleziona Campo --</option>
-              <option value="Sporting Club San Francesco, Napoli">Sporting Club San Francesco, Napoli</option>
-              <option value="Centro Sportivo La Paratina, Napoli">Centro Sportivo La Paratina, Napoli</option>
-              <option value="Sporting S.Antonio, Napoli">Sporting S.Antonio, Napoli</option>
-              <option value="La Boutique del Calcio, Napoli">La Boutique del Calcio, Napoli</option>
-              <option value="Campo Centrale del Parco Corto Maltese, Napoli">Campo Centrale del Parco Corto Maltese, Napoli</option>
-            </select>
-
-            <div id="edit_regular_group">
-              <label>Giornata</label>
-              <input type="number" name="giornata" id="edit_giornata" min="1">
-            </div>
-
-            <div id="edit_knockout_group" class="hidden">
-              <div class="form-row">
-                <div>
-                  <label>Fase eliminazione</label>
-                  <select name="fase_round" id="edit_fase_round">
-                    <option value="">-- Seleziona fase --</option>
-                    <?php foreach ($fasiEliminazione as $round): ?>
-                      <option value="<?= htmlspecialchars($round) ?>"><?= ucfirst(strtolower($round)) ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
-                <div>
-                  <label>Tipologia partita</label>
-                  <select name="fase_leg" id="edit_fase_leg">
-                    <option value="">-- Seleziona tipologia --</option>
-                    <?php foreach ($tipiAndataRitorno as $tipo): ?>
-                      <option value="<?= htmlspecialchars($tipo) ?>"><?= ucfirst(strtolower($tipo)) ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div>
-                <label>Link YouTube (opzionale)</label>
-                <input type="url" name="link_youtube" id="edit_link_youtube" placeholder="https://youtube.com/...">
-              </div>
-              <div>
-                <label>Link Instagram (opzionale)</label>
-                <input type="url" name="link_instagram" id="edit_link_instagram" placeholder="https://instagram.com/...">
-              </div>
-            </div>
-
-            <div class="actions" style="margin-top:12px;">
-              <button type="submit" class="btn-primary">Salva modifiche</button>
-              <button type="button" class="btn-secondary" id="reset_edit">Pulisci form</button>
-              <a id="stats_link" class="btn-secondary hidden" target="_blank">Statistiche</a>
-            </div>
-          </form>
+        <div>
+          <label>Fase</label>
+          <select name="fase" required>
+            <?php foreach ($fasiAmmesse as $f): ?>
+              <option value="<?= htmlspecialchars($f) ?>"><?= htmlspecialchars($f) ?></option>
+            <?php endforeach; ?>
+          </select>
         </div>
+        <div>
+          <label>Squadra casa</label>
+          <select name="squadra_casa" id="squadraCasaCrea" required>
+            <option value="">-- Seleziona torneo prima --</option>
+          </select>
+        </div>
+        <div>
+          <label>Squadra ospite</label>
+          <select name="squadra_ospite" id="squadraOspiteCrea" required>
+            <option value="">-- Seleziona torneo prima --</option>
+          </select>
+        </div>
+        <input type="hidden" name="gol_casa" value="0">
+        <input type="hidden" name="gol_ospite" value="0">
+        <div>
+          <label>Data</label>
+          <input type="date" name="data_partita" required>
+        </div>
+        <div>
+          <label>Ora</label>
+          <input type="time" name="ora_partita" required>
+        </div>
+        <div>
+          <label>Campo</label>
+          <select name="campo" required>
+            <option value="">-- Seleziona campo --</option>
+            <option value="Sporting Club San Francesco, Napoli">Sporting Club San Francesco, Napoli</option>
+            <option value="Centro Sportivo La Paratina, Napoli">Centro Sportivo La Paratina, Napoli</option>
+            <option value="Sporting S.Antonio, Napoli">Sporting S.Antonio, Napoli</option>
+            <option value="La Boutique del Calcio, Napoli">La Boutique del Calcio, Napoli</option>
+            <option value="Campo Centrale del Parco Corto Maltese, Napoli">Campo Centrale del Parco Corto Maltese, Napoli</option>
+          </select>
+        </div>
+        <div id="giornataWrapper">
+          <label>Giornata</label>
+          <input type="number" name="giornata" id="giornataCrea" min="1" required>
+        </div>
+        <div id="roundWrapper" class="hidden">
+          <label>Fase eliminazione</label>
+          <select name="round_eliminazione" id="roundCrea">
+            <option value="">-- Seleziona fase --</option>
+            <option value="TRENTADUESIMI">Trentaduesimi di finale</option>
+            <option value="SEDICESIMI">Sedicesimi di finale</option>
+            <option value="OTTAVI">Ottavi di finale</option>
+            <option value="QUARTI">Quarti di finale</option>
+            <option value="SEMIFINALE">Semifinale</option>
+            <option value="FINALE">Finale</option>
+          </select>
+        </div>
+        <input type="hidden" name="giocata" value="0">
+        <input type="hidden" name="link_youtube" value="">
+        <input type="hidden" name="link_instagram" value="">
+        <div class="full">
+          <button type="submit" class="btn-primary">Crea partita</button>
+        </div>
+        </form>
       </div>
-
-      <section class="admin-table-section">
-        <h2>Elenco partite</h2>
-        <div class="table-responsive">
-          <table class="admin-table" style="min-width:1000px;">
-            <thead>
-              <tr>
-                <th>Torneo</th>
-                <th>Fase</th>
-                <th>Giornata/Fase</th>
-                <th>Casa</th>
-                <th>Ospite</th>
-                <th>Data</th>
-                <th>Ora</th>
-                <th>Campo</th>
-                <th>Azioni</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php while ($p = $partite->fetch_assoc()): ?>
-                <tr
-                  data-id="<?= (int)$p['id'] ?>"
-                  data-torneo="<?= htmlspecialchars($p['torneo']) ?>"
-                  data-fase="<?= htmlspecialchars($p['fase'] ?? 'REGULAR') ?>"
-                  data-giornata="<?= htmlspecialchars($p['giornata'] ?? '') ?>"
-                  data-fase-round="<?= htmlspecialchars($p['fase_round'] ?? '') ?>"
-                  data-fase-leg="<?= htmlspecialchars($p['fase_leg'] ?? '') ?>"
-                  data-casa="<?= htmlspecialchars($p['squadra_casa']) ?>"
-                  data-ospite="<?= htmlspecialchars($p['squadra_ospite']) ?>"
-                  data-gol-casa="<?= (int)$p['gol_casa'] ?>"
-                  data-gol-ospite="<?= (int)$p['gol_ospite'] ?>"
-                  data-data="<?= htmlspecialchars($p['data_partita']) ?>"
-                  data-ora="<?= htmlspecialchars($p['ora_partita']) ?>"
-                  data-campo="<?= htmlspecialchars($p['campo']) ?>"
-                  data-youtube="<?= htmlspecialchars($p['link_youtube'] ?? '') ?>"
-                  data-instagram="<?= htmlspecialchars($p['link_instagram'] ?? '') ?>"
-                >
-                  <td><?= htmlspecialchars($p['torneo']) ?></td>
-                  <td><?= htmlspecialchars($p['fase'] ?? 'REGULAR') ?></td>
-                  <td>
-                    <?php if (!empty($p['giornata'])): ?>
-                      Giornata <?= htmlspecialchars($p['giornata']) ?>
-                    <?php else: ?>
-                      <?= htmlspecialchars($p['fase_round'] ?? '') ?> (<?= htmlspecialchars($p['fase_leg'] ?? '') ?>)
-                    <?php endif; ?>
-                  </td>
-                  <td><?= htmlspecialchars($p['squadra_casa']) ?></td>
-                  <td><?= htmlspecialchars($p['squadra_ospite']) ?></td>
-                  <td><?= htmlspecialchars($p['data_partita']) ?></td>
-                  <td><?= htmlspecialchars($p['ora_partita']) ?></td>
-                  <td><?= htmlspecialchars($p['campo']) ?></td>
-                  <td class="actions">
-                    <button type="button" class="btn-secondary btn-edit">Modifica</button>
-                    <button type="button" class="btn-danger btn-small btn-delete">Elimina</button>
-                  </td>
-                </tr>
-              <?php endwhile; ?>
-            </tbody>
-          </table>
-        </div>
-      </section>
     </section>
-  </main>
 
-  <form method="POST" id="formElimina" class="hidden">
-    <input type="hidden" name="elimina" value="1">
-    <input type="hidden" name="id_da_eliminare" id="id_da_eliminare">
-  </form>
+    <!-- MODIFICA -->
+    <section class="tab-section" data-tab="modifica">
+      <div class="form-card">
+        <h3>Modifica partita</h3>
+        <form class="admin-form inline" method="POST" id="formModifica">
+        <input type="hidden" name="azione" value="modifica">
+        <div class="full">
+          <label>Seleziona torneo</label>
+          <select id="selTorneoMod" required>
+            <option value="">-- Seleziona torneo --</option>
+            <?php foreach ($torneiDisponibili as $t): ?>
+              <option value="<?= htmlspecialchars($t['slug']) ?>"><?= htmlspecialchars($t['nome']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label>Fase</label>
+          <select id="selFaseMod" required>
+            <option value="">-- Seleziona fase --</option>
+            <?php foreach ($fasiAmmesse as $f): ?>
+              <option value="<?= htmlspecialchars($f) ?>"><?= htmlspecialchars($f) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label>Giornata / Turno</label>
+          <select id="selGiornataMod" required disabled>
+            <option value="">-- Seleziona fase --</option>
+          </select>
+        </div>
+        <div>
+          <label>Partita</label>
+          <select name="partita_id" id="selPartitaMod" required disabled>
+            <option value="">-- Seleziona giornata/turno --</option>
+          </select>
+        </div>
+        <div class="full">
+          <button type="button" id="btnStatsMod" class="btn-secondary-modern" style="display:none;">Statistiche partita</button>
+        </div>
+        <div>
+          <label>Torneo</label>
+          <select name="torneo_mod" id="torneo_mod" required>
+            <option value="">-- Seleziona torneo --</option>
+            <?php foreach ($torneiDisponibili as $t): ?>
+              <option value="<?= htmlspecialchars($t['slug']) ?>"><?= htmlspecialchars($t['nome']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label>Fase</label>
+          <select name="fase_mod" id="fase_mod" required>
+            <?php foreach ($fasiAmmesse as $f): ?>
+              <option value="<?= htmlspecialchars($f) ?>"><?= htmlspecialchars($f) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label>Squadra casa</label>
+          <select name="squadra_casa_mod" id="squadra_casa_mod" required>
+            <option value="">-- Seleziona torneo prima --</option>
+          </select>
+        </div>
+        <div>
+          <label>Squadra ospite</label>
+          <select name="squadra_ospite_mod" id="squadra_ospite_mod" required>
+            <option value="">-- Seleziona torneo prima --</option>
+          </select>
+        </div>
+        <div>
+          <label>Gol casa</label>
+          <input type="number" name="gol_casa_mod" id="gol_casa_mod" min="0">
+        </div>
+        <div>
+          <label>Gol ospite</label>
+          <input type="number" name="gol_ospite_mod" id="gol_ospite_mod" min="0">
+        </div>
+        <div>
+          <label>Data</label>
+          <input type="date" name="data_partita_mod" id="data_partita_mod" required>
+        </div>
+        <div>
+          <label>Ora</label>
+          <input type="time" name="ora_partita_mod" id="ora_partita_mod" required>
+        </div>
+        <div>
+          <label>Campo</label>
+          <select name="campo_mod" id="campo_mod" required>
+            <option value="">-- Seleziona campo --</option>
+            <option value="Sporting Club San Francesco, Napoli">Sporting Club San Francesco, Napoli</option>
+            <option value="Centro Sportivo La Paratina, Napoli">Centro Sportivo La Paratina, Napoli</option>
+            <option value="Sporting S.Antonio, Napoli">Sporting S.Antonio, Napoli</option>
+            <option value="La Boutique del Calcio, Napoli">La Boutique del Calcio, Napoli</option>
+            <option value="Campo Centrale del Parco Corto Maltese, Napoli">Campo Centrale del Parco Corto Maltese, Napoli</option>
+          </select>
+        </div>
+        <div id="giornataWrapperMod">
+          <label>Giornata</label>
+          <input type="number" name="giornata_mod" id="giornata_mod" min="1" required>
+        </div>
+        <div id="roundWrapperMod" class="hidden">
+          <label>Fase eliminazione</label>
+          <select name="round_eliminazione_mod" id="round_eliminazione_mod">
+            <option value="">-- Seleziona fase --</option>
+            <option value="TRENTADUESIMI">Trentaduesimi di finale</option>
+            <option value="SEDICESIMI">Sedicesimi di finale</option>
+            <option value="OTTAVI">Ottavi di finale</option>
+            <option value="QUARTI">Quarti di finale</option>
+            <option value="SEMIFINALE">Semifinale</option>
+            <option value="FINALE">Finale</option>
+          </select>
+        </div>
+        <div>
+          <label>Giocata</label>
+          <input type="checkbox" name="giocata_mod" id="giocata_mod" value="1">
+        </div>
+        <div>
+          <label>Link YouTube</label>
+          <input type="url" name="link_youtube_mod" id="link_youtube_mod" placeholder="https://youtube.com/...">
+        </div>
+        <div>
+          <label>Link Instagram</label>
+          <input type="url" name="link_instagram_mod" id="link_instagram_mod" placeholder="https://instagram.com/...">
+        </div>
+        <div class="full">
+          <button type="submit" class="btn-primary">Salva modifiche</button>
+        </div>
+        </form>
+      </div>
+    </section>
 
-  <div id="footer-container"></div>
+    <!-- ELIMINA -->
+    <section class="tab-section" data-tab="elimina">
+      <div class="form-card">
+        <h3>Elimina partita</h3>
+        <form method="POST" class="admin-form" id="formElimina">
+        <input type="hidden" name="azione" value="elimina">
+        <input type="hidden" name="partita_id" id="partitaEliminaHidden">
+        <div>
+          <label>Torneo</label>
+          <select id="selTorneoElim" required>
+            <option value="">-- Seleziona torneo --</option>
+            <?php foreach ($torneiDisponibili as $t): ?>
+              <option value="<?= htmlspecialchars($t['slug']) ?>"><?= htmlspecialchars($t['nome']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label>Fase</label>
+          <select id="selFaseElim" required>
+            <option value="">-- Seleziona fase --</option>
+            <?php foreach ($fasiAmmesse as $f): ?>
+              <option value="<?= htmlspecialchars($f) ?>"><?= htmlspecialchars($f) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label>Giornata / Turno</label>
+          <select id="selGiornataElim" required disabled>
+            <option value="">-- Seleziona fase --</option>
+          </select>
+        </div>
+        <div>
+          <label>Partita</label>
+          <select id="selPartitaElim" required disabled>
+            <option value="">-- Seleziona giornata/turno --</option>
+          </select>
+        </div>
+        <button type="button" id="btnApriConfermaElimina" class="btn-danger modern-danger">Elimina partita</button>
+        </form>
+      </div>
+    </section>
 
-  <script src="/torneioldschool/includi/header-interactions.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      if (typeof initHeaderInteractions === 'function') {
-        initHeaderInteractions();
+  </section>
+</main>
+
+<div id="footer-container"></div>
+
+<div class="confirm-modal" id="modalElimina">
+    <div class="confirm-card">
+      <h4>Conferma eliminazione</h4>
+      <p id="modalEliminaTesto">Sei sicuro di voler eliminare questa partita?</p>
+      <div class="confirm-actions">
+        <button type="button" class="btn-ghost" id="btnAnnullaElimina">Annulla</button>
+        <button type="button" class="modern-danger" id="btnConfermaElimina">Elimina</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const partiteData = <?php echo json_encode($partite, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+  const squadreMap = <?php echo json_encode($squadrePerTorneo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+  const roundLabelMap = {
+    'TRENTADUESIMI': 6,
+    'SEDICESIMI': 5,
+    'OTTAVI': 4,
+    'QUARTI': 3,
+    'SEMIFINALE': 2,
+    'FINALE': 1,
+  };
+  const roundLabelFromGiornata = Object.fromEntries(Object.entries(roundLabelMap).map(([k,v]) => [String(v), k]));
+  const roundLabelByKey = roundLabelFromGiornata;
+
+  // Tabs
+  const tabButtons = document.querySelectorAll('.tab-buttons button');
+  const tabSections = document.querySelectorAll('.tab-section');
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabButtons.forEach(b => b.classList.remove('active'));
+      tabSections.forEach(sec => sec.classList.remove('active'));
+      btn.classList.add('active');
+      const target = btn.dataset.tab;
+      const section = document.querySelector(`.tab-section[data-tab="${target}"]`);
+      if (section) section.classList.add('active');
+    });
+  });
+
+  const populateSquadre = (torneoSlug, selectId, selectedValue = '') => {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.innerHTML = '<option value=\"\">-- Seleziona --</option>';
+    const lista = squadreMap[torneoSlug] || [];
+    lista.forEach(nome => {
+      const opt = new Option(nome, nome);
+      select.add(opt);
+    });
+    if (selectedValue) select.value = selectedValue;
+  };
+
+  const enforceDifferentTeams = (idA, idB) => {
+    const a = document.getElementById(idA);
+    const b = document.getElementById(idB);
+    if (!a || !b) return;
+    a.addEventListener('change', () => {
+      if (a.value && a.value === b.value) {
+        b.value = '';
       }
-
-      const footer = document.getElementById('footer-container');
-      if (footer) {
-        fetch('/torneioldschool/includi/footer.html')
-          .then(r => r.text())
-          .then(html => footer.innerHTML = html)
-          .catch(err => console.error('Errore footer:', err));
+    });
+    b.addEventListener('change', () => {
+      if (a.value && a.value === b.value) {
+        b.value = '';
       }
+    });
+  };
 
-      const faseGroups = [
-        { fase: document.getElementById('create_fase'), reg: document.getElementById('create_regular_group'), ko: document.getElementById('create_knockout_group'), round: document.getElementById('create_fase_round'), leg: document.getElementById('create_fase_leg'), giornata: document.getElementById('create_giornata') },
-        { fase: document.getElementById('edit_fase'), reg: document.getElementById('edit_regular_group'), ko: document.getElementById('edit_knockout_group'), round: document.getElementById('edit_fase_round'), leg: document.getElementById('edit_fase_leg'), giornata: document.getElementById('edit_giornata') }
-      ];
-
-      function gestisciFase(cfg) {
-        if (!cfg.fase) return;
-        const isRegular = (cfg.fase.value || '').toUpperCase() === 'REGULAR';
-        cfg.reg?.classList.toggle('hidden', !isRegular);
-        cfg.ko?.classList.toggle('hidden', isRegular);
-
-        if (cfg.giornata) {
-          cfg.giornata.required = isRegular;
-          if (!isRegular) cfg.giornata.value = '';
-        }
-        if (cfg.round) {
-          cfg.round.required = !isRegular;
-          cfg.round.disabled = isRegular;
-          if (isRegular) cfg.round.value = '';
-        }
-        if (cfg.leg) {
-          cfg.leg.required = !isRegular;
-          cfg.leg.disabled = isRegular;
-          if (isRegular) cfg.leg.value = '';
-        }
-      }
-
-  function gestisciFase(selectElemento, groupGiornataId, groupKoId, selectRoundId, selectLegId) {
-    const valore = selectElemento?.value || "REGULAR";
-    const gruppoGiornata = document.getElementById(groupGiornataId);
-    const gruppoKo = document.getElementById(groupKoId);
-    const selectRound = document.getElementById(selectRoundId);
-    const selectLeg = document.getElementById(selectLegId);
-
-    const isRegular = valore === "REGULAR";
-
-    if (gruppoGiornata) {
-      gruppoGiornata.classList.toggle("hidden", !isRegular);
-      const inputGiornata = gruppoGiornata.querySelector("input");
-      if (inputGiornata) {
-        inputGiornata.required = isRegular;
-        inputGiornata.disabled = !isRegular;
-      }
-    }
-
-    if (gruppoKo) {
-      gruppoKo.classList.toggle("hidden", isRegular);
-    }
-
-    [selectRound, selectLeg].forEach(sel => {
-      if (!sel) return;
-      sel.disabled = isRegular;
-      sel.required = !isRegular;
-      if (isRegular) sel.value = "";
+  const torneoCrea = document.getElementById('torneoCrea');
+  if (torneoCrea) {
+    torneoCrea.addEventListener('change', () => {
+      populateSquadre(torneoCrea.value, 'squadraCasaCrea');
+      populateSquadre(torneoCrea.value, 'squadraOspiteCrea');
     });
   }
+  enforceDifferentTeams('squadraCasaCrea', 'squadraOspiteCrea');
 
-  async function caricaSquadre(slug, idCasa, idOspite, selCasa = "", selOspite = "") {
-    console.log("Carico squadre per torneo:", slug);
-    if (!slug) return;
-    try {
-      const url = "/torneioldschool/api/get_squadre.php?torneo=" + encodeURIComponent(slug);
-      const r = await fetch(url);
-      if (!r.ok) console.error("ERRORE fetch get_squadre:", r.status);
-      const d = await r.json();
-      const casa = document.getElementById(idCasa);
-      const osp = document.getElementById(idOspite);
-      if (!casa || !osp) return console.error("Select squadre non trovate");
+  const toggleRoundGiornata = (faseSelect, giornataWrapId, roundWrapId) => {
+    const isRegular = (faseSelect.value || '').toUpperCase() === 'REGULAR';
+    const giornataWrap = document.getElementById(giornataWrapId);
+    const roundWrap = document.getElementById(roundWrapId);
+    if (giornataWrap) giornataWrap.classList.toggle('hidden', !isRegular);
+    if (roundWrap) roundWrap.classList.toggle('hidden', isRegular);
+    const giornataInput = giornataWrap ? giornataWrap.querySelector('input') : null;
+    const roundSelect = roundWrap ? roundWrap.querySelector('select') : null;
+    if (giornataInput) {
+      giornataInput.required = isRegular;
+      if (!isRegular) giornataInput.value = '';
+    }
+    if (roundSelect) {
+      roundSelect.required = !isRegular;
+      if (isRegular) roundSelect.value = '';
+    }
+  };
 
-      casa.innerHTML = osp.innerHTML = '<option>-- Seleziona --</option>';
-      d.forEach(n => {
-        casa.add(new Option(n, n));
-        osp.add(new Option(n, n));
-      });
+  const faseCrea = document.querySelector('select[name="fase"]');
+  if (faseCrea) {
+    toggleRoundGiornata(faseCrea, 'giornataWrapper', 'roundWrapper');
+    faseCrea.addEventListener('change', () => toggleRoundGiornata(faseCrea, 'giornataWrapper', 'roundWrapper'));
+  }
 
-      async function caricaSquadre(torneo, casaId, ospiteId, selCasa = '', selOspite = '') {
-        const casa = document.getElementById(casaId);
-        const osp = document.getElementById(ospiteId);
-        if (!casa || !osp) return;
+  const fillField = (id, val) => { const el = document.getElementById(id); if (el) { if (el.type === 'checkbox') { el.checked = !!val; } else { el.value = val ?? ''; } } };
 
-        casa.innerHTML = osp.innerHTML = '<option value="">-- Seleziona --</option>';
-        if (!torneo) return;
+  const setupSelector = ({ torneoId, faseId, giornataId, partitaId, onPartita }) => {
+    const torneoSel = document.getElementById(torneoId);
+    const faseSel = document.getElementById(faseId);
+    const giorSel = document.getElementById(giornataId);
+    const partSel = document.getElementById(partitaId);
 
-        try {
-          const res = await fetch(`/torneioldschool/api/get_squadre.php?torneo=${encodeURIComponent(torneo)}`);
-          if (!res.ok) throw new Error('Errore rete');
-          const dati = await res.json();
-          dati.forEach(nome => {
-            casa.add(new Option(nome, nome));
-            osp.add(new Option(nome, nome));
-          });
-          if (selCasa) casa.value = selCasa;
-          if (selOspite) osp.value = selOspite;
-        } catch (err) {
-          console.error('Errore caricamento squadre:', err);
-        }
-      }
-
-      const createTorneo = document.getElementById('create_torneo');
-      createTorneo?.addEventListener('change', () => caricaSquadre(createTorneo.value, 'create_casa', 'create_ospite'));
-
-      const editTorneo = document.getElementById('edit_torneo');
-      editTorneo?.addEventListener('change', () => caricaSquadre(editTorneo.value, 'edit_casa', 'edit_ospite'));
-
-  const faseCrea = document.getElementById("selectFaseCrea");
-  faseCrea?.addEventListener("change", () =>
-    gestisciFase(faseCrea, "creaGiornataGroup", "creaKnockoutGroup", "crea_fase_round", "crea_fase_leg")
-  );
-  gestisciFase(faseCrea, "creaGiornataGroup", "creaKnockoutGroup", "crea_fase_round", "crea_fase_leg");
-
-  // ============================
-  // MODIFICA PARTITE
-  // ============================
-  const selectTorneoMod = document.getElementById("modSelectTorneo");
-  const selectFaseMod = document.getElementById("modSelectFase");
-  const selectGiornataMod = document.getElementById("modSelectGiornata");
-  const selectPartitaMod = document.getElementById("modSelectPartita");
-  const torneoHiddenMod = document.getElementById("torneoHiddenMod");
-  const modFormDati = document.getElementById("modFormDati");
-  const btnStats = document.getElementById("btn_statistiche");
-  let partiteCache = {};
-
-  function resetModForm() {
-    if (modFormDati) modFormDati.classList.add("hidden");
-    if (btnStats) btnStats.style.display = "none";
-    [selectPartitaMod, selectGiornataMod].forEach(sel => {
+    const resetSelect = (sel, placeholder) => {
       if (!sel) return;
-      sel.innerHTML = '<option value="">-- Seleziona torneo prima --</option>';
+      sel.innerHTML = `<option value=\"\">${placeholder}</option>`;
       sel.disabled = true;
-    });
-  }
+    };
 
-  async function caricaGiornateMod() {
-    const torneo = selectTorneoMod?.value || "";
-    const fase = selectFaseMod?.value || "";
-    if (!torneo || !selectGiornataMod || !selectPartitaMod) return;
-
-    selectGiornataMod.innerHTML = '<option value="">-- Seleziona --</option>';
-    selectPartitaMod.innerHTML = '<option value="">-- Seleziona giornata prima --</option>';
-    selectPartitaMod.disabled = true;
-
-    try {
-      const url = `/torneioldschool/api/get_partite.php?torneo=${encodeURIComponent(torneo)}${fase ? `&fase=${encodeURIComponent(fase)}` : ""}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Errore rete " + res.status);
-      partiteCache = await res.json();
-
-      const keys = Object.keys(partiteCache).sort((a, b) => Number(a) - Number(b));
-      keys.forEach(k => {
-        const label = isNaN(Number(k)) ? k : `Giornata ${k}`;
-        selectGiornataMod.add(new Option(label, k));
+    const populateGiornate = () => {
+      if (!torneoSel || !faseSel || !giorSel) return;
+      resetSelect(giorSel, '-- Seleziona fase --');
+      resetSelect(partSel, '-- Seleziona giornata/turno --');
+      const torneoVal = torneoSel.value;
+      const faseVal = (faseSel.value || '').toUpperCase();
+      if (!torneoVal || !faseVal) return;
+      const filtrate = partiteData.filter(p =>
+        p.torneo === torneoVal && (p.fase || '').toUpperCase() === faseVal
+      );
+      const uniche = Array.from(new Set(filtrate.map(p => p.giornata === null ? '' : String(p.giornata))));
+      uniche.sort((a, b) => Number(a) - Number(b));
+      uniche.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g;
+        if (faseVal === 'REGULAR') {
+          opt.textContent = `Giornata ${g}`;
+        } else {
+          opt.textContent = roundLabelByKey[String(g)] || 'Turno';
+        }
+        giorSel.appendChild(opt);
       });
-      selectGiornataMod.disabled = false;
-    } catch (err) {
-      console.error("Errore caricamento partite:", err);
-    }
-  }
+      giorSel.disabled = uniche.length === 0;
+      partSel.disabled = true;
+    };
 
-  selectTorneoMod?.addEventListener("change", () => {
-    if (torneoHiddenMod) torneoHiddenMod.value = selectTorneoMod.value;
-    if (selectFaseMod) selectFaseMod.disabled = !selectTorneoMod.value;
-    caricaSquadre(selectTorneoMod.value, "squadraCasaMod", "squadraOspiteMod");
-    resetModForm();
-    caricaGiornateMod();
-  });
-
-  selectFaseMod?.addEventListener("change", () => {
-    gestisciFase(selectFaseMod, "modGiornataGroup", "modKnockoutGroup", "mod_fase_round", "mod_fase_leg");
-    resetModForm();
-    caricaGiornateMod();
-  });
-
-  selectGiornataMod?.addEventListener("change", () => {
-    if (!selectPartitaMod) return;
-    const lista = partiteCache[selectGiornataMod.value] || [];
-    selectPartitaMod.innerHTML = '<option value="">-- Seleziona partita --</option>';
-    lista.forEach(p => {
-      const label = `${p.squadra_casa} - ${p.squadra_ospite}`;
-      selectPartitaMod.add(new Option(label, p.id));
-    });
-    selectPartitaMod.disabled = lista.length === 0;
-    if (lista.length === 0) {
-      console.warn("Nessuna partita trovata per la selezione attuale");
-    }
-  });
-
-  selectPartitaMod?.addEventListener("change", async () => {
-    const id = selectPartitaMod.value;
-    if (!id) return;
-    try {
-      const res = await fetch(`/torneioldschool/api/get_partita.php?id=${id}`);
-      if (!res.ok) throw new Error("Errore rete " + res.status);
-      const data = await res.json();
-
-      ["squadraCasaMod", "squadraOspiteMod"].forEach(selId => {
-        const el = document.getElementById(selId);
-        if (el) el.innerHTML = "";
+    const populatePartite = () => {
+      if (!torneoSel || !faseSel || !giorSel || !partSel) return;
+      resetSelect(partSel, '-- Seleziona giornata/turno --');
+      const torneoVal = torneoSel.value;
+      const faseVal = (faseSel.value || '').toUpperCase();
+      const gVal = giorSel.value;
+      if (!torneoVal || !faseVal || gVal === '') return;
+      const filtrate = partiteData.filter(p =>
+        p.torneo === torneoVal &&
+        (p.fase || '').toUpperCase() === faseVal &&
+        String(p.giornata ?? '') === gVal
+      );
+      filtrate.forEach(p => {
+        const label = `${p.squadra_casa} - ${p.squadra_ospite} (${p.data_partita} ${p.ora_partita ?? ''})`;
+        const opt = new Option(label, p.id);
+        partSel.add(opt);
       });
-      caricaSquadre(data.torneo, "squadraCasaMod", "squadraOspiteMod", data.squadra_casa, data.squadra_ospite);
+      partSel.disabled = filtrate.length === 0;
+    };
 
-      document.getElementById("mod_fase").value = data.fase || "REGULAR";
-      document.getElementById("mod_gol_casa").value = data.gol_casa ?? 0;
-      document.getElementById("mod_gol_ospite").value = data.gol_ospite ?? 0;
-      document.getElementById("mod_data_partita").value = data.data_partita || "";
-      document.getElementById("mod_ora_partita").value = data.ora_partita || "";
-      document.getElementById("mod_campo").value = data.campo || "";
-      document.getElementById("mod_giornata").value = data.giornata ?? "";
-      document.getElementById("mod_fase_round").value = data.fase_round || "";
-      document.getElementById("mod_fase_leg").value = data.fase_leg || "";
-      document.getElementById("mod_link_youtube").value = data.link_youtube || "";
-      document.getElementById("mod_link_instagram").value = data.link_instagram || "";
+    torneoSel?.addEventListener('change', populateGiornate);
+    faseSel?.addEventListener('change', populateGiornate);
+    giorSel?.addEventListener('change', populatePartite);
+    partSel?.addEventListener('change', () => {
+      const id = parseInt(partSel.value, 10);
+      const partita = partiteData.find(p => parseInt(p.id, 10) === id);
+      onPartita?.(partita || null);
+    });
+  };
 
-      gestisciFase(document.getElementById("mod_fase"), "modGiornataGroup", "modKnockoutGroup", "mod_fase_round", "mod_fase_leg");
-
-      if (modFormDati) modFormDati.classList.remove("hidden");
-      if (btnStats) {
-        btnStats.style.display = "block";
-        btnStats.onclick = () => {
-          window.location.href = `/torneioldschool/api/statistiche_partita.php?partitaid=${id}`;
-        };
+  setupSelector({
+    torneoId: 'selTorneoMod',
+    faseId: 'selFaseMod',
+    giornataId: 'selGiornataMod',
+    partitaId: 'selPartitaMod',
+    onPartita: (partita) => {
+      if (!partita) return;
+      const torneoMod = document.getElementById('torneo_mod');
+      if (torneoMod) {
+        if (![...torneoMod.options].some(o => o.value === partita.torneo)) {
+          const opt = new Option(partita.torneo, partita.torneo, true, true);
+          torneoMod.add(opt);
+        }
+        torneoMod.value = partita.torneo;
+        populateSquadre(partita.torneo, 'squadra_casa_mod', partita.squadra_casa);
+        populateSquadre(partita.torneo, 'squadra_ospite_mod', partita.squadra_ospite);
       }
-    } catch (err) {
-      console.error("Errore recupero partita:", err);
+      fillField('fase_mod', partita.fase);
+      const faseModSelect = document.getElementById('fase_mod');
+      if (faseModSelect) toggleRoundGiornata(faseModSelect, 'giornataWrapperMod', 'roundWrapperMod');
+      if (partita.fase && partita.fase.toUpperCase() !== 'REGULAR') {
+        const lbl = roundLabelFromGiornata[String(partita.giornata)] || '';
+        const roundSel = document.getElementById('round_eliminazione_mod');
+        if (roundSel) roundSel.value = lbl;
+        const giornataInput = document.getElementById('giornata_mod');
+        if (giornataInput) giornataInput.value = '';
+      } else {
+        const roundSel = document.getElementById('round_eliminazione_mod');
+        if (roundSel) roundSel.value = '';
+        fillField('giornata_mod', partita.giornata);
+      }
+      fillField('gol_casa_mod', partita.gol_casa);
+      fillField('gol_ospite_mod', partita.gol_ospite);
+      fillField('data_partita_mod', partita.data_partita);
+      fillField('ora_partita_mod', partita.ora_partita);
+      fillField('campo_mod', partita.campo);
+      fillField('giocata_mod', Number(partita.giocata) === 1);
+      fillField('link_youtube_mod', partita.link_youtube);
+      fillField('link_instagram_mod', partita.link_instagram);
+    }
+  });
+  enforceDifferentTeams('squadra_casa_mod', 'squadra_ospite_mod');
+
+  const faseModSelect = document.getElementById('fase_mod');
+  if (faseModSelect) {
+    faseModSelect.addEventListener('change', () => toggleRoundGiornata(faseModSelect, 'giornataWrapperMod', 'roundWrapperMod'));
+    toggleRoundGiornata(faseModSelect, 'giornataWrapperMod', 'roundWrapperMod');
+  }
+
+  setupSelector({
+    torneoId: 'selTorneoElim',
+    faseId: 'selFaseElim',
+    giornataId: 'selGiornataElim',
+    partitaId: 'selPartitaElim',
+    onPartita: (partita) => {
+      const hidden = document.getElementById('partitaEliminaHidden');
+      if (hidden) hidden.value = partita ? partita.id : '';
+      const testo = document.getElementById('modalEliminaTesto');
+      if (testo) {
+        if (partita) {
+          testo.textContent = `Eliminare ${partita.squadra_casa} - ${partita.squadra_ospite} (${partita.data_partita} ${partita.ora_partita ?? ''})?`;
+        } else {
+          testo.textContent = 'Sei sicuro di voler eliminare questa partita?';
+        }
+      }
     }
   });
 
-  document.getElementById("mod_fase")?.addEventListener("change", () =>
-    gestisciFase(document.getElementById("mod_fase"), "modGiornataGroup", "modKnockoutGroup", "mod_fase_round", "mod_fase_leg")
-  );
+  const modal = document.getElementById('modalElimina');
+  const btnApri = document.getElementById('btnApriConfermaElimina');
+  const btnChiudi = document.getElementById('btnAnnullaElimina');
+  const btnConferma = document.getElementById('btnConfermaElimina');
+  const formElim = document.getElementById('formElimina');
+  btnApri?.addEventListener('click', () => {
+    if (modal) modal.classList.add('active');
+  });
+  btnChiudi?.addEventListener('click', () => modal?.classList.remove('active'));
+  btnConferma?.addEventListener('click', () => {
+    if (formElim) formElim.submit();
+  });
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) modal.classList.remove('active');
+  });
 
-  // ============================
-  // FOOTER
-  // ============================
-  const footer = document.getElementById("footer-container");
+  // Footer
+  const footer = document.getElementById('footer-container');
   if (footer) {
-    fetch("/torneioldschool/includi/footer.html")
+    fetch('/torneioldschool/includi/footer.html')
       .then(r => r.text())
-      .then(html => footer.innerHTML = html)
-      .catch(err => console.error("Errore footer:", err));
+      .then(html => { footer.innerHTML = html; })
+      .catch(err => console.error('Errore footer:', err));
   }
-
-});
 </script>
 
-      function pulisciFormEdit() {
-        editForm?.reset();
-        if (document.getElementById('edit_id')) document.getElementById('edit_id').value = '';
-        caricaSquadre('', 'edit_casa', 'edit_ospite');
-        if (statsLink) statsLink.classList.add('hidden');
-        faseGroups.forEach(cfg => gestisciFase(cfg));
-      }
-
-      document.getElementById('reset_edit')?.addEventListener('click', pulisciFormEdit);
-
-      document.querySelectorAll('.btn-edit').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const row = btn.closest('tr');
-          if (!row || !editForm) return;
-
-          document.getElementById('edit_id').value = row.dataset.id || '';
-          editTorneo.value = row.dataset.torneo || '';
-          document.getElementById('edit_fase').value = row.dataset.fase || 'REGULAR';
-          document.getElementById('edit_gol_casa').value = row.dataset.golCasa || 0;
-          document.getElementById('edit_gol_ospite').value = row.dataset.golOspite || 0;
-          document.getElementById('edit_data').value = row.dataset.data || '';
-          document.getElementById('edit_ora').value = row.dataset.ora || '';
-          document.getElementById('edit_campo').value = row.dataset.campo || '';
-          document.getElementById('edit_giornata').value = row.dataset.giornata || '';
-          document.getElementById('edit_fase_round').value = row.dataset.faseRound || '';
-          document.getElementById('edit_fase_leg').value = row.dataset.faseLeg || '';
-          document.getElementById('edit_link_youtube').value = row.dataset.youtube || '';
-          document.getElementById('edit_link_instagram').value = row.dataset.instagram || '';
-
-          caricaSquadre(row.dataset.torneo, 'edit_casa', 'edit_ospite', row.dataset.casa, row.dataset.ospite);
-
-          if (statsLink) {
-            statsLink.href = `/torneioldschool/api/statistiche_partita.php?partitaid=${row.dataset.id}`;
-            statsLink.classList.remove('hidden');
-          }
-
-          gestisciFase(faseGroups[1]);
-          editForm.scrollIntoView({ behavior: 'smooth' });
-        });
-      });
-
-      document.querySelectorAll('.btn-delete').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const row = btn.closest('tr');
-          if (!row) return;
-          const label = `${row.dataset.casa || ''} - ${row.dataset.ospite || ''}`;
-          if (confirm(`Eliminare la partita ${label}?`)) {
-            document.getElementById('id_da_eliminare').value = row.dataset.id;
-            document.getElementById('formElimina').submit();
-          }
-        });
-      });
-    });
-  </script>
 </body>
 </html>

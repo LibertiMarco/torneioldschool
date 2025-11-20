@@ -123,10 +123,20 @@
     <section id="calendario" class="tab-section">
       <h2>Calendario</h2>
       <div class="filtro-giornata">
-        <label for="giornataSelect">Seleziona giornata:</label>
-        <select id="giornataSelect">
-          <option value="">Tutte</option>
-        </select>
+        <div class="filtro-riga">
+          <label for="faseCalendario">Fase:</label>
+          <select id="faseCalendario">
+            <option value="REGULAR" selected>Regular</option>
+            <option value="GOLD">Gold</option>
+            <option value="SILVER">Silver</option>
+          </select>
+        </div>
+        <div class="filtro-riga" id="wrapperGiornataSelect">
+          <label for="giornataSelect">Giornata:</label>
+          <select id="giornataSelect">
+            <option value="">Tutte</option>
+          </select>
+        </div>
       </div>
       <div id="contenitoreGiornate"></div>
     </section>
