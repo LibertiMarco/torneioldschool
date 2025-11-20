@@ -652,6 +652,36 @@ document.addEventListener("DOMContentLoaded", () => {
     selectAzione.addEventListener("change", e => mostraForm(e.target.value));
   }
 
+  function gestisciFase(selectElemento, groupGiornataId, groupKoId, selectRoundId, selectLegId) {
+    const valore = selectElemento?.value || "REGULAR";
+    const gruppoGiornata = document.getElementById(groupGiornataId);
+    const gruppoKo = document.getElementById(groupKoId);
+    const selectRound = document.getElementById(selectRoundId);
+    const selectLeg = document.getElementById(selectLegId);
+
+    const isRegular = valore === "REGULAR";
+
+    if (gruppoGiornata) {
+      gruppoGiornata.classList.toggle("hidden", !isRegular);
+      const inputGiornata = gruppoGiornata.querySelector("input");
+      if (inputGiornata) {
+        inputGiornata.required = isRegular;
+        inputGiornata.disabled = !isRegular;
+      }
+    }
+
+    if (gruppoKo) {
+      gruppoKo.classList.toggle("hidden", isRegular);
+    }
+
+    [selectRound, selectLeg].forEach(sel => {
+      if (!sel) return;
+      sel.disabled = isRegular;
+      sel.required = !isRegular;
+      if (isRegular) sel.value = "";
+    });
+  }
+
   async function caricaSquadre(slug, idCasa, idOspite, selCasa = "", selOspite = "") {
     console.log("Carico squadre per torneo:", slug);
     if (!slug) return;
@@ -684,6 +714,143 @@ document.addEventListener("DOMContentLoaded", () => {
     torneoSelect.addEventListener("change", () =>
       caricaSquadre(torneoSelect.value, "squadraCasa", "squadraOspite")
     );
+  }
+
+  const faseCrea = document.getElementById("selectFaseCrea");
+  faseCrea?.addEventListener("change", () =>
+    gestisciFase(faseCrea, "creaGiornataGroup", "creaKnockoutGroup", "crea_fase_round", "crea_fase_leg")
+  );
+  gestisciFase(faseCrea, "creaGiornataGroup", "creaKnockoutGroup", "crea_fase_round", "crea_fase_leg");
+
+  // ============================
+  // MODIFICA PARTITE
+  // ============================
+  const selectTorneoMod = document.getElementById("modSelectTorneo");
+  const selectFaseMod = document.getElementById("modSelectFase");
+  const selectGiornataMod = document.getElementById("modSelectGiornata");
+  const selectPartitaMod = document.getElementById("modSelectPartita");
+  const torneoHiddenMod = document.getElementById("torneoHiddenMod");
+  const modFormDati = document.getElementById("modFormDati");
+  const btnStats = document.getElementById("btn_statistiche");
+  let partiteCache = {};
+
+  function resetModForm() {
+    if (modFormDati) modFormDati.classList.add("hidden");
+    if (btnStats) btnStats.style.display = "none";
+    [selectPartitaMod, selectGiornataMod].forEach(sel => {
+      if (!sel) return;
+      sel.innerHTML = '<option value="">-- Seleziona torneo prima --</option>';
+      sel.disabled = true;
+    });
+  }
+
+  async function caricaGiornateMod() {
+    const torneo = selectTorneoMod?.value || "";
+    const fase = selectFaseMod?.value || "";
+    if (!torneo || !selectGiornataMod || !selectPartitaMod) return;
+
+    selectGiornataMod.innerHTML = '<option value="">-- Seleziona --</option>';
+    selectPartitaMod.innerHTML = '<option value="">-- Seleziona giornata prima --</option>';
+    selectPartitaMod.disabled = true;
+
+    try {
+      const url = `/torneioldschool/api/get_partite.php?torneo=${encodeURIComponent(torneo)}${fase ? `&fase=${encodeURIComponent(fase)}` : ""}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Errore rete " + res.status);
+      partiteCache = await res.json();
+
+      const keys = Object.keys(partiteCache).sort((a, b) => Number(a) - Number(b));
+      keys.forEach(k => {
+        const label = isNaN(Number(k)) ? k : `Giornata ${k}`;
+        selectGiornataMod.add(new Option(label, k));
+      });
+      selectGiornataMod.disabled = false;
+    } catch (err) {
+      console.error("Errore caricamento partite:", err);
+    }
+  }
+
+  selectTorneoMod?.addEventListener("change", () => {
+    if (torneoHiddenMod) torneoHiddenMod.value = selectTorneoMod.value;
+    if (selectFaseMod) selectFaseMod.disabled = !selectTorneoMod.value;
+    caricaSquadre(selectTorneoMod.value, "squadraCasaMod", "squadraOspiteMod");
+    resetModForm();
+    caricaGiornateMod();
+  });
+
+  selectFaseMod?.addEventListener("change", () => {
+    gestisciFase(selectFaseMod, "modGiornataGroup", "modKnockoutGroup", "mod_fase_round", "mod_fase_leg");
+    resetModForm();
+    caricaGiornateMod();
+  });
+
+  selectGiornataMod?.addEventListener("change", () => {
+    if (!selectPartitaMod) return;
+    const lista = partiteCache[selectGiornataMod.value] || [];
+    selectPartitaMod.innerHTML = '<option value="">-- Seleziona partita --</option>';
+    lista.forEach(p => {
+      const label = `${p.squadra_casa} - ${p.squadra_ospite}`;
+      selectPartitaMod.add(new Option(label, p.id));
+    });
+    selectPartitaMod.disabled = lista.length === 0;
+    if (lista.length === 0) {
+      console.warn("Nessuna partita trovata per la selezione attuale");
+    }
+  });
+
+  selectPartitaMod?.addEventListener("change", async () => {
+    const id = selectPartitaMod.value;
+    if (!id) return;
+    try {
+      const res = await fetch(`/torneioldschool/api/get_partita.php?id=${id}`);
+      if (!res.ok) throw new Error("Errore rete " + res.status);
+      const data = await res.json();
+
+      ["squadraCasaMod", "squadraOspiteMod"].forEach(selId => {
+        const el = document.getElementById(selId);
+        if (el) el.innerHTML = "";
+      });
+      caricaSquadre(data.torneo, "squadraCasaMod", "squadraOspiteMod", data.squadra_casa, data.squadra_ospite);
+
+      document.getElementById("mod_fase").value = data.fase || "REGULAR";
+      document.getElementById("mod_gol_casa").value = data.gol_casa ?? 0;
+      document.getElementById("mod_gol_ospite").value = data.gol_ospite ?? 0;
+      document.getElementById("mod_data_partita").value = data.data_partita || "";
+      document.getElementById("mod_ora_partita").value = data.ora_partita || "";
+      document.getElementById("mod_campo").value = data.campo || "";
+      document.getElementById("mod_giornata").value = data.giornata ?? "";
+      document.getElementById("mod_fase_round").value = data.fase_round || "";
+      document.getElementById("mod_fase_leg").value = data.fase_leg || "";
+      document.getElementById("mod_link_youtube").value = data.link_youtube || "";
+      document.getElementById("mod_link_instagram").value = data.link_instagram || "";
+
+      gestisciFase(document.getElementById("mod_fase"), "modGiornataGroup", "modKnockoutGroup", "mod_fase_round", "mod_fase_leg");
+
+      if (modFormDati) modFormDati.classList.remove("hidden");
+      if (btnStats) {
+        btnStats.style.display = "block";
+        btnStats.onclick = () => {
+          window.location.href = `/torneioldschool/api/statistiche_partita.php?partitaid=${id}`;
+        };
+      }
+    } catch (err) {
+      console.error("Errore recupero partita:", err);
+    }
+  });
+
+  document.getElementById("mod_fase")?.addEventListener("change", () =>
+    gestisciFase(document.getElementById("mod_fase"), "modGiornataGroup", "modKnockoutGroup", "mod_fase_round", "mod_fase_leg")
+  );
+
+  // ============================
+  // FOOTER
+  // ============================
+  const footer = document.getElementById("footer-container");
+  if (footer) {
+    fetch("/torneioldschool/includi/footer.html")
+      .then(r => r.text())
+      .then(html => footer.innerHTML = html)
+      .catch(err => console.error("Errore footer:", err));
   }
 
 });
