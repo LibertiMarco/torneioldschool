@@ -754,10 +754,7 @@ document.addEventListener("DOMContentLoaded", () => {
     selectPartitaMod.disabled = true;
 
     try {
-      const params = new URLSearchParams({ torneo });
-      if (fase) params.append("fase", fase);
-      const url = `/torneioldschool/api/get_partite.php?${params.toString()}`;
-
+      const url = `/torneioldschool/api/get_partite.php?torneo=${encodeURIComponent(torneo)}${fase ? `&fase=${encodeURIComponent(fase)}` : ""}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("Errore rete " + res.status);
       partiteCache = await res.json();
