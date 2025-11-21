@@ -203,7 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $articoli = [];
-$res = $conn->query("SELECT id, titolo, contenuto, DATE_FORMAT(data_pubblicazione, '%d/%m/%Y %H:%i') AS data_pubblicazione FROM blog_post ORDER BY data_pubblicazione DESC");
+$res = $conn->query("SELECT id, titolo, contenuto, data_pubblicazione AS data_iso, DATE_FORMAT(data_pubblicazione, '%d/%m/%Y %H:%i') AS data_pubblicazione FROM blog_post ORDER BY data_pubblicazione DESC");
 if ($res) {
   while ($row = $res->fetch_assoc()) {
     $row['id'] = (int)$row['id'];
@@ -240,6 +240,10 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     main.admin-wrapper { flex: 1 0 auto; }
     .panel-card { background: #fff; border: 1px solid #e5eaf0; border-radius: 14px; padding: 18px; box-shadow: 0 12px 30px rgba(0,0,0,0.06); margin-bottom: 20px; }
     .panel-card h2 { margin-top: 0; color: #15293e; font-size: 1.05rem; }
+    .tab-buttons { display: flex; gap: 12px; margin: 10px 0 20px; flex-wrap: wrap; }
+    .tab-buttons button { padding: 12px 16px; border: 1px solid #cbd5e1; background: #ecf1f7; cursor: pointer; border-radius: 10px; font-weight: 600; color: #1c2a3a; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: all .2s; }
+    .tab-buttons button:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+    .tab-buttons button.active { background: linear-gradient(135deg, #15293e, #1f3f63); color: #fff; border-color: #15293e; box-shadow: 0 8px 20px rgba(21,41,62,0.25); }
     .admin-select-action { margin: 30px 0 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
     .admin-select-action select { padding: 10px 14px; border-radius: 10px; border: 1px solid #cfd8e3; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.04); }
     .hidden { display: none !important; }
@@ -282,6 +286,20 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     .file-upload-label::before { content: "⇧"; }
     /* Nasconde il vecchio pulsante torna al blog in gestione articoli */
     button[onclick*="/torneioldschool/blog.php"] { display: none !important; }
+    .sortable { cursor: pointer; user-select: none; }
+    .sortable::after { content: "↕"; margin-left: 6px; font-size: 0.8rem; color: #7b8498; }
+    /* Pulsanti modale coerenti */
+    .btn-ghost { border: 1px solid #d5dbe4; background: #f8f9fc; color: #1c2a3a; border-radius: 12px; padding: 12px 16px; font-weight: 800; letter-spacing: 0.2px; cursor: pointer; transition: transform .15s, box-shadow .15s; }
+    .btn-ghost:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(0,0,0,0.08); }
+    .modern-danger { background: linear-gradient(135deg, #d72638, #b1172a); border: none; color: #fff; padding: 12px 16px; border-radius: 12px; font-weight: 800; letter-spacing: 0.2px; cursor: pointer; box-shadow: 0 12px 26px rgba(183,23,42,0.32); transition: transform .15s, box-shadow .15s; }
+    .modern-danger:hover { transform: translateY(-1px); box-shadow: 0 16px 30px rgba(183,23,42,0.38); }
+    .confirm-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); backdrop-filter: blur(2px); z-index: 9999; }
+    .confirm-modal.active { display: flex; }
+    .confirm-card { background: #fff; border-radius: 14px; padding: 22px; width: min(420px, 90vw); box-shadow: 0 18px 34px rgba(0,0,0,0.15); border: 1px solid #e5eaf0; }
+    .confirm-card h4 { margin: 0 0 8px; color: #15293e; }
+    .confirm-card p { margin: 0 0 16px; color: #345; }
+    .confirm-actions { display: flex; gap: 12px; justify-content: center; }
+    .confirm-actions button { flex: 1 1 0; min-width: 140px; text-align: center; }
   </style>
 </head>
 <body>
@@ -293,13 +311,10 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     <h1 class="admin-title">Gestione articoli del blog</h1>
     <p>Utilizza il selettore per creare nuovi articoli, modificarli o eliminarli. Puoi caricare piu immagini e video per creare caroselli accattivanti.</p>
 
-    <div class="admin-select-action">
-      <label for="azioneBlog">Seleziona azione:</label>
-      <select id="azioneBlog">
-        <option value="crea" selected>Crea articolo</option>
-        <option value="modifica">Modifica articolo</option>
-        <option value="elimina">Elimina articolo</option>
-      </select>
+    <div class="tab-buttons">
+      <button type="button" data-tab="crea" class="active">Crea</button>
+      <button type="button" data-tab="modifica">Modifica</button>
+      <button type="button" data-tab="elimina">Elimina</button>
     </div>
 
     <?php if ($successo): ?>
@@ -350,7 +365,6 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
       <form method="POST" class="admin-form blog-form" enctype="multipart/form-data" id="formModificaBlog">
         <input type="hidden" name="azione" value="modifica">
         <input type="hidden" name="articolo_id" id="articolo_id_mod">
-        <input type="hidden" name="solo_media_mod" id="solo_media_mod" value="0">
 
         <label for="modSelectArticolo">Seleziona articolo</label>
         <select id="modSelectArticolo" required <?= empty($articoli) ? 'disabled' : '' ?>>
@@ -371,22 +385,6 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 
         <button type="submit" class="btn-primary" <?= empty($articoli) ? 'disabled' : '' ?> style="width:max-content;">Salva modifiche</button>
 
-        <div class="file-upload-group" id="uploadGroupMod" data-upload-name="media_mod[]">
-          <label>Aggiungi nuovi media</label>
-          <div class="upload-row" data-upload-row>
-            <div class="file-upload">
-              <label class="file-upload-label">
-                <input type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.webm,.ogg,.mov" multiple>
-                <span>Carica media</span>
-              </label>
-              <span class="file-upload-filename" data-default="Nessun file selezionato">Nessun file selezionato</span>
-            </div>
-            <button type="button" class="upload-remove" data-remove>Rimuovi</button>
-          </div>
-          <button type="button" class="btn-secondary-modern" data-add-upload data-add-upload-pick>Carica file</button>
-          <p class="helper-text">I file si aggiungeranno al carosello esistente.</p>
-        </div>
-
         <div class="media-list" id="mediaList">
           <p>Nessun media associato.</p>
         </div>
@@ -397,20 +395,24 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
       <?php if (empty($articoli)): ?>
         <p>Non ci sono articoli da eliminare.</p>
       <?php else: ?>
-        <table class="blog-table">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+          <input type="text" id="filterTitle" placeholder="Cerca per titolo" style="padding:8px 10px; border-radius:10px; border:1px solid #d5dbe4; min-width:220px;">
+          <input type="text" id="filterDate" placeholder="Cerca per data (gg/mm/aaaa)" style="padding:8px 10px; border-radius:10px; border:1px solid #d5dbe4; min-width:200px;">
+        </div>
+        <table class="blog-table" id="tabElimina">
           <thead>
-            <tr><th>Titolo</th><th>Pubblicato il</th><th>Azioni</th></tr>
+            <tr><th data-sort="titolo" class="sortable">Titolo</th><th data-sort="data" class="sortable">Pubblicato il</th><th>Azioni</th></tr>
           </thead>
           <tbody>
             <?php foreach ($articoli as $articolo): ?>
-              <tr>
+              <tr data-title="<?= htmlspecialchars($articolo['titolo']) ?>" data-date="<?= htmlspecialchars($articolo['data_pubblicazione']) ?>" data-date-iso="<?= htmlspecialchars($articolo['data_iso'] ?? '') ?>">
                 <td><?= htmlspecialchars($articolo['titolo']) ?></td>
                 <td><?= htmlspecialchars($articolo['data_pubblicazione']) ?></td>
                 <td>
-                  <form method="POST" onsubmit="return confirm('Vuoi eliminare questo articolo e tutti i suoi media?');">
+                  <form method="POST" class="delete-form">
                     <input type="hidden" name="azione" value="elimina">
                     <input type="hidden" name="articolo_id" value="<?= (int)$articolo['id'] ?>">
-                    <button type="submit" class="btn-danger modern">Elimina</button>
+                    <button type="button" class="btn-danger modern btn-delete-row">Elimina</button>
                   </form>
                 </td>
               </tr>
@@ -425,13 +427,16 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 <div id="footer-container"></div>
 <script>
 const sezioni = document.querySelectorAll('[data-section]');
-const selettoreAzioni = document.getElementById('azioneBlog');
+const tabButtons = document.querySelectorAll('.tab-buttons button');
 const postsData = <?= $articoliJson ?: '[]' ?>;
 
-function mostraSezione(nome) { sezioni.forEach(section => { section.classList.toggle('hidden', section.dataset.section !== nome); }); }
+function mostraSezione(nome) {
+  sezioni.forEach(section => { section.classList.toggle('hidden', section.dataset.section !== nome); });
+  tabButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === nome));
+}
 function clearAlerts() { document.querySelectorAll('.admin-alert').forEach(el => el.remove()); }
-selettoreAzioni?.addEventListener('change', e => { clearAlerts(); mostraSezione(e.target.value); });
-mostraSezione(selettoreAzioni?.value || 'crea');
+tabButtons.forEach(btn => btn.addEventListener('click', () => { clearAlerts(); mostraSezione(btn.dataset.tab); }));
+mostraSezione('crea');
 
 // Nasconde gli alert dopo qualche secondo o se si cambia form
 setTimeout(clearAlerts, 4000);
@@ -550,7 +555,6 @@ function setupUploadGroup(groupId) {
 }
 
 setupUploadGroup('uploadGroupCreate');
-setupUploadGroup('uploadGroupMod');
 
 Array.from(document.querySelectorAll('.file-upload-label span')).forEach(el => el.textContent = 'Carica media');
 
@@ -558,6 +562,104 @@ fetch('/torneioldschool/includi/footer.html')
   .then(r => r.text())
   .then(html => { const footer = document.getElementById('footer-container'); if (footer) footer.innerHTML = html; })
   .catch(err => console.error('Errore nel caricamento del footer:', err));
+
+// --- Ricerca e sort tabella elimina ---
+(function() {
+  const tbody = document.querySelector('#tabElimina tbody');
+  const rows = tbody ? Array.from(tbody.querySelectorAll('tr')) : [];
+  let sortField = null;
+  let sortDir = 1;
+
+  function applyFilterAndSort() {
+    const fTitle = (document.getElementById('filterTitle')?.value || '').toLowerCase();
+    const fDate = (document.getElementById('filterDate')?.value || '').toLowerCase();
+
+    const filtered = rows.filter(r => {
+      const t = (r.dataset.title || '').toLowerCase();
+      const d = (r.dataset.date || '').toLowerCase();
+      return (!fTitle || t.includes(fTitle)) && (!fDate || d.includes(fDate));
+    });
+
+    if (sortField) {
+      filtered.sort((a, b) => {
+        let av = '', bv = '';
+        if (sortField === 'titolo') {
+          av = (a.dataset.title || '').toLowerCase();
+          bv = (b.dataset.title || '').toLowerCase();
+        } else if (sortField === 'data') {
+          av = a.dataset.dateIso || '';
+          bv = b.dataset.dateIso || '';
+        }
+        if (av < bv) return -1 * sortDir;
+        if (av > bv) return 1 * sortDir;
+        return 0;
+      });
+    }
+
+    if (tbody) {
+      tbody.innerHTML = '';
+      filtered.forEach(r => tbody.appendChild(r));
+    }
+  }
+
+  document.getElementById('filterTitle')?.addEventListener('input', applyFilterAndSort);
+  document.getElementById('filterDate')?.addEventListener('input', applyFilterAndSort);
+  document.querySelectorAll('.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const field = th.dataset.sort;
+      if (sortField === field) sortDir *= -1; else { sortField = field; sortDir = 1; }
+      applyFilterAndSort();
+    });
+  });
+})();
+
+// --- Modale eliminazione ---
+const modalDel = document.createElement('div');
+modalDel.className = 'confirm-modal';
+modalDel.innerHTML = `
+  <div class="confirm-card">
+    <h4>Conferma eliminazione</h4>
+    <p id="deleteText">Vuoi eliminare questo articolo?</p>
+    <div class="confirm-actions">
+      <button type="button" class="btn-ghost" id="btnCancelDel">Annulla</button>
+      <button type="button" class="modern-danger" id="btnConfirmDel">Elimina</button>
+    </div>
+  </div>
+`;
+document.body.appendChild(modalDel);
+const deleteText = modalDel.querySelector('#deleteText');
+const btnCancelDel = modalDel.querySelector('#btnCancelDel');
+const btnConfirmDel = modalDel.querySelector('#btnConfirmDel');
+let pendingForm = null;
+
+document.querySelectorAll('.btn-delete-row').forEach(btn => {
+  btn.addEventListener('click', () => {
+    pendingForm = btn.closest('form');
+    const title = pendingForm?.dataset.title || 'questo articolo';
+    const date = pendingForm?.dataset.date || '';
+    if (deleteText) deleteText.textContent = `Eliminare "${title}" ${date ? '(' + date + ')' : ''}?`;
+    modalDel.classList.add('active');
+  });
+});
+
+btnCancelDel?.addEventListener('click', () => {
+  pendingForm = null;
+  modalDel.classList.remove('active');
+});
+btnConfirmDel?.addEventListener('click', () => {
+  if (pendingForm) pendingForm.submit();
+  pendingForm = null;
+  modalDel.classList.remove('active');
+});
+modalDel.addEventListener('click', (e) => {
+  if (e.target === modalDel) {
+    pendingForm = null;
+    modalDel.classList.remove('active');
+  }
+});
+
+// Rimuove la card tornablog se presente
+document.querySelector('button[onclick*="/torneioldschool/blog.php"]')?.closest('.panel-card')?.remove();
 
 // Previene il reinvio delle form dopo refresh/navigazione
 if (window.history.replaceState) {
