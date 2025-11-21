@@ -50,6 +50,7 @@ if (!empty($sessionAvatar)) {
                   $nome_completo = trim($nome . ' ' . $cognome);
                 ?>
                 <span class="welcome-text">👋 Ciao, <?= htmlspecialchars($nome_completo) ?></span>
+                <a href="/torneioldschool/account.php">Il mio account</a>
 
                 <?php if ($_SESSION['ruolo'] === 'admin'): ?>
                     <a href="/torneioldschool/admin_dashboard.php">Gestione Sito</a>
