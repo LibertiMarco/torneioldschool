@@ -42,6 +42,31 @@
         </div>
       </section>
 
+      <!-- CLASSIFICHE GIOCATORI -->
+      <section class="home-leaders">
+        <div class="leaders-header">
+          <div>
+            <p class="leaders-eyebrow">Classifiche giocatori</p>
+            <h2>Classifiche All Time - Tornei Old School</h2>
+            <p>I bomber piu' prolifici dei nostri tornei, aggiornati in tempo reale.</p>
+          </div>
+          <div class="leaders-actions">
+            <div class="leaders-switch">
+              <button type="button" class="hero-btn hero-btn--ghost leader-toggle active" data-ordine="gol">Classifica Gol</button>
+              <button type="button" class="hero-btn hero-btn--ghost leader-toggle" data-ordine="presenze">Classifica Presenze</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="leader-full-link">
+          <a href="/torneioldschool/classifica_giocatori.php" class="hero-btn hero-btn--ghost hero-btn--small">Classifica completa</a>
+        </div>
+
+        <div id="homeLeadersList" class="leader-list">
+          <!-- Caricamento automatico via JS -->
+        </div>
+      </section>
+
       <!-- CHI SIAMO -->
       <section class="chisiamo-hero">
         <div class="hero-overlay">
@@ -107,7 +132,74 @@ async function loadNews() {
     });
 }
 
+function renderHomeLeaderCard(player, position, torneoLabel, ordine) {
+    const foto = player.foto || '/torneioldschool/img/giocatori/unknown.jpg';
+    const nome = `${player.nome ?? ''} ${player.cognome ?? ''}`.trim() || 'Giocatore senza nome';
+    const squadra = player.squadra ? `${player.squadra}${torneoLabel ? ' - ' + torneoLabel : ''}` : 'Giocatore';
+
+    const metaPresenze = `<span>⏱️ ${player.presenze ?? 0} presenze</span>`;
+    const metaGol = `<span>⚽ ${player.gol ?? 0} gol</span>`;
+    const metaOrder = ordine === 'presenze' ? [metaPresenze, metaGol] : [metaGol, metaPresenze];
+
+    return `
+      <div class="leader-card">
+        <div class="leader-rank">${position}</div>
+        <div class="leader-avatar">
+          <img src="${foto}" alt="${nome}" onerror="this.src='/torneioldschool/img/giocatori/unknown.jpg';">
+        </div>
+        <div class="leader-main">
+          <div>
+            <div class="leader-name">${nome}</div>
+            <div class="leader-team">${squadra}</div>
+          </div>
+          <div class="leader-meta">
+            ${metaOrder.join('')}
+          </div>
+        </div>
+      </div>
+    `;
+}
+
+async function loadTopScorers() {
+    const list = document.getElementById("homeLeadersList");
+    if (!list) return;
+
+    const params = new URLSearchParams({ per_page: 5, ordine: currentOrderHome });
+
+    try {
+        const response = await fetch('/torneioldschool/api/classifica_giocatori.php?' + params.toString());
+        const data = await response.json();
+        const items = Array.isArray(data.data) ? data.data : [];
+        if (!items.length) {
+            list.innerHTML = '<p class="empty-state">Nessun dato disponibile al momento.</p>';
+            return;
+        }
+        list.innerHTML = items.map((p, idx) => renderHomeLeaderCard(p, idx + 1, p.torneo || '', currentOrderHome)).join('');
+    } catch (error) {
+        console.error('Errore nel caricamento classifica giocatori:', error);
+        list.innerHTML = '<p class="empty-state">Errore nel recupero della classifica.</p>';
+    }
+}
+
+let currentOrderHome = 'gol';
+
+function setHomeOrder(order) {
+    currentOrderHome = order;
+    document.querySelectorAll('.leader-toggle').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.ordine === order);
+    });
+    loadTopScorers();
+}
+
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.leader-toggle');
+    if (!btn) return;
+    const order = btn.dataset.ordine || 'gol';
+    setHomeOrder(order);
+});
+
 loadNews();
+loadTopScorers();
 </script>
 
   <!-- SCRIPT HEADER -->
