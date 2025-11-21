@@ -280,6 +280,25 @@ if ($res) {
     .btn-ghost:hover { border-color: #15293e; color: #15293e; }
     .btn-secondary-modern { border: 1px solid #cbd5e1; background: #f5f7fb; color: #15293e; border-radius: 10px; padding: 10px 14px; font-weight: 700; box-shadow: 0 6px 14px rgba(0,0,0,0.08); transition: transform .15s, box-shadow .15s; }
     .btn-secondary-modern:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.12); }
+    .btn-stats { background: linear-gradient(135deg, #1f3f63, #2a5b8a); color: #fff; border: none; padding: 12px 16px; border-radius: 12px; font-weight: 700; box-shadow: 0 10px 22px rgba(31,63,99,0.25); cursor: pointer; transition: transform .15s, box-shadow .15s; }
+    .btn-stats:hover { transform: translateY(-1px); box-shadow: 0 14px 26px rgba(31,63,99,0.32); }
+
+    .stats-wrapper { margin-top: 10px; }
+    .stats-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .stats-actions button { padding: 12px 16px; border-radius: 12px; border: 1px solid #cbd5e1; background: #f6f8fb; cursor: pointer; font-weight: 700; color: #1c2a3a; box-shadow: 0 6px 14px rgba(0,0,0,0.06); transition: all .15s; }
+    .stats-actions button:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+    .stats-actions button.active { background: linear-gradient(135deg, #15293e, #1f3f63); color: #fff; border-color: #15293e; box-shadow: 0 12px 24px rgba(21,41,62,0.25); }
+    .stats-form { display: none; background: #fff; border: 1px solid #e5eaf0; border-radius: 14px; padding: 16px; box-shadow: 0 10px 24px rgba(0,0,0,0.06); }
+    .stats-form.active { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 16px; }
+    .stats-form label { font-weight: 600; color: #15293e; }
+    .stats-form input, .stats-form select { border-radius: 10px; border: 1px solid #d5dbe4; padding: 10px; background: #fafbff; transition: border-color .2s, box-shadow .2s; }
+    .stats-form input:focus, .stats-form select:focus { border-color: #15293e; box-shadow: 0 0 0 3px rgba(21,41,62,0.15); outline: none; }
+    .section-divider { border: 0; height: 1px; background: #15293e; margin: 16px 0; display: block; width: 100%; }
+    .admin-form.inline .section-divider { grid-column: 1 / -1; }
+    .stats-button-row { display: flex; justify-content: center; }
+    @media (max-width: 767px) {
+      .stats-button-row { justify-content: flex-start; }
+    }
   </style>
 </head>
 <body>
@@ -385,6 +404,7 @@ if ($res) {
       </div>
     </section>
 
+    <!-- Sezione statistiche spostata su pagina dedicata -->
     <!-- MODIFICA -->
     <section class="tab-section" data-tab="modifica">
       <div class="form-card">
@@ -421,9 +441,10 @@ if ($res) {
             <option value="">-- Seleziona giornata/turno --</option>
           </select>
         </div>
-        <div class="full">
-          <button type="button" id="btnStatsMod" class="btn-secondary-modern" style="display:none;">Statistiche partita</button>
+        <div class="full stats-button-row">
+          <button type="button" id="btnStatsMod" class="btn-stats" style="display:none;">Statistiche partita</button>
         </div>
+        <hr class="section-divider">
         <div>
           <label>Torneo</label>
           <select name="torneo_mod" id="torneo_mod" required>
@@ -563,15 +584,26 @@ if ($res) {
 <div id="footer-container"></div>
 
 <div class="confirm-modal" id="modalElimina">
-    <div class="confirm-card">
-      <h4>Conferma eliminazione</h4>
-      <p id="modalEliminaTesto">Sei sicuro di voler eliminare questa partita?</p>
-      <div class="confirm-actions">
-        <button type="button" class="btn-ghost" id="btnAnnullaElimina">Annulla</button>
-        <button type="button" class="modern-danger" id="btnConfermaElimina">Elimina</button>
-      </div>
+  <div class="confirm-card">
+    <h4>Conferma eliminazione</h4>
+    <p id="modalEliminaTesto">Sei sicuro di voler eliminare questa partita?</p>
+    <div class="confirm-actions">
+      <button type="button" class="btn-ghost" id="btnAnnullaElimina">Annulla</button>
+      <button type="button" class="modern-danger" id="btnConfermaElimina">Elimina</button>
     </div>
   </div>
+</div>
+
+<div class="confirm-modal" id="modalEliminaStat">
+  <div class="confirm-card">
+    <h4>Conferma eliminazione</h4>
+    <p id="modalEliminaStatTesto">Sei sicuro di voler eliminare questa statistica?</p>
+    <div class="confirm-actions">
+      <button type="button" class="btn-ghost" id="btnAnnullaEliminaStat">Annulla</button>
+      <button type="button" class="modern-danger" id="btnConfermaEliminaStat">Elimina</button>
+    </div>
+  </div>
+</div>
 
 <script>
   const partiteData = <?php echo json_encode($partite, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
@@ -664,6 +696,47 @@ if ($res) {
 
   const fillField = (id, val) => { const el = document.getElementById(id); if (el) { if (el.type === 'checkbox') { el.checked = !!val; } else { el.value = val ?? ''; } } };
 
+  const applyPartitaModForm = (partita) => {
+    if (!partita) return;
+    const btnStats = document.getElementById('btnStatsMod');
+    if (btnStats) {
+      btnStats.style.display = 'inline-block';
+      btnStats.setAttribute('data-id', partita.id);
+    }
+    const torneoMod = document.getElementById('torneo_mod');
+    if (torneoMod) {
+      if (![...torneoMod.options].some(o => o.value === partita.torneo)) {
+        const opt = new Option(partita.torneo, partita.torneo, true, true);
+        torneoMod.add(opt);
+      }
+      torneoMod.value = partita.torneo;
+      populateSquadre(partita.torneo, 'squadra_casa_mod', partita.squadra_casa);
+      populateSquadre(partita.torneo, 'squadra_ospite_mod', partita.squadra_ospite);
+    }
+    fillField('fase_mod', partita.fase);
+    const faseModSelect = document.getElementById('fase_mod');
+    if (faseModSelect) toggleRoundGiornata(faseModSelect, 'giornataWrapperMod', 'roundWrapperMod');
+    if (partita.fase && partita.fase.toUpperCase() !== 'REGULAR') {
+      const lbl = roundLabelFromGiornata[String(partita.giornata)] || '';
+      const roundSel = document.getElementById('round_eliminazione_mod');
+      if (roundSel) roundSel.value = lbl;
+      const giornataInput = document.getElementById('giornata_mod');
+      if (giornataInput) giornataInput.value = '';
+    } else {
+      const roundSel = document.getElementById('round_eliminazione_mod');
+      if (roundSel) roundSel.value = '';
+      fillField('giornata_mod', partita.giornata);
+    }
+    fillField('gol_casa_mod', partita.gol_casa);
+    fillField('gol_ospite_mod', partita.gol_ospite);
+    fillField('data_partita_mod', partita.data_partita);
+    fillField('ora_partita_mod', partita.ora_partita);
+    fillField('campo_mod', partita.campo);
+    fillField('giocata_mod', Number(partita.giocata) === 1);
+    fillField('link_youtube_mod', partita.link_youtube);
+    fillField('link_instagram_mod', partita.link_instagram);
+  };
+
   const setupSelector = ({ torneoId, faseId, giornataId, partitaId, onPartita }) => {
     const torneoSel = document.getElementById(torneoId);
     const faseSel = document.getElementById(faseId);
@@ -737,41 +810,7 @@ if ($res) {
     faseId: 'selFaseMod',
     giornataId: 'selGiornataMod',
     partitaId: 'selPartitaMod',
-    onPartita: (partita) => {
-      if (!partita) return;
-      const torneoMod = document.getElementById('torneo_mod');
-      if (torneoMod) {
-        if (![...torneoMod.options].some(o => o.value === partita.torneo)) {
-          const opt = new Option(partita.torneo, partita.torneo, true, true);
-          torneoMod.add(opt);
-        }
-        torneoMod.value = partita.torneo;
-        populateSquadre(partita.torneo, 'squadra_casa_mod', partita.squadra_casa);
-        populateSquadre(partita.torneo, 'squadra_ospite_mod', partita.squadra_ospite);
-      }
-      fillField('fase_mod', partita.fase);
-      const faseModSelect = document.getElementById('fase_mod');
-      if (faseModSelect) toggleRoundGiornata(faseModSelect, 'giornataWrapperMod', 'roundWrapperMod');
-      if (partita.fase && partita.fase.toUpperCase() !== 'REGULAR') {
-        const lbl = roundLabelFromGiornata[String(partita.giornata)] || '';
-        const roundSel = document.getElementById('round_eliminazione_mod');
-        if (roundSel) roundSel.value = lbl;
-        const giornataInput = document.getElementById('giornata_mod');
-        if (giornataInput) giornataInput.value = '';
-      } else {
-        const roundSel = document.getElementById('round_eliminazione_mod');
-        if (roundSel) roundSel.value = '';
-        fillField('giornata_mod', partita.giornata);
-      }
-      fillField('gol_casa_mod', partita.gol_casa);
-      fillField('gol_ospite_mod', partita.gol_ospite);
-      fillField('data_partita_mod', partita.data_partita);
-      fillField('ora_partita_mod', partita.ora_partita);
-      fillField('campo_mod', partita.campo);
-      fillField('giocata_mod', Number(partita.giocata) === 1);
-      fillField('link_youtube_mod', partita.link_youtube);
-      fillField('link_instagram_mod', partita.link_instagram);
-    }
+    onPartita: (partita) => applyPartitaModForm(partita)
   });
   enforceDifferentTeams('squadra_casa_mod', 'squadra_ospite_mod');
 
@@ -814,6 +853,97 @@ if ($res) {
   });
   modal?.addEventListener('click', (e) => {
     if (e.target === modal) modal.classList.remove('active');
+  });
+
+  const btnStatsMod = document.getElementById('btnStatsMod');
+  btnStatsMod?.addEventListener('click', () => {
+    const id = btnStatsMod.getAttribute('data-id');
+    if (!id) return;
+    saveModState();
+    window.location.href = `/torneioldschool/api/statistiche_partita.php?partitaid=${id}`;
+  });
+
+  // Memorizza la selezione corrente (torneo/fase/giornata/partita) per ripristinarla al ritorno dallo schermo statistiche
+  function saveModState() {
+    const state = {
+      tab: 'modifica',
+      torneo: document.getElementById('selTorneoMod')?.value || '',
+      fase: document.getElementById('selFaseMod')?.value || '',
+      giornata: document.getElementById('selGiornataMod')?.value || '',
+      partita: document.getElementById('selPartitaMod')?.value || ''
+    };
+    sessionStorage.setItem('gestionePartiteModState', JSON.stringify(state));
+  }
+
+  function updatePartitaCache(partita) {
+    if (!partita || !partita.id) return;
+    const idx = partiteData.findIndex(p => String(p.id) === String(partita.id));
+    if (idx >= 0) {
+      partiteData[idx] = partita;
+    } else {
+      partiteData.push(partita);
+    }
+  }
+
+  async function fetchPartita(id) {
+    if (!id) return null;
+    try {
+      const res = await fetch(`/torneioldschool/api/get_partita.php?id=${id}`);
+      const data = await res.json();
+      return data && !data.error ? data : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Ripristina la selezione se presente in sessionStorage
+  function restoreModState() {
+    const raw = sessionStorage.getItem('gestionePartiteModState');
+    if (!raw) return;
+    let state;
+    try { state = JSON.parse(raw); } catch (e) { return; }
+
+    // Attiva tab Modifica
+    const tabBtn = document.querySelector('.tab-buttons button[data-tab="modifica"]');
+    tabBtn?.click();
+
+    const torneoSel = document.getElementById('selTorneoMod');
+    const faseSel = document.getElementById('selFaseMod');
+    const giorSel = document.getElementById('selGiornataMod');
+    const partSel = document.getElementById('selPartitaMod');
+
+    if (torneoSel) torneoSel.value = state.torneo || '';
+    if (faseSel) faseSel.value = state.fase || '';
+
+    // Trigger popolamento giornate/partite
+    faseSel?.dispatchEvent(new Event('change'));
+    torneoSel?.dispatchEvent(new Event('change'));
+
+    if (giorSel && state.giornata !== undefined) {
+      giorSel.value = state.giornata;
+      giorSel.dispatchEvent(new Event('change'));
+    }
+    if (partSel && state.partita) {
+      partSel.value = state.partita;
+      partSel.dispatchEvent(new Event('change'));
+    }
+
+    // Recupera partita aggiornata (es. gol aggiornati da statistiche) e applica al form
+    if (state.partita) {
+      fetchPartita(state.partita).then((p) => {
+        if (p) {
+          updatePartitaCache(p);
+          applyPartitaModForm(p);
+        }
+      });
+    }
+
+    sessionStorage.removeItem('gestionePartiteModState');
+  }
+
+  restoreModState();
+  window.addEventListener('pageshow', () => {
+    restoreModState();
   });
 
   // Footer

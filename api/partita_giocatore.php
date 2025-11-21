@@ -46,6 +46,140 @@ if ($azione === 'list') {
     exit;
 }
 
+function aggiornaGiocatoreGlobale(mysqli $conn, int $giocatoreId): void {
+    $q = $conn->prepare("SELECT 
+        COUNT(*) AS presenze,
+        COALESCE(SUM(goal),0) AS goal,
+        COALESCE(SUM(assist),0) AS assist,
+        COALESCE(SUM(cartellino_giallo),0) AS gialli,
+        COALESCE(SUM(cartellino_rosso),0) AS rossi,
+        SUM(CASE WHEN voto IS NOT NULL THEN voto ELSE 0 END) AS somma_voti,
+        SUM(CASE WHEN voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
+        FROM partita_giocatore WHERE giocatore_id=?");
+    $q->bind_param("i", $giocatoreId);
+    $q->execute();
+    $r = $q->get_result()->fetch_assoc() ?: [];
+    $media = ($r['num_voti'] ?? 0) > 0 ? round(($r['somma_voti'] ?? 0) / $r['num_voti'], 2) : null;
+    $upd = $conn->prepare("UPDATE giocatori SET presenze=?, reti=?, assist=?, gialli=?, rossi=?, media_voti=? WHERE id=?");
+    $upd->bind_param(
+        "iiiiidi",
+        $r['presenze'],
+        $r['goal'],
+        $r['assist'],
+        $r['gialli'],
+        $r['rossi'],
+        $media,
+        $giocatoreId
+    );
+    $upd->execute();
+}
+
+function aggiornaGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squadraId): void {
+    $teamInfo = $conn->prepare("SELECT nome, torneo FROM squadre WHERE id=?");
+    $teamInfo->bind_param("i", $squadraId);
+    $teamInfo->execute();
+    $t = $teamInfo->get_result()->fetch_assoc();
+    if (!$t) return;
+    $nome = $t['nome'];
+    $torneo = $t['torneo'];
+
+    $q = $conn->prepare("SELECT 
+        COUNT(*) AS presenze,
+        COALESCE(SUM(pg.goal),0) AS goal,
+        COALESCE(SUM(pg.assist),0) AS assist,
+        COALESCE(SUM(pg.cartellino_giallo),0) AS gialli,
+        COALESCE(SUM(pg.cartellino_rosso),0) AS rossi,
+        SUM(CASE WHEN pg.voto IS NOT NULL THEN pg.voto ELSE 0 END) AS somma_voti,
+        SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
+        FROM partita_giocatore pg
+        JOIN partite p ON p.id = pg.partita_id
+        WHERE pg.giocatore_id = ?
+          AND p.torneo = ?
+          AND (p.squadra_casa = ? OR p.squadra_ospite = ?)");
+    $q->bind_param("isss", $giocatoreId, $torneo, $nome, $nome);
+    $q->execute();
+    $r = $q->get_result()->fetch_assoc() ?: [];
+    $media = ($r['num_voti'] ?? 0) > 0 ? round(($r['somma_voti'] ?? 0) / $r['num_voti'], 2) : null;
+
+    $upd = $conn->prepare("UPDATE squadre_giocatori SET presenze=?, reti=?, assist=?, gialli=?, rossi=?, media_voti=? WHERE giocatore_id=? AND squadra_id=?");
+    $upd->bind_param(
+        "iiiiidii",
+        $r['presenze'],
+        $r['goal'],
+        $r['assist'],
+        $r['gialli'],
+        $r['rossi'],
+        $media,
+        $giocatoreId,
+        $squadraId
+    );
+    $upd->execute();
+}
+
+function squadraPerPartitaGiocatore(mysqli $conn, int $partitaId, int $giocatoreId): ?int {
+    $q = $conn->prepare("SELECT p.torneo, p.squadra_casa, p.squadra_ospite FROM partite p WHERE p.id=?");
+    $q->bind_param("i", $partitaId);
+    $q->execute();
+    $p = $q->get_result()->fetch_assoc();
+    if (!$p) return null;
+
+    $sq = $conn->prepare("SELECT sg.squadra_id FROM squadre_giocatori sg JOIN squadre s ON s.id = sg.squadra_id WHERE sg.giocatore_id=? AND s.torneo=? AND s.nome IN (?, ?) LIMIT 1");
+    $sq->bind_param("isss", $giocatoreId, $p['torneo'], $p['squadra_casa'], $p['squadra_ospite']);
+    $sq->execute();
+    $res = $sq->get_result()->fetch_assoc();
+    return $res['squadra_id'] ?? null;
+}
+
+function ricalcolaStatistiche(mysqli $conn, int $partitaId, int $giocatoreId): void {
+    aggiornaGiocatoreGlobale($conn, $giocatoreId);
+    $squadraId = squadraPerPartitaGiocatore($conn, $partitaId, $giocatoreId);
+    if ($squadraId) {
+      aggiornaGiocatoreSquadra($conn, $giocatoreId, $squadraId);
+    }
+}
+
+/**
+ * Aggiorna automaticamente i gol della partita sommando quelli inseriti nelle statistiche.
+ * Somma i goal per squadra (casa/ospite) e li scrive su partite.gol_casa / partite.gol_ospite.
+ */
+function aggiornaGolPartita(mysqli $conn, int $partitaId): void {
+    $partInfo = $conn->prepare("SELECT torneo, squadra_casa, squadra_ospite FROM partite WHERE id=?");
+    $partInfo->bind_param("i", $partitaId);
+    $partInfo->execute();
+    $p = $partInfo->get_result()->fetch_assoc();
+    if (!$p) return;
+
+    $sumSql = $conn->prepare("
+        SELECT s.nome AS squadra, COALESCE(SUM(pg.goal),0) AS gol
+        FROM partita_giocatore pg
+        JOIN giocatori g ON g.id = pg.giocatore_id
+        JOIN squadre_giocatori sg ON sg.giocatore_id = pg.giocatore_id
+        JOIN squadre s ON s.id = sg.squadra_id
+        JOIN partite p ON p.id = pg.partita_id
+        WHERE pg.partita_id = ?
+          AND s.torneo = p.torneo
+          AND s.nome IN (p.squadra_casa, p.squadra_ospite)
+        GROUP BY s.nome
+    ");
+    $sumSql->bind_param("i", $partitaId);
+    $sumSql->execute();
+    $res = $sumSql->get_result();
+
+    $golCasa = 0;
+    $golOsp = 0;
+    while ($row = $res->fetch_assoc()) {
+        if ($row['squadra'] === $p['squadra_casa']) {
+            $golCasa = (int)$row['gol'];
+        } elseif ($row['squadra'] === $p['squadra_ospite']) {
+            $golOsp = (int)$row['gol'];
+        }
+    }
+
+    $upd = $conn->prepare("UPDATE partite SET gol_casa = ?, gol_ospite = ? WHERE id = ?");
+    $upd->bind_param("iii", $golCasa, $golOsp, $partitaId);
+    $upd->execute();
+}
+
 /* ==========================================================
    LISTA GIOCATORI DISPONIBILI PER LA PARTITA
    (solo squadre in campo E NON già inseriti)
@@ -56,28 +190,26 @@ if ($azione === 'list_giocatori') {
 
     $partita_id = (int)$_GET['partita_id'];
 
-    // squadre della partita
-    $q = $conn->prepare("SELECT squadra_casa, squadra_ospite FROM partite WHERE id=?");
+    // Recupero info partita (torneo, squadre)
+    $q = $conn->prepare("SELECT torneo, squadra_casa, squadra_ospite FROM partite WHERE id=?");
     $q->bind_param("i", $partita_id);
     $q->execute();
     $p = $q->get_result()->fetch_assoc();
 
     if (!$p) { echo json_encode([]); exit; }
 
-    // giocatori NON ancora inseriti
+    // Giocatori delle due squadre, esclusi quelli già inseriti per questa partita
     $sql = "SELECT DISTINCT g.id, g.nome, g.cognome, s.nome AS squadra
-            FROM partite p
-            JOIN squadre s ON s.torneo = p.torneo AND s.nome IN (p.squadra_casa, p.squadra_ospite)
+            FROM squadre s
             JOIN squadre_giocatori sg ON sg.squadra_id = s.id
             JOIN giocatori g ON g.id = sg.giocatore_id
-            WHERE p.id = ?
-            AND g.id NOT IN (
-                SELECT giocatore_id FROM partita_giocatore WHERE partita_id = ?
-            )
+            WHERE s.torneo = ?
+              AND s.nome IN (?, ?)
+              AND g.id NOT IN (SELECT giocatore_id FROM partita_giocatore WHERE partita_id = ?)
             ORDER BY g.cognome, g.nome";
 
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ii", $partita_id, $partita_id);
+    $stmt->bind_param("sssi", $p['torneo'], $p['squadra_casa'], $p['squadra_ospite'], $partita_id);
     $stmt->execute();
 
     $res = $stmt->get_result();
@@ -122,6 +254,9 @@ if ($azione === 'add') {
     $stmt->bind_param("iiiiiid", $partita_id, $giocatore, $goal, $assist, $giallo, $rosso, $voto);
     $stmt->execute();
 
+    ricalcolaStatistiche($conn, $partita_id, $giocatore);
+    aggiornaGolPartita($conn, $partita_id);
+
     echo json_encode(["success" => true, "message" => "Statistica aggiunta"]);
     exit;
 }
@@ -154,7 +289,17 @@ if ($azione === 'edit') {
 
     $stmt->execute();
 
+    $partita_id_q = $conn->prepare("SELECT partita_id, giocatore_id FROM partita_giocatore WHERE id=?");
+    $partita_id_q->bind_param("i", $id);
+    $partita_id_q->execute();
+    $rPrev = $partita_id_q->get_result()->fetch_assoc();
+
     echo json_encode(["success" => true, "message" => "Statistica aggiornata"]);
+
+    if ($rPrev) {
+      ricalcolaStatistiche($conn, (int)$rPrev['partita_id'], (int)$rPrev['giocatore_id']);
+      aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
+    }
     exit;
 }
 
@@ -165,9 +310,19 @@ if ($azione === 'delete') {
 
     $id = (int)$_POST['id'];
 
+    $partita_id_q = $conn->prepare("SELECT partita_id, giocatore_id FROM partita_giocatore WHERE id=?");
+    $partita_id_q->bind_param("i", $id);
+    $partita_id_q->execute();
+    $rPrev = $partita_id_q->get_result()->fetch_assoc();
+
     $stmt = $conn->prepare("DELETE FROM partita_giocatore WHERE id=?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
+
+    if ($rPrev) {
+      ricalcolaStatistiche($conn, (int)$rPrev['partita_id'], (int)$rPrev['giocatore_id']);
+      aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
+    }
 
     echo json_encode(["success" => true, "message" => "Statistica eliminata"]);
     exit;

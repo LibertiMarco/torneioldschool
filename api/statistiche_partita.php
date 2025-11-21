@@ -57,17 +57,21 @@ if (!$partita_id) {
 /* Pulsante indietro */
 .page-header .btn-back {
     align-self: flex-start;
-    background: #222;
+    background: linear-gradient(135deg, #1f3f63, #2a5b8a);
     border: none;
-    padding: 8px 16px;
+    padding: 10px 16px;
     color: white;
-    border-radius: 6px;
+    border-radius: 10px;
     cursor: pointer;
     font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 8px 20px rgba(31,63,99,0.25);
+    transition: transform .15s, box-shadow .15s;
 }
 
 .page-header .btn-back:hover {
-    background: #000;
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px rgba(31,63,99,0.32);
 }
 
 /* === BOX PARTITA === */
@@ -182,6 +186,33 @@ if (!$partita_id) {
     padding: 4px 8px;
     font-size: 14px;
 }
+.confirm-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(2px);
+    z-index: 9999;
+}
+.confirm-modal.active { display: flex; }
+.confirm-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 22px;
+    width: min(420px, 90vw);
+    box-shadow: 0 18px 34px rgba(0,0,0,0.15);
+    border: 1px solid #e5eaf0;
+}
+.confirm-card h4 { margin: 0 0 8px; color: #15293e; }
+.confirm-card p { margin: 0 0 16px; color: #345; }
+.confirm-actions { display: flex; gap: 12px; justify-content: center; }
+.confirm-actions button { flex: 1 1 0; min-width: 140px; text-align: center; }
+.btn-ghost { border: 1px solid #d5dbe4; background: #fff; color: #1c2a3a; border-radius: 10px; padding: 12px 14px; cursor: pointer; font-weight: 700; }
+.btn-ghost:hover { border-color: #15293e; color: #15293e; }
+.modern-danger { background: linear-gradient(135deg, #d72638, #b1172a); border: none; color: #fff; padding: 12px 18px; border-radius: 12px; box-shadow: 0 10px 25px rgba(183, 23, 42, 0.3); transition: transform .15s, box-shadow .15s; font-weight: 700; letter-spacing: 0.2px; }
+.modern-danger:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(183, 23, 42, 0.4); }
 
 </style>
 </head>
@@ -197,7 +228,7 @@ if (!$partita_id) {
 
 <!-- HEADER FINALE -->
 <div class="page-header">
-    <button class="btn-back" onclick="window.location.href='gestione_partite.php'">← Torna indietro</button>
+    <button class="btn-back" id="btnBackStats">← Torna indietro</button>
     <h1>Statistiche Partita</h1>
 </div>
 
@@ -263,29 +294,16 @@ if (!$partita_id) {
 <section id="sectionEdit" class="admin-form hidden">
   <h2>Modifica Statistica</h2>
 
-  <div class="table-scroll">
-    <table class="admin-table" id="tabellaEdit">
-      <thead>
-        <tr>
-          <th>Giocatore</th>
-          <th>Squadra</th>
-          <th>Gol</th>
-          <th>Assist</th>
-          <th>Gialli</th>
-          <th>Rossi</th>
-          <th>Voto</th>
-          <th>Modifica</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-  <hr>
-
-  <form id="formEdit">
+  <form id="formEdit" class="admin-form">
     <input type="hidden" name="id" id="edit_id">
     <input type="hidden" name="partita_id" value="<?php echo $partita_id; ?>">
+
+    <div class="form-group">
+      <label>Giocatore</label>
+      <select id="edit_giocatore_sel">
+        <option value="">-- Seleziona giocatore --</option>
+      </select>
+    </div>
 
     <div class="form-row">
       <div class="form-group half">
@@ -344,9 +362,22 @@ if (!$partita_id) {
 </section>
 </main>
 
+<div class="confirm-modal" id="modalDeleteStat">
+  <div class="confirm-card">
+    <h4>Conferma eliminazione</h4>
+    <p id="deleteStatText">Sei sicuro di voler eliminare questa statistica?</p>
+    <div class="confirm-actions">
+      <button type="button" class="btn-ghost" id="btnCancelDeleteStat">Annulla</button>
+      <button type="button" class="modern-danger" id="btnConfirmDeleteStat">Elimina</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const ID = <?php echo $partita_id; ?>;
 const API = "/torneioldschool/api/partita_giocatore.php";
+let currentStats = [];
+let pendingDelete = null;
 
 /* Popup elegante */
 function showMsg(msg, type="success"){
@@ -383,8 +414,13 @@ document.getElementById("partitaInfo").innerHTML = `
 /* CARICA GIOCATORI */
 async function loadPlayers(){
   const r = await fetch(`${API}?azione=list_giocatori&partita_id=${ID}`);
-  const list = await r.json();
+  const list = await r.json().catch(() => []);
   const sel = document.getElementById("add_giocatore");
+
+  if (!Array.isArray(list) || list.length === 0) {
+    sel.innerHTML = `<option value="">Nessun giocatore disponibile</option>`;
+    return;
+  }
 
   sel.innerHTML = `<option value="">-- Seleziona giocatore --</option>`;
   list.forEach(g => {
@@ -397,37 +433,43 @@ async function loadStats(){
   const r = await fetch(`${API}?azione=list&partita_id=${ID}`);
   const stats = await r.json();
 
-  const TE = document.querySelector("#tabellaEdit tbody");
+  currentStats = Array.isArray(stats) ? stats : [];
   const TD = document.querySelector("#tabellaDelete tbody");
 
-  TE.innerHTML = "";
+  // Popola select modifica
+  const editSel = document.getElementById("edit_giocatore_sel");
+  if (editSel) {
+    const previous = editSel.value;
+    editSel.innerHTML = `<option value="">-- Seleziona giocatore --</option>`;
+    currentStats.forEach(s => {
+      editSel.innerHTML += `<option value="${s.id}">${s.cognome} ${s.nome} (${s.squadra})</option>`;
+    });
+    if (previous && currentStats.some(s => String(s.id) === String(previous))) {
+      editSel.value = previous;
+    } else {
+      editSel.value = "";
+    }
+    populateEditFromSelect();
+  }
+
   TD.innerHTML = "";
 
-  stats.forEach(s => {
-    TE.innerHTML += `
-      <tr>
-        <td>${s.cognome} ${s.nome}</td>
-        <td>${s.squadra}</td>
-        <td>${s.goal}</td>
-        <td>${s.assist}</td>
-        <td>${s.cartellino_giallo}</td>
-        <td>${s.cartellino_rosso}</td>
-        <td>${s.voto ?? '-'}</td>
-        <td><button data-edit="${s.id}" class="btn-primary btn-sm">Modifica</button></td>
-      </tr>`;
-
-    TD.innerHTML += `
-      <tr>
-        <td>${s.cognome} ${s.nome}</td>
-        <td>${s.squadra}</td>
-        <td>${s.goal}</td>
-        <td>${s.assist}</td>
-        <td>${s.cartellino_giallo}</td>
-        <td>${s.cartellino_rosso}</td>
-        <td>${s.voto ?? '-'}</td>
-        <td><button data-del="${s.id}" class="btn-danger btn-sm">Elimina</button></td>
-      </tr>`;
-  });
+  if (TD) {
+    TD.innerHTML = "";
+    currentStats.forEach(s => {
+      TD.innerHTML += `
+        <tr>
+          <td>${s.cognome} ${s.nome}</td>
+          <td>${s.squadra}</td>
+          <td>${s.goal}</td>
+          <td>${s.assist}</td>
+          <td>${s.cartellino_giallo}</td>
+          <td>${s.cartellino_rosso}</td>
+          <td>${s.voto ?? '-'}</td>
+          <td><button data-del="${s.id}" class="btn-danger btn-sm">Elimina</button></td>
+        </tr>`;
+    });
+  }
 }
 
 /* Aggiunta */
@@ -452,20 +494,20 @@ document.getElementById("formAdd").addEventListener("submit", async e => {
   }
 });
 
-/* Popola modifica */
-document.querySelector("#tabellaEdit tbody").addEventListener("click", e => {
-  const id = e.target.dataset.edit;
-  if (!id) return;
-
-  const tr = e.target.closest("tr").children;
-
-  document.getElementById("edit_id").value = id;
-  document.getElementById("edit_goal").value = tr[2].textContent;
-  document.getElementById("edit_assist").value = tr[3].textContent;
-  document.getElementById("edit_giallo").value = tr[4].textContent;
-  document.getElementById("edit_rosso").value = tr[5].textContent;
-  document.getElementById("edit_voto").value = tr[6].textContent === "-" ? "" : tr[6].textContent;
-});
+/* Popola modifica tramite select */
+function populateEditFromSelect() {
+  const sel = document.getElementById("edit_giocatore_sel");
+  if (!sel || !sel.value) return;
+  const stat = currentStats.find(s => String(s.id) === String(sel.value));
+  if (!stat) return;
+  document.getElementById("edit_id").value = stat.id;
+  document.getElementById("edit_goal").value = stat.goal ?? 0;
+  document.getElementById("edit_assist").value = stat.assist ?? 0;
+  document.getElementById("edit_giallo").value = stat.cartellino_giallo ?? 0;
+  document.getElementById("edit_rosso").value = stat.cartellino_rosso ?? 0;
+  document.getElementById("edit_voto").value = stat.voto ?? "";
+}
+document.getElementById("edit_giocatore_sel")?.addEventListener("change", populateEditFromSelect);
 
 /* Salva modifica */
 document.getElementById("formEdit").addEventListener("submit", async e => {
@@ -483,24 +525,52 @@ document.getElementById("formEdit").addEventListener("submit", async e => {
   }
 });
 
-/* Eliminazione */
-document.querySelector("#tabellaDelete tbody").addEventListener("click", async e => {
+/* Eliminazione con modale custom */
+const modalDel = document.getElementById("modalDeleteStat");
+const btnCancelDel = document.getElementById("btnCancelDeleteStat");
+const btnConfirmDel = document.getElementById("btnConfirmDeleteStat");
+const deleteStatText = document.getElementById("deleteStatText");
+const tableDelete = document.querySelector("#tabellaDelete tbody");
+
+tableDelete?.addEventListener("click", async e => {
   const id = e.target.dataset.del;
   if (!id) return;
 
-  if (!confirm("Eliminare questa statistica?")) return;
+  pendingDelete = currentStats.find(s => String(s.id) === String(id)) || null;
+  if (pendingDelete && deleteStatText) {
+    deleteStatText.textContent = `Eliminare ${pendingDelete.cognome} ${pendingDelete.nome}?`;
+  }
+  modalDel?.classList.add("active");
+});
 
+btnCancelDel?.addEventListener("click", () => {
+  pendingDelete = null;
+  modalDel?.classList.remove("active");
+});
+
+btnConfirmDel?.addEventListener("click", async () => {
+  if (!pendingDelete) return;
   const fd = new FormData();
   fd.append("azione","delete");
-  fd.append("id",id);
-
+  fd.append("id", pendingDelete.id);
   const r = await fetch(API, { method:"POST", body:fd });
   const out = await r.json();
-
   if(out.success){
       showMsg("Statistica eliminata", "success");
       await loadStats();
       await loadPlayers();
+  }
+  pendingDelete = null;
+  modalDel?.classList.remove("active");
+});
+
+/* Pulsante indietro: prova history, altrimenti torna alla gestione partite */
+document.getElementById("btnBackStats")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  if (window.history.length > 1) {
+    window.history.back();
+  } else {
+    window.location.href = "/torneioldschool/api/gestione_partite.php";
   }
 });
 

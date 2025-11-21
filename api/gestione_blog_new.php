@@ -14,7 +14,7 @@ $contenuto = '';
 
 $mediaDir = __DIR__ . '/../img/blog_media/';
 $allowedImages = ['jpg', 'jpeg', 'png', 'webp'];
-$allowedVideos = ['mp4', 'webm', 'ogg', 'mov'];
+$allowedVideos = ['mp4', 'webm', 'ogg'];
 
 function sanitizeText(?string $value): string {
   return trim((string)$value);
@@ -114,28 +114,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   if ($azioneForm === 'modifica') {
     $id = (int)($_POST['articolo_id'] ?? 0);
-    $soloMedia = ($_POST['solo_media_mod'] ?? '') === '1';
     $nuovoTitolo = sanitizeText($_POST['titolo_mod'] ?? '');
     $nuovoContenuto = sanitizeText($_POST['contenuto_mod'] ?? '');
-    if ($id <= 0 || (!$soloMedia && ($nuovoTitolo === '' || $nuovoContenuto === ''))) {
+    if ($id <= 0 || $nuovoTitolo === '' || $nuovoContenuto === '') {
       $errore = 'Seleziona un articolo valido e compila tutti i campi.';
     } else {
-      if (!$soloMedia) {
-        $stmt = $conn->prepare("UPDATE blog_post SET titolo = ?, contenuto = ? WHERE id = ?");
-        if ($stmt) {
-          $stmt->bind_param('ssi', $nuovoTitolo, $nuovoContenuto, $id);
-          if (!$stmt->execute()) {
-            $errore = 'Aggiornamento non riuscito.';
+      $stmt = $conn->prepare("UPDATE blog_post SET titolo = ?, contenuto = ? WHERE id = ?");
+      if ($stmt) {
+        $stmt->bind_param('ssi', $nuovoTitolo, $nuovoContenuto, $id);
+        if ($stmt->execute()) {
+          if (addMediaToPost($conn, $id, $_FILES['media_mod'] ?? [], $mediaDir, $allowedImages, $allowedVideos, $errore)) {
+            $successo = 'Articolo aggiornato con successo.';
           }
-          $stmt->close();
         } else {
-          $errore = 'Errore interno durante l\'aggiornamento.';
+          $errore = 'Aggiornamento non riuscito.';
         }
-      }
-      if (!$errore) {
-        if (addMediaToPost($conn, $id, $_FILES['media_mod'] ?? [], $mediaDir, $allowedImages, $allowedVideos, $errore)) {
-          $successo = $soloMedia ? 'Media aggiunti correttamente.' : 'Articolo aggiornato con successo.';
-        }
+        $stmt->close();
+      } else {
+        $errore = 'Errore interno durante l\'aggiornamento.';
       }
     }
   }
@@ -252,10 +248,10 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     .file-upload input[type="file"] { display: none; }
     .file-upload-group { display: flex; flex-direction: column; gap: 12px; }
     .upload-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .file-upload-label { background: linear-gradient(135deg, #10385a, #1d5078); color: #fff; padding: 12px 18px; border-radius: 14px; cursor: pointer; font-weight: 800; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 14px 28px rgba(16,56,90,0.25); transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease; letter-spacing: 0.2px; border: 1px solid rgba(255,255,255,0.12); }
-    .file-upload-label::before { content: "⇧"; display: inline-block; font-weight: 900; }
-    .file-upload-label:hover { transform: translateY(-2px); box-shadow: 0 18px 36px rgba(16,56,90,0.32); filter: brightness(1.05); }
-    .file-upload-label span { color: #fff; font-weight: 800; }
+    .file-upload-label { background: linear-gradient(135deg, #0f2740, #1f3f63); color: #fff; padding: 12px 18px; border-radius: 14px; cursor: pointer; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 14px 28px rgba(15,39,64,0.25); transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease; letter-spacing: 0.3px; border: 1px solid rgba(255,255,255,0.12); }
+    .file-upload-label::before { content: "⬆"; display: inline-block; font-weight: 900; }
+    .file-upload-label:hover { transform: translateY(-2px); box-shadow: 0 18px 36px rgba(15,39,64,0.32); filter: brightness(1.05); }
+    .file-upload-label span { color: #fff; font-weight: 700; }
     .file-upload-filename { color: #475467; font-size: 0.95rem; }
     .file-upload small { width: 100%; color: #6b7280; }
     .form-section { margin-top: 25px; }
@@ -264,24 +260,17 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     .blog-table th { background: #f8fafc; font-size: 0.9rem; color: #15293e; }
     .blog-table td:last-child { text-align: right; }
     .media-list { margin-top: 20px; border: 1px solid #e4e9f7; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: #f9fbff; }
-    .media-item { display: flex; gap: 12px; align-items: flex-start; border-bottom: 1px solid #e4e9f7; padding-bottom: 10px; }
+    .media-item { display: flex; justify-content: space-between; gap: 16px; align-items: center; border-bottom: 1px solid #e4e9f7; padding-bottom: 10px; }
     .media-item:last-child { border-bottom: none; padding-bottom: 0; }
-    .media-item-info { display: flex; flex-direction: column; gap: 4px; flex: 1 1 0; min-width: 0; }
+    .media-item-info { display: flex; flex-direction: column; gap: 4px; }
     .media-item strong { font-size: 0.9rem; }
-    .media-item span { font-size: 0.85rem; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block; }
-    .media-item form { margin-left: auto; display: flex; align-items: center; }
-    .media-item form .btn-danger.modern { width: auto; min-width: 120px; }
+    .media-item span { font-size: 0.85rem; color: #6b7280; }
     .badge-type { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; background: #e8f0ff; color: #1f3f63; margin-left: 6px; }
     .btn-danger.modern { background: linear-gradient(135deg, #d72638, #b1172a); border: none; color: #fff; padding: 10px 14px; border-radius: 10px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 22px rgba(183,23,42,0.25); transition: transform .15s, box-shadow .15s; }
     .btn-danger.modern:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(183,23,42,0.35); }
     .helper-text { color: #586274; font-size: 0.9rem; margin-top: -6px; margin-bottom: 10px; }
     .upload-remove { border: 1px solid #d5dbe4; background: #fff; color: #1c2a3a; border-radius: 10px; padding: 8px 12px; cursor: pointer; font-weight: 700; }
     .upload-remove:hover { border-color: #1f3f63; color: #1f3f63; }
-    .btn-secondary-modern { background: linear-gradient(135deg, #e8ecf3, #d5dde8); color: #1f3f63; border: 1px solid #c4cfdd; padding: 10px 14px; border-radius: 10px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 18px rgba(0,0,0,0.08); transition: transform .15s, box-shadow .15s; }
-    .btn-secondary-modern:hover { transform: translateY(-1px); box-shadow: 0 12px 22px rgba(0,0,0,0.12); }
-    .file-upload-label::before { content: "⇧"; }
-    /* Nasconde il vecchio pulsante torna al blog in gestione articoli */
-    button[onclick*="/torneioldschool/blog.php"] { display: none !important; }
   </style>
 </head>
 <body>
@@ -310,13 +299,6 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
       <div class="admin-alert error"><?= htmlspecialchars($errore) ?></div>
     <?php endif; ?>
 
-    <div class="panel-card" style="margin-bottom: 12px; display:flex; justify-content:flex-start;">
-      <button type="button" class="btn-secondary-modern" style="display:inline-flex; align-items:center; gap:8px;" onclick="window.location.href='/torneioldschool/blog.php'">
-        <span style="font-size:16px;">←</span>
-        <span>Torna al blog</span>
-      </button>
-    </div>
-
     <div class="panel-card form-section" data-section="crea">
       <form method="POST" class="admin-form blog-form" enctype="multipart/form-data">
         <input type="hidden" name="azione" value="crea">
@@ -331,14 +313,14 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
           <div class="upload-row" data-upload-row>
             <div class="file-upload">
               <label class="file-upload-label">
-                <input type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.webm,.ogg,.mov" multiple>
+                <input type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.webm,.ogg" multiple>
                 <span>Carica media</span>
               </label>
               <span class="file-upload-filename" data-default="Nessun file selezionato">Nessun file selezionato</span>
             </div>
             <button type="button" class="upload-remove" data-remove>Rimuovi</button>
           </div>
-          <button type="button" class="btn-secondary-modern" data-add-upload data-add-upload-pick>Carica file</button>
+          <button type="button" class="btn-secondary-modern" data-add-upload>Aggiungi un altro file</button>
           <p class="helper-text">Formato supportato: JPG, PNG, WEBP, MP4, WEBM, OGG. I file verranno mostrati nell'ordine di selezione.</p>
         </div>
 
@@ -347,10 +329,9 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     </div>
 
     <div class="panel-card form-section hidden" data-section="modifica">
-      <form method="POST" class="admin-form blog-form" enctype="multipart/form-data" id="formModificaBlog">
+      <form method="POST" class="admin-form blog-form" enctype="multipart/form-data">
         <input type="hidden" name="azione" value="modifica">
         <input type="hidden" name="articolo_id" id="articolo_id_mod">
-        <input type="hidden" name="solo_media_mod" id="solo_media_mod" value="0">
 
         <label for="modSelectArticolo">Seleziona articolo</label>
         <select id="modSelectArticolo" required <?= empty($articoli) ? 'disabled' : '' ?>>
@@ -366,30 +347,30 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <label for="titolo_mod">Titolo</label>
         <input type="text" id="titolo_mod" name="titolo_mod" required>
 
-      <label for="contenuto_mod">Contenuto</label>
-      <textarea id="contenuto_mod" name="contenuto_mod" required></textarea>
-
-        <button type="submit" class="btn-primary" <?= empty($articoli) ? 'disabled' : '' ?> style="width:max-content;">Salva modifiche</button>
+        <label for="contenuto_mod">Contenuto</label>
+        <textarea id="contenuto_mod" name="contenuto_mod" required></textarea>
 
         <div class="file-upload-group" id="uploadGroupMod" data-upload-name="media_mod[]">
           <label>Aggiungi nuovi media</label>
           <div class="upload-row" data-upload-row>
             <div class="file-upload">
               <label class="file-upload-label">
-                <input type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.webm,.ogg,.mov" multiple>
+                <input type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.webm,.ogg" multiple>
                 <span>Carica media</span>
               </label>
               <span class="file-upload-filename" data-default="Nessun file selezionato">Nessun file selezionato</span>
             </div>
             <button type="button" class="upload-remove" data-remove>Rimuovi</button>
           </div>
-          <button type="button" class="btn-secondary-modern" data-add-upload data-add-upload-pick>Carica file</button>
+          <button type="button" class="btn-secondary-modern" data-add-upload>Aggiungi un altro file</button>
           <p class="helper-text">I file si aggiungeranno al carosello esistente.</p>
         </div>
 
         <div class="media-list" id="mediaList">
           <p>Nessun media associato.</p>
         </div>
+
+        <button type="submit" class="btn-primary" <?= empty($articoli) ? 'disabled' : '' ?>>Salva modifiche</button>
       </form>
     </div>
 
@@ -429,12 +410,8 @@ const selettoreAzioni = document.getElementById('azioneBlog');
 const postsData = <?= $articoliJson ?: '[]' ?>;
 
 function mostraSezione(nome) { sezioni.forEach(section => { section.classList.toggle('hidden', section.dataset.section !== nome); }); }
-function clearAlerts() { document.querySelectorAll('.admin-alert').forEach(el => el.remove()); }
-selettoreAzioni?.addEventListener('change', e => { clearAlerts(); mostraSezione(e.target.value); });
+selettoreAzioni?.addEventListener('change', e => mostraSezione(e.target.value));
 mostraSezione(selettoreAzioni?.value || 'crea');
-
-// Nasconde gli alert dopo qualche secondo o se si cambia form
-setTimeout(clearAlerts, 4000);
 
 const moduloSelect = document.getElementById('modSelectArticolo');
 const idField = document.getElementById('articolo_id_mod');
@@ -486,13 +463,15 @@ function createUploadRow(name) {
       <label class="file-upload-label" for="${inputId}">
         <span>Carica media</span>
       </label>
-      <input id="${inputId}" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.webm,.ogg,.mov" multiple name="${name}" style="display:none;">
+      <input id="${inputId}" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.webm,.ogg" multiple name="${name}" style="display:none;">
       <span class="file-upload-filename" data-default="Nessun file selezionato">Nessun file selezionato</span>
     </div>
     <button type="button" class="upload-remove" data-remove>Rimuovi</button>
   `;
   const input = row.querySelector('input[type="file"]');
+  const label = row.querySelector('label.file-upload-label');
   const filename = row.querySelector('.file-upload-filename');
+  label.addEventListener('click', () => input?.click());
   input.addEventListener('change', () => {
     if (!filename) return;
     filename.textContent = (input.files && input.files.length)
@@ -516,19 +495,15 @@ function setupUploadGroup(groupId) {
   const rows = group.querySelectorAll('[data-upload-row]');
   rows.forEach(row => {
     const input = row.querySelector('input[type="file"]');
+    const label = row.querySelector('label.file-upload-label');
     const filename = row.querySelector('.file-upload-filename');
     if (input) input.name = name;
+    label?.addEventListener('click', () => input?.click());
     input?.addEventListener('change', () => {
       if (!filename) return;
       filename.textContent = (input.files && input.files.length)
         ? Array.from(input.files).map(f => f.name).join(', ')
         : (filename.dataset.default || 'Nessun file selezionato');
-      if (groupId === 'uploadGroupMod') {
-        const formMod = document.getElementById('formModificaBlog');
-        if (formMod && input.files && input.files.length) {
-          formMod.submit();
-        }
-      }
     });
     row.querySelector('[data-remove]')?.addEventListener('click', () => {
       const container = row.parentElement;
@@ -540,12 +515,6 @@ function setupUploadGroup(groupId) {
   addBtn?.addEventListener('click', () => {
     const newRow = createUploadRow(name);
     addBtn.before(newRow);
-    const input = newRow.querySelector('input[type="file"]');
-    if (groupId === 'uploadGroupMod') {
-      const solo = document.getElementById('solo_media_mod');
-      if (solo) solo.value = '1';
-    }
-    input?.click();
   });
 }
 
@@ -558,21 +527,6 @@ fetch('/torneioldschool/includi/footer.html')
   .then(r => r.text())
   .then(html => { const footer = document.getElementById('footer-container'); if (footer) footer.innerHTML = html; })
   .catch(err => console.error('Errore nel caricamento del footer:', err));
-
-// Previene il reinvio delle form dopo refresh/navigazione
-if (window.history.replaceState) {
-  window.history.replaceState(null, '', window.location.href);
-}
-
-// Evita doppio submit involontario
-document.querySelectorAll('form').forEach(f => {
-  f.addEventListener('submit', () => {
-    f.querySelectorAll('button[type="submit"]').forEach(b => { b.disabled = true; });
-    setTimeout(() => {
-      f.querySelectorAll('button[type="submit"]').forEach(b => { b.disabled = false; });
-    }, 2000);
-  });
-});
 </script>
 </body>
 </html>

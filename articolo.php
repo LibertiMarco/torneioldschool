@@ -16,6 +16,12 @@ $isLogged = isset($_SESSION['user_id']);
 <link rel="stylesheet" href="/torneioldschool/style.css">
 
 <style>
+.page-background {
+    background: radial-gradient(circle at 10% 20%, rgba(31,63,99,0.08) 0%, transparent 25%), radial-gradient(circle at 90% 10%, rgba(231,145,77,0.08) 0%, transparent 22%), linear-gradient(180deg, #f3f6fb 0%, #e8eef7 100%);
+    min-height: 100vh;
+    padding-bottom: 40px;
+}
+
 .article-layout {
     max-width: 1200px;
     margin: 80px auto 60px;
@@ -27,10 +33,11 @@ $isLogged = isset($_SESSION['user_id']);
 }
 
 .article-panel {
-    background: #fff;
+    background: linear-gradient(180deg, #ffffff 0%, #f7f9fe 100%);
     border-radius: 20px;
-    padding: 40px;
-    box-shadow: 0 30px 70px rgba(15, 23, 42, 0.1);
+    padding: 42px;
+    box-shadow: 0 26px 60px rgba(15, 23, 42, 0.12);
+    border: 1px solid #e3e8f4;
 }
 
 .article-meta {
@@ -63,13 +70,15 @@ $isLogged = isset($_SESSION['user_id']);
 }
 
 .article-panel h2 {
-    font-size: 2.3rem;
+    font-size: 2.4rem;
     margin: 12px 0 6px;
     color: #0f172a;
+    letter-spacing: -0.02em;
 }
 
 .article-subtitle {
-    color: #5c657c;
+    color: #54607a;
+    font-weight: 600;
     margin: 0 0 8px;
 }
 
@@ -79,7 +88,7 @@ $isLogged = isset($_SESSION['user_id']);
     border-radius: 18px;
     overflow: hidden;
     background: #0f172a;
-    min-height: 260px;
+    padding: 12px;
 }
 
 .article-media.hidden {
@@ -89,19 +98,27 @@ $isLogged = isset($_SESSION['user_id']);
 .media-stage {
     width: 100%;
     height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     min-height: 260px;
 }
 
 .media-stage img,
 .media-stage video {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: auto;
+    max-height: none;
+    object-fit: contain;
     display: block;
+    background: #000;
 }
 
-.media-stage video {
-    background: #000;
+@media (min-width: 900px) {
+    .media-stage img,
+    .media-stage video {
+        max-height: 80vh;
+    }
 }
 
 .carousel-nav {
@@ -160,7 +177,7 @@ $isLogged = isset($_SESSION['user_id']);
 .article-content {
     color: #1e2433;
     font-size: 1.1rem;
-    line-height: 1.8;
+    line-height: 1.82;
 }
 
 .article-content p {
@@ -179,10 +196,11 @@ $isLogged = isset($_SESSION['user_id']);
 }
 
 .article-sidebar {
-    background: #fff;
-    border-radius: 20px;
+    background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+    border-radius: 18px;
     padding: 26px;
-    box-shadow: 0 25px 50px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 20px 46px rgba(15, 23, 42, 0.08);
+    border: 1px solid #e4e9f4;
     align-self: flex-start;
     position: sticky;
     top: 140px;
@@ -190,6 +208,59 @@ $isLogged = isset($_SESSION['user_id']);
 
 .article-sidebar h3 {
     margin-top: 0;
+}
+
+.article-backlink-top {
+    max-width: 1200px;
+    margin: 90px auto 0;
+    padding: 0 20px;
+}
+
+.btn-back-blog {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #1f3f63, #2a5b8a);
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: 14px;
+    text-decoration: none;
+    font-weight: 800;
+    box-shadow: 0 12px 26px rgba(31,63,99,0.28);
+    transition: transform .15s, box-shadow .15s;
+}
+
+.btn-back-blog:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 32px rgba(31,63,99,0.32);
+}
+.article-backlink-inline {
+    margin-bottom: 16px;
+}
+
+.article-backlink {
+    max-width: 1200px;
+    margin: 20px auto 0;
+    padding: 0 20px;
+}
+
+.btn-back-blog {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #1f3f63, #2a5b8a);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 800;
+    box-shadow: 0 12px 26px rgba(31,63,99,0.28);
+    transition: transform .15s, box-shadow .15s;
+}
+
+.btn-back-blog:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 32px rgba(31,63,99,0.32);
 }
 
 .related-post {
@@ -416,7 +487,7 @@ $isLogged = isset($_SESSION['user_id']);
 </style>
 </head>
 
-<body>
+<body class="page-background">
 
 <?php include __DIR__ . '/includi/header.php'; ?>
 
@@ -427,6 +498,9 @@ $isLogged = isset($_SESSION['user_id']);
         <span aria-hidden="true">⟵</span> Blog
       </a>
       <span id="articleDate" class="sr-only">--/--/----</span>
+    </div>
+    <div class="article-backlink-inline">
+      <a href="/torneioldschool/blog.php" class="btn-back-blog" aria-label="Torna al blog">↩ Torna al blog</a>
     </div>
     <h2 id="articleTitle">Caricamento...</h2>
     <p class="article-subtitle" id="articleSubtitle">Recuperiamo i dettagli e li inquadriamo al meglio.</p>
