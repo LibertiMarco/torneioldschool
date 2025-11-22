@@ -223,22 +223,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['associa_squadra'])) {
     $giocatoreAssoc = (int)($_POST['giocatore_associa'] ?? 0);
     $squadraAssoc = (int)($_POST['squadra_associa'] ?? 0);
-    if ($giocatoreAssoc && $squadraAssoc) {
-        if ($pivot->esisteAssociazione($giocatoreAssoc, $squadraAssoc)) {
-            redirectGestione('associazioni', ['assoc_exists' => 1]);
+        if ($giocatoreAssoc && $squadraAssoc) {
+            if ($pivot->esisteAssociazione($giocatoreAssoc, $squadraAssoc)) {
+                redirectGestione('associazioni', ['assoc_exists' => 1]);
+            }
+            $giocatoreRecord = $giocatore->getById($giocatoreAssoc);
+            $associazioneAttuale = $pivot->getAssociazione($giocatoreAssoc, $squadraAssoc);
+            $fotoAttuale = $associazioneAttuale['foto'] ?? null;
+            $fotoUpload = $giocatoreRecord
+                ? salvaFotoAssociazione($giocatoreRecord['nome'] ?? '', $giocatoreRecord['cognome'] ?? '', 'foto_associazione_upload', $fotoAttuale)
+                : null;
+            $fotoAssoc = $fotoUpload ?? $fotoAttuale;
+            $isCaptain = isset($_POST['capitano_associa']) && $_POST['capitano_associa'] === '1';
+            $pivot->assegna($giocatoreAssoc, $squadraAssoc, $fotoAssoc, [], false, $isCaptain);
         }
-        $giocatoreRecord = $giocatore->getById($giocatoreAssoc);
-        $associazioneAttuale = $pivot->getAssociazione($giocatoreAssoc, $squadraAssoc);
-        $fotoAttuale = $associazioneAttuale['foto'] ?? null;
-        $fotoUpload = $giocatoreRecord
-            ? salvaFotoAssociazione($giocatoreRecord['nome'] ?? '', $giocatoreRecord['cognome'] ?? '', 'foto_associazione_upload', $fotoAttuale)
-            : null;
-        $fotoAssoc = $fotoUpload ?? $fotoAttuale;
-        $pivot->assegna($giocatoreAssoc, $squadraAssoc, $fotoAssoc);
-    }
 
-    redirectGestione('associazioni');
-}
+        redirectGestione('associazioni');
+    }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['modifica_associazione'])) {
     $giocatoreAssoc = (int)($_POST['mod_assoc_giocatore'] ?? 0);
@@ -257,15 +258,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['modifica_associazione
             'rossi' => (int)($_POST['mod_assoc_rossi'] ?? 0),
             'media_voti' => $mediaPost === '' ? null : (float)$mediaPost
         ];
-        $fotoUpload = (!$removeFoto && $giocatoreRecord)
-            ? salvaFotoAssociazione($giocatoreRecord['nome'] ?? '', $giocatoreRecord['cognome'] ?? '', 'mod_assoc_foto_upload', $fotoEsistente)
-            : null;
-        $fotoAssoc = $removeFoto ? null : ($fotoUpload ?? $fotoEsistente);
-        $pivot->assegna($giocatoreAssoc, $squadraAssoc, $fotoAssoc, $stats, $removeFoto);
-    }
+            $fotoUpload = (!$removeFoto && $giocatoreRecord)
+                ? salvaFotoAssociazione($giocatoreRecord['nome'] ?? '', $giocatoreRecord['cognome'] ?? '', 'mod_assoc_foto_upload', $fotoEsistente)
+                : null;
+            $fotoAssoc = $removeFoto ? null : ($fotoUpload ?? $fotoEsistente);
+            $isCaptain = isset($_POST['mod_assoc_capitano']) && $_POST['mod_assoc_capitano'] === '1';
+            $pivot->assegna($giocatoreAssoc, $squadraAssoc, $fotoAssoc, $stats, $removeFoto, $isCaptain);
+        }
 
-    redirectGestione('associazioni');
-}
+        redirectGestione('associazioni');
+    }
 
 // --- DISSOCIA ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dissocia_squadra'])) {
@@ -296,6 +298,8 @@ if ($listaResult) {
         $giocatori[] = $row;
     }
 }
+
+$giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 per default
 ?>
 
 <!DOCTYPE html>
@@ -693,6 +697,11 @@ if ($listaResult) {
       </div>
 
       <div class="form-group">
+          <label><input type="checkbox" name="capitano_associa" value="1"> Capitano della squadra</label>
+          <small>Un solo capitano per squadra; un giocatore può essere capitano di squadre diverse.</small>
+      </div>
+
+      <div class="form-group">
           <label>Foto specifica (opzionale)</label>
           <div class="file-upload">
               <input type="file" name="foto_associazione_upload" id="foto_associazione_upload" accept="image/png,image/jpeg,image/webp,image/gif">
@@ -731,6 +740,11 @@ if ($listaResult) {
           <select id="modAssocGiocatore" name="mod_assoc_giocatore" required disabled>
               <option value="">-- Seleziona un giocatore --</option>
           </select>
+      </div>
+
+      <div class="form-group">
+          <label><input type="checkbox" name="mod_assoc_capitano" id="mod_assoc_capitano" value="1"> Capitano della squadra</label>
+          <small>Un solo capitano per squadra; un giocatore può essere capitano di squadre diverse.</small>
       </div>
 
       <div class="form-row">
@@ -826,7 +840,7 @@ if ($listaResult) {
 
 <section class="admin-table-section form-elimina hidden">
 <h2>Elimina Giocatore</h2>
-<input type="text" id="search" placeholder="Cerca giocatore..." class="search-input">
+<input type="text" id="search" placeholder="Cerca (mostrati ultimi 10 creati)" class="search-input" data-all-players='<?= json_encode($giocatori, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>'>
 
 <table class="admin-table-squadre" id="tabellaGiocatori">
 <thead>
@@ -838,23 +852,28 @@ if ($listaResult) {
 </tr>
 </thead>
 <tbody>
-<?php foreach ($giocatori as $row): ?>
-<tr>
-    <td><?= htmlspecialchars($row['nome']) ?></td>
-    <td><?= htmlspecialchars($row['cognome']) ?></td>
-    <td><?= htmlspecialchars($row['ruolo']) ?></td>
-    <td>
-        <button type="button"
-                class="btn-danger btn-delete"
-                data-id="<?= $row['id'] ?>"
-                data-name="<?= htmlspecialchars($row['nome'] . ' ' . $row['cognome']) ?>">
-            Elimina
-        </button>
-    </td>
-</tr>
-<?php endforeach; ?>
+<?php if (!empty($giocatoriElimina)): ?>
+    <?php foreach ($giocatoriElimina as $row): ?>
+    <tr>
+        <td><?= htmlspecialchars($row['nome']) ?></td>
+        <td><?= htmlspecialchars($row['cognome']) ?></td>
+        <td><?= htmlspecialchars($row['ruolo']) ?></td>
+        <td>
+            <button type="button"
+                    class="btn-danger btn-delete"
+                    data-id="<?= $row['id'] ?>"
+                    data-name="<?= htmlspecialchars($row['nome'] . ' ' . $row['cognome']) ?>">
+                Elimina
+            </button>
+        </td>
+    </tr>
+    <?php endforeach; ?>
+<?php else: ?>
+    <tr><td colspan="4">Nessun giocatore disponibile.</td></tr>
+<?php endif; ?>
 </tbody>
 </table>
+<small>Per altri giocatori usa la ricerca: digita il nome/cognome e scorri i risultati filtrati (max 10 mostrati).</small>
 </section>
 
 </section>
@@ -1007,11 +1026,19 @@ const modAssocGialli = document.getElementById("mod_assoc_gialli");
 const modAssocRossi = document.getElementById("mod_assoc_rossi");
 const modAssocMedia = document.getElementById("mod_assoc_media");
 const modAssocRemoveFoto = document.getElementById("mod_assoc_remove_foto");
+const modAssocCapitano = document.getElementById("mod_assoc_capitano");
 const assocOperationSelect = document.getElementById("assocOperation");
 const assocFormAdd = document.querySelector(".assoc-form-add");
 const assocFormEdit = document.querySelector(".assoc-form-edit");
 const assocFormRemove = document.querySelector(".assoc-form-remove");
 const removeAssocButtons = document.querySelectorAll(".btn-remove-assoc");
+const allPlayersDataEl = document.getElementById("search");
+let allPlayers = [];
+try {
+    allPlayers = JSON.parse(allPlayersDataEl?.getAttribute("data-all-players") || "[]") || [];
+} catch (e) {
+    allPlayers = [];
+}
 
 const API_SQUADRE_TORNEO = "/torneioldschool/api/get_squadre_torneo.php";
 const API_GIOCATORI_SQUADRA = "/torneioldschool/api/get_giocatori_squadra.php";
@@ -1030,6 +1057,7 @@ function clearModAssocStatsFields() {
     });
     if (modAssocMedia) modAssocMedia.value = "";
     if (modAssocRemoveFoto) modAssocRemoveFoto.checked = false;
+    if (modAssocCapitano) modAssocCapitano.checked = false;
 }
 
 function populateModAssocStatsFromOption(option) {
@@ -1045,6 +1073,7 @@ function populateModAssocStatsFromOption(option) {
     if (modAssocRossi) modAssocRossi.value = ds.rossi ?? "0";
     if (modAssocMedia) modAssocMedia.value = ds.media ?? "";
     if (modAssocRemoveFoto) modAssocRemoveFoto.checked = false;
+    if (modAssocCapitano) modAssocCapitano.checked = ds.captain === "1";
 }
 
 async function loadSquadre(select, torneo, placeholder = "-- Seleziona una squadra --") {
@@ -1102,6 +1131,9 @@ async function loadGiocatori(select, squadraId, torneo, placeholder = "-- Selezi
             } else {
                 delete opt.dataset.media;
             }
+            if (typeof g.is_captain !== "undefined") {
+                opt.dataset.captain = String(g.is_captain);
+            }
             select.appendChild(opt);
         });
         return data;
@@ -1136,9 +1168,57 @@ searchGiocatoreInput?.addEventListener("input", e => filterGiocatori(e.target.va
 function filterTabella(term) {
     if (!tabellaGiocatori) return;
     const normalized = term.trim().toLowerCase();
-    tabellaGiocatori.querySelectorAll("tbody tr").forEach(row => {
-        const testo = row.textContent.toLowerCase();
-        row.style.display = normalized === "" || testo.includes(normalized) ? "" : "none";
+    const tbody = tabellaGiocatori.querySelector("tbody");
+    if (!tbody) return;
+
+    // Se non c'è testo, mostra gli ultimi 10 (già popolati dal PHP)
+    if (normalized === "") {
+        // ripristina ultimi 10
+        tbody.querySelectorAll("tr").forEach(row => row.style.display = "");
+        return;
+    }
+
+    if (!Array.isArray(allPlayers) || allPlayers.length === 0) {
+        // fallback: filtro sui presenti
+        tbody.querySelectorAll("tr").forEach(row => {
+            const testo = row.textContent.toLowerCase();
+            row.style.display = testo.includes(normalized) ? "" : "none";
+        });
+        return;
+    }
+
+    const filtered = allPlayers.filter(p => {
+        const t = `${p.nome || ""} ${p.cognome || ""} ${p.ruolo || ""}`.toLowerCase();
+        return t.includes(normalized);
+    });
+
+    tbody.innerHTML = "";
+    if (filtered.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 4;
+        td.textContent = "Nessun giocatore trovato.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+    }
+
+    filtered.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${(p.nome || "").replace(/</g,"&lt;")}</td>
+            <td>${(p.cognome || "").replace(/</g,"&lt;")}</td>
+            <td>${(p.ruolo || "").replace(/</g,"&lt;")}</td>
+            <td>
+              <button type="button"
+                class="btn-danger btn-delete"
+                data-id="${p.id}"
+                data-name="${(p.nome || "")} ${(p.cognome || "")}">
+                Elimina
+              </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
     });
 }
 

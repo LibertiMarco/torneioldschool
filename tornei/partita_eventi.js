@@ -2,6 +2,15 @@
 const params     = new URLSearchParams(window.location.search);
 const ID_PARTITA = params.get("id");
 const TORNEO     = params.get("torneo");
+function normalizeLogoName(name = "") {
+  return name.replace(/[^A-Za-z0-9]/g, "");
+}
+function logoPathFrom(p, keyLogo, keyNome) {
+  const stored = p[keyLogo];
+  if (stored) return stored;
+  const slug = normalizeLogoName(p[keyNome] || "");
+  return slug ? `/torneioldschool/img/scudetti/${slug}.png` : "/torneioldschool/img/scudetti/default.png";
+}
 
 // ====================== FORMATTA DATA ======================
 function formattaData(data) {
@@ -54,7 +63,12 @@ async function caricaPartita() {
 
     const dataStr = formattaData(p.data_partita);
     const oraStr  = p.ora_partita && p.ora_partita !== "00:00:00" ? p.ora_partita.slice(0,5) : "";
-    const campo   = p.campo?.trim() || "Campo da definire";
+  const campo   = p.campo?.trim() || "Campo da definire";
+    const logoCasa = logoPathFrom(p, "logo_casa", "squadra_casa");
+    const logoOsp = logoPathFrom(p, "logo_ospite", "squadra_ospite");
+
+    const golCasa = (p.gol_casa !== null && p.gol_casa !== undefined) ? p.gol_casa : "-";
+    const golOsp = (p.gol_ospite !== null && p.gol_ospite !== undefined) ? p.gol_ospite : "-";
 
     document.getElementById("partitaContainer").innerHTML = `
     <div class="match-card match-card-blue">
@@ -71,19 +85,19 @@ async function caricaPartita() {
 
       <div class="match-body">
         <div class="team home">
-          <img src="/torneioldschool/img/scudetti/${p.squadra_casa}.png" class="team-logo">
+          <img src="${logoCasa}" class="team-logo" alt="${p.squadra_casa}">
           <span class="team-name">${p.squadra_casa}</span>
         </div>
 
         <div class="match-center">
-          <span class="score">${p.gol_casa}</span>
+          <span class="score" id="scoreHome">${golCasa}</span>
           <span class="dash">-</span>
-          <span class="score">${p.gol_ospite}</span>
+          <span class="score" id="scoreAway">${golOsp}</span>
         </div>
 
         <div class="team away">
           <span class="team-name">${p.squadra_ospite}</span>
-          <img src="/torneioldschool/img/scudetti/${p.squadra_ospite}.png" class="team-logo">
+          <img src="${logoOsp}" class="team-logo" alt="${p.squadra_ospite}">
         </div>
       </div>
     </div>
@@ -147,48 +161,58 @@ async function caricaEventiGiocatori() {
         byTeam[home].sort(sortFn);
         byTeam[away].sort(sortFn);
 
-        // funzione lista
-        const renderList = arr => {
-            if (!arr.length)
-                return `<div class="evento-mini-row muted">Nessun evento</div>`;
+        // Aggiorna punteggio in header in base agli eventi
+        const homeGoals = byTeam[home].reduce((sum, g) => sum + (g.goal || 0), 0);
+        const awayGoals = byTeam[away].reduce((sum, g) => sum + (g.goal || 0), 0);
+        const scoreHomeEl = document.getElementById("scoreHome");
+        const scoreAwayEl = document.getElementById("scoreAway");
+        if (scoreHomeEl) scoreHomeEl.textContent = homeGoals;
+        if (scoreAwayEl) scoreAwayEl.textContent = awayGoals;
 
+        const renderList = (arr) => {
+            if (!arr.length) return `<div class="evento-mini-row muted">Nessun evento</div>`;
             return arr.map(g => {
                 const abbrev = `${g.cognome} ${g.nome.charAt(0).toUpperCase()}.`;
-
                 return `
-                <div class="evento-mini-row">
+                  <div class="evento-mini-row">
                     <div class="evento-nome">${abbrev}</div>
-
-                <div class="evento-dettagli">
-                    <span class="icons-after-name">
-                        ${"⚽".repeat(g.goal)}
-                        ${"🟨".repeat(g.gialli)}
-                        ${"🟥".repeat(g.rossi)}
-                    </span>
-                            
-                    ${g.voto !== null ? `<span class="voto"><strong>${formatVoto(g.voto)}</strong></span>` : ""}
-                </div>
-
-                </div>`;
+                    <div class="evento-dettagli">
+                        <span class="icons-after-name">
+                            ${"⚽".repeat(g.goal)}
+                            ${"🟨".repeat(g.gialli)}
+                            ${"🟥".repeat(g.rossi)}
+                        </span>
+                        ${g.voto !== null ? `<span class="voto"><strong>${formatVoto(g.voto)}</strong></span>` : ""}
+                    </div>
+                  </div>
+                `;
             }).join("");
         };
 
+        const logoHome = logoPathFrom(window.PARTITA, "logo_casa", "squadra_casa");
+        const logoAway = logoPathFrom(window.PARTITA, "logo_ospite", "squadra_ospite");
         document.getElementById("riepilogoEventi").innerHTML = `
             <div class="stats-card">
 
-                <div class="stats-header">
-                    <div class="team-side left">
-                        <img src="/torneioldschool/img/scudetti/${home}.png" class="team-logo">
-                    </div>
-
-                    <div class="team-side right">
-                        <img src="/torneioldschool/img/scudetti/${away}.png" class="team-logo">
-                    </div>
-                </div>
-
                 <div class="stats-body">
-                    <div class="stats-col">${renderList(byTeam[home])}</div>
-                    <div class="stats-col">${renderList(byTeam[away])}</div>
+                    <div class="team-block">
+                      <div class="team-block-head">
+                        <img src="${logoHome}" class="team-logo" alt="${home}">
+                        <span>${home}</span>
+                      </div>
+                      <div class="team-block-body">
+                        ${renderList(byTeam[home])}
+                      </div>
+                    </div>
+                    <div class="team-block">
+                      <div class="team-block-head">
+                        <img src="${logoAway}" class="team-logo" alt="${away}">
+                        <span>${away}</span>
+                      </div>
+                      <div class="team-block-body">
+                        ${renderList(byTeam[away])}
+                      </div>
+                    </div>
                 </div>
 
             </div>

@@ -8,7 +8,7 @@ class SquadraGiocatore {
         $this->conn = $conn;
     }
 
-    public function assegna($giocatoreId, $squadraId, $foto = null, array $stats = [], $forzaRimozioneFoto = false) {
+    public function assegna($giocatoreId, $squadraId, $foto = null, array $stats = [], $forzaRimozioneFoto = false, $isCaptain = false) {
         $defaults = [
             'presenze' => 0,
             'reti' => 0,
@@ -24,10 +24,17 @@ class SquadraGiocatore {
         if ($forzaRimozioneFoto) {
             $foto = null;
         }
+        if ($isCaptain) {
+            $reset = $this->conn->prepare("UPDATE {$this->table} SET is_captain = 0 WHERE squadra_id = ?");
+            $reset->bind_param("i", $squadraId);
+            $reset->execute();
+            $reset->close();
+        }
+
         $sql = "
             INSERT INTO {$this->table}
-                (squadra_id, giocatore_id, foto, presenze, reti, assist, gialli, rossi, media_voti)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (squadra_id, giocatore_id, foto, presenze, reti, assist, gialli, rossi, media_voti, is_captain)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 {$fotoUpdateSql},
                 presenze = VALUES(presenze),
@@ -35,22 +42,31 @@ class SquadraGiocatore {
                 assist = VALUES(assist),
                 gialli = VALUES(gialli),
                 rossi = VALUES(rossi),
-                media_voti = VALUES(media_voti)
+                media_voti = VALUES(media_voti),
+                is_captain = VALUES(is_captain)
         ";
 
         $stmt = $this->conn->prepare($sql);
         $foto = $foto !== '' ? $foto : null;
+        $presenze = (int)$stats['presenze'];
+        $reti = (int)$stats['reti'];
+        $assist = (int)$stats['assist'];
+        $gialli = (int)$stats['gialli'];
+        $rossi = (int)$stats['rossi'];
+        $mediaVal = $media;
+        $isCaptainVal = $isCaptain ? 1 : 0;
         $stmt->bind_param(
-            "iisiiiiid",
+            "iisiiiiidi",
             $squadraId,
             $giocatoreId,
             $foto,
-            $stats['presenze'],
-            $stats['reti'],
-            $stats['assist'],
-            $stats['gialli'],
-            $stats['rossi'],
-            $media
+            $presenze,
+            $reti,
+            $assist,
+            $gialli,
+            $rossi,
+            $mediaVal,
+            $isCaptainVal
         );
         $result = $stmt->execute();
         $stmt->close();
@@ -105,7 +121,8 @@ class SquadraGiocatore {
                    sg.assist AS assist_squadra,
                    sg.gialli AS gialli_squadra,
                    sg.rossi AS rossi_squadra,
-                   sg.media_voti AS media_squadra
+                   sg.media_voti AS media_squadra,
+                   sg.is_captain
             FROM {$this->table} sg
             JOIN giocatori g ON g.id = sg.giocatore_id
             JOIN squadre s ON s.id = sg.squadra_id

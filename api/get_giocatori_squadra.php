@@ -30,7 +30,8 @@ while ($row = $result->fetch_assoc()) {
         "assist" => (int)($row["assist_squadra"] ?? 0),
         "gialli" => (int)($row["gialli_squadra"] ?? 0),
         "rossi" => (int)($row["rossi_squadra"] ?? 0),
-        "media_voti" => isset($row["media_squadra"]) ? $row["media_squadra"] : null
+        "media_voti" => isset($row["media_squadra"]) ? $row["media_squadra"] : null,
+        "is_captain" => (int)($row["is_captain"] ?? 0)
     ];
 }
 

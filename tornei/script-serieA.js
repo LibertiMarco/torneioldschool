@@ -160,12 +160,22 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       return;
     }
 
+    // Filtra per mostrare solo la fase scelta (per REGULAR escludiamo GOLD/SILVER)
+    let dataFiltrata = data;
+    if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
+      dataFiltrata = {};
+      Object.keys(data || {}).forEach(g => {
+        const matches = (data[g] || []).filter(p => (p.fase || "REGULAR").toUpperCase() === "REGULAR");
+        if (matches.length) dataFiltrata[g] = matches;
+      });
+    }
+
     const calendarioSection = document.getElementById("contenitoreGiornate");
     calendarioSection.innerHTML = "";
 
     const giornataSelect = document.getElementById("giornataSelect");
     const wrapperGiornata = document.getElementById("wrapperGiornataSelect");
-    const giornateDisponibili = Object.keys(data).sort((a, b) => a - b);
+    const giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
 
     if (wrapperGiornata) {
       const isRegular = (faseSelezionata || "").toUpperCase() === "REGULAR";
@@ -204,7 +214,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       }
       giornataDiv.appendChild(titolo);
 
-      data[numGiornata].forEach(partita => {
+      (dataFiltrata[numGiornata] || []).forEach(partita => {
         const partitaDiv = document.createElement("div");
         partitaDiv.classList.add("match-card");
       

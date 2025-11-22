@@ -68,6 +68,7 @@ $sql_squadre_giocatori = "CREATE TABLE IF NOT EXISTS squadre_giocatori (
     squadra_id INT NOT NULL,
     giocatore_id INT NOT NULL,
     foto VARCHAR(255) DEFAULT NULL,
+    is_captain TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uniq_squadra_giocatore (squadra_id, giocatore_id),
     CONSTRAINT fk_sg_squadra FOREIGN KEY (squadra_id) REFERENCES squadre(id) ON DELETE CASCADE,

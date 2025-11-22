@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS squadre_giocatori (
     gialli INT UNSIGNED NOT NULL DEFAULT 0,
     rossi INT UNSIGNED NOT NULL DEFAULT 0,
     media_voti DECIMAL(4,2) DEFAULT NULL,
+    is_captain TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_squadra_giocatore (squadra_id, giocatore_id),
     KEY idx_sg_giocatore (giocatore_id),

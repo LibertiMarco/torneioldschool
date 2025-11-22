@@ -27,6 +27,15 @@ class Giocatore {
         return $this->conn->query($sql);
     }
 
+    public function getLastCreated($limit = 10) {
+        $limit = (int)$limit;
+        if ($limit <= 0) { $limit = 10; }
+        $stmt = $this->conn->prepare("SELECT * FROM {$this->table} ORDER BY id DESC LIMIT ?");
+        $stmt->bind_param("i", $limit);
+        $stmt->execute();
+        return $stmt->get_result();
+    }
+
     // ✅ GET BY ID
     public function getById($id) {
         $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE id = ?");
@@ -123,7 +132,8 @@ class Giocatore {
                        sg.assist AS assist_squadra,
                        sg.gialli AS gialli_squadra,
                        sg.rossi AS rossi_squadra,
-                       sg.media_voti AS media_squadra
+                       sg.media_voti AS media_squadra,
+                       sg.is_captain
                 FROM squadre_giocatori sg
                 JOIN giocatori g ON g.id = sg.giocatore_id
                 JOIN squadre s ON s.id = sg.squadra_id
@@ -141,7 +151,8 @@ class Giocatore {
                        sg.assist AS assist_squadra,
                        sg.gialli AS gialli_squadra,
                        sg.rossi AS rossi_squadra,
-                       sg.media_voti AS media_squadra
+                       sg.media_voti AS media_squadra,
+                       sg.is_captain
                 FROM squadre_giocatori sg
                 JOIN giocatori g ON g.id = sg.giocatore_id
                 JOIN squadre s ON s.id = sg.squadra_id

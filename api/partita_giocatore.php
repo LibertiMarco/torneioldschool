@@ -149,17 +149,25 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId): void {
     $p = $partInfo->get_result()->fetch_assoc();
     if (!$p) return;
 
+    // Recupera gli ID delle squadre casa/ospite nel torneo corrente
+    $idCasa = null;
+    $idOsp = null;
+    $ids = $conn->prepare("SELECT id, nome FROM squadre WHERE torneo = ? AND nome IN (?, ?)");
+    $ids->bind_param("sss", $p['torneo'], $p['squadra_casa'], $p['squadra_ospite']);
+    $ids->execute();
+    $resIds = $ids->get_result();
+    while ($r = $resIds->fetch_assoc()) {
+        if ($r['nome'] === $p['squadra_casa']) $idCasa = (int)$r['id'];
+        if ($r['nome'] === $p['squadra_ospite']) $idOsp = (int)$r['id'];
+    }
+
+    // Somma i goal per squadra_id (via squadre_giocatori); se non trovata squadra_id rimane 0
     $sumSql = $conn->prepare("
-        SELECT s.nome AS squadra, COALESCE(SUM(pg.goal),0) AS gol
+        SELECT sg.squadra_id, COALESCE(SUM(pg.goal),0) AS gol
         FROM partita_giocatore pg
-        JOIN giocatori g ON g.id = pg.giocatore_id
-        JOIN squadre_giocatori sg ON sg.giocatore_id = pg.giocatore_id
-        JOIN squadre s ON s.id = sg.squadra_id
-        JOIN partite p ON p.id = pg.partita_id
+        LEFT JOIN squadre_giocatori sg ON sg.giocatore_id = pg.giocatore_id
         WHERE pg.partita_id = ?
-          AND s.torneo = p.torneo
-          AND s.nome IN (p.squadra_casa, p.squadra_ospite)
-        GROUP BY s.nome
+        GROUP BY sg.squadra_id
     ");
     $sumSql->bind_param("i", $partitaId);
     $sumSql->execute();
@@ -168,9 +176,10 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId): void {
     $golCasa = 0;
     $golOsp = 0;
     while ($row = $res->fetch_assoc()) {
-        if ($row['squadra'] === $p['squadra_casa']) {
+        $sid = $row['squadra_id'] ? (int)$row['squadra_id'] : null;
+        if ($sid !== null && $idCasa !== null && $sid === $idCasa) {
             $golCasa = (int)$row['gol'];
-        } elseif ($row['squadra'] === $p['squadra_ospite']) {
+        } elseif ($sid !== null && $idOsp !== null && $sid === $idOsp) {
             $golOsp = (int)$row['gol'];
         }
     }
