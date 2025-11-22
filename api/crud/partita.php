@@ -45,19 +45,20 @@ class Partita {
         $fase_round = null,
         $fase_leg = null,
         $link_youtube = null,
-        $link_instagram = null
+        $link_instagram = null,
+        $arbitro = null
     ) {
         $stmt = $this->conn->prepare("
             INSERT INTO {$this->table}
             (squadra_casa, squadra_ospite, gol_casa, gol_ospite,
              data_partita, ora_partita, campo, giornata, torneo, fase,
              fase_round, fase_leg,
-             link_youtube, link_instagram)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             link_youtube, link_instagram, arbitro)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
         $stmt->bind_param(
-            "ssiisssissssss",
+            "ssiisssisssssss",
             $squadra_casa,
             $squadra_ospite,
             $gol_casa,
@@ -71,7 +72,8 @@ class Partita {
             $fase_round,
             $fase_leg,
             $link_youtube,
-            $link_instagram
+            $link_instagram,
+            $arbitro
         );
 
         return $stmt->execute();
@@ -93,19 +95,21 @@ class Partita {
         $fase_round = null,
         $fase_leg = null,
         $link_youtube = null,
-        $link_instagram = null
+        $link_instagram = null,
+        $arbitro = null
     ) {
         $stmt = $this->conn->prepare("
             UPDATE {$this->table}
             SET squadra_casa = ?, squadra_ospite = ?, gol_casa = ?, gol_ospite = ?,
                 data_partita = ?, ora_partita = ?, campo = ?, giornata = ?, torneo = ?, fase = ?,
                 fase_round = ?, fase_leg = ?,
-                link_youtube = ?, link_instagram = ?
+                link_youtube = ?, link_instagram = ?,
+                arbitro = ?
             WHERE id = ?
         ");
 
         $stmt->bind_param(
-            "ssiisssissssssi",
+            "ssiisssisssssssi",
             $squadra_casa,
             $squadra_ospite,
             $gol_casa,
@@ -120,6 +124,7 @@ class Partita {
             $fase_leg,
             $link_youtube,
             $link_instagram,
+            $arbitro,
             $id
         );
 

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/crud/Partita.php';
 header('Content-Type: application/json; charset=utf-8');
 
 $azione = $_GET['azione'] ?? $_POST['azione'] ?? '';
@@ -142,12 +143,12 @@ function ricalcolaStatistiche(mysqli $conn, int $partitaId, int $giocatoreId): v
  * Aggiorna automaticamente i gol della partita sommando quelli inseriti nelle statistiche.
  * Somma i goal per squadra (casa/ospite) e li scrive su partite.gol_casa / partite.gol_ospite.
  */
-function aggiornaGolPartita(mysqli $conn, int $partitaId): void {
-    $partInfo = $conn->prepare("SELECT torneo, squadra_casa, squadra_ospite FROM partite WHERE id=?");
+function aggiornaGolPartita(mysqli $conn, int $partitaId): ?array {
+    $partInfo = $conn->prepare("SELECT torneo, fase, squadra_casa, squadra_ospite, gol_casa AS old_gol_casa, gol_ospite AS old_gol_ospite FROM partite WHERE id=?");
     $partInfo->bind_param("i", $partitaId);
     $partInfo->execute();
     $p = $partInfo->get_result()->fetch_assoc();
-    if (!$p) return;
+    if (!$p) return null;
 
     // Recupera gli ID delle squadre casa/ospite nel torneo corrente
     $idCasa = null;
@@ -187,6 +188,48 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId): void {
     $upd = $conn->prepare("UPDATE partite SET gol_casa = ?, gol_ospite = ? WHERE id = ?");
     $upd->bind_param("iii", $golCasa, $golOsp, $partitaId);
     $upd->execute();
+
+    return [
+        'partita_id' => $partitaId,
+        'torneo' => $p['torneo'],
+        'fase' => $p['fase'] ?? 'REGULAR',
+        'squadra_casa' => $p['squadra_casa'],
+        'squadra_ospite' => $p['squadra_ospite'],
+        'gol_casa' => $golCasa,
+        'gol_ospite' => $golOsp,
+        'old_gol_casa' => (int)($p['old_gol_casa'] ?? 0),
+        'old_gol_ospite' => (int)($p['old_gol_ospite'] ?? 0)
+    ];
+}
+
+function marcaPartitaGiocata(mysqli $conn, int $partitaId): void {
+    $upd = $conn->prepare("UPDATE partite SET giocata = 1 WHERE id = ?");
+    if ($upd) {
+        $upd->bind_param("i", $partitaId);
+        $upd->execute();
+    }
+}
+
+function aggiornaClassificaDaInfo(?array $info): void {
+    if (!$info) return;
+    $partitaModel = new Partita();
+    $vecchi = [
+        'torneo' => $info['torneo'],
+        'squadra_casa' => $info['squadra_casa'],
+        'squadra_ospite' => $info['squadra_ospite'],
+        'gol_casa' => $info['old_gol_casa'] ?? 0,
+        'gol_ospite' => $info['old_gol_ospite'] ?? 0,
+        'fase' => $info['fase'] ?? 'REGULAR'
+    ];
+    $partitaModel->aggiornaClassifica(
+        $info['torneo'],
+        $info['squadra_casa'],
+        $info['squadra_ospite'],
+        $info['gol_casa'],
+        $info['gol_ospite'],
+        $vecchi,
+        $info['fase'] ?? 'REGULAR'
+    );
 }
 
 /* ==========================================================
@@ -264,7 +307,9 @@ if ($azione === 'add') {
     $stmt->execute();
 
     ricalcolaStatistiche($conn, $partita_id, $giocatore);
-    aggiornaGolPartita($conn, $partita_id);
+    $infoClassifica = aggiornaGolPartita($conn, $partita_id);
+    marcaPartitaGiocata($conn, $partita_id);
+    aggiornaClassificaDaInfo($infoClassifica);
 
     echo json_encode(["success" => true, "message" => "Statistica aggiunta"]);
     exit;
@@ -307,7 +352,9 @@ if ($azione === 'edit') {
 
     if ($rPrev) {
       ricalcolaStatistiche($conn, (int)$rPrev['partita_id'], (int)$rPrev['giocatore_id']);
-      aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
+      $infoClassifica = aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
+      marcaPartitaGiocata($conn, (int)$rPrev['partita_id']);
+      aggiornaClassificaDaInfo($infoClassifica);
     }
     exit;
 }
@@ -330,7 +377,9 @@ if ($azione === 'delete') {
 
     if ($rPrev) {
       ricalcolaStatistiche($conn, (int)$rPrev['partita_id'], (int)$rPrev['giocatore_id']);
-      aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
+      $infoClassifica = aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
+      marcaPartitaGiocata($conn, (int)$rPrev['partita_id']);
+      aggiornaClassificaDaInfo($infoClassifica);
     }
 
     echo json_encode(["success" => true, "message" => "Statistica eliminata"]);

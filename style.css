@@ -345,6 +345,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 140px;
 }
 
 #calendario .match-center {
@@ -358,6 +359,37 @@ body {
 
 #calendario .vs {
   color: #777;
+}
+
+@media (max-width: 640px) {
+  #calendario .match-card {
+    padding: 14px 0;
+  }
+  #calendario .match-header {
+    font-size: 0.95rem;
+    padding: 0 12px 6px 12px;
+  }
+  #calendario .match-body {
+    grid-template-columns: 1fr auto 1fr;
+    gap: 8px;
+    padding: 0 12px;
+    align-items: center;
+  }
+  #calendario .team {
+    gap: 8px;
+    min-width: 0;
+  }
+  #calendario .team-logo {
+    width: 34px;
+    height: 34px;
+  }
+  #calendario .team-name {
+    font-size: 0.92rem;
+    max-width: 110px;
+  }
+  #calendario .match-center {
+    min-width: 70px;
+  }
 }
 
 .filtro-giornata {
@@ -4689,6 +4721,7 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 .team-block-head {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 10px;
     font-weight: 800;
     letter-spacing: .3px;
@@ -4858,27 +4891,37 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
   gap: 20px;
   min-width: 0;
 }
+.match-card-blue .match-referee {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 14px;
+  color: #e9eef5;
+  letter-spacing: 0.2px;
+}
 
 .match-card-blue .team-name {
   font-weight: 600;
   font-size: 16px;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #fff;
 }
 
 .match-card-blue .team {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
+  text-align: center;
 }
 .match-card-blue .team.home {
-  justify-content: flex-start;
+  justify-content: center;
 }
 .match-card-blue .team.away {
-  justify-content: flex-end;
-  text-align: right;
+  justify-content: center;
+  text-align: center;
 }
 .match-card-blue .match-center {
   min-width: 120px;
@@ -4923,6 +4966,9 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
   }
   .match-card-blue .team-name {
     font-size: 14px;
+  }
+  .match-card-blue .match-referee {
+    font-size: 13px;
   }
   .match-card-blue .match-center {
     flex: 0 0 auto;

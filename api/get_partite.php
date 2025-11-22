@@ -14,8 +14,24 @@ function respondError(string $msg, int $code = 500): void {
 try {
   $torneo = $_GET['torneo'] ?? '';
   $fase = strtoupper($_GET['fase'] ?? '');
+  $idPartita = isset($_GET['id']) ? (int)$_GET['id'] : 0;
   $fasiAmmesse = ['REGULAR','GOLD','SILVER'];
-  if(!$torneo){ respondError("Parametro 'torneo' mancante.", 400); }
+  if(!$torneo && $idPartita <= 0){ respondError("Parametro 'torneo' mancante.", 400); }
+
+  // Se non arriva il torneo ma arriva l'id, recuperalo dalla partita
+  if (!$torneo && $idPartita > 0) {
+    $tmp = $conn->prepare("SELECT torneo FROM partite WHERE id=? LIMIT 1");
+    if ($tmp) {
+      $tmp->bind_param("i", $idPartita);
+      if ($tmp->execute()) {
+        $resTmp = $tmp->get_result();
+        $rowTmp = $resTmp->fetch_assoc();
+        $torneo = $rowTmp['torneo'] ?? '';
+      }
+      $tmp->close();
+    }
+    if (!$torneo) { respondError("Torneo non trovato per la partita indicata.", 404); }
+  }
 
   $logoMap = [];
   $logoStmt = $conn->prepare("SELECT nome, logo FROM squadre WHERE torneo=?");
@@ -35,6 +51,11 @@ try {
   $query = "SELECT * FROM partite WHERE torneo=?";
   $types = "s";
   $params = [$torneo];
+  if ($idPartita > 0) {
+    $query .= " AND id=?";
+    $types .= "i";
+    $params[] = $idPartita;
+  }
   if ($fase && in_array($fase, $fasiAmmesse, true)) {
     $query .= " AND fase=?";
     $types .= "s";
@@ -56,13 +77,9 @@ try {
   $r = $st->get_result();
 
   $giornate=[];
+  $lista = [];
   while($row=$r->fetch_assoc()){
-    $key = $row['giornata'];
-    if ($key === null) {
-      $key = 0;
-    }
-    if(!isset($giornate[$key])) $giornate[$key]=[];
-    $giornate[$key][]=[
+    $record = [
       "id"=>$row['id'],
       "squadra_casa"=>$row['squadra_casa'],
       "squadra_ospite"=>$row['squadra_ospite'],
@@ -77,11 +94,26 @@ try {
       "fase"=>$row['fase'],
       "fase_round"=>null,
       "fase_leg"=>null,
+      "arbitro"=>$row['arbitro'] ?? '',
       "link_youtube"=>$row['link_youtube'] ?? null,
       "link_instagram"=>$row['link_instagram'] ?? null,
       "giocata"=>$row['giocata'] ?? 0
     ];
+
+    $lista[] = $record;
+    $key = $row['giornata'];
+    if ($key === null) {
+      $key = 0;
+    }
+    if(!isset($giornate[$key])) $giornate[$key]=[];
+    $giornate[$key][]=$record;
   }
+
+  if ($idPartita > 0) {
+    echo json_encode($lista, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT);
+    exit;
+  }
+
   echo json_encode($giornate, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT);
 } catch (Throwable $e) {
   respondError("Errore interno: " . $e->getMessage());

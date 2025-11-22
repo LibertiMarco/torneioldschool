@@ -29,7 +29,8 @@ $sql_partite = "CREATE TABLE IF NOT EXISTS partite (
     data_partita DATE NOT NULL,
     ora_partita TIME NOT NULL,
     campo VARCHAR(255) NOT NULL,
-    giornata TINYINT UNSIGNED NOT NULL
+    giornata TINYINT UNSIGNED NOT NULL,
+    arbitro VARCHAR(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
 crea_tabella($conn, $sql_partite, "partite");

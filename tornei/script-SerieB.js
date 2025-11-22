@@ -35,9 +35,9 @@ function nomeFaseDaGiornata(g) {
 }
 
 // ====================== CLASSIFICA (GIRONE) ======================
-async function caricaClassifica() {
+async function caricaClassifica(torneoSlug = TORNEO) {
   try {
-    const response = await fetch(`/torneioldschool/api/leggiClassifica.php?torneo=${TORNEO}`);
+    const response = await fetch(`/torneioldschool/api/leggiClassifica.php?torneo=${encodeURIComponent(torneoSlug)}`);
     const data = await response.json();
 
     if (data.error) {
@@ -218,12 +218,15 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         const partitaDiv = document.createElement("div");
         partitaDiv.classList.add("match-card");
       
-        // ✅ Rende cliccabile la match-card
-        partitaDiv.style.cursor = "pointer";
-        partitaDiv.onclick = () => {
-          window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${TORNEO}`;
-          console.log("URL generato:", link);
-        };
+        // ✅ Rende cliccabile la match-card solo se giocata
+        if (String(partita.giocata) === "1") {
+          partitaDiv.style.cursor = "pointer";
+          partitaDiv.onclick = () => {
+            window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${TORNEO}`;
+          };
+        } else {
+          partitaDiv.style.cursor = "default";
+        }
       
         const dataStr = formattaData(partita.data_partita);
         const stadio = partita.campo || "Campo da definire";
@@ -282,7 +285,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
 
 // ====================== PLAYOFF STILE CALENDARIO ======================
 async function caricaPlayoff(tipoCoppa) {
-  const torneoPlayoff = `${TORNEO}_${tipoCoppa.toUpperCase()}`;
+  const faseParam = (tipoCoppa || "gold").toUpperCase(); // GOLD / SILVER
   const container = document.getElementById("playoffContainer");
 
   container.innerHTML = `
@@ -291,7 +294,7 @@ async function caricaPlayoff(tipoCoppa) {
   `;
 
   try {
-    const res = await fetch(`/torneioldschool/api/get_partite.php?torneo=${torneoPlayoff}`);
+    const res = await fetch(`/torneioldschool/api/get_partite.php?torneo=${encodeURIComponent(TORNEO)}&fase=${faseParam}`);
     const data = await res.json();
 
     if (data.error) {
@@ -523,6 +526,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const playoffContainer = document.getElementById("playoffContainer");
   const heroImg = document.getElementById("torneoHeroImg");
   const torneoTitle = document.querySelector(".torneo-title .titolo");
+  const loadClassifica = (slug) => caricaClassifica(slug || TORNEO);
 
   // carico subito la parte girone
   caricaClassifica();
@@ -584,7 +588,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // torna alla classifica
       playoffContainer.style.display = "none";
       classificaWrapper.style.display = "block";
-      caricaClassifica();
+      loadClassifica();
     }
   });
 
@@ -593,6 +597,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (faseSelect.value === "eliminazione") {
       caricaPlayoff(coppaSelect.value);
     }
+    // la classifica rimane quella del torneo base; le coppe usano solo le partite filtrate per fase
+    loadClassifica(TORNEO);
   });
 });
 

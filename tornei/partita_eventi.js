@@ -25,6 +25,14 @@ function formatVoto(v) {
     const num = parseFloat(v);
     return num % 1 === 0 ? num.toFixed(0) : num.toFixed(1);
 }
+function escapeHtml(str = "") {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+}
 
 // ====================== START ======================
 document.addEventListener("DOMContentLoaded", async () => {
@@ -69,6 +77,7 @@ async function caricaPartita() {
 
     const golCasa = (p.gol_casa !== null && p.gol_casa !== undefined) ? p.gol_casa : "-";
     const golOsp = (p.gol_ospite !== null && p.gol_ospite !== undefined) ? p.gol_ospite : "-";
+    const arbitro = (p.arbitro || "").trim();
 
     document.getElementById("partitaContainer").innerHTML = `
     <div class="match-card match-card-blue">
@@ -85,8 +94,8 @@ async function caricaPartita() {
 
       <div class="match-body">
         <div class="team home">
-          <img src="${logoCasa}" class="team-logo" alt="${p.squadra_casa}">
           <span class="team-name">${p.squadra_casa}</span>
+          <img src="${logoCasa}" class="team-logo" alt="${p.squadra_casa}">
         </div>
 
         <div class="match-center">
@@ -100,6 +109,7 @@ async function caricaPartita() {
           <img src="${logoOsp}" class="team-logo" alt="${p.squadra_ospite}">
         </div>
       </div>
+      <div class="match-referee">Arbitro: ${arbitro ? escapeHtml(arbitro) : 'Da definire'}</div>
     </div>
 
 <div class="match-link-container">
@@ -170,8 +180,9 @@ async function caricaEventiGiocatori() {
         if (scoreAwayEl) scoreAwayEl.textContent = awayGoals;
 
         const renderList = (arr) => {
-            if (!arr.length) return `<div class="evento-mini-row muted">Nessun evento</div>`;
-            return arr.map(g => {
+            const filtered = (arr || []).filter(g => (g.goal || 0) > 0 || (g.assist || 0) > 0 || (g.gialli || 0) > 0 || (g.rossi || 0) > 0);
+            if (!filtered.length) return `<div class="evento-mini-row muted">Nessun evento</div>`;
+            return filtered.map(g => {
                 const abbrev = `${g.cognome} ${g.nome.charAt(0).toUpperCase()}.`;
                 return `
                   <div class="evento-mini-row">
@@ -196,10 +207,9 @@ async function caricaEventiGiocatori() {
 
                 <div class="stats-body">
                     <div class="team-block">
-                      <div class="team-block-head">
-                        <img src="${logoHome}" class="team-logo" alt="${home}">
-                        <span>${home}</span>
-                      </div>
+                    <div class="team-block-head">
+                      <img src="${logoHome}" class="team-logo" alt="${home}">
+                    </div>
                       <div class="team-block-body">
                         ${renderList(byTeam[home])}
                       </div>
@@ -207,7 +217,6 @@ async function caricaEventiGiocatori() {
                     <div class="team-block">
                       <div class="team-block-head">
                         <img src="${logoAway}" class="team-logo" alt="${away}">
-                        <span>${away}</span>
                       </div>
                       <div class="team-block-body">
                         ${renderList(byTeam[away])}

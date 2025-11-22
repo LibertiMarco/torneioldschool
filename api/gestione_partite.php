@@ -91,11 +91,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $campo = sanitize_text($_POST['campo'] ?? '');
     $roundSelezionato = sanitize_text($_POST['round_eliminazione'] ?? '');
     $giornata = sanitize_int($_POST['giornata'] ?? '');
-    $giocata = isset($_POST['giocata']) ? 1 : 0;
+    $giocata = 0; // sempre non giocata alla creazione
     $gol_casa = sanitize_int($_POST['gol_casa'] ?? '0');
     $gol_ospite = sanitize_int($_POST['gol_ospite'] ?? '0');
     $link_youtube = sanitize_text($_POST['link_youtube'] ?? '');
     $link_instagram = sanitize_text($_POST['link_instagram'] ?? '');
+    $arbitro = sanitize_text($_POST['arbitro'] ?? '');
 
     if ($torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($fase !== 'REGULAR' && $roundSelezionato === '')) {
       $errore = 'Compila tutti i campi obbligatori.';
@@ -105,32 +106,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       if ($fase !== 'REGULAR') {
         $giornata = round_to_giornata($roundSelezionato, $roundMap) ?? 0;
       }
-      $stmt = $conn->prepare("INSERT INTO partite (torneo, fase, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
-      if ($stmt) {
-        $stmt->bind_param(
-          'ssssiisssiiss',
-          $torneo,
-          $fase,
-          $casa,
-          $ospite,
-          $gol_casa,
-          $gol_ospite,
-          $data,
-          $ora,
-          $campo,
-          $giornata,
-          $giocata,
-          $link_youtube,
-          $link_instagram
-        );
-        if ($stmt->execute()) {
-          $successo = 'Partita creata correttamente.';
-        } else {
-          $errore = 'Inserimento non riuscito.';
+      // controllo: una squadra non può avere due partite nella stessa giornata dello stesso torneo
+      $dupCheck = $conn->prepare("
+        SELECT 1 FROM partite
+        WHERE torneo = ? AND giornata = ? AND fase = ?
+          AND (squadra_casa = ? OR squadra_ospite = ? OR squadra_casa = ? OR squadra_ospite = ?)
+        LIMIT 1
+      ");
+      if ($dupCheck) {
+        $dupCheck->bind_param("sisssss", $torneo, $giornata, $fase, $casa, $casa, $ospite, $ospite);
+        $dupCheck->execute();
+        $dupCheck->store_result();
+        if ($dupCheck->num_rows > 0) {
+          $errore = 'Una delle squadre ha già una partita in questa giornata.';
         }
-        $stmt->close();
+        $dupCheck->close();
+      }
+
+      if (!empty($errore)) {
+        // non procedere oltre
       } else {
-        $errore = 'Errore interno durante la creazione.';
+        $stmt = $conn->prepare("INSERT INTO partite (torneo, fase, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
+        if ($stmt) {
+          $stmt->bind_param(
+            'ssssiisssiisss',
+            $torneo,
+            $fase,
+            $casa,
+            $ospite,
+            $gol_casa,
+            $gol_ospite,
+            $data,
+            $ora,
+            $campo,
+            $giornata,
+            $giocata,
+            $arbitro,
+            $link_youtube,
+            $link_instagram
+          );
+          if ($stmt->execute()) {
+            $successo = 'Partita creata correttamente.';
+          } else {
+            $errore = 'Inserimento non riuscito.';
+          }
+          $stmt->close();
+        } else {
+          $errore = 'Errore interno durante la creazione.';
+        }
       }
     }
   }
@@ -146,11 +169,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $campo = sanitize_text($_POST['campo_mod'] ?? '');
     $roundSelezionato = sanitize_text($_POST['round_eliminazione_mod'] ?? '');
     $giornata = sanitize_int($_POST['giornata_mod'] ?? '');
-    $giocata = isset($_POST['giocata_mod']) ? 1 : 0;
+    // di default, in modifica settiamo giocata a true
+    $giocata = 1;
     $gol_casa = sanitize_int($_POST['gol_casa_mod'] ?? '0');
     $gol_ospite = sanitize_int($_POST['gol_ospite_mod'] ?? '0');
     $link_youtube = sanitize_text($_POST['link_youtube_mod'] ?? '');
     $link_instagram = sanitize_text($_POST['link_instagram_mod'] ?? '');
+    $arbitro = sanitize_text($_POST['arbitro_mod'] ?? '');
 
     if ($id <= 0 || $torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($fase !== 'REGULAR' && $roundSelezionato === '')) {
       $errore = 'Seleziona una partita e compila i campi obbligatori.';
@@ -160,10 +185,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       if ($fase !== 'REGULAR') {
         $giornata = round_to_giornata($roundSelezionato, $roundMap) ?? 0;
       }
-      $stmt = $conn->prepare("UPDATE partite SET torneo=?, fase=?, squadra_casa=?, squadra_ospite=?, gol_casa=?, gol_ospite=?, data_partita=?, ora_partita=?, campo=?, giornata=?, giocata=?, link_youtube=?, link_instagram=? WHERE id=?");
+      $stmt = $conn->prepare("UPDATE partite SET torneo=?, fase=?, squadra_casa=?, squadra_ospite=?, gol_casa=?, gol_ospite=?, data_partita=?, ora_partita=?, campo=?, giornata=?, giocata=?, arbitro=?, link_youtube=?, link_instagram=? WHERE id=?");
       if ($stmt) {
         $stmt->bind_param(
-          'ssssiisssiissi',
+          'ssssiisssiisssi',
           $torneo,
           $fase,
           $casa,
@@ -175,6 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           $campo,
           $giornata,
           $giocata,
+          $arbitro,
           $link_youtube,
           $link_instagram,
           $id
@@ -213,7 +239,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $partite = [];
-$res = $conn->query("SELECT id, torneo, fase, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, link_youtube, link_instagram, created_at FROM partite ORDER BY data_partita DESC, ora_partita DESC, id DESC");
+$res = $conn->query("SELECT id, torneo, fase, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, arbitro, link_youtube, link_instagram, created_at FROM partite ORDER BY data_partita DESC, ora_partita DESC, id DESC");
 if ($res) {
   while ($row = $res->fetch_assoc()) {
     $partite[] = $row;
@@ -345,16 +371,37 @@ if ($res) {
             <?php endforeach; ?>
           </select>
         </div>
+        <div id="giornataWrapper">
+          <label>Giornata</label>
+          <select name="giornata" id="giornataCrea" required>
+            <option value="">-- Seleziona giornata (1-8) --</option>
+            <?php for ($g = 1; $g <= 8; $g++): ?>
+              <option value="<?= $g ?>"><?= $g ?></option>
+            <?php endfor; ?>
+          </select>
+        </div>
+        <div id="roundWrapper" class="hidden">
+          <label>Fase eliminazione</label>
+          <select name="round_eliminazione" id="roundCrea">
+            <option value="">-- Seleziona fase --</option>
+            <option value="TRENTADUESIMI">Trentaduesimi di finale</option>
+            <option value="SEDICESIMI">Sedicesimi di finale</option>
+            <option value="OTTAVI">Ottavi di finale</option>
+            <option value="QUARTI">Quarti di finale</option>
+            <option value="SEMIFINALE">Semifinale</option>
+            <option value="FINALE">Finale</option>
+          </select>
+        </div>
         <div>
           <label>Squadra casa</label>
           <select name="squadra_casa" id="squadraCasaCrea" required>
-            <option value="">-- Seleziona torneo prima --</option>
+            <option value="">-- Seleziona torneo/giornata --</option>
           </select>
         </div>
         <div>
           <label>Squadra ospite</label>
           <select name="squadra_ospite" id="squadraOspiteCrea" required>
-            <option value="">-- Seleziona torneo prima --</option>
+            <option value="">-- Seleziona torneo/giornata --</option>
           </select>
         </div>
         <input type="hidden" name="gol_casa" value="0">
@@ -378,21 +425,9 @@ if ($res) {
             <option value="Campo Centrale del Parco Corto Maltese, Napoli">Campo Centrale del Parco Corto Maltese, Napoli</option>
           </select>
         </div>
-        <div id="giornataWrapper">
-          <label>Giornata</label>
-          <input type="number" name="giornata" id="giornataCrea" min="1" required>
-        </div>
-        <div id="roundWrapper" class="hidden">
-          <label>Fase eliminazione</label>
-          <select name="round_eliminazione" id="roundCrea">
-            <option value="">-- Seleziona fase --</option>
-            <option value="TRENTADUESIMI">Trentaduesimi di finale</option>
-            <option value="SEDICESIMI">Sedicesimi di finale</option>
-            <option value="OTTAVI">Ottavi di finale</option>
-            <option value="QUARTI">Quarti di finale</option>
-            <option value="SEMIFINALE">Semifinale</option>
-            <option value="FINALE">Finale</option>
-          </select>
+        <div>
+          <label>Arbitro</label>
+          <input type="text" name="arbitro" placeholder="Nome dell'arbitro">
         </div>
         <input type="hidden" name="giocata" value="0">
         <input type="hidden" name="link_youtube" value="">
@@ -501,6 +536,10 @@ if ($res) {
             <option value="Campo Centrale del Parco Corto Maltese, Napoli">Campo Centrale del Parco Corto Maltese, Napoli</option>
           </select>
         </div>
+        <div>
+          <label>Arbitro</label>
+          <input type="text" name="arbitro_mod" id="arbitro_mod" placeholder="Nome dell'arbitro">
+        </div>
         <div id="giornataWrapperMod">
           <label>Giornata</label>
           <input type="number" name="giornata_mod" id="giornata_mod" min="1" required>
@@ -519,7 +558,7 @@ if ($res) {
         </div>
         <div>
           <label>Giocata</label>
-          <input type="checkbox" name="giocata_mod" id="giocata_mod" value="1">
+          <input type="checkbox" name="giocata_mod" id="giocata_mod" value="1" checked>
         </div>
         <div>
           <label>Link YouTube</label>
@@ -662,12 +701,74 @@ if ($res) {
   };
 
   const torneoCrea = document.getElementById('torneoCrea');
+  const faseCrea = document.querySelector('select[name="fase"]');
+  const giornataCrea = document.getElementById('giornataCrea');
+  const roundCrea = document.getElementById('roundCrea');
+
+  const getGiornataTarget = () => {
+    const faseVal = (faseCrea?.value || '').toUpperCase();
+    if (faseVal === 'REGULAR') {
+      const g = parseInt(giornataCrea?.value || '', 10);
+      return isNaN(g) ? null : g;
+    }
+    const lbl = roundCrea?.value || '';
+    return roundLabelMap[lbl] ? roundLabelMap[lbl] : null;
+  };
+
+  const populateSquadreFiltrate = () => {
+    const torneoVal = torneoCrea?.value || '';
+    const faseVal = (faseCrea?.value || '').toUpperCase();
+    const giornataVal = getGiornataTarget();
+    const casaSel = document.getElementById('squadraCasaCrea');
+    const ospSel = document.getElementById('squadraOspiteCrea');
+    const resetSelect = (sel, placeholder) => {
+      if (!sel) return;
+      sel.innerHTML = `<option value="">${placeholder}</option>`;
+      sel.disabled = true;
+    };
+    if (!torneoVal || !faseVal || !giornataVal) {
+      resetSelect(casaSel, '-- Seleziona torneo/giornata --');
+      resetSelect(ospSel, '-- Seleziona torneo/giornata --');
+      return;
+    }
+    const lista = squadreMap[torneoVal] || [];
+    const occupate = new Set(
+      partiteData
+        .filter(p =>
+          p.torneo === torneoVal &&
+          (p.fase || 'REGULAR').toUpperCase() === faseVal &&
+          String(p.giornata) === String(giornataVal)
+        )
+        .flatMap(p => [p.squadra_casa, p.squadra_ospite])
+    );
+    const disponibili = lista.filter(nome => !occupate.has(nome));
+    const fill = (sel) => {
+      if (!sel) return;
+      sel.disabled = false;
+      sel.innerHTML = '<option value=\"\">-- Seleziona --</option>';
+      disponibili.forEach(nome => {
+        sel.add(new Option(nome, nome));
+      });
+    };
+    fill(casaSel);
+    fill(ospSel);
+  };
+
   if (torneoCrea) {
-    torneoCrea.addEventListener('change', () => {
-      populateSquadre(torneoCrea.value, 'squadraCasaCrea');
-      populateSquadre(torneoCrea.value, 'squadraOspiteCrea');
-    });
+    torneoCrea.addEventListener('change', populateSquadreFiltrate);
   }
+  if (faseCrea) {
+    faseCrea.addEventListener('change', populateSquadreFiltrate);
+  }
+  if (giornataCrea) {
+    giornataCrea.addEventListener('change', populateSquadreFiltrate);
+  }
+  if (roundCrea) {
+    roundCrea.addEventListener('change', populateSquadreFiltrate);
+  }
+  // inizializza filtrando appena caricata la pagina
+  populateSquadreFiltrate();
+
   enforceDifferentTeams('squadraCasaCrea', 'squadraOspiteCrea');
 
   const toggleRoundGiornata = (faseSelect, giornataWrapId, roundWrapId) => {
@@ -688,10 +789,12 @@ if ($res) {
     }
   };
 
-  const faseCrea = document.querySelector('select[name="fase"]');
   if (faseCrea) {
     toggleRoundGiornata(faseCrea, 'giornataWrapper', 'roundWrapper');
-    faseCrea.addEventListener('change', () => toggleRoundGiornata(faseCrea, 'giornataWrapper', 'roundWrapper'));
+    faseCrea.addEventListener('change', () => {
+      toggleRoundGiornata(faseCrea, 'giornataWrapper', 'roundWrapper');
+      populateSquadreFiltrate();
+    });
   }
 
   const fillField = (id, val) => { const el = document.getElementById(id); if (el) { if (el.type === 'checkbox') { el.checked = !!val; } else { el.value = val ?? ''; } } };
@@ -725,14 +828,16 @@ if ($res) {
     } else {
       const roundSel = document.getElementById('round_eliminazione_mod');
       if (roundSel) roundSel.value = '';
-      fillField('giornata_mod', partita.giornata);
+    fillField('giornata_mod', partita.giornata);
     }
     fillField('gol_casa_mod', partita.gol_casa);
     fillField('gol_ospite_mod', partita.gol_ospite);
     fillField('data_partita_mod', partita.data_partita);
     fillField('ora_partita_mod', partita.ora_partita);
     fillField('campo_mod', partita.campo);
-    fillField('giocata_mod', Number(partita.giocata) === 1);
+    fillField('arbitro_mod', partita.arbitro || '');
+    // in modifica flag giocata sempre settato a true
+    fillField('giocata_mod', true);
     fillField('link_youtube_mod', partita.link_youtube);
     fillField('link_instagram_mod', partita.link_instagram);
   };

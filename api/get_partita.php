@@ -38,5 +38,6 @@ echo json_encode([
     "giornata"       => array_key_exists('giornata', $dati) && $dati['giornata'] !== null ? (int)$dati['giornata'] : null,
     "giocata"        => isset($dati['giocata']) ? (int)$dati['giocata'] : 0,
     "link_youtube"   => $dati['link_youtube'] ?? null,
-    "link_instagram" => $dati['link_instagram'] ?? null
+    "link_instagram" => $dati['link_instagram'] ?? null,
+    "arbitro"        => $dati['arbitro'] ?? ''
 ], JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT);
