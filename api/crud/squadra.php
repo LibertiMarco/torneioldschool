@@ -54,7 +54,7 @@ class squadra {
     }
 
     public function getByTorneo($torneo) {
-        $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE torneo = ?");
+        $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE torneo = ? ORDER BY nome ASC");
         $stmt->bind_param("s", $torneo);
         $stmt->execute();
         return $stmt->get_result();

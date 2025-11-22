@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Serie B - Tornei Old School</title>
+  <title>Serie B 3.0 - Tornei Old School</title>
   <link rel="stylesheet" href="../style.css" />
   <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
@@ -11,6 +11,40 @@
     main.content {
       margin-top: 30px;
       padding-top: 10px;
+    }
+    .torneo-hero {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 25px;
+      text-align: center;
+      flex-wrap: wrap;
+    }
+    .torneo-hero img {
+      width: 80px;
+      height: 80px;
+      border-radius: 18px;
+      object-fit: cover;
+      box-shadow: 0 12px 30px rgba(21, 41, 62, 0.22);
+      border: 3px solid #fff;
+    }
+    .torneo-title {
+      text-align: center;
+      min-width: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 80px;
+    }
+    .torneo-title h1 {
+      margin: 0;
+      text-align: center;
+    }
+    @media (max-width: 600px) {
+      .torneo-hero {
+        flex-wrap: wrap;
+      }
     }
   </style>
 </head>
@@ -22,7 +56,12 @@
 
   <!-- CONTENUTO PRINCIPALE -->
   <main class="content">
-    <h1 class="titolo">Serie B</h1><br>
+    <div class="torneo-hero">
+      <img id="torneoHeroImg" src="/torneioldschool/img/tornei/pallone.png" alt="Logo Serie B 3.0">
+      <div class="torneo-title">
+        <h1 class="titolo">Serie B 3.0</h1>
+      </div>
+    </div>
 
     <!-- Sezioni navigazione -->
     <nav class="tabs">
@@ -84,10 +123,20 @@
     <section id="calendario" class="tab-section">
       <h2>Calendario</h2>
       <div class="filtro-giornata">
-        <label for="giornataSelect">Seleziona giornata:</label>
-        <select id="giornataSelect">
-          <option value="">Tutte</option>
-        </select>
+        <div class="filtro-riga">
+          <label for="faseCalendario">Fase:</label>
+          <select id="faseCalendario">
+            <option value="REGULAR" selected>Regular</option>
+            <option value="GOLD">Gold</option>
+            <option value="SILVER">Silver</option>
+          </select>
+        </div>
+        <div class="filtro-riga" id="wrapperGiornataSelect">
+          <label for="giornataSelect">Giornata:</label>
+          <select id="giornataSelect">
+            <option value="">Tutte</option>
+          </select>
+        </div>
       </div>
       <div id="contenitoreGiornate"></div>
     </section>
@@ -120,7 +169,7 @@
     <div class="regola">
       <h3>⚽ Fase 1 — Regular Season</h3>
       <p>
-        Tutte le squadre partecipano a un <strong>girone unico</strong> in stile Champions League.
+        Tutte le squadre partecipano a una <strong>Regular Season</strong> in stile Champions League.
         Ogni squadra disputa <strong>8 partite</strong> totali.
       </p>
       <p>

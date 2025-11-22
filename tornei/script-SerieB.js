@@ -139,9 +139,20 @@ function mostraClassifica(classifica) {
 
 
 // ====================== CALENDARIO (GIRONE) ======================
-async function caricaCalendario(giornataSelezionata = "") {
+const roundLabelByKey = {
+  "1": "Finale",
+  "2": "Semifinale",
+  "3": "Quarti di finale",
+  "4": "Ottavi di finale",
+  "5": "Sedicesimi di finale",
+  "6": "Trentaduesimi di finale",
+  "KO": "Fase eliminazione"
+};
+
+async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REGULAR") {
   try {
-    const res = await fetch(`/torneioldschool/api/get_partite.php?torneo=${TORNEO}`);
+    const faseParam = faseSelezionata && faseSelezionata !== "REGULAR" ? `&fase=${faseSelezionata}` : "";
+    const res = await fetch(`/torneioldschool/api/get_partite.php?torneo=${TORNEO}${faseParam}`);
     const data = await res.json();
 
     if (data.error) {
@@ -153,27 +164,44 @@ async function caricaCalendario(giornataSelezionata = "") {
     calendarioSection.innerHTML = "";
 
     const giornataSelect = document.getElementById("giornataSelect");
+    const wrapperGiornata = document.getElementById("wrapperGiornataSelect");
     const giornateDisponibili = Object.keys(data).sort((a, b) => a - b);
 
-    // Popola la picklist solo una volta
-    if (giornataSelect.options.length <= 1) {
-      giornateDisponibili.forEach(g => {
-        const opt = document.createElement("option");
-        opt.value = g;
-        opt.textContent = `Giornata ${g}`;
-        giornataSelect.appendChild(opt);
-      });
+    if (wrapperGiornata) {
+      const isRegular = (faseSelezionata || "").toUpperCase() === "REGULAR";
+      wrapperGiornata.style.display = isRegular ? "flex" : "none";
+    }
+
+    if (giornataSelect) {
+      if (giornataSelect.options.length <= 1 || giornataSelezionata === "") {
+        giornataSelect.innerHTML = '<option value="">Tutte</option>';
+        if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
+          giornateDisponibili.forEach(g => {
+            const opt = document.createElement("option");
+            opt.value = g;
+            opt.textContent = `Giornata ${g}`;
+            giornataSelect.appendChild(opt);
+          });
+        }
+      }
     }
 
     // Filtra le giornate mostrate
-    const giornateDaMostrare = giornataSelezionata ? [giornataSelezionata] : giornateDisponibili;
+    const giornateDaMostrare = giornataSelezionata && faseSelezionata === "REGULAR"
+      ? [giornataSelezionata]
+      : giornateDisponibili;
 
     giornateDaMostrare.forEach(numGiornata => {
       const giornataDiv = document.createElement("div");
       giornataDiv.classList.add("giornata");
 
       const titolo = document.createElement("h3");
-      titolo.textContent = `Giornata ${numGiornata}`;
+      if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
+        titolo.textContent = `Giornata ${numGiornata}`;
+      } else {
+        const labelRound = roundLabelByKey[String(numGiornata)] || "Fase eliminazione";
+        titolo.textContent = labelRound;
+      }
       giornataDiv.appendChild(titolo);
 
       data[numGiornata].forEach(partita => {
@@ -193,7 +221,7 @@ async function caricaCalendario(giornataSelezionata = "") {
         const golOspite = partita.giocata == 1 ? partita.gol_ospite : null;
         const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
         const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
-      
+
         partitaDiv.innerHTML = `
           <div class="match-header">
             <span>
@@ -295,6 +323,7 @@ async function caricaPlayoff(tipoCoppa) {
         const giocata = partita.giocata == 1;
         const golCasa = giocata ? partita.gol_casa : null;
         const golOspite = giocata ? partita.gol_ospite : null;
+
         const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
         const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
 
@@ -482,17 +511,44 @@ document.addEventListener("DOMContentLoaded", () => {
   const coppaSelect = document.getElementById("coppaSelect");
   const classificaWrapper = document.getElementById("classificaWrapper");
   const playoffContainer = document.getElementById("playoffContainer");
+  const heroImg = document.getElementById("torneoHeroImg");
+  const torneoTitle = document.querySelector(".torneo-title .titolo");
 
   // carico subito la parte girone
   caricaClassifica();
-  caricaCalendario();
+  const faseCalendario = document.getElementById("faseCalendario");
+  const giornataSelect = document.getElementById("giornataSelect");
+
+  const triggerCalendario = () => {
+    const faseVal = (faseCalendario?.value || "REGULAR").toUpperCase();
+    const gVal = (giornataSelect?.value || "");
+    caricaCalendario(gVal, faseVal);
+  };
+
+  caricaCalendario("", "REGULAR");
   caricaSquadrePerRosa();
+  if (heroImg) {
+    fetch(`/torneioldschool/api/get_torneo_by_slug.php?slug=${encodeURIComponent(TORNEO)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data || data.error) return;
+        heroImg.src = data.img || "/torneioldschool/img/tornei/pallone.png";
+        if (torneoTitle && data.nome) torneoTitle.textContent = data.nome;
+      })
+      .catch(err => console.error("Errore recupero info torneo:", err));
+  }
 
   // filtro calendario giornate
-  const giornataSelect = document.getElementById("giornataSelect");
-  giornataSelect.addEventListener("change", () => {
-    caricaCalendario(giornataSelect.value);
-  });
+  if (giornataSelect) {
+    giornataSelect.addEventListener("change", () => triggerCalendario());
+  }
+
+  if (faseCalendario) {
+    faseCalendario.addEventListener("change", () => {
+      if (giornataSelect) giornataSelect.value = "";
+      triggerCalendario();
+    });
+  }
 
   // cambio fase girone/eliminazione
   faseSelect.addEventListener("change", () => {

@@ -84,9 +84,7 @@ CREATE TABLE IF NOT EXISTS giocatori (
     rossi INT NOT NULL DEFAULT 0,
     media_voti DECIMAL(4,2) DEFAULT NULL,
     foto VARCHAR(255) NOT NULL DEFAULT '/torneioldschool/img/giocatori/unknown.jpg',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    KEY idx_giocatori_torneo (torneo),
-    KEY idx_giocatori_squadra (squadra)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Partite (api/crud/Partita.php, api/get_partite*.php, tornei/script-serieA.js)

@@ -265,6 +265,36 @@ $lista = $torneo->getAll();
             font-size: 0.9rem;
             color: #5f6b7b;
         }
+
+        /* Pulsanti switch azione (stile gestione squadre) */
+        .admin-btn-group {
+            display: inline-flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .action-toggle {
+            border: 1px solid #cbd5e1;
+            background: #ecf1f7;
+            color: #1c2a3a;
+            padding: 10px 18px;
+            border-radius: 12px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .action-toggle:hover {
+            background: #e0e7ef;
+            border-color: #c0cadd;
+            transform: translateY(-1px);
+        }
+        .action-toggle.active {
+            background: linear-gradient(135deg, #15293e, #1f3f63);
+            border-color: #15293e;
+            color: #fff;
+            box-shadow: 0 6px 14px rgba(21,41,62,0.25);
+        }
     </style>
 </head>
 <body>
@@ -275,14 +305,14 @@ $lista = $torneo->getAll();
             <a class="admin-back-link" href="/torneioldschool/admin_dashboard.php">Torna alla dashboard</a>
             <h1 class="admin-title">Gestione Tornei</h1>
 
-            <!-- PICKLIST -->
-            <div class="admin-select-action">
-                <label for="azione">Seleziona azione:</label>
-                <select id="azione" class="operation-picker">
-                    <option value="crea" selected>Aggiungi Torneo</option>
-                    <option value="modifica">Modifica Torneo</option>
-                    <option value="elimina">Elimina Torneo</option>
-                </select>
+            <!-- SWITCH AZIONI -->
+            <div class="admin-select-action" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                <span>Seleziona azione:</span>
+                <div class="admin-btn-group">
+                    <button type="button" class="action-toggle active" data-action="crea">Crea</button>
+                    <button type="button" class="action-toggle" data-action="modifica">Modifica</button>
+                    <button type="button" class="action-toggle" data-action="elimina">Elimina</button>
+                </div>
             </div>
 
 
@@ -393,22 +423,28 @@ $lista = $torneo->getAll();
   <?php include __DIR__ . '/../includi/delete_modal.php'; ?>
 
     <script>
-        const selectAzione = document.getElementById('azione');
         const formCrea = document.querySelector('.form-crea');
         const formModifica = document.querySelector('.form-modifica');
         const formElimina = document.querySelector('.form-elimina');
+        const actionButtons = document.querySelectorAll('.action-toggle');
 
         function mostraSezione(valore) {
-            formCrea.classList.add('hidden');
-            formModifica.classList.add('hidden');
-            formElimina.classList.add('hidden');
+            [formCrea, formModifica, formElimina].forEach(f => f.classList.add('hidden'));
+            actionButtons.forEach(btn => btn.classList.remove('active'));
+
+            const activeBtn = document.querySelector(`.action-toggle[data-action="${valore}"]`);
+            if (activeBtn) activeBtn.classList.add('active');
 
             if (valore === 'crea') formCrea.classList.remove('hidden');
             if (valore === 'modifica') formModifica.classList.remove('hidden');
             if (valore === 'elimina') formElimina.classList.remove('hidden');
         }
 
-        selectAzione.addEventListener('change', (e) => mostraSezione(e.target.value));
+        actionButtons.forEach(btn => {
+            btn.addEventListener('click', () => mostraSezione(btn.dataset.action));
+        });
+
+        mostraSezione('crea');
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
