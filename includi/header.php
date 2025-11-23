@@ -4,12 +4,12 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 $sessionAvatar = $_SESSION['avatar'] ?? '';
-$avatarUrl = '/torneioldschool/img/icone/user.png';
+$avatarUrl = '/img/icone/user.png';
 if (!empty($sessionAvatar)) {
     if (preg_match('#^https?://#i', $sessionAvatar)) {
         $avatarUrl = $sessionAvatar;
     } else {
-        $avatarUrl = '/torneioldschool/' . ltrim($sessionAvatar, '/');
+        $avatarUrl = '/' . ltrim($sessionAvatar, '/');
     }
 }
 ?>
@@ -18,22 +18,22 @@ if (!empty($sessionAvatar)) {
 
     <!-- HAMBURGER (solo mobile) -->
     <button class="mobile-menu-btn" id="mobileMenuBtn">
-        <img src="/torneioldschool/img/icone/menu.png" alt="menu" />
+        <img src="/img/icone/menu.png" alt="menu" />
     </button>
 
     <!-- LOGO -->
     <div class="header-logo">
-        <a href="/torneioldschool/index.php">
-            <img src="/torneioldschool/img/logo_old_school.png" alt="Logo">
+        <a href="/index.php">
+            <img src="/img/logo_old_school.png" alt="Logo">
         </a>
     </div>
 
     <!-- NAVIGAZIONE DESKTOP + MOBILE -->
     <nav class="header-nav" id="mainNav">
-        <a href="/torneioldschool/tornei.php">Tornei</a>
-        <a href="/torneioldschool/blog.php">Blog</a>
-        <a href="/torneioldschool/chisiamo.php">Chi siamo</a>
-        <a href="/torneioldschool/contatti.php">Contatti</a>
+        <a href="/tornei.php">Tornei</a>
+        <a href="/blog.php">Blog</a>
+        <a href="/chisiamo.php">Chi siamo</a>
+        <a href="/contatti.php">Contatti</a>
     </nav>
 
     <!-- MENU UTENTE -->
@@ -50,16 +50,16 @@ if (!empty($sessionAvatar)) {
                   $nome_completo = trim($nome . ' ' . $cognome);
                 ?>
                 <span class="welcome-text">👋 Ciao, <?= htmlspecialchars($nome_completo) ?></span>
-                <a href="/torneioldschool/account.php">Il mio account</a>
+                <a href="/account.php">Il mio account</a>
 
                 <?php if ($_SESSION['ruolo'] === 'admin'): ?>
-                    <a href="/torneioldschool/admin_dashboard.php">Gestione Sito</a>
+                    <a href="/admin_dashboard.php">Gestione Sito</a>
                 <?php endif; ?>
 
-                <a href="/torneioldschool/logout.php">Logout</a>
+                <a href="/logout.php">Logout</a>
             <?php else: ?>
-                <a href="/torneioldschool/register.php">Iscriviti</a>
-                <a href="/torneioldschool/login.php">Accedi</a>
+                <a href="/register.php">Iscriviti</a>
+                <a href="/login.php">Accedi</a>
             <?php endif; ?>
         </div>
     </div>
@@ -210,7 +210,7 @@ if (!empty($sessionAvatar)) {
     window.__HEADER_INTERACTIONS_SCRIPT__ = true;
 
     const script = document.createElement("script");
-    script.src = "/torneioldschool/includi/header-interactions.js";
+    script.src = "/includi/header-interactions.js";
     script.defer = true;
     document.head.appendChild(script);
 })();
