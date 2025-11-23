@@ -57,8 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reinvia conferma email - Tornei Old School</title>
-  <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
-  <link rel="stylesheet" href="/torneioldschool/style.css">
+  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
+  <link rel="stylesheet" href="/style.css">
   <style>
     body {
       background: #f4f6fb;
@@ -167,19 +167,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </form>
 
       <div class="links">
-        <a href="/torneioldschool/login.php">Torna al login</a>
-        <a href="/torneioldschool/register.php">Crea un nuovo account</a>
+        <a href="/login.php">Torna al login</a>
+        <a href="/register.php">Crea un nuovo account</a>
       </div>
     </div>
   </main>
 
   <div id="footer-container"></div>
-  <script src="/torneioldschool/includi/header-interactions.js"></script>
+  <script src="/includi/header-interactions.js"></script>
   <script>
-    fetch("/torneioldschool/includi/footer.html")
+    fetch("/includi/footer.html")
       .then(r => r.text())
       .then(html => document.getElementById("footer-container").innerHTML = html);
-    fetch("/torneioldschool/includi/header.php")
+    fetch("/includi/header.php")
       .then(r => r.text())
       .then(html => {
         document.getElementById("header-container").innerHTML = html;

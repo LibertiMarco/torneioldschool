@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS tornei (
     stato ENUM('programmato','in corso','terminato') NOT NULL DEFAULT 'programmato',
     data_inizio DATE NOT NULL,
     data_fine DATE NOT NULL,
-    img VARCHAR(255) DEFAULT '/torneioldschool/img/tornei/pallone.png',
+    img VARCHAR(255) DEFAULT '/img/tornei/pallone.png',
     filetorneo VARCHAR(255) NOT NULL,
     categoria VARCHAR(100) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS giocatori (
     gialli INT NOT NULL DEFAULT 0,
     rossi INT NOT NULL DEFAULT 0,
     media_voti DECIMAL(4,2) DEFAULT NULL,
-    foto VARCHAR(255) NOT NULL DEFAULT '/torneioldschool/img/giocatori/unknown.jpg',
+    foto VARCHAR(255) NOT NULL DEFAULT '/img/giocatori/unknown.jpg',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

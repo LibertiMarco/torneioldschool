@@ -7,7 +7,7 @@ require_once __DIR__ . '/../includi/db.php';
 header('Content-Type: application/json; charset=utf-8');
 
 $azione = $_GET['azione'] ?? '';
-$mediaBasePath = '/torneioldschool/img/blog_media/';
+$mediaBasePath = '/img/blog_media/';
 
 function json_response($data, int $status = 200): void {
     http_response_code($status);
@@ -25,7 +25,7 @@ function build_cover_query(string $alias = 'cover'): string {
                  LIMIT 1),
                 CASE
                     WHEN immagine IS NULL OR immagine = '' THEN ''
-                    ELSE CONCAT('/torneioldschool/img/blog/', immagine)
+                    ELSE CONCAT('/img/blog/', immagine)
                 END
             ) AS {$alias}";
 }

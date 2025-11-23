@@ -58,7 +58,7 @@ $sql_rose = "CREATE TABLE IF NOT EXISTS giocatori (
     nome VARCHAR(255) NOT NULL,
     cognome VARCHAR(255) NOT NULL,
     ruolo VARCHAR(255) NOT NULL,
-    foto VARCHAR(255) DEFAULT '/torneioldschool/img/giocatori/unknown.jpg'
+    foto VARCHAR(255) DEFAULT '/img/giocatori/unknown.jpg'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
 crea_tabella($conn, $sql_rose, "giocatori");

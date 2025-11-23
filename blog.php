@@ -9,8 +9,8 @@ if (session_status() === PHP_SESSION_NONE) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Blog &amp; Novità - Tornei Old School</title>
-<link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
-<link rel="stylesheet" href="/torneioldschool/style.css">
+<link rel="icon" type="image/png" href="/img/logo_old_school.png">
+<link rel="stylesheet" href="/style.css">
 
 <style>
 :root {
@@ -526,7 +526,7 @@ if (session_status() === PHP_SESSION_NONE) {
         </div>
         <div class="section-meta">
           <span class="meta-pill" id="featuredUpdated">Aggiornato ora</span>
-          <a class="meta-pill alt" href="/torneioldschool/tornei.php">Vai ai tornei</a>
+          <a class="meta-pill alt" href="/tornei.php">Vai ai tornei</a>
         </div>
       </div>
       <div class="featured-card" id="featuredPost">
@@ -641,8 +641,8 @@ function updateFeatured(post) {
             <h3>${escapeHTML(post.titolo)}</h3>
             <p>${escapeHTML(preview || 'Scopri cosa è successo dietro le quinte del torneo!')}</p>
             <div class="featured-actions">
-                <a class="primary" href="/torneioldschool/articolo.php?id=${post.id}">Leggi ora</a>
-                <a class="secondary" href="/torneioldschool/tornei.php">Vedi i tornei</a>
+                <a class="primary" href="/articolo.php?id=${post.id}">Leggi ora</a>
+                <a class="secondary" href="/tornei.php">Vedi i tornei</a>
             </div>
         </div>`;
 }
@@ -657,7 +657,7 @@ function createCard(post) {
 
     return `
         <article class="blog-card">
-            <a href="/torneioldschool/articolo.php?id=${post.id}">
+            <a href="/articolo.php?id=${post.id}">
                 <div class="card-image">${imageMarkup}</div>
                 <div class="card-body">
                     <div class="card-date">${escapeHTML(post.data)}</div>
@@ -695,7 +695,7 @@ function renderMiniList(posts, excludeId = null) {
     miniList.innerHTML = suggestions.slice(0, 5).map(post => {
         const cover = post.cover || post.immagine || '';
         return `
-        <a class="mini-card" href="/torneioldschool/articolo.php?id=${post.id}">
+        <a class="mini-card" href="/articolo.php?id=${post.id}">
             <div class="mini-thumb">
                 ${cover ? `<img src="${encodeURI(cover)}" alt="${escapeHTML(post.titolo)}">` : ''}
             </div>
@@ -740,7 +740,7 @@ function filterPosts(term) {
 
 async function loadBlog() {
     try {
-        const response = await fetch('/torneioldschool/api/blog.php?azione=lista');
+        const response = await fetch('/api/blog.php?azione=lista');
         if (!response.ok) {
             throw new Error('Impossibile recuperare gli articoli');
         }

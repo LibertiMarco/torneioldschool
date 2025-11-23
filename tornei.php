@@ -334,8 +334,8 @@ if ($result && $result->num_rows > 0) {
       <div class="box">
         <h2>Accesso richiesto</h2>
         <p>Per visualizzare i tornei devi iscriverti o accedere al sito.</p>
-        <button onclick="window.location.href='/torneioldschool/login.php'">Accedi</button>
-        <button onclick="window.location.href='/torneioldschool/register.php'">Iscriviti</button>
+        <button onclick="window.location.href='/login.php'">Accedi</button>
+        <button onclick="window.location.href='/register.php'">Iscriviti</button>
       </div>
     </div>
   <?php endif; ?>
@@ -344,14 +344,14 @@ if ($result && $result->num_rows > 0) {
   <div id="footer-container"></div>
 
   <!-- SCRIPTS FOOTER + HEADER -->
-  <script src="/torneioldschool/includi/header-interactions.js"></script>
+  <script src="/includi/header-interactions.js"></script>
   <script>
-    fetch("/torneioldschool/includi/footer.html")
+    fetch("/includi/footer.html")
       .then(r => r.text())
       .then(d => document.getElementById("footer-container").innerHTML = d);
 
     document.addEventListener("DOMContentLoaded", () => {
-      fetch("/torneioldschool/includi/header.php")
+      fetch("/includi/header.php")
         .then(r => r.text())
         .then(d => {
           document.getElementById("header-container").innerHTML = d;

@@ -31,7 +31,7 @@ class torneo {
      */
     public function crea($nome, $stato, $data_inizio, $data_fine, $img = null, $filetorneo, $categoria) {
         if (empty($img)) {
-            $img = "/torneioldschool/img/tornei/pallone.png";
+            $img = "/img/tornei/pallone.png";
         }
 
         $stmt = $this->conn->prepare("
@@ -48,7 +48,7 @@ class torneo {
      */
     public function aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria) {
         if (empty($img)) {
-            $img = "/torneioldschool/img/tornei/pallone.png";
+            $img = "/img/tornei/pallone.png";
         }
 
         $stmt = $this->conn->prepare("

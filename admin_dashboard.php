@@ -12,8 +12,8 @@ if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Amministratore</title>
-    <link rel="stylesheet" href="/torneioldschool/style.css">
-    <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="icon" type="image/png" href="/img/logo_old_school.png">
 </head>
 <body class="admin-page">
     <?php include __DIR__ . '/includi/header.php'; ?>
@@ -62,10 +62,10 @@ if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
     <a class="logout-btn" href="index.php">Esci dal pannello</a>
     </main>
     <div id="footer-container"></div>
-    <script src="/torneioldschool/includi/header-interactions.js"></script>
+    <script src="/includi/header-interactions.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
-        fetch("/torneioldschool/includi/footer.html")
+        fetch("/includi/footer.html")
           .then(r => r.text())
           .then(html => {
             const footer = document.getElementById("footer-container");

@@ -37,7 +37,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Contattaci - Tornei Old School</title>
-  <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link rel="stylesheet" href="style.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Poppins:wght@400;600&display=swap');
@@ -203,11 +203,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <?php endif; ?>
 
         <div class="footer-socials">
-          <a href="https://www.instagram.com/tornei_old_school/" target="_blank"><img src="/torneioldschool/img/icone/instagram.png" alt="Instagram"></a>
-          <a href="https://www.facebook.com/TotorABullet" target="_blank"><img src="/torneioldschool/img/icone/facebook.png" alt="Facebook"></a>
-          <a href="https://www.youtube.com/@TORNEIOLDSCHOOL-e8f" target="_blank"><img src="/torneioldschool/img/icone/youtube.png" alt="YouTube"></a>
-          <a href="https://www.tiktok.com/@tornei_oldschool" target="_blank"><img src="/torneioldschool/img/icone/tiktok.png" alt="TikTok"></a>
-          <a href="https://wa.me/393383213272" target="_blank"><img src="/torneioldschool/img/icone/whatsapp.png" alt="Whatsapp"></a>
+          <a href="https://www.instagram.com/tornei_old_school/" target="_blank"><img src="/img/icone/instagram.png" alt="Instagram"></a>
+          <a href="https://www.facebook.com/TotorABullet" target="_blank"><img src="/img/icone/facebook.png" alt="Facebook"></a>
+          <a href="https://www.youtube.com/@TORNEIOLDSCHOOL-e8f" target="_blank"><img src="/img/icone/youtube.png" alt="YouTube"></a>
+          <a href="https://www.tiktok.com/@tornei_oldschool" target="_blank"><img src="/img/icone/tiktok.png" alt="TikTok"></a>
+          <a href="https://wa.me/393383213272" target="_blank"><img src="/img/icone/whatsapp.png" alt="Whatsapp"></a>
         </div>
       </div>
     </section>
@@ -215,15 +215,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
   <div id="footer-container"></div>
 
-  <script src="/torneioldschool/includi/header-interactions.js"></script>
+  <script src="/includi/header-interactions.js"></script>
   <script>
     // FOOTER
-    fetch("/torneioldschool/includi/footer.html")
+    fetch("/includi/footer.html")
       .then(r => r.text())
       .then(html => document.getElementById("footer-container").innerHTML = html);
 
     // HEADER
-    fetch("/torneioldschool/includi/header.php")
+    fetch("/includi/header.php")
       .then(r => r.text())
       .then(html => {
         document.getElementById("header-container").innerHTML = html;

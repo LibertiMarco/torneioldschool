@@ -1,7 +1,7 @@
 ﻿<?php
 session_start();
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
-  header("Location: /torneioldschool/index.php");
+  header("Location: /index.php");
   exit;
 }
 
@@ -252,8 +252,8 @@ if ($res) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestione Partite</title>
-  <link rel="stylesheet" href="/torneioldschool/style.css">
-  <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <style>
     body { display: flex; flex-direction: column; min-height: 100vh; background: #f7f9fc; }
     main.admin-wrapper { flex: 1 0 auto; }
@@ -332,7 +332,7 @@ if ($res) {
 
 <main class="admin-wrapper">
   <section class="admin-container">
-    <a class="admin-back-link" href="/torneioldschool/admin_dashboard.php">Torna alla dashboard</a>
+    <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
     <h1 class="admin-title">Gestione Partite</h1>
 
     <?php if ($errore): ?>
@@ -965,7 +965,7 @@ if ($res) {
     const id = btnStatsMod.getAttribute('data-id');
     if (!id) return;
     saveModState();
-    window.location.href = `/torneioldschool/api/statistiche_partita.php?partitaid=${id}`;
+    window.location.href = `/api/statistiche_partita.php?partitaid=${id}`;
   });
 
   // Memorizza la selezione corrente (torneo/fase/giornata/partita) per ripristinarla al ritorno dallo schermo statistiche
@@ -993,7 +993,7 @@ if ($res) {
   async function fetchPartita(id) {
     if (!id) return null;
     try {
-      const res = await fetch(`/torneioldschool/api/get_partita.php?id=${id}`);
+      const res = await fetch(`/api/get_partita.php?id=${id}`);
       const data = await res.json();
       return data && !data.error ? data : null;
     } catch (e) {
@@ -1054,7 +1054,7 @@ if ($res) {
   // Footer
   const footer = document.getElementById('footer-container');
   if (footer) {
-    fetch('/torneioldschool/includi/footer.html')
+    fetch('/includi/footer.html')
       .then(r => r.text())
       .then(html => { footer.innerHTML = html; })
       .catch(err => console.error('Errore footer:', err));

@@ -9,8 +9,8 @@ if (session_status() === PHP_SESSION_NONE) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Classifica marcatori - Tornei Old School</title>
-    <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
-    <link rel="stylesheet" href="/torneioldschool/style.css">
+    <link rel="icon" type="image/png" href="/img/logo_old_school.png">
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <?php include __DIR__ . '/includi/header.php'; ?>
@@ -21,8 +21,8 @@ if (session_status() === PHP_SESSION_NONE) {
         <h1>Classifiche All Time - Tornei Old School</h1>
         <p class="leaders-lead">Classifica marcatori all time. Cerca un giocatore e scorri la lista completa con pagine da 10 risultati.</p>
         <div class="leader-hero-actions">
-            <a class="hero-btn hero-btn--ghost" href="/torneioldschool/index.php">Torna alla home</a>
-            <a class="hero-btn" href="/torneioldschool/tornei.php">Vai ai tornei</a>
+            <a class="hero-btn hero-btn--ghost" href="/index.php">Torna alla home</a>
+            <a class="hero-btn" href="/tornei.php">Vai ai tornei</a>
         </div>
     </section>
 
@@ -42,7 +42,7 @@ if (session_status() === PHP_SESSION_NONE) {
         </div>
 
         <div class="leader-full-link">
-            <a href="/torneioldschool/classifica_giocatori.php" class="hero-btn hero-btn--ghost hero-btn--small">Classifica completa</a>
+            <a href="/classifica_giocatori.php" class="hero-btn hero-btn--ghost hero-btn--small">Classifica completa</a>
         </div>
 
         <div id="leaderList" class="leader-list">
@@ -61,7 +61,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 <div id="footer-container"></div>
 <script>
-fetch("/torneioldschool/includi/footer.html")
+fetch("/includi/footer.html")
     .then(response => response.text())
     .then(html => document.getElementById("footer-container").innerHTML = html)
     .catch(error => console.error("Errore nel caricamento del footer:", error));
@@ -104,7 +104,7 @@ function renderCards(players) {
     const startIndex = ((lastMeta.page || 1) - 1) * (lastMeta.per_page || perPage);
     leaderList.innerHTML = players.map((p, idx) => {
         const posizione = startIndex + idx + 1;
-        const foto = p.foto || '/torneioldschool/img/giocatori/unknown.jpg';
+        const foto = p.foto || '/img/giocatori/unknown.jpg';
         const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim() || 'Giocatore';
         const ruolo = p.ruolo ? `<span class="leader-role">${escapeHTML(p.ruolo)}</span>` : '';
         const team = p.squadra ? escapeHTML(p.squadra) : 'Squadra non assegnata';
@@ -114,7 +114,7 @@ function renderCards(players) {
             <div class="leader-card">
                 <div class="leader-rank">${posizione}</div>
                 <div class="leader-avatar">
-                    <img src="${foto}" alt="${nomeCompleto}" onerror="this.src='/torneioldschool/img/giocatori/unknown.jpg';">
+                    <img src="${foto}" alt="${nomeCompleto}" onerror="this.src='/img/giocatori/unknown.jpg';">
                 </div>
                 <div class="leader-main">
                     <div>
@@ -142,7 +142,7 @@ function renderCards(players) {
     const startIndex = ((lastMeta.page || 1) - 1) * (lastMeta.per_page || perPage);
     leaderList.innerHTML = players.map((p, idx) => {
         const posizione = startIndex + idx + 1;
-        const foto = p.foto || '/torneioldschool/img/giocatori/unknown.jpg';
+        const foto = p.foto || '/img/giocatori/unknown.jpg';
         const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim() || 'Giocatore';
         const ruolo = p.ruolo ? `<span class="leader-role">${escapeHTML(p.ruolo)}</span>` : '';
         const team = p.squadra ? escapeHTML(p.squadra) : 'Squadra non assegnata';
@@ -155,7 +155,7 @@ function renderCards(players) {
             <div class="leader-card">
                 <div class="leader-rank">${posizione}</div>
                 <div class="leader-avatar">
-                    <img src="${foto}" alt="${nomeCompleto}" onerror="this.src='/torneioldschool/img/giocatori/unknown.jpg';">
+                    <img src="${foto}" alt="${nomeCompleto}" onerror="this.src='/img/giocatori/unknown.jpg';">
                 </div>
                 <div class="leader-main">
                     <div>
@@ -200,7 +200,7 @@ async function loadLeaders(resetPage = false) {
     leaderList.innerHTML = '<p class="loading">Caricamento classifica...</p>';
 
     try {
-        const response = await fetch('/torneioldschool/api/classifica_giocatori.php?' + params.toString());
+        const response = await fetch('/api/classifica_giocatori.php?' + params.toString());
         const payload = await response.json();
         const giocatori = Array.isArray(payload.data) ? payload.data : [];
         updatePagination(payload.pagination);

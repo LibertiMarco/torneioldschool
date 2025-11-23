@@ -49,8 +49,8 @@ if ($email && $token) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Conferma email - Tornei Old School</title>
-  <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
-  <link rel="stylesheet" href="/torneioldschool/style.css">
+  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
+  <link rel="stylesheet" href="/style.css">
   <style>
     body {
       background: #f4f6fb;
@@ -130,22 +130,22 @@ if ($email && $token) {
       <p><?= htmlspecialchars($message) ?></p>
       <div class="actions">
         <?php if ($status === 'success' || $status === 'info'): ?>
-          <a class="btn" href="/torneioldschool/login.php">Vai al login</a>
+          <a class="btn" href="/login.php">Vai al login</a>
         <?php else: ?>
-          <a class="btn" href="/torneioldschool/register.php">Torna alla registrazione</a>
+          <a class="btn" href="/register.php">Torna alla registrazione</a>
         <?php endif; ?>
-        <a class="link-secondary" href="/torneioldschool/">Torna alla home</a>
+        <a class="link-secondary" href="/">Torna alla home</a>
       </div>
     </div>
   </main>
 
   <div id="footer-container"></div>
-  <script src="/torneioldschool/includi/header-interactions.js"></script>
+  <script src="/includi/header-interactions.js"></script>
   <script>
-    fetch("/torneioldschool/includi/footer.html")
+    fetch("/includi/footer.html")
       .then(r => r.text())
       .then(html => document.getElementById("footer-container").innerHTML = html);
-    fetch("/torneioldschool/includi/header.php")
+    fetch("/includi/header.php")
       .then(r => r.text())
       .then(html => {
         document.getElementById("header-container").innerHTML = html;

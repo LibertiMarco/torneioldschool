@@ -82,5 +82,5 @@ $stmt->close();
 $conn->close();
 
 echo "<h2>✅ Tornei inseriti correttamente nella tabella!</h2>";
-echo "<p><a href='/torneioldschool/tornei.php'>Vai alla pagina Tornei</a></p>";
+echo "<p><a href='/tornei.php'>Vai alla pagina Tornei</a></p>";
 ?>

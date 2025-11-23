@@ -194,11 +194,11 @@ class SquadraGiocatore {
             return;
         }
         $fotoPath = str_replace('\\', '/', $fotoPath);
-        $defaultFoto = '/torneioldschool/img/giocatori/unknown.jpg';
+        $defaultFoto = '/img/giocatori/unknown.jpg';
         if ($fotoPath === $defaultFoto) {
             return;
         }
-        if (strpos($fotoPath, '/torneioldschool/img/giocatori/') !== 0) {
+        if (strpos($fotoPath, '/img/giocatori/') !== 0) {
             return;
         }
 

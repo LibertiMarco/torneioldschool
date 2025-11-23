@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
-  header("Location: /torneioldschool/index.php");
+  header("Location: /index.php");
   exit;
 }
 
@@ -229,8 +229,8 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestione Blog</title>
-  <link rel="stylesheet" href="/torneioldschool/style.css">
-  <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <style>
     body { display: flex; flex-direction: column; min-height: 100vh; background: linear-gradient(180deg, #f6f8fb 0%, #eef3f9 100%); }
     main.admin-wrapper { flex: 1 0 auto; }
@@ -278,7 +278,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 
 <main class="admin-wrapper">
   <section class="admin-container">
-    <a class="admin-back-link" href="/torneioldschool/admin_dashboard.php">Torna alla dashboard</a>
+    <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
     <h1 class="admin-title">Gestione articoli del blog</h1>
     <p>Utilizza il selettore per creare nuovi articoli, modificarli o eliminarli. Puoi caricare piu immagini e video per creare caroselli accattivanti.</p>
 
@@ -523,7 +523,7 @@ setupUploadGroup('uploadGroupMod');
 
 Array.from(document.querySelectorAll('.file-upload-label span')).forEach(el => el.textContent = 'Carica media');
 
-fetch('/torneioldschool/includi/footer.html')
+fetch('/includi/footer.html')
   .then(r => r.text())
   .then(html => { const footer = document.getElementById('footer-container'); if (footer) footer.innerHTML = html; })
   .catch(err => console.error('Errore nel caricamento del footer:', err));

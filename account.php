@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['user_id'])) {
-    header("Location: /torneioldschool/login.php");
+    header("Location: /login.php");
     exit;
 }
 
@@ -45,14 +45,14 @@ function risolviAvatarUrl($avatarPath) {
         if (preg_match('#^https?://#i', $avatarPath)) {
             return $avatarPath;
         }
-        return '/torneioldschool/' . ltrim($avatarPath, '/');
+        return '/' . ltrim($avatarPath, '/');
     }
-    return '/torneioldschool/img/icone/user.png';
+    return '/img/icone/user.png';
 }
 
 $currentUser = caricaUtente($conn, $userId);
 if (!$currentUser) {
-    header("Location: /torneioldschool/logout.php");
+    header("Location: /logout.php");
     exit;
 }
 
@@ -190,8 +190,8 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Il mio account - Tornei Old School</title>
-  <link rel="stylesheet" href="/torneioldschool/style.css">
-  <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <style>
     body {
       background: #f4f6fb;
@@ -485,7 +485,7 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
   <div id="footer-container"></div>
 
   <script>
-    fetch("/torneioldschool/includi/footer.html")
+    fetch("/includi/footer.html")
       .then(r => r.text())
       .then(html => document.getElementById("footer-container").innerHTML = html);
 

@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
-  header("Location: /torneioldschool/index.php");
+  header("Location: /index.php");
   exit;
 }
 
@@ -18,8 +18,8 @@ if (!$partita_id) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Statistiche Partita</title>
-<link rel="stylesheet" href="/torneioldschool/style.css">
-<link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" type="image/png" href="/img/logo_old_school.png">
 
 <style>
 
@@ -375,7 +375,7 @@ if (!$partita_id) {
 
 <script>
 const ID = <?php echo $partita_id; ?>;
-const API = "/torneioldschool/api/partita_giocatore.php";
+const API = "/api/partita_giocatore.php";
 let currentStats = [];
 let pendingDelete = null;
 
@@ -401,7 +401,7 @@ document.getElementById("azioneStat").addEventListener("change", e => {
 
 /* INFO PARTITA */
 async function loadPartita(){
-  const r = await fetch(`/torneioldschool/api/get_partita.php?id=${ID}`);
+  const r = await fetch(`/api/get_partita.php?id=${ID}`);
   const p = await r.json();
 document.getElementById("partitaInfo").innerHTML = `
     <b>${p.squadra_casa} - ${p.squadra_ospite}</b><br>
@@ -570,7 +570,7 @@ document.getElementById("btnBackStats")?.addEventListener("click", (e) => {
   if (window.history.length > 1) {
     window.history.back();
   } else {
-    window.location.href = "/torneioldschool/api/gestione_partite.php";
+    window.location.href = "/api/gestione_partite.php";
   }
 });
 

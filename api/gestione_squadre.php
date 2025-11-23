@@ -1,7 +1,7 @@
 ﻿<?php
 session_start();
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
-    header('Location: /torneioldschool/index.php');
+    header('Location: /index.php');
     exit;
 }
 
@@ -82,7 +82,7 @@ function salvaScudetto($nomeSquadra, $torneoSlug, $fieldName) {
         return null;
     }
 
-    return '/torneioldschool/img/scudetti/' . $filename;
+    return '/img/scudetti/' . $filename;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -198,8 +198,8 @@ if ($resSquadre = $squadra->getAll()) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestione Squadre</title>
-  <link rel="stylesheet" href="/torneioldschool/style.css">
-  <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <style>
     body { display: flex; flex-direction: column; min-height: 100vh; background: linear-gradient(180deg, #f6f8fb 0%, #eef3f9 100%); }
     main.admin-wrapper { flex: 1 0 auto; }
@@ -272,7 +272,7 @@ if ($resSquadre = $squadra->getAll()) {
   <?php include __DIR__ . '/../includi/header.php'; ?>
   <main class="admin-wrapper">
     <section class="admin-container">
-      <a class="admin-back-link" href="/torneioldschool/admin_dashboard.php">Torna alla dashboard</a>
+      <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
       <h1 class="admin-title">Gestione Squadre</h1>
       <p>Usa i tab per creare, modificare o eliminare le squadre. Stile e interazione sono gli stessi della gestione blog.</p>
 
@@ -511,7 +511,7 @@ if ($resSquadre = $squadra->getAll()) {
           hiddenId.value = '';
           Object.keys(campi).forEach(function(k) { if (campi[k]) campi[k].value = ''; });
           if (!torneo) { selectSquadraMod.disabled = true; return; }
-          fetch('/torneioldschool/api/get_squadre_torneo.php?torneo=' + encodeURIComponent(torneo))
+          fetch('/api/get_squadre_torneo.php?torneo=' + encodeURIComponent(torneo))
             .then(function(res) { return res.json(); })
             .then(function(data) {
               if (data && data.length) {
@@ -529,7 +529,7 @@ if ($resSquadre = $squadra->getAll()) {
           var id = e.target.value;
           hiddenId.value = id;
           if (!id) { Object.keys(campi).forEach(function(k) { if (campi[k]) campi[k].value = ''; }); return; }
-          fetch('/torneioldschool/api/get_squadra.php?id=' + encodeURIComponent(id))
+          fetch('/api/get_squadra.php?id=' + encodeURIComponent(id))
             .then(function(res) { return res.json(); })
             .then(function(data) {
               if (data && !data.error) {
@@ -551,7 +551,7 @@ if ($resSquadre = $squadra->getAll()) {
       function initFooter() {
         var footer = document.getElementById('footer-container');
         if (!footer) return;
-        fetch('/torneioldschool/includi/footer.html')
+        fetch('/includi/footer.html')
           .then(function(r) { return r.text(); })
           .then(function(html) { footer.innerHTML = html; })
           .catch(function(err) { console.error('Errore footer:', err); });
@@ -649,7 +649,7 @@ if ($resSquadre = $squadra->getAll()) {
             tbody.innerHTML = '<tr><td colspan=\"3\">Seleziona un torneo per vedere le squadre.</td></tr>';
             return;
           }
-          fetch('/torneioldschool/api/get_squadre_torneo.php?torneo=' + encodeURIComponent(torneo))
+          fetch('/api/get_squadre_torneo.php?torneo=' + encodeURIComponent(torneo))
             .then(function(res) { return res.json(); })
             .then(function(data) { renderRows(data || [], torneoLabel); })
             .catch(function(err) {

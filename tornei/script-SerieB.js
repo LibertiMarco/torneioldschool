@@ -10,8 +10,8 @@ function resolveLogoPath(name, storedPath) {
   const cached = teamLogos[name];
   if (cached) return cached;
   const slug = normalizeLogoName(name || "");
-  if (!slug) return "/torneioldschool/img/scudetti/default.png";
-  return `/torneioldschool/img/scudetti/${slug}.png`;
+  if (!slug) return "/img/scudetti/default.png";
+  return `/img/scudetti/${slug}.png`;
 }
 
 // ====================== UTILS ======================
@@ -37,7 +37,7 @@ function nomeFaseDaGiornata(g) {
 // ====================== CLASSIFICA (GIRONE) ======================
 async function caricaClassifica(torneoSlug = TORNEO) {
   try {
-    const response = await fetch(`/torneioldschool/api/leggiClassifica.php?torneo=${encodeURIComponent(torneoSlug)}`);
+    const response = await fetch(`/api/leggiClassifica.php?torneo=${encodeURIComponent(torneoSlug)}`);
     const data = await response.json();
 
     if (data.error) {
@@ -152,7 +152,7 @@ const roundLabelByKey = {
 async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REGULAR") {
   try {
     const faseParam = faseSelezionata && faseSelezionata !== "REGULAR" ? `&fase=${faseSelezionata}` : "";
-    const res = await fetch(`/torneioldschool/api/get_partite.php?torneo=${TORNEO}${faseParam}`);
+    const res = await fetch(`/api/get_partite.php?torneo=${TORNEO}${faseParam}`);
     const data = await res.json();
 
     if (data.error) {
@@ -294,7 +294,7 @@ async function caricaPlayoff(tipoCoppa) {
   `;
 
   try {
-    const res = await fetch(`/torneioldschool/api/get_partite.php?torneo=${encodeURIComponent(TORNEO)}&fase=${faseParam}`);
+    const res = await fetch(`/api/get_partite.php?torneo=${encodeURIComponent(TORNEO)}&fase=${faseParam}`);
     const data = await res.json();
 
     if (data.error) {
@@ -398,7 +398,7 @@ async function caricaPlayoff(tipoCoppa) {
 // ====================== ROSE SQUADRE ======================
 async function caricaSquadrePerRosa() {
   try {
-    const res = await fetch(`/torneioldschool/api/leggiClassifica.php?torneo=${TORNEO}`);
+    const res = await fetch(`/api/leggiClassifica.php?torneo=${TORNEO}`);
     const squadre = await res.json();
 
     const select = document.getElementById("selectSquadra");
@@ -439,7 +439,7 @@ async function caricaSquadrePerRosa() {
 
 async function caricaRosaSquadra(squadra) {
   try {
-    const res = await fetch(`/torneioldschool/api/get_rosa.php?torneo=${TORNEO}&squadra=${encodeURIComponent(squadra)}`);
+    const res = await fetch(`/api/get_rosa.php?torneo=${TORNEO}&squadra=${encodeURIComponent(squadra)}`);
     const data = await res.json();
 
     const container = document.getElementById("rosaContainer");
@@ -542,11 +542,11 @@ document.addEventListener("DOMContentLoaded", () => {
   caricaCalendario("", "REGULAR");
   caricaSquadrePerRosa();
   if (heroImg) {
-    fetch(`/torneioldschool/api/get_torneo_by_slug.php?slug=${encodeURIComponent(TORNEO)}`)
+    fetch(`/api/get_torneo_by_slug.php?slug=${encodeURIComponent(TORNEO)}`)
       .then(res => res.json())
       .then(data => {
         if (!data || data.error) return;
-        heroImg.src = data.img || "/torneioldschool/img/tornei/pallone.png";
+        heroImg.src = data.img || "/img/tornei/pallone.png";
         if (torneoTitle && data.nome) torneoTitle.textContent = data.nome;
       })
       .catch(err => console.error("Errore recupero info torneo:", err));

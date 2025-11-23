@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
-    header("Location: /torneioldschool/index.php");
+    header("Location: /index.php");
     exit;
 }
 
@@ -115,14 +115,14 @@ function salvaImmagineTorneo($nomeTorneo, $fileField) {
         return null;
     }
 
-    return '/torneioldschool/img/tornei/' . $filename;
+    return '/img/tornei/' . $filename;
 }
 
 function eliminaImmagineTorneo($imgPath) {
     if (!$imgPath) {
         return;
     }
-    $default = '/torneioldschool/img/tornei/pallone.png';
+    $default = '/img/tornei/pallone.png';
     $basename = basename($imgPath);
     if ($basename === basename($default)) {
         return;
@@ -209,8 +209,8 @@ $lista = $torneo->getAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Tornei</title>
-    <link rel="stylesheet" href="/torneioldschool/style.css">
-    <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="icon" type="image/png" href="/img/logo_old_school.png">
     <style>
         body {
             display: flex;
@@ -302,7 +302,7 @@ $lista = $torneo->getAll();
 
     <main class="admin-wrapper">
         <section class="admin-container">
-            <a class="admin-back-link" href="/torneioldschool/admin_dashboard.php">Torna alla dashboard</a>
+            <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
             <h1 class="admin-title">Gestione Tornei</h1>
 
             <!-- SWITCH AZIONI -->
@@ -497,7 +497,7 @@ selectTorneo.addEventListener('change', async (e) => {
     }
 
     try {
-        const res = await fetch(`/torneioldschool/api/get_torneo.php?id=${id}`);
+        const res = await fetch(`/api/get_torneo.php?id=${id}`);
         const data = await res.json();
 
         if (data && !data.error) {
@@ -563,13 +563,13 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener('DOMContentLoaded', () => {
   const footer = document.getElementById('footer-container');
   if (!footer) return;
-  fetch('/torneioldschool/includi/footer.html')
+  fetch('/includi/footer.html')
     .then(response => response.text())
     .then(html => footer.innerHTML = html)
     .catch(err => console.error('Errore caricamento footer:', err));
 });
 </script>
-<script src="/torneioldschool/includi/delete-modal.js"></script>
+<script src="/includi/delete-modal.js"></script>
 
 </body>
 </html>

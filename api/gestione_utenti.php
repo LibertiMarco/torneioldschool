@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
-    header("Location: /torneioldschool/index.php");
+    header("Location: /index.php");
     exit;
 }
 
@@ -55,8 +55,8 @@ $lista = $utente->getAll();
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestione Utenti</title>
-  <link rel="stylesheet" href="/torneioldschool/style.css">
-  <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <style>
     body {
       display: flex;
@@ -230,7 +230,7 @@ $lista = $utente->getAll();
 
   <main class="admin-wrapper">
     <section class="admin-container">
-      <a class="admin-back-link" href="/torneioldschool/admin_dashboard.php">Torna alla dashboard</a>
+      <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
       <h1 class="admin-title">Gestione Utenti</h1>
 
       <!-- PICKLIST -->
@@ -405,7 +405,7 @@ $lista = $utente->getAll();
         return;
       }
       try {
-        const res = await fetch(`/torneioldschool/api/get_utente.php?id=${id}`);
+        const res = await fetch(`/api/get_utente.php?id=${id}`);
         const data = await res.json();
         if (data && !data.error) {
           campi.email.value = data.email || '';
@@ -551,12 +551,12 @@ $lista = $utente->getAll();
     document.addEventListener('DOMContentLoaded', () => {
       const footerContainer = document.getElementById('footer-container');
       if (!footerContainer) return;
-  fetch('/torneioldschool/includi/footer.html')
+  fetch('/includi/footer.html')
     .then(response => response.text())
     .then(html => footerContainer.innerHTML = html)
     .catch(err => console.error('Errore nel caricamento del footer:', err));
 });
 </script>
-<script src="/torneioldschool/includi/delete-modal.js"></script>
+<script src="/includi/delete-modal.js"></script>
 </body>
 </html>

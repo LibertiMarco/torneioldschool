@@ -12,8 +12,8 @@ $isLogged = isset($_SESSION['user_id']);
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Articolo - Tornei Old School</title>
-<link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
-<link rel="stylesheet" href="/torneioldschool/style.css">
+<link rel="icon" type="image/png" href="/img/logo_old_school.png">
+<link rel="stylesheet" href="/style.css">
 
 <style>
 .page-background {
@@ -494,13 +494,13 @@ $isLogged = isset($_SESSION['user_id']);
 <main class="article-layout">
   <article class="article-panel" id="articlePanel">
     <div class="article-meta">
-      <a class="article-badge" href="/torneioldschool/blog.php" aria-label="Torna al blog">
+      <a class="article-badge" href="/blog.php" aria-label="Torna al blog">
         <span aria-hidden="true">⟵</span> Blog
       </a>
       <span id="articleDate" class="sr-only">--/--/----</span>
     </div>
     <div class="article-backlink-inline">
-      <a href="/torneioldschool/blog.php" class="btn-back-blog" aria-label="Torna al blog">↩ Torna al blog</a>
+      <a href="/blog.php" class="btn-back-blog" aria-label="Torna al blog">↩ Torna al blog</a>
     </div>
     <h2 id="articleTitle">Caricamento...</h2>
     <p class="article-subtitle" id="articleSubtitle">Recuperiamo i dettagli e li inquadriamo al meglio.</p>
@@ -537,7 +537,7 @@ $isLogged = isset($_SESSION['user_id']);
         </form>
       <?php else: ?>
         <p class="comments-hint">
-          Vuoi dire la tua? <a href="/torneioldschool/login.php">Accedi</a> o <a href="/torneioldschool/register.php">registrati</a> per lasciare un commento.
+          Vuoi dire la tua? <a href="/login.php">Accedi</a> o <a href="/register.php">registrati</a> per lasciare un commento.
         </p>
       <?php endif; ?>
     </div>
@@ -567,7 +567,7 @@ const commentFeedback = document.getElementById('commentFeedback');
 const replyInfo = document.getElementById('replyInfo');
 const replyName = document.getElementById('replyName');
 const replyCancelBtn = document.getElementById('replyCancel');
-const defaultAvatar = '/torneioldschool/img/icone/user.png';
+const defaultAvatar = '/img/icone/user.png';
 const canReply = <?= $isLogged ? 'true' : 'false' ?>;
 let replyTarget = null;
 let replyMention = '';
@@ -724,7 +724,7 @@ async function fetchJSON(url, options = {}) {
 
 async function loadArticle() {
     try {
-        const { data, ok } = await fetchJSON(`/torneioldschool/api/blog.php?azione=articolo&id=${articleId}`);
+        const { data, ok } = await fetchJSON(`/api/blog.php?azione=articolo&id=${articleId}`);
         if (!ok) {
             throw new Error(data?.error || 'Articolo non trovato.');
         }
@@ -742,7 +742,7 @@ async function loadArticle() {
 
 async function loadRelated() {
     try {
-        const { data: posts } = await fetchJSON('/torneioldschool/api/blog.php?azione=ultimi');
+        const { data: posts } = await fetchJSON('/api/blog.php?azione=ultimi');
 
         if (!Array.isArray(posts) || !posts.length) {
             relatedList.innerHTML = '<p>Nessun articolo correlato al momento.</p>';
@@ -753,7 +753,7 @@ async function loadRelated() {
             .filter(post => Number(post.id) !== articleId)
             .slice(0, 4)
             .map(post => `
-                <a class="related-post" href="/torneioldschool/articolo.php?id=${post.id}">
+                <a class="related-post" href="/articolo.php?id=${post.id}">
                     <span>${escapeHTML(post.data || '')}</span>
                     <strong>${escapeHTML(post.titolo)}</strong>
                 </a>
@@ -767,7 +767,7 @@ function buildCommentHTML(comment, isChild = false, rootId = null, threadAuthor 
     const topId = rootId ?? comment.id;
     const rootAuthor = threadAuthor ?? comment.autore;
     const avatarSrc = comment.avatar
-        ? `/torneioldschool/${comment.avatar.replace(/^\/+/, '')}`
+        ? `/${comment.avatar.replace(/^\/+/, '')}`
         : defaultAvatar;
     const replies = Array.isArray(comment.replies) ? comment.replies : [];
 
@@ -801,7 +801,7 @@ function renderComments(comments) {
 
 async function fetchComments() {
     try {
-        const { data } = await fetchJSON(`/torneioldschool/api/blog.php?azione=commenti&id=${articleId}`);
+        const { data } = await fetchJSON(`/api/blog.php?azione=commenti&id=${articleId}`);
         renderComments(Array.isArray(data) ? data : []);
     } catch (err) {
         commentsList.innerHTML = `<p class="feedback-message error">${escapeHTML(err.message)}</p>`;
@@ -823,7 +823,7 @@ async function submitComment(event) {
     setFeedback('Pubblicazione in corso...');
 
     try {
-        const { data, ok } = await fetchJSON('/torneioldschool/api/blog.php?azione=commenti_salva', {
+        const { data, ok } = await fetchJSON('/api/blog.php?azione=commenti_salva', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ post_id: articleId, commento: text, parent_id: replyTarget })

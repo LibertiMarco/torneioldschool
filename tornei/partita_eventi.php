@@ -7,7 +7,7 @@
 
   <!-- stesso CSS della pagina principale -->
   <link rel="stylesheet" href="../style.css" />
-  <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
 </head>
 
@@ -35,10 +35,10 @@
   <div id="footer-container"></div>
 
   <!-- SCRIPT: HEADER -->
-  <script src="/torneioldschool/includi/header-interactions.js"></script>
+  <script src="/includi/header-interactions.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      fetch("/torneioldschool/includi/header.php")
+      fetch("/includi/header.php")
         .then(r => r.text())
                 .then(html => {
           document.getElementById("header-container").innerHTML = html;
@@ -50,7 +50,7 @@
 
   <!-- SCRIPT: FOOTER -->
   <script>
-    fetch("/torneioldschool/includi/footer.html")
+    fetch("/includi/footer.html")
       .then(r => r.text())
       .then(html => { document.getElementById("footer-container").innerHTML = html; })
       .catch(e => console.error("Errore footer:", e));

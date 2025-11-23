@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
-    header("Location: /torneioldschool/index.php");
+    header("Location: /index.php");
     exit;
 }
 
@@ -28,15 +28,15 @@ function redirectGestione($action = null, $extraParams = []) {
 
 function salvaFotoGiocatore($nome, $cognome, $fieldName, $fotoEsistente = null) {
     if (!isset($_FILES[$fieldName]) || $_FILES[$fieldName]['error'] === UPLOAD_ERR_NO_FILE) {
-        return $fotoEsistente ?: '/torneioldschool/img/giocatori/unknown.jpg';
+        return $fotoEsistente ?: '/img/giocatori/unknown.jpg';
     }
     if ($_FILES[$fieldName]['error'] !== UPLOAD_ERR_OK) {
-        return $fotoEsistente ?: '/torneioldschool/img/giocatori/unknown.jpg';
+        return $fotoEsistente ?: '/img/giocatori/unknown.jpg';
     }
 
     $maxSize = 2 * 1024 * 1024;
     if ($_FILES[$fieldName]['size'] > $maxSize) {
-        return $fotoEsistente ?: '/torneioldschool/img/giocatori/unknown.jpg';
+        return $fotoEsistente ?: '/img/giocatori/unknown.jpg';
     }
 
     $allowed = [
@@ -49,12 +49,12 @@ function salvaFotoGiocatore($nome, $cognome, $fieldName, $fotoEsistente = null) 
     $mime = finfo_file($finfo, $_FILES[$fieldName]['tmp_name']);
     finfo_close($finfo);
     if (!isset($allowed[$mime])) {
-        return $fotoEsistente ?: '/torneioldschool/img/giocatori/unknown.jpg';
+        return $fotoEsistente ?: '/img/giocatori/unknown.jpg';
     }
 
     $baseDir = realpath(__DIR__ . '/../img/giocatori');
     if (!$baseDir) {
-        return $fotoEsistente ?: '/torneioldschool/img/giocatori/unknown.jpg';
+        return $fotoEsistente ?: '/img/giocatori/unknown.jpg';
     }
 
     $slugNome = strtolower(preg_replace('/[^a-z0-9]/i', '', $nome . $cognome));
@@ -71,10 +71,10 @@ function salvaFotoGiocatore($nome, $cognome, $fieldName, $fotoEsistente = null) 
     }
 
     if (!move_uploaded_file($_FILES[$fieldName]['tmp_name'], $baseDir . '/' . $filename)) {
-        return $fotoEsistente ?: '/torneioldschool/img/giocatori/unknown.jpg';
+        return $fotoEsistente ?: '/img/giocatori/unknown.jpg';
     }
 
-    return '/torneioldschool/img/giocatori/' . $filename;
+    return '/img/giocatori/' . $filename;
 }
 
 function cancellaFotoGiocatore($fotoPath) {
@@ -82,11 +82,11 @@ function cancellaFotoGiocatore($fotoPath) {
         return;
     }
     $fotoPath = str_replace('\\', '/', $fotoPath);
-    $defaultFoto = '/torneioldschool/img/giocatori/unknown.jpg';
+    $defaultFoto = '/img/giocatori/unknown.jpg';
     if ($fotoPath === $defaultFoto) {
         return;
     }
-    if (strpos($fotoPath, '/torneioldschool/img/giocatori/') !== 0) {
+    if (strpos($fotoPath, '/img/giocatori/') !== 0) {
         return;
     }
 
@@ -152,11 +152,11 @@ function salvaFotoAssociazione($nome, $cognome, $fieldName, $fotoEsistente = nul
         return null;
     }
 
-    if ($fotoEsistente && strpos($fotoEsistente, '/torneioldschool/img/giocatori/') === 0 && $fotoEsistente !== '/torneioldschool/img/giocatori/unknown.jpg') {
+    if ($fotoEsistente && strpos($fotoEsistente, '/img/giocatori/') === 0 && $fotoEsistente !== '/img/giocatori/unknown.jpg') {
         cancellaFotoGiocatore($fotoEsistente);
     }
 
-    return '/torneioldschool/img/giocatori/' . $filename;
+    return '/img/giocatori/' . $filename;
 }
 
 $tornei = [];
@@ -198,7 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $id = (int)$_POST['id'];
     $record = $giocatore->getById($id);
-    $fotoEsistente = $record['foto'] ?? '/torneioldschool/img/giocatori/unknown.jpg';
+    $fotoEsistente = $record['foto'] ?? '/img/giocatori/unknown.jpg';
     $nome = trim($_POST['nome']);
     $cognome = trim($_POST['cognome']);
     $fotoPath = salvaFotoGiocatore($nome, $cognome, 'foto_upload_mod', $fotoEsistente);
@@ -308,8 +308,8 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Giocatori</title>
-    <link rel="stylesheet" href="/torneioldschool/style.css">
-    <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="icon" type="image/png" href="/img/logo_old_school.png">
     <style>
         body {
             display: flex;
@@ -545,7 +545,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 
   <main class="admin-wrapper">
     <section class="admin-container">
-<a class="admin-back-link" href="/torneioldschool/admin_dashboard.php">Torna alla dashboard</a>
+<a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
 <h1 class="admin-title">Gestione Giocatori</h1>
 
 <?php if (isset($_GET['duplicate']) && $_GET['duplicate'] === '1'): ?>
@@ -1040,8 +1040,8 @@ try {
     allPlayers = [];
 }
 
-const API_SQUADRE_TORNEO = "/torneioldschool/api/get_squadre_torneo.php";
-const API_GIOCATORI_SQUADRA = "/torneioldschool/api/get_giocatori_squadra.php";
+const API_SQUADRE_TORNEO = "/api/get_squadre_torneo.php";
+const API_GIOCATORI_SQUADRA = "/api/get_giocatori_squadra.php";
 
 function resetSelect(select, placeholder, disable = true) {
     if (!select) return;
@@ -1381,7 +1381,7 @@ selectGiocatore?.addEventListener("change", async e => {
     const id = e.target.value;
     if (!id) return;
 
-    const res = await fetch(`/torneioldschool/api/get_giocatore.php?id=${id}`);
+    const res = await fetch(`/api/get_giocatore.php?id=${id}`);
     const data = await res.json();
     if (!data) return;
 
@@ -1441,7 +1441,7 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener('DOMContentLoaded', () => {
     const footer = document.getElementById('footer-container');
     if (!footer) return;
-    fetch('/torneioldschool/includi/footer.html')
+    fetch('/includi/footer.html')
         .then(r => r.text())
         .then(html => footer.innerHTML = html)
         .catch(err => console.error('Errore footer:', err));

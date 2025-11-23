@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chi Siamo - Tornei Old School</title>
-  <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link rel="stylesheet" href="style.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Poppins:wght@400;600&display=swap');
@@ -198,15 +198,15 @@
 
   <div id="footer-container"></div>
 
-  <script src="/torneioldschool/includi/header-interactions.js"></script>
+  <script src="/includi/header-interactions.js"></script>
   <script>
     // FOOTER
-    fetch("/torneioldschool/includi/footer.html")
+    fetch("/includi/footer.html")
       .then(r => r.text())
       .then(html => document.getElementById("footer-container").innerHTML = html);
 
     // HEADER
-    fetch("/torneioldschool/includi/header.php")
+    fetch("/includi/header.php")
       .then(r => r.text())
       .then(html => {
         document.getElementById("header-container").innerHTML = html;

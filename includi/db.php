@@ -1,8 +1,8 @@
 <?php
 $host="localhost"; 
-$user="root"; 
+$user="torneio2_MarcoLiberti"; 
 $pass=""; 
-$dbname="torneioldschool";
+$dbname="torneio2_torneioldschool";
 
 $conn = new mysqli($host,$user,$pass,$dbname);
 

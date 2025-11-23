@@ -130,7 +130,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Registrati - Tornei Old School</title>
@@ -399,13 +399,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
   <div id="footer-container"></div>
 
-  <script src="/torneioldschool/includi/header-interactions.js"></script>
+  <script src="/includi/header-interactions.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      fetch("/torneioldschool/includi/footer.html")
+      fetch("/includi/footer.html")
         .then(r => r.text())
         .then(html => document.getElementById("footer-container").innerHTML = html);
-      fetch("/torneioldschool/includi/header.php")
+      fetch("/includi/header.php")
         .then(r => r.text())
         .then(html => {
           document.getElementById("header-container").innerHTML = html;

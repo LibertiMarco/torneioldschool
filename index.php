@@ -5,7 +5,7 @@
   <title>Home - Tornei Old School</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" type="image/png" href="/torneioldschool/img/logo_old_school.png">
+  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
 </head>
 
 <body>
@@ -22,7 +22,7 @@
         <div class="hero-overlay">
           <h1>TORNEI</h1>
           <p>Accedi a tutte le informazioni e alle regole dei nostri tornei!</p>
-          <a href="/torneioldschool/tornei.php" class="hero-btn">Tornei</a>
+          <a href="/tornei.php" class="hero-btn">Tornei</a>
         </div>
       </section>
 
@@ -59,7 +59,7 @@
         </div>
 
         <div class="leader-full-link">
-          <a href="/torneioldschool/classifica_giocatori.php" class="hero-btn hero-btn--ghost hero-btn--small">Classifica completa</a>
+          <a href="/classifica_giocatori.php" class="hero-btn hero-btn--ghost hero-btn--small">Classifica completa</a>
         </div>
 
         <div id="homeLeadersList" class="leader-list">
@@ -102,7 +102,7 @@
 
   <!-- SCRIPT FOOTER -->
   <script>
-    fetch("/torneioldschool/includi/footer.html")
+    fetch("/includi/footer.html")
       .then(response => response.text())
       .then(data => document.getElementById("footer-container").innerHTML = data)
       .catch(error => console.error("Errore nel caricamento del footer:", error));
@@ -110,7 +110,7 @@
 
 <script>
 async function loadNews() {
-    const r = await fetch('/torneioldschool/api/blog.php?azione=ultimi');
+    const r = await fetch('/api/blog.php?azione=ultimi');
     const posts = await r.json();
     const box = document.getElementById("newsGrid");
 
@@ -122,9 +122,9 @@ async function loadNews() {
     }
 
     posts.forEach(p => {
-        const imageSrc = p.immagine ? p.immagine : '/torneioldschool/img/blog/placeholder.jpg';
+        const imageSrc = p.immagine ? p.immagine : '/img/blog/placeholder.jpg';
         box.innerHTML += `
-        <article onclick="location.href='/torneioldschool/articolo.php?id=${p.id}'" style="cursor:pointer">
+        <article onclick="location.href='/articolo.php?id=${p.id}'" style="cursor:pointer">
             <img src="${imageSrc}" alt="">
             <h3>${p.titolo}</h3>
             <p>${p.data}</p>
@@ -133,7 +133,7 @@ async function loadNews() {
 }
 
 function renderHomeLeaderCard(player, position, torneoLabel, ordine) {
-    const foto = player.foto || '/torneioldschool/img/giocatori/unknown.jpg';
+    const foto = player.foto || '/img/giocatori/unknown.jpg';
     const nome = `${player.nome ?? ''} ${player.cognome ?? ''}`.trim() || 'Giocatore senza nome';
     const squadra = player.squadra ? `${player.squadra}${torneoLabel ? ' - ' + torneoLabel : ''}` : 'Giocatore';
 
@@ -145,7 +145,7 @@ function renderHomeLeaderCard(player, position, torneoLabel, ordine) {
       <div class="leader-card">
         <div class="leader-rank">${position}</div>
         <div class="leader-avatar">
-          <img src="${foto}" alt="${nome}" onerror="this.src='/torneioldschool/img/giocatori/unknown.jpg';">
+          <img src="${foto}" alt="${nome}" onerror="this.src='/img/giocatori/unknown.jpg';">
         </div>
         <div class="leader-main">
           <div>
@@ -167,7 +167,7 @@ async function loadTopScorers() {
     const params = new URLSearchParams({ per_page: 5, ordine: currentOrderHome });
 
     try {
-        const response = await fetch('/torneioldschool/api/classifica_giocatori.php?' + params.toString());
+        const response = await fetch('/api/classifica_giocatori.php?' + params.toString());
         const data = await response.json();
         const items = Array.isArray(data.data) ? data.data : [];
         if (!items.length) {
@@ -203,10 +203,10 @@ loadTopScorers();
 </script>
 
   <!-- SCRIPT HEADER -->
-  <script src="/torneioldschool/includi/header-interactions.js"></script>
+  <script src="/includi/header-interactions.js"></script>
   <script>
   document.addEventListener("DOMContentLoaded", () => {
-    fetch("/torneioldschool/includi/header.php")
+    fetch("/includi/header.php")
       .then(response => response.text())
       .then(data => {
         document.getElementById("header-container").innerHTML = data;

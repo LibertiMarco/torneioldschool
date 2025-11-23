@@ -9,7 +9,7 @@ function logoPathFrom(p, keyLogo, keyNome) {
   const stored = p[keyLogo];
   if (stored) return stored;
   const slug = normalizeLogoName(p[keyNome] || "");
-  return slug ? `/torneioldschool/img/scudetti/${slug}.png` : "/torneioldschool/img/scudetti/default.png";
+  return slug ? `/img/scudetti/${slug}.png` : "/img/scudetti/default.png";
 }
 
 // ====================== FORMATTA DATA ======================
@@ -53,13 +53,13 @@ async function caricaPartita() {
     let p = null;
 
     try {
-        const resTry = await fetch(`/torneioldschool/api/get_partite.php?id=${ID_PARTITA}&torneo=${TORNEO}`);
+        const resTry = await fetch(`/api/get_partite.php?id=${ID_PARTITA}&torneo=${TORNEO}`);
         const dataTry = await resTry.json();
         if (Array.isArray(dataTry) && dataTry.length > 0) p = dataTry[0];
     } catch {}
 
     if (!p) {
-        const res = await fetch(`/torneioldschool/api/get_partite.php?torneo=${TORNEO}`);
+        const res = await fetch(`/api/get_partite.php?torneo=${TORNEO}`);
         const data = await res.json();
         const tutte = Array.isArray(data) ? data : Object.values(data).flat();
         p = tutte.find(x => String(x.id) === String(ID_PARTITA));
@@ -116,13 +116,13 @@ async function caricaPartita() {
 
   ${p.link_youtube ? `
     <a href="${p.link_youtube}" target="_blank" class="match-link-btn yt">
-      <img src="/torneioldschool/img/icone/youtube.png" alt="YouTube"> Guarda su YouTube
+      <img src="/img/icone/youtube.png" alt="YouTube"> Guarda su YouTube
     </a>
   ` : ""}
 
   ${p.link_instagram ? `
     <a href="${p.link_instagram}" target="_blank" class="match-link-btn ig">
-      <img src="/torneioldschool/img/icone/instagram.png" alt="Instagram"> Guarda su Instagram
+      <img src="/img/icone/instagram.png" alt="Instagram"> Guarda su Instagram
     </a>
   ` : ""}
 
@@ -138,7 +138,7 @@ async function caricaPartita() {
 async function caricaEventiGiocatori() {
 
     try {
-        const res = await fetch(`/torneioldschool/api/get_eventi_partita.php?partita=${ID_PARTITA}`);
+        const res = await fetch(`/api/get_eventi_partita.php?partita=${ID_PARTITA}`);
         const eventi = await res.json();
 
         const home = window.PARTITA.squadra_casa;
