@@ -142,7 +142,7 @@
     }
     #${BANNER_ID}.is-visible { display: flex; flex-direction: column; }
     #${BANNER_ID} .consent-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-    #${BANNER_ID} button { border: none; cursor: pointer; font-weight: 700; padding: 10px 14px; border-radius: 10px; }
+    #${BANNER_ID} .consent-actions button { flex: 1 1 140px; min-width: 120px; border: none; cursor: pointer; font-weight: 700; padding: 10px 14px; border-radius: 10px; text-align: center; }
     #${BANNER_ID} .btn-primary { background: #3b82f6; color: #fff; }
     #${BANNER_ID} .btn-ghost { background: transparent; color: #f9fafb; border: 1px solid rgba(255,255,255,0.25); }
     #${BANNER_ID} a { color: #93c5fd; text-decoration: underline; }
