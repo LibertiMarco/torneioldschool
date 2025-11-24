@@ -10,6 +10,7 @@ class SquadraGiocatore {
 
     public function assegna($giocatoreId, $squadraId, $foto = null, array $stats = [], $forzaRimozioneFoto = false, $isCaptain = false) {
         $defaults = [
+            'ruolo' => null,
             'presenze' => 0,
             'reti' => 0,
             'assist' => 0,
@@ -33,10 +34,11 @@ class SquadraGiocatore {
 
         $sql = "
             INSERT INTO {$this->table}
-                (squadra_id, giocatore_id, foto, presenze, reti, assist, gialli, rossi, media_voti, is_captain)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (squadra_id, giocatore_id, foto, ruolo, presenze, reti, assist, gialli, rossi, media_voti, is_captain)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 {$fotoUpdateSql},
+                ruolo = VALUES(ruolo),
                 presenze = VALUES(presenze),
                 reti = VALUES(reti),
                 assist = VALUES(assist),
@@ -48,6 +50,7 @@ class SquadraGiocatore {
 
         $stmt = $this->conn->prepare($sql);
         $foto = $foto !== '' ? $foto : null;
+        $ruolo = $stats['ruolo'] ?? null;
         $presenze = (int)$stats['presenze'];
         $reti = (int)$stats['reti'];
         $assist = (int)$stats['assist'];
@@ -56,10 +59,11 @@ class SquadraGiocatore {
         $mediaVal = $media;
         $isCaptainVal = $isCaptain ? 1 : 0;
         $stmt->bind_param(
-            "iisiiiiidi",
+            "iissiiiiidi",
             $squadraId,
             $giocatoreId,
             $foto,
+            $ruolo,
             $presenze,
             $reti,
             $assist,
@@ -100,7 +104,7 @@ class SquadraGiocatore {
 
     public function getSquadrePerGiocatore($giocatoreId) {
         $sql = "
-            SELECT s.id, s.nome, s.torneo, sg.foto
+            SELECT s.id, s.nome, s.torneo, sg.foto, sg.ruolo
             FROM {$this->table} sg
             JOIN squadre s ON s.id = sg.squadra_id
             WHERE sg.giocatore_id = ?
@@ -116,6 +120,7 @@ class SquadraGiocatore {
         $sql = "
             SELECT g.*, s.nome AS squadra_nome, s.torneo,
                    COALESCE(sg.foto, g.foto) AS foto_squadra,
+                   sg.ruolo AS ruolo_squadra,
                    sg.presenze AS presenze_squadra,
                    sg.reti AS reti_squadra,
                    sg.assist AS assist_squadra,

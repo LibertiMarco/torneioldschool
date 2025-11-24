@@ -127,6 +127,7 @@ class Giocatore {
             $sql = "
                 SELECT g.*, s.nome AS squadra, s.torneo,
                        COALESCE(sg.foto, g.foto) AS foto_squadra,
+                       sg.ruolo AS ruolo_squadra,
                        sg.presenze AS presenze_squadra,
                        sg.reti AS reti_squadra,
                        sg.assist AS assist_squadra,
@@ -146,6 +147,7 @@ class Giocatore {
             $sql = "
                 SELECT g.*, s.nome AS squadra, s.torneo,
                        COALESCE(sg.foto, g.foto) AS foto_squadra,
+                       sg.ruolo AS ruolo_squadra,
                        sg.presenze AS presenze_squadra,
                        sg.reti AS reti_squadra,
                        sg.assist AS assist_squadra,

@@ -25,6 +25,7 @@ while ($row = $result->fetch_assoc()) {
         "squadra" => $row["squadra"],
         "torneo" => $row["torneo"],
         "foto" => $row["foto_squadra"] ?? $row["foto"] ?? '/img/giocatori/unknown.jpg',
+        "ruolo" => $row["ruolo_squadra"] ?? $row["ruolo"] ?? '',
         "presenze" => (int)($row["presenze_squadra"] ?? 0),
         "reti" => (int)($row["reti_squadra"] ?? 0),
         "assist" => (int)($row["assist_squadra"] ?? 0),

@@ -182,12 +182,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     $nuovoId = $giocatore->crea(
         $nome,
         $cognome,
-        trim($_POST['ruolo']),
-        (int)$_POST['presenze'],
-        (int)$_POST['reti'],
-        (int)$_POST['gialli'],
-        (int)$_POST['rossi'],
-        trim($_POST['media_voti']),
+        '', // ruolo spostato su associazione squadra
+        0,
+        0,
+        0,
+        0,
+        null,
         $fotoPath
     );
 
@@ -207,12 +207,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
         $id,
         $nome,
         $cognome,
-        trim($_POST['ruolo']),
-        (int)$_POST['presenze'],
-        (int)$_POST['reti'],
-        (int)$_POST['gialli'],
-        (int)$_POST['rossi'],
-        trim($_POST['media_voti']),
+        '', // ruolo spostato su associazione squadra
+        0,
+        0,
+        0,
+        0,
+        null,
         $fotoPath
     );
 
@@ -235,7 +235,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['associa_squadra'])) {
                 : null;
             $fotoAssoc = $fotoUpload ?? $fotoAttuale;
             $isCaptain = isset($_POST['capitano_associa']) && $_POST['capitano_associa'] === '1';
-            $pivot->assegna($giocatoreAssoc, $squadraAssoc, $fotoAssoc, [], false, $isCaptain);
+            $pivot->assegna($giocatoreAssoc, $squadraAssoc, $fotoAssoc, [
+                'ruolo' => trim($_POST['ruolo_associa'] ?? '')
+            ], false, $isCaptain);
         }
 
         redirectGestione('associazioni');
@@ -251,6 +253,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['modifica_associazione
         $removeFoto = isset($_POST['mod_assoc_remove_foto']) && $_POST['mod_assoc_remove_foto'] === '1';
         $mediaPost = isset($_POST['mod_assoc_media']) ? trim($_POST['mod_assoc_media']) : '';
         $stats = [
+            'ruolo' => trim($_POST['mod_assoc_ruolo'] ?? ''),
             'presenze' => (int)($_POST['mod_assoc_presenze'] ?? 0),
             'reti' => (int)($_POST['mod_assoc_reti'] ?? 0),
             'assist' => (int)($_POST['mod_assoc_assist'] ?? 0),
@@ -581,17 +584,6 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 </div>
 
 <div class="form-group">
-    <label>Ruolo</label>
-    <select name="ruolo">
-        <option value="">-- Nessun ruolo --</option>
-        <option value="Portiere">Portiere</option>
-        <option value="Difensore">Difensore</option>
-        <option value="Centrocampista">Centrocampista</option>
-        <option value="Attaccante">Attaccante</option>
-    </select>
-</div>
-
-<div class="form-group">
     <label>Foto</label>
     <div class="file-upload">
         <input type="file" name="foto_upload" id="foto_upload" accept="image/png,image/jpeg,image/webp,image/gif">
@@ -627,18 +619,18 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 
 <div class="form-group"><label>Nome</label><input type="text" name="nome" id="mod_nome"></div>
 <div class="form-group"><label>Cognome</label><input type="text" name="cognome" id="mod_cognome"></div>
-<div class="form-group"><label>Ruolo</label><input type="text" name="ruolo" id="mod_ruolo"></div>
+<div class="form-group"><label>Ruolo</label><input type="text" name="ruolo" id="mod_ruolo" disabled placeholder="Scegli ruolo in associazione"></div>
 <div class="form-row">
-    <div class="form-group half"><label>Presenze</label><input type="number" name="presenze" id="mod_presenze"></div>
-    <div class="form-group half"><label>Reti</label><input type="number" name="reti" id="mod_reti"></div>
+<div class="form-group half"><label>Presenze</label><input type="number" name="presenze" id="mod_presenze" value="0" readonly></div>
+<div class="form-group half"><label>Reti</label><input type="number" name="reti" id="mod_reti" value="0" readonly></div>
 </div>
 
 <div class="form-row">
-    <div class="form-group half"><label>Gialli</label><input type="number" name="gialli" id="mod_gialli"></div>
-    <div class="form-group half"><label>Rossi</label><input type="number" name="rossi" id="mod_rossi"></div>
+<div class="form-group half"><label>Gialli</label><input type="number" name="gialli" id="mod_gialli" value="0" readonly></div>
+<div class="form-group half"><label>Rossi</label><input type="number" name="rossi" id="mod_rossi" value="0" readonly></div>
 </div>
 
-<div class="form-group"><label>Media Voti</label><input type="text" name="media_voti" id="mod_media"></div>
+<div class="form-group"><label>Media Voti</label><input type="text" name="media_voti" id="mod_media" readonly></div>
 <div class="form-group">
     <label>Foto</label>
     <div class="file-upload">
@@ -672,8 +664,9 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
           <select id="assocTorneo" required>
               <option value="">-- Seleziona un torneo --</option>
               <?php foreach ($tornei as $torneoVal): ?>
-              <option value="<?= htmlspecialchars($torneoVal['id']) ?>">
-                  <?= htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo') ?>
+              <?php $torneoNome = htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo'); ?>
+              <option value="<?= $torneoNome ?>">
+                  <?= $torneoNome ?>
               </option>
               <?php endforeach; ?>
           </select>
@@ -693,6 +686,16 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
               <?php foreach ($giocatori as $g): ?>
               <option value="<?= $g['id'] ?>"><?= htmlspecialchars($g['cognome'] . ' ' . $g['nome']) ?></option>
               <?php endforeach; ?>
+          </select>
+      </div>
+      <div class="form-group">
+          <label>Ruolo in squadra</label>
+          <select name="ruolo_associa" id="ruolo_associa">
+              <option value="">-- Seleziona un ruolo --</option>
+              <option value="Portiere">Portiere</option>
+              <option value="Difensore">Difensore</option>
+              <option value="Centrocampista">Centrocampista</option>
+              <option value="Attaccante">Attaccante</option>
           </select>
       </div>
 
@@ -721,8 +724,9 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
           <select id="modAssocTorneo" required>
               <option value="">-- Seleziona un torneo --</option>
               <?php foreach ($tornei as $torneoVal): ?>
-              <option value="<?= htmlspecialchars($torneoVal['id']) ?>">
-                  <?= htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo') ?>
+              <?php $torneoNome = htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo'); ?>
+              <option value="<?= $torneoNome ?>">
+                  <?= $torneoNome ?>
               </option>
               <?php endforeach; ?>
           </select>
@@ -739,6 +743,16 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
           <label>Giocatore</label>
           <select id="modAssocGiocatore" name="mod_assoc_giocatore" required disabled>
               <option value="">-- Seleziona un giocatore --</option>
+          </select>
+      </div>
+      <div class="form-group">
+          <label>Ruolo in squadra</label>
+          <select id="mod_assoc_ruolo" name="mod_assoc_ruolo">
+              <option value="">-- Seleziona un ruolo --</option>
+              <option value="Portiere">Portiere</option>
+              <option value="Difensore">Difensore</option>
+              <option value="Centrocampista">Centrocampista</option>
+              <option value="Attaccante">Attaccante</option>
           </select>
       </div>
 
@@ -811,8 +825,9 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
           <select id="remTorneo" required>
               <option value="">-- Seleziona un torneo --</option>
               <?php foreach ($tornei as $torneoVal): ?>
-              <option value="<?= htmlspecialchars($torneoVal['id']) ?>">
-                  <?= htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo') ?>
+              <?php $torneoNome = htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo'); ?>
+              <option value="<?= $torneoNome ?>">
+                  <?= $torneoNome ?>
               </option>
               <?php endforeach; ?>
           </select>
@@ -1027,6 +1042,8 @@ const modAssocRossi = document.getElementById("mod_assoc_rossi");
 const modAssocMedia = document.getElementById("mod_assoc_media");
 const modAssocRemoveFoto = document.getElementById("mod_assoc_remove_foto");
 const modAssocCapitano = document.getElementById("mod_assoc_capitano");
+const modAssocRuolo = document.getElementById("mod_assoc_ruolo");
+const ruoloAssocia = document.getElementById("ruolo_associa");
 const assocOperationSelect = document.getElementById("assocOperation");
 const assocFormAdd = document.querySelector(".assoc-form-add");
 const assocFormEdit = document.querySelector(".assoc-form-edit");
@@ -1058,6 +1075,7 @@ function clearModAssocStatsFields() {
     if (modAssocMedia) modAssocMedia.value = "";
     if (modAssocRemoveFoto) modAssocRemoveFoto.checked = false;
     if (modAssocCapitano) modAssocCapitano.checked = false;
+    if (modAssocRuolo) modAssocRuolo.value = "";
 }
 
 function populateModAssocStatsFromOption(option) {
@@ -1074,6 +1092,7 @@ function populateModAssocStatsFromOption(option) {
     if (modAssocMedia) modAssocMedia.value = ds.media ?? "";
     if (modAssocRemoveFoto) modAssocRemoveFoto.checked = false;
     if (modAssocCapitano) modAssocCapitano.checked = ds.captain === "1";
+    if (modAssocRuolo) modAssocRuolo.value = ds.ruolo || "";
 }
 
 async function loadSquadre(select, torneo, placeholder = "-- Seleziona una squadra --") {
@@ -1134,6 +1153,9 @@ async function loadGiocatori(select, squadraId, torneo, placeholder = "-- Selezi
             if (typeof g.is_captain !== "undefined") {
                 opt.dataset.captain = String(g.is_captain);
             }
+            if (typeof g.ruolo !== "undefined") {
+                opt.dataset.ruolo = g.ruolo;
+            }
             select.appendChild(opt);
         });
         return data;
@@ -1141,6 +1163,47 @@ async function loadGiocatori(select, squadraId, torneo, placeholder = "-- Selezi
         console.error("Errore nel caricamento giocatori:", err);
         return [];
     }
+}
+
+async function fetchGiocatoriAssociatiIds(squadraId) {
+    if (!squadraId) return [];
+    try {
+        const res = await fetch(`${API_GIOCATORI_SQUADRA}?squadra_id=${squadraId}`);
+        const data = await res.json();
+        if (!Array.isArray(data)) return [];
+        return data.map(p => String(p.id));
+    } catch (err) {
+        console.error("Errore nel recupero giocatori associati:", err);
+        return [];
+    }
+}
+
+async function aggiornaGiocatoriDisponibiliPerAssociazione() {
+    if (!assocGiocatore) return;
+    const squadraId = assocSquadra?.value;
+    // Nessuna squadra: mostra tutti
+    if (!squadraId) {
+        resetSelect(assocGiocatore, "-- Seleziona un giocatore --", false);
+        allPlayers.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.id;
+            opt.textContent = `${p.cognome || ""} ${p.nome || ""}`.trim();
+            assocGiocatore.appendChild(opt);
+        });
+        return;
+    }
+
+    const associati = await fetchGiocatoriAssociatiIds(squadraId);
+    const setAssociati = new Set(associati);
+    resetSelect(assocGiocatore, "-- Seleziona un giocatore --", false);
+    allPlayers
+        .filter(p => !setAssociati.has(String(p.id)))
+        .forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.id;
+            opt.textContent = `${p.cognome || ""} ${p.nome || ""}`.trim();
+            assocGiocatore.appendChild(opt);
+        });
 }
 
 function filterGiocatori(term) {
@@ -1340,6 +1403,7 @@ if (removeAssocModal) {
 
 assocTorneo?.addEventListener("change", async () => {
     await loadSquadre(assocSquadra, assocTorneo.value);
+    await aggiornaGiocatoriDisponibiliPerAssociazione();
 });
 
 remTorneo?.addEventListener("change", async () => {
@@ -1366,6 +1430,8 @@ modAssocGiocatore?.addEventListener("change", () => {
     const opt = modAssocGiocatore.selectedOptions && modAssocGiocatore.selectedOptions[0];
     populateModAssocStatsFromOption(opt);
 });
+
+assocSquadra?.addEventListener("change", () => aggiornaGiocatoriDisponibiliPerAssociazione());
 
 function mostraFormAssoc(val) {
     [assocFormAdd, assocFormEdit, assocFormRemove].forEach(f => f && f.classList.add('hidden'));
