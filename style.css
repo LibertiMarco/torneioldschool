@@ -2664,6 +2664,43 @@ body {
   }
 }
 
+.bracket-team .team-name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.phase-filter {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 10px 0 16px 0;
+}
+
+.phase-filter .phase-btn {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  background: #f7f9fc;
+  border-radius: 10px;
+  font-weight: 600;
+  color: #15293e;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.phase-filter .phase-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.phase-filter .phase-btn.active {
+  background: linear-gradient(135deg, #15293e, #1f3f63);
+  color: #fff;
+  border-color: #15293e;
+  box-shadow: 0 8px 18px rgba(21,41,62,0.2);
+}
+
 /* ====== PLAYOFF STILE CALENDARIO ====== */
 .fase-playoff {
   margin-bottom: 40px;

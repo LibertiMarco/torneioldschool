@@ -21,14 +21,19 @@ $sql = "
         g.cognome,
         s.nome AS squadra,
         s.logo AS logo,
-        s.torneo,
-        sg.reti AS gol,
-        sg.presenze
-    FROM squadre_giocatori sg
-    JOIN giocatori g ON g.id = sg.giocatore_id
-    JOIN squadre s ON s.id = sg.squadra_id
-    WHERE s.torneo = ? AND sg.reti > 0
-    ORDER BY sg.reti DESC, sg.presenze DESC, g.cognome ASC, g.nome ASC
+        p.torneo,
+        SUM(pg.goal) AS gol,
+        COUNT(*) AS presenze
+    FROM partita_giocatore pg
+    JOIN partite p ON p.id = pg.partita_id
+    JOIN giocatori g ON g.id = pg.giocatore_id
+    JOIN squadre s ON s.torneo = p.torneo
+        AND s.nome IN (p.squadra_casa, p.squadra_ospite)
+    JOIN squadre_giocatori sg ON sg.giocatore_id = g.id AND sg.squadra_id = s.id
+    WHERE p.torneo = ?
+    GROUP BY g.id, s.id, p.torneo
+    HAVING SUM(pg.goal) > 0
+    ORDER BY gol DESC, presenze DESC, g.cognome ASC, g.nome ASC
     LIMIT ?
 ";
 

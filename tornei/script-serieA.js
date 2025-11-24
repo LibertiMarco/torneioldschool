@@ -483,6 +483,7 @@ async function caricaPlayoff(tipoCoppa) {
         <option value="RITORNO">Ritorno</option>
       </select>
     </div>
+    <div class="phase-filter" id="playoffPhaseFilters"></div>
     <div class="bracket-wrapper" id="fasiPlayoff"></div>
   `;
 
@@ -505,6 +506,9 @@ async function caricaPlayoff(tipoCoppa) {
     const fasiContainer = document.getElementById("fasiPlayoff");
     const legWrap = document.getElementById("playoffLegFilterWrap");
     const legSelect = document.getElementById("playoffLegFilter");
+    const phaseFilter = document.getElementById("playoffPhaseFilters");
+    let currentLeg = "";
+    let currentPhase = "";
 
     const hasSemiLegs = Object.values(data || {}).some(arr =>
       (arr || []).some(p => (p.fase_round || "").toUpperCase() === "SEMIFINALE" && p.fase_leg)
@@ -515,17 +519,51 @@ async function caricaPlayoff(tipoCoppa) {
       legWrap.style.display = "none";
     }
 
-    const renderPlayoff = (selectedLeg = "") => {
+    if (phaseFilter) {
+      phaseFilter.innerHTML = "";
+      const phases =
+        tipoCoppa.toLowerCase() === "gold"
+          ? [
+              { label: "Tutte", val: "" },
+              { label: "Ottavi", val: "4" },
+              { label: "Quarti", val: "3" },
+              { label: "Semifinali", val: "2" },
+              { label: "Finale", val: "1" },
+            ]
+          : [
+              { label: "Tutte", val: "" },
+              { label: "Semifinali", val: "2" },
+              { label: "Finale", val: "1" },
+            ];
+      phases.forEach(ph => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "phase-btn" + (ph.val === "" ? " active" : "");
+        btn.dataset.phase = ph.val;
+        btn.textContent = ph.label;
+        btn.onclick = () => {
+          phaseFilter.querySelectorAll(".phase-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          currentPhase = ph.val;
+          renderPlayoff();
+        };
+        phaseFilter.appendChild(btn);
+      });
+    }
+
+    const renderPlayoff = (newLeg) => {
+      if (typeof newLeg !== "undefined") currentLeg = newLeg;
       if (!fasiContainer) return;
       fasiContainer.innerHTML = "";
       const ordineGiornate = [4, 3, 2, 1]; // Ottavi -> Quarti -> Semi -> Finale
 
       ordineGiornate.forEach(g => {
+        if (currentPhase && String(g) !== currentPhase) return;
         const matchList = (data[g] || []).filter(p => {
           const leg = (p.fase_leg || "").toUpperCase();
           const isSemi = (p.fase_round || "").toUpperCase() === "SEMIFINALE";
-          if (selectedLeg && isSemi && leg) {
-            return leg === selectedLeg;
+          if (currentLeg && isSemi && leg) {
+            return leg === currentLeg;
           }
           return true;
         });

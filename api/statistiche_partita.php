@@ -57,7 +57,7 @@ if (!$partita_id) {
 /* Pulsante indietro */
 .page-header .btn-back {
     align-self: flex-start;
-    background: linear-gradient(135deg, #1f3f63, #2a5b8a);
+    background: #15293e;
     border: none;
     padding: 10px 16px;
     color: white;
@@ -274,19 +274,11 @@ if (!$partita_id) {
   <div class="form-row">
     <div class="form-group half">
       <label>Giallo</label>
-      <label class="toggle-control">
-        <input type="checkbox" name="cartellino_giallo" value="1">
-        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-        <span class="toggle-label">Cartellino giallo</span>
-      </label>
+      <input type="checkbox" name="cartellino_giallo" value="1">
     </div>
     <div class="form-group half">
       <label>Rosso</label>
-      <label class="toggle-control">
-        <input type="checkbox" name="cartellino_rosso" value="1">
-        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-        <span class="toggle-label">Cartellino rosso</span>
-      </label>
+      <input type="checkbox" name="cartellino_rosso" value="1">
     </div>
   </div>
 
@@ -327,19 +319,11 @@ if (!$partita_id) {
   <div class="form-row">
     <div class="form-group half">
       <label>Giallo</label>
-      <label class="toggle-control">
-        <input id="edit_giallo" type="checkbox" name="cartellino_giallo" value="1">
-        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-        <span class="toggle-label">Cartellino giallo</span>
-      </label>
+      <input id="edit_giallo" type="checkbox" name="cartellino_giallo" value="1">
     </div>
     <div class="form-group half">
       <label>Rosso</label>
-      <label class="toggle-control">
-        <input id="edit_rosso" type="checkbox" name="cartellino_rosso" value="1">
-        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-        <span class="toggle-label">Cartellino rosso</span>
-      </label>
+      <input id="edit_rosso" type="checkbox" name="cartellino_rosso" value="1">
     </div>
   </div>
 
