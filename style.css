@@ -358,9 +358,19 @@ body {
     font-size: 14px;
   }
 
+  /* Evita scroll orizzontale su mobile */
+  #marcatori .marcatori-table {
+    min-width: 100%;
+  }
+
   /* Nasconde la colonna Squadra su mobile */
   #marcatori .marcatori-table th:nth-child(3),
   #marcatori .marcatori-table td:nth-child(3) {
+    display: none;
+  }
+  /* Nasconde Presenze su mobile per avere 3 colonne visibili */
+  #marcatori .marcatori-table th:nth-child(5),
+  #marcatori .marcatori-table td:nth-child(5) {
     display: none;
   }
 

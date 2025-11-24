@@ -144,7 +144,7 @@ async function caricaMarcatori(torneoSlug = TORNEO) {
   if (!body) return;
   body.innerHTML = `<tr><td colspan="5">Caricamento...</td></tr>`;
   try {
-    const res = await fetch(`/api/classifica_marcatori.php?torneo=${encodeURIComponent(torneoSlug)}`);
+    const res = await fetch(`/api/classifica_marcatori.php?torneo=${encodeURIComponent(torneoSlug)}&limit=15`);
     const data = await res.json();
     if (!Array.isArray(data)) {
       body.innerHTML = `<tr><td colspan="5">Nessun dato marcatori</td></tr>`;
