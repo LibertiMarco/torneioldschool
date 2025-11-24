@@ -21,26 +21,28 @@ $perPage = (int)($_GET['per_page'] ?? 10);
 $perPage = $perPage > 0 ? min($perPage, 50) : 10;
 $offset = ($page - 1) * $perPage;
 
-$conditions = [];
-$params = [];
-$types = '';
+$conditionsBase = [];
+$conditionsSearch = [];
+$paramsSearch = [];
+$typesSearch = '';
 
 if ($search !== '') {
-    $conditions[] = '(CONCAT_WS(" ", g.nome, g.cognome) LIKE ? OR CONCAT_WS(" ", g.cognome, g.nome) LIKE ?)';
+    $conditionsSearch[] = '(CONCAT_WS(" ", nome, cognome) LIKE ? OR CONCAT_WS(" ", cognome, nome) LIKE ?)';
     $like = '%' . $search . '%';
-    $params[] = $like;
-    $params[] = $like;
-    $types .= 'ss';
+    $paramsSearch[] = $like;
+    $paramsSearch[] = $like;
+    $typesSearch .= 'ss';
 }
 
-// Filtri per escludere valori a zero
+// Filtri per escludere valori a zero (sempre applicati alla base classifica)
 if ($ordine === 'gol') {
-    $conditions[] = 'g.reti > 0';
+    $conditionsBase[] = 'g.reti > 0';
 } elseif ($ordine === 'presenze') {
-    $conditions[] = 'g.presenze > 0';
+    $conditionsBase[] = 'g.presenze > 0';
 }
 
-$where = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
+$whereBase = $conditionsBase ? 'WHERE ' . implode(' AND ', $conditionsBase) : '';
+$whereSearch = $conditionsSearch ? 'WHERE ' . implode(' AND ', $conditionsSearch) : '';
 
 $orderClause = $ordine === 'presenze'
     ? 'ORDER BY presenze DESC, gol DESC, g.cognome ASC, g.nome ASC'
@@ -48,25 +50,31 @@ $orderClause = $ordine === 'presenze'
 
 // Query dati
 $sql = "
-    SELECT 
-        g.id,
-        g.nome,
-        g.cognome,
-        g.ruolo,
-        '' AS squadra,
-        '' AS torneo,
-        g.foto AS foto,
-        g.reti AS gol,
-        g.presenze AS presenze,
-        g.media_voti AS media_voti
-    FROM giocatori g
-    $where
-    $orderClause
+    SELECT *
+    FROM (
+        SELECT 
+            g.id,
+            g.nome,
+            g.cognome,
+            g.ruolo,
+            '' AS squadra,
+            '' AS torneo,
+            g.foto AS foto,
+            g.reti AS gol,
+            g.presenze AS presenze,
+            g.media_voti AS media_voti,
+            @rownum := @rownum + 1 AS posizione
+        FROM giocatori g
+        CROSS JOIN (SELECT @rownum := 0) AS r
+        $whereBase
+        $orderClause
+    ) AS ordered
+    $whereSearch
     LIMIT ? OFFSET ?
 ";
 
-$paramsData = $params;
-$typesData = $types . 'ii';
+$paramsData = $paramsSearch;
+$typesData = $typesSearch . 'ii';
 $paramsData[] = $perPage;
 $paramsData[] = $offset;
 
@@ -77,7 +85,7 @@ if (!$stmt) {
     exit;
 }
 
-if ($typesData !== '' && $paramsData) {
+if ($typesSearch !== '' && $paramsData) {
     $stmt->bind_param($typesData, ...$paramsData);
 } else {
     $stmt->bind_param('ii', $perPage, $offset);
@@ -94,14 +102,19 @@ $stmt->close();
 // Conteggio totale per la paginazione
 $countSql = "
     SELECT COUNT(*) AS totale
-    FROM giocatori g
-    $where
+    FROM (
+        SELECT g.id
+        FROM giocatori g
+        $whereBase
+        $orderClause
+    ) AS ordered
+    $whereSearch
 ";
 
 $countStmt = $conn->prepare($countSql);
 if ($countStmt) {
-    if ($types !== '' && $params) {
-        $countStmt->bind_param($types, ...$params);
+    if ($typesSearch !== '' && $paramsSearch) {
+        $countStmt->bind_param($typesSearch, ...$paramsSearch);
     }
     $countStmt->execute();
     $countRes = $countStmt->get_result();

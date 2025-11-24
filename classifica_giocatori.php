@@ -165,8 +165,9 @@ function renderCards(players) {
     }
 
     const startIndex = ((lastMeta.page || 1) - 1) * (lastMeta.per_page || perPage);
+
     leaderList.innerHTML = players.map((p, idx) => {
-        const posizione = startIndex + idx + 1;
+        const posizione = p.posizione ?? (startIndex + idx + 1);
         const foto = p.foto || FALLBACK_AVATAR;
         const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim();
         const ruolo = p.ruolo ? `<span class="leader-role">${escapeHTML(p.ruolo)}</span>` : '';
