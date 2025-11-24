@@ -2,6 +2,7 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+$loggedIn = isset($_SESSION['user_id']);
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -25,6 +26,29 @@ if (session_status() === PHP_SESSION_NONE) {
             <a class="hero-btn" href="/tornei.php">Vai ai tornei</a>
         </div>
     </section>
+
+    <?php if (!$loggedIn): ?>
+      <section class="leaders-panel">
+        <div class="leader-list">
+          <p class="empty-state">Per vedere la classifica completa devi accedere.</p>
+        </div>
+        <div class="leader-hero-actions" style="margin-top:16px;">
+          <a class="hero-btn" href="/login.php">Accedi</a>
+          <a class="hero-btn hero-btn--ghost" href="/register.php">Crea un account</a>
+        </div>
+      </section>
+    </div>
+
+    <div id="footer-container"></div>
+    <script>
+    fetch("/includi/footer.html")
+        .then(response => response.text())
+        .then(html => document.getElementById("footer-container").innerHTML = html)
+        .catch(error => console.error("Errore nel caricamento del footer:", error));
+    </script>
+    </body>
+    </html>
+    <?php exit; endif; ?>
 
     <section class="leaders-panel">
         <div class="leaders-controls">

@@ -1642,6 +1642,13 @@ body {
   font-weight: 600;
 }
 
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 14px;
+}
+
 .footer-links a {
   color: #ffffffcc;
   text-decoration: none;
@@ -1692,6 +1699,10 @@ body {
   .footer-content {
     flex-direction: column;
     gap: 20px;
+  }
+
+  .footer-links {
+    gap: 12px 14px; /* spazio extra tra le righe quando vanno a capo */
   }
 }
 

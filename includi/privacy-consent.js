@@ -176,7 +176,11 @@
   }
 
   function showBanner() {
-    const banner = document.getElementById(BANNER_ID);
+    let banner = document.getElementById(BANNER_ID);
+    if (!banner) {
+      renderBanner();
+      banner = document.getElementById(BANNER_ID);
+    }
     if (banner) {
       banner.classList.add('is-visible');
     }
@@ -226,12 +230,18 @@
     }
   });
 
-  document.addEventListener('DOMContentLoaded', () => {
+  function initConsent() {
     renderBanner();
     const consent = loadConsent();
     if (!consent) {
       showBanner();
     }
     applyConsent(consent);
-  });
+  }
+
+  if (document.readyState !== 'loading') {
+    initConsent();
+  } else {
+    document.addEventListener('DOMContentLoaded', initConsent);
+  }
 })();
