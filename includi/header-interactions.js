@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   if (window.__HEADER_INTERACTIONS_INITIALIZED__) {
     return;
   }
@@ -111,7 +111,20 @@
     ensureGlobalListeners();
   }
 
+  function loadPrivacyScript() {
+    if (window.__TOS_CONSENT_LOADER__) {
+      return;
+    }
+    window.__TOS_CONSENT_LOADER__ = true;
+    const script = document.createElement("script");
+    script.src = "/includi/privacy-consent.js";
+    script.defer = true;
+    document.head.appendChild(script);
+  }
+
   window.initHeaderInteractions = initHeaderInteractions;
+
+  loadPrivacyScript();
 
   if (document.readyState !== "loading") {
     initHeaderInteractions(document);

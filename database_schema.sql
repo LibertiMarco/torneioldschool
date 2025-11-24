@@ -202,3 +202,22 @@ CREATE TABLE IF NOT EXISTS notifiche_commenti (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- Tracciamento eventi utente (solo se consenso fornito)
+CREATE TABLE IF NOT EXISTS eventi_utente (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL,
+    session_id VARCHAR(128) DEFAULT NULL,
+    event_type VARCHAR(64) NOT NULL,
+    path VARCHAR(255) DEFAULT NULL,
+    referrer VARCHAR(255) DEFAULT NULL,
+    title VARCHAR(255) DEFAULT NULL,
+    details TEXT,
+    ip_troncato VARCHAR(64) DEFAULT NULL,
+    user_agent VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_event_type_created (event_type, created_at),
+    INDEX idx_session_created (session_id, created_at),
+    INDEX idx_user_created (user_id, created_at),
+    CONSTRAINT fk_event_user FOREIGN KEY (user_id) REFERENCES utenti(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

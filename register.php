@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
@@ -316,8 +316,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     .toggle-password.is-visible .icon-eye {
       display: none;
     }
-    .toggle-password.is-visible .icon-eye-off {
+        .toggle-password.is-visible .icon-eye-off {
       display: block;
+    }
+    .consent-box {
+      background: #f7f9fc;
+      border: 1px solid #e5e8ed;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-top: 6px;
+    }
+    .consent-box label {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 0.95rem;
+      color: #15293e;
+      line-height: 1.4;
+    }
+    .consent-box input[type="checkbox"] {
+      margin-top: 4px;
+    }
+    .consent-note {
+      color: #555;
+      font-size: 0.9rem;
+      margin: 8px 0 0;
     }
   </style>
 </head>
@@ -387,7 +410,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           </label>
           <span class="file-name" id="avatarName">Nessun file selezionato</span>
         </div>
-        <small style="color:#666;">File JPG, PNG, GIF o WEBP - max 2MB.</small>
+                <small style="color:#666;">File JPG, PNG, GIF o WEBP - max 2MB.</small>
+
+        <div class="consent-box">
+          <label>
+            <input type="checkbox" name="accetta_privacy" required>
+            <span>Ho letto la <a href="/privacy.php" target="_blank">Privacy Policy</a> e acconsento al trattamento dei dati per l'iscrizione.</span>
+          </label>
+          <label>
+            <input type="checkbox" name="consenso_foto">
+            <span>Acconsento all'uso della mia foto per mostrare profili e classifiche (facoltativo).</span>
+          </label>
+        </div>
+        <p class="consent-note">Puoi revocare i consensi scrivendo a <a href="mailto:info@torneioldschool.it">info@torneioldschool.it</a>.</p>
 
         <button type="submit" class="register-btn">Crea Account</button>
 
@@ -499,5 +534,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   </script>
 </body>
 </html>
+
+
 
 
