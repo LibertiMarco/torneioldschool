@@ -675,8 +675,11 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
           <select id="assocTorneo" required>
               <option value="">-- Seleziona un torneo --</option>
               <?php foreach ($tornei as $torneoVal): ?>
-              <?php $torneoNome = htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo'); ?>
-              <option value="<?= $torneoNome ?>">
+              <?php
+                  $torneoSlug = htmlspecialchars($torneoVal['torneo'] ?? $torneoVal['filetorneo'] ?? '');
+                  $torneoNome = htmlspecialchars($torneoVal['nome'] ?? $torneoSlug ?? 'Torneo');
+              ?>
+              <option value="<?= $torneoSlug ?>">
                   <?= $torneoNome ?>
               </option>
               <?php endforeach; ?>
@@ -740,8 +743,11 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
           <select id="modAssocTorneo" required>
               <option value="">-- Seleziona un torneo --</option>
               <?php foreach ($tornei as $torneoVal): ?>
-              <?php $torneoNome = htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo'); ?>
-              <option value="<?= $torneoNome ?>">
+              <?php
+                  $torneoSlug = htmlspecialchars($torneoVal['torneo'] ?? $torneoVal['filetorneo'] ?? '');
+                  $torneoNome = htmlspecialchars($torneoVal['nome'] ?? $torneoSlug ?? 'Torneo');
+              ?>
+              <option value="<?= $torneoSlug ?>">
                   <?= $torneoNome ?>
               </option>
               <?php endforeach; ?>
@@ -841,8 +847,11 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
           <select id="remTorneo" required>
               <option value="">-- Seleziona un torneo --</option>
               <?php foreach ($tornei as $torneoVal): ?>
-              <?php $torneoNome = htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo'); ?>
-              <option value="<?= $torneoNome ?>">
+              <?php
+                  $torneoSlug = htmlspecialchars($torneoVal['torneo'] ?? $torneoVal['filetorneo'] ?? '');
+                  $torneoNome = htmlspecialchars($torneoVal['nome'] ?? $torneoSlug ?? 'Torneo');
+              ?>
+              <option value="<?= $torneoSlug ?>">
                   <?= $torneoNome ?>
               </option>
               <?php endforeach; ?>

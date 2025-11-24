@@ -468,7 +468,7 @@ async function caricaPlayoff(tipoCoppa) {
   }
 }
 
-// override con filtro andata/ritorno semifinali
+// override con filtro andata/ritorno semifinali in stile bracket
 async function caricaPlayoff(tipoCoppa) {
   const faseParam = (tipoCoppa || "gold").toUpperCase(); // GOLD / SILVER
   const container = document.getElementById("playoffContainer");
@@ -483,7 +483,7 @@ async function caricaPlayoff(tipoCoppa) {
         <option value="RITORNO">Ritorno</option>
       </select>
     </div>
-    <div id="fasiPlayoff"></div>
+    <div class="bracket-wrapper" id="fasiPlayoff"></div>
   `;
 
   try {
@@ -518,86 +518,59 @@ async function caricaPlayoff(tipoCoppa) {
     const renderPlayoff = (selectedLeg = "") => {
       if (!fasiContainer) return;
       fasiContainer.innerHTML = "";
-      const giornate = Object.keys(data)
-        .map(g => parseInt(g))
-        .filter(g => g >= 1 && g <= 4)
-        .sort((a, b) => a - b);
+      const ordineGiornate = [4, 3, 2, 1]; // Ottavi -> Quarti -> Semi -> Finale
 
-      giornate.forEach(g => {
-        const nomeFase = fasiMap[g] || `Fase ${g}`;
-        const faseDiv = document.createElement("div");
-        faseDiv.classList.add("fase-playoff");
+      ordineGiornate.forEach(g => {
+        const matchList = (data[g] || []).filter(p => {
+          const leg = (p.fase_leg || "").toUpperCase();
+          const isSemi = (p.fase_round || "").toUpperCase() === "SEMIFINALE";
+          if (selectedLeg && isSemi && leg) {
+            return leg === selectedLeg;
+          }
+          return true;
+        });
+        if (!matchList.length) return;
 
-        const titolo = document.createElement("h3");
-        titolo.textContent = nomeFase;
-        faseDiv.appendChild(titolo);
+        const col = document.createElement("div");
+        col.className = "bracket-col";
+        const titolo = document.createElement("div");
+        titolo.className = "bracket-col-title";
+        titolo.textContent = fasiMap[g] || `Fase ${g}`;
+        col.appendChild(titolo);
 
-        (data[g] || [])
-          .filter(partita => {
-            const leg = (partita.fase_leg || "").toUpperCase();
-            if (selectedLeg && leg) return leg === selectedLeg;
-            return true;
-          })
-          .forEach(partita => {
-            const partitaDiv = document.createElement("div");
-            partitaDiv.classList.add("match-card");
+        matchList.forEach(partita => {
+          const giocata = partita.giocata == 1 && partita.gol_casa !== null && partita.gol_ospite !== null;
+          const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
+          const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
+          const dataStr = formattaData(partita.data_partita);
+          const legLabel = partita.fase_leg ? ` · ${partita.fase_leg}` : "";
 
-            const dataStr = formattaData(partita.data_partita);
-            const stadio = partita.campo || "Campo da definire";
-            const giocata = partita.giocata == 1;
-            const golCasa = giocata ? partita.gol_casa : null;
-            const golOspite = giocata ? partita.gol_ospite : null;
-
-            const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
-            const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
-
-            partitaDiv.innerHTML = `
-              <div class="match-header">
-                <span>
-                  ${stadio}
-                  ${
-                    stadio && stadio !== "Campo da definire"
-                      ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stadio)}"
-                            target="_blank"
-                            class="maps-link">�Y"?</a>`
-                      : ""
-                  }
-                </span>
-                <span>
-                  ${dataStr}${partita.ora_partita ? " - " + partita.ora_partita.slice(0,5) : ""}
-                  ${partita.fase_leg ? ` · ${partita.fase_leg}` : ""}
-                </span>
+          const match = document.createElement("div");
+          match.className = "bracket-match";
+          match.innerHTML = `
+            <div class="bracket-team">
+              <div class="team-side">
+                <img class="team-logo" src="${logoCasa}" alt="${partita.squadra_casa}">
+                <span class="team-name">${partita.squadra_casa}</span>
               </div>
-
-              <div class="match-body">
-                <div class="team home">
-                  <img src="${logoCasa}" alt="${partita.squadra_casa}" class="team-logo">
-                  <span class="team-name">${partita.squadra_casa}</span>
-                </div>
-
-                <div class="match-center">
-                  ${
-                    giocata
-                      ? `<span class="score">${golCasa}</span>
-                         <span class="dash">-</span>
-                         <span class="score">${golOspite}</span>`
-                      : `<span class="vs">VS</span>`
-                  }
-                </div>
-
-                <div class="team away">
-                  <span class="team-name">${partita.squadra_ospite}</span>
-                  <img src="${logoOspite}" alt="${partita.squadra_ospite}" class="team-logo">
-                </div>
+              <span class="team-score">${giocata ? partita.gol_casa : '-'}</span>
+            </div>
+            <div class="bracket-team">
+              <div class="team-side">
+                <img class="team-logo" src="${logoOspite}" alt="${partita.squadra_ospite}">
+                <span class="team-name">${partita.squadra_ospite}</span>
               </div>
-            `;
+              <span class="team-score">${giocata ? partita.gol_ospite : '-'}</span>
+            </div>
+            <div class="bracket-meta">
+              <span>${dataStr}${partita.ora_partita ? ' · ' + partita.ora_partita.slice(0,5) : ''}${legLabel}</span>
+              <span>${partita.campo || 'Campo da definire'}</span>
+            </div>
+          `;
+          col.appendChild(match);
+        });
 
-            faseDiv.appendChild(partitaDiv);
-          });
-
-        if (faseDiv.querySelector(".match-card")) {
-          fasiContainer.appendChild(faseDiv);
-        }
+        fasiContainer.appendChild(col);
       });
     };
 
