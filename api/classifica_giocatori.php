@@ -22,27 +22,28 @@ $perPage = $perPage > 0 ? min($perPage, 50) : 10;
 $offset = ($page - 1) * $perPage;
 
 $conditionsBase = [];
-$conditionsSearch = [];
+$searchConditions = [];
 $paramsSearch = [];
 $typesSearch = '';
 
-if ($search !== '') {
-    $conditionsSearch[] = '(CONCAT_WS(" ", nome, cognome) LIKE ? OR CONCAT_WS(" ", cognome, nome) LIKE ?)';
-    $like = '%' . $search . '%';
-    $paramsSearch[] = $like;
-    $paramsSearch[] = $like;
-    $typesSearch .= 'ss';
-}
-
-// Filtri per escludere valori a zero (sempre applicati alla base classifica)
+// Filtri base (escludi zero)
 if ($ordine === 'gol') {
     $conditionsBase[] = 'g.reti > 0';
 } elseif ($ordine === 'presenze') {
     $conditionsBase[] = 'g.presenze > 0';
 }
 
+// Filtro ricerca (applicato DOPO il ranking)
+if ($search !== '') {
+    $searchConditions[] = '(CONCAT_WS(" ", nome, cognome) LIKE ? OR CONCAT_WS(" ", cognome, nome) LIKE ?)';
+    $like = '%' . $search . '%';
+    $paramsSearch[] = $like;
+    $paramsSearch[] = $like;
+    $typesSearch .= 'ss';
+}
+
 $whereBase = $conditionsBase ? 'WHERE ' . implode(' AND ', $conditionsBase) : '';
-$whereSearch = $conditionsSearch ? 'WHERE ' . implode(' AND ', $conditionsSearch) : '';
+$whereSearch = $searchConditions ? 'WHERE ' . implode(' AND ', $searchConditions) : '';
 
 $orderClause = $ordine === 'presenze'
     ? 'ORDER BY g.presenze DESC, g.reti DESC, g.cognome ASC, g.nome ASC'
@@ -53,32 +54,21 @@ $sql = "
     SELECT *
     FROM (
         SELECT 
-            base.id,
-            base.nome,
-            base.cognome,
-            base.ruolo,
+            g.id,
+            g.nome,
+            g.cognome,
+            g.ruolo,
             '' AS squadra,
             '' AS torneo,
-            base.foto,
-            base.gol,
-            base.presenze,
-            base.media_voti,
+            g.foto,
+            g.reti AS gol,
+            g.presenze,
+            g.media_voti,
             @rownum := @rownum + 1 AS posizione
-        FROM (
-            SELECT 
-                g.id,
-                g.nome,
-                g.cognome,
-                g.ruolo,
-                g.foto,
-                g.reti AS gol,
-                g.presenze,
-                g.media_voti
-            FROM giocatori g
-            $whereBase
-            $orderClause
-        ) AS base
+        FROM giocatori g
         CROSS JOIN (SELECT @rownum := 0) AS r
+        $whereBase
+        $orderClause
     ) AS ordered
     $whereSearch
     ORDER BY posizione ASC
@@ -115,13 +105,11 @@ $stmt->close();
 $countSql = "
     SELECT COUNT(*) AS totale
     FROM (
-        SELECT 
-            g.id,
-            g.nome,
-            g.cognome
+        SELECT g.id, g.nome, g.cognome
         FROM giocatori g
         $whereBase
-    ) AS base
+        $orderClause
+    ) AS ordered
     $whereSearch
 ";
 
