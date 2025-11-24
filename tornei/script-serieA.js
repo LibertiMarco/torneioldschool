@@ -543,8 +543,8 @@ async function caricaRosaSquadra(squadra) {
       const nome = giocatore.nome || "";
       const cognome = giocatore.cognome || "";
       const nomeCompleto = `${nome} ${cognome}`.trim() || "Giocatore";
-      const ruolo = (giocatore.ruolo || "").toLowerCase();
-      const isPortiere = ruolo.includes("portiere") || ruolo === "p" || ruolo === "gk";
+      const ruolo = (giocatore.ruolo || "").toLowerCase().trim();
+      const isPortiere = ruolo === "portiere";
       const ruoloBadge = isPortiere ? ' <span class="role-badge gk-badge">GK</span>' : "";
       const foto = giocatore.foto || FALLBACK_AVATAR;
 
