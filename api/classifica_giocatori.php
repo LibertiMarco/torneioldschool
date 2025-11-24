@@ -47,9 +47,6 @@ $whereSearch = $conditionsSearch ? 'WHERE ' . implode(' AND ', $conditionsSearch
 $orderClause = $ordine === 'presenze'
     ? 'ORDER BY g.presenze DESC, g.reti DESC, g.cognome ASC, g.nome ASC'
     : 'ORDER BY g.reti DESC, g.presenze DESC, g.cognome ASC, g.nome ASC';
-$outerOrder = $ordine === 'presenze'
-    ? 'ORDER BY presenze DESC, gol DESC, cognome ASC, nome ASC'
-    : 'ORDER BY gol DESC, presenze DESC, cognome ASC, nome ASC';
 
 // Query dati
 $sql = "
@@ -84,7 +81,7 @@ $sql = "
         CROSS JOIN (SELECT @rownum := 0) AS r
     ) AS ordered
     $whereSearch
-    $outerOrder
+    ORDER BY posizione ASC
     LIMIT ? OFFSET ?
 ";
 
