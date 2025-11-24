@@ -43,7 +43,9 @@ function salvaFotoGiocatore($nome, $cognome, $fieldName, $fotoEsistente = null) 
         'image/jpeg' => 'jpg',
         'image/png'  => 'png',
         'image/webp' => 'webp',
-        'image/gif'  => 'gif'
+        'image/gif'  => 'gif',
+        'image/pjpeg' => 'jpg',
+        'image/jpg' => 'jpg'
     ];
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
     $mime = finfo_file($finfo, $_FILES[$fieldName]['tmp_name']);
@@ -52,7 +54,11 @@ function salvaFotoGiocatore($nome, $cognome, $fieldName, $fotoEsistente = null) 
         return $fotoEsistente ?: '/img/giocatori/unknown.jpg';
     }
 
-    $baseDir = realpath(__DIR__ . '/../img/giocatori');
+    $baseDirPath = __DIR__ . '/../img/giocatori';
+    if (!is_dir($baseDirPath)) {
+        @mkdir($baseDirPath, 0775, true);
+    }
+    $baseDir = realpath($baseDirPath);
     if (!$baseDir) {
         return $fotoEsistente ?: '/img/giocatori/unknown.jpg';
     }

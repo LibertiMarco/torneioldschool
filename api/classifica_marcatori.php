@@ -27,7 +27,7 @@ $sql = "
     FROM squadre_giocatori sg
     JOIN giocatori g ON g.id = sg.giocatore_id
     JOIN squadre s ON s.id = sg.squadra_id
-    WHERE s.torneo = ?
+    WHERE s.torneo = ? AND sg.reti > 0
     ORDER BY sg.reti DESC, sg.presenze DESC, g.cognome ASC, g.nome ASC
     LIMIT ?
 ";
