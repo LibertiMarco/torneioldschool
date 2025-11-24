@@ -352,6 +352,19 @@ body {
   background: #fff;
 }
 
+.marcatori-pagination {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.marcatori-pagination #marcatoriPageInfo {
+  font-weight: 600;
+  color: #15293e;
+}
+
 @media (max-width: 720px) {
   #marcatori .table-wrapper {
     overflow-x: visible;

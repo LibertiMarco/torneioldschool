@@ -139,44 +139,74 @@ function mostraClassifica(classifica) {
 }
 
 // ====================== MARCATORI TORNEO ======================
+const MARCATORI_PER_PAGE = 15;
+let marcatoriData = [];
+let marcatoriPage = 1;
+
+function renderMarcatoriPagina(page = 1) {
+  const body = document.getElementById("marcatoriBody");
+  if (!body) return;
+
+  if (!Array.isArray(marcatoriData) || marcatoriData.length === 0) {
+    body.innerHTML = `<tr><td colspan="5">Nessun dato marcatori</td></tr>`;
+    const info = document.getElementById("marcatoriPageInfo");
+    if (info) info.textContent = "";
+    if (document.getElementById("prevMarcatori")) document.getElementById("prevMarcatori").disabled = true;
+    if (document.getElementById("nextMarcatori")) document.getElementById("nextMarcatori").disabled = true;
+    return;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(marcatoriData.length / MARCATORI_PER_PAGE));
+  marcatoriPage = Math.min(Math.max(1, page), totalPages);
+  const start = (marcatoriPage - 1) * MARCATORI_PER_PAGE;
+  const slice = marcatoriData.slice(start, start + MARCATORI_PER_PAGE);
+
+  body.innerHTML = "";
+  slice.forEach((p, idx) => {
+    const logo = resolveLogoPath(p.squadra, p.logo);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${start + idx + 1}</td>
+      <td>
+        <div class="scorer-player">
+          <span class="scorer-name">${p.nome ?? ''} ${p.cognome ?? ''}</span>
+          <img class="scorer-logo-inline" src="${logo}" alt="${p.squadra || ''}">
+        </div>
+      </td>
+      <td>
+        <div class="scorer-team">
+          <img src="${logo}" alt="${p.squadra || ''}">
+          <span>${p.squadra || ''}</span>
+        </div>
+      </td>
+      <td>${p.gol ?? 0}</td>
+      <td>${p.presenze ?? 0}</td>
+    `;
+    body.appendChild(tr);
+  });
+
+  const prevBtn = document.getElementById("prevMarcatori");
+  const nextBtn = document.getElementById("nextMarcatori");
+  const info = document.getElementById("marcatoriPageInfo");
+  if (info) info.textContent = `Pagina ${marcatoriPage} di ${totalPages}`;
+  if (prevBtn) prevBtn.disabled = marcatoriPage <= 1;
+  if (nextBtn) nextBtn.disabled = marcatoriPage >= totalPages;
+}
+
 async function caricaMarcatori(torneoSlug = TORNEO) {
   const body = document.getElementById("marcatoriBody");
   if (!body) return;
   body.innerHTML = `<tr><td colspan="5">Caricamento...</td></tr>`;
   try {
-    const res = await fetch(`/api/classifica_marcatori.php?torneo=${encodeURIComponent(torneoSlug)}&limit=15`);
+    const res = await fetch(`/api/classifica_marcatori.php?torneo=${encodeURIComponent(torneoSlug)}`);
     const data = await res.json();
-    if (!Array.isArray(data)) {
-      body.innerHTML = `<tr><td colspan="5">Nessun dato marcatori</td></tr>`;
+    if (!Array.isArray(data) || !data.length) {
+      marcatoriData = [];
+      renderMarcatoriPagina(1);
       return;
     }
-    if (!data.length) {
-      body.innerHTML = `<tr><td colspan="5">Nessun dato marcatori</td></tr>`;
-      return;
-    }
-    body.innerHTML = "";
-    data.forEach((p, idx) => {
-      const logo = resolveLogoPath(p.squadra, p.logo);
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${idx + 1}</td>
-        <td>
-          <div class="scorer-player">
-            <span class="scorer-name">${p.nome ?? ''} ${p.cognome ?? ''}</span>
-            <img class="scorer-logo-inline" src="${logo}" alt="${p.squadra || ''}">
-          </div>
-        </td>
-        <td>
-          <div class="scorer-team">
-            <img src="${logo}" alt="${p.squadra || ''}">
-            <span>${p.squadra || ''}</span>
-          </div>
-        </td>
-        <td>${p.gol ?? 0}</td>
-        <td>${p.presenze ?? 0}</td>
-      `;
-      body.appendChild(tr);
-    });
+    marcatoriData = data;
+    renderMarcatoriPagina(1);
   } catch (err) {
     console.error("Errore nel caricamento marcatori:", err);
     body.innerHTML = `<tr><td colspan="5">Errore caricamento marcatori</td></tr>`;
@@ -577,6 +607,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const heroImg = document.getElementById("torneoHeroImg");
   const torneoTitle = document.querySelector(".torneo-title .titolo");
   const loadClassifica = (slug) => caricaClassifica(slug || TORNEO);
+  const prevMarcatori = document.getElementById("prevMarcatori");
+  const nextMarcatori = document.getElementById("nextMarcatori");
 
   // carico subito la parte girone
   caricaClassifica();
@@ -657,4 +689,15 @@ document.querySelectorAll(".tab-button").forEach(btn => {
       caricaMarcatori();
     }
   });
+
+  if (prevMarcatori) {
+    prevMarcatori.addEventListener("click", () => {
+      renderMarcatoriPagina(marcatoriPage - 1);
+    });
+  }
+  if (nextMarcatori) {
+    nextMarcatori.addEventListener("click", () => {
+      renderMarcatoriPagina(marcatoriPage + 1);
+    });
+  }
 });
