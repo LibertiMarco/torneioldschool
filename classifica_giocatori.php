@@ -72,6 +72,7 @@ const perPage = 10;
 let currentPage = 1;
 let lastMeta = { page: 1, per_page: perPage, total: 0, total_pages: 0 };
 let currentOrder = 'gol';
+const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
 
 const leaderList = document.getElementById('leaderList');
 const pageInfo = document.getElementById('pageInfo');
@@ -104,7 +105,7 @@ function renderCards(players) {
     const startIndex = ((lastMeta.page || 1) - 1) * (lastMeta.per_page || perPage);
     leaderList.innerHTML = players.map((p, idx) => {
         const posizione = startIndex + idx + 1;
-        const foto = p.foto || '/img/giocatori/unknown.jpg';
+        const foto = p.foto || FALLBACK_AVATAR;
         const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim() || 'Giocatore';
         const ruolo = p.ruolo ? `<span class="leader-role">${escapeHTML(p.ruolo)}</span>` : '';
         const team = p.squadra ? escapeHTML(p.squadra) : 'Squadra non assegnata';
@@ -114,7 +115,7 @@ function renderCards(players) {
             <div class="leader-card">
                 <div class="leader-rank">${posizione}</div>
                 <div class="leader-avatar">
-                    <img src="${foto}" alt="${nomeCompleto}" onerror="this.src='/img/giocatori/unknown.jpg';">
+                    <img src="${foto}" alt="${nomeCompleto}" onerror="this.onerror=null; this.src='${FALLBACK_AVATAR}';">
                 </div>
                 <div class="leader-main">
                     <div>
@@ -142,7 +143,7 @@ function renderCards(players) {
     const startIndex = ((lastMeta.page || 1) - 1) * (lastMeta.per_page || perPage);
     leaderList.innerHTML = players.map((p, idx) => {
         const posizione = startIndex + idx + 1;
-        const foto = p.foto || '/img/giocatori/unknown.jpg';
+        const foto = p.foto || FALLBACK_AVATAR;
         const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim() || 'Giocatore';
         const ruolo = p.ruolo ? `<span class="leader-role">${escapeHTML(p.ruolo)}</span>` : '';
         const team = p.squadra ? escapeHTML(p.squadra) : 'Squadra non assegnata';
@@ -155,7 +156,7 @@ function renderCards(players) {
             <div class="leader-card">
                 <div class="leader-rank">${posizione}</div>
                 <div class="leader-avatar">
-                    <img src="${foto}" alt="${nomeCompleto}" onerror="this.src='/img/giocatori/unknown.jpg';">
+                    <img src="${foto}" alt="${nomeCompleto}" onerror="this.onerror=null; this.src='${FALLBACK_AVATAR}';">
                 </div>
                 <div class="leader-main">
                     <div>

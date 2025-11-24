@@ -341,11 +341,35 @@ body {
   background: #fff;
 }
 
+#marcatori .scorer-logo-inline {
+  display: none;
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 1px solid #e1e7ef;
+  background: #fff;
+}
+
 @media (max-width: 720px) {
   #marcatori th,
   #marcatori td {
     padding: 10px;
     font-size: 14px;
+  }
+
+  /* Nasconde la colonna Squadra su mobile */
+  #marcatori .marcatori-table th:nth-child(3),
+  #marcatori .marcatori-table td:nth-child(3) {
+    display: none;
+  }
+
+  #marcatori .scorer-player {
+    gap: 10px;
+  }
+
+  #marcatori .scorer-logo-inline {
+    display: inline-flex;
   }
 }
 

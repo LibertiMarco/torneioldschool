@@ -1,4 +1,5 @@
 const TORNEO = "SerieA"; // Nome base del torneo nel DB (fase girone)
+const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
 const teamLogos = {};
 
 function normalizeLogoName(name = "") {
@@ -162,6 +163,7 @@ async function caricaMarcatori(torneoSlug = TORNEO) {
         <td>
           <div class="scorer-player">
             <span class="scorer-name">${p.nome ?? ''} ${p.cognome ?? ''}</span>
+            <img class="scorer-logo-inline" src="${logo}" alt="${p.squadra || ''}">
           </div>
         </td>
         <td>
@@ -514,7 +516,7 @@ async function caricaRosaSquadra(squadra) {
       const ruolo = (giocatore.ruolo || "").toLowerCase();
       const isPortiere = ruolo.includes("portiere") || ruolo === "p" || ruolo === "gk";
       const ruoloBadge = isPortiere ? ' <span class="role-badge gk-badge">GK</span>' : "";
-      const foto = giocatore.foto || "/img/giocatori/unknown.jpg";
+      const foto = giocatore.foto || FALLBACK_AVATAR;
 
       card.innerHTML = `
         <div class="player-name-row">
@@ -525,7 +527,7 @@ async function caricaRosaSquadra(squadra) {
           <div class="player-photo">
             <img src="${foto}" 
                  alt="${nomeCompleto}"
-                 onerror="this.src='/img/giocatori/unknown.jpg';">
+                 onerror="this.onerror=null; this.src='${FALLBACK_AVATAR}';">
           </div>
 
           <div class="player-stats">
