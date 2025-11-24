@@ -170,8 +170,6 @@ function renderCards(players) {
         const foto = p.foto || FALLBACK_AVATAR;
         const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim();
         const ruolo = p.ruolo ? `<span class="leader-role">${escapeHTML(p.ruolo)}</span>` : '';
-        const team = p.squadra ? escapeHTML(p.squadra) : 'Squadra non assegnata';
-        const media = p.media_voti ? `<span>* ${p.media_voti}</span>` : '';
         const metaPresenze = `<span>Presenze: ${p.presenze ?? 0}</span>`;
         const metaGol = `<span>Gol: ${p.gol ?? 0}</span>`;
         const metaOrder = currentOrder === 'presenze' ? [metaPresenze, metaGol] : [metaGol, metaPresenze];
@@ -185,11 +183,10 @@ function renderCards(players) {
                 <div class="leader-main">
                     <div>
                         <div class="leader-name">${nomeCompleto} ${ruolo}</div>
-                        <div class="leader-team">${team}</div>
+                        <div class="leader-team"></div>
                     </div>
                     <div class="leader-meta">
                         ${metaOrder.join('')}
-                        ${media}
                     </div>
                 </div>
             </div>

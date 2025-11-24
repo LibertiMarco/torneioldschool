@@ -136,8 +136,8 @@ async function loadNews() {
 
 function renderHomeLeaderCard(player, position, torneoLabel, ordine) {
     const foto = player.foto || '/img/giocatori/unknown.jpg';
-    const nome = `${player.nome ?? ''} ${player.cognome ?? ''}`.trim() || 'Giocatore senza nome';
-    const squadra = player.squadra ? `${player.squadra}${torneoLabel ? ' - ' + torneoLabel : ''}` : 'Giocatore';
+    const nome = `${player.nome ?? ''} ${player.cognome ?? ''}`.trim() || 'Profilo';
+    const squadra = player.squadra ? `${player.squadra}${torneoLabel ? ' - ' + torneoLabel : ''}` : '';
 
     const metaPresenze = `<span>⏱️ ${player.presenze ?? 0} presenze</span>`;
     const metaGol = `<span>⚽ ${player.gol ?? 0} gol</span>`;
