@@ -567,7 +567,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const faseSelect = document.getElementById("faseSelect");
   const coppaSelect = document.getElementById("coppaSelect");
   const classificaWrapper = document.getElementById("classificaWrapper");
-  const marcatoriWrapper = document.getElementById("marcatoriWrapper");
   const playoffContainer = document.getElementById("playoffContainer");
   const heroImg = document.getElementById("torneoHeroImg");
   const torneoTitle = document.querySelector(".torneo-title .titolo");
@@ -575,7 +574,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // carico subito la parte girone
   caricaClassifica();
-  caricaMarcatori();
   const faseCalendario = document.getElementById("faseCalendario");
   const giornataSelect = document.getElementById("giornataSelect");
 
@@ -621,7 +619,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (faseSelect.value === "eliminazione") {
       // mostra bracket playoff
       classificaWrapper.style.display = "none";
-      if (marcatoriWrapper) marcatoriWrapper.style.display = "none";
       playoffContainer.style.display = "block";
 
       // se non è selezionata nessuna coppa ancora, default gold
@@ -635,9 +632,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // torna alla classifica
       playoffContainer.style.display = "none";
       classificaWrapper.style.display = "block";
-      if (marcatoriWrapper) marcatoriWrapper.style.display = "block";
       loadClassifica();
-      caricaMarcatori();
     }
   });
 
@@ -658,5 +653,8 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     document.querySelectorAll(".tab-section").forEach(s => s.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById(btn.dataset.tab).classList.add("active");
+    if (btn.dataset.tab === "marcatori") {
+      caricaMarcatori();
+    }
   });
 });

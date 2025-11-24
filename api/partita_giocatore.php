@@ -84,6 +84,7 @@ function aggiornaGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squadraId
     $nome = $t['nome'];
     $torneo = $t['torneo'];
 
+    // Considera solo le partite di Regular Season per le statistiche di squadra/torneo
     $q = $conn->prepare("SELECT 
         COUNT(*) AS presenze,
         COALESCE(SUM(pg.goal),0) AS goal,
@@ -96,7 +97,8 @@ function aggiornaGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squadraId
         JOIN partite p ON p.id = pg.partita_id
         WHERE pg.giocatore_id = ?
           AND p.torneo = ?
-          AND (p.squadra_casa = ? OR p.squadra_ospite = ?)");
+          AND (p.squadra_casa = ? OR p.squadra_ospite = ?)
+          AND UPPER(COALESCE(p.fase, 'REGULAR')) = 'REGULAR'");
     $q->bind_param("isss", $giocatoreId, $torneo, $nome, $nome);
     $q->execute();
     $r = $q->get_result()->fetch_assoc() ?: [];
@@ -131,10 +133,20 @@ function squadraPerPartitaGiocatore(mysqli $conn, int $partitaId, int $giocatore
     return $res['squadra_id'] ?? null;
 }
 
+function fasePartita(mysqli $conn, int $partitaId): string {
+    $q = $conn->prepare("SELECT UPPER(COALESCE(fase, 'REGULAR')) AS fase FROM partite WHERE id=?");
+    $q->bind_param("i", $partitaId);
+    $q->execute();
+    $r = $q->get_result()->fetch_assoc();
+    return $r['fase'] ?? 'REGULAR';
+}
+
 function ricalcolaStatistiche(mysqli $conn, int $partitaId, int $giocatoreId): void {
     aggiornaGiocatoreGlobale($conn, $giocatoreId);
+    $fase = fasePartita($conn, $partitaId);
     $squadraId = squadraPerPartitaGiocatore($conn, $partitaId, $giocatoreId);
-    if ($squadraId) {
+    // aggiorna le stats per squadra/torneo solo in Regular Season
+    if ($squadraId && $fase === 'REGULAR') {
       aggiornaGiocatoreSquadra($conn, $giocatoreId, $squadraId);
     }
 }
