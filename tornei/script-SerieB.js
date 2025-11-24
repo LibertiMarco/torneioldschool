@@ -536,6 +536,9 @@ async function caricaRosaSquadra(squadra) {
     const grid = document.createElement("div");
     grid.classList.add("rosa-grid");
 
+    // ordina per cognome
+    data.sort((a, b) => (a.cognome || "").localeCompare(b.cognome || "", "it", { sensitivity: "base" }));
+
     data.forEach(giocatore => {
       const card = document.createElement("div");
       card.classList.add("player-card");
@@ -543,7 +546,7 @@ async function caricaRosaSquadra(squadra) {
       const nome = giocatore.nome || "";
       const cognome = giocatore.cognome || "";
       const nomeCompleto = `${nome} ${cognome}`.trim() || "Giocatore";
-      const ruolo = (giocatore.ruolo || "").toLowerCase().trim();
+      const ruolo = (giocatore.ruolo_squadra || giocatore.ruolo || "").toLowerCase().trim();
       const isPortiere = ruolo === "portiere";
       const ruoloBadge = isPortiere ? ' <span class="role-badge gk-badge">GK</span>' : "";
       const foto = giocatore.foto || FALLBACK_AVATAR;
