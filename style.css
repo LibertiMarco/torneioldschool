@@ -353,15 +353,20 @@ body {
 }
 
 @media (max-width: 720px) {
+  #marcatori .table-wrapper {
+    overflow-x: visible;
+  }
+
   #marcatori th,
   #marcatori td {
-    padding: 10px;
+    padding: 8px;
     font-size: 14px;
   }
 
   /* Evita scroll orizzontale su mobile */
   #marcatori .marcatori-table {
-    min-width: 100%;
+    min-width: 0;
+    width: 100%;
     table-layout: fixed;
   }
 
@@ -371,6 +376,8 @@ body {
   #marcatori .marcatori-table th:nth-child(3),
   #marcatori .marcatori-table td:nth-child(3) {
     display: none;
+    padding: 0;
+    width: 0;
   }
 
   /* Colonne compatte per Giocatore, Gol, Pres. */
@@ -378,14 +385,14 @@ body {
   #marcatori .marcatori-table td:nth-child(4),
   #marcatori .marcatori-table th:nth-child(5),
   #marcatori .marcatori-table td:nth-child(5) {
-    width: 54px;
-    min-width: 54px;
+    width: 50px;
+    min-width: 50px;
     text-align: center;
   }
 
   #marcatori .scorer-name {
     display: inline-block;
-    max-width: 160px;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
