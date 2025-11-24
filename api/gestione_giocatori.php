@@ -1445,11 +1445,17 @@ assocTorneo?.addEventListener("change", async () => {
     await loadSquadre(assocSquadra, assocTorneo.value);
     await aggiornaGiocatoriDisponibiliPerAssociazione();
 });
+if (assocTorneo?.value) {
+    loadSquadre(assocSquadra, assocTorneo.value).then(() => aggiornaGiocatoriDisponibiliPerAssociazione());
+}
 
 remTorneo?.addEventListener("change", async () => {
     await loadSquadre(remSquadra, remTorneo.value);
     resetSelect(remGiocatore, "-- Seleziona un giocatore --");
 });
+if (remTorneo?.value) {
+    loadSquadre(remSquadra, remTorneo.value);
+}
 
 remSquadra?.addEventListener("change", async () => {
     await loadGiocatori(remGiocatore, remSquadra.value, remTorneo.value);
@@ -1460,6 +1466,9 @@ modAssocTorneo?.addEventListener("change", async () => {
     resetSelect(modAssocGiocatore, "-- Seleziona un giocatore --");
     clearModAssocStatsFields();
 });
+if (modAssocTorneo?.value) {
+    loadSquadre(modAssocSquadra, modAssocTorneo.value);
+}
 
 modAssocSquadra?.addEventListener("change", async () => {
     await loadGiocatori(modAssocGiocatore, modAssocSquadra.value, modAssocTorneo.value);
