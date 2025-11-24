@@ -127,6 +127,8 @@ if ($azione === 'articolo' && isset($_GET['id'])) {
 // Lista commenti per articolo
 if ($azione === 'commenti' && isset($_GET['id'])) {
     $postId = (int)$_GET['id'];
+    $currentUserId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
+    $isAdmin = isset($_SESSION['ruolo']) && $_SESSION['ruolo'] === 'admin';
 
     $stmt = $conn->prepare(
         "SELECT c.id,
@@ -154,6 +156,8 @@ if ($azione === 'commenti' && isset($_GET['id'])) {
     $lookup = [];
 
     foreach ($rows as $row) {
+        $ownerId = (int)$row['utente_id'];
+        $row['can_delete'] = $isAdmin || ($currentUserId && $ownerId === $currentUserId);
         $row['replies'] = [];
         $row['parent_id'] = $row['parent_id'] ? (int)$row['parent_id'] : null;
         $lookup[$row['id']] = $row;
@@ -176,6 +180,49 @@ if ($azione === 'commenti' && isset($_GET['id'])) {
     unset($comment);
 
     json_response($root);
+}
+
+// Elimina commento (owner o admin)
+if ($azione === 'commenti_elimina' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_SESSION['user_id'])) {
+        json_response(['error' => 'Devi effettuare il login per eliminare un commento.'], 401);
+    }
+
+    $payload = json_decode(file_get_contents('php://input'), true) ?? [];
+    $commentId = isset($payload['id']) ? (int)$payload['id'] : 0;
+    if ($commentId <= 0) {
+        json_response(['error' => 'ID commento non valido.'], 400);
+    }
+
+    $check = $conn->prepare("SELECT utente_id FROM blog_commenti WHERE id = ?");
+    if (!$check) {
+        json_response(['error' => 'Errore tecnico.'], 500);
+    }
+    $check->bind_param('i', $commentId);
+    $check->execute();
+    $res = $check->get_result();
+    if (!$res || !$res->num_rows) {
+        json_response(['error' => 'Commento non trovato.'], 404);
+    }
+    $row = $res->fetch_assoc();
+    $ownerId = (int)$row['utente_id'];
+    $check->close();
+
+    $currentUserId = (int)$_SESSION['user_id'];
+    $isAdmin = isset($_SESSION['ruolo']) && $_SESSION['ruolo'] === 'admin';
+    if (!$isAdmin && $ownerId !== $currentUserId) {
+        json_response(['error' => 'Non hai i permessi per eliminare questo commento.'], 403);
+    }
+
+    $del = $conn->prepare("DELETE FROM blog_commenti WHERE id = ?");
+    if (!$del) {
+        json_response(['error' => 'Errore nella preparazione della cancellazione.'], 500);
+    }
+    $del->bind_param('i', $commentId);
+    if ($del->execute()) {
+        json_response(['success' => true]);
+    }
+    json_response(['error' => 'Impossibile eliminare il commento.'], 500);
 }
 
 // Salva commento

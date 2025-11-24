@@ -415,6 +415,21 @@ $isLogged = isset($_SESSION['user_id']);
     text-decoration: underline;
 }
 
+.delete-action {
+    border: none;
+    background: transparent;
+    color: #b91c1c;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0;
+    margin-left: 12px;
+}
+
+.delete-action:hover {
+    text-decoration: underline;
+}
+
 .mention-tag {
     display: inline-block;
     background: #eef2ff;
@@ -424,6 +439,14 @@ $isLogged = isset($_SESSION['user_id']);
     font-size: 0.78rem;
     font-weight: 600;
     margin-bottom: 6px;
+}
+
+.comment-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 6px;
 }
 
 .comment-replies {
@@ -770,6 +793,15 @@ function buildCommentHTML(comment, isChild = false, rootId = null, threadAuthor 
         ? `/${comment.avatar.replace(/^\/+/, '')}`
         : defaultAvatar;
     const replies = Array.isArray(comment.replies) ? comment.replies : [];
+    const canReply = !isChild && !!commentForm;
+    const actions = [];
+    if (canReply) {
+        actions.push(`<button class="reply-action" type="button" data-target="${topId}" data-author="${escapeHTML(comment.autore || 'Utente')}">Rispondi</button>`);
+    }
+    if (comment.can_delete) {
+        actions.push(`<button class="delete-action" type="button" data-id="${comment.id}">Elimina</button>`);
+    }
+    const actionsHtml = actions.length ? `<div class="comment-actions">${actions.join('')}</div>` : '';
 
     return `
         <div class="comment-item">
@@ -781,7 +813,7 @@ function buildCommentHTML(comment, isChild = false, rootId = null, threadAuthor 
                 <div class="comment-date">${escapeHTML(comment.data || '')}</div>
                 ${isChild && rootAuthor ? `<div class="mention-tag">@${escapeHTML(rootAuthor)}</div>` : ''}
                 <div class="comment-text">${escapeHTML(comment.commento || '')}</div>
-                ${canReply ? `<button class="reply-action" type="button" data-target="${topId}" data-author="${escapeHTML(comment.autore || 'Utente')}">Rispondi</button>` : ''}
+                ${actionsHtml}
                 ${replies.length ? `<div class="comment-replies">
                     ${replies.map(reply => buildCommentHTML(reply, true, topId, rootAuthor)).join('')}
                 </div>` : ''}
@@ -848,6 +880,32 @@ if (isLogged && commentForm) {
 
 if (canReply) {
     commentsList?.addEventListener('click', event => {
+        const deleteBtn = event.target.closest('.delete-action');
+        if (deleteBtn) {
+            const commentId = Number(deleteBtn.dataset.id);
+            if (!commentId) {
+                return;
+            }
+            if (!window.confirm('Vuoi eliminare questo commento?')) {
+                return;
+            }
+            fetchJSON('/api/blog.php?azione=commenti_elimina', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: commentId })
+            })
+            .then(({ data, ok }) => {
+                if (!ok) {
+                    throw new Error(data?.error || 'Eliminazione non riuscita.');
+                }
+                fetchComments();
+            })
+            .catch(err => {
+                setFeedback(err.message, 'error');
+            });
+            return;
+        }
+
         const btn = event.target.closest('.reply-action');
         if (!btn) {
             return;
