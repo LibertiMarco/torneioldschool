@@ -359,8 +359,8 @@ body {
 
   #marcatori th,
   #marcatori td {
-    padding: 8px;
-    font-size: 14px;
+    padding: 8px 10px;
+    font-size: 13px;
   }
 
   /* Evita scroll orizzontale su mobile */
@@ -370,9 +370,7 @@ body {
     table-layout: fixed;
   }
 
-  /* Nasconde colonna # e Squadra su mobile */
-  #marcatori .marcatori-table th:nth-child(1),
-  #marcatori .marcatori-table td:nth-child(1),
+  /* Nasconde solo la colonna Squadra su mobile */
   #marcatori .marcatori-table th:nth-child(3),
   #marcatori .marcatori-table td:nth-child(3) {
     display: none;
@@ -381,12 +379,24 @@ body {
   }
 
   /* Colonne compatte per Giocatore, Gol, Pres. */
+  #marcatori .marcatori-table th:nth-child(1),
+  #marcatori .marcatori-table td:nth-child(1) {
+    width: 14%;
+    min-width: 42px;
+    text-align: center;
+  }
+
+  #marcatori .marcatori-table th:nth-child(2),
+  #marcatori .marcatori-table td:nth-child(2) {
+    width: 52%;
+    min-width: 0;
+  }
   #marcatori .marcatori-table th:nth-child(4),
   #marcatori .marcatori-table td:nth-child(4),
   #marcatori .marcatori-table th:nth-child(5),
   #marcatori .marcatori-table td:nth-child(5) {
-    width: 50px;
-    min-width: 50px;
+    width: 17%;
+    min-width: 48px;
     text-align: center;
   }
 
@@ -396,6 +406,16 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  #marcatori .scorer-player {
+    gap: 6px;
+  }
+
+  #marcatori .scorer-logo-inline {
+    width: 22px;
+    height: 22px;
   }
 
   #marcatori .scorer-player {
