@@ -793,11 +793,11 @@ if ($res) {
     const roundWrap = document.getElementById(roundWrapId);
     if (giornataWrap) giornataWrap.classList.toggle('hidden', !isRegular);
     if (roundWrap) roundWrap.classList.toggle('hidden', isRegular);
-    const giornataInput = giornataWrap ? giornataWrap.querySelector('input') : null;
+    const giornataField = giornataWrap ? giornataWrap.querySelector('input, select') : null;
     const roundSelect = roundWrap ? roundWrap.querySelector('select') : null;
-    if (giornataInput) {
-      giornataInput.required = isRegular;
-      if (!isRegular) giornataInput.value = '';
+    if (giornataField) {
+      giornataField.required = isRegular;
+      if (!isRegular) giornataField.value = '';
     }
     if (roundSelect) {
       roundSelect.required = !isRegular;
