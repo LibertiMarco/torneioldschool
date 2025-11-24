@@ -676,8 +676,8 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
               <option value="">-- Seleziona un torneo --</option>
               <?php foreach ($tornei as $torneoVal): ?>
               <?php
-                  $val = htmlspecialchars($torneoVal['torneo'] ?? '');
-                  $label = htmlspecialchars($torneoVal['nome'] ?? ($torneoVal['torneo'] ?? 'Torneo'));
+                  $val = htmlspecialchars($torneoVal['id'] ?? $torneoVal['torneo'] ?? $torneoVal['nome'] ?? '');
+                  $label = htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo');
               ?>
               <option value="<?= $val ?>">
                   <?= $label ?>
@@ -744,8 +744,8 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
               <option value="">-- Seleziona un torneo --</option>
               <?php foreach ($tornei as $torneoVal): ?>
               <?php
-                  $val = htmlspecialchars($torneoVal['torneo'] ?? '');
-                  $label = htmlspecialchars($torneoVal['nome'] ?? ($torneoVal['torneo'] ?? 'Torneo'));
+                  $val = htmlspecialchars($torneoVal['id'] ?? $torneoVal['torneo'] ?? $torneoVal['nome'] ?? '');
+                  $label = htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo');
               ?>
               <option value="<?= $val ?>">
                   <?= $label ?>
@@ -848,8 +848,8 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
               <option value="">-- Seleziona un torneo --</option>
               <?php foreach ($tornei as $torneoVal): ?>
               <?php
-                  $val = htmlspecialchars($torneoVal['torneo'] ?? '');
-                  $label = htmlspecialchars($torneoVal['nome'] ?? ($torneoVal['torneo'] ?? 'Torneo'));
+                  $val = htmlspecialchars($torneoVal['id'] ?? $torneoVal['torneo'] ?? $torneoVal['nome'] ?? '');
+                  $label = htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo');
               ?>
               <option value="<?= $val ?>">
                   <?= $label ?>
