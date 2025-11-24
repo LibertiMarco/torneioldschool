@@ -4350,11 +4350,24 @@ select:focus {
   justify-content: center;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #ffd800;
-  color: #15293e;
+  background: #d6e4f5;
+  color: #0f1f33;
+  border: 1px solid #b9cee8;
   font-weight: 800;
   font-size: 12px;
   letter-spacing: 0.5px;
+}
+
+#rose .gk-badge {
+  background: #d6e4f5;
+  color: #0f1f33;
+  border: 1px solid #b9cee8;
+}
+
+#rose .captain-badge {
+  background: #d80000;
+  color: #fff;
+  border: 1px solid #b90f0f;
 }
 
 #rose .player-bottom {

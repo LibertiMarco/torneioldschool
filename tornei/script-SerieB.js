@@ -548,12 +548,14 @@ async function caricaRosaSquadra(squadra) {
       const nomeCompleto = `${nome} ${cognome}`.trim() || "Giocatore";
       const ruolo = (giocatore.ruolo_squadra || giocatore.ruolo || "").toLowerCase().trim();
       const isPortiere = ruolo === "portiere";
+      const isCaptain = String(giocatore.is_captain || giocatore.captain) === "1";
       const ruoloBadge = isPortiere ? ' <span class="role-badge gk-badge">GK</span>' : "";
+      const captainBadge = isCaptain ? ' <span class="role-badge captain-badge">C</span>' : "";
       const foto = giocatore.foto || FALLBACK_AVATAR;
 
       card.innerHTML = `
   <div class="player-name-row">
-    <h4 class="player-name">${nomeCompleto}${ruoloBadge}</h4>
+    <h4 class="player-name">${nomeCompleto}${ruoloBadge}${captainBadge}</h4>
   </div>
 
   <div class="player-bottom">

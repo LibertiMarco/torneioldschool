@@ -12,6 +12,7 @@ $sql = "
     SELECT 
         g.id, g.nome, g.cognome, g.ruolo,
         sg.ruolo AS ruolo_squadra,
+        sg.is_captain,
         g.presenze, g.reti, g.gialli, g.rossi, g.media_voti,
         COALESCE(sg.foto, g.foto) AS foto,
         s.logo AS logo_squadra
