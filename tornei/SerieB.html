@@ -41,9 +41,75 @@
       margin: 0;
       text-align: center;
     }
+    .classifica-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .marcatori-wrapper {
+      background: #fff;
+      border: 1px solid rgba(21,41,62,0.08);
+      border-radius: 12px;
+      box-shadow: 0 12px 30px rgba(15,23,42,0.08);
+      padding: 14px;
+    }
+    .marcatori-wrapper h3 {
+      margin: 0 0 10px;
+      font-size: 1.1rem;
+    }
+    .marcatori-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .marcatori-table th,
+    .marcatori-table td {
+      padding: 8px 6px;
+      border-bottom: 1px solid #e6eaf0;
+      font-size: 0.95rem;
+      text-align: left;
+    }
+    .marcatori-table th:nth-child(1),
+    .marcatori-table td:nth-child(1) {
+      width: 36px;
+      text-align: center;
+    }
+    .marcatori-table th:nth-child(4),
+    .marcatori-table td:nth-child(4),
+    .marcatori-table th:nth-child(5),
+    .marcatori-table td:nth-child(5) {
+      width: 55px;
+      text-align: center;
+    }
+    .scorer-player {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .scorer-name {
+      font-weight: 600;
+    }
+    .scorer-team {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+      color: #485568;
+    }
+    .scorer-team img {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #fff;
+      border: 1px solid #e6eaf0;
+    }
     @media (max-width: 600px) {
       .torneo-hero {
         flex-wrap: wrap;
+      }
+      .classifica-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -91,25 +157,45 @@
         </div>
       </div>
 
-      <!-- CLASSIFICA NORMALE -->
-      <div class="table-wrapper" id="classificaWrapper">
-        <table id="tableClassifica">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Squadra</th>
-              <th>Pti</th>
-              <th>G</th>
-              <th>V</th>
-              <th>N</th>
-              <th>P</th>
-              <th>GF</th>
-              <th>GS</th>
-              <th>DR</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <!-- CLASSIFICA NORMALE + MARCATORI -->
+      <div class="classifica-grid">
+        <div class="table-wrapper" id="classificaWrapper">
+          <table id="tableClassifica">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Squadra</th>
+                <th>Pti</th>
+                <th>G</th>
+                <th>V</th>
+                <th>N</th>
+                <th>P</th>
+                <th>GF</th>
+                <th>GS</th>
+                <th>DR</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="marcatori-wrapper" id="marcatoriWrapper">
+          <h3>Classifica Marcatori</h3>
+          <table class="marcatori-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Giocatore</th>
+                <th>Squadra</th>
+                <th>Gol</th>
+                <th>Pres.</th>
+              </tr>
+            </thead>
+            <tbody id="marcatoriBody">
+              <!-- popolato via JS -->
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- PLAYOFF / BRACKET -->
@@ -213,7 +299,7 @@
     <div class="regola">
       <h3>📅 Calendario</h3>
       <ul>
-        <li>Le partite si disputano principalmente <strong>il lunedì e il martedì</strong>.</li>
+        <li>Le partite si disputano principalmente <strong>il mercoledì e il giovedì</strong>.</li>
         <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedì o venerdì</strong>.</li>
       </ul>
     </div>

@@ -137,6 +137,50 @@ function mostraClassifica(classifica) {
   }
 }
 
+// ====================== MARCATORI TORNEO ======================
+async function caricaMarcatori(torneoSlug = TORNEO) {
+  const body = document.getElementById("marcatoriBody");
+  if (!body) return;
+  body.innerHTML = `<tr><td colspan="5">Caricamento...</td></tr>`;
+  try {
+    const res = await fetch(`/api/classifica_marcatori.php?torneo=${encodeURIComponent(torneoSlug)}`);
+    const data = await res.json();
+    if (!Array.isArray(data)) {
+      body.innerHTML = `<tr><td colspan="5">Nessun dato marcatori</td></tr>`;
+      return;
+    }
+    if (!data.length) {
+      body.innerHTML = `<tr><td colspan="5">Nessun dato marcatori</td></tr>`;
+      return;
+    }
+    body.innerHTML = "";
+    data.forEach((p, idx) => {
+      const logo = resolveLogoPath(p.squadra, p.logo);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${idx + 1}</td>
+        <td>
+          <div class="scorer-player">
+            <span class="scorer-name">${p.nome ?? ''} ${p.cognome ?? ''}</span>
+          </div>
+        </td>
+        <td>
+          <div class="scorer-team">
+            <img src="${logo}" alt="${p.squadra || ''}">
+            <span>${p.squadra || ''}</span>
+          </div>
+        </td>
+        <td>${p.gol ?? 0}</td>
+        <td>${p.presenze ?? 0}</td>
+      `;
+      body.appendChild(tr);
+    });
+  } catch (err) {
+    console.error("Errore nel caricamento marcatori:", err);
+    body.innerHTML = `<tr><td colspan="5">Errore caricamento marcatori</td></tr>`;
+  }
+}
+
 
 // ====================== CALENDARIO (GIRONE) ======================
 const roundLabelByKey = {
@@ -523,6 +567,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const faseSelect = document.getElementById("faseSelect");
   const coppaSelect = document.getElementById("coppaSelect");
   const classificaWrapper = document.getElementById("classificaWrapper");
+  const marcatoriWrapper = document.getElementById("marcatoriWrapper");
   const playoffContainer = document.getElementById("playoffContainer");
   const heroImg = document.getElementById("torneoHeroImg");
   const torneoTitle = document.querySelector(".torneo-title .titolo");
@@ -530,6 +575,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // carico subito la parte girone
   caricaClassifica();
+  caricaMarcatori();
   const faseCalendario = document.getElementById("faseCalendario");
   const giornataSelect = document.getElementById("giornataSelect");
 
@@ -569,6 +615,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (faseSelect.value === "eliminazione") {
       // mostra bracket playoff
       classificaWrapper.style.display = "none";
+      if (marcatoriWrapper) marcatoriWrapper.style.display = "none";
       playoffContainer.style.display = "block";
 
       // se non è selezionata nessuna coppa ancora, default gold
@@ -582,7 +629,9 @@ document.addEventListener("DOMContentLoaded", () => {
       // torna alla classifica
       playoffContainer.style.display = "none";
       classificaWrapper.style.display = "block";
+      if (marcatoriWrapper) marcatoriWrapper.style.display = "block";
       loadClassifica();
+      caricaMarcatori();
     }
   });
 
