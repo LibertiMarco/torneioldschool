@@ -130,7 +130,7 @@ function renderCards(players) {
     leaderList.innerHTML = players.map((p, idx) => {
         const posizione = startIndex + idx + 1;
         const foto = p.foto || FALLBACK_AVATAR;
-        const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim() || 'Giocatore';
+        const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim();
         const ruolo = p.ruolo ? `<span class="leader-role">${escapeHTML(p.ruolo)}</span>` : '';
         const team = p.squadra ? escapeHTML(p.squadra) : 'Squadra non assegnata';
         const media = p.media_voti ? `<span>⭐ ${p.media_voti}</span>` : '';
@@ -168,7 +168,7 @@ function renderCards(players) {
     leaderList.innerHTML = players.map((p, idx) => {
         const posizione = startIndex + idx + 1;
         const foto = p.foto || FALLBACK_AVATAR;
-        const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim() || 'Giocatore';
+        const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim();
         const ruolo = p.ruolo ? `<span class="leader-role">${escapeHTML(p.ruolo)}</span>` : '';
         const team = p.squadra ? escapeHTML(p.squadra) : 'Squadra non assegnata';
         const media = p.media_voti ? `<span>* ${p.media_voti}</span>` : '';

@@ -204,21 +204,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $id = (int)$_POST['id'];
     $record = $giocatore->getById($id);
+    if (!$record) {
+        redirectGestione('modifica');
+    }
     $fotoEsistente = $record['foto'] ?? '/img/giocatori/unknown.jpg';
     $nome = trim($_POST['nome']);
     $cognome = trim($_POST['cognome']);
     $fotoPath = salvaFotoGiocatore($nome, $cognome, 'foto_upload_mod', $fotoEsistente);
 
+    // preserva statistiche e ruolo esistenti
+    $ruolo = $record['ruolo'] ?? '';
+    $presenze = isset($record['presenze']) ? (int)$record['presenze'] : 0;
+    $reti = isset($record['reti']) ? (int)$record['reti'] : 0;
+    $gialli = isset($record['gialli']) ? (int)$record['gialli'] : 0;
+    $rossi = isset($record['rossi']) ? (int)$record['rossi'] : 0;
+    $media = isset($record['media_voti']) && $record['media_voti'] !== '' ? (float)$record['media_voti'] : null;
+
     $giocatore->aggiorna(
         $id,
         $nome,
         $cognome,
-        '', // ruolo spostato su associazione squadra
-        0,
-        0,
-        0,
-        0,
-        null,
+        $ruolo, // mantieni ruolo registrato
+        $presenze,
+        $reti,
+        $gialli,
+        $rossi,
+        $media,
         $fotoPath
     );
 
@@ -609,7 +620,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 
 <div class="form-group">
     <label>Cerca giocatore</label>
-    <input type="search" id="searchGiocatore" placeholder="Digita nome o cognome">
+    <input type="search" id="searchGiocatore" placeholder="Digita nome o cognome" autocomplete="off">
 </div>
 
 <!-- SELEZIONE GIOCATORE -->
@@ -1249,19 +1260,23 @@ async function aggiornaGiocatoriDisponibiliPerAssociazione() {
 function filterGiocatori(term) {
     if (!selectGiocatore) return;
     const normalized = term.trim().toLowerCase();
-    Array.from(selectGiocatore.options).forEach(opt => {
+    const options = Array.from(selectGiocatore.options);
+    let firstVisible = "";
+    options.forEach(opt => {
         if (!opt.value) {
             opt.hidden = false;
             return;
         }
         const text = opt.textContent.toLowerCase();
-        opt.hidden = normalized !== "" && !text.includes(normalized);
+        const match = normalized === "" || text.includes(normalized);
+        opt.hidden = !match;
+        if (match && !firstVisible) {
+            firstVisible = opt.value;
+        }
     });
-    if (
-        normalized &&
-        selectGiocatore.selectedOptions.length &&
-        selectGiocatore.selectedOptions[0].hidden
-    ) {
+    if (normalized) {
+        selectGiocatore.value = firstVisible || "";
+    } else {
         selectGiocatore.value = "";
     }
 }
