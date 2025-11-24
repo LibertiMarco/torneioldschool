@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 header("Content-Type: application/json");
 
 if (!isset($_GET['id'])) {
@@ -8,7 +8,7 @@ if (!isset($_GET['id'])) {
 
 $id = (int)$_GET['id'];
 
-require_once __DIR__ . '/crud/Giocatore.php';
+require_once __DIR__ . '/crud/giocatore.php';
 $giocatore = new Giocatore();
 
 $dati = $giocatore->getById($id);

@@ -6,7 +6,7 @@ if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
 }
 
 require_once __DIR__ . '/crud/Squadra.php';
-require_once __DIR__ . '/crud/Torneo.php';
+require_once __DIR__ . '/crud/torneo.php';
 
 $squadra = new Squadra();
 $torneoModel = new Torneo();

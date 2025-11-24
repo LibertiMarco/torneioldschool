@@ -1,5 +1,5 @@
-<?php
-require_once __DIR__ . '/crud/Torneo.php';
+﻿<?php
+require_once __DIR__ . '/crud/torneo.php';
 header('Content-Type: application/json');
 
 if (isset($_GET['id'])) {

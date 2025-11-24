@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 header("Content-Type: application/json; charset=UTF-8");
 
 // --- CONNESSIONE DATABASE + MODEL ---
 require_once __DIR__ . '/../includi/db.php';
-require_once __DIR__ . '/crud/Partita.php';
+require_once __DIR__ . '/crud/partita.php';
 
 $partita = new Partita();
 

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 header("Content-Type: application/json");
 
 if (!isset($_GET['torneo']) && !isset($_GET['squadra_id']) && !isset($_GET['squadra'])) {
@@ -10,7 +10,7 @@ $torneo = isset($_GET['torneo']) ? trim($_GET['torneo']) : null;
 $squadra = isset($_GET['squadra']) ? trim($_GET['squadra']) : null;
 $squadraId = isset($_GET['squadra_id']) ? (int)$_GET['squadra_id'] : null;
 
-require_once __DIR__ . '/crud/Giocatore.php';
+require_once __DIR__ . '/crud/giocatore.php';
 $giocatore = new Giocatore();
 
 $result = $giocatore->getGiocatoriBySquadra($squadra, $torneo, $squadraId);

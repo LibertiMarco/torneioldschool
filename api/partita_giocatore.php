@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includi/db.php';
-require_once __DIR__ . '/crud/Partita.php';
+require_once __DIR__ . '/crud/partita.php';
 header('Content-Type: application/json; charset=utf-8');
 
 $azione = $_GET['azione'] ?? $_POST['azione'] ?? '';
@@ -234,7 +234,7 @@ function aggiornaClassificaDaInfo(?array $info): void {
 
 /* ==========================================================
    LISTA GIOCATORI DISPONIBILI PER LA PARTITA
-   (solo squadre in campo E NON già inseriti)
+   (solo squadre in campo E NON giÃ  inseriti)
 ========================================================== */
 if ($azione === 'list_giocatori') {
 
@@ -250,7 +250,7 @@ if ($azione === 'list_giocatori') {
 
     if (!$p) { echo json_encode([]); exit; }
 
-    // Giocatori delle due squadre, esclusi quelli già inseriti per questa partita
+    // Giocatori delle due squadre, esclusi quelli giÃ  inseriti per questa partita
     $sql = "SELECT DISTINCT g.id, g.nome, g.cognome, s.nome AS squadra
             FROM squadre s
             JOIN squadre_giocatori sg ON sg.squadra_id = s.id
@@ -286,7 +286,7 @@ if ($azione === 'add') {
     $rosso      = (int)$_POST['cartellino_rosso'];
     $voto       = $_POST['voto'] === "" ? null : (float)$_POST['voto'];
 
-    /* 🔥 CONTROLLO DUPLICATO */
+    /* ðŸ”¥ CONTROLLO DUPLICATO */
     $check = $conn->prepare("SELECT id FROM partita_giocatore WHERE partita_id = ? AND giocatore_id = ?");
     $check->bind_param("ii", $partita_id, $giocatore);
     $check->execute();
@@ -297,7 +297,7 @@ if ($azione === 'add') {
         exit;
     }
 
-    /* ➕ INSERIMENTO */
+    /* âž• INSERIMENTO */
     $sql = "INSERT INTO partita_giocatore
             (partita_id, giocatore_id, presenza, goal, assist, cartellino_giallo, cartellino_rosso, voto)
             VALUES (?, ?, 1, ?, ?, ?, ?, ?)";

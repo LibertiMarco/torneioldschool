@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 session_start();
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
     header("Location: /index.php");
     exit;
 }
 
-require_once __DIR__ . '/crud/Torneo.php';
+require_once __DIR__ . '/crud/torneo.php';
 $torneo = new Torneo();
 require_once __DIR__ . '/crud/Squadra.php';
 $squadraModel = new Squadra();
@@ -338,7 +338,7 @@ $lista = $torneo->getAll();
                         <button type="button" class="file-btn" data-target="img_upload">Scegli immagine</button>
                         <span class="file-name" id="img_upload_name">Nessun file selezionato</span>
                     </div>
-                    <small>Se non carichi un file verrà usata l'immagine predefinita.</small>
+                    <small>Se non carichi un file verrÃ  usata l'immagine predefinita.</small>
                 </div>
                 <div class="form-group"><label>File Torneo</label><input type="text" name="filetorneo" required></div>
                 <div class="form-group"><label>Categoria</label><input type="text" name="categoria" required></div>
@@ -378,7 +378,7 @@ $lista = $torneo->getAll();
                         <button type="button" class="file-btn" data-target="img_upload_mod">Scegli immagine</button>
                         <span class="file-name" id="img_upload_mod_name">Nessun file selezionato</span>
                     </div>
-                    <small>Se non carichi nulla resterà l'immagine attuale.</small>
+                    <small>Se non carichi nulla resterÃ  l'immagine attuale.</small>
                 </div>
                 <div class="form-group"><label>File Torneo</label><input type="text" name="filetorneo" id="mod_file"></div>
                 <div class="form-group"><label>Categoria</label><input type="text" name="categoria" id="mod_categoria"></div>
@@ -401,7 +401,7 @@ $lista = $torneo->getAll();
                     </thead>
                     <tbody>
                         <?php while ($row = $lista->fetch_assoc()): ?>
-                            <tr data-id="<?= $row['id'] ?>"> <!-- memorizziamo l’ID come attributo -->
+                            <tr data-id="<?= $row['id'] ?>"> <!-- memorizziamo lâ€™ID come attributo -->
                                 <td><?= htmlspecialchars($row['nome']) ?></td>
                                 <td><?= htmlspecialchars($row['stato']) ?></td>
                                 <td><?= htmlspecialchars($row['categoria']) ?></td>
@@ -551,7 +551,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tbody.innerHTML = "";
       rows.forEach(r => tbody.appendChild(r));
 
-      // Aggiorna indicatori ↑↓
+      // Aggiorna indicatori â†‘â†“
       headers.forEach(h => h.classList.remove("sort-asc", "sort-desc"));
       header.classList.add(sortDirection[col] === "asc" ? "sort-asc" : "sort-desc");
     });

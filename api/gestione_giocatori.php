@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 session_start();
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
     header("Location: /index.php");
     exit;
 }
 
-require_once __DIR__ . '/crud/Giocatore.php';
+require_once __DIR__ . '/crud/giocatore.php';
 require_once __DIR__ . '/crud/Squadra.php';
 require_once __DIR__ . '/crud/SquadraGiocatore.php';
 $giocatore = new Giocatore();
@@ -549,9 +549,9 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 <h1 class="admin-title">Gestione Giocatori</h1>
 
 <?php if (isset($_GET['duplicate']) && $_GET['duplicate'] === '1'): ?>
-<div class="admin-alert error" id="duplicateAlert">Giocatore già esistente</div>
+<div class="admin-alert error" id="duplicateAlert">Giocatore giÃ  esistente</div>
 <?php elseif (isset($_GET['assoc_exists']) && $_GET['assoc_exists'] === '1'): ?>
-<div class="admin-alert error" id="assocAlert">Il giocatore fa già parte di questa squadra</div>
+<div class="admin-alert error" id="assocAlert">Il giocatore fa giÃ  parte di questa squadra</div>
 <?php endif; ?>
 
 <!-- PICKLIST -->
@@ -566,7 +566,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
       </div>
 <input type="hidden" id="currentAction" value="<?= htmlspecialchars($currentAction) ?>">
 
-<!-- ✅ FORM CREA -->
+<!-- âœ… FORM CREA -->
 <form method="POST" class="admin-form form-crea" enctype="multipart/form-data">
 <h2>Aggiungi Giocatore</h2>
 
@@ -598,14 +598,14 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
         <button type="button" class="file-btn" data-target="foto_upload">Scegli immagine</button>
         <span class="file-name" id="foto_upload_name">Nessun file selezionato</span>
     </div>
-    <small>Se non carichi un'immagine verrà usata <code>unknown.jpg</code>.</small>
+    <small>Se non carichi un'immagine verrÃ  usata <code>unknown.jpg</code>.</small>
 </div>
 
 <button type="submit" name="crea" class="btn-primary">Crea Giocatore</button>
 </form>
 
 
-<!-- ✅ FORM MODIFICA -->
+<!-- âœ… FORM MODIFICA -->
 <form method="POST" class="admin-form form-modifica hidden" id="formModifica" enctype="multipart/form-data">
 <h2>Modifica Giocatore</h2>
 
@@ -652,7 +652,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 <button type="submit" name="aggiorna" class="btn-primary">Aggiorna Giocatore</button>
 </form>
 
-<!-- ✅ SEZIONE ELIMINA -->
+<!-- âœ… SEZIONE ELIMINA -->
 <!-- GESTIONE ASSOCIAZIONI -->
 <section class="admin-associazioni form-associazioni hidden">
   <h2>Associazione Calciatore-Squadra</h2>
@@ -698,7 +698,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 
       <div class="form-group">
           <label><input type="checkbox" name="capitano_associa" value="1"> Capitano della squadra</label>
-          <small>Un solo capitano per squadra; un giocatore può essere capitano di squadre diverse.</small>
+          <small>Un solo capitano per squadra; un giocatore puÃ² essere capitano di squadre diverse.</small>
       </div>
 
       <div class="form-group">
@@ -708,7 +708,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
               <button type="button" class="file-btn" data-target="foto_associazione_upload">Scegli immagine</button>
               <span class="file-name" id="foto_associazione_upload_name">Nessun file selezionato</span>
           </div>
-          <small>Se non carichi nulla verrà usata la foto del giocatore.</small>
+          <small>Se non carichi nulla verrÃ  usata la foto del giocatore.</small>
       </div>
 
       <button type="submit" name="associa_squadra" class="btn-primary">Aggiungi associazione</button>
@@ -744,7 +744,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 
       <div class="form-group">
           <label><input type="checkbox" name="mod_assoc_capitano" id="mod_assoc_capitano" value="1"> Capitano della squadra</label>
-          <small>Un solo capitano per squadra; un giocatore può essere capitano di squadre diverse.</small>
+          <small>Un solo capitano per squadra; un giocatore puÃ² essere capitano di squadre diverse.</small>
       </div>
 
       <div class="form-row">
@@ -904,7 +904,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 <div id="footer-container"></div>
 
 
-<!-- ✅ SCRIPTS -->
+<!-- âœ… SCRIPTS -->
 <script>
 const selectAzione = document.getElementById('azione');
 const currentActionInput = document.getElementById('currentAction');
@@ -1171,7 +1171,7 @@ function filterTabella(term) {
     const tbody = tabellaGiocatori.querySelector("tbody");
     if (!tbody) return;
 
-    // Se non c'è testo, mostra gli ultimi 10 (già popolati dal PHP)
+    // Se non c'Ã¨ testo, mostra gli ultimi 10 (giÃ  popolati dal PHP)
     if (normalized === "") {
         // ripristina ultimi 10
         tbody.querySelectorAll("tr").forEach(row => row.style.display = "");
@@ -1396,7 +1396,7 @@ selectGiocatore?.addEventListener("change", async e => {
 });
 </script>
 <script>
-// ✅ ORDINAMENTO TABELLA ELIMINA GIOCATORI
+// âœ… ORDINAMENTO TABELLA ELIMINA GIOCATORI
 document.addEventListener("DOMContentLoaded", () => {
     const table = document.getElementById("tabellaGiocatori");
     const headers = table.querySelectorAll("th[data-col]");

@@ -1,20 +1,20 @@
-<?php
-require_once __DIR__ . '/crud/Partita.php';
+﻿<?php
+require_once __DIR__ . '/crud/partita.php';
 $partita = new Partita();
 
 header('Content-Type: application/json; charset=UTF-8');
 
-// 🔹 Controllo parametro
+// ðŸ”¹ Controllo parametro
 if (!isset($_GET['torneo']) || empty(trim($_GET['torneo']))) {
     echo json_encode(['error' => 'Torneo non specificato']);
     exit;
 }
 
-// 🔹 Normalizza nome torneo: rimuove eventuali suffissi _gold o _silver
+// ðŸ”¹ Normalizza nome torneo: rimuove eventuali suffissi _gold o _silver
 $torneo = trim($_GET['torneo']);
 $torneo = preg_replace('/_(gold|silver)$/i', '', $torneo);
 
-// 🔹 Recupero squadre dal DB
+// ðŸ”¹ Recupero squadre dal DB
 $squadre = $partita->getSquadre($torneo);
 
 if (!$squadre) {
