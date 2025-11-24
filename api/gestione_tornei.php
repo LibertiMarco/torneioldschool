@@ -25,7 +25,7 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug) {
     }
 
     $htmlTemplate = $baseDir . '/SerieA.html';
-    $jsTemplate = $baseDir . '/Script-SerieA.js';
+    $jsTemplate = $baseDir . '/script-SerieA.js';
     if (!file_exists($htmlTemplate) || !file_exists($jsTemplate)) {
         return;
     }
@@ -38,7 +38,7 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug) {
 
     $newScriptName = 'script-' . $slug . '.js';
     $htmlContent = str_replace(
-        ['Serie A', 'Script-SerieA.js'],
+        ['Serie A', 'script-SerieA.js'],
         [$nomeTorneo, $newScriptName],
         $htmlContent
     );
