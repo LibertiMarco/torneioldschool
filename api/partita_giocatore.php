@@ -162,40 +162,25 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId): ?array {
     $p = $partInfo->get_result()->fetch_assoc();
     if (!$p) return null;
 
-    // Recupera gli ID delle squadre casa/ospite nel torneo corrente
-    $idCasa = null;
-    $idOsp = null;
-    $ids = $conn->prepare("SELECT id, nome FROM squadre WHERE torneo = ? AND nome IN (?, ?)");
-    $ids->bind_param("sss", $p['torneo'], $p['squadra_casa'], $p['squadra_ospite']);
-    $ids->execute();
-    $resIds = $ids->get_result();
-    while ($r = $resIds->fetch_assoc()) {
-        if ($r['nome'] === $p['squadra_casa']) $idCasa = (int)$r['id'];
-        if ($r['nome'] === $p['squadra_ospite']) $idOsp = (int)$r['id'];
-    }
-
-    // Somma i goal per squadra_id (via squadre_giocatori); se non trovata squadra_id rimane 0
+    // Somma i goal per squadra filtrando solo le due squadre coinvolte e il torneo corrente
     $sumSql = $conn->prepare("
-        SELECT sg.squadra_id, COALESCE(SUM(pg.goal),0) AS gol
+        SELECT
+          SUM(CASE WHEN s.nome = ? THEN pg.goal ELSE 0 END) AS gol_casa,
+          SUM(CASE WHEN s.nome = ? THEN pg.goal ELSE 0 END) AS gol_osp
         FROM partita_giocatore pg
-        LEFT JOIN squadre_giocatori sg ON sg.giocatore_id = pg.giocatore_id
+        JOIN partite p ON p.id = pg.partita_id
+        JOIN squadre_giocatori sg ON sg.giocatore_id = pg.giocatore_id
+        JOIN squadre s ON s.id = sg.squadra_id
         WHERE pg.partita_id = ?
-        GROUP BY sg.squadra_id
+          AND s.torneo = p.torneo
+          AND s.nome IN (p.squadra_casa, p.squadra_ospite)
     ");
-    $sumSql->bind_param("i", $partitaId);
+    $sumSql->bind_param("ssi", $p['squadra_casa'], $p['squadra_ospite'], $partitaId);
     $sumSql->execute();
-    $res = $sumSql->get_result();
+    $res = $sumSql->get_result()->fetch_assoc() ?: [];
 
-    $golCasa = 0;
-    $golOsp = 0;
-    while ($row = $res->fetch_assoc()) {
-        $sid = $row['squadra_id'] ? (int)$row['squadra_id'] : null;
-        if ($sid !== null && $idCasa !== null && $sid === $idCasa) {
-            $golCasa = (int)$row['gol'];
-        } elseif ($sid !== null && $idOsp !== null && $sid === $idOsp) {
-            $golOsp = (int)$row['gol'];
-        }
-    }
+    $golCasa = (int)($res['gol_casa'] ?? 0);
+    $golOsp = (int)($res['gol_osp'] ?? 0);
 
     $upd = $conn->prepare("UPDATE partite SET gol_casa = ?, gol_ospite = ? WHERE id = ?");
     $upd->bind_param("iii", $golCasa, $golOsp, $partitaId);

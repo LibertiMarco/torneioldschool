@@ -274,11 +274,19 @@ if (!$partita_id) {
   <div class="form-row">
     <div class="form-group half">
       <label>Giallo</label>
-      <input type="number" name="cartellino_giallo" min="0" max="1" value="0" required>
+      <label class="toggle-control">
+        <input type="checkbox" name="cartellino_giallo" value="1">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">Cartellino giallo</span>
+      </label>
     </div>
     <div class="form-group half">
       <label>Rosso</label>
-      <input type="number" name="cartellino_rosso" min="0" max="1" value="0" required>
+      <label class="toggle-control">
+        <input type="checkbox" name="cartellino_rosso" value="1">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">Cartellino rosso</span>
+      </label>
     </div>
   </div>
 
@@ -306,26 +314,34 @@ if (!$partita_id) {
     </div>
 
     <div class="form-row">
-      <div class="form-group half">
-        <label>Gol</label>
-        <input id="edit_goal" type="number" name="goal" min="0" required>
-      </div>
-      <div class="form-group half">
-        <label>Assist</label>
-        <input id="edit_assist" type="number" name="assist" min="0" required>
-      </div>
+    <div class="form-group half">
+      <label>Gol</label>
+      <input id="edit_goal" type="number" name="goal" min="0" required>
     </div>
+    <div class="form-group half">
+      <label>Assist</label>
+      <input id="edit_assist" type="number" name="assist" min="0" required>
+    </div>
+  </div>
 
-    <div class="form-row">
-      <div class="form-group half">
-        <label>Giallo</label>
-        <input id="edit_giallo" type="number" name="cartellino_giallo" min="0" max="1" required>
-      </div>
-      <div class="form-group half">
-        <label>Rosso</label>
-        <input id="edit_rosso" type="number" name="cartellino_rosso" min="0" max="1" required>
-      </div>
+  <div class="form-row">
+    <div class="form-group half">
+      <label>Giallo</label>
+      <label class="toggle-control">
+        <input id="edit_giallo" type="checkbox" name="cartellino_giallo" value="1">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">Cartellino giallo</span>
+      </label>
     </div>
+    <div class="form-group half">
+      <label>Rosso</label>
+      <label class="toggle-control">
+        <input id="edit_rosso" type="checkbox" name="cartellino_rosso" value="1">
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">Cartellino rosso</span>
+      </label>
+    </div>
+  </div>
 
     <div class="form-group">
       <label>Voto</label>
@@ -403,11 +419,18 @@ document.getElementById("azioneStat").addEventListener("change", e => {
 async function loadPartita(){
   const r = await fetch(`/api/get_partita.php?id=${ID}`);
   const p = await r.json();
-document.getElementById("partitaInfo").innerHTML = `
+  let torneoNome = p.torneo || '';
+  try {
+    const tr = await fetch(`/api/get_torneo_by_slug.php?slug=${encodeURIComponent(p.torneo || '')}`);
+    const td = await tr.json();
+    if (td && td.nome) torneoNome = td.nome;
+  } catch (e) {}
+
+  document.getElementById("partitaInfo").innerHTML = `
     <b>${p.squadra_casa} - ${p.squadra_ospite}</b><br>
-    ${p.data_partita} | 
-    ${p.ora_partita.substring(0,5)}
-`;
+    ${p.data_partita} | ${p.ora_partita.substring(0,5)}<br>
+    <span style="font-size:14px;color:#444;">${torneoNome} · ${p.fase || 'REGULAR'}</span>
+  `;
 
 }
 
@@ -477,6 +500,8 @@ document.getElementById("formAdd").addEventListener("submit", async e => {
   e.preventDefault();
   const fd = new FormData(e.target);
   fd.append("azione","add");
+  fd.set("cartellino_giallo", e.target.cartellino_giallo?.checked ? 1 : 0);
+  fd.set("cartellino_rosso", e.target.cartellino_rosso?.checked ? 1 : 0);
 
   const r = await fetch(API, { method:"POST", body:fd });
   const out = await r.json();
@@ -503,8 +528,8 @@ function populateEditFromSelect() {
   document.getElementById("edit_id").value = stat.id;
   document.getElementById("edit_goal").value = stat.goal ?? 0;
   document.getElementById("edit_assist").value = stat.assist ?? 0;
-  document.getElementById("edit_giallo").value = stat.cartellino_giallo ?? 0;
-  document.getElementById("edit_rosso").value = stat.cartellino_rosso ?? 0;
+  document.getElementById("edit_giallo").checked = (stat.cartellino_giallo ?? 0) > 0;
+  document.getElementById("edit_rosso").checked = (stat.cartellino_rosso ?? 0) > 0;
   document.getElementById("edit_voto").value = stat.voto ?? "";
 }
 document.getElementById("edit_giocatore_sel")?.addEventListener("change", populateEditFromSelect);
@@ -515,6 +540,8 @@ document.getElementById("formEdit").addEventListener("submit", async e => {
 
   const fd = new FormData(e.target);
   fd.append("azione","edit");
+  fd.set("cartellino_giallo", e.target.cartellino_giallo?.checked ? 1 : 0);
+  fd.set("cartellino_rosso", e.target.cartellino_rosso?.checked ? 1 : 0);
 
   const r = await fetch(API, { method:"POST", body:fd });
   const out = await r.json();
