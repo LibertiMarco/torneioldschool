@@ -53,19 +53,32 @@ $sql = "
     SELECT *
     FROM (
         SELECT 
-            g.id,
-            g.nome,
-            g.cognome,
-            g.ruolo,
+            base.id,
+            base.nome,
+            base.cognome,
+            base.ruolo,
             '' AS squadra,
             '' AS torneo,
-            g.foto AS foto,
-            g.reti AS gol,
-            g.presenze AS presenze,
-            g.media_voti AS media_voti,
-            ROW_NUMBER() OVER ($orderClause) AS posizione
-        FROM giocatori g
-        $whereBase
+            base.foto,
+            base.gol,
+            base.presenze,
+            base.media_voti,
+            @rownum := @rownum + 1 AS posizione
+        FROM (
+            SELECT 
+                g.id,
+                g.nome,
+                g.cognome,
+                g.ruolo,
+                g.foto,
+                g.reti AS gol,
+                g.presenze,
+                g.media_voti
+            FROM giocatori g
+            $whereBase
+            $orderClause
+        ) AS base
+        CROSS JOIN (SELECT @rownum := 0) AS r
     ) AS ordered
     $whereSearch
     ORDER BY posizione ASC
@@ -102,7 +115,10 @@ $stmt->close();
 $countSql = "
     SELECT COUNT(*) AS totale
     FROM (
-        SELECT g.id
+        SELECT 
+            g.id,
+            g.nome,
+            g.cognome
         FROM giocatori g
         $whereBase
     ) AS base
