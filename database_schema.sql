@@ -1,5 +1,5 @@
 ﻿-- Schema SQL per torneioldschool
--- Tabelle derivate dalle query presenti in register.php, login.php, api/gestione_*, api/blog.php e tornei/script-serieA.js
+-- Tabelle derivate dalle query presenti in register.php, login.php, api/gestione_*, api/blog.php e tornei/Script-SerieA.js
 
 CREATE DATABASE IF NOT EXISTS torneioldschool CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE torneioldschool;
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS giocatori (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Partite (api/crud/Partita.php, api/get_partite*.php, tornei/script-serieA.js)
+-- Partite (api/crud/Partita.php, api/get_partite*.php, tornei/Script-SerieA.js)
 CREATE TABLE IF NOT EXISTS partite (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     torneo VARCHAR(255) NOT NULL,
