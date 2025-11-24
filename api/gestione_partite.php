@@ -1065,6 +1065,16 @@ if ($res) {
   restoreModState();
   window.addEventListener('pageshow', () => {
     restoreModState();
+    // Se una partita è selezionata, ricarica i dati aggiornati (es. gol salvati da statistiche_partita)
+    const partSel = document.getElementById('selPartitaMod');
+    const selectedId = partSel?.value;
+    if (selectedId) {
+      fetchPartita(selectedId).then(p => {
+        if (!p) return;
+        updatePartitaCache(p);
+        applyPartitaModForm(p);
+      });
+    }
   });
 
   // Footer
