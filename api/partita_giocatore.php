@@ -162,20 +162,26 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId): ?array {
     $p = $partInfo->get_result()->fetch_assoc();
     if (!$p) return null;
 
-    // Somma i goal per squadra filtrando solo le due squadre coinvolte e il torneo corrente
+    // Somma i gol per squadra aggregando per nome squadra (evita duplicazioni per giocatori trasferiti)
     $sumSql = $conn->prepare("
-        SELECT
-          SUM(CASE WHEN s.nome = ? THEN pg.goal ELSE 0 END) AS gol_casa,
-          SUM(CASE WHEN s.nome = ? THEN pg.goal ELSE 0 END) AS gol_osp
-        FROM partita_giocatore pg
-        JOIN partite p ON p.id = pg.partita_id
-        JOIN squadre_giocatori sg ON sg.giocatore_id = pg.giocatore_id
-        JOIN squadre s ON s.id = sg.squadra_id
-        WHERE pg.partita_id = ?
-          AND s.torneo = p.torneo
-          AND s.nome IN (p.squadra_casa, p.squadra_ospite)
+        SELECT 
+          SUM(CASE WHEN agg.squadra = p.squadra_casa THEN agg.gol ELSE 0 END) AS gol_casa,
+          SUM(CASE WHEN agg.squadra = p.squadra_ospite THEN agg.gol ELSE 0 END) AS gol_osp
+        FROM partite p
+        LEFT JOIN (
+          SELECT pg.partita_id, s.nome AS squadra, SUM(pg.goal) AS gol
+          FROM partita_giocatore pg
+          JOIN partite pp ON pp.id = pg.partita_id
+          JOIN squadre_giocatori sg ON sg.giocatore_id = pg.giocatore_id
+          JOIN squadre s ON s.id = sg.squadra_id
+          WHERE pg.partita_id = ?
+            AND s.torneo = pp.torneo
+            AND s.nome IN (pp.squadra_casa, pp.squadra_ospite)
+          GROUP BY pg.partita_id, s.nome
+        ) AS agg ON agg.partita_id = p.id
+        WHERE p.id = ?
     ");
-    $sumSql->bind_param("ssi", $p['squadra_casa'], $p['squadra_ospite'], $partitaId);
+    $sumSql->bind_param("ii", $partitaId, $partitaId);
     $sumSql->execute();
     $res = $sumSql->get_result()->fetch_assoc() ?: [];
 
