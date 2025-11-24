@@ -63,13 +63,12 @@ $sql = "
             g.reti AS gol,
             g.presenze AS presenze,
             g.media_voti AS media_voti,
-            @rownum := @rownum + 1 AS posizione
+            ROW_NUMBER() OVER ($orderClause) AS posizione
         FROM giocatori g
-        CROSS JOIN (SELECT @rownum := 0) AS r
         $whereBase
-        $orderClause
     ) AS ordered
     $whereSearch
+    ORDER BY posizione ASC
     LIMIT ? OFFSET ?
 ";
 
@@ -106,8 +105,7 @@ $countSql = "
         SELECT g.id
         FROM giocatori g
         $whereBase
-        $orderClause
-    ) AS ordered
+    ) AS base
     $whereSearch
 ";
 
