@@ -1674,6 +1674,19 @@ body {
   color: #cccccc;
 }
 
+/* Sovrascrive eventuali caratteri rotti nel copyright */
+.footer-bottom p {
+  position: relative;
+  color: transparent;
+}
+.footer-bottom p::before {
+  content: "© 2025 Tornei Old School - Tutti i diritti riservati";
+  color: #cccccc;
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .footer-content {
