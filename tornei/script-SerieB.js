@@ -508,15 +508,24 @@ async function caricaRosaSquadra(squadra) {
       const card = document.createElement("div");
       card.classList.add("player-card");
 
-card.innerHTML = `
+      const nome = giocatore.nome || "";
+      const cognome = giocatore.cognome || "";
+      const nomeCompleto = `${nome} ${cognome}`.trim() || "Giocatore";
+      const ruolo = (giocatore.ruolo || "").toLowerCase();
+      const isPortiere = ruolo.includes("portiere") || ruolo === "p" || ruolo === "gk";
+      const ruoloBadge = isPortiere ? ' <span class="role-badge gk-badge">GK</span>' : "";
+      const foto = giocatore.foto || "/img/giocatori/unknown.jpg";
+
+      card.innerHTML = `
   <div class="player-name-row">
-    <h4 class="player-name">${giocatore.nome} ${giocatore.cognome}</h4>
+    <h4 class="player-name">${nomeCompleto}${ruoloBadge}</h4>
   </div>
 
   <div class="player-bottom">
     <div class="player-photo">
-      <img src="${giocatore.foto}" 
-           alt="${giocatore.nome} ${giocatore.cognome}">
+      <img src="${foto}" 
+           alt="${nomeCompleto}"
+           onerror="this.src='/img/giocatori/unknown.jpg';">
     </div>
 
     <div class="player-stats">
@@ -547,11 +556,6 @@ card.innerHTML = `
     </div>
   </div>
 `;
-
-
-
-
-
 
       grid.appendChild(card);
     });

@@ -508,50 +508,54 @@ async function caricaRosaSquadra(squadra) {
       const card = document.createElement("div");
       card.classList.add("player-card");
 
-card.innerHTML = `
-  <div class="player-name-row">
-    <h4 class="player-name">${giocatore.nome} ${giocatore.cognome}</h4>
-  </div>
+      const nome = giocatore.nome || "";
+      const cognome = giocatore.cognome || "";
+      const nomeCompleto = `${nome} ${cognome}`.trim() || "Giocatore";
+      const ruolo = (giocatore.ruolo || "").toLowerCase();
+      const isPortiere = ruolo.includes("portiere") || ruolo === "p" || ruolo === "gk";
+      const ruoloBadge = isPortiere ? ' <span class="role-badge gk-badge">GK</span>' : "";
+      const foto = giocatore.foto || "/img/giocatori/unknown.jpg";
 
-  <div class="player-bottom">
-    <div class="player-photo">
-      <img src="${giocatore.foto}" 
-           alt="${giocatore.nome} ${giocatore.cognome}">
-    </div>
-
-    <div class="player-stats">
-      <div class="row">
-        <div class="stat">
-          <span class="label">Presenze</span>
-          <span class="value">${giocatore.presenze ?? '0'}</span>
+      card.innerHTML = `
+        <div class="player-name-row">
+          <h4 class="player-name">${nomeCompleto}${ruoloBadge}</h4>
         </div>
-        <div class="stat">
-          <span class="label">Cart. Gialli / Rossi</span>
-          <span class="value">
-            <span class="yellow">${giocatore.gialli ?? '0'}</span>/
-            <span class="red"> ${giocatore.rossi ?? '0'}</span>
-          </span>
+
+        <div class="player-bottom">
+          <div class="player-photo">
+            <img src="${foto}" 
+                 alt="${nomeCompleto}"
+                 onerror="this.src='/img/giocatori/unknown.jpg';">
+          </div>
+
+          <div class="player-stats">
+            <div class="row">
+              <div class="stat">
+                <span class="label">Presenze</span>
+                <span class="value">${giocatore.presenze ?? '0'}</span>
+              </div>
+              <div class="stat">
+                <span class="label">Cart. Gialli / Rossi</span>
+                <span class="value">
+                  <span class="yellow">${giocatore.gialli ?? '0'}</span>/
+                  <span class="red"> ${giocatore.rossi ?? '0'}</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="stat">
+                <span class="label">Reti</span>
+                <span class="value">${giocatore.reti ?? '0'}</span>
+              </div>
+              <div class="stat rating">
+                <span class="label">Media Voti</span>
+                <span class="value">${giocatore.media_voti ?? '0'}</span>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-
-      <div class="row">
-        <div class="stat">
-          <span class="label">Reti</span>
-          <span class="value">${giocatore.reti ?? '0'}</span>
-        </div>
-        <div class="stat rating">
-          <span class="label">Media Voti</span>
-          <span class="value">${giocatore.media_voti ?? '0'}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-`;
-
-
-
-
-
+      `;
 
       grid.appendChild(card);
     });

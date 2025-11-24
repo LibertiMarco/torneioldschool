@@ -612,7 +612,12 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
     <select name="id" id="selectGiocatore" required>
         <option value="">-- Seleziona un giocatore --</option>
         <?php foreach ($giocatori as $g): ?>
-        <option value="<?= $g['id'] ?>"><?= htmlspecialchars($g['cognome'] . ' ' . $g['nome']) ?></option>
+        <?php
+            $isPortiere = isset($g['ruolo']) && preg_match('/portiere|\\bgk\\b|^p$/i', $g['ruolo']);
+            $label = trim(($g['cognome'] ?? '') . ' ' . ($g['nome'] ?? ''));
+            if ($isPortiere) $label .= ' (GK)';
+        ?>
+        <option value="<?= $g['id'] ?>"><?= htmlspecialchars($label) ?></option>
         <?php endforeach; ?>
     </select>
 </div>
@@ -684,7 +689,12 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
           <select name="giocatore_associa" id="assocGiocatore" required>
               <option value="">-- Seleziona un giocatore --</option>
               <?php foreach ($giocatori as $g): ?>
-              <option value="<?= $g['id'] ?>"><?= htmlspecialchars($g['cognome'] . ' ' . $g['nome']) ?></option>
+              <?php
+                  $isPortiere = isset($g['ruolo']) && preg_match('/portiere|\\bgk\\b|^p$/i', $g['ruolo']);
+                  $label = trim(($g['cognome'] ?? '') . ' ' . ($g['nome'] ?? ''));
+                  if ($isPortiere) $label .= ' (GK)';
+              ?>
+              <option value="<?= $g['id'] ?>"><?= htmlspecialchars($label) ?></option>
               <?php endforeach; ?>
           </select>
       </div>
@@ -1060,6 +1070,21 @@ try {
 const API_SQUADRE_TORNEO = "/api/get_squadre_torneo.php";
 const API_GIOCATORI_SQUADRA = "/api/get_giocatori_squadra.php";
 
+function isPortiereRuolo(ruolo) {
+    const r = (ruolo || "").toLowerCase().trim();
+    return r.includes("portiere") || r === "gk" || r === "p";
+}
+
+function buildPlayerLabel(player = {}, order = "nome") {
+    const nome = player.nome || "";
+    const cognome = player.cognome || "";
+    const base = order === "cognome"
+        ? `${cognome} ${nome}`.trim()
+        : `${nome} ${cognome}`.trim();
+    const suffix = isPortiereRuolo(player.ruolo) ? " (GK)" : "";
+    return `${base}${suffix}`;
+}
+
 function resetSelect(select, placeholder, disable = true) {
     if (!select) return;
     select.innerHTML = placeholder ? `<option value="">${placeholder}</option>` : "";
@@ -1139,7 +1164,7 @@ async function loadGiocatori(select, squadraId, torneo, placeholder = "-- Selezi
         data.forEach(g => {
             const opt = document.createElement("option");
             opt.value = g.id;
-            opt.textContent = `${g.nome} ${g.cognome}`;
+            opt.textContent = buildPlayerLabel(g, "nome");
             if (typeof g.presenze !== "undefined") opt.dataset.presenze = g.presenze;
             if (typeof g.reti !== "undefined") opt.dataset.reti = g.reti;
             if (typeof g.assist !== "undefined") opt.dataset.assist = g.assist;
@@ -1187,7 +1212,7 @@ async function aggiornaGiocatoriDisponibiliPerAssociazione() {
         allPlayers.forEach(p => {
             const opt = document.createElement("option");
             opt.value = p.id;
-            opt.textContent = `${p.cognome || ""} ${p.nome || ""}`.trim();
+            opt.textContent = buildPlayerLabel(p, "cognome");
             assocGiocatore.appendChild(opt);
         });
         return;
@@ -1201,7 +1226,7 @@ async function aggiornaGiocatoriDisponibiliPerAssociazione() {
         .forEach(p => {
             const opt = document.createElement("option");
             opt.value = p.id;
-            opt.textContent = `${p.cognome || ""} ${p.nome || ""}`.trim();
+            opt.textContent = buildPlayerLabel(p, "cognome");
             assocGiocatore.appendChild(opt);
         });
 }
