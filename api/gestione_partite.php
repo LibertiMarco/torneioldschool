@@ -78,6 +78,31 @@ function giornata_to_roundLabel(?int $giornata, array $map): ?string {
 }
 
 // ===== OPERAZIONI CRUD =====
+function squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, $excludeId = null) {
+  $sql = "
+    SELECT 1 FROM partite
+    WHERE torneo = ? AND fase = ? AND giornata = ?
+      AND (squadra_casa = ? OR squadra_ospite = ? OR squadra_casa = ? OR squadra_ospite = ?)
+  ";
+  $types = "sisssss";
+  $params = [$torneo, $fase, $giornata, $casa, $casa, $ospite, $ospite];
+  if ($excludeId !== null) {
+    $sql .= " AND id <> ?";
+    $types .= "i";
+    $params[] = $excludeId;
+  }
+  $sql .= " LIMIT 1";
+
+  $stmt = $conn->prepare($sql);
+  if (!$stmt) return false;
+  $stmt->bind_param($types, ...$params);
+  $stmt->execute();
+  $stmt->store_result();
+  $dup = $stmt->num_rows > 0;
+  $stmt->close();
+  return $dup;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $azione = $_POST['azione'] ?? '';
 
@@ -106,21 +131,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       if ($fase !== 'REGULAR') {
         $giornata = round_to_giornata($roundSelezionato, $roundMap) ?? 0;
       }
-      // controllo: una squadra non può avere due partite nella stessa giornata dello stesso torneo
-      $dupCheck = $conn->prepare("
-        SELECT 1 FROM partite
-        WHERE torneo = ? AND giornata = ? AND fase = ?
-          AND (squadra_casa = ? OR squadra_ospite = ? OR squadra_casa = ? OR squadra_ospite = ?)
-        LIMIT 1
-      ");
-      if ($dupCheck) {
-        $dupCheck->bind_param("sisssss", $torneo, $giornata, $fase, $casa, $casa, $ospite, $ospite);
-        $dupCheck->execute();
-        $dupCheck->store_result();
-        if ($dupCheck->num_rows > 0) {
-          $errore = 'Una delle squadre ha già una partita in questa giornata.';
-        }
-        $dupCheck->close();
+      // controllo: una squadra non può avere due partite nella stessa giornata della stessa fase
+      if (squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite)) {
+        $errore = 'Una delle squadre ha già una partita in questa giornata per questa fase.';
       }
 
       if (!empty($errore)) {
@@ -184,6 +197,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
       if ($fase !== 'REGULAR') {
         $giornata = round_to_giornata($roundSelezionato, $roundMap) ?? 0;
+      }
+      if (squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, $id)) {
+        $errore = 'Una delle squadre ha già una partita in questa giornata per questa fase.';
       }
       $stmt = $conn->prepare("UPDATE partite SET torneo=?, fase=?, squadra_casa=?, squadra_ospite=?, gol_casa=?, gol_ospite=?, data_partita=?, ora_partita=?, campo=?, giornata=?, giocata=?, arbitro=?, link_youtube=?, link_instagram=? WHERE id=?");
       if ($stmt) {
