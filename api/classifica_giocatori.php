@@ -45,8 +45,8 @@ $whereBase = $conditionsBase ? 'WHERE ' . implode(' AND ', $conditionsBase) : ''
 $whereSearch = $conditionsSearch ? 'WHERE ' . implode(' AND ', $conditionsSearch) : '';
 
 $orderClause = $ordine === 'presenze'
-    ? 'ORDER BY presenze DESC, gol DESC, g.cognome ASC, g.nome ASC'
-    : 'ORDER BY gol DESC, presenze DESC, g.cognome ASC, g.nome ASC';
+    ? 'ORDER BY g.presenze DESC, g.reti DESC, g.cognome ASC, g.nome ASC'
+    : 'ORDER BY g.reti DESC, g.presenze DESC, g.cognome ASC, g.nome ASC';
 
 // Query dati
 $sql = "
