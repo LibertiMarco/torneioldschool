@@ -3,6 +3,12 @@ session_start();
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
 
+$alreadyLogged = isset($_SESSION['user_id']);
+if ($alreadyLogged) {
+    header("Location: /index.php");
+    exit;
+}
+
 $error = "";
 $successMessage = "";
 $avatarPath = null;

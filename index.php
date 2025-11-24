@@ -85,7 +85,8 @@
         </div>
       </section>
 
-      <!-- ISCRIZIONE HERO -->
+      <?php if (!isset($_SESSION['user_id'])): ?>
+      <!-- ISCRIZIONE HERO (solo se non loggato) -->
       <section class="iscrizione-hero">
         <div class="hero-overlay">
           <h1>Iscriviti ai Tornei Old School</h1>
@@ -93,6 +94,7 @@
           <a href="register.php" class="hero-btn">Iscriviti Ora</a>
         </div>
       </section>
+      <?php endif; ?>
 
     </div> <!-- fine homepage -->
   </div> <!-- fine content -->
