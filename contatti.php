@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 
 $success = "";
@@ -15,7 +15,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Inserisci un'email valida.";
     } else {
-        $to = "oldschooltornei@gmail.com";
+        $to = "sponsor@torneioldschool.it";
         $subject = "Nuovo messaggio da Tornei Old School";
         $body = "Hai ricevuto un nuovo messaggio:\n\n"
               . "Nome: $nome\n"
