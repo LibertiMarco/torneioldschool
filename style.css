@@ -148,6 +148,7 @@ body {
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
+  color: #15293e;
   transition: 0.2s;
 }
 
@@ -364,18 +365,15 @@ body {
     table-layout: fixed;
   }
 
-  /* Nasconde la colonna Squadra su mobile */
+  /* Nasconde colonna # e Squadra su mobile */
+  #marcatori .marcatori-table th:nth-child(1),
+  #marcatori .marcatori-table td:nth-child(1),
   #marcatori .marcatori-table th:nth-child(3),
   #marcatori .marcatori-table td:nth-child(3) {
     display: none;
   }
 
-  /* Colonne compatte per avere 3 visibili (#, Giocatore, Gol, Pres.) */
-  #marcatori .marcatori-table th:nth-child(1),
-  #marcatori .marcatori-table td:nth-child(1) {
-    width: 34px;
-    min-width: 34px;
-  }
+  /* Colonne compatte per Giocatore, Gol, Pres. */
   #marcatori .marcatori-table th:nth-child(4),
   #marcatori .marcatori-table td:nth-child(4),
   #marcatori .marcatori-table th:nth-child(5),
@@ -387,7 +385,7 @@ body {
 
   #marcatori .scorer-name {
     display: inline-block;
-    max-width: 140px;
+    max-width: 160px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
