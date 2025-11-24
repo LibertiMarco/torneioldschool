@@ -33,6 +33,13 @@ if ($search !== '') {
     $types .= 'ss';
 }
 
+// Filtri per escludere valori a zero
+if ($ordine === 'gol') {
+    $conditions[] = 'g.reti > 0';
+} elseif ($ordine === 'presenze') {
+    $conditions[] = 'g.presenze > 0';
+}
+
 $where = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
 
 $orderClause = $ordine === 'presenze'
