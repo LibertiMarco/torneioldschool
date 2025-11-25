@@ -286,7 +286,7 @@
         </label>
         <label class="consent-option">
           <input type="checkbox" data-consent="marketing">
-          <span>Comunicazioni promozionali e offerte sui tornei.</span>
+          <span>Comunicazioni promozionali e info sui tornei.</span>
         </label>
       </div>
       <div class="consent-actions">

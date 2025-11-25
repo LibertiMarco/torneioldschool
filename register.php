@@ -445,7 +445,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           </label>
           <label>
             <input type="checkbox" name="consenso_marketing">
-            <span>Acconsento a comunicazioni promozionali e offerte sui tornei (facoltativo).</span>
+            <span>Acconsento a comunicazioni promozionali e info sui tornei (facoltativo).</span>
           </label>
         </div>
         <p class="consent-note">Puoi modificare o revocare marketing/newsletter e tracciamento in qualsiasi momento dal tuo account o dal link "Gestisci preferenze" nel footer.</p>

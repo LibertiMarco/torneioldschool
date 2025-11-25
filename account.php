@@ -545,7 +545,7 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
               </div>
               <div class="consent-row">
                 <input type="checkbox" id="consenso_marketing" name="consenso_marketing" <?= !empty($consents['marketing']) ? 'checked' : '' ?>>
-                <label for="consenso_marketing">Comunicazioni promozionali e offerte sui tornei (facoltativo).</label>
+                <label for="consenso_marketing">Comunicazioni promozionali e info sui tornei (facoltativo).</label>
               </div>
               <div class="consent-row">
                 <input type="checkbox" id="consenso_tracking" name="consenso_tracking" <?= !empty($consents['tracking']) ? 'checked' : '' ?>>
