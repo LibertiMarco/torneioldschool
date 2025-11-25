@@ -143,8 +143,13 @@
     #${BANNER_ID}.is-visible { display: flex; flex-direction: column; }
     #${BANNER_ID} .consent-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     #${BANNER_ID} .consent-actions button { flex: 1 1 140px; min-width: 120px; border: none; cursor: pointer; font-weight: 700; padding: 10px 14px; border-radius: 10px; text-align: center; }
+    #${BANNER_ID} .consent-options { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+    #${BANNER_ID} .consent-option { display: flex; gap: 8px; align-items: flex-start; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; border-radius: 10px; }
+    #${BANNER_ID} .consent-option input { margin-top: 4px; }
+    #${BANNER_ID} .consent-option span { color: #e5e7eb; }
     #${BANNER_ID} .btn-primary { background: #3b82f6; color: #fff; }
     #${BANNER_ID} .btn-ghost { background: transparent; color: #f9fafb; border: 1px solid rgba(255,255,255,0.25); }
+    #${BANNER_ID} .btn-muted { background: #1f2937; color: #f9fafb; border: 1px solid rgba(255,255,255,0.15); }
     #${BANNER_ID} a { color: #93c5fd; text-decoration: underline; }
     @media (min-width: 600px) {
       #${BANNER_ID} { flex-direction: row; align-items: center; }
@@ -153,10 +158,26 @@
   `;
   document.head.appendChild(style);
 
+  function normalizeConsent(raw) {
+    const base = { tracking: false, marketing: false, newsletter: false, ts: null };
+    if (typeof raw === 'boolean') {
+      base.tracking = raw;
+      return base;
+    }
+    if (raw && typeof raw === 'object') {
+      base.tracking = !!raw.tracking;
+      base.marketing = !!raw.marketing;
+      base.newsletter = !!raw.newsletter;
+      base.ts = raw.ts || Date.now();
+      return base;
+    }
+    return base;
+  }
+
   function loadConsent() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : null;
+      return saved ? normalizeConsent(JSON.parse(saved)) : null;
     } catch (err) {
       return null;
     }
@@ -165,6 +186,21 @@
   function saveConsent(consent) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(consent));
+    } catch (err) {}
+  }
+
+  function syncConsentWithServer(consent) {
+    try {
+      fetch('/api/consensi.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          marketing: !!consent.marketing,
+          newsletter: !!consent.newsletter,
+          tracking: !!consent.tracking,
+        }),
+      }).catch(() => {});
     } catch (err) {}
   }
 
@@ -182,6 +218,7 @@
       banner = document.getElementById(BANNER_ID);
     }
     if (banner) {
+      fillBanner(loadConsent() || {});
       banner.classList.add('is-visible');
     }
   }
@@ -194,6 +231,40 @@
     }
   }
 
+  function fillBanner(consent) {
+    const banner = document.getElementById(BANNER_ID);
+    if (!banner) return;
+    ['tracking', 'marketing', 'newsletter'].forEach((key) => {
+      const input = banner.querySelector(`input[data-consent="${key}"]`);
+      if (input) {
+        input.checked = !!(consent && consent[key]);
+      }
+    });
+  }
+
+  function collectBannerConsent() {
+    const banner = document.getElementById(BANNER_ID);
+    if (!banner) return { tracking: false, marketing: false, newsletter: false, ts: Date.now() };
+    const trackingInput = banner.querySelector('input[data-consent="tracking"]');
+    const marketingInput = banner.querySelector('input[data-consent="marketing"]');
+    const newsletterInput = banner.querySelector('input[data-consent="newsletter"]');
+    return {
+      tracking: !!(trackingInput && trackingInput.checked),
+      marketing: !!(marketingInput && marketingInput.checked),
+      newsletter: !!(newsletterInput && newsletterInput.checked),
+      ts: Date.now(),
+    };
+  }
+
+  function handleSave(consent) {
+    const normalized = normalizeConsent(consent);
+    normalized.ts = Date.now();
+    saveConsent(normalized);
+    applyConsent(normalized);
+    syncConsentWithServer(normalized);
+    hideBanner();
+  }
+
   function renderBanner() {
     if (document.getElementById(BANNER_ID)) return;
 
@@ -204,21 +275,46 @@
         Usiamo cookie tecnici e, se acconsenti, registriamo alcune azioni per migliorare il sito (senza salvare i contenuti dei form).
         <a href="/privacy.php">Privacy</a> &middot; <a href="/cookie.php">Cookie</a>
       </div>
+      <div class="consent-options">
+        <label class="consent-option">
+          <input type="checkbox" data-consent="tracking">
+          <span>Tracciamento utilizzo del sito (eventi anonimi) per analisi aggregate.</span>
+        </label>
+        <label class="consent-option">
+          <input type="checkbox" data-consent="newsletter">
+          <span>Newsletter: aggiornamenti su tornei, calendari e novit�.</span>
+        </label>
+        <label class="consent-option">
+          <input type="checkbox" data-consent="marketing">
+          <span>Comunicazioni promozionali e offerte sui tornei.</span>
+        </label>
+      </div>
       <div class="consent-actions">
-        <button type="button" class="btn-ghost" data-consent="reject">Rifiuta</button>
-        <button type="button" class="btn-primary" data-consent="accept">Accetta</button>
+        <button type="button" class="btn-ghost" data-consent="reject">Rifiuta tutto</button>
+        <button type="button" class="btn-muted" data-consent="save">Salva preferenze</button>
+        <button type="button" class="btn-primary" data-consent="accept">Accetta tutto</button>
       </div>
     `;
     document.body.appendChild(banner);
+
+    fillBanner(loadConsent() || {});
 
     banner.addEventListener('click', (event) => {
       const btn = event.target instanceof Element ? event.target.closest('[data-consent]') : null;
       if (!btn) return;
       const choice = btn.getAttribute('data-consent');
-      const consent = { tracking: choice === 'accept', ts: Date.now() };
-      saveConsent(consent);
-      applyConsent(consent);
-      hideBanner();
+      if (choice === 'accept') {
+        handleSave({ tracking: true, marketing: true, newsletter: true });
+        return;
+      }
+      if (choice === 'reject') {
+        handleSave({ tracking: false, marketing: false, newsletter: false });
+        return;
+      }
+      if (choice === 'save') {
+        const consent = collectBannerConsent();
+        handleSave(consent);
+      }
     });
   }
 

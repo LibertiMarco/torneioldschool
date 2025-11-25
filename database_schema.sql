@@ -221,3 +221,37 @@ CREATE TABLE IF NOT EXISTS eventi_utente (
     INDEX idx_user_created (user_id, created_at),
     CONSTRAINT fk_event_user FOREIGN KEY (user_id) REFERENCES utenti(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Consensi utente (marketing/newsletter/termini/tracking)
+CREATE TABLE IF NOT EXISTS consensi_utenti (
+    user_id INT UNSIGNED NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    marketing TINYINT(1) NOT NULL DEFAULT 0,
+    newsletter TINYINT(1) NOT NULL DEFAULT 0,
+    terms TINYINT(1) NOT NULL DEFAULT 0,
+    tracking TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id),
+    UNIQUE KEY uq_consensi_email (email),
+    CONSTRAINT fk_consensi_utente FOREIGN KEY (user_id) REFERENCES utenti(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Log consensi utente (storico variazioni)
+CREATE TABLE IF NOT EXISTS consensi_log (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED DEFAULT NULL,
+    email VARCHAR(255) DEFAULT NULL,
+    marketing TINYINT(1) NOT NULL DEFAULT 0,
+    newsletter TINYINT(1) NOT NULL DEFAULT 0,
+    terms TINYINT(1) NOT NULL DEFAULT 0,
+    tracking TINYINT(1) NOT NULL DEFAULT 0,
+    action ENUM('update','revoke_all') NOT NULL DEFAULT 'update',
+    source VARCHAR(50) NOT NULL DEFAULT 'manual',
+    ip VARCHAR(64) DEFAULT NULL,
+    user_agent VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_consensi_user (user_id, created_at),
+    KEY idx_consensi_email (email),
+    CONSTRAINT fk_consensi_log_user FOREIGN KEY (user_id) REFERENCES utenti(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

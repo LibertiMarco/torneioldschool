@@ -17,6 +17,7 @@ if (!is_array($data)) {
 }
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/consent_helpers.php';
 
 function sanitizeStr($value, $max = 255) {
     $value = trim((string)$value);
@@ -75,6 +76,16 @@ $userId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
 $sessionId = session_id() ?: null;
 $ip = truncateIp($_SERVER['REMOTE_ADDR'] ?? '') ?? null;
 $userAgent = sanitizeStr($_SERVER['HTTP_USER_AGENT'] ?? '', 255);
+
+// Blocca registrazione se il consenso al tracking non è attivo
+if ($userId) {
+    $email = consent_get_user_email($conn, $userId) ?? '';
+    $consents = consent_current_snapshot($conn, $userId, $email);
+    if (empty($consents['tracking'])) {
+        echo json_encode(['status' => 'tracking_disabled']);
+        exit;
+    }
+}
 
 $stmt = $conn->prepare("INSERT INTO eventi_utente (user_id, session_id, event_type, path, referrer, title, details, ip_troncato, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 if (!$stmt) {

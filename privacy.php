@@ -23,6 +23,7 @@
       <p class="policy-meta">Ultimo aggiornamento: <?php echo date('d/m/Y'); ?></p>
       <h1>Privacy Policy</h1>
       <p>Questa informativa spiega come trattiamo i dati quando ti iscrivi ai tornei o navighi sul sito.</p>
+      <p>Newsletter e comunicazioni promozionali sono facoltative: puoi attivarle o revocarle in qualsiasi momento dalla pagina account o dal link "Gestisci preferenze" nel footer.</p>
     </section>
 
     <section class="policy-block">
@@ -47,6 +48,7 @@
         <li>Uso della foto profilo: consenso facoltativo.</li>
         <li>Sicurezza, prevenzione abusi e manutenzione: legittimo interesse.</li>
         <li>Analisi dell'utilizzo e tracciamento delle operazioni sul sito: consenso tramite banner.</li>
+        <li>Newsletter e comunicazioni promozionali sui tornei: consenso facoltativo e revocabile.</li>
       </ul>
     </section>
 

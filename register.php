@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
+require_once __DIR__ . '/includi/consent_helpers.php';
 
 $alreadyLogged = isset($_SESSION['user_id']);
 if ($alreadyLogged) {
@@ -36,6 +37,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = trim($_POST['email']);
     $password = trim($_POST['password']);
     $confirm_password = trim($_POST['confirm_password']);
+    $accettaPrivacy = !empty($_POST['accetta_privacy']);
+    $accettaTermini = !empty($_POST['accetta_termini']);
+    $consensoMarketing = !empty($_POST['consenso_marketing']);
+    $consensoNewsletter = !empty($_POST['consenso_newsletter']);
 
     // Validazione base
     if (empty($nome) || empty($cognome) || empty($email) || empty($password) || empty($confirm_password)) {
@@ -44,6 +49,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $error = "Inserisci un'email valida.";
     } elseif ($password !== $confirm_password) {
         $error = "Le password non coincidono.";
+    } elseif (!$accettaPrivacy || !$accettaTermini) {
+        $error = "Devi accettare l'informativa privacy e i termini di servizio.";
     } else {
         // Controllo forza password lato server
         $pattern = '/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};\'":\\|,.<>\/?]).{8,}$/';
@@ -118,6 +125,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $stmt->bind_param("ssssssss", $nome, $cognome, $email, $hashed_password, $ruolo, $avatarPath, $tokenVerifica, $tokenScadenza);
 
                     if ($stmt->execute()) {
+                        $newUserId = $stmt->insert_id ?: $conn->insert_id;
+                        consent_save($conn, (int)$newUserId, $email, [
+                            'marketing' => $consensoMarketing,
+                            'newsletter' => $consensoNewsletter,
+                            'terms' => 1,
+                            'tracking' => 0,
+                        ], 'register');
                         if (inviaEmailVerifica($email, $nome, $tokenVerifica)) {
                             $successMessage = "Registrazione completata! Ti abbiamo inviato una email di conferma a {$email}.";
                         } else {
@@ -418,11 +432,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <span>Ho letto la <a href="/privacy.php" target="_blank">Privacy Policy</a> e acconsento al trattamento dei dati per l'iscrizione.</span>
           </label>
           <label>
+            <input type="checkbox" name="accetta_termini" required>
+            <span>Accetto i Termini di servizio/regolamento dei tornei.</span>
+          </label>
+          <label>
             <input type="checkbox" name="consenso_foto">
             <span>Acconsento all'uso della mia foto per mostrare profili e classifiche (facoltativo).</span>
           </label>
+          <label>
+            <input type="checkbox" name="consenso_newsletter">
+            <span>Voglio ricevere la newsletter con novit� e calendari dei tornei (facoltativo).</span>
+          </label>
+          <label>
+            <input type="checkbox" name="consenso_marketing">
+            <span>Acconsento a comunicazioni promozionali e offerte sui tornei (facoltativo).</span>
+          </label>
         </div>
-        <p class="consent-note">Puoi revocare i consensi scrivendo a <a href="mailto:info@torneioldschool.it">info@torneioldschool.it</a>.</p>
+        <p class="consent-note">Puoi modificare o revocare marketing/newsletter e tracciamento in qualsiasi momento dal tuo account o dal link "Gestisci preferenze" nel footer.</p>
 
         <button type="submit" class="register-btn">Crea Account</button>
 

@@ -726,9 +726,21 @@ function formatContent(text = '') {
         return '<p>Non abbiamo trovato il contenuto di questo articolo.</p>';
     }
 
+    const applyInline = (str) =>
+        str.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
     return text
         .split(/\n{2,}/)
-        .map(paragraph => `<p>${paragraph.replace(/\n/g, '<br>')}</p>`)
+        .map(block => {
+            const safe = escapeHTML(block.trim());
+            if (safe.startsWith('## ')) {
+                return `<h3>${applyInline(safe.slice(3))}</h3>`;
+            }
+            if (safe.startsWith('# ')) {
+                return `<h2>${applyInline(safe.slice(2))}</h2>`;
+            }
+            return `<p>${applyInline(safe).replace(/\n/g, '<br>')}</p>`;
+        })
         .join('');
 }
 

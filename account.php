@@ -7,6 +7,7 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
+require_once __DIR__ . '/includi/consent_helpers.php';
 
 $userId = (int)$_SESSION['user_id'];
 $successMessage = '';
@@ -55,14 +56,25 @@ if (!$currentUser) {
     header("Location: /logout.php");
     exit;
 }
+$consents = consent_current_snapshot($conn, $userId, $currentUser['email'] ?? '');
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['revoca_consensi'])) {
+    $consents = consent_save($conn, $userId, $currentUser['email'] ?? '', [
+        'marketing' => 0,
+        'newsletter' => 0,
+        'tracking' => 0,
+    ], 'account', 'revoke_all');
+    $successMessage = "Consensi marketing/newsletter/tracciamento revocati.";
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nome = trim($_POST['nome'] ?? '');
     $cognome = trim($_POST['cognome'] ?? '');
     $email = $currentUser['email'];
     $password = trim($_POST['password'] ?? '');
     $confirmPassword = trim($_POST['confirm_password'] ?? '');
     $currentPassword = trim($_POST['current_password'] ?? '');
+    $consensoMarketing = !empty($_POST['consenso_marketing']);
+    $consensoNewsletter = !empty($_POST['consenso_newsletter']);
+    $consensoTracking = !empty($_POST['consenso_tracking']);
     $avatarPath = $currentUser['avatar'] ?? null;
     $emailChanged = false;
 
@@ -169,7 +181,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['cognome'] = $cognome;
             $_SESSION['email'] = $email;
             $_SESSION['avatar'] = $avatarPath;
-
+            $consents = consent_save($conn, $userId, $currentUser['email'] ?? '', [
+                'marketing' => $consensoMarketing,
+                'newsletter' => $consensoNewsletter,
+                'tracking' => $consensoTracking,
+                'terms' => 1,
+            ], 'account');
             $successMessage = "Impostazioni aggiornate con successo.";
 
             $currentUser = caricaUtente($conn, $userId);
@@ -349,6 +366,33 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
       color: #64748b;
       font-size: 0.9rem;
     }
+    .consent-panel {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-top: 4px;
+    }
+    .consent-panel h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      color: #0f172a;
+    }
+    .consent-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      color: #0f172a;
+    }
+    .consent-row input[type="checkbox"] {
+      margin-top: 4px;
+    }
+    .consent-hint {
+      color: #475569;
+      font-size: 0.9rem;
+      margin: 6px 0 0;
+    }
     .save-btn {
       margin-top: 10px;
       background: linear-gradient(120deg, #15293e, #1f3d60);
@@ -365,6 +409,22 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
     .save-btn:hover {
       transform: translateY(-1px);
       box-shadow: 0 16px 32px rgba(15, 23, 42, 0.22);
+    }
+    .revoke-btn {
+      margin-top: 10px;
+      background: #fff;
+      color: #b91c1c;
+      border: 1px solid #fca5a5;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 0.98rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+    .revoke-btn:hover {
+      background: #fef2f2;
+      transform: translateY(-1px);
     }
     .password-area {
       display: flex;
@@ -476,8 +536,30 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
               </div>
             </div>
           </div>
+          <div class="form-field" style="grid-column: 1 / -1;">
+            <div class="consent-panel">
+              <h3>Consensi marketing e preferenze</h3>
+              <div class="consent-row">
+                <input type="checkbox" id="consenso_newsletter" name="consenso_newsletter" <?= !empty($consents['newsletter']) ? 'checked' : '' ?>>
+                <label for="consenso_newsletter">Newsletter con novit� e calendari tornei (facoltativo).</label>
+              </div>
+              <div class="consent-row">
+                <input type="checkbox" id="consenso_marketing" name="consenso_marketing" <?= !empty($consents['marketing']) ? 'checked' : '' ?>>
+                <label for="consenso_marketing">Comunicazioni promozionali e offerte sui tornei (facoltativo).</label>
+              </div>
+              <div class="consent-row">
+                <input type="checkbox" id="consenso_tracking" name="consenso_tracking" <?= !empty($consents['tracking']) ? 'checked' : '' ?>>
+                <label for="consenso_tracking">Tracciamento utilizzo del sito per migliorare i servizi (facoltativo).</label>
+              </div>
+              <p class="consent-hint">Togli la spunta per revocare questi consensi. Privacy e termini restano attivi per mantenere l'account.</p>
+            </div>
+          </div>
         </div>
         <button type="submit" class="save-btn">Salva modifiche</button>
+      </form>
+      <form method="POST" style="margin-top: 6px;">
+        <input type="hidden" name="revoca_consensi" value="1">
+        <button type="submit" class="revoke-btn">Revoca marketing / newsletter / tracciamento</button>
       </form>
     </section>
   </main>
@@ -490,6 +572,16 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
       .then(html => document.getElementById("footer-container").innerHTML = html);
 
     document.addEventListener("DOMContentLoaded", () => {
+      try {
+        const consentState = {
+          tracking: <?= !empty($consents['tracking']) ? 'true' : 'false' ?>,
+          marketing: <?= !empty($consents['marketing']) ? 'true' : 'false' ?>,
+          newsletter: <?= !empty($consents['newsletter']) ? 'true' : 'false' ?>,
+          ts: Date.now(),
+        };
+        localStorage.setItem("tosConsent", JSON.stringify(consentState));
+      } catch (err) {}
+
       const passwordButtons = document.querySelectorAll(".toggle-password");
       passwordButtons.forEach(btn => {
         btn.addEventListener("click", () => {
