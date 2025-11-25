@@ -1,5 +1,10 @@
 RewriteEngine On
 
+# Forza HTTPS (eccetto ambienti locali)
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1|::1)$ [NC]
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
 # Rende dinamici robots.txt e sitemap.xml senza rompere i percorsi standard
 RewriteRule ^robots\.txt$ robots.php [L]
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
@@ -33,6 +38,12 @@ RewriteRule ^sitemap\.xml$ sitemap.php [L]
   <FilesMatch "\.(html|php)$">
     Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
   </FilesMatch>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set Permissions-Policy "geolocation=(),microphone=(),camera=()"
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+  Header set Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' data: https:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
 </IfModule>
 
 # Pagine di errore personalizzate

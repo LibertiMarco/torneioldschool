@@ -1,5 +1,6 @@
-<?php
+﻿<?php
 session_start();
+require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
 require_once __DIR__ . '/includi/seo.php';
@@ -18,52 +19,67 @@ $resendBreadcrumbs = seo_breadcrumb_schema([
 
 $error = "";
 $success = "";
-$emailField = trim($_GET['email'] ?? ($_POST['email'] ?? ''));
+$emailField = trim($_POST['email'] ?? '');
+$captchaQuestion = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
-    $emailField = $email;
+    if (!csrf_is_valid($_POST['_csrf'] ?? '', 'resend_form')) {
+        $error = "Sessione scaduta. Ricarica e riprova.";
+    } elseif (honeypot_triggered()) {
+        $error = "Richiesta non valida.";
+    } elseif (!rate_limit_allow('resend_form', 3, 900)) {
+        $wait = rate_limit_retry_after('resend_form', 900);
+        $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
+    } elseif (!captcha_is_valid('resend_form', $_POST['captcha_answer'] ?? null)) {
+        $error = "Verifica anti-spam non valida.";
+    }
 
-    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = "Inserisci un indirizzo email valido.";
-    } else {
-        $stmt = $conn->prepare("SELECT id, nome, cognome, email_verificata FROM utenti WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $user = $result->fetch_assoc();
+    if (!$error) {
+        $email = trim($_POST['email'] ?? '');
+        $emailField = $email;
 
-        if (!$user) {
-            $success = "Se esiste un account con questa email, riceverai a breve un nuovo link di conferma.";
-        } elseif ((int)$user['email_verificata'] === 1) {
-            $success = "Questa email risulta già verificata. Puoi accedere con le tue credenziali.";
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error = "Inserisci un indirizzo email valido.";
         } else {
-            try {
-                $token = bin2hex(random_bytes(32));
-            } catch (Exception $e) {
-                $error = "Errore nella generazione del token. Riprova fra qualche minuto.";
-            }
+            $stmt = $conn->prepare("SELECT id, nome, cognome, email_verificata FROM utenti WHERE email = ?");
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $user = $result->fetch_assoc();
 
-            if (!$error) {
-                $scadenza = (new DateTime('+1 day'))->format('Y-m-d H:i:s');
-                $update = $conn->prepare("UPDATE utenti SET token_verifica = ?, token_verifica_scadenza = ? WHERE id = ?");
-                $update->bind_param("ssi", $token, $scadenza, $user['id']);
+            if (!$user) {
+                $success = "Se esiste un account con questa email, riceverai a breve un nuovo link di conferma.";
+            } elseif ((int)$user['email_verificata'] === 1) {
+                $success = "Questa email risulta gia verificata. Puoi accedere con le tue credenziali.";
+            } else {
+                try {
+                    $token = bin2hex(random_bytes(32));
+                } catch (Exception $e) {
+                    $error = "Errore nella generazione del token. Riprova fra qualche minuto.";
+                }
 
-                if ($update->execute()) {
-                    if (inviaEmailVerifica($email, $user['nome'], $token)) {
-                        $success = "Email inviata! Controlla la tua casella per completare la verifica.";
-                        $_POST = [];
+                if (!$error) {
+                    $scadenza = (new DateTime('+1 day'))->format('Y-m-d H:i:s');
+                    $update = $conn->prepare("UPDATE utenti SET token_verifica = ?, token_verifica_scadenza = ? WHERE id = ?");
+                    $update->bind_param("ssi", $token, $scadenza, $user['id']);
+
+                    if ($update->execute()) {
+                        if (inviaEmailVerifica($email, $user['nome'], $token)) {
+                            $success = "Email inviata! Controlla la tua casella per completare la verifica.";
+                            $_POST = [];
+                        } else {
+                            $error = "Non e stato possibile inviare l'email. Riprova piu tardi.";
+                        }
                     } else {
-                        $error = "Non è stato possibile inviare l'email. Riprova più tardi.";
+                        $error = "Errore durante l'aggiornamento del token. Riprova.";
                     }
-                } else {
-                    $error = "Errore durante l'aggiornamento del token. Riprova.";
                 }
             }
         }
     }
 }
-?>
+
+$captchaQuestion = captcha_generate('resend_form');?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -110,6 +126,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       border: 1px solid #c9d3e1;
       border-radius: 10px;
       font-size: 1rem;
+    }
+    .hp-field {
+      position: absolute;
+      left: -9999px;
+      top: auto;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
     }
     .resend-card button {
       border: none;
@@ -163,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <main class="resend-wrapper">
     <div class="resend-card">
       <h1>Reinvia email di conferma</h1>
-      <p>Inserisci la tua email. Se l'account non è ancora stato verificato, ti invieremo un nuovo link.</p>
+      <p>Inserisci la tua email. Se l'account non ├¿ ancora stato verificato, ti invieremo un nuovo link.</p>
 
       <?php if ($error): ?>
         <div class="error-message"><?= htmlspecialchars($error) ?></div>
@@ -174,8 +198,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
 
       <form method="POST" action="">
+        <?= csrf_field('resend_form') ?>
+        <div class="hp-field" aria-hidden="true">
+          <label for="hp_field">Lascia vuoto</label>
+          <input type="text" id="hp_field" name="hp_field" tabindex="-1" autocomplete="off">
+        </div>
         <label for="email">Email</label>
         <input type="email" id="email" name="email" required value="<?= htmlspecialchars($emailField) ?>">
+        <label for="captcha_answer">Verifica: quanto fa <?= htmlspecialchars($captchaQuestion) ?>?</label>
+        <input type="number" id="captcha_answer" name="captcha_answer" inputmode="numeric" required>
         <button type="submit">Invia nuovamente il link</button>
       </form>
 
@@ -201,3 +232,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </script>
 </body>
 </html>
+
+
+
+
