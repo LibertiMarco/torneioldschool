@@ -255,3 +255,16 @@ CREATE TABLE IF NOT EXISTS consensi_log (
     KEY idx_consensi_email (email),
     CONSTRAINT fk_consensi_log_user FOREIGN KEY (user_id) REFERENCES utenti(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Log invii newsletter articoli (facoltativo)
+CREATE TABLE IF NOT EXISTS newsletter_log (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    post_id INT UNSIGNED NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    status ENUM('queued','sent','failed') NOT NULL DEFAULT 'sent',
+    error TEXT DEFAULT NULL,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_news_post (post_id, sent_at),
+    KEY idx_news_email (email),
+    CONSTRAINT fk_newsletter_post FOREIGN KEY (post_id) REFERENCES blog_post(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

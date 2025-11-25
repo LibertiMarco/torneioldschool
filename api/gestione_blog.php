@@ -6,6 +6,7 @@ if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
 }
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/mail_helper.php';
 
 $errore = '';
 $successo = '';
@@ -89,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($azioneForm === 'crea') {
     $titolo = sanitizeText($_POST['titolo'] ?? '');
     $contenuto = sanitizeText($_POST['contenuto'] ?? '');
+    $inviaNotifica = !empty($_POST['invia_notifica_newsletter']);
     if ($titolo === '' || $contenuto === '') {
       $errore = 'Compila titolo e contenuto per pubblicare un articolo.';
     } else {
@@ -97,10 +99,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param('ss', $titolo, $contenuto);
         if ($stmt->execute()) {
           $postId = $stmt->insert_id;
+          $titoloUsato = $titolo;
+          $contenutoUsato = $contenuto;
           $titolo = '';
           $contenuto = '';
           if (addMediaToPost($conn, $postId, $_FILES['media'] ?? [], $mediaDir, $allowedImages, $allowedVideos, $errore)) {
             $successo = 'Articolo pubblicato correttamente!';
+            if ($inviaNotifica) {
+              $resultMail = invia_notifica_articolo($conn, (int)$postId, $titoloUsato, $contenutoUsato);
+              if ($resultMail['totali'] > 0) {
+                $successo .= ' Notifica inviata a ' . (int)$resultMail['inviate'] . ' su ' . (int)$resultMail['totali'] . ' iscritti newsletter.';
+              } else {
+                $successo .= ' Nessun iscritto alla newsletter al momento.';
+              }
+            }
           }
         } else {
           $errore = 'Impossibile salvare l\'articolo. Riprova.';
@@ -356,6 +368,11 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
           <button type="button" class="btn-secondary-modern" data-add-upload data-add-upload-pick>Carica file</button>
           <p class="helper-text">Formato supportato: JPG, PNG, WEBP, MP4, WEBM, OGG. I file verranno mostrati nell'ordine di selezione.</p>
         </div>
+
+        <label class="checkbox-row" style="margin-top: 8px; display:flex; gap:8px; align-items:flex-start;">
+          <input type="checkbox" name="invia_notifica_newsletter" value="1">
+          <span>Invia notifica email agli utenti con consenso newsletter.</span>
+        </label>
 
         <button type="submit" class="btn-primary">Pubblica articolo</button>
       </form>
