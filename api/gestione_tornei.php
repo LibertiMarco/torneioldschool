@@ -4,6 +4,7 @@ if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
     header("Location: /index.php");
     exit;
 }
+header('X-Robots-Tag: noindex, nofollow', true);
 
 require_once __DIR__ . '/crud/torneo.php';
 $torneo = new Torneo();
@@ -206,10 +207,11 @@ $lista = $torneo->getAll();
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Tornei</title>
-    <link rel="stylesheet" href="/style.css">
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="robots" content="noindex, nofollow">
+        <title>Gestione Tornei</title>
+        <link rel="stylesheet" href="/style.css">
     <link rel="icon" type="image/png" href="/img/logo_old_school.png">
     <style>
         body {

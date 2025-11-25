@@ -5,13 +5,108 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $id = (int)($_GET['id'] ?? 0);
 $isLogged = isset($_SESSION['user_id']);
+require_once __DIR__ . '/includi/seo.php';
+require_once __DIR__ . '/includi/db.php';
+
+$baseUrl = seo_base_url();
+$articleUrl = $baseUrl . '/articolo.php?id=' . $id;
+$articleMeta = [
+    'title' => 'Articolo - Tornei Old School',
+    'description' => 'Leggi le ultime notizie dei tornei Old School.',
+    'url' => $articleUrl,
+    'canonical' => $articleUrl,
+    'type' => 'article',
+    'image' => $baseUrl . '/img/blog/placeholder.jpg',
+];
+$articleSchema = [];
+$breadcrumbSchema = seo_breadcrumb_schema([
+    ['name' => 'Home', 'url' => $baseUrl . '/'],
+    ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
+    ['name' => 'Articolo', 'url' => $articleUrl],
+]);
+
+if ($id > 0) {
+    $stmt = $conn->prepare(
+        "SELECT titolo,
+                contenuto,
+                data_pubblicazione,
+                COALESCE(
+                    (SELECT CONCAT('/img/blog_media/', file_path)
+                     FROM blog_media
+                     WHERE post_id = blog_post.id AND tipo = 'image'
+                     ORDER BY ordine ASC, id ASC
+                     LIMIT 1),
+                    CASE
+                        WHEN immagine IS NULL OR immagine = '' THEN ''
+                        ELSE CONCAT('/img/blog/', immagine)
+                    END
+                ) AS cover
+         FROM blog_post
+         WHERE id = ?
+         LIMIT 1"
+    );
+
+    if ($stmt) {
+        $stmt->bind_param('i', $id);
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+            if ($row = $result->fetch_assoc()) {
+                $cover = $row['cover'] ?? '';
+                $coverUrl = $cover ? $baseUrl . '/' . ltrim($cover, '/') : $articleMeta['image'];
+                $excerpt = seo_trim($row['contenuto'] ?? '', 180);
+                $articleMeta = [
+                    'title' => ($row['titolo'] ?? 'Articolo') . ' - Tornei Old School',
+                    'description' => $excerpt ?: $articleMeta['description'],
+                    'url' => $articleUrl,
+                    'canonical' => $articleUrl,
+                    'type' => 'article',
+                    'image' => $coverUrl,
+                ];
+
+                $breadcrumbSchema = seo_breadcrumb_schema([
+                    ['name' => 'Home', 'url' => $baseUrl . '/'],
+                    ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
+                    ['name' => $row['titolo'] ?? 'Articolo', 'url' => $articleUrl],
+                ]);
+
+                $articleSchema = [
+                    '@context' => 'https://schema.org',
+                    '@type' => 'Article',
+                    'headline' => $row['titolo'] ?? '',
+                    'description' => $excerpt,
+                    'image' => [$coverUrl],
+                    'mainEntityOfPage' => $articleUrl,
+                    'author' => [
+                        '@type' => 'Organization',
+                        'name' => 'Tornei Old School',
+                    ],
+                    'publisher' => [
+                        '@type' => 'Organization',
+                        'name' => 'Tornei Old School',
+                        'logo' => [
+                            '@type' => 'ImageObject',
+                            'url' => $baseUrl . '/img/logo_old_school.png',
+                        ],
+                    ],
+                ];
+
+                if (!empty($row['data_pubblicazione'])) {
+                    $articleSchema['datePublished'] = date('c', strtotime($row['data_pubblicazione']));
+                }
+            }
+        }
+        $stmt->close();
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Articolo - Tornei Old School</title>
+<?php render_seo_tags($articleMeta); ?>
+<?php render_jsonld($breadcrumbSchema); ?>
+<?php render_jsonld($articleSchema); ?>
 <link rel="icon" type="image/png" href="/img/logo_old_school.png">
 <link rel="stylesheet" href="/style.css">
 

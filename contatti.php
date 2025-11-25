@@ -30,13 +30,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
     }
 }
+require_once __DIR__ . '/includi/seo.php';
+$baseUrl = seo_base_url();
+$contattiSeo = [
+  'title' => 'Contatti - Tornei Old School',
+  'description' => 'Scrivici per collaborazioni, iscrizioni o domande sui tornei Old School.',
+  'url' => $baseUrl . '/contatti.php',
+  'canonical' => $baseUrl . '/contatti.php',
+];
+$contattiBreadcrumbs = seo_breadcrumb_schema([
+  ['name' => 'Home', 'url' => $baseUrl . '/'],
+  ['name' => 'Contatti', 'url' => $baseUrl . '/contatti.php'],
+]);
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contattaci - Tornei Old School</title>
+  <?php render_seo_tags($contattiSeo); ?>
+  <?php render_jsonld($contattiBreadcrumbs); ?>
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link rel="stylesheet" href="style.css">
   <style>

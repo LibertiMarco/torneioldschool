@@ -1,9 +1,24 @@
+<?php
+require_once __DIR__ . '/includi/seo.php';
+$baseUrl = seo_base_url();
+$aboutSeo = [
+  'title' => 'Chi siamo - Tornei Old School',
+  'description' => 'La storia, la squadra e i valori che guidano i tornei Old School.',
+  'url' => $baseUrl . '/chisiamo.php',
+  'canonical' => $baseUrl . '/chisiamo.php',
+];
+$aboutBreadcrumbs = seo_breadcrumb_schema([
+  ['name' => 'Home', 'url' => $baseUrl . '/'],
+  ['name' => 'Chi siamo', 'url' => $baseUrl . '/chisiamo.php'],
+]);
+?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chi Siamo - Tornei Old School</title>
+  <?php render_seo_tags($aboutSeo); ?>
+  <?php render_jsonld($aboutBreadcrumbs); ?>
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link rel="stylesheet" href="style.css">
   <style>

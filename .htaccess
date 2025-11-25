@@ -1,0 +1,5 @@
+RewriteEngine On
+
+# Rende dinamici robots.txt e sitemap.xml senza rompere i percorsi standard
+RewriteRule ^robots\.txt$ robots.php [L]
+RewriteRule ^sitemap\.xml$ sitemap.php [L]

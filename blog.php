@@ -2,13 +2,26 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+require_once __DIR__ . '/includi/seo.php';
+$baseUrl = seo_base_url();
+$blogSeo = [
+    'title' => 'Blog e novita - Tornei Old School',
+    'description' => 'Articoli, aggiornamenti e storie dai tornei Old School con risultati, curiosita e approfondimenti.',
+    'url' => $baseUrl . '/blog.php',
+    'canonical' => $baseUrl . '/blog.php',
+];
+$blogBreadcrumbs = seo_breadcrumb_schema([
+    ['name' => 'Home', 'url' => $baseUrl . '/'],
+    ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
+]);
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blog &amp; Novità - Tornei Old School</title>
+<?php render_seo_tags($blogSeo); ?>
+<?php render_jsonld($blogBreadcrumbs); ?>
 <link rel="icon" type="image/png" href="/img/logo_old_school.png">
 <link rel="stylesheet" href="/style.css">
 

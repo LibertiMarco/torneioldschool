@@ -1,9 +1,24 @@
+<?php
+require_once __DIR__ . '/includi/seo.php';
+$baseUrl = seo_base_url();
+$legalSeo = [
+  'title' => 'Note legali - Tornei Old School',
+  'description' => 'Termini legali e condizioni d uso del sito Tornei Old School.',
+  'url' => $baseUrl . '/note_legali.php',
+  'canonical' => $baseUrl . '/note_legali.php',
+];
+$legalBreadcrumbs = seo_breadcrumb_schema([
+  ['name' => 'Home', 'url' => $baseUrl . '/'],
+  ['name' => 'Note legali', 'url' => $baseUrl . '/note_legali.php'],
+]);
+?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Note legali - Tornei Old School</title>
+  <?php render_seo_tags($legalSeo); ?>
+  <?php render_jsonld($legalBreadcrumbs); ?>
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <style>

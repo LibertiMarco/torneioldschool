@@ -44,13 +44,26 @@ if ($result && $result->num_rows > 0) {
     }
   }
 }
+require_once __DIR__ . '/includi/seo.php';
+$baseUrl = seo_base_url();
+$torneiSeo = [
+  'title' => 'Tornei in corso - Tornei Old School',
+  'description' => 'Calendari, risultati e documenti dei tornei Old School divisi per stato.',
+  'url' => $baseUrl . '/tornei.php',
+  'canonical' => $baseUrl . '/tornei.php',
+];
+$torneiBreadcrumbs = seo_breadcrumb_schema([
+  ['name' => 'Home', 'url' => $baseUrl . '/'],
+  ['name' => 'Tornei', 'url' => $baseUrl . '/tornei.php'],
+]);
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Tornei - Tornei Old School</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <?php render_seo_tags($torneiSeo); ?>
+  <?php render_jsonld($torneiBreadcrumbs); ?>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" type="image/png" href="img/logo_old_school.png">
   <style>

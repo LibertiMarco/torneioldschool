@@ -1,6 +1,19 @@
 <?php
 session_start();
 require_once __DIR__ . '/includi/db.php';
+require_once __DIR__ . '/includi/seo.php';
+
+$baseUrl = seo_base_url();
+$loginSeo = [
+    'title' => 'Login - Tornei Old School',
+    'description' => 'Accedi al tuo profilo per seguire tornei, classifiche e commenti.',
+    'url' => $baseUrl . '/login.php',
+    'canonical' => $baseUrl . '/login.php',
+];
+$loginBreadcrumbs = seo_breadcrumb_schema([
+    ['name' => 'Home', 'url' => $baseUrl . '/'],
+    ['name' => 'Login', 'url' => $baseUrl . '/login.php'],
+]);
 
 $alreadyLogged = isset($_SESSION['user_id']);
 if ($alreadyLogged) {
@@ -55,10 +68,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Tornei Old School</title>
+  <?php render_seo_tags($loginSeo); ?>
+  <?php render_jsonld($loginBreadcrumbs); ?>
+  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link rel="stylesheet" href="style.css">
   <style>
     .login-container {

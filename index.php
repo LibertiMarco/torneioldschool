@@ -1,9 +1,40 @@
+<?php
+require_once __DIR__ . '/includi/seo.php';
+$baseUrl = seo_base_url();
+$homeSeo = [
+  'title' => 'Tornei calcio a 5 Napoli | Tornei Old School',
+  'description' => 'Tornei amatoriali di calcio a 5 a Napoli: iscrizioni, calendari, classifiche e partite con aggiornamenti in tempo reale.',
+  'url' => $baseUrl . '/',
+  'canonical' => $baseUrl . '/',
+];
+$orgSchema = seo_org_schema([
+  'name' => 'Tornei Old School',
+  'url' => $baseUrl . '/',
+  'sport' => 'Calcio',
+  'logo' => $baseUrl . '/img/logo_old_school.png',
+]);
+$localSchema = [
+  '@context' => 'https://schema.org',
+  '@type' => 'SportsActivityLocation',
+  'name' => 'Tornei Old School - Calcio a 5 Napoli',
+  'sport' => 'Calcio a 5',
+  'areaServed' => 'Napoli',
+  'address' => [
+    '@type' => 'PostalAddress',
+    'addressLocality' => 'Napoli',
+    'addressCountry' => 'IT',
+  ],
+  'url' => $baseUrl . '/',
+];
+?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Home - Tornei Old School</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <?php render_seo_tags($homeSeo); ?>
+  <?php render_jsonld($orgSchema); ?>
+  <?php render_jsonld($localSchema); ?>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
 </head>

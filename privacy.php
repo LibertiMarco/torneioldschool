@@ -1,9 +1,24 @@
 ﻿<!DOCTYPE html>
 <html lang="it">
 <head>
+  <?php
+  require_once __DIR__ . '/includi/seo.php';
+  $baseUrl = seo_base_url();
+  $privacySeo = [
+    'title' => 'Privacy Policy - Tornei Old School',
+    'description' => 'Informativa sulla privacy e sul trattamento dei dati personali per i tornei Old School.',
+    'url' => $baseUrl . '/privacy.php',
+    'canonical' => $baseUrl . '/privacy.php',
+  ];
+  $privacyBreadcrumbs = seo_breadcrumb_schema([
+    ['name' => 'Home', 'url' => $baseUrl . '/'],
+    ['name' => 'Privacy Policy', 'url' => $baseUrl . '/privacy.php'],
+  ]);
+  ?>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Policy - Tornei Old School</title>
+  <?php render_seo_tags($privacySeo); ?>
+  <?php render_jsonld($privacyBreadcrumbs); ?>
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <style>

@@ -1,9 +1,24 @@
 ﻿<!DOCTYPE html>
 <html lang="it">
 <head>
+  <?php
+  require_once __DIR__ . '/includi/seo.php';
+  $baseUrl = seo_base_url();
+  $cookieSeo = [
+    'title' => 'Cookie Policy - Tornei Old School',
+    'description' => 'Dettagli su uso dei cookie e strumenti di tracciamento sul sito Tornei Old School.',
+    'url' => $baseUrl . '/cookie.php',
+    'canonical' => $baseUrl . '/cookie.php',
+  ];
+  $cookieBreadcrumbs = seo_breadcrumb_schema([
+    ['name' => 'Home', 'url' => $baseUrl . '/'],
+    ['name' => 'Cookie Policy', 'url' => $baseUrl . '/cookie.php'],
+  ]);
+  ?>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cookie Policy - Tornei Old School</title>
+  <?php render_seo_tags($cookieSeo); ?>
+  <?php render_jsonld($cookieBreadcrumbs); ?>
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <style>

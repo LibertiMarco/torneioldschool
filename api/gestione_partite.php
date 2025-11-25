@@ -4,6 +4,7 @@ if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
   header("Location: /index.php");
   exit;
 }
+header('X-Robots-Tag: noindex, nofollow', true);
 
 require_once __DIR__ . '/../includi/db.php';
 
@@ -267,6 +268,7 @@ if ($res) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
   <title>Gestione Partite</title>
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">

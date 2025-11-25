@@ -1,6 +1,19 @@
 <?php
 session_start();
 require_once __DIR__ . '/includi/db.php';
+require_once __DIR__ . '/includi/seo.php';
+
+$baseUrl = seo_base_url();
+$verifySeo = [
+    'title' => 'Conferma email - Tornei Old School',
+    'description' => 'Verifica il tuo indirizzo email per completare la registrazione su Tornei Old School.',
+    'url' => $baseUrl . '/verify_email.php',
+    'canonical' => $baseUrl . '/verify_email.php',
+];
+$verifyBreadcrumbs = seo_breadcrumb_schema([
+    ['name' => 'Home', 'url' => $baseUrl . '/'],
+    ['name' => 'Conferma email', 'url' => $baseUrl . '/verify_email.php'],
+]);
 
 $status = 'error';
 $message = 'Link di verifica non valido.';
@@ -48,7 +61,8 @@ if ($email && $token) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Conferma email - Tornei Old School</title>
+  <?php render_seo_tags($verifySeo); ?>
+  <?php render_jsonld($verifyBreadcrumbs); ?>
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link rel="stylesheet" href="/style.css">
   <style>

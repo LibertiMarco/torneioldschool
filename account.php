@@ -8,6 +8,19 @@ if (!isset($_SESSION['user_id'])) {
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
 require_once __DIR__ . '/includi/consent_helpers.php';
+require_once __DIR__ . '/includi/seo.php';
+
+$baseUrl = seo_base_url();
+$accountSeo = [
+    'title' => 'Il mio account - Tornei Old School',
+    'description' => 'Gestisci profilo, avatar e preferenze dei tornei Old School.',
+    'url' => $baseUrl . '/account.php',
+    'canonical' => $baseUrl . '/account.php',
+];
+$accountBreadcrumbs = seo_breadcrumb_schema([
+    ['name' => 'Home', 'url' => $baseUrl . '/'],
+    ['name' => 'Account', 'url' => $baseUrl . '/account.php'],
+]);
 
 $userId = (int)$_SESSION['user_id'];
 $successMessage = '';
@@ -206,7 +219,8 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Il mio account - Tornei Old School</title>
+  <?php render_seo_tags($accountSeo); ?>
+  <?php render_jsonld($accountBreadcrumbs); ?>
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <style>

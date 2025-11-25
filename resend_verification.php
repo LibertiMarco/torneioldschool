@@ -2,6 +2,19 @@
 session_start();
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
+require_once __DIR__ . '/includi/seo.php';
+
+$baseUrl = seo_base_url();
+$resendSeo = [
+    'title' => 'Reinvia conferma email - Tornei Old School',
+    'description' => 'Richiedi un nuovo link di conferma per il tuo account Tornei Old School.',
+    'url' => $baseUrl . '/resend_verification.php',
+    'canonical' => $baseUrl . '/resend_verification.php',
+];
+$resendBreadcrumbs = seo_breadcrumb_schema([
+    ['name' => 'Home', 'url' => $baseUrl . '/'],
+    ['name' => 'Reinvia conferma email', 'url' => $baseUrl . '/resend_verification.php'],
+]);
 
 $error = "";
 $success = "";
@@ -56,7 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reinvia conferma email - Tornei Old School</title>
+  <?php render_seo_tags($resendSeo); ?>
+  <?php render_jsonld($resendBreadcrumbs); ?>
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link rel="stylesheet" href="/style.css">
   <style>

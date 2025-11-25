@@ -3,13 +3,26 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 $loggedIn = isset($_SESSION['user_id']);
+require_once __DIR__ . '/includi/seo.php';
+$baseUrl = seo_base_url();
+$leadersSeo = [
+    'title' => 'Classifica giocatori - Tornei Old School',
+    'description' => 'Marcatori e presenze dei tornei Old School con classifiche aggiornate in tempo reale.',
+    'url' => $baseUrl . '/classifica_giocatori.php',
+    'canonical' => $baseUrl . '/classifica_giocatori.php',
+];
+$leadersBreadcrumbs = seo_breadcrumb_schema([
+    ['name' => 'Home', 'url' => $baseUrl . '/'],
+    ['name' => 'Classifica giocatori', 'url' => $baseUrl . '/classifica_giocatori.php'],
+]);
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classifica marcatori - Tornei Old School</title>
+    <?php render_seo_tags($leadersSeo); ?>
+    <?php render_jsonld($leadersBreadcrumbs); ?>
     <link rel="icon" type="image/png" href="/img/logo_old_school.png">
     <link rel="stylesheet" href="/style.css">
 </head>

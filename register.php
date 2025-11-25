@@ -3,6 +3,19 @@ session_start();
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
 require_once __DIR__ . '/includi/consent_helpers.php';
+require_once __DIR__ . '/includi/seo.php';
+
+$baseUrl = seo_base_url();
+$registerSeo = [
+    'title' => 'Registrati - Tornei Old School',
+    'description' => 'Crea un account per partecipare ai tornei, salvare statistiche e commentare le partite.',
+    'url' => $baseUrl . '/register.php',
+    'canonical' => $baseUrl . '/register.php',
+];
+$registerBreadcrumbs = seo_breadcrumb_schema([
+    ['name' => 'Home', 'url' => $baseUrl . '/'],
+    ['name' => 'Registrati', 'url' => $baseUrl . '/register.php'],
+]);
 
 $alreadyLogged = isset($_SESSION['user_id']);
 if ($alreadyLogged) {
@@ -150,10 +163,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Registrati - Tornei Old School</title>
+  <?php render_seo_tags($registerSeo); ?>
+  <?php render_jsonld($registerBreadcrumbs); ?>
+  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link rel="stylesheet" href="style.css">
   <style>
     .register-page {
