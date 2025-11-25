@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/seo.php';
 
@@ -23,14 +24,26 @@ if ($alreadyLogged) {
 
 $error = "";
 $needsVerificationResend = null;
+$loginCsrf = csrf_get_token('login_form');
+$resendCsrf = csrf_get_token('resend_verification');
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = trim($_POST['email']);
-    $password = trim($_POST['password']);
+    if (!csrf_is_valid($_POST['_csrf'] ?? '', 'login_form')) {
+        $error = "Sessione scaduta. Ricarica la pagina e riprova.";
+    } elseif (honeypot_triggered()) {
+        $error = "Richiesta non valida.";
+    } elseif (!rate_limit_allow('login_attempt', 5, 900)) {
+        $wait = rate_limit_retry_after('login_attempt', 900);
+        $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
+    }
 
-    // query di selezione
-    $sql = "SELECT id, email, nome, cognome, ruolo, password, avatar, email_verificata FROM utenti WHERE email = ?";
-    $stmt = $conn->prepare($sql);
+    if (!$error) {
+        $email = trim($_POST['email']);
+        $password = trim($_POST['password']);
+
+        // query di selezione
+        $sql = "SELECT id, email, nome, cognome, ruolo, password, avatar, email_verificata FROM utenti WHERE email = ?";
+        $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -63,6 +76,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } else {
         $error = "Email non trovata.";
     }
+}
 }
 ?>
 <!DOCTYPE html>
@@ -102,6 +116,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       flex-direction: column;
       gap: 15px;
       text-align: left;
+    }
+    .hp-field {
+      position: absolute;
+      left: -9999px;
+      top: auto;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
     }
     .login-form label {
       font-weight: 600;
@@ -192,6 +214,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     .toggle-password.is-visible .icon-eye-off {
       display: block;
     }
+    .inline-resend {
+      margin-top: 8px;
+    }
+    .resend-link {
+      background: none;
+      border: none;
+      color: #15293e;
+      text-decoration: underline;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0;
+      font-size: 0.95rem;
+    }
+    .resend-link:hover {
+      color: #0e1d2e;
+    }
   </style>
 </head>
 <body>
@@ -200,6 +238,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="login-box">
       <h2>Accedi</h2>
       <form class="login-form" method="POST" action="">
+        <?= csrf_field('login_form') ?>
+        <div class="hp-field" aria-hidden="true">
+          <label for="hp_field">Lascia vuoto</label>
+          <input type="text" id="hp_field" name="hp_field" tabindex="-1" autocomplete="off">
+        </div>
         <label for="email">Email</label>
         <input type="email" id="email" name="email" required>
 
@@ -222,8 +265,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           <div class="error-message">
             <?= htmlspecialchars($error) ?>
             <?php if ($needsVerificationResend): ?>
-              <br>
-              <a href="resend_verification.php?email=<?= urlencode($needsVerificationResend) ?>" style="color:#15293e;text-decoration:underline;font-weight:bold;">Reinvia email di conferma</a>
+              <form method="POST" action="resend_verification.php" class="inline-resend">
+                <?= csrf_field('resend_verification') ?>
+                <input type="hidden" name="email" value="<?= htmlspecialchars($needsVerificationResend) ?>">
+                <button type="submit" class="resend-link">Reinvia email di conferma</button>
+              </form>
             <?php endif; ?>
           </div>
         <?php endif; ?>

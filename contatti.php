@@ -1,36 +1,49 @@
-﻿<?php
+<?php
 session_start();
+require_once __DIR__ . '/includi/security.php';
+require_once __DIR__ . '/includi/seo.php';
 
 $success = "";
 $error = "";
 
-// Quando il form viene inviato
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $nome = trim($_POST["nome"]);
-    $email = trim($_POST["email"]);
-    $messaggio = trim($_POST["messaggio"]);
-
-    if (empty($nome) || empty($email) || empty($messaggio)) {
-        $error = "Compila tutti i campi.";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = "Inserisci un'email valida.";
+    if (!csrf_is_valid($_POST['_csrf'] ?? '', 'contact_form')) {
+        $error = "Sessione scaduta. Ricarica la pagina e riprova.";
+    } elseif (honeypot_triggered()) {
+        $error = "Richiesta non valida.";
+    } elseif (!rate_limit_allow('contact_form', 3, 300)) {
+        $wait = rate_limit_retry_after('contact_form', 300);
+        $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
+    } elseif (!captcha_is_valid('contact_form', $_POST['captcha_answer'] ?? null)) {
+        $error = "Verifica anti-spam non valida.";
     } else {
-        $to = "sponsor@torneioldschool.it";
-        $subject = "Nuovo messaggio da Tornei Old School";
-        $body = "Hai ricevuto un nuovo messaggio:\n\n"
-              . "Nome: $nome\n"
-              . "Email: $email\n\n"
-              . "Messaggio:\n$messaggio\n";
-        $headers = "From: $email\r\nReply-To: $email\r\n";
+        $nome = trim($_POST["nome"] ?? '');
+        $email = trim($_POST["email"] ?? '');
+        $messaggio = trim($_POST["messaggio"] ?? '');
 
-        if (mail($to, $subject, $body, $headers)) {
-            $success = "Messaggio inviato con successo! Ti risponderemo al più presto.";
+        if (empty($nome) || empty($email) || empty($messaggio)) {
+            $error = "Compila tutti i campi.";
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error = "Inserisci un'email valida.";
         } else {
-            $error = "Errore durante l'invio. Riprova più tardi.";
+            $to = "sponsor@torneioldschool.it";
+            $subject = "Nuovo messaggio da Tornei Old School";
+            $body = "Hai ricevuto un nuovo messaggio:\n\n"
+                  . "Nome: $nome\n"
+                  . "Email: $email\n\n"
+                  . "Messaggio:\n$messaggio\n";
+            $headers = "From: $email\r\nReply-To: $email\r\n";
+
+            if (mail($to, $subject, $body, $headers)) {
+                $success = "Messaggio inviato con successo! Ti risponderemo al piu presto.";
+            } else {
+                $error = "Errore durante l'invio. Riprova piu tardi.";
+            }
         }
     }
 }
-require_once __DIR__ . '/includi/seo.php';
+$captchaQuestion = captcha_generate('contact_form');
+
 $baseUrl = seo_base_url();
 $contattiSeo = [
   'title' => 'Contatti - Tornei Old School',
@@ -115,6 +128,13 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
       gap: 15px;
     }
 
+    .contact-form label {
+      text-align: left;
+      font-weight: 600;
+      color: #15293e;
+      font-size: 0.95rem;
+    }
+
     .contact-form input,
     .contact-form textarea {
       padding: 12px 15px;
@@ -176,6 +196,15 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
       transform: scale(1.15);
     }
 
+    .hp-field {
+      position: absolute;
+      left: -9999px;
+      top: auto;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+
     @media (max-width: 700px) {
       .banner {
         font-size: 2.2rem;
@@ -202,9 +231,16 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
         <h1>Contattaci</h1>
 
         <form method="POST" action="">
+          <?= csrf_field('contact_form') ?>
+          <div class="hp-field" aria-hidden="true">
+            <label for="hp_field">Lascia vuoto</label>
+            <input type="text" id="hp_field" name="hp_field" tabindex="-1" autocomplete="off">
+          </div>
           <input type="text" name="nome" placeholder="Il tuo nome" required>
           <input type="email" name="email" placeholder="La tua email" required>
           <textarea name="messaggio" rows="5" placeholder="Il tuo messaggio..." required></textarea>
+          <label for="captcha_answer">Verifica: quanto fa <?= htmlspecialchars($captchaQuestion) ?>?</label>
+          <input type="number" id="captcha_answer" name="captcha_answer" inputmode="numeric" required>
           <button type="submit">Invia Messaggio</button>
         </form>
 
