@@ -126,34 +126,176 @@
   style.textContent = `
     #${BANNER_ID} {
       position: fixed;
-      bottom: 16px;
-      left: 16px;
-      right: 16px;
-      max-width: 720px;
-      margin: 0 auto;
-      background: #111827;
-      color: #f9fafb;
-      padding: 14px 16px;
-      border-radius: 14px;
-      box-shadow: 0 16px 40px rgba(0,0,0,0.3);
-      z-index: 9999;
+      inset: 0;
+      padding: 18px;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(4px);
       display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #${BANNER_ID}.is-visible { display: flex; }
+    #${BANNER_ID} .consent-card {
+      width: min(960px, 100%);
+      background: #ffffff;
+      color: #0f172a;
+      border-radius: 18px;
+      box-shadow: 0 26px 60px rgba(15,23,42,0.28);
+      border: 1px solid #d7e0f0;
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 16px 20px;
+      padding: 22px 24px 20px;
+      position: relative;
+    }
+    #${BANNER_ID} .consent-eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: #d80000;
+      margin: 4px 0;
+    }
+    #${BANNER_ID} h3 {
+      margin: 2px 0 6px;
+      font-size: 1.4rem;
+      color: #15293e;
+    }
+    #${BANNER_ID} .consent-text {
+      color: #4b5563;
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+    #${BANNER_ID} .consent-links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 6px;
+    }
+    #${BANNER_ID} .consent-links a {
+      color: #15293e;
+      font-weight: 700;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(21,41,62,0.35);
+      padding-bottom: 2px;
+    }
+    #${BANNER_ID} .consent-links a:hover {
+      color: #0f172a;
+      border-color: #0f172a;
+    }
+    #${BANNER_ID} .consent-options {
+      background: #f5f8fd;
+      border: 1px solid #e3eaf7;
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
       gap: 10px;
     }
-    #${BANNER_ID}.is-visible { display: flex; flex-direction: column; }
-    #${BANNER_ID} .consent-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-    #${BANNER_ID} .consent-actions button { flex: 1 1 140px; min-width: 120px; border: none; cursor: pointer; font-weight: 700; padding: 10px 14px; border-radius: 10px; text-align: center; }
-    #${BANNER_ID} .consent-options { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
-    #${BANNER_ID} .consent-option { display: flex; gap: 8px; align-items: flex-start; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; border-radius: 10px; }
-    #${BANNER_ID} .consent-option input { margin-top: 4px; }
-    #${BANNER_ID} .consent-option span { color: #e5e7eb; }
-    #${BANNER_ID} .btn-primary { background: #3b82f6; color: #fff; }
-    #${BANNER_ID} .btn-ghost { background: transparent; color: #f9fafb; border: 1px solid rgba(255,255,255,0.25); }
-    #${BANNER_ID} .btn-muted { background: #1f2937; color: #f9fafb; border: 1px solid rgba(255,255,255,0.15); }
-    #${BANNER_ID} a { color: #93c5fd; text-decoration: underline; }
-    @media (min-width: 600px) {
-      #${BANNER_ID} { flex-direction: row; align-items: center; }
-      #${BANNER_ID} .consent-actions { margin-top: 0; margin-left: auto; }
+    #${BANNER_ID} .consent-option {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: flex-start;
+      background: #ffffff;
+      border: 1px solid #e5e8f0;
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+    #${BANNER_ID} .consent-option input {
+      margin-top: 4px;
+      width: 44px;
+      height: 24px;
+      accent-color: #15293e;
+      cursor: pointer;
+    }
+    #${BANNER_ID} .consent-option-body {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    #${BANNER_ID} .consent-option-body strong {
+      display: block;
+      color: #0f172a;
+      font-size: 1rem;
+      margin-bottom: 2px;
+    }
+    #${BANNER_ID} .consent-option-body span {
+      color: #4b5563;
+      line-height: 1.5;
+      font-size: 0.98rem;
+    }
+    #${BANNER_ID} .consent-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      grid-column: 1 / -1;
+      margin-top: 6px;
+    }
+    #${BANNER_ID} .consent-actions button {
+      min-width: 140px;
+      border: none;
+      cursor: pointer;
+      font-weight: 800;
+      padding: 12px 16px;
+      border-radius: 12px;
+      text-align: center;
+      letter-spacing: 0.01em;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+    }
+    #${BANNER_ID} .consent-actions button:hover {
+      transform: translateY(-1px);
+    }
+    #${BANNER_ID} .btn-primary {
+      background: linear-gradient(135deg, #1f3d5a, #15293e);
+      color: #fff;
+      box-shadow: 0 14px 32px rgba(21,41,62,0.25);
+    }
+    #${BANNER_ID} .btn-primary:hover {
+      background: linear-gradient(135deg, #223f5e, #0f1c2e);
+    }
+    #${BANNER_ID} .btn-muted {
+      background: #e9edf7;
+      color: #1f2937;
+      border: 1px solid #d7deee;
+    }
+    #${BANNER_ID} .btn-ghost {
+      background: transparent;
+      color: #15293e;
+      border: 1px solid #cbd5e1;
+    }
+    #${BANNER_ID} .btn-ghost:hover {
+      background: #f1f5f9;
+    }
+    @media (max-width: 860px) {
+      #${BANNER_ID} {
+        padding: 12px;
+      }
+      #${BANNER_ID} .consent-card {
+        grid-template-columns: 1fr;
+        padding: 18px 18px 16px;
+      }
+      #${BANNER_ID} .consent-actions {
+        justify-content: center;
+      }
+      #${BANNER_ID} .consent-actions button {
+        flex: 1 1 140px;
+      }
+    }
+    @media (max-width: 540px) {
+      #${BANNER_ID} .consent-card {
+        border-radius: 14px;
+      }
+      #${BANNER_ID} .consent-option {
+        grid-template-columns: auto 1fr;
+        align-items: center;
+      }
+      #${BANNER_ID} .consent-option input {
+        margin-top: 0;
+      }
     }
   `;
   document.head.appendChild(style);
@@ -271,28 +413,44 @@
     const banner = document.createElement('div');
     banner.id = BANNER_ID;
     banner.innerHTML = `
-      <div class="consent-text">
-        Usiamo cookie tecnici e, se acconsenti, registriamo alcune azioni per migliorare il sito (senza salvare i contenuti dei form).
-        <a href="/privacy.php">Privacy</a> &middot; <a href="/cookie.php">Cookie</a>
-      </div>
-      <div class="consent-options">
+      <div class="consent-card" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
+        <div class="consent-copy">
+          <p class="consent-eyebrow">Privacy e cookie</p>
+          <h3 id="consentTitle">Gestisci le preferenze</h3>
+          <p class="consent-text">Usiamo cookie tecnici e, se acconsenti, registriamo alcune azioni anonime per migliorare il sito (senza salvare i contenuti dei form).</p>
+          <div class="consent-links">
+            <a href="/privacy.php">Privacy</a>
+            <a href="/cookie.php">Cookie</a>
+          </div>
+        </div>
+        <div class="consent-options">
         <label class="consent-option">
           <input type="checkbox" data-consent="tracking">
-          <span>Tracciamento utilizzo del sito (eventi anonimi) per analisi aggregate.</span>
+          <div class="consent-option-body">
+            <strong>Analytics anonimi</strong>
+            <span>Tracciamento utilizzo del sito (eventi anonimi) per analisi aggregate.</span>
+          </div>
         </label>
         <label class="consent-option">
           <input type="checkbox" data-consent="newsletter">
-          <span>Newsletter: aggiornamenti su tornei, calendari e novit�.</span>
+          <div class="consent-option-body">
+            <strong>Newsletter</strong>
+            <span>Invio aggiornamenti su tornei, calendari e novita.</span>
+          </div>
         </label>
         <label class="consent-option">
           <input type="checkbox" data-consent="marketing">
-          <span>Comunicazioni promozionali e info sui tornei.</span>
+          <div class="consent-option-body">
+            <strong>Comunicazioni promozionali</strong>
+            <span>Info sui tornei e comunicazioni dedicate.</span>
+          </div>
         </label>
-      </div>
-      <div class="consent-actions">
-        <button type="button" class="btn-ghost" data-consent="reject">Rifiuta tutto</button>
-        <button type="button" class="btn-muted" data-consent="save">Salva preferenze</button>
-        <button type="button" class="btn-primary" data-consent="accept">Accetta tutto</button>
+        </div>
+        <div class="consent-actions">
+          <button type="button" class="btn-ghost" data-consent="reject">Rifiuta tutto</button>
+          <button type="button" class="btn-muted" data-consent="save">Salva preferenze</button>
+          <button type="button" class="btn-primary" data-consent="accept">Accetta tutto</button>
+        </div>
       </div>
     `;
     document.body.appendChild(banner);
@@ -341,3 +499,4 @@
     document.addEventListener('DOMContentLoaded', initConsent);
   }
 })();
+
