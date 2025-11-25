@@ -107,8 +107,7 @@ if ($id > 0) {
 <?php render_seo_tags($articleMeta); ?>
 <?php render_jsonld($breadcrumbSchema); ?>
 <?php render_jsonld($articleSchema); ?>
-<link rel="icon" type="image/png" href="/img/logo_old_school.png">
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
 
 <style>
 .page-background {

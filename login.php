@@ -72,8 +72,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($loginSeo); ?>
   <?php render_jsonld($loginBreadcrumbs); ?>
-  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
   <style>
     .login-container {
       display: flex;
@@ -237,7 +236,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   </div>
   <div id="footer-container"></div>
 
-  <script src="/includi/header-interactions.js"></script>
+  <script src="/includi/app.min.js?v=20251126"></script>
   <script>
     // FOOTER
     fetch("/includi/footer.html")

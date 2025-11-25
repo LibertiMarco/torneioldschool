@@ -8,6 +8,7 @@ header('X-Robots-Tag: noindex, nofollow', true);
 
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/mail_helper.php';
+require_once __DIR__ . '/../includi/image_optimizer.php';
 
 $errore = '';
 $successo = '';
@@ -17,6 +18,7 @@ $contenuto = '';
 $mediaDir = __DIR__ . '/../img/blog_media/';
 $allowedImages = ['jpg', 'jpeg', 'png', 'webp'];
 $allowedVideos = ['mp4', 'webm', 'ogg', 'mov'];
+$maxUploadBytes = 20 * 1024 * 1024;
 
 function sanitizeText(?string $value): string {
   return trim((string)$value);
@@ -30,16 +32,29 @@ function detectMediaType(string $filename, array $allowedImages, array $allowedV
 }
 
 function saveMediaFile(array $file, string $uploadDir, array $allowedImages, array $allowedVideos, string &$errore): ?array {
+  global $maxUploadBytes;
   if (empty($file) || !isset($file['error']) || $file['error'] === UPLOAD_ERR_NO_FILE) return null;
   if ($file['error'] !== UPLOAD_ERR_OK) { $errore = 'Errore nel caricamento dei file multimediali.'; return null; }
   $tipo = detectMediaType($file['name'] ?? '', $allowedImages, $allowedVideos);
   if (!$tipo) { $errore = 'Formato non supportato. Carica immagini JPG/PNG/WEBP o video MP4/WEBM/OGG.'; return null; }
+  if ($tipo === 'image' && ($file['size'] ?? 0) > $maxUploadBytes) {
+    $errore = 'Immagine troppo pesante. Limite 20MB prima della compressione.';
+    return null;
+  }
   if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true)) { $errore = 'Impossibile creare la cartella per i media.'; return null; }
   try { $random = bin2hex(random_bytes(4)); } catch (Throwable $th) { $random = bin2hex(openssl_random_pseudo_bytes(4)); }
   $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
   $nomeFile = 'media_' . date('Ymd_His') . '_' . $random . '.' . $ext;
   $dest = rtrim($uploadDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $nomeFile;
   if (!move_uploaded_file($file['tmp_name'], $dest)) { $errore = 'Salvataggio del file non riuscito.'; return null; }
+  if ($tipo === 'image') {
+    optimize_image_file($dest, [
+      'maxWidth' => 1920,
+      'maxHeight' => 1920,
+      'quality' => 82,
+      'maxBytes' => 8 * 1024 * 1024,
+    ]);
+  }
   return ['path' => $nomeFile, 'tipo' => $tipo];
 }
 
@@ -247,8 +262,9 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>Gestione Blog</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style.min.css?v=20251126">
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
+  <link rel="apple-touch-icon" href="/img/logo_old_school.png">
   <style>
     body { display: flex; flex-direction: column; min-height: 100vh; background: linear-gradient(180deg, #f6f8fb 0%, #eef3f9 100%); }
     main.admin-wrapper { flex: 1 0 auto; }

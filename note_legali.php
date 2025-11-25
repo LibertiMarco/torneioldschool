@@ -19,8 +19,7 @@ $legalBreadcrumbs = seo_breadcrumb_schema([
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($legalSeo); ?>
   <?php render_jsonld($legalBreadcrumbs); ?>
-  <link rel="stylesheet" href="/style.css">
-  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
+  <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
   <style>
     .legal-page { padding: 40px 20px; max-width: 960px; margin: 0 auto; }
     .legal-hero h1 { margin-bottom: 8px; }
@@ -87,7 +86,7 @@ $legalBreadcrumbs = seo_breadcrumb_schema([
 
   <div id="footer-container"></div>
 
-  <script src="/includi/header-interactions.js"></script>
+  <script src="/includi/app.min.js?v=20251126"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       fetch('/includi/header.php')

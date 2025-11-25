@@ -270,8 +270,9 @@ if ($res) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>Gestione Partite</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style.min.css?v=20251126">
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
+  <link rel="apple-touch-icon" href="/img/logo_old_school.png">
   <style>
     body { display: flex; flex-direction: column; min-height: 100vh; background: #f7f9fc; }
     main.admin-wrapper { flex: 1 0 auto; }

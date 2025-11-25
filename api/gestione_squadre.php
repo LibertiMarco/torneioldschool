@@ -8,6 +8,7 @@ header('X-Robots-Tag: noindex, nofollow', true);
 
 require_once __DIR__ . '/crud/Squadra.php';
 require_once __DIR__ . '/crud/torneo.php';
+require_once __DIR__ . '/../includi/image_optimizer.php';
 
 $squadra = new Squadra();
 $torneoModel = new Torneo();
@@ -32,7 +33,7 @@ function salvaScudetto($nomeSquadra, $torneoSlug, $fieldName) {
         return null;
     }
 
-    $maxSize = 2 * 1024 * 1024;
+    $maxSize = 20 * 1024 * 1024;
     if ($_FILES[$fieldName]['size'] > $maxSize) {
         return null;
     }
@@ -79,8 +80,18 @@ function salvaScudetto($nomeSquadra, $torneoSlug, $fieldName) {
         $counter++;
     }
 
-    if (!move_uploaded_file($_FILES[$fieldName]['tmp_name'], $baseDir . '/' . $filename)) {
+    $dest = $baseDir . '/' . $filename;
+    if (!move_uploaded_file($_FILES[$fieldName]['tmp_name'], $dest)) {
         return null;
+    }
+
+    if ($extension !== 'svg' && $extension !== 'gif') {
+        optimize_image_file($dest, [
+            'maxWidth' => 1920,
+            'maxHeight' => 1920,
+            'quality' => 82,
+            'maxBytes' => 8 * 1024 * 1024,
+        ]);
     }
 
     return '/img/scudetti/' . $filename;
@@ -200,8 +211,9 @@ if ($resSquadre = $squadra->getAll()) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <title>Gestione Squadre</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style.min.css?v=20251126">
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
+  <link rel="apple-touch-icon" href="/img/logo_old_school.png">
   <style>
     body { display: flex; flex-direction: column; min-height: 100vh; background: linear-gradient(180deg, #f6f8fb 0%, #eef3f9 100%); }
     main.admin-wrapper { flex: 1 0 auto; }

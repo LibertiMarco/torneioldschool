@@ -221,8 +221,7 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($accountSeo); ?>
   <?php render_jsonld($accountBreadcrumbs); ?>
-  <link rel="stylesheet" href="/style.css">
-  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
+  <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
   <style>
     body {
       background: #f4f6fb;

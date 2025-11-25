@@ -35,8 +35,7 @@ $localSchema = [
   <?php render_seo_tags($homeSeo); ?>
   <?php render_jsonld($orgSchema); ?>
   <?php render_jsonld($localSchema); ?>
-  <link rel="stylesheet" href="style.css">
-  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
+  <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
 </head>
 
 <body>
@@ -236,7 +235,7 @@ loadTopScorers();
 </script>
 
   <!-- SCRIPT HEADER -->
-  <script src="/includi/header-interactions.js"></script>
+  <script src="/includi/app.min.js?v=20251126"></script>
   <script>
   document.addEventListener("DOMContentLoaded", () => {
     fetch("/includi/header.php")

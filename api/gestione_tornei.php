@@ -10,6 +10,7 @@ require_once __DIR__ . '/crud/torneo.php';
 $torneo = new Torneo();
 require_once __DIR__ . '/crud/Squadra.php';
 $squadraModel = new Squadra();
+require_once __DIR__ . '/../includi/image_optimizer.php';
 
 function sanitizeTorneoSlug($value) {
     $slug = preg_replace('/[^A-Za-z0-9_-]/', '', $value);
@@ -80,6 +81,11 @@ function salvaImmagineTorneo($nomeTorneo, $fileField) {
         return null;
     }
 
+    $maxSize = 20 * 1024 * 1024;
+    if ($_FILES[$fileField]['size'] > $maxSize) {
+        return null;
+    }
+
     $allowed = [
         'image/jpeg' => 'jpg',
         'image/png'  => 'png',
@@ -94,7 +100,11 @@ function salvaImmagineTorneo($nomeTorneo, $fileField) {
         return null;
     }
 
-    $baseDir = realpath(__DIR__ . '/../img/tornei');
+    $baseDirPath = __DIR__ . '/../img/tornei';
+    if (!is_dir($baseDirPath)) {
+        @mkdir($baseDirPath, 0775, true);
+    }
+    $baseDir = realpath($baseDirPath);
     if (!$baseDir) {
         return null;
     }
@@ -112,8 +122,18 @@ function salvaImmagineTorneo($nomeTorneo, $fileField) {
         $counter++;
     }
 
-    if (!move_uploaded_file($_FILES[$fileField]['tmp_name'], $baseDir . '/' . $filename)) {
+    $dest = $baseDir . '/' . $filename;
+    if (!move_uploaded_file($_FILES[$fileField]['tmp_name'], $dest)) {
         return null;
+    }
+
+    if ($extension !== 'gif') {
+        optimize_image_file($dest, [
+            'maxWidth' => 1920,
+            'maxHeight' => 1920,
+            'quality' => 82,
+            'maxBytes' => 8 * 1024 * 1024,
+        ]);
     }
 
     return '/img/tornei/' . $filename;
@@ -211,8 +231,9 @@ $lista = $torneo->getAll();
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="robots" content="noindex, nofollow">
         <title>Gestione Tornei</title>
-        <link rel="stylesheet" href="/style.css">
+        <link rel="stylesheet" href="/style.min.css?v=20251126">
     <link rel="icon" type="image/png" href="/img/logo_old_school.png">
+    <link rel="apple-touch-icon" href="/img/logo_old_school.png">
     <style>
         body {
             display: flex;

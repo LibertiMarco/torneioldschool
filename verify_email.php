@@ -63,8 +63,7 @@ if ($email && $token) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($verifySeo); ?>
   <?php render_jsonld($verifyBreadcrumbs); ?>
-  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
   <style>
     body {
       background: #f4f6fb;
@@ -154,7 +153,7 @@ if ($email && $token) {
   </main>
 
   <div id="footer-container"></div>
-  <script src="/includi/header-interactions.js"></script>
+  <script src="/includi/app.min.js?v=20251126"></script>
   <script>
     fetch("/includi/footer.html")
       .then(r => r.text())

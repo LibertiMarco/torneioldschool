@@ -50,8 +50,7 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($contattiSeo); ?>
   <?php render_jsonld($contattiBreadcrumbs); ?>
-  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Poppins:wght@400;600&display=swap');
 
@@ -228,7 +227,7 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
 
   <div id="footer-container"></div>
 
-  <script src="/includi/header-interactions.js"></script>
+  <script src="/includi/app.min.js?v=20251126"></script>
   <script>
     // FOOTER
     fetch("/includi/footer.html")

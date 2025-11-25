@@ -9,6 +9,7 @@ header('X-Robots-Tag: noindex, nofollow', true);
 require_once __DIR__ . '/crud/giocatore.php';
 require_once __DIR__ . '/crud/Squadra.php';
 require_once __DIR__ . '/crud/SquadraGiocatore.php';
+require_once __DIR__ . '/../includi/image_optimizer.php';
 $giocatore = new Giocatore();
 $squadraModel = new Squadra();
 $pivot = new SquadraGiocatore();
@@ -35,7 +36,7 @@ function salvaFotoGiocatore($nome, $cognome, $fieldName, $fotoEsistente = null) 
         return $fotoEsistente ?: '/img/giocatori/unknown.jpg';
     }
 
-    $maxSize = 2 * 1024 * 1024;
+    $maxSize = 20 * 1024 * 1024; // accetta file pesanti, verranno compressi
     if ($_FILES[$fieldName]['size'] > $maxSize) {
         return $fotoEsistente ?: '/img/giocatori/unknown.jpg';
     }
@@ -77,9 +78,17 @@ function salvaFotoGiocatore($nome, $cognome, $fieldName, $fotoEsistente = null) 
         $counter++;
     }
 
-    if (!move_uploaded_file($_FILES[$fieldName]['tmp_name'], $baseDir . '/' . $filename)) {
+    $dest = $baseDir . '/' . $filename;
+    if (!move_uploaded_file($_FILES[$fieldName]['tmp_name'], $dest)) {
         return $fotoEsistente ?: '/img/giocatori/unknown.jpg';
     }
+
+    optimize_image_file($dest, [
+        'maxWidth' => 1920,
+        'maxHeight' => 1920,
+        'quality' => 82,
+        'maxBytes' => 8 * 1024 * 1024,
+    ]);
 
     return '/img/giocatori/' . $filename;
 }
@@ -118,7 +127,7 @@ function salvaFotoAssociazione($nome, $cognome, $fieldName, $fotoEsistente = nul
         return null;
     }
 
-    $maxSize = 2 * 1024 * 1024;
+    $maxSize = 20 * 1024 * 1024;
     if ($_FILES[$fieldName]['size'] > $maxSize) {
         return null;
     }
@@ -155,9 +164,17 @@ function salvaFotoAssociazione($nome, $cognome, $fieldName, $fotoEsistente = nul
         $counter++;
     }
 
-    if (!move_uploaded_file($_FILES[$fieldName]['tmp_name'], $baseDir . '/' . $filename)) {
+    $dest = $baseDir . '/' . $filename;
+    if (!move_uploaded_file($_FILES[$fieldName]['tmp_name'], $dest)) {
         return null;
     }
+
+    optimize_image_file($dest, [
+        'maxWidth' => 1920,
+        'maxHeight' => 1920,
+        'quality' => 82,
+        'maxBytes' => 8 * 1024 * 1024,
+    ]);
 
     if ($fotoEsistente && strpos($fotoEsistente, '/img/giocatori/') === 0 && $fotoEsistente !== '/img/giocatori/unknown.jpg') {
         cancellaFotoGiocatore($fotoEsistente);
@@ -330,8 +347,9 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title>Gestione Giocatori</title>
-    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/style.min.css?v=20251126">
     <link rel="icon" type="image/png" href="/img/logo_old_school.png">
+    <link rel="apple-touch-icon" href="/img/logo_old_school.png">
     <style>
         body {
             display: flex;

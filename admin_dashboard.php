@@ -14,8 +14,9 @@ header('X-Robots-Tag: noindex, nofollow', true);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title>Dashboard Amministratore</title>
-    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/style.min.css?v=20251126">
     <link rel="icon" type="image/png" href="/img/logo_old_school.png">
+    <link rel="apple-touch-icon" href="/img/logo_old_school.png">
 </head>
 <body class="admin-page">
     <?php include __DIR__ . '/includi/header.php'; ?>
@@ -64,7 +65,7 @@ header('X-Robots-Tag: noindex, nofollow', true);
     <a class="logout-btn" href="index.php">Esci dal pannello</a>
     </main>
     <div id="footer-container"></div>
-    <script src="/includi/header-interactions.js"></script>
+    <script src="/includi/app.min.js?v=20251126"></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         fetch("/includi/footer.html")

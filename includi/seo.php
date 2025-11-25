@@ -1,5 +1,16 @@
 <?php
 if (!function_exists('seo_base_url')) {
+    if (!defined('ASSET_VERSION')) {
+        define('ASSET_VERSION', '20251126');
+    }
+
+    function asset_url(string $path, ?string $version = null): string
+    {
+        $ver = $version ?? ASSET_VERSION;
+        $separator = (strpos($path, '?') === false) ? '?' : '&';
+        return $path . $separator . 'v=' . rawurlencode($ver);
+    }
+
     function seo_base_url(): string
     {
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
@@ -40,10 +51,14 @@ if (!function_exists('seo_base_url')) {
         $image = $meta['image'] ?? ($base . '/img/logo_old_school.png');
         $type = $meta['type'] ?? 'website';
         $siteName = $meta['site_name'] ?? 'Tornei Old School';
+        $icon = $meta['icon'] ?? ($base . '/img/logo_old_school.png');
+        $appleIcon = $meta['apple_icon'] ?? ($base . '/img/logo_old_school.png');
 
         echo "<title>" . seo_clean($title) . "</title>\n";
         echo '<meta name="description" content="' . seo_clean($description) . '">' . "\n";
         echo '<link rel="canonical" href="' . seo_clean($canonical) . '">' . "\n";
+        echo '<link rel="icon" type="image/png" href="' . seo_clean($icon) . '">' . "\n";
+        echo '<link rel="apple-touch-icon" href="' . seo_clean($appleIcon) . '">' . "\n";
 
         echo '<meta property="og:type" content="' . seo_clean($type) . '">' . "\n";
         echo '<meta property="og:title" content="' . seo_clean($title) . '">' . "\n";
