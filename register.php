@@ -560,7 +560,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="file-upload">
           <input type="file" id="avatar" name="avatar" accept="image/*">
           <label for="avatar" class="file-btn">
-            <span class="file-icon" aria-hidden="true">F</span> Scegli foto
+            <span class="file-icon" aria-hidden="true">📷</span> Scegli foto
           </label>
           <span class="file-name" id="avatarName">Nessun file selezionato</span>
         </div>
