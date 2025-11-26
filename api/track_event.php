@@ -1,5 +1,5 @@
 ﻿<?php
-session_start();
+require_once __DIR__ . '/../includi/security.php';
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -87,6 +87,10 @@ $userId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
 $sessionId = session_id() ?: null;
 $ip = truncateIp($_SERVER['REMOTE_ADDR'] ?? '') ?? null;
 $userAgent = sanitizeStr($_SERVER['HTTP_USER_AGENT'] ?? '', 255);
+
+if (!$userId) {
+    json_response(403, ['error' => 'Tracking consent required']);
+}
 
 // Blocca registrazione se il consenso al tracking non è attivo
 if ($userId) {

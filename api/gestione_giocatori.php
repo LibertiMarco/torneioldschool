@@ -1,5 +1,5 @@
 ﻿<?php
-session_start();
+require_once __DIR__ . '/../includi/security.php';
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
     header("Location: /index.php");
     exit;
@@ -13,6 +13,11 @@ require_once __DIR__ . '/../includi/image_optimizer.php';
 $giocatore = new Giocatore();
 $squadraModel = new Squadra();
 $pivot = new SquadraGiocatore();
+$adminCsrf = csrf_get_token('admin_giocatori');
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_require('admin_giocatori');
+}
 $currentAction = $_GET['action'] ?? 'crea';
 
 function redirectGestione($action = null, $extraParams = []) {
@@ -608,6 +613,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 
 <!-- âœ… FORM CREA -->
 <form method="POST" class="admin-form form-crea" enctype="multipart/form-data">
+<?= csrf_field('admin_giocatori') ?>
 <h2>Aggiungi Giocatore</h2>
 
 <div class="form-group">
@@ -636,6 +642,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 
 <!-- âœ… FORM MODIFICA -->
 <form method="POST" class="admin-form form-modifica hidden" id="formModifica" enctype="multipart/form-data">
+<?= csrf_field('admin_giocatori') ?>
 <h2>Modifica Giocatore</h2>
 
 <div class="form-group">
@@ -700,6 +707,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
   </div>
 
   <form method="POST" class="admin-form assoc-form assoc-form-add" enctype="multipart/form-data">
+      <?= csrf_field('admin_giocatori') ?>
       <input type="hidden" name="action" value="associazioni">
       <div class="form-group">
           <label>Seleziona Torneo</label>
@@ -768,6 +776,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
   </form>
 
   <form method="POST" class="admin-form assoc-form assoc-form-edit hidden" enctype="multipart/form-data">
+      <?= csrf_field('admin_giocatori') ?>
       <input type="hidden" name="action" value="associazioni">
       <div class="form-group">
           <label>Seleziona Torneo</label>
@@ -871,6 +880,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
   </form>
 
   <form method="POST" class="admin-form assoc-form assoc-form-remove hidden">
+      <?= csrf_field('admin_giocatori') ?>
       <input type="hidden" name="action" value="associazioni">
       <input type="hidden" name="dissocia_squadra" value="1">
       <div class="form-group">

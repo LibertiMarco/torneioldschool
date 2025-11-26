@@ -1,10 +1,9 @@
 <?php
-session_start();
 require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/seo.php';
-$recaptchaSiteKey = '6LdY7hgsAAAAABGEVpsKMlZNeEacbWH8ZLf8L-Ku';
-$recaptchaSecretKey = '6LdY7hgsAAAAAJ6MnhkD578xaLpn3Xh1fB3Y-srp';
+$recaptchaSiteKey = getenv('RECAPTCHA_SITE_KEY') ?: '';
+$recaptchaSecretKey = getenv('RECAPTCHA_SECRET_KEY') ?: '';
 
 $baseUrl = seo_base_url();
 $loginSeo = [
@@ -72,6 +71,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } elseif (!rate_limit_allow('login_attempt', 5, 900)) {
         $wait = rate_limit_retry_after('login_attempt', 900);
         $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
+    } elseif ($recaptchaSecretKey === '' || $recaptchaSiteKey === '') {
+        $error = "Servizio non disponibile: reCAPTCHA non configurato.";
     } elseif (!verify_recaptcha($recaptchaSecretKey, $_POST['g-recaptcha-response'] ?? '', $_SERVER['REMOTE_ADDR'] ?? '')) {
         $error = "Verifica reCAPTCHA non valida. Riprova.";
     }
@@ -97,6 +98,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $needsVerificationResend = $email;
             } else {
             // imposta le variabili di sessione
+            session_regenerate_id(true);
             $_SESSION['user_id'] = $row['id'];
             $_SESSION['email'] = $row['email'];
             $_SESSION['nome'] = $row['nome'];

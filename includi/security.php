@@ -1,6 +1,27 @@
 <?php
+// Session hardening: set secure cookie flags and strict mode before starting
 if (session_status() === PHP_SESSION_NONE) {
+    $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
+    if (function_exists('session_set_cookie_params')) {
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path' => '/',
+            'secure' => $isHttps,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+    }
+    if (!ini_get('session.use_strict_mode')) {
+        ini_set('session.use_strict_mode', '1');
+    }
     session_start();
+    // regenerate periodically to reduce fixation
+    $created = $_SESSION['__created_at'] ?? time();
+    if (($created + 1800) < time()) {
+        session_regenerate_id(true);
+        $created = time();
+    }
+    $_SESSION['__created_at'] = $created;
 }
 
 // Basic CSRF utilities

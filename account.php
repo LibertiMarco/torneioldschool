@@ -1,5 +1,5 @@
 ﻿<?php
-session_start();
+require_once __DIR__ . '/includi/security.php';
 if (!isset($_SESSION['user_id'])) {
     header("Location: /login.php");
     exit;
@@ -26,6 +26,7 @@ $userId = (int)$_SESSION['user_id'];
 $successMessage = '';
 $errorMessage = '';
 $infoMessage = '';
+$accountCsrf = csrf_get_token('account_form');
 
 function caricaUtente($conn, $id) {
     $stmt = $conn->prepare("SELECT id, nome, cognome, email, avatar, password FROM utenti WHERE id = ?");
@@ -71,39 +72,42 @@ if (!$currentUser) {
 }
 $consents = consent_current_snapshot($conn, $userId, $currentUser['email'] ?? '');
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['revoca_consensi'])) {
-    $consents = consent_save($conn, $userId, $currentUser['email'] ?? '', [
-        'marketing' => 0,
-        'newsletter' => 0,
-        'tracking' => 0,
-    ], 'account', 'revoke_all');
-    $successMessage = "Consensi marketing/newsletter/tracciamento revocati.";
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nome = trim($_POST['nome'] ?? '');
-    $cognome = trim($_POST['cognome'] ?? '');
-    $email = $currentUser['email'];
-    $password = trim($_POST['password'] ?? '');
-    $confirmPassword = trim($_POST['confirm_password'] ?? '');
-    $currentPassword = trim($_POST['current_password'] ?? '');
-    $consensoMarketing = !empty($_POST['consenso_marketing']);
-    $consensoNewsletter = !empty($_POST['consenso_newsletter']);
-    $consensoTracking = !empty($_POST['consenso_tracking']);
-    $avatarPath = $currentUser['avatar'] ?? null;
-    $emailChanged = false;
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!csrf_is_valid($_POST['_csrf'] ?? '', 'account_form')) {
+        $errorMessage = "Sessione scaduta. Ricarica la pagina e riprova.";
+    } elseif (isset($_POST['revoca_consensi'])) {
+        $consents = consent_save($conn, $userId, $currentUser['email'] ?? '', [
+            'marketing' => 0,
+            'newsletter' => 0,
+            'tracking' => 0,
+        ], 'account', 'revoke_all');
+        $successMessage = "Consensi marketing/newsletter/tracciamento revocati.";
+    } else {
+        $nome = trim($_POST['nome'] ?? '');
+        $cognome = trim($_POST['cognome'] ?? '');
+        $email = $currentUser['email'];
+        $password = trim($_POST['password'] ?? '');
+        $confirmPassword = trim($_POST['confirm_password'] ?? '');
+        $currentPassword = trim($_POST['current_password'] ?? '');
+        $consensoMarketing = !empty($_POST['consenso_marketing']);
+        $consensoNewsletter = !empty($_POST['consenso_newsletter']);
+        $consensoTracking = !empty($_POST['consenso_tracking']);
+        $avatarPath = $currentUser['avatar'] ?? null;
+        $emailChanged = false;
 
-    $passwordRegex = '/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};\'":\\\\|,.<>\/?]).{8,}$/';
+        $passwordRegex = '/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};\'":\\\\|,.<>\/?]).{8,}$/';
 
-    if ($nome === '' || $cognome === '' || $email === '') {
-        $errorMessage = "Compila tutti i campi obbligatori.";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errorMessage = "Inserisci un'email valida.";
-    } elseif ($password !== '' && $password !== $confirmPassword) {
-        $errorMessage = "Le password non coincidono.";
-    } elseif ($password !== '' && !preg_match($passwordRegex, $password)) {
-        $errorMessage = "La password deve avere almeno 8 caratteri, una maiuscola, un numero e un simbolo speciale.";
-    } elseif ($password !== '' && $currentPassword === '') {
-        $errorMessage = "Per cambiare password inserisci prima quella attuale.";
-    }
+        if ($nome === '' || $cognome === '' || $email === '') {
+            $errorMessage = "Compila tutti i campi obbligatori.";
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errorMessage = "Inserisci un'email valida.";
+        } elseif ($password !== '' && $password !== $confirmPassword) {
+            $errorMessage = "Le password non coincidono.";
+        } elseif ($password !== '' && !preg_match($passwordRegex, $password)) {
+            $errorMessage = "La password deve avere almeno 8 caratteri, una maiuscola, un numero e un simbolo speciale.";
+        } elseif ($password !== '' && $currentPassword === '') {
+            $errorMessage = "Per cambiare password inserisci prima quella attuale.";
+        }
 
     if (!$errorMessage && isset($_FILES['avatar']) && $_FILES['avatar']['error'] !== UPLOAD_ERR_NO_FILE) {
         if ($_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
@@ -209,6 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['revoca_consensi'])) {
 
         $stmt->close();
     }
+}
 }
 
 $avatarUrl = risolviAvatarUrl($currentUser['avatar'] ?? '');
@@ -492,6 +497,7 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
       <?php endif; ?>
 
       <form class="account-form" method="POST" enctype="multipart/form-data" autocomplete="off">
+        <?= csrf_field('account_form') ?>
         <div class="field-grid">
           <div class="form-field">
             <label for="nome">Nome</label>
@@ -571,6 +577,7 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
         <button type="submit" class="save-btn">Salva modifiche</button>
       </form>
       <form method="POST" style="margin-top: 6px;">
+        <?= csrf_field('account_form') ?>
         <input type="hidden" name="revoca_consensi" value="1">
         <button type="submit" class="revoke-btn">Revoca marketing / newsletter / tracciamento</button>
       </form>
