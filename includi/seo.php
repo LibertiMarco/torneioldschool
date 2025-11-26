@@ -3,6 +3,10 @@ if (!function_exists('seo_base_url')) {
     if (!defined('ASSET_VERSION')) {
         define('ASSET_VERSION', '20251126');
     }
+    if (!defined('GA_MEASUREMENT_ID')) {
+        $envGaId = getenv('GA_MEASUREMENT_ID') ?: '';
+        define('GA_MEASUREMENT_ID', $envGaId);
+    }
 
     function asset_url(string $path, ?string $version = null): string
     {
@@ -72,6 +76,8 @@ if (!function_exists('seo_base_url')) {
         echo '<meta name="twitter:title" content="' . seo_clean($title) . '">' . "\n";
         echo '<meta name="twitter:description" content="' . seo_clean($description) . '">' . "\n";
         echo '<meta name="twitter:image" content="' . seo_clean($image) . '">' . "\n";
+
+        render_analytics_bootstrap();
     }
 
     function render_jsonld(array $schema): void
@@ -162,5 +168,19 @@ if (!function_exists('seo_base_url')) {
         }
 
         return $schema;
+    }
+
+    function render_analytics_bootstrap(): void
+    {
+        $id = trim(GA_MEASUREMENT_ID ?? '');
+        if ($id === '') {
+            return;
+        }
+        $safeId = preg_replace('/[^A-Za-z0-9_-]/', '', $id);
+        if ($safeId === '') {
+            return;
+        }
+
+        echo '<script>window.__GA_MEASUREMENT_ID=' . json_encode($safeId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';</script>' . "\n";
     }
 }

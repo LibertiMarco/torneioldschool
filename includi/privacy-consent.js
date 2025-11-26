@@ -148,6 +148,67 @@
     Tracking.track(eventType, details);
   };
 
+  // ---------- Optional GA4 (privacy-first, consent-driven) ----------
+  const GoogleAnalytics = (function () {
+    const gaId = (window.__GA_MEASUREMENT_ID || '').trim();
+    let initialized = false;
+
+    function hasId() {
+      return gaId !== '';
+    }
+
+    function bootstrap() {
+      if (initialized || !hasId()) return;
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = window.gtag || function gtag() {
+        window.dataLayer.push(arguments);
+      };
+      window.gtag('consent', 'default', {
+        analytics_storage: 'denied',
+        ad_storage: 'denied',
+        functionality_storage: 'granted',
+        security_storage: 'granted',
+      });
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(gaId);
+      document.head.appendChild(script);
+      initialized = true;
+    }
+
+    function enable() {
+      if (!hasId()) return;
+      bootstrap();
+      if (typeof window.gtag === 'function') {
+        window.gtag('consent', 'update', {
+          analytics_storage: 'granted',
+          ad_storage: 'denied',
+        });
+        window.gtag('js', new Date());
+        window.gtag('config', gaId, {
+          anonymize_ip: true,
+          allow_ad_personalization_signals: false,
+          transport_type: 'beacon',
+        });
+      }
+    }
+
+    function disable() {
+      if (typeof window.gtag === 'function') {
+        window.gtag('consent', 'update', {
+          analytics_storage: 'denied',
+          ad_storage: 'denied',
+        });
+      }
+    }
+
+    return {
+      enable,
+      disable,
+      hasId,
+    };
+  })();
+
   // ---------- Consent banner ----------
   const style = document.createElement('style');
   style.textContent = `
@@ -396,11 +457,14 @@
   }
 
   function applyConsent(consent) {
-    if (consent && consent.tracking) {
+    const trackingAllowed = !!(consent && consent.tracking);
+    if (trackingAllowed) {
       Tracking.enable();
-    } else {
-      Tracking.disable();
+      GoogleAnalytics.enable();
+      return;
     }
+    Tracking.disable();
+    GoogleAnalytics.disable();
   }
 
   function fillBanner(consent) {
