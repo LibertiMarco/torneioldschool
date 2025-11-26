@@ -563,10 +563,10 @@
           </div>
         </label>
         </div>
-        <div class="consent-actions" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px;">
-          <button type="button" class="btn-ghost" data-consent="reject" style="min-width:140px;border:1px solid #cbd5e1;background:transparent;color:#15293e;font-weight:800;padding:12px 16px;border-radius:12px;">Rifiuta tutto</button>
-          <button type="button" class="btn-muted" data-consent="save" style="min-width:140px;border:1px solid #d7deee;background:#e9edf7;color:#1f2937;font-weight:800;padding:12px 16px;border-radius:12px;">Salva preferenze</button>
-          <button type="button" class="btn-primary" data-consent="accept" style="min-width:140px;border:none;background:linear-gradient(135deg,#1f3d5a,#15293e);color:#fff;font-weight:800;padding:12px 16px;border-radius:12px;box-shadow:0 14px 32px rgba(21,41,62,0.25);">Accetta tutto</button>
+        <div class="consent-actions" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;margin-top:8px;">
+          <button type="button" class="btn-ghost" data-consent="reject" style="flex:1 1 0;min-width:150px;border:1px solid #cbd5e1;background:transparent;color:#15293e;font-weight:800;padding:12px 16px;border-radius:12px;">Rifiuta tutto</button>
+          <button type="button" class="btn-muted" data-consent="save" style="flex:1 1 0;min-width:150px;border:1px solid #d7deee;background:#e9edf7;color:#1f2937;font-weight:800;padding:12px 16px;border-radius:12px;">Salva preferenze</button>
+          <button type="button" class="btn-primary" data-consent="accept" style="flex:1 1 0;min-width:150px;border:none;background:linear-gradient(135deg,#1f3d5a,#15293e);color:#fff;font-weight:800;padding:12px 16px;border-radius:12px;box-shadow:0 14px 32px rgba(21,41,62,0.25);">Accetta tutto</button>
         </div>
       </div>
     `;
