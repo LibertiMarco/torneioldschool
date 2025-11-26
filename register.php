@@ -5,8 +5,8 @@ require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
 require_once __DIR__ . '/includi/consent_helpers.php';
 require_once __DIR__ . '/includi/seo.php';
-$recaptchaSiteKey = '6LegyRgsAAAADADEFiiBVdKdf7oYcIUcwW5IR6Mo';
-$recaptchaSecretKey = '6LegyRgsAAAAPYJd4h-Glyps68emLGxB7dkRsDW';
+$recaptchaSiteKey = '6LdN7hgsAAAABGEVpsKMlZNeEacbWH8ZLf6L-Ku';
+$recaptchaSecretKey = '6LdN7hgsAAAAl6MnhkD578xaLpn3XhfB3Y-srp';
 
 $baseUrl = seo_base_url();
 $registerSeo = [
