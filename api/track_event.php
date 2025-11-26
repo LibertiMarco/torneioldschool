@@ -19,6 +19,12 @@ if (!is_array($data)) {
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/consent_helpers.php';
 
+function json_response(int $code, array $payload): void {
+    http_response_code($code);
+    echo json_encode($payload);
+    exit;
+}
+
 function sanitizeStr($value, $max = 255) {
     $value = trim((string)$value);
     if ($value === '') {
@@ -65,6 +71,11 @@ function sanitizeDetails($details) {
     return $clean;
 }
 
+$hasDb = isset($conn) && $conn instanceof mysqli && !$conn->connect_errno;
+if (!$hasDb) {
+    json_response(503, ['error' => 'DB non disponibile']);
+}
+
 $eventType = sanitizeEventType($data['event_type'] ?? 'custom');
 $path = sanitizeStr($data['path'] ?? '', 255);
 $referrer = sanitizeStr($data['referrer'] ?? '', 255);
@@ -89,9 +100,8 @@ if ($userId) {
 
 $stmt = $conn->prepare("INSERT INTO eventi_utente (user_id, session_id, event_type, path, referrer, title, details, ip_troncato, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 if (!$stmt) {
-    http_response_code(500);
-    echo json_encode(['error' => 'DB error']);
-    exit;
+    error_log('track_event prepare failed: ' . $conn->error);
+    json_response(200, ['status' => 'ignored']);
 }
 
 $stmt->bind_param(
@@ -110,8 +120,8 @@ $stmt->bind_param(
 if ($stmt->execute()) {
     echo json_encode(['status' => 'ok']);
 } else {
-    http_response_code(500);
-    echo json_encode(['error' => 'Impossibile registrare l\'evento']);
+    error_log('track_event insert failed: ' . $stmt->error);
+    json_response(200, ['status' => 'ignored']);
 }
 
 $stmt->close();

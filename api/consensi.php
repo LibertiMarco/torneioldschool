@@ -18,7 +18,18 @@ $userId = (int)$_SESSION['user_id'];
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/consent_helpers.php';
 
+function json_response(int $code, array $payload): void {
+    http_response_code($code);
+    echo json_encode($payload);
+    exit;
+}
+
 $email = consent_get_user_email($conn, $userId) ?? '';
+
+$hasDb = isset($conn) && $conn instanceof mysqli && !$conn->connect_errno;
+if (!$hasDb) {
+    json_response(503, ['error' => 'DB non disponibile']);
+}
 
 function parse_bool($value): int
 {
