@@ -217,6 +217,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
     .recaptcha-box {
       margin: 10px 0 6px;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      transform-origin: left top;
     }
     .password-field {
       position: relative;
