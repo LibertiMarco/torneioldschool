@@ -130,7 +130,7 @@
     }
     window.__TOS_CONSENT_LOADER__ = true;
     const script = document.createElement("script");
-    script.src = "/includi/privacy-consent.min.js?v=20251130";
+    script.src = "/includi/privacy-consent.min.js?v=20251201";
     script.defer = true;
     document.head.appendChild(script);
   }

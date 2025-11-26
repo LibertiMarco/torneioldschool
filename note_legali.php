@@ -86,7 +86,7 @@ $legalBreadcrumbs = seo_breadcrumb_schema([
 
   <div id="footer-container"></div>
 
-  <script src="/includi/app.min.js?v=20251130"></script>
+  <script src="/includi/app.min.js?v=20251201"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       fetch('/includi/header.php')

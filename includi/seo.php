@@ -1,7 +1,7 @@
 <?php
 if (!function_exists('seo_base_url')) {
     if (!defined('ASSET_VERSION')) {
-        define('ASSET_VERSION', '20251130');
+        define('ASSET_VERSION', '20251201');
     }
     if (!defined('GA_MEASUREMENT_ID')) {
         $envGaId = getenv('GA_MEASUREMENT_ID') ?: '';
