@@ -148,6 +148,8 @@
       gap: 16px 20px;
       padding: 22px 24px 20px;
       position: relative;
+      max-height: 88vh;
+      overflow-y: auto;
     }
     #${BANNER_ID} .consent-eyebrow {
       text-transform: uppercase;
