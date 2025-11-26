@@ -1,12 +1,10 @@
-﻿<?php
+﻿﻿<?php
 session_start();
 require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
 require_once __DIR__ . '/includi/consent_helpers.php';
 require_once __DIR__ . '/includi/seo.php';
-$recaptchaSiteKey = '6LegyRgsAAAADADEFiiBVdKdf7oYcIUcwW5IR6Mo';
-$recaptchaSecretKey = '6LegyRgsAAAAPYJd4h-Glyps68emLGxB7dkRsDW';
 
 $baseUrl = seo_base_url();
 $registerSeo = [
@@ -30,6 +28,7 @@ $error = "";
 $successMessage = "";
 $avatarPath = null;
 $registerCsrf = csrf_get_token('register_form');
+$captchaQuestion = '';
 
 function generaNomeAvatar($nome, $cognome, $estensione, $uploadDir) {
     $nomeSan = preg_replace('/[^A-Za-z0-9]/', '', ucwords(strtolower($nome)));
@@ -48,41 +47,6 @@ function generaNomeAvatar($nome, $cognome, $estensione, $uploadDir) {
     return $filename;
 }
 
-function verify_recaptcha(string $secret, string $token, string $ip = '', string $expectedAction = 'register', float $minScore = 0.4): bool
-{
-    if (trim($secret) === '' || trim($token) === '') {
-        return false;
-    }
-    $payload = http_build_query([
-        'secret' => $secret,
-        'response' => $token,
-        'remoteip' => $ip,
-    ]);
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => "Content-type: application/x-www-form-urlencoded\r\n",
-            'content' => $payload,
-            'timeout' => 5,
-        ]
-    ]);
-    $result = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, $context);
-    if ($result === false) {
-        return false;
-    }
-    $data = json_decode($result, true);
-    if (!is_array($data) || empty($data['success'])) {
-        return false;
-    }
-    if ($expectedAction !== '' && isset($data['action']) && $data['action'] !== $expectedAction) {
-        return false;
-    }
-    if (isset($data['score']) && $data['score'] < $minScore) {
-        return false;
-    }
-    return true;
-}
-
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (!csrf_is_valid($_POST['_csrf'] ?? '', 'register_form')) {
         $error = "Sessione scaduta. Ricarica la pagina e riprova.";
@@ -91,8 +55,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } elseif (!rate_limit_allow('register_form', 3, 900)) {
         $wait = rate_limit_retry_after('register_form', 900);
         $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
-    } elseif (!verify_recaptcha($recaptchaSecretKey, $_POST['g-recaptcha-response'] ?? '', $_SERVER['REMOTE_ADDR'] ?? '', 'register', 0.4)) {
-        $error = "Verifica reCAPTCHA non valida. Riprova.";
+    } elseif (!captcha_is_valid('register_form', $_POST['captcha_answer'] ?? null)) {
+        $error = "Verifica anti-spam non valida.";
     }
 
     if (!$error) {
@@ -210,7 +174,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
         }
     }
-}?>
+}
+
+$captchaQuestion = captcha_generate('register_form');?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -219,7 +185,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   <?php render_seo_tags($registerSeo); ?>
   <?php render_jsonld($registerBreadcrumbs); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
-  <script src="https://www.google.com/recaptcha/api.js?render=<?= htmlspecialchars($recaptchaSiteKey) ?>" async defer></script>
   <style>
     .register-page {
       background-color: #f4f4f4;
@@ -523,11 +488,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       font-size: 0.9rem;
       margin: 8px 0 0;
     }
-    .recaptcha-helper {
-      margin: 12px 0 6px;
-      color: #4b5563;
-      font-size: 0.9rem;
-    }
   </style>
 </head>
 <body>
@@ -663,8 +623,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
         <p class="consent-note">Puoi modificare o revocare marketing/newsletter e tracciamento in qualsiasi momento dal tuo account o dal link "Gestisci preferenze" nel footer.</p>
 
-        <div class="recaptcha-helper" aria-hidden="true">Protezione reCAPTCHA v3 attiva.</div>
-        <input type="hidden" name="g-recaptcha-response" id="gRecaptchaResponse">
+        <label for="captcha_answer">Verifica: quanto fa <?= htmlspecialchars($captchaQuestion) ?>?</label>
+        <input type="number" id="captcha_answer" name="captcha_answer" inputmode="numeric" required>
 
         <button type="submit" class="register-btn">Crea Account</button>
 
@@ -696,26 +656,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             initHeaderInteractions();
           }
         });
-
-      const recaptchaSiteKey = "<?= htmlspecialchars($recaptchaSiteKey) ?>";
-      function refreshRecaptcha() {
-        if (!window.grecaptcha || !grecaptcha.execute) {
-          return;
-        }
-        grecaptcha.ready(() => {
-          grecaptcha.execute(recaptchaSiteKey, { action: 'register' }).then((token) => {
-            const field = document.getElementById('gRecaptchaResponse');
-            if (field) {
-              field.value = token;
-            }
-          });
-        });
-      }
-      const recaptchaInterval = setInterval(() => {
-        refreshRecaptcha();
-      }, 110000); // refresh token ~ every 110s
-      window.addEventListener('beforeunload', () => clearInterval(recaptchaInterval));
-      window.addEventListener('load', refreshRecaptcha);
 
       const avatarInput = document.getElementById('avatar');
       const avatarName = document.getElementById('avatarName');
