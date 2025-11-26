@@ -3,6 +3,8 @@ session_start();
 require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/seo.php';
+$recaptchaSiteKey = '6LegyRgsAAAADADEFiiBVdKdf7oYcIUcwW5IR6Mo';
+$recaptchaSecretKey = '6LegyRgsAAAAPYJd4h-Glyps68emLGxB7dkRsDW';
 
 $baseUrl = seo_base_url();
 $loginSeo = [
@@ -27,6 +29,41 @@ $needsVerificationResend = null;
 $loginCsrf = csrf_get_token('login_form');
 $resendCsrf = csrf_get_token('resend_verification');
 
+function verify_recaptcha(string $secret, string $token, string $ip = '', string $expectedAction = 'login', float $minScore = 0.4): bool
+{
+    if (trim($secret) === '' || trim($token) === '') {
+        return false;
+    }
+    $payload = http_build_query([
+        'secret' => $secret,
+        'response' => $token,
+        'remoteip' => $ip,
+    ]);
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+            'content' => $payload,
+            'timeout' => 5,
+        ]
+    ]);
+    $result = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, $context);
+    if ($result === false) {
+        return false;
+    }
+    $data = json_decode($result, true);
+    if (!is_array($data) || empty($data['success'])) {
+        return false;
+    }
+    if ($expectedAction !== '' && isset($data['action']) && $data['action'] !== $expectedAction) {
+        return false;
+    }
+    if (isset($data['score']) && $data['score'] < $minScore) {
+        return false;
+    }
+    return true;
+}
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (!csrf_is_valid($_POST['_csrf'] ?? '', 'login_form')) {
         $error = "Sessione scaduta. Ricarica la pagina e riprova.";
@@ -35,6 +72,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } elseif (!rate_limit_allow('login_attempt', 5, 900)) {
         $wait = rate_limit_retry_after('login_attempt', 900);
         $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
+    } elseif (!verify_recaptcha($recaptchaSecretKey, $_POST['g-recaptcha-response'] ?? '', $_SERVER['REMOTE_ADDR'] ?? '', 'login', 0.4)) {
+        $error = "Verifica reCAPTCHA non valida. Riprova.";
     }
 
     if (!$error) {
@@ -87,6 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   <?php render_seo_tags($loginSeo); ?>
   <?php render_jsonld($loginBreadcrumbs); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
+  <script src="https://www.google.com/recaptcha/api.js?render=<?= htmlspecialchars($recaptchaSiteKey) ?>" async defer></script>
   <style>
     .login-container {
       display: flex;
@@ -175,6 +215,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     .login-footer a:hover {
       text-decoration: underline;
     }
+    .recaptcha-helper {
+      margin: 8px 0 4px;
+      color: #4b5563;
+      font-size: 0.9rem;
+    }
     .password-field {
       position: relative;
       display: flex;
@@ -258,6 +303,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </svg>
           </button>
         </div>
+        <div class="recaptcha-helper" aria-hidden="true">Protezione reCAPTCHA v3 attiva.</div>
+        <input type="hidden" name="g-recaptcha-response" id="gRecaptchaResponse">
 
         <button type="submit" class="login-btn">Entra</button>
 
@@ -282,7 +329,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   </div>
   <div id="footer-container"></div>
 
-  <script src="/includi/app.min.js?v=20251126"></script>
+  <script src="/includi/app.min.js?v=20251128"></script>
   <script>
     // FOOTER
     fetch("/includi/footer.html")
@@ -314,6 +361,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         toggleButton.setAttribute("aria-label", isHidden ? "Nascondi password" : "Mostra password");
       });
     })();
+
+    // reCAPTCHA v3
+    const recaptchaSiteKey = "<?= htmlspecialchars($recaptchaSiteKey) ?>";
+    function refreshRecaptcha() {
+      if (!window.grecaptcha || !grecaptcha.execute) {
+        return;
+      }
+      grecaptcha.ready(() => {
+        grecaptcha.execute(recaptchaSiteKey, { action: 'login' }).then((token) => {
+          const field = document.getElementById('gRecaptchaResponse');
+          if (field) {
+            field.value = token;
+          }
+        });
+      });
+    }
+    const recaptchaInterval = setInterval(refreshRecaptcha, 110000);
+    window.addEventListener('beforeunload', () => clearInterval(recaptchaInterval));
+    window.addEventListener('load', refreshRecaptcha);
   </script>
 </body>
 </html>

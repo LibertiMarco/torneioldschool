@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 if (!isset($_SESSION['user_id'])) {
     header("Location: /login.php");
@@ -647,12 +647,12 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
         if (regex.test(passwordInput.value)) {
           passwordMessage.textContent = "Password valida.";
           passwordMessage.style.color = "green";
-          passwordCheck.textContent = "✓";
+          passwordCheck.textContent = "OK";
           passwordCheck.style.color = "green";
         } else {
           passwordMessage.textContent = "Password non valida.";
           passwordMessage.style.color = "red";
-          passwordCheck.textContent = "✗";
+          passwordCheck.textContent = "X";
           passwordCheck.style.color = "red";
         }
       };
@@ -668,12 +668,12 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
         if (confirmInput.value === passwordInput.value) {
           confirmMessage.textContent = "Le password coincidono.";
           confirmMessage.style.color = "green";
-          confirmCheck.textContent = "✓";
+          confirmCheck.textContent = "OK";
           confirmCheck.style.color = "green";
         } else {
           confirmMessage.textContent = "Le password non coincidono.";
           confirmMessage.style.color = "red";
-          confirmCheck.textContent = "✗";
+          confirmCheck.textContent = "X";
           confirmCheck.style.color = "red";
         }
       };
