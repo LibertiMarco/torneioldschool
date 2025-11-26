@@ -7,6 +7,33 @@
   const STORAGE_KEY = 'tosConsent';
   const BANNER_ID = 'tos-consent-banner';
 
+  function isUserAuthenticated() {
+    if (typeof window.__TOS_IS_AUTH === 'boolean') {
+      return window.__TOS_IS_AUTH;
+    }
+    const html = document.documentElement;
+    const body = document.body;
+    if (html && html.getAttribute('data-user-auth') === '1') {
+      return true;
+    }
+    if (body && body.getAttribute('data-user-auth') === '1') {
+      return true;
+    }
+    const header = document.querySelector('.site-header[data-auth="1"]');
+    return !!header;
+  }
+
+  function toggleNewsletterVisibility() {
+    const block = document.querySelector(`#${BANNER_ID} [data-newsletter-block]`);
+    if (!block) return;
+    const visible = isUserAuthenticated();
+    block.style.display = visible ? '' : 'none';
+    const checkbox = block.querySelector('input[data-consent="newsletter"]');
+    if (!visible && checkbox) {
+      checkbox.checked = false;
+    }
+  }
+
   // ---------- Tracking module ----------
   const Tracking = (function () {
     let allowed = false;
@@ -363,6 +390,7 @@
     }
     if (banner) {
       fillBanner(loadConsent() || {});
+      toggleNewsletterVisibility();
       banner.classList.add('is-visible');
     }
   }
@@ -433,7 +461,7 @@
             <span>Tracciamento utilizzo del sito (eventi anonimi) per analisi aggregate.</span>
           </div>
         </label>
-        <label class="consent-option">
+        <label class="consent-option" data-newsletter-block="1">
           <input type="checkbox" data-consent="newsletter">
           <div class="consent-option-body">
             <strong>Newsletter</strong>
@@ -458,6 +486,7 @@
     document.body.appendChild(banner);
 
     fillBanner(loadConsent() || {});
+    toggleNewsletterVisibility();
 
     banner.addEventListener('click', (event) => {
       const btn = event.target instanceof Element ? event.target.closest('[data-consent]') : null;

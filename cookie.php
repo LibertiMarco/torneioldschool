@@ -70,7 +70,7 @@
 
   <div id="footer-container"></div>
 
-  <script src="/includi/app.min.js?v=20251127"></script>
+  <script src="/includi/app.min.js?v=20251128"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       fetch('/includi/header.php')

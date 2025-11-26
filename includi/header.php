@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+$isLoggedIn = isset($_SESSION['user_id']);
 $sessionAvatar = $_SESSION['avatar'] ?? '';
 $avatarUrl = '/img/icone/user.png';
 if (!empty($sessionAvatar)) {
@@ -14,7 +15,7 @@ if (!empty($sessionAvatar)) {
 }
 ?>
 
-<header class="site-header">
+<header class="site-header" data-auth="<?= $isLoggedIn ? '1' : '0' ?>">
 
     <!-- HAMBURGER (solo mobile) -->
     <button class="mobile-menu-btn" id="mobileMenuBtn">
@@ -210,7 +211,7 @@ if (!empty($sessionAvatar)) {
     window.__HEADER_INTERACTIONS_SCRIPT__ = true;
 
     const script = document.createElement("script");
-    script.src = "/includi/app.min.js?v=20251127";
+    script.src = "/includi/app.min.js?v=20251128";
     script.defer = true;
     document.head.appendChild(script);
 })();

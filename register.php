@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
@@ -85,14 +85,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if (!preg_match($pattern, $password)) {
                 $error = "La password deve avere almeno 8 caratteri, una maiuscola, un numero e un simbolo speciale.";
             } else {
-                // Verifica se l'email esiste già
+                // Verifica se l'email esiste gi�
                 $check = $conn->prepare("SELECT id FROM utenti WHERE email = ?");
                 $check->bind_param("s", $email);
                 $check->execute();
                 $result = $check->get_result();
 
                 if ($result->num_rows > 0) {
-                    $error = "Esiste già un account con questa email.";
+                    $error = "Esiste gi� un account con questa email.";
                 } else {
                     // Gestione avatar (opzionale)
                     if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] !== UPLOAD_ERR_NO_FILE) {
@@ -138,7 +138,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         try {
                             $tokenVerifica = bin2hex(random_bytes(32));
                         } catch (Exception $e) {
-                            $error = "Errore tecnico nella generazione del token. Riprova più tardi.";
+                            $error = "Errore tecnico nella generazione del token. Riprova pi� tardi.";
                         }
                     }
 
@@ -163,7 +163,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             if (inviaEmailVerifica($email, $nome, $tokenVerifica)) {
                                 $successMessage = "Registrazione completata! Ti abbiamo inviato una email di conferma a {$email}.";
                             } else {
-                                $successMessage = "Registrazione riuscita, ma non è stato possibile inviare l'email di conferma. Contattaci per ricevere assistenza.";
+                                $successMessage = "Registrazione riuscita, ma non � stato possibile inviare l'email di conferma. Contattaci per ricevere assistenza.";
                             }
                             $_POST = [];
                         } else {
@@ -372,22 +372,116 @@ $captchaQuestion = captcha_generate('register_form');?>
       display: block;
     }
     .consent-box {
-      background: #f7f9fc;
-      border: 1px solid #e5e8ed;
-      border-radius: 10px;
-      padding: 12px 14px;
+      background: linear-gradient(135deg, #f9fbff, #f4f6fb);
+      border: 1px solid #e1e7f0;
+      border-radius: 14px;
+      padding: 16px 18px;
       margin-top: 6px;
+      box-shadow: 0 18px 40px rgba(21,41,62,0.07);
     }
-    .consent-box label {
+    .consent-head {
       display: flex;
-      gap: 10px;
-      align-items: flex-start;
-      font-size: 0.95rem;
-      color: #15293e;
-      line-height: 1.4;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
     }
-    .consent-box input[type="checkbox"] {
+    .consent-badge {
+      background: #15293e;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 6px 10px;
+      border-radius: 10px;
+      letter-spacing: 0.01em;
+    }
+    .consent-subtitle {
+      color: #4b5563;
+      font-size: 0.95rem;
+      margin: 0;
+    }
+    .consent-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+    }
+    .consent-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 12px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid #e6ebf3;
+      box-shadow: 0 6px 18px rgba(21,41,62,0.05);
+    }
+    .consent-item input[type="checkbox"] {
+      appearance: none;
+      width: 20px;
+      height: 20px;
       margin-top: 4px;
+      border-radius: 6px;
+      border: 1.5px solid #9aa5b5;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .consent-item input[type="checkbox"]:checked {
+      background: #15293e;
+      border-color: #15293e;
+      box-shadow: 0 8px 18px rgba(21,41,62,0.18);
+    }
+    .consent-item input[type="checkbox"]::after {
+      content: "?";
+      color: transparent;
+      font-weight: 800;
+      font-size: 12px;
+    }
+    .consent-item input[type="checkbox"]:checked::after {
+      color: #fff;
+    }
+    .consent-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      color: #15293e;
+      font-size: 0.96rem;
+      line-height: 1.45;
+    }
+    .consent-title {
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .consent-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+    .consent-tag.required {
+      background: #fde8e2;
+      color: #b91c1c;
+      border: 1px solid #fca5a5;
+    }
+    .consent-tag.optional {
+      background: #ecfdf3;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+    .consent-help {
+      color: #4b5563;
+      font-size: 0.9rem;
+      margin: 0;
     }
     .consent-note {
       color: #555;
@@ -463,33 +557,69 @@ $captchaQuestion = captcha_generate('register_form');?>
         <div class="file-upload">
           <input type="file" id="avatar" name="avatar" accept="image/*">
           <label for="avatar" class="file-btn">
-            <span>📸</span> Scegli foto
+            <span>??</span> Scegli foto
           </label>
           <span class="file-name" id="avatarName">Nessun file selezionato</span>
         </div>
                 <small style="color:#666;">File JPG, PNG, GIF o WEBP - max 2MB.</small>
 
-        <div class="consent-box">
-          <label>
-            <input type="checkbox" name="accetta_privacy" required>
-            <span>Ho letto la <a href="/privacy.php" target="_blank">Privacy Policy</a> e acconsento al trattamento dei dati per l'iscrizione.</span>
-          </label>
-          <label>
-            <input type="checkbox" name="accetta_termini" required>
-            <span>Accetto i Termini di servizio/regolamento dei tornei.</span>
-          </label>
-          <label>
-            <input type="checkbox" name="consenso_foto">
-            <span>Acconsento all'uso della mia foto per mostrare profili e classifiche (facoltativo).</span>
-          </label>
-          <label>
-            <input type="checkbox" name="consenso_newsletter">
-            <span>Voglio ricevere la newsletter con novit� e calendari dei tornei (facoltativo).</span>
-          </label>
-          <label>
-            <input type="checkbox" name="consenso_marketing">
-            <span>Acconsento a comunicazioni promozionali e info sui tornei (facoltativo).</span>
-          </label>
+                <div class="consent-box">
+          <div class="consent-head">
+            <span class="consent-badge">Consensi</span>
+            <p class="consent-subtitle">Completa quelli obbligatori e, se vuoi, attiva gli aggiornamenti facoltativi.</p>
+          </div>
+          <div class="consent-list">
+            <label class="consent-item">
+              <input type="checkbox" name="accetta_privacy" required>
+              <div class="consent-copy">
+                <span class="consent-title">
+                  Privacy e trattamento dati
+                  <span class="consent-tag required">Obbligatorio</span>
+                </span>
+                <p class="consent-help">Ho letto la <a href="/privacy.php" target="_blank">Privacy Policy</a> e acconsento al trattamento dei dati per l'iscrizione.</p>
+              </div>
+            </label>
+            <label class="consent-item">
+              <input type="checkbox" name="accetta_termini" required>
+              <div class="consent-copy">
+                <span class="consent-title">
+                  Termini di servizio / regolamento tornei
+                  <span class="consent-tag required">Obbligatorio</span>
+                </span>
+                <p class="consent-help">Accetto le regole per partecipare e utilizzare il servizio.</p>
+              </div>
+            </label>
+            <label class="consent-item">
+              <input type="checkbox" name="consenso_foto">
+              <div class="consent-copy">
+                <span class="consent-title">
+                  Utilizzo della foto profilo
+                  <span class="consent-tag optional">Facoltativo</span>
+                </span>
+                <p class="consent-help">Permettiamo di mostrare la tua foto in profili e classifiche.</p>
+              </div>
+            </label>
+            <label class="consent-item">
+              <input type="checkbox" name="consenso_newsletter">
+              <div class="consent-copy">
+                <span class="consent-title">
+                  Newsletter tornei
+                  <span class="consent-tag optional">Facoltativo</span>
+                </span>
+                <p class="consent-help">Aggiornamenti su novita e calendari dei tornei.</p>
+              </div>
+            </label>
+            <label class="consent-item">
+              <input type="checkbox" name="consenso_marketing">
+              <div class="consent-copy">
+                <span class="consent-title">
+                  Comunicazioni promozionali
+                  <span class="consent-tag optional">Facoltativo</span>
+                </span>
+                <p class="consent-help">Info dedicate sui tornei e iniziative speciali.</p>
+              </div>
+            </label>
+          </div>
         </div>
         <p class="consent-note">Puoi modificare o revocare marketing/newsletter e tracciamento in qualsiasi momento dal tuo account o dal link "Gestisci preferenze" nel footer.</p>
 
@@ -504,7 +634,7 @@ $captchaQuestion = captcha_generate('register_form');?>
       </form>
 
         <div class="register-footer">
-          <p>Hai già un account? <a href="login.php">Accedi</a></p>
+          <p>Hai gi� un account? <a href="login.php">Accedi</a></p>
         </div>
       </div>
     </div>
@@ -512,7 +642,7 @@ $captchaQuestion = captcha_generate('register_form');?>
 
   <div id="footer-container"></div>
 
-  <script src="/includi/app.min.js?v=20251126"></script>
+  <script src="/includi/app.min.js?v=20251128"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       fetch("/includi/footer.html")
@@ -564,11 +694,11 @@ $captchaQuestion = captcha_generate('register_form');?>
 
           if (regex.test(password)) {
             passwordMessage.style.color = 'green';
-            passwordCheck.textContent = '✓';
+            passwordCheck.textContent = '?';
             passwordCheck.style.color = 'green';
           } else {
             passwordMessage.style.color = 'red';
-            passwordCheck.textContent = '✗';
+            passwordCheck.textContent = '?';
             passwordCheck.style.color = 'red';
           }
         });
@@ -586,12 +716,12 @@ $captchaQuestion = captcha_generate('register_form');?>
         if (confirmInput.value === passwordInput.value) {
           confirmMessage.style.color = 'green';
           confirmMessage.textContent = 'Le password coincidono.';
-          confirmCheck.textContent = '✓';
+          confirmCheck.textContent = '?';
           confirmCheck.style.color = 'green';
         } else {
           confirmMessage.style.color = 'red';
           confirmMessage.textContent = 'Le password non coincidono.';
-          confirmCheck.textContent = '✗';
+          confirmCheck.textContent = '?';
           confirmCheck.style.color = 'red';
         }
       }
@@ -606,6 +736,7 @@ $captchaQuestion = captcha_generate('register_form');?>
   </script>
 </body>
 </html>
+
 
 
 

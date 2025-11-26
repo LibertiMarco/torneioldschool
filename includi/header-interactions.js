@@ -99,14 +99,27 @@
     return document;
   }
 
+  function publishAuthState(headers) {
+    const isAuth = Array.from(headers || []).some(
+      (header) => header && header.getAttribute("data-auth") === "1"
+    );
+    document.documentElement.setAttribute("data-user-auth", isAuth ? "1" : "0");
+    if (document.body) {
+      document.body.setAttribute("data-user-auth", isAuth ? "1" : "0");
+    }
+    window.__TOS_IS_AUTH = isAuth;
+  }
+
   function initHeaderInteractions(root) {
     const scope = resolveScope(root);
     const headers = scope.querySelectorAll(".site-header");
 
     if (!headers.length) {
+      publishAuthState([]);
       return;
     }
 
+    publishAuthState(headers);
     headers.forEach(setupHeader);
     ensureGlobalListeners();
   }
@@ -117,7 +130,7 @@
     }
     window.__TOS_CONSENT_LOADER__ = true;
     const script = document.createElement("script");
-    script.src = "/includi/privacy-consent.js";
+    script.src = "/includi/privacy-consent.min.js?v=20251128";
     script.defer = true;
     document.head.appendChild(script);
   }
