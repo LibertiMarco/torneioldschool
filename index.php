@@ -235,7 +235,7 @@ loadTopScorers();
 </script>
 
   <!-- SCRIPT HEADER -->
-  <script src="/includi/app.min.js?v=20251126"></script>
+  <script src="/includi/app.min.js?v=20251130"></script>
   <script>
   document.addEventListener("DOMContentLoaded", () => {
     fetch("/includi/header.php")
