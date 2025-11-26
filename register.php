@@ -121,14 +121,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if (!preg_match($pattern, $password)) {
                 $error = "La password deve avere almeno 8 caratteri, una maiuscola, un numero e un simbolo speciale.";
             } else {
-                // Verifica se l'email esiste gi�
+                // Verifica se l'email esiste già
                 $check = $conn->prepare("SELECT id FROM utenti WHERE email = ?");
                 $check->bind_param("s", $email);
                 $check->execute();
                 $result = $check->get_result();
 
                 if ($result->num_rows > 0) {
-                    $error = "Esiste gi� un account con questa email.";
+                    $error = "Esiste già un account con questa email.";
                 } else {
                     // Gestione avatar (opzionale)
                     if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] !== UPLOAD_ERR_NO_FILE) {
@@ -174,7 +174,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         try {
                             $tokenVerifica = bin2hex(random_bytes(32));
                         } catch (Exception $e) {
-                            $error = "Errore tecnico nella generazione del token. Riprova pi� tardi.";
+                            $error = "Errore tecnico nella generazione del token. Riprova pi? tardi.";
                         }
                     }
 
@@ -199,7 +199,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             if (inviaEmailVerifica($email, $nome, $tokenVerifica)) {
                                 $successMessage = "Registrazione completata! Ti abbiamo inviato una email di conferma a {$email}.";
                             } else {
-                                $successMessage = "Registrazione riuscita, ma non � stato possibile inviare l'email di conferma. Contattaci per ricevere assistenza.";
+                                $successMessage = "Registrazione riuscita, ma non ? stato possibile inviare l'email di conferma. Contattaci per ricevere assistenza.";
                             }
                             $_POST = [];
                         } else {
@@ -420,12 +420,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       display: block;
     }
     .consent-box {
-      background: #f8fafc;
-      border: 1px solid #e3e7ee;
+      background: #fbfdff;
+      border: 1px solid #dfe7f0;
       border-radius: 10px;
-      padding: 10px 12px;
+      padding: 12px;
       margin-top: 6px;
-      box-shadow: 0 10px 26px rgba(21,41,62,0.06);
+      box-shadow: 0 10px 24px rgba(21,41,62,0.05);
     }
     .consent-list {
       display: grid;
@@ -440,12 +440,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       font-size: 0.95rem;
       line-height: 1.3;
       color: #15293e;
+      background: #fff;
+      border: 1px solid #e8edf4;
+      border-radius: 8px;
+      padding: 10px 10px;
     }
     .consent-item input[type="checkbox"] {
       width: 18px;
       height: 18px;
       accent-color: #15293e;
       flex-shrink: 0;
+    }
+    .consent-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 8px;
+    }
+    .consent-accept-all {
+      border: 1px solid #d1d9e6;
+      background: #eef3fb;
+      color: #0f1f33;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .consent-accept-all:hover {
+      background: #e2eaf7;
+      border-color: #c3d0e5;
     }
     .consent-note {
       color: #555;
@@ -460,7 +483,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       transform-origin: left top;
     }
     .recaptcha-box .g-recaptcha {
-      transform: scale(0.94);
+      transform: scale(0.9);
       transform-origin: left top;
     }
   </style>
@@ -539,6 +562,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <small style="color:#666;">File JPG, PNG, GIF o WEBP - max 2MB.</small>
 
         <div class="consent-box">
+          <div class="consent-actions">
+            <button type="button" class="consent-accept-all" id="consentAcceptAll">Accetta tutto</button>
+          </div>
           <div class="consent-list">
             <label class="consent-item">
               <input type="checkbox" name="accetta_privacy" required>
@@ -572,7 +598,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       </form>
 
         <div class="register-footer">
-          <p>Hai gi� un account? <a href="login.php">Accedi</a></p>
+          <p>Hai già un account? <a href="login.php">Accedi</a></p>
         </div>
       </div>
     </div>
@@ -618,6 +644,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         });
       });
 
+      const acceptAllBtn = document.getElementById('consentAcceptAll');
+      if (acceptAllBtn) {
+        acceptAllBtn.addEventListener('click', () => {
+          document.querySelectorAll('.consent-item input[type="checkbox"]').forEach((el) => {
+            el.checked = true;
+          });
+        });
+      }
       const passwordInput = document.getElementById('password');
       const passwordMessage = document.getElementById('passwordMessage');
       const passwordCheck = document.getElementById('passwordCheck');

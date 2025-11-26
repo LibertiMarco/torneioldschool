@@ -222,6 +222,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       align-items: center;
       transform-origin: left top;
     }
+    .recaptcha-box .g-recaptcha {
+      transform: scale(0.9);
+      transform-origin: left top;
+    }
     .password-field {
       position: relative;
       display: flex;
