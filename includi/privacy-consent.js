@@ -215,9 +215,9 @@
     #${BANNER_ID} {
       position: fixed;
       inset: 0;
-      padding: 18px;
-      background: rgba(15, 23, 42, 0.55);
-      backdrop-filter: blur(4px);
+      padding: 22px;
+      background: radial-gradient(circle at 20% 20%, rgba(21,41,62,0.55), rgba(10,18,30,0.82));
+      backdrop-filter: blur(6px);
       display: none;
       align-items: center;
       justify-content: center;
@@ -225,50 +225,62 @@
     }
     #${BANNER_ID}.is-visible { display: flex; }
     #${BANNER_ID} .consent-card {
-      width: min(960px, 100%);
-      background: #ffffff;
+      width: min(880px, 100%);
+      background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
       color: #0f172a;
       border-radius: 18px;
-      box-shadow: 0 26px 60px rgba(15,23,42,0.28);
+      box-shadow: 0 20px 60px rgba(10,18,30,0.35);
       border: 1px solid #d7e0f0;
       display: grid;
       grid-template-columns: 1.05fr 1fr;
-      gap: 16px 20px;
-      padding: 22px 24px 20px;
+      gap: 18px 22px;
+      padding: 22px 26px 20px;
       position: relative;
       max-height: 88vh;
       overflow-y: auto;
     }
+    #${BANNER_ID} .consent-card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      border-radius: 18px 0 0 18px;
+      background: linear-gradient(180deg, #d80000, #15293e);
+    }
     #${BANNER_ID} .consent-eyebrow {
       text-transform: uppercase;
-      letter-spacing: 0.12em;
-      font-size: 0.78rem;
+      letter-spacing: 0.14em;
+      font-size: 0.8rem;
       font-weight: 800;
       color: #d80000;
       margin: 4px 0;
     }
     #${BANNER_ID} h3 {
-      margin: 2px 0 6px;
-      font-size: 1.4rem;
+      margin: 2px 0 8px;
+      font-size: 1.45rem;
       color: #15293e;
+      letter-spacing: -0.01em;
     }
     #${BANNER_ID} .consent-text {
       color: #4b5563;
-      line-height: 1.6;
-      margin-bottom: 8px;
+      line-height: 1.65;
+      margin-bottom: 10px;
+      font-size: 1rem;
     }
     #${BANNER_ID} .consent-links {
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
       align-items: center;
-      margin-top: 6px;
+      margin-top: 8px;
     }
     #${BANNER_ID} .consent-links a {
       color: #15293e;
       font-weight: 700;
       text-decoration: none;
-      border-bottom: 1px solid rgba(21,41,62,0.35);
+      border-bottom: 2px solid rgba(21,41,62,0.35);
       padding-bottom: 2px;
     }
     #${BANNER_ID} .consent-links a:hover {
@@ -279,42 +291,44 @@
       background: #f5f8fd;
       border: 1px solid #e3eaf7;
       border-radius: 14px;
-      padding: 12px;
+      padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
     }
     #${BANNER_ID} .consent-option {
       display: grid;
       grid-template-columns: auto 1fr;
-      gap: 10px;
+      gap: 12px;
       align-items: flex-start;
       background: #ffffff;
       border: 1px solid #e5e8f0;
       border-radius: 12px;
-      padding: 10px 12px;
+      padding: 12px 14px;
+      box-shadow: 0 8px 20px rgba(15,23,42,0.05);
     }
     #${BANNER_ID} .consent-option input {
       margin-top: 4px;
-      width: 44px;
-      height: 24px;
+      width: 46px;
+      height: 26px;
       accent-color: #15293e;
       cursor: pointer;
     }
     #${BANNER_ID} .consent-option-body {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 3px;
     }
     #${BANNER_ID} .consent-option-body strong {
       display: block;
       color: #0f172a;
-      font-size: 1rem;
+      font-size: 1.02rem;
       margin-bottom: 2px;
+      letter-spacing: -0.01em;
     }
     #${BANNER_ID} .consent-option-body span {
       color: #4b5563;
-      line-height: 1.5;
+      line-height: 1.55;
       font-size: 0.98rem;
     }
     #${BANNER_ID} .consent-actions {
@@ -323,7 +337,7 @@
       flex-wrap: wrap;
       justify-content: flex-end;
       grid-column: 1 / -1;
-      margin-top: 6px;
+      margin-top: 8px;
     }
     #${BANNER_ID} .consent-actions button {
       min-width: 140px;
@@ -367,6 +381,7 @@
       #${BANNER_ID} .consent-card {
         grid-template-columns: 1fr;
         padding: 18px 18px 16px;
+        gap: 14px;
       }
       #${BANNER_ID} .consent-actions {
         justify-content: center;
