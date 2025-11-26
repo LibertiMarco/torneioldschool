@@ -483,8 +483,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       transform-origin: left top;
     }
     .recaptcha-box .g-recaptcha {
-      transform: scale(0.9);
+      transform: scale(1);
       transform-origin: left top;
+    }
+    @media (max-width: 640px) {
+      .recaptcha-box .g-recaptcha {
+        transform: scale(0.9);
+      }
     }
   </style>
 </head>
