@@ -1,7 +1,7 @@
-<IfModule mod_env.c>
-  SetEnv RECAPTCHA_SITE_KEY "6LdY7hgsAAAAABGEVpsKMlZNeEacbWH8ZLf8L-Ku"
-  SetEnv RECAPTCHA_SECRET_KEY "6LdY7hgsAAAAAJ6MnhkD578xaLpn3Xh1fB3Y-srp"
-</IfModule>
+#<IfModule mod_env.c>
+#  SetEnv RECAPTCHA_SITE_KEY "6LdY7hgsAAAAABGEVpsKMlZNeEacbWH8ZLf8L-Ku"
+#  SetEnv RECAPTCHA_SECRET_KEY "6LdY7hgsAAAAAJ6MnhkD578xaLpn3Xh1fB3Y-srp"
+#</IfModule>
 
 RewriteEngine On
 
