@@ -29,7 +29,7 @@ $needsVerificationResend = null;
 $loginCsrf = csrf_get_token('login_form');
 $resendCsrf = csrf_get_token('resend_verification');
 
-function verify_recaptcha(string $secret, string $token, string $ip = '', string $expectedAction = 'login', float $minScore = 0.4): bool
+function verify_recaptcha(string $secret, string $token, string $ip = '', string $expectedAction = '', float $minScore = 0.0): bool
 {
     if (trim($secret) === '' || trim($token) === '') {
         return false;
@@ -58,7 +58,7 @@ function verify_recaptcha(string $secret, string $token, string $ip = '', string
     if ($expectedAction !== '' && isset($data['action']) && $data['action'] !== $expectedAction) {
         return false;
     }
-    if (isset($data['score']) && $data['score'] < $minScore) {
+    if ($minScore > 0 && isset($data['score']) && $data['score'] < $minScore) {
         return false;
     }
     return true;
@@ -72,7 +72,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } elseif (!rate_limit_allow('login_attempt', 5, 900)) {
         $wait = rate_limit_retry_after('login_attempt', 900);
         $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
-    } elseif (!verify_recaptcha($recaptchaSecretKey, $_POST['g-recaptcha-response'] ?? '', $_SERVER['REMOTE_ADDR'] ?? '', 'login', 0.4)) {
+    } elseif (!verify_recaptcha($recaptchaSecretKey, $_POST['g-recaptcha-response'] ?? '', $_SERVER['REMOTE_ADDR'] ?? '')) {
         $error = "Verifica reCAPTCHA non valida. Riprova.";
     }
 
@@ -126,7 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   <?php render_seo_tags($loginSeo); ?>
   <?php render_jsonld($loginBreadcrumbs); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
-  <script src="https://www.google.com/recaptcha/api.js?render=<?= htmlspecialchars($recaptchaSiteKey) ?>" async defer></script>
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
   <style>
     .login-container {
       display: flex;
@@ -215,10 +215,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     .login-footer a:hover {
       text-decoration: underline;
     }
-    .recaptcha-helper {
-      margin: 8px 0 4px;
-      color: #4b5563;
-      font-size: 0.9rem;
+    .recaptcha-box {
+      margin: 10px 0 6px;
     }
     .password-field {
       position: relative;
@@ -303,8 +301,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </svg>
           </button>
         </div>
-        <div class="recaptcha-helper" aria-hidden="true">Protezione reCAPTCHA v3 attiva.</div>
-        <input type="hidden" name="g-recaptcha-response" id="gRecaptchaResponse">
+        <div class="recaptcha-box">
+          <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($recaptchaSiteKey) ?>"></div>
+        </div>
 
         <button type="submit" class="login-btn">Entra</button>
 
@@ -361,25 +360,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         toggleButton.setAttribute("aria-label", isHidden ? "Nascondi password" : "Mostra password");
       });
     })();
-
-    // reCAPTCHA v3
-    const recaptchaSiteKey = "<?= htmlspecialchars($recaptchaSiteKey) ?>";
-    function refreshRecaptcha() {
-      if (!window.grecaptcha || !grecaptcha.execute) {
-        return;
-      }
-      grecaptcha.ready(() => {
-        grecaptcha.execute(recaptchaSiteKey, { action: 'login' }).then((token) => {
-          const field = document.getElementById('gRecaptchaResponse');
-          if (field) {
-            field.value = token;
-          }
-        });
-      });
-    }
-    const recaptchaInterval = setInterval(refreshRecaptcha, 110000);
-    window.addEventListener('beforeunload', () => clearInterval(recaptchaInterval));
-    window.addEventListener('load', refreshRecaptcha);
   </script>
 </body>
 </html>

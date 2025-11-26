@@ -48,7 +48,7 @@ function generaNomeAvatar($nome, $cognome, $estensione, $uploadDir) {
     return $filename;
 }
 
-function verify_recaptcha(string $secret, string $token, string $ip = '', string $expectedAction = 'register', float $minScore = 0.4): bool
+function verify_recaptcha(string $secret, string $token, string $ip = '', string $expectedAction = '', float $minScore = 0.0): bool
 {
     if (trim($secret) === '' || trim($token) === '') {
         return false;
@@ -77,7 +77,7 @@ function verify_recaptcha(string $secret, string $token, string $ip = '', string
     if ($expectedAction !== '' && isset($data['action']) && $data['action'] !== $expectedAction) {
         return false;
     }
-    if (isset($data['score']) && $data['score'] < $minScore) {
+    if ($minScore > 0 && isset($data['score']) && $data['score'] < $minScore) {
         return false;
     }
     return true;
@@ -91,7 +91,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } elseif (!rate_limit_allow('register_form', 3, 900)) {
         $wait = rate_limit_retry_after('register_form', 900);
         $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
-    } elseif (!verify_recaptcha($recaptchaSecretKey, $_POST['g-recaptcha-response'] ?? '', $_SERVER['REMOTE_ADDR'] ?? '', 'register', 0.4)) {
+    } elseif (!verify_recaptcha($recaptchaSecretKey, $_POST['g-recaptcha-response'] ?? '', $_SERVER['REMOTE_ADDR'] ?? '')) {
         $error = "Verifica reCAPTCHA non valida. Riprova.";
     }
 
@@ -219,7 +219,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   <?php render_seo_tags($registerSeo); ?>
   <?php render_jsonld($registerBreadcrumbs); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
-  <script src="https://www.google.com/recaptcha/api.js?render=<?= htmlspecialchars($recaptchaSiteKey) ?>" async defer></script>
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
   <style>
     .register-page {
       background-color: #f4f4f4;
@@ -523,10 +523,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       font-size: 0.9rem;
       margin: 8px 0 0;
     }
-    .recaptcha-helper {
+    .recaptcha-box {
       margin: 12px 0 6px;
-      color: #4b5563;
-      font-size: 0.9rem;
     }
   </style>
 </head>
@@ -663,8 +661,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
         <p class="consent-note">Puoi modificare o revocare marketing/newsletter e tracciamento in qualsiasi momento dal tuo account o dal link "Gestisci preferenze" nel footer.</p>
 
-        <div class="recaptcha-helper" aria-hidden="true">Protezione reCAPTCHA v3 attiva.</div>
-        <input type="hidden" name="g-recaptcha-response" id="gRecaptchaResponse">
+        <div class="recaptcha-box">
+          <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($recaptchaSiteKey) ?>"></div>
+        </div>
 
         <button type="submit" class="register-btn">Crea Account</button>
 
@@ -696,26 +695,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             initHeaderInteractions();
           }
         });
-
-      const recaptchaSiteKey = "<?= htmlspecialchars($recaptchaSiteKey) ?>";
-      function refreshRecaptcha() {
-        if (!window.grecaptcha || !grecaptcha.execute) {
-          return;
-        }
-        grecaptcha.ready(() => {
-          grecaptcha.execute(recaptchaSiteKey, { action: 'register' }).then((token) => {
-            const field = document.getElementById('gRecaptchaResponse');
-            if (field) {
-              field.value = token;
-            }
-          });
-        });
-      }
-      const recaptchaInterval = setInterval(() => {
-        refreshRecaptcha();
-      }, 110000); // refresh token ~ every 110s
-      window.addEventListener('beforeunload', () => clearInterval(recaptchaInterval));
-      window.addEventListener('load', refreshRecaptcha);
 
       const avatarInput = document.getElementById('avatar');
       const avatarName = document.getElementById('avatarName');
