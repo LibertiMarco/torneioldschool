@@ -350,6 +350,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       align-items: center;
       gap: 8px;
     }
+    .file-upload .file-icon {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #fff;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 11px;
+      background: rgba(255,255,255,0.12);
+      letter-spacing: 0;
+    }
     .file-upload .file-btn:hover {
       background: #0e1d2e;
       transform: translateY(-1px);
@@ -407,116 +420,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       display: block;
     }
     .consent-box {
-      background: linear-gradient(135deg, #f9fbff, #f4f6fb);
-      border: 1px solid #e1e7f0;
-      border-radius: 14px;
-      padding: 16px 18px;
-      margin-top: 6px;
-      box-shadow: 0 18px 40px rgba(21,41,62,0.07);
-    }
-    .consent-head {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-    }
-    .consent-badge {
-      background: #15293e;
-      color: #fff;
-      font-weight: 700;
-      font-size: 0.9rem;
-      padding: 6px 10px;
+      background: #f8fafc;
+      border: 1px solid #e3e7ee;
       border-radius: 10px;
-      letter-spacing: 0.01em;
-    }
-    .consent-subtitle {
-      color: #4b5563;
-      font-size: 0.95rem;
-      margin: 0;
+      padding: 10px 12px;
+      margin-top: 6px;
+      box-shadow: 0 10px 26px rgba(21,41,62,0.06);
     }
     .consent-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+      display: grid;
+      gap: 8px;
       margin: 0;
       padding: 0;
     }
     .consent-item {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 12px;
-      align-items: flex-start;
-      padding: 12px;
-      border-radius: 12px;
-      background: #fff;
-      border: 1px solid #e6ebf3;
-      box-shadow: 0 6px 18px rgba(21,41,62,0.05);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+      line-height: 1.3;
+      color: #15293e;
     }
     .consent-item input[type="checkbox"] {
-      appearance: none;
-      width: 20px;
-      height: 20px;
-      margin-top: 4px;
-      border-radius: 6px;
-      border: 1.5px solid #9aa5b5;
-      background: #fff;
-      display: grid;
-      place-items: center;
-      transition: all 0.15s ease;
-      cursor: pointer;
-    }
-    .consent-item input[type="checkbox"]:checked {
-      background: #15293e;
-      border-color: #15293e;
-      box-shadow: 0 8px 18px rgba(21,41,62,0.18);
-    }
-    .consent-item input[type="checkbox"]::after {
-      content: "?";
-      color: transparent;
-      font-weight: 800;
-      font-size: 12px;
-    }
-    .consent-item input[type="checkbox"]:checked::after {
-      color: #fff;
-    }
-    .consent-copy {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      color: #15293e;
-      font-size: 0.96rem;
-      line-height: 1.45;
-    }
-    .consent-title {
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .consent-tag {
-      display: inline-flex;
-      align-items: center;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.01em;
-    }
-    .consent-tag.required {
-      background: #fde8e2;
-      color: #b91c1c;
-      border: 1px solid #fca5a5;
-    }
-    .consent-tag.optional {
-      background: #ecfdf3;
-      color: #15803d;
-      border: 1px solid #bbf7d0;
-    }
-    .consent-help {
-      color: #4b5563;
-      font-size: 0.9rem;
-      margin: 0;
+      width: 18px;
+      height: 18px;
+      accent-color: #15293e;
+      flex-shrink: 0;
     }
     .consent-note {
       color: #555;
@@ -528,6 +457,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       display: flex;
       justify-content: flex-start;
       align-items: center;
+      transform-origin: left top;
+    }
+    .recaptcha-box .g-recaptcha {
+      transform: scale(0.94);
       transform-origin: left top;
     }
   </style>
@@ -599,67 +532,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="file-upload">
           <input type="file" id="avatar" name="avatar" accept="image/*">
           <label for="avatar" class="file-btn">
-            <span>??</span> Scegli foto
+            <span class="file-icon" aria-hidden="true">F</span> Scegli foto
           </label>
           <span class="file-name" id="avatarName">Nessun file selezionato</span>
         </div>
                 <small style="color:#666;">File JPG, PNG, GIF o WEBP - max 2MB.</small>
 
-                <div class="consent-box">
-          <div class="consent-head">
-            <span class="consent-badge">Consensi</span>
-            <p class="consent-subtitle">Completa quelli obbligatori e, se vuoi, attiva gli aggiornamenti facoltativi.</p>
-          </div>
+        <div class="consent-box">
           <div class="consent-list">
             <label class="consent-item">
               <input type="checkbox" name="accetta_privacy" required>
-              <div class="consent-copy">
-                <span class="consent-title">
-                  Privacy e trattamento dati
-                  <span class="consent-tag required">Obbligatorio</span>
-                </span>
-                <p class="consent-help">Ho letto la <a href="/privacy.php" target="_blank">Privacy Policy</a> e acconsento al trattamento dei dati per l'iscrizione.</p>
-              </div>
+              <span><strong>Privacy (obbligatorio)</strong> — Ho letto la <a href="/privacy.php" target="_blank">Privacy Policy</a> e acconsento al trattamento dei dati.</span>
             </label>
             <label class="consent-item">
               <input type="checkbox" name="accetta_termini" required>
-              <div class="consent-copy">
-                <span class="consent-title">
-                  Termini di servizio / regolamento tornei
-                  <span class="consent-tag required">Obbligatorio</span>
-                </span>
-                <p class="consent-help">Accetto le regole per partecipare e utilizzare il servizio.</p>
-              </div>
-            </label>
-            <label class="consent-item">
-              <input type="checkbox" name="consenso_foto">
-              <div class="consent-copy">
-                <span class="consent-title">
-                  Utilizzo della foto profilo
-                  <span class="consent-tag optional">Facoltativo</span>
-                </span>
-                <p class="consent-help">Permettiamo di mostrare la tua foto in profili e classifiche.</p>
-              </div>
+              <span><strong>Termini del servizio (obbligatorio)</strong> — Accetto il regolamento dei tornei.</span>
             </label>
             <label class="consent-item">
               <input type="checkbox" name="consenso_newsletter">
-              <div class="consent-copy">
-                <span class="consent-title">
-                  Newsletter tornei
-                  <span class="consent-tag optional">Facoltativo</span>
-                </span>
-                <p class="consent-help">Aggiornamenti su novita e calendari dei tornei.</p>
-              </div>
+              <span><strong>Newsletter (facoltativo)</strong> — Aggiornamenti su novità e calendari.</span>
             </label>
             <label class="consent-item">
               <input type="checkbox" name="consenso_marketing">
-              <div class="consent-copy">
-                <span class="consent-title">
-                  Comunicazioni promozionali
-                  <span class="consent-tag optional">Facoltativo</span>
-                </span>
-                <p class="consent-help">Info dedicate sui tornei e iniziative speciali.</p>
-              </div>
+              <span><strong>Comunicazioni promozionali (facoltativo)</strong> — Info dedicate sui tornei.</span>
             </label>
           </div>
         </div>
