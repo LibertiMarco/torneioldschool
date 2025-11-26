@@ -337,15 +337,16 @@
       font-size: 0.98rem;
     }
     #${BANNER_ID} .consent-actions {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      display: flex;
       gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
       grid-column: 1 / -1;
       margin-top: 8px;
-      align-items: stretch;
     }
     #${BANNER_ID} .consent-actions button {
-      width: 100%;
+      flex: 1 1 160px;
+      min-width: 160px;
       border: none;
       cursor: pointer;
       font-weight: 800;
@@ -388,9 +389,7 @@
         padding: 16px 16px 14px;
         gap: 12px;
       }
-      #${BANNER_ID} .consent-actions {
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      }
+      #${BANNER_ID} .consent-actions button { flex: 1 1 150px; min-width: 150px; }
     }
     @media (max-width: 540px) {
       #${BANNER_ID} {
@@ -560,10 +559,10 @@
           </div>
         </label>
         </div>
-        <div class="consent-actions" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:8px;align-items:stretch;">
-          <button type="button" class="btn-ghost" data-consent="reject" style="width:100%;border:1px solid #cbd5e1;background:transparent;color:#15293e;font-weight:800;padding:12px 16px;border-radius:12px;">Rifiuta tutto</button>
-          <button type="button" class="btn-muted" data-consent="save" style="width:100%;border:1px solid #d7deee;background:#e9edf7;color:#1f2937;font-weight:800;padding:12px 16px;border-radius:12px;">Salva preferenze</button>
-          <button type="button" class="btn-primary" data-consent="accept" style="width:100%;border:none;background:linear-gradient(135deg,#1f3d5a,#15293e);color:#fff;font-weight:800;padding:12px 16px;border-radius:12px;box-shadow:0 14px 32px rgba(21,41,62,0.25);">Accetta tutto</button>
+        <div class="consent-actions" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
+          <button type="button" class="btn-ghost" data-consent="reject" style="flex:1 1 160px;min-width:160px;border:1px solid #cbd5e1;background:transparent;color:#15293e;font-weight:800;padding:12px 16px;border-radius:12px;">Rifiuta tutto</button>
+          <button type="button" class="btn-muted" data-consent="save" style="flex:1 1 160px;min-width:160px;border:1px solid #d7deee;background:#e9edf7;color:#1f2937;font-weight:800;padding:12px 16px;border-radius:12px;">Salva preferenze</button>
+          <button type="button" class="btn-primary" data-consent="accept" style="flex:1 1 160px;min-width:160px;border:none;background:linear-gradient(135deg,#1f3d5a,#15293e);color:#fff;font-weight:800;padding:12px 16px;border-radius:12px;box-shadow:0 14px 32px rgba(21,41,62,0.25);">Accetta tutto</button>
         </div>
       </div>
     `;
