@@ -211,7 +211,7 @@ if (!empty($sessionAvatar)) {
     window.__HEADER_INTERACTIONS_SCRIPT__ = true;
 
     const script = document.createElement("script");
-    script.src = "/includi/app.min.js?v=20251203";
+    script.src = "/includi/app.min.js?v=20251204";
     script.defer = true;
     document.head.appendChild(script);
 })();

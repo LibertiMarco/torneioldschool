@@ -212,7 +212,7 @@ $aboutBreadcrumbs = seo_breadcrumb_schema([
 
   <div id="footer-container"></div>
 
-  <script src="/includi/app.min.js?v=20251203"></script>
+  <script src="/includi/app.min.js?v=20251204"></script>
   <script>
     // FOOTER
     fetch("/includi/footer.html")

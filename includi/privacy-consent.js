@@ -530,7 +530,7 @@
     const banner = document.createElement('div');
     banner.id = BANNER_ID;
     banner.innerHTML = `
-      <div class="consent-card" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
+      <div class="consent-card" role="dialog" aria-modal="true" aria-labelledby="consentTitle" style="background:#fff;border:1px solid #dce3f3;border-radius:16px;box-shadow:0 20px 60px rgba(15,23,42,0.35);padding:20px 22px 18px;max-width:760px;width:100%;color:#0f172a;">
         <div class="consent-copy">
           <p class="consent-eyebrow">Privacy e cookie</p>
           <h3 id="consentTitle">Gestisci le preferenze</h3>
@@ -540,33 +540,33 @@
             <a href="/cookie.php">Cookie</a>
           </div>
         </div>
-        <div class="consent-options">
-        <label class="consent-option">
-          <input type="checkbox" data-consent="tracking">
-          <div class="consent-option-body">
-            <strong>Analytics anonimi</strong>
-            <span>Tracciamento utilizzo del sito (eventi anonimi) per analisi aggregate.</span>
+        <div class="consent-options" style="background:#f6f9ff;border:1px solid #e3eaf7;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:12px;">
+        <label class="consent-option" style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:flex-start;background:#fff;border:1px solid #e5e8f0;border-radius:12px;padding:12px 14px;box-shadow:0 10px 28px rgba(15,23,42,0.08);">
+          <input type="checkbox" data-consent="tracking" style="width:46px;height:26px;accent-color:#15293e;margin-top:4px;">
+          <div class="consent-option-body" style="display:flex;flex-direction:column;gap:3px;">
+            <strong style="color:#0f172a;font-size:1.02rem;margin-bottom:1px;">Analytics anonimi</strong>
+            <span style="color:#4b5563;line-height:1.55;font-size:0.98rem;">Tracciamento utilizzo del sito (eventi anonimi) per analisi aggregate.</span>
           </div>
         </label>
-        <label class="consent-option" data-newsletter-block="1">
-          <input type="checkbox" data-consent="newsletter">
-          <div class="consent-option-body">
-            <strong>Newsletter</strong>
-            <span>Invio aggiornamenti su tornei, calendari e novita.</span>
+        <label class="consent-option" data-newsletter-block="1" style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:flex-start;background:#fff;border:1px solid #e5e8f0;border-radius:12px;padding:12px 14px;box-shadow:0 10px 28px rgba(15,23,42,0.08);">
+          <input type="checkbox" data-consent="newsletter" style="width:46px;height:26px;accent-color:#15293e;margin-top:4px;">
+          <div class="consent-option-body" style="display:flex;flex-direction:column;gap:3px;">
+            <strong style="color:#0f172a;font-size:1.02rem;margin-bottom:1px;">Newsletter</strong>
+            <span style="color:#4b5563;line-height:1.55;font-size:0.98rem;">Invio aggiornamenti su tornei, calendari e novita.</span>
           </div>
         </label>
-        <label class="consent-option">
-          <input type="checkbox" data-consent="marketing">
-          <div class="consent-option-body">
-            <strong>Comunicazioni promozionali</strong>
-            <span>Info sui tornei e comunicazioni dedicate.</span>
+        <label class="consent-option" style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:flex-start;background:#fff;border:1px solid #e5e8f0;border-radius:12px;padding:12px 14px;box-shadow:0 10px 28px rgba(15,23,42,0.08);">
+          <input type="checkbox" data-consent="marketing" style="width:46px;height:26px;accent-color:#15293e;margin-top:4px;">
+          <div class="consent-option-body" style="display:flex;flex-direction:column;gap:3px;">
+            <strong style="color:#0f172a;font-size:1.02rem;margin-bottom:1px;">Comunicazioni promozionali</strong>
+            <span style="color:#4b5563;line-height:1.55;font-size:0.98rem;">Info sui tornei e comunicazioni dedicate.</span>
           </div>
         </label>
         </div>
-        <div class="consent-actions">
-          <button type="button" class="btn-ghost" data-consent="reject">Rifiuta tutto</button>
-          <button type="button" class="btn-muted" data-consent="save">Salva preferenze</button>
-          <button type="button" class="btn-primary" data-consent="accept">Accetta tutto</button>
+        <div class="consent-actions" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px;">
+          <button type="button" class="btn-ghost" data-consent="reject" style="min-width:140px;border:1px solid #cbd5e1;background:transparent;color:#15293e;font-weight:800;padding:12px 16px;border-radius:12px;">Rifiuta tutto</button>
+          <button type="button" class="btn-muted" data-consent="save" style="min-width:140px;border:1px solid #d7deee;background:#e9edf7;color:#1f2937;font-weight:800;padding:12px 16px;border-radius:12px;">Salva preferenze</button>
+          <button type="button" class="btn-primary" data-consent="accept" style="min-width:140px;border:none;background:linear-gradient(135deg,#1f3d5a,#15293e);color:#fff;font-weight:800;padding:12px 16px;border-radius:12px;box-shadow:0 14px 32px rgba(21,41,62,0.25);">Accetta tutto</button>
         </div>
       </div>
     `;
