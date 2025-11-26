@@ -1,8 +1,20 @@
 <?php
-$host = getenv('DB_HOST') ?: 'localhost';
-$user = getenv('DB_USER') ?: '';
-$pass = getenv('DB_PASSWORD') ?: '';
-$dbname = getenv('DB_NAME') ?: '';
+require_once __DIR__ . '/env_loader.php';
+
+function env_or_default(string $key, string $default = ''): string
+{
+    $value = getenv($key);
+    return ($value !== false && $value !== '') ? $value : $default;
+}
+
+$host = env_or_default('DB_HOST', 'localhost');
+$user = env_or_default('DB_USER', '');
+$pass = env_or_default('DB_PASSWORD', '');
+$dbname = env_or_default('DB_NAME', '');
+
+if ($user === '' || $dbname === '') {
+    die('Configurazione DB mancante: definisci DB_USER e DB_NAME.');
+}
 
 $conn = new mysqli($host, $user, $pass, $dbname);
 

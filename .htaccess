@@ -1,13 +1,13 @@
-<IfModule mod_env.c>
-  # DB (meglio spostarli fuori repo appena possibile)
-  SetEnv DB_HOST "localhost"
-  SetEnv DB_NAME "torneio2_torneioldschool"
-  SetEnv DB_USER "torneio2_MarcoLiberti"
-  SetEnv DB_PASSWORD "MarcoOldSchool"
-  # reCAPTCHA
-  SetEnv RECAPTCHA_SITE_KEY "6LdY7hgsAAAAABGEVpsKMlZNeEacbWH8ZLf8L-Ku"
-  SetEnv RECAPTCHA_SECRET_KEY "6LdY7hgsAAAAAJ6MnhkD578xaLpn3Xh1fB3Y-srp"
-</IfModule>
+#<IfModule mod_env.c>
+#  # DB (meglio spostarli fuori repo appena possibile)
+#  # SetEnv DB_HOST "localhost"
+#  # SetEnv DB_NAME "torneio2_torneioldschool"
+#  # SetEnv DB_USER "torneio2_MarcoLiberti"
+#  # SetEnv DB_PASSWORD "MarcoOldSchool"
+#  # reCAPTCHA
+#  # SetEnv RECAPTCHA_SITE_KEY "6LdY7hgsAAAAABGEVpsKMlZNeEacbWH8ZLf8L-Ku"
+#  # SetEnv RECAPTCHA_SECRET_KEY "6LdY7hgsAAAAAJ6MnhkD578xaLpn3Xh1fB3Y-srp"
+#</IfModule>
 
 RewriteEngine On
 
