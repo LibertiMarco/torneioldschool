@@ -15,7 +15,7 @@ if (!function_exists('inviaEmailVerifica')) {
 
         $headers = "MIME-Version: 1.0\r\n";
         $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-        $headers .= "From: Tornei Old School <no-reply@torneioldschool.local>\r\n";
+        $headers .= "From: Tornei Old School <noreply@torneioldschool.it>\r\n";
 
         return mail($email, $subject, $message, $headers);
     }
@@ -82,7 +82,7 @@ if (!function_exists('invia_notifica_articolo')) {
         $subject = "Nuovo articolo: {$titolo}";
         $headers = "MIME-Version: 1.0\r\n";
         $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-        $headers .= "From: Tornei Old School <no-reply@torneioldschool.local>\r\n";
+        $headers .= "From: Tornei Old School <newsletter@torneioldschool.it>\r\n";
 
         $sent = 0;
         foreach ($destinatari as $dest) {
@@ -108,3 +108,4 @@ if (!function_exists('invia_notifica_articolo')) {
         return ['inviate' => $sent, 'totali' => count($destinatari)];
     }
 }
+
