@@ -65,7 +65,7 @@ header('X-Robots-Tag: noindex, nofollow', true);
     <a class="logout-btn" href="index.php">Esci dal pannello</a>
     </main>
     <div id="footer-container"></div>
-    <script src="/includi/app.min.js?v=20251202"></script>
+    <script src="/includi/app.min.js?v=20251203"></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         fetch("/includi/footer.html")

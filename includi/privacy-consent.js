@@ -215,8 +215,8 @@
     #${BANNER_ID} {
       position: fixed;
       inset: 0;
-      padding: 18px;
-      background: radial-gradient(circle at 30% 20%, rgba(21,41,62,0.4), rgba(10,18,30,0.72));
+      padding: 20px 16px;
+      background: rgba(15, 23, 42, 0.55);
       backdrop-filter: blur(5px);
       display: none;
       align-items: center;
@@ -224,17 +224,19 @@
       z-index: 9999;
       font-family: "Inter","Segoe UI",system-ui,-apple-system,sans-serif;
       color: #0f172a;
+      box-sizing: border-box;
     }
+    #${BANNER_ID} * { box-sizing: border-box; }
     #${BANNER_ID}.is-visible { display: flex; }
     #${BANNER_ID} .consent-card {
-      width: min(820px, 100%);
+      width: min(760px, 100%);
       background: #ffffff;
-      border-radius: 18px;
-      box-shadow: 0 26px 70px rgba(15,23,42,0.32);
-      border: 1px solid #dbe3f3;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(15,23,42,0.35);
+      border: 1px solid #dce3f3;
       display: grid;
-      grid-template-columns: 1.05fr 1fr;
-      gap: 16px 20px;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 16px 18px;
       padding: 20px 22px 18px;
       position: relative;
       max-height: 88vh;
@@ -246,9 +248,12 @@
       left: 0;
       top: 0;
       bottom: 0;
-      width: 6px;
-      border-radius: 18px 0 0 18px;
+      width: 5px;
+      border-radius: 16px 0 0 16px;
       background: linear-gradient(180deg, #d80000, #15293e);
+    }
+    #${BANNER_ID} .consent-copy {
+      padding-left: 8px;
     }
     #${BANNER_ID} .consent-eyebrow {
       text-transform: uppercase;
@@ -260,7 +265,7 @@
     }
     #${BANNER_ID} h3 {
       margin: 0 0 8px;
-      font-size: 1.4rem;
+      font-size: 1.32rem;
       color: #15293e;
       letter-spacing: -0.01em;
     }
@@ -292,7 +297,7 @@
       background: #f6f9ff;
       border: 1px solid #e3eaf7;
       border-radius: 14px;
-      padding: 14px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -340,7 +345,7 @@
       margin-top: 8px;
     }
     #${BANNER_ID} .consent-actions button {
-      min-width: 142px;
+      min-width: 140px;
       border: none;
       cursor: pointer;
       font-weight: 800;
@@ -374,9 +379,9 @@
     #${BANNER_ID} .btn-ghost:hover {
       background: #f1f5f9;
     }
-    @media (max-width: 860px) {
+    @media (max-width: 900px) {
       #${BANNER_ID} {
-        padding: 12px;
+        align-items: flex-end;
       }
       #${BANNER_ID} .consent-card {
         grid-template-columns: 1fr;
@@ -391,6 +396,9 @@
       }
     }
     @media (max-width: 540px) {
+      #${BANNER_ID} {
+        padding: 12px;
+      }
       #${BANNER_ID} .consent-card {
         border-radius: 14px;
       }
