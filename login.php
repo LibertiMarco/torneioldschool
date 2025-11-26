@@ -341,7 +341,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   </div>
   <div id="footer-container"></div>
 
-  <script src="/includi/app.min.js?v=20251201"></script>
+  <script src="/includi/app.min.js?v=20251202"></script>
   <script>
     // FOOTER
     fetch("/includi/footer.html")
