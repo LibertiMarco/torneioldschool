@@ -65,12 +65,10 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
   <?php render_jsonld($contattiBreadcrumbs); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Poppins:wght@400;600&display=swap');
-
     body {
       margin: 0;
       padding: 0;
-      font-family: 'Poppins', sans-serif;
+      font-family: 'Poppins', 'Segoe UI', Tahoma, sans-serif;
       background: linear-gradient(180deg, #f6f7fb 0%, #e9edf2 100%);
       color: #15293e;
     }

@@ -214,3 +214,4 @@ if (!empty($sessionAvatar)) {
     document.head.appendChild(script);
 })();
 </script>
+<script src="/includi/consent-sync.js?v=20251206" defer></script>

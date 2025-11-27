@@ -581,6 +581,13 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
         <input type="hidden" name="revoca_consensi" value="1">
         <button type="submit" class="revoke-btn">Revoca marketing / newsletter / tracciamento</button>
       </form>
+
+      <hr style="margin:24px 0; border:none; border-top:1px solid #e2e8f0;">
+      <div style="background:#fff5f5;border:1px solid #fecdd3;border-radius:12px;padding:12px 14px;">
+        <p style="margin:0 0 10px;font-weight:700;color:#b91c1c;">Vuoi eliminare il tuo account?</p>
+        <p style="margin:0 0 10px;color:#b91c1c;">Puoi cancellare definitivamente il profilo e i consensi dal link dedicato.</p>
+        <a class="revoke-btn" href="/account_delete.php" style="display:inline-block;text-decoration:none;text-align:center;">Vai alla cancellazione account</a>
+      </div>
     </section>
   </main>
 
@@ -593,10 +600,12 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
 
     document.addEventListener("DOMContentLoaded", () => {
       try {
+        const current = JSON.parse(localStorage.getItem("tosConsent") || "{}");
         const consentState = {
           tracking: <?= !empty($consents['tracking']) ? 'true' : 'false' ?>,
           marketing: <?= !empty($consents['marketing']) ? 'true' : 'false' ?>,
           newsletter: <?= !empty($consents['newsletter']) ? 'true' : 'false' ?>,
+          recaptcha: !!current.recaptcha,
           ts: Date.now(),
         };
         localStorage.setItem("tosConsent", JSON.stringify(consentState));
