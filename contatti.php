@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/includi/security.php';
+require_once __DIR__ . '/includi/env_loader.php';
 require_once __DIR__ . '/includi/seo.php';
 
 $success = "";
