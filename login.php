@@ -25,6 +25,7 @@ if ($alreadyLogged) {
 
 $error = "";
 $needsVerificationResend = null;
+$invalidCredentialsMessage = "Email o password errati.";
 $loginCsrf = csrf_get_token('login_form');
 $resendCsrf = csrf_get_token('resend_verification');
 
@@ -112,10 +113,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             exit;
             }
         } else {
-            $error = "Password errata.";
+            $error = $invalidCredentialsMessage;
         }
     } else {
-        $error = "Email non trovata.";
+        $error = $invalidCredentialsMessage;
     }
 }
 }

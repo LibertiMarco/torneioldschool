@@ -48,7 +48,7 @@ if (!empty($sessionAvatar)) {
                   $cognome = $_SESSION['cognome'] ?? '';
                   $nome_completo = trim($nome . ' ' . $cognome);
                 ?>
-                <span class="welcome-text">👋 Ciao, <?= htmlspecialchars($nome_completo) ?></span>
+                <span class="welcome-text">Ciao, <?= htmlspecialchars($nome_completo) ?></span>
                 <a href="/account.php">Il mio account</a>
 
                 <?php if ($_SESSION['ruolo'] === 'admin'): ?>
@@ -215,3 +215,4 @@ if (!empty($sessionAvatar)) {
 })();
 </script>
 <script src="/includi/consent-sync.js?v=20251206" defer></script>
+

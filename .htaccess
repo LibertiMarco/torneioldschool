@@ -54,7 +54,7 @@ RewriteRule ^sitemap\.xml$ sitemap.php [L]
   Header set Referrer-Policy "strict-origin-when-cross-origin"
   Header set Permissions-Policy "geolocation=(),microphone=(),camera=()"
   Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
-  Header set Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' data: https:; connect-src 'self' https://www.google.com https://www.gstatic.com; frame-src 'self' https://www.google.com https://www.gstatic.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+  Header set Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https:; font-src 'self' data: https:; connect-src 'self' https://www.google.com https://www.gstatic.com; frame-src 'self' https://www.google.com https://www.gstatic.com; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 </IfModule>
 
 # Pagine di errore personalizzate

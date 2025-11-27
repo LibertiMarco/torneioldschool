@@ -293,6 +293,7 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
           <div class="recaptcha-box">
             <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($recaptchaSiteKey) ?>"></div>
           </div>
+          <div class="error-message" id="recaptchaError" style="display:none;">Conferma il reCAPTCHA prima di inviare.</div>
           <button type="submit">Invia Messaggio</button>
         </form>
 
@@ -349,6 +350,26 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
       };
       ["pointerdown", "focusin", "keydown"].forEach(evt => {
         form.addEventListener(evt, loadRecaptcha, { once: true });
+      });
+
+      form.addEventListener("submit", (event) => {
+        const tokenField = form.querySelector('textarea[name="g-recaptcha-response"], input[name="g-recaptcha-response"]');
+        const hasToken = tokenField && tokenField.value.trim() !== "";
+        const errorBox = document.getElementById("recaptchaError");
+        if (!hasToken) {
+          event.preventDefault();
+          loadRecaptcha();
+          if (typeof grecaptcha !== "undefined" && grecaptcha.reset) {
+            grecaptcha.reset();
+          }
+          if (errorBox) {
+            errorBox.style.display = "";
+          }
+          return;
+        }
+        if (errorBox) {
+          errorBox.style.display = "none";
+        }
       });
     })();
   </script>

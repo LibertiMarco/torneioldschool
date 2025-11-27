@@ -14,6 +14,7 @@
     ['name' => 'Home', 'url' => $baseUrl . '/'],
     ['name' => 'Privacy Policy', 'url' => $baseUrl . '/privacy.php'],
   ]);
+  $lastUpdate = date('d/m/Y', @filemtime(__FILE__) ?: time());
   ?>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -34,7 +35,7 @@
 
   <main class="content policy-page">
     <section class="policy-hero">
-      <p class="policy-meta">Ultimo aggiornamento: <?php echo date('d/m/Y'); ?></p>
+      <p class="policy-meta">Ultimo aggiornamento: <?php echo $lastUpdate; ?></p>
       <h1>Privacy Policy</h1>
       <p>Questa informativa spiega come trattiamo i dati quando ti iscrivi ai tornei o navighi sul sito.</p>
       <p>Newsletter e comunicazioni promozionali sono facoltative: puoi attivarle o revocarle in qualsiasi momento dalla pagina account o dal link "Gestisci preferenze" nel footer.</p>

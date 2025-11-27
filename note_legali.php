@@ -11,6 +11,7 @@ $legalBreadcrumbs = seo_breadcrumb_schema([
   ['name' => 'Home', 'url' => $baseUrl . '/'],
   ['name' => 'Note legali', 'url' => $baseUrl . '/note_legali.php'],
 ]);
+$lastUpdate = date('d/m/Y', @filemtime(__FILE__) ?: time());
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -34,7 +35,7 @@ $legalBreadcrumbs = seo_breadcrumb_schema([
 
   <main class="content legal-page">
     <section class="legal-hero">
-      <p class="legal-meta">Ultimo aggiornamento: <?php echo date('d/m/Y'); ?></p>
+      <p class="legal-meta">Ultimo aggiornamento: <?php echo $lastUpdate; ?></p>
       <h1>Note legali e Termini d'uso</h1>
       <p>Condizioni di utilizzo del sito, informazioni sul titolare e disclaimer sui contenuti.</p>
     </section>

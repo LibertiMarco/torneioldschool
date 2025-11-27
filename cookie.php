@@ -14,6 +14,7 @@
     ['name' => 'Home', 'url' => $baseUrl . '/'],
     ['name' => 'Cookie Policy', 'url' => $baseUrl . '/cookie.php'],
   ]);
+  $lastUpdate = date('d/m/Y', @filemtime(__FILE__) ?: time());
   ?>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -34,7 +35,7 @@
 
   <main class="content policy-page">
     <section class="policy-hero">
-      <p class="policy-meta">Ultimo aggiornamento: <?php echo date('d/m/Y'); ?></p>
+      <p class="policy-meta">Ultimo aggiornamento: <?php echo $lastUpdate; ?></p>
       <h1>Cookie Policy</h1>
       <p>Spieghiamo quali cookie e strumenti simili usiamo e come gestire le preferenze.</p>
     </section>
@@ -45,6 +46,7 @@
         <li>Cookie di sessione (es. PHPSESSID) per login e funzionalità di base.</li>
         <li>Cookie/localStorage per ricordare la tua scelta nel banner di consenso.</li>
         <li>Altri cookie tecnici legati a preferenze del sito. Non usiamo cookie di profilazione.</li>
+        <li>reCAPTCHA di Google per proteggere i form (login, registrazione, contatti): Google può impostare cookie e tracciare l'IP per rilevare abusi. Vedi la <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Privacy Policy di Google</a> e i <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">Termini di servizio</a>.</li>
       </ul>
     </section>
 

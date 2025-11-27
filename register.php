@@ -176,7 +176,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         try {
                             $tokenVerifica = bin2hex(random_bytes(32));
                         } catch (Exception $e) {
-                            $error = "Errore tecnico nella generazione del token. Riprova pi? tardi.";
+                            $error = "Errore tecnico nella generazione del token. Riprova più tardi.";
                         }
                     }
 
@@ -201,7 +201,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             if (inviaEmailVerifica($email, $nome, $tokenVerifica)) {
                                 $successMessage = "Registrazione completata! Ti abbiamo inviato una email di conferma a {$email}.";
                             } else {
-                                $successMessage = "Registrazione riuscita, ma non ? stato possibile inviare l'email di conferma. Contattaci per ricevere assistenza.";
+                                $successMessage = "Registrazione riuscita, ma non è stato possibile inviare l'email di conferma. Contattaci per ricevere assistenza.";
                             }
                             $_POST = [];
                         } else {
