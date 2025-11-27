@@ -97,6 +97,22 @@ $localSchema = [
         </div>
       </section>
 
+      <!-- ALBO D'ORO -->
+      <section class="home-hof">
+        <div class="hof-header">
+          <div>
+            <p class="hof-eyebrow">Albo d'oro</p>
+            <h2>Le vincitrici dei nostri tornei</h2>
+            <p>Uno sguardo rapido a tutte le squadre che hanno conquistato i nostri trofei.</p>
+          </div>
+          <a href="/tornei.php" class="hero-btn hero-btn--ghost hero-btn--small">Tutti i tornei</a>
+        </div>
+
+        <div id="hallOfFameGrid" class="hof-grid">
+          <!-- Caricamento automatico via JS -->
+        </div>
+      </section>
+
       <!-- CHI SIAMO -->
       <section class="chisiamo-hero">
         <div class="hero-overlay">
@@ -213,6 +229,94 @@ async function loadTopScorers() {
     }
 }
 
+function formatShortDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('it-IT', { month: 'short', year: 'numeric' });
+}
+
+function formatPeriodo(inizio, fine, anno) {
+    const start = formatShortDate(inizio);
+    const end = formatShortDate(fine);
+    if (start && end) return `${start} - ${end}`;
+    if (end) return `Concluso ${end}`;
+    if (start) return `Iniziato ${start}`;
+    if (anno) return `Stagione ${anno}`;
+    return 'Torneo concluso';
+}
+
+function normalizePath(path) {
+    if (!path) return '';
+    if (/^https?:\/\//i.test(path)) return path;
+    if (path.startsWith('/')) return path;
+    return '/' + path.replace(/^\/+/, '');
+}
+
+function renderHallCard(item) {
+    const torneoLogo = item.torneo_img || '/img/tornei/pallone.png';
+    const winnerLogo = item.logo_vincitrice || '/img/tornei/pallone.png';
+    const fileLink = normalizePath(item.filetorneo);
+    const periodo = formatPeriodo(item.data_inizio, item.data_fine, item.anno);
+
+    return `
+      <article class="hof-card">
+        <div class="hof-top">
+          <span class="hof-badge">${item.categoria || 'Torneo'}</span>
+          <span class="hof-year">${item.anno || ''}</span>
+        </div>
+        <div class="hof-body">
+          <div class="hof-tournament">
+            <div class="hof-logo">
+              <img src="${torneoLogo}" alt="Logo ${item.torneo}" onerror="this.src='/img/tornei/pallone.png';">
+            </div>
+            <div>
+              <p class="hof-label">Torneo</p>
+              <h3>${item.torneo}</h3>
+              <p class="hof-meta">${periodo}</p>
+            </div>
+          </div>
+          <div class="hof-winner">
+            <p class="hof-label">Vincitrice</p>
+            <div class="hof-winner-row">
+              <div class="hof-logo hof-logo--small">
+                <img src="${winnerLogo}" alt="Logo ${item.vincitrice}" onerror="this.src='/img/tornei/pallone.png';">
+              </div>
+              <span class="hof-winner-name">${item.vincitrice}</span>
+            </div>
+          </div>
+        </div>
+        <div class="hof-actions">
+          <a href="/tornei.php" class="hero-btn hero-btn--ghost hero-btn--small">Scheda tornei</a>
+          ${fileLink ? `<a class="hof-link" href="${fileLink}" target="_blank" rel="noopener">Tabellone</a>` : ''}
+        </div>
+      </article>
+    `;
+}
+
+async function loadHallOfFame() {
+    const grid = document.getElementById('hallOfFameGrid');
+    if (!grid) return;
+
+    grid.innerHTML = '<p class="loading">Caricamento in corso...</p>';
+
+    try {
+        const response = await fetch('/api/albo_doro.php');
+        const payload = await response.json();
+        const data = Array.isArray(payload.data) ? payload.data : [];
+
+        if (!data.length) {
+            grid.innerHTML = '<p class="empty-state">Nessuna vincitrice registrata.</p>';
+            return;
+        }
+
+        grid.innerHTML = data.map(renderHallCard).join('');
+    } catch (error) {
+        console.error("Errore nel caricamento dell'albo d'oro:", error);
+        grid.innerHTML = '<p class="empty-state">Impossibile recuperare l\'albo d\'oro.</p>';
+    }
+}
+
 let currentOrderHome = 'gol';
 
 function setHomeOrder(order) {
@@ -232,46 +336,55 @@ document.addEventListener('click', (e) => {
 
 loadNews();
 loadTopScorers();
+loadHallOfFame();
 </script>
 
   <!-- SCRIPT HEADER -->
   <script src="/includi/app.min.js?v=20251204"></script>
   <script>
   document.addEventListener("DOMContentLoaded", () => {
-    fetch("/includi/header.php")
-      .then(response => response.text())
-      .then(data => {
-        document.getElementById("header-container").innerHTML = data;
-        initHeaderInteractions();
+    const headerSlot = document.getElementById("header-container");
+    if (headerSlot) {
+      fetch("/includi/header.php")
+        .then(response => response.text())
+        .then(data => {
+          headerSlot.innerHTML = data;
+          initHeaderInteractions(headerSlot);
+          attachHeaderExtras();
+        })
+        .catch(error => console.error("Errore nel caricamento dell'header:", error));
+    } else {
+      // Header già incluso via PHP
+      initHeaderInteractions(document);
+      attachHeaderExtras();
+    }
 
-        // Effetto scroll header
-        const header = document.querySelector(".site-header");
+    function attachHeaderExtras() {
+      const header = document.querySelector(".site-header");
+      if (header) {
         window.addEventListener("scroll", () => {
-          if (window.scrollY > 50) header.classList.add("scrolled");
-          else header.classList.remove("scrolled");
+          header.classList.toggle("scrolled", window.scrollY > 50);
         });
+      }
 
-        // Dropdown Tornei
-        const dropdown = document.querySelector(".dropdown");
-        const btn = dropdown?.querySelector(".dropbtn");
-        const menu = dropdown?.querySelector(".dropdown-content");
-
-        if (btn && menu) {
-          btn.addEventListener("click", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropdown.classList.toggle("open");
-            menu.style.display = dropdown.classList.contains("open") ? "block" : "none";
-          });
-          document.addEventListener("click", (e) => {
-            if (!dropdown.contains(e.target)) {
-              dropdown.classList.remove("open");
-              if (menu) menu.style.display = "none";
-            }
-          });
-        }
-      })
-      .catch(error => console.error("Errore nel caricamento dell'header:", error));
+      const dropdown = document.querySelector(".dropdown");
+      const btn = dropdown?.querySelector(".dropbtn");
+      const menu = dropdown?.querySelector(".dropdown-content");
+      if (btn && menu) {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropdown.classList.toggle("open");
+          menu.style.display = dropdown.classList.contains("open") ? "block" : "none";
+        });
+        document.addEventListener("click", (e) => {
+          if (!dropdown.contains(e.target)) {
+            dropdown.classList.remove("open");
+            menu.style.display = "none";
+          }
+        });
+      }
+    }
   });
   </script>
 

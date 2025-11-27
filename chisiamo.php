@@ -11,6 +11,15 @@ $aboutBreadcrumbs = seo_breadcrumb_schema([
   ['name' => 'Home', 'url' => $baseUrl . '/'],
   ['name' => 'Chi siamo', 'url' => $baseUrl . '/chisiamo.php'],
 ]);
+$arbitri = [
+  ['nome' => 'Arbitro 1', 'foto' => '/img/giocatori/unknown.jpg'],
+  ['nome' => 'Arbitro 2', 'foto' => '/img/giocatori/unknown.jpg'],
+  ['nome' => 'Arbitro 3', 'foto' => '/img/giocatori/unknown.jpg'],
+];
+$videomaker = [
+  ['nome' => 'Videomaker 1', 'foto' => '/img/giocatori/unknown.jpg'],
+  ['nome' => 'Videomaker 2', 'foto' => '/img/giocatori/unknown.jpg'],
+];
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -147,6 +156,99 @@ $aboutBreadcrumbs = seo_breadcrumb_schema([
       box-shadow: 0 10px 25px rgba(21,41,62,0.45);
     }
 
+    /* Switch organizzatori/staff */
+    .team-switch {
+      display: inline-flex;
+      gap: 12px;
+      margin-top: 45px;
+      background: #e6e9f1;
+      padding: 8px;
+      border-radius: 999px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    }
+    .team-tab {
+      border: none;
+      background: transparent;
+      color: #15293e;
+      font-weight: 700;
+      padding: 10px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .team-tab.active {
+      background: linear-gradient(135deg, #15293e, #1f3d5a);
+      color: #fff;
+      box-shadow: 0 8px 18px rgba(21, 41, 62, 0.25);
+    }
+
+    .team-panel {
+      display: none;
+      margin-top: 30px;
+      animation: fadeIn 0.35s ease;
+    }
+    .team-panel.active {
+      display: block;
+    }
+
+    /* Staff section */
+    .staff-section {
+      margin-top: 26px;
+      text-align: left;
+    }
+    .staff-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .staff-pill {
+      background: #15293e;
+      color: #fff;
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+    }
+    .staff-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+    .staff-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      border: 1px solid #e4e8f0;
+    }
+    .staff-card img {
+      width: 58px;
+      height: 58px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #f3f5f8;
+      border: 1px solid #e5e9f2;
+      flex-shrink: 0;
+    }
+    .staff-name {
+      font-weight: 800;
+      color: #15293e;
+      margin: 0;
+      font-size: 1rem;
+    }
+    .staff-role {
+      margin: 2px 0 0;
+      color: #4c5b71;
+      font-size: 0.95rem;
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -162,6 +264,11 @@ $aboutBreadcrumbs = seo_breadcrumb_schema([
       }
       .member {
         width: 90%;
+      }
+      .team-switch {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
       }
     }
   </style>
@@ -194,15 +301,60 @@ $aboutBreadcrumbs = seo_breadcrumb_schema([
 
       <p class="about-highlight">Tornei Old School — il calcio come una volta, con lo spirito di oggi.</p>
 
-      <div class="about-team">
-        <div class="member">
-          <h3>Frank</h3>
-          <p>Spirito organizzativo del gruppo, gestisce logistica e contatti con squadre e arbitri.  
-          Sempre pronto a dare energia e motivazione al campo.</p>
+      <div class="team-switch">
+        <button class="team-tab active" data-target="organizzatori">Organizzatori</button>
+        <button class="team-tab" data-target="staff">Staff</button>
+      </div>
+
+      <div class="team-panel active" id="panel-organizzatori">
+        <div class="about-team">
+          <div class="member">
+            <h3>Frank</h3>
+            <p>Spirito organizzativo del gruppo, gestisce logistica e contatti con squadre e arbitri.  
+            Sempre pronto a dare energia e motivazione al campo.</p>
+          </div>
+          <div class="member">
+            <h3>Emanuele</h3>
+            <p>Creativo e appassionato di comunicazione, cura i social, i video e l�?Tesperienza digitale dei nostri tornei.</p>
+          </div>
         </div>
-        <div class="member">
-          <h3>Emanuele</h3>
-          <p>Creativo e appassionato di comunicazione, cura i social, i video e l’esperienza digitale dei nostri tornei.</p>
+      </div>
+
+      <div class="team-panel" id="panel-staff">
+        <div class="staff-section">
+          <div class="staff-header">
+            <span class="staff-pill">Arbitri</span>
+            <p class="staff-role">Direzione di gara affidata al nostro team di ufficiali.</p>
+          </div>
+          <div class="staff-grid">
+            <?php foreach ($arbitri as $arb): ?>
+              <div class="staff-card">
+                <img src="<?= htmlspecialchars($arb['foto']) ?>" alt="Foto <?= htmlspecialchars($arb['nome']) ?>" onerror="this.src='/img/giocatori/unknown.jpg';">
+                <div>
+                  <p class="staff-name"><?= htmlspecialchars($arb['nome']) ?></p>
+                  <p class="staff-role">Arbitro</p>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+
+        <div class="staff-section">
+          <div class="staff-header">
+            <span class="staff-pill">Videomaker</span>
+            <p class="staff-role">Riprese, highlights e contenuti social dei nostri match.</p>
+          </div>
+          <div class="staff-grid">
+            <?php foreach ($videomaker as $video): ?>
+              <div class="staff-card">
+                <img src="<?= htmlspecialchars($video['foto']) ?>" alt="Foto <?= htmlspecialchars($video['nome']) ?>" onerror="this.src='/img/giocatori/unknown.jpg';">
+                <div>
+                  <p class="staff-name"><?= htmlspecialchars($video['nome']) ?></p>
+                  <p class="staff-role">Videomaker</p>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
         </div>
       </div>
 
@@ -230,6 +382,18 @@ $aboutBreadcrumbs = seo_breadcrumb_schema([
           header?.classList.toggle("scrolled", window.scrollY > 50);
         });
       });
+
+    // Switch tra organizzatori e staff
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".team-tab");
+      if (!btn) return;
+      const target = btn.dataset.target || "";
+      document.querySelectorAll(".team-tab").forEach(el => el.classList.toggle("active", el === btn));
+      document.querySelectorAll(".team-panel").forEach(panel => {
+        panel.classList.toggle("active", panel.id === `panel-${target}`);
+      });
+    });
   </script>
 </body>
 </html>
+

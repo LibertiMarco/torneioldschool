@@ -1101,6 +1101,176 @@ body {
   gap: 6px;
 }
 
+/* ALBO D'ORO */
+.home-hof {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 25px 60px rgba(21, 41, 62, 0.12);
+  margin-top: 10px;
+}
+
+.hof-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.hof-eyebrow {
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.hof-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.hof-card {
+  border: 1px solid #e5e9f2;
+  border-radius: 14px;
+  padding: 16px 18px;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 12px 26px rgba(21, 41, 62, 0.08);
+}
+
+.hof-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hof-badge {
+  background: #eef2f7;
+  color: #15293e;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hof-year {
+  color: #54657a;
+  font-weight: 700;
+}
+
+.hof-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hof-tournament {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.hof-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: #f1f4f9;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e5e9f2;
+  flex-shrink: 0;
+}
+
+.hof-logo img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.hof-logo--small {
+  width: 44px;
+  height: 44px;
+}
+
+.hof-logo--small img {
+  width: 40px;
+  height: 40px;
+}
+
+.hof-label {
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #8a9ab1;
+  letter-spacing: 0.08em;
+  margin-bottom: 2px;
+}
+
+.hof-meta {
+  color: #54657a;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.hof-winner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hof-winner-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hof-winner-name {
+  font-weight: 800;
+  color: #15293e;
+  font-size: 1.05rem;
+}
+
+.hof-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hof-link {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.hof-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .hof-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hof-card {
+    padding: 14px;
+  }
+}
+
 .leader-role {
   color: #6b7a8c;
   font-size: 0.85rem;
