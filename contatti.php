@@ -249,16 +249,14 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
       transform-origin: left top;
       min-height: 78px;
       width: 100%;
+      overflow: hidden;
     }
     .recaptcha-box .g-recaptcha {
       transform: scale(1);
-      transform-origin: left top;
+      transform-origin: center top;
       margin: 0 auto;
     }
     @media (max-width: 640px) {
-      .recaptcha-box .g-recaptcha {
-        transform: scale(0.9);
-      }
     }
 
     @media (max-width: 700px) {
@@ -348,6 +346,19 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
     (function () {
       const form = document.querySelector(".contact-form form");
       if (!form) return;
+      const recaptchaBox = form.querySelector(".recaptcha-box");
+      const recaptchaWidget = recaptchaBox ? recaptchaBox.querySelector(".g-recaptcha") : null;
+
+      const resizeRecaptcha = () => {
+        if (!recaptchaBox || !recaptchaWidget) return;
+        const baseWidth = 304;
+        const boxWidth = recaptchaBox.clientWidth || baseWidth;
+        const scale = Math.min(1.4, Math.max(0.75, boxWidth / baseWidth));
+        recaptchaWidget.style.transform = `scale(${scale})`;
+        recaptchaWidget.style.transformOrigin = "center top";
+        recaptchaBox.style.minHeight = `${Math.ceil(78 * scale)}px`;
+      };
+
       const loadRecaptcha = () => {
         if (window.__tosRecaptchaLoaded) return;
         window.__tosRecaptchaLoaded = true;
@@ -359,9 +370,11 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
       };
       // carica subito per mostrare il widget
       loadRecaptcha();
+      resizeRecaptcha();
       ["pointerdown", "focusin", "keydown"].forEach(evt => {
         form.addEventListener(evt, loadRecaptcha, { once: true });
       });
+      window.addEventListener("resize", resizeRecaptcha);
 
       form.addEventListener("submit", (event) => {
         const tokenField = form.querySelector('textarea[name="g-recaptcha-response"], input[name="g-recaptcha-response"]');
@@ -382,6 +395,8 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
           errorBox.style.display = "none";
         }
       });
+      // riposiziona dopo il rendering del widget
+      setTimeout(resizeRecaptcha, 600);
     })();
   </script>
 </body>
