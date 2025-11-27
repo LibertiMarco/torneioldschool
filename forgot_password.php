@@ -111,7 +111,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$error) {
                     $expires = new DateTime('+1 hour');
                     if (create_reset_token($conn, (int)$user['id'], $token, $expires)) {
-                        inviaEmailResetPassword($email, $user['nome'] ?? '', $token);
+                        $mailOk = inviaEmailResetPassword($email, $user['nome'] ?? '', $token);
+                        if (!$mailOk) {
+                            error_log('forgot_password: invio email fallito per ' . $email);
+                            $error = "Invio email non riuscito. Riprova tra poco o contattaci.";
+                            $success = "";
+                        }
                     }
                 }
             }
