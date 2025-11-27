@@ -353,7 +353,7 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
         if (!recaptchaBox || !recaptchaWidget) return;
         const baseWidth = 304;
         const boxWidth = recaptchaBox.clientWidth || baseWidth;
-        const scale = Math.min(1.4, Math.max(0.75, boxWidth / baseWidth));
+        const scale = Math.min(1.05, Math.max(0.75, boxWidth / baseWidth));
         recaptchaWidget.style.transform = `scale(${scale})`;
         recaptchaWidget.style.transformOrigin = "center top";
         recaptchaBox.style.minHeight = `${Math.ceil(78 * scale)}px`;
