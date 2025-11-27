@@ -10,6 +10,49 @@ require_once __DIR__ . '/../includi/db.php';
 $messages = [];
 $errors = [];
 
+function h($str) {
+    return htmlspecialchars((string)$str, ENT_QUOTES, 'UTF-8');
+}
+
+function handleUpload(string $field, ?string $existing = null): ?string {
+    if (!isset($_FILES[$field]) || !is_uploaded_file($_FILES[$field]['tmp_name'])) {
+        return $existing;
+    }
+
+    $tmp = $_FILES[$field]['tmp_name'];
+    $name = $_FILES[$field]['name'];
+    $size = (int)$_FILES[$field]['size'];
+
+    if ($size > 2 * 1024 * 1024) { // 2MB
+        throw new Exception('Immagine troppo grande (max 2MB).');
+    }
+
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime = finfo_file($finfo, $tmp);
+    finfo_close($finfo);
+    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+    if (!isset($allowed[$mime])) {
+        throw new Exception('Formato immagine non valido. Solo JPG, PNG, WEBP.');
+    }
+
+    $ext = $allowed[$mime];
+    $slug = preg_replace('/[^a-z0-9]+/i', '-', pathinfo($name, PATHINFO_FILENAME));
+    $slug = trim($slug, '-');
+    $filename = 'albo_' . time() . '_' . ($slug ?: 'logo') . '.' . $ext;
+
+    $destDir = realpath(__DIR__ . '/../img/scudetti');
+    if (!$destDir) {
+        $destDir = __DIR__ . '/../img/scudetti';
+        @mkdir($destDir, 0755, true);
+    }
+    $destPath = $destDir . '/' . $filename;
+    if (!move_uploaded_file($tmp, $destPath)) {
+        throw new Exception('Caricamento immagine non riuscito.');
+    }
+
+    return '/img/scudetti/' . $filename;
+}
+
 if (!$conn || $conn->connect_error) {
     $errors[] = "Connessione al database non disponibile";
 } else {
@@ -21,9 +64,6 @@ if (!$conn || $conn->connect_error) {
         $competizione = trim($_POST['competizione'] ?? '');
         $categoria = trim($_POST['categoria'] ?? '');
         $vincitrice = trim($_POST['vincitrice'] ?? '');
-        $vincitrice_logo = trim($_POST['vincitrice_logo'] ?? '');
-        $torneo_logo = trim($_POST['torneo_logo'] ?? '');
-        $tabellone_url = trim($_POST['tabellone_url'] ?? '');
         $inizio_mese = (int)($_POST['inizio_mese'] ?? 0);
         $inizio_anno = (int)($_POST['inizio_anno'] ?? 0);
         $fine_mese = (int)($_POST['fine_mese'] ?? 0);
@@ -35,13 +75,17 @@ if (!$conn || $conn->connect_error) {
                 if ($competizione === '' || $vincitrice === '') {
                     throw new Exception('Compila almeno competizione e vincitrice.');
                 }
+                $logo = handleUpload('vincitrice_logo_file', null);
+
                 $stmt = $conn->prepare("INSERT INTO albo (competizione, categoria, vincitrice, vincitrice_logo, torneo_logo, tabellone_url, inizio_mese, inizio_anno, fine_mese, fine_anno) VALUES (?,?,?,?,?,?,?,?,?,?)");
+                $torneo_logo = '/img/logo_old_school.png';
+                $tabellone_url = '';
                 $stmt->bind_param(
                     "ssssssiiii",
                     $competizione,
                     $categoria,
                     $vincitrice,
-                    $vincitrice_logo,
+                    $logo,
                     $torneo_logo,
                     $tabellone_url,
                     $inizio_mese ?: null,
@@ -56,15 +100,23 @@ if (!$conn || $conn->connect_error) {
                 if ($competizione === '' || $vincitrice === '') {
                     throw new Exception('Compila almeno competizione e vincitrice.');
                 }
-                $stmt = $conn->prepare("UPDATE albo SET competizione=?, categoria=?, vincitrice=?, vincitrice_logo=?, torneo_logo=?, tabellone_url=?, inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=? WHERE id=?");
+                $currentLogo = null;
+                $fetch = $conn->prepare("SELECT vincitrice_logo FROM albo WHERE id=?");
+                $fetch->bind_param("i", $id);
+                $fetch->execute();
+                $fetch->bind_result($currentLogo);
+                $fetch->fetch();
+                $fetch->close();
+
+                $logo = handleUpload('vincitrice_logo_file', $currentLogo);
+
+                $stmt = $conn->prepare("UPDATE albo SET competizione=?, categoria=?, vincitrice=?, vincitrice_logo=?, torneo_logo='/img/logo_old_school.png', tabellone_url='', inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=? WHERE id=?");
                 $stmt->bind_param(
-                    "ssssssiiiii",
+                    "ssssiiiii",
                     $competizione,
                     $categoria,
                     $vincitrice,
-                    $vincitrice_logo,
-                    $torneo_logo,
-                    $tabellone_url,
+                    $logo,
                     $inizio_mese ?: null,
                     $inizio_anno ?: null,
                     $fine_mese ?: null,
@@ -93,10 +145,6 @@ if (!$conn || $conn->connect_error) {
             $albo[] = $row;
         }
     }
-}
-
-function h($str) {
-    return htmlspecialchars((string)$str, ENT_QUOTES, 'UTF-8');
 }
 ?>
 <!DOCTYPE html>
@@ -139,7 +187,7 @@ function h($str) {
 
     <div class="admin-card-inline">
       <h3>Nuova voce</h3>
-      <form method="POST">
+      <form method="POST" enctype="multipart/form-data">
         <input type="hidden" name="azione" value="create">
         <div class="form-grid">
           <div>
@@ -155,16 +203,8 @@ function h($str) {
             <input type="text" name="vincitrice" required>
           </div>
           <div>
-            <label>Logo vincitrice (URL o /img/...)</label>
-            <input type="text" name="vincitrice_logo" placeholder="/img/scudetti/team.png">
-          </div>
-          <div>
-            <label>Logo torneo (URL o /img/...)</label>
-            <input type="text" name="torneo_logo" placeholder="/img/tornei/pallone.png">
-          </div>
-          <div>
-            <label>Link tabellone</label>
-            <input type="text" name="tabellone_url" placeholder="/tornei/SerieA.html">
+            <label>Logo vincitrice (upload)</label>
+            <input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp">
           </div>
           <div>
             <label>Inizio (mese)</label>
@@ -226,15 +266,13 @@ function h($str) {
                   </form>
                   <details>
                     <summary>Modifica</summary>
-                    <form method="POST" class="form-grid" style="margin-top:8px;">
+                    <form method="POST" enctype="multipart/form-data" class="form-grid" style="margin-top:8px;">
                       <input type="hidden" name="azione" value="update">
                       <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
                       <label>Competizione<input type="text" name="competizione" value="<?= h($row['competizione']) ?>" required></label>
                       <label>Categoria<input type="text" name="categoria" value="<?= h($row['categoria']) ?>"></label>
                       <label>Vincitrice<input type="text" name="vincitrice" value="<?= h($row['vincitrice']) ?>" required></label>
-                      <label>Logo vincitrice<input type="text" name="vincitrice_logo" value="<?= h($row['vincitrice_logo']) ?>"></label>
-                      <label>Logo torneo<input type="text" name="torneo_logo" value="<?= h($row['torneo_logo']) ?>"></label>
-                      <label>Link tabellone<input type="text" name="tabellone_url" value="<?= h($row['tabellone_url']) ?>"></label>
+                      <label>Logo vincitrice (upload per sostituire)<input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp"></label>
                       <label>Inizio mese<input type="number" name="inizio_mese" min="1" max="12" value="<?= h($row['inizio_mese']) ?>"></label>
                       <label>Inizio anno<input type="number" name="inizio_anno" min="2000" max="2100" value="<?= h($row['inizio_anno']) ?>"></label>
                       <label>Fine mese<input type="number" name="fine_mese" min="1" max="12" value="<?= h($row['fine_mese']) ?>"></label>
