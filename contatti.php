@@ -348,6 +348,8 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
         s.defer = true;
         document.head.appendChild(s);
       };
+      // carica subito per mostrare il widget
+      loadRecaptcha();
       ["pointerdown", "focusin", "keydown"].forEach(evt => {
         form.addEventListener(evt, loadRecaptcha, { once: true });
       });
