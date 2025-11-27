@@ -216,3 +216,58 @@ if (!empty($sessionAvatar)) {
 </script>
 <script src="/includi/consent-sync.js?v=20251206" defer></script>
 
+<!-- Inline fallback per menu header -->
+<script>
+(function() {
+  if (window.__HEADER_INLINE_READY__) return;
+  window.__HEADER_INLINE_READY__ = true;
+
+  function closeMenus(header, state) {
+    if (state.mainNav) state.mainNav.classList.remove("open");
+    if (state.userMenu) state.userMenu.classList.remove("open");
+  }
+
+  function setupHeader() {
+    var header = document.querySelector(".site-header");
+    if (!header) return;
+    var mobileBtn = header.querySelector("#mobileMenuBtn");
+    var mainNav = header.querySelector("#mainNav");
+    var userBtn = header.querySelector("#userBtn");
+    var userMenu = header.querySelector("#userMenu");
+    var state = { mainNav: mainNav, userMenu: userMenu };
+
+    if (mobileBtn && mainNav) {
+      mobileBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var isOpen = mainNav.classList.toggle("open");
+        if (isOpen && userMenu) userMenu.classList.remove("open");
+      });
+    }
+
+    if (userBtn && userMenu) {
+      userBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var isOpen = userMenu.classList.toggle("open");
+        if (isOpen && mainNav) mainNav.classList.remove("open");
+      });
+    }
+
+    document.addEventListener("click", function (e) {
+      if (header.contains(e.target)) return;
+      closeMenus(header, state);
+    });
+
+    window.addEventListener("resize", function () {
+      if (window.innerWidth > 768) closeMenus(header, state);
+    });
+  }
+
+  if (document.readyState !== "loading") {
+    setupHeader();
+  } else {
+    document.addEventListener("DOMContentLoaded", setupHeader);
+  }
+})();
+</script>
