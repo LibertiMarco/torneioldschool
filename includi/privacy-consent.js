@@ -229,7 +229,8 @@
     #${BANNER_ID} * { box-sizing: border-box; }
     #${BANNER_ID}.is-visible { display: flex; }
     #${BANNER_ID} .consent-card {
-      width: min(760px, 100%);
+      width: min(760px, calc(100% - 32px));
+      max-width: 100%;
       background: #ffffff;
       border-radius: 16px;
       box-shadow: 0 20px 60px rgba(15,23,42,0.35);
@@ -239,7 +240,7 @@
       gap: 16px 18px;
       padding: 20px 22px 18px;
       position: relative;
-      max-height: 88vh;
+      max-height: min(88vh, calc(100vh - 40px));
       overflow-y: auto;
     }
     #${BANNER_ID} .consent-card::before {
@@ -397,6 +398,8 @@
       }
       #${BANNER_ID} .consent-card {
         border-radius: 14px;
+        width: min(760px, calc(100% - 24px));
+        max-height: min(88vh, calc(100vh - 24px));
       }
       #${BANNER_ID} .consent-option {
         grid-template-columns: auto 1fr;

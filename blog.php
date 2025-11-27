@@ -534,7 +534,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
       <div class="section-heading with-meta">
         <div>
           <span class="section-eyebrow">In evidenza</span>
-          <h2>Il pezzo del momento</h2>
+          <h2>L'articolo del momento</h2>
         </div>
         <div class="section-meta">
           <span class="meta-pill" id="featuredUpdated">Aggiornato ora</span>
