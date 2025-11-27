@@ -1,5 +1,27 @@
 <?php
 
+// Invio email con envelope/From configurabili per ridurre lo spam score
+if (!function_exists('tos_mail_send')) {
+    function tos_mail_send(string $to, string $subject, string $body, string $fromName = 'Tornei Old School'): bool
+    {
+        $fromEmail = getenv('MAIL_FROM') ?: 'noreply@torneioldschool.it';
+        $replyTo = getenv('MAIL_REPLY_TO') ?: 'info@torneioldschool.it';
+        $returnPath = getenv('MAIL_RETURN_PATH') ?: $fromEmail;
+
+        $headers = "MIME-Version: 1.0\r\n";
+        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        $headers .= "From: {$fromName} <{$fromEmail}>\r\n";
+        $headers .= "Reply-To: {$replyTo}\r\n";
+        $headers .= "List-Unsubscribe: <mailto:{$replyTo}?subject=Unsubscribe>\r\n";
+
+        $params = $returnPath ? "-f{$returnPath}" : null;
+        if ($params) {
+            return mail($to, $subject, $body, $headers, $params);
+        }
+        return mail($to, $subject, $body, $headers);
+    }
+}
+
 if (!function_exists('inviaEmailVerifica')) {
     function inviaEmailVerifica($email, $nome, $token) {
         $link = build_absolute_url('/verify_email.php?token=' . urlencode($token) . '&email=' . urlencode($email));
@@ -9,15 +31,11 @@ if (!function_exists('inviaEmailVerifica')) {
             . "Grazie per esserti registrato su Tornei Old School.\n"
             . "Per completare la registrazione, conferma il tuo indirizzo email cliccando sul link seguente:\n\n"
             . "{$link}\n\n"
-            . "Il link scadrà tra 24 ore.\n\n"
+            . "Il link scadra' tra 24 ore.\n\n"
             . "Se non hai richiesto questa registrazione, ignora questa email.\n\n"
             . "A presto,\nIl team Tornei Old School";
 
-        $headers = "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-        $headers .= "From: Tornei Old School <noreply@torneioldschool.it>\r\n";
-
-        return mail($email, $subject, $message, $headers);
+        return tos_mail_send($email, $subject, $message);
     }
 }
 
@@ -32,11 +50,7 @@ if (!function_exists('inviaEmailResetPassword')) {
             . "Per procedere clicca il link qui sotto (scade tra 1 ora):\n{$link}\n\n"
             . "A presto,\nIl team Tornei Old School";
 
-        $headers = "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-        $headers .= "From: Tornei Old School <noreply@torneioldschool.it>\r\n";
-
-        return mail($email, $subject, $body, $headers);
+        return tos_mail_send($email, $subject, $body);
     }
 }
 
@@ -99,10 +113,6 @@ if (!function_exists('invia_notifica_articolo')) {
         $excerpt = estrai_estratto_testo($contenuto);
 
         $subject = "Nuovo articolo: {$titolo}";
-        $headers = "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-        $headers .= "From: Tornei Old School <newsletter@torneioldschool.it>\r\n";
-
         $sent = 0;
         foreach ($destinatari as $dest) {
             $body = "Ciao " . ($dest['nome'] ?: 'giocatore') . ",\n\n";
@@ -112,10 +122,10 @@ if (!function_exists('invia_notifica_articolo')) {
                 $body .= $excerpt . "\n\n";
             }
             $body .= "Leggi qui: {$link}\n\n";
-            $body .= "Ricevi questa email perché hai dato il consenso alla newsletter su Tornei Old School.\n";
+            $body .= "Ricevi questa email perche' hai dato il consenso alla newsletter su Tornei Old School.\n";
             $body .= "Puoi revocare il consenso dalla pagina account o dal link \"Gestisci preferenze\" nel sito.\n";
 
-            $ok = mail($dest['email'], $subject, $body, $headers);
+            $ok = tos_mail_send($dest['email'], $subject, $body, 'Tornei Old School');
             if ($ok) {
                 $sent++;
                 log_newsletter_send($conn, $postId, $dest['email'], 'sent', null);
@@ -127,4 +137,3 @@ if (!function_exists('invia_notifica_articolo')) {
         return ['inviate' => $sent, 'totali' => count($destinatari)];
     }
 }
-
