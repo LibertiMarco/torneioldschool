@@ -101,6 +101,7 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
   <?php render_seo_tags($contattiSeo); ?>
   <?php render_jsonld($contattiBreadcrumbs); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
   <style>
     body {
       margin: 0;
@@ -245,6 +246,7 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
       justify-content: flex-start;
       align-items: center;
       transform-origin: left top;
+      min-height: 78px;
     }
     .recaptcha-box .g-recaptcha {
       transform: scale(1);
@@ -291,7 +293,11 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
           <input type="email" name="email" placeholder="La tua email" required>
           <textarea name="messaggio" rows="5" placeholder="Il tuo messaggio..." required></textarea>
           <div class="recaptcha-box">
-            <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($recaptchaSiteKey) ?>"></div>
+            <?php if (trim($recaptchaSiteKey) === ''): ?>
+              <div class="error-message" style="display:block;">reCAPTCHA non configurato: aggiungi RECAPTCHA_SITE_KEY/SECRET.</div>
+            <?php else: ?>
+              <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($recaptchaSiteKey) ?>"></div>
+            <?php endif; ?>
           </div>
           <div class="error-message" id="recaptchaError" style="display:none;">Conferma il reCAPTCHA prima di inviare.</div>
           <button type="submit">Invia Messaggio</button>
