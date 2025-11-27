@@ -672,11 +672,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
           if (regex.test(password)) {
             passwordMessage.style.color = 'green';
-            passwordCheck.textContent = '?';
+            passwordCheck.textContent = '✔';
             passwordCheck.style.color = 'green';
           } else {
             passwordMessage.style.color = 'red';
-            passwordCheck.textContent = '?';
+            passwordCheck.textContent = '✕';
             passwordCheck.style.color = 'red';
           }
         });
@@ -694,12 +694,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (confirmInput.value === passwordInput.value) {
           confirmMessage.style.color = 'green';
           confirmMessage.textContent = 'Le password coincidono.';
-          confirmCheck.textContent = '?';
+          confirmCheck.textContent = '✔';
           confirmCheck.style.color = 'green';
         } else {
           confirmMessage.style.color = 'red';
           confirmMessage.textContent = 'Le password non coincidono.';
-          confirmCheck.textContent = '?';
+          confirmCheck.textContent = '✕';
           confirmCheck.style.color = 'red';
         }
       }
