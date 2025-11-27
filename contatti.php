@@ -5,6 +5,43 @@ require_once __DIR__ . '/includi/seo.php';
 
 $success = "";
 $error = "";
+$recaptchaSiteKey = getenv('RECAPTCHA_SITE_KEY') ?: '';
+$recaptchaSecretKey = getenv('RECAPTCHA_SECRET_KEY') ?: '';
+
+function verify_recaptcha(string $secret, string $token, string $ip = '', string $expectedAction = '', float $minScore = 0.0): bool
+{
+    if (trim($secret) === '' || trim($token) === '') {
+        return false;
+    }
+    $payload = http_build_query([
+        'secret' => $secret,
+        'response' => $token,
+        'remoteip' => $ip,
+    ]);
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+            'content' => $payload,
+            'timeout' => 5,
+        ]
+    ]);
+    $result = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, $context);
+    if ($result === false) {
+        return false;
+    }
+    $data = json_decode($result, true);
+    if (!is_array($data) || empty($data['success'])) {
+        return false;
+    }
+    if ($expectedAction !== '' && isset($data['action']) && $data['action'] !== $expectedAction) {
+        return false;
+    }
+    if ($minScore > 0 && isset($data['score']) && $data['score'] < $minScore) {
+        return false;
+    }
+    return true;
+}
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if (!csrf_is_valid($_POST['_csrf'] ?? '', 'contact_form')) {
@@ -14,8 +51,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif (!rate_limit_allow('contact_form', 3, 300)) {
         $wait = rate_limit_retry_after('contact_form', 300);
         $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
-    } elseif (!captcha_is_valid('contact_form', $_POST['captcha_answer'] ?? null)) {
-        $error = "Verifica anti-spam non valida.";
+    } elseif ($recaptchaSecretKey === '' || $recaptchaSiteKey === '') {
+        $error = "Servizio non disponibile: reCAPTCHA non configurato.";
+    } elseif (!verify_recaptcha($recaptchaSecretKey, $_POST['g-recaptcha-response'] ?? '', $_SERVER['REMOTE_ADDR'] ?? '')) {
+        $error = "Verifica reCAPTCHA non valida. Riprova.";
     } else {
         $nome = trim($_POST["nome"] ?? '');
         $email = trim($_POST["email"] ?? '');
@@ -42,8 +81,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
     }
 }
-$captchaQuestion = captcha_generate('contact_form');
-
 $baseUrl = seo_base_url();
 $contattiSeo = [
   'title' => 'Contatti - Tornei Old School',
@@ -202,6 +239,22 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
       height: 1px;
       overflow: hidden;
     }
+    .recaptcha-box {
+      margin: 12px 0 6px;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      transform-origin: left top;
+    }
+    .recaptcha-box .g-recaptcha {
+      transform: scale(1);
+      transform-origin: left top;
+    }
+    @media (max-width: 640px) {
+      .recaptcha-box .g-recaptcha {
+        transform: scale(0.9);
+      }
+    }
 
     @media (max-width: 700px) {
       .banner {
@@ -237,8 +290,9 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
           <input type="text" name="nome" placeholder="Il tuo nome" required>
           <input type="email" name="email" placeholder="La tua email" required>
           <textarea name="messaggio" rows="5" placeholder="Il tuo messaggio..." required></textarea>
-          <label for="captcha_answer">Verifica: quanto fa <?= htmlspecialchars($captchaQuestion) ?>?</label>
-          <input type="number" id="captcha_answer" name="captcha_answer" inputmode="numeric" required>
+          <div class="recaptcha-box">
+            <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($recaptchaSiteKey) ?>"></div>
+          </div>
           <button type="submit">Invia Messaggio</button>
         </form>
 
@@ -279,6 +333,24 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
           header?.classList.toggle("scrolled", window.scrollY > 50);
         });
       });
+
+    // Lazy-load reCAPTCHA al primo tocco/focus sul form (necessario per sicurezza anti-bot)
+    (function () {
+      const form = document.querySelector(".contact-form form");
+      if (!form) return;
+      const loadRecaptcha = () => {
+        if (window.__tosRecaptchaLoaded) return;
+        window.__tosRecaptchaLoaded = true;
+        const s = document.createElement("script");
+        s.src = "https://www.google.com/recaptcha/api.js";
+        s.async = true;
+        s.defer = true;
+        document.head.appendChild(s);
+      };
+      ["pointerdown", "focusin", "keydown"].forEach(evt => {
+        form.addEventListener(evt, loadRecaptcha, { once: true });
+      });
+    })();
   </script>
 </body>
 </html>

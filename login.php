@@ -337,6 +337,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
       <div class="login-footer">
         <p>Non hai un account? <a href="register.php">Registrati</a></p>
+        <p><a href="forgot_password.php">Password dimenticata?</a></p>
       </div>
     </div>
   </div>

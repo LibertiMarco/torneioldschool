@@ -21,6 +21,25 @@ if (!function_exists('inviaEmailVerifica')) {
     }
 }
 
+if (!function_exists('inviaEmailResetPassword')) {
+    function inviaEmailResetPassword(string $email, string $nome, string $token): bool
+    {
+        $link = build_absolute_url('/reset_password.php?token=' . urlencode($token) . '&email=' . urlencode($email));
+        $subject = "Reimposta la tua password - Tornei Old School";
+        $body = "Ciao {$nome},\n\n"
+            . "Hai richiesto di reimpostare la password del tuo account su Tornei Old School.\n"
+            . "Se non hai effettuato tu la richiesta, puoi ignorare questa email.\n\n"
+            . "Per procedere clicca il link qui sotto (scade tra 1 ora):\n{$link}\n\n"
+            . "A presto,\nIl team Tornei Old School";
+
+        $headers = "MIME-Version: 1.0\r\n";
+        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        $headers .= "From: Tornei Old School <noreply@torneioldschool.it>\r\n";
+
+        return mail($email, $subject, $body, $headers);
+    }
+}
+
 if (!function_exists('build_absolute_url')) {
     function build_absolute_url(string $path): string {
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
