@@ -60,6 +60,12 @@ header('X-Robots-Tag: noindex, nofollow', true);
         <p>Pubblica nuovi articoli e tieni aggiornato il blog.</p><br>
         <a href="api/gestione_blog.php">Crea articoli</a>
       </div>
+
+      <div class="admin-card">
+        <h3>Albo d'oro</h3>
+        <p>Inserisci e aggiorna le vincitrici dei tornei.</p><br>
+        <a href="api/gestione_albo.php">Gestisci</a>
+      </div>
     </div>
 
     <a class="logout-btn" href="index.php">Esci dal pannello</a>

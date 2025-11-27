@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS giocatori;
 DROP TABLE IF EXISTS squadre;
 DROP TABLE IF EXISTS tornei;
 DROP TABLE IF EXISTS utenti;
+DROP TABLE IF EXISTS albo;
 
 -- Utenti (login.php, register.php, api/gestione_utenti.php, api/blog.php)
 CREATE TABLE IF NOT EXISTS utenti (
@@ -36,6 +37,22 @@ CREATE TABLE IF NOT EXISTS utenti (
     UNIQUE KEY uq_utenti_email (email),
     UNIQUE KEY uq_utenti_username (username),
     KEY idx_utenti_token_verifica (token_verifica)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Albo d'oro (api/albo_doro.php, api/gestione_albo.php)
+CREATE TABLE IF NOT EXISTS albo (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    competizione VARCHAR(255) NOT NULL,
+    categoria VARCHAR(100) DEFAULT NULL,
+    vincitrice VARCHAR(255) NOT NULL,
+    vincitrice_logo VARCHAR(255) DEFAULT NULL,
+    torneo_logo VARCHAR(255) DEFAULT NULL,
+    tabellone_url VARCHAR(255) DEFAULT NULL,
+    inizio_mese TINYINT UNSIGNED DEFAULT NULL,
+    inizio_anno SMALLINT UNSIGNED DEFAULT NULL,
+    fine_mese TINYINT UNSIGNED DEFAULT NULL,
+    fine_anno SMALLINT UNSIGNED DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tornei (tornei.php, api/gestione_tornei.php, api/crud/Torneo.php)
