@@ -80,6 +80,10 @@ if (!$conn || $conn->connect_error) {
                 $stmt = $conn->prepare("INSERT INTO albo (competizione, categoria, vincitrice, vincitrice_logo, torneo_logo, tabellone_url, inizio_mese, inizio_anno, fine_mese, fine_anno) VALUES (?,?,?,?,?,?,?,?,?,?)");
                 $torneo_logo = '/img/logo_old_school.png';
                 $tabellone_url = '';
+                $im = $inizio_mese ?: null;
+                $ia = $inizio_anno ?: null;
+                $fm = $fine_mese ?: null;
+                $fa = $fine_anno ?: null;
                 $stmt->bind_param(
                     "ssssssiiii",
                     $competizione,
@@ -88,10 +92,10 @@ if (!$conn || $conn->connect_error) {
                     $logo,
                     $torneo_logo,
                     $tabellone_url,
-                    $inizio_mese ?: null,
-                    $inizio_anno ?: null,
-                    $fine_mese ?: null,
-                    $fine_anno ?: null
+                    $im,
+                    $ia,
+                    $fm,
+                    $fa
                 );
                 $stmt->execute();
                 $stmt->close();
@@ -110,6 +114,11 @@ if (!$conn || $conn->connect_error) {
 
                 $logo = handleUpload('vincitrice_logo_file', $currentLogo);
 
+                $im2 = $inizio_mese ?: null;
+                $ia2 = $inizio_anno ?: null;
+                $fm2 = $fine_mese ?: null;
+                $fa2 = $fine_anno ?: null;
+
                 $stmt = $conn->prepare("UPDATE albo SET competizione=?, categoria=?, vincitrice=?, vincitrice_logo=?, torneo_logo='/img/logo_old_school.png', tabellone_url='', inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=? WHERE id=?");
                 $stmt->bind_param(
                     "ssssiiiii",
@@ -117,10 +126,10 @@ if (!$conn || $conn->connect_error) {
                     $categoria,
                     $vincitrice,
                     $logo,
-                    $inizio_mese ?: null,
-                    $inizio_anno ?: null,
-                    $fine_mese ?: null,
-                    $fine_anno ?: null,
+                    $im2,
+                    $ia2,
+                    $fm2,
+                    $fa2,
                     $id
                 );
                 $stmt->execute();
