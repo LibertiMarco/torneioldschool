@@ -375,43 +375,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       });
     })();
 
-    // Gating reCAPTCHA: carica solo se l'utente ha consentito (tracking o flag recaptcha)
+    // Lazy-load reCAPTCHA al primo tocco/focus sul form (considerato necessario per sicurezza anti-bot)
     (function () {
       const form = document.querySelector(".login-form");
-      const box = document.querySelector(".recaptcha-box");
-      const recaptchaContainer = document.querySelector(".g-recaptcha");
-      if (!form || !box || !recaptchaContainer) return;
-
-      const STORAGE_KEY = "tosConsent";
-
-      function readConsent() {
-        try {
-          return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-        } catch (e) {
-          return {};
-        }
-      }
-
-      function allowRecaptcha(consent) {
-        return !!(consent.recaptcha || consent.tracking);
-      }
-
-      function persistRecaptchaConsent() {
-        const current = readConsent();
-        const next = {
-          marketing: !!current.marketing,
-          newsletter: !!current.newsletter,
-          tracking: !!current.tracking,
-          recaptcha: true,
-          ts: Date.now(),
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        if (typeof window.__tosSyncConsent__ === "function") {
-          window.__tosSyncConsent__();
-        }
-      }
-
-      function loadRecaptcha() {
+      if (!form) return;
+      const loadRecaptcha = () => {
         if (window.__tosRecaptchaLoaded) return;
         window.__tosRecaptchaLoaded = true;
         const s = document.createElement("script");
@@ -419,49 +387,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         s.async = true;
         s.defer = true;
         document.head.appendChild(s);
-      }
+      };
 
-      function renderBlocker() {
-        box.innerHTML = `
-          <div class="recaptcha-blocker" style="background:#fff5f5;border:1px solid #fecdd3;border-radius:10px;padding:10px 12px;color:#b91c1c;">
-            <p style="margin:0 0 8px;font-weight:700;">Per proteggere il form usiamo reCAPTCHA.</p>
-            <button type="button" class="allow-recaptcha" style="background:#15293e;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer;">Consenti reCAPTCHA</button>
-            <p style="margin:8px 0 0;color:#7f1d1d;font-size:0.9rem;">La scelta viene salvata nelle preferenze (recaptcha).</p>
-          </div>
-        `;
-        const btn = box.querySelector(".allow-recaptcha");
-        if (btn) {
-          btn.addEventListener("click", () => {
-            persistRecaptchaConsent();
-            renderAllowed();
-          });
-        }
-      }
-
-      function renderAllowed() {
-        box.innerHTML = "";
-        box.appendChild(recaptchaContainer);
-        loadRecaptcha();
-      }
-
-      function init() {
-        const consent = readConsent();
-        if (allowRecaptcha(consent)) {
-          renderAllowed();
-        } else {
-          renderBlocker();
-        }
-      }
-
-      form.addEventListener("submit", (e) => {
-        if (!allowRecaptcha(readConsent())) {
-          e.preventDefault();
-          renderBlocker();
-          box.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
+      ["pointerdown", "focusin", "keydown"].forEach(evt => {
+        form.addEventListener(evt, loadRecaptcha, { once: true });
       });
-
-      init();
     })();
   </script>
 </body>
