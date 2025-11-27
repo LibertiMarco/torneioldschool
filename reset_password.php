@@ -69,8 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$error) {
         $error = "Sessione scaduta. Ricarica la pagina e riprova.";
     } elseif (honeypot_triggered()) {
         $error = "Richiesta non valida.";
-    } elseif (!rate_limit_allow('reset_password', 5, 900)) {
-        $wait = rate_limit_retry_after('reset_password', 900);
+    } elseif (!rate_limit_allow('reset_password', 5, 60)) {
+        $wait = rate_limit_retry_after('reset_password', 60);
         $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
     } else {
         $password = trim($_POST['password'] ?? '');

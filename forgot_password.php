@@ -79,8 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Sessione scaduta. Ricarica la pagina e riprova.";
     } elseif (honeypot_triggered()) {
         $error = "Richiesta non valida.";
-    } elseif (!rate_limit_allow('forgot_password', 3, 900)) {
-        $wait = rate_limit_retry_after('forgot_password', 900);
+    } elseif (!rate_limit_allow('forgot_password', 3, 60)) {
+        $wait = rate_limit_retry_after('forgot_password', 60);
         $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
     } elseif ($recaptchaSecretKey === '' || $recaptchaSiteKey === '') {
         $error = "Servizio non disponibile: reCAPTCHA non configurato.";
