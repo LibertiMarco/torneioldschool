@@ -169,6 +169,12 @@ if (!$conn || $conn->connect_error) {
     .msg { padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; }
     .msg.ok { background: #e7f6ec; color: #14532d; border: 1px solid #bbf7d0; }
     .msg.err { background: #fef2f2; color: #991b1b; border: 1px solid #fecdd3; }
+    .file-input { display: block; }
+    .file-label { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fafc; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
+    .file-label:hover { border-color: #15293e; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    .file-btn { background: #15293e; color: #fff; padding: 8px 12px; border-radius: 8px; font-weight: 700; font-size: 0.95rem; }
+    .file-name { color: #475569; font-weight: 600; font-size: 0.95rem; }
+    .file-input input[type="file"] { display: none; }
     @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -202,9 +208,13 @@ if (!$conn || $conn->connect_error) {
             <label>Vincitrice*</label>
             <input type="text" name="vincitrice" required>
           </div>
-          <div>
+          <div class="file-input">
             <label>Logo vincitrice (upload)</label>
-            <input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp">
+            <label class="file-label">
+              <span class="file-btn">Scegli file</span>
+              <span class="file-name">Nessun file selezionato</span>
+              <input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
+            </label>
           </div>
           <div>
             <label>Inizio (mese)</label>
@@ -272,7 +282,13 @@ if (!$conn || $conn->connect_error) {
                       <label>Competizione<input type="text" name="competizione" value="<?= h($row['competizione']) ?>" required></label>
                       <label>Categoria<input type="text" name="categoria" value="<?= h($row['categoria']) ?>"></label>
                       <label>Vincitrice<input type="text" name="vincitrice" value="<?= h($row['vincitrice']) ?>" required></label>
-                      <label>Logo vincitrice (upload per sostituire)<input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp"></label>
+                      <div class="file-input">
+                        <label class="file-label">
+                          <span class="file-btn">Scegli file</span>
+                          <span class="file-name"><?= h($row['vincitrice_logo'] ?: 'Nessun file selezionato') ?></span>
+                          <input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
+                        </label>
+                      </div>
                       <label>Inizio mese<input type="number" name="inizio_mese" min="1" max="12" value="<?= h($row['inizio_mese']) ?>"></label>
                       <label>Inizio anno<input type="number" name="inizio_anno" min="2000" max="2100" value="<?= h($row['inizio_anno']) ?>"></label>
                       <label>Fine mese<input type="number" name="fine_mese" min="1" max="12" value="<?= h($row['fine_mese']) ?>"></label>
