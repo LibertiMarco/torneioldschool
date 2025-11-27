@@ -24,7 +24,7 @@ function fetchAlboCustom(mysqli $conn): array {
     }
 
     $sql = "
-        SELECT id, competizione, categoria, vincitrice, vincitrice_logo, torneo_logo, tabellone_url,
+        SELECT id, competizione, premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url,
                inizio_mese, inizio_anno, fine_mese, fine_anno, created_at
         FROM albo
         ORDER BY COALESCE(fine_anno, inizio_anno, YEAR(created_at)) DESC,
@@ -42,7 +42,7 @@ function fetchAlboCustom(mysqli $conn): array {
         $anno = $row['fine_anno'] ?: $row['inizio_anno'] ?: '';
         $rows[] = [
             'torneo' => $row['competizione'],
-            'categoria' => $row['categoria'],
+            'categoria' => $row['premio'],
             'stato' => 'archivio',
             'data_inizio' => dateFromParts((int)$row['inizio_mese'], (int)$row['inizio_anno']),
             'data_fine' => dateFromParts((int)$row['fine_mese'], (int)$row['fine_anno']),

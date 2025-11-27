@@ -62,7 +62,7 @@ if (!$conn || $conn->connect_error) {
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $competizione = trim($_POST['competizione'] ?? '');
-        $categoria = trim($_POST['categoria'] ?? '');
+        $premio = trim($_POST['premio'] ?? 'Vincente');
         $vincitrice = trim($_POST['vincitrice'] ?? '');
         $inizio_mese = (int)($_POST['inizio_mese'] ?? 0);
         $inizio_anno = (int)($_POST['inizio_anno'] ?? 0);
@@ -77,7 +77,7 @@ if (!$conn || $conn->connect_error) {
                 }
                 $logo = handleUpload('vincitrice_logo_file', null);
 
-                $stmt = $conn->prepare("INSERT INTO albo (competizione, categoria, vincitrice, vincitrice_logo, torneo_logo, tabellone_url, inizio_mese, inizio_anno, fine_mese, fine_anno) VALUES (?,?,?,?,?,?,?,?,?,?)");
+                $stmt = $conn->prepare("INSERT INTO albo (competizione, premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url, inizio_mese, inizio_anno, fine_mese, fine_anno) VALUES (?,?,?,?,?,?,?,?,?,?)");
                 $torneo_logo = '/img/logo_old_school.png';
                 $tabellone_url = '';
                 $im = $inizio_mese ?: null;
@@ -87,7 +87,7 @@ if (!$conn || $conn->connect_error) {
                 $stmt->bind_param(
                     "ssssssiiii",
                     $competizione,
-                    $categoria,
+                    $premio,
                     $vincitrice,
                     $logo,
                     $torneo_logo,
@@ -119,11 +119,11 @@ if (!$conn || $conn->connect_error) {
                 $fm2 = $fine_mese ?: null;
                 $fa2 = $fine_anno ?: null;
 
-                $stmt = $conn->prepare("UPDATE albo SET competizione=?, categoria=?, vincitrice=?, vincitrice_logo=?, torneo_logo='/img/logo_old_school.png', tabellone_url='', inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=? WHERE id=?");
+                $stmt = $conn->prepare("UPDATE albo SET competizione=?, premio=?, vincitrice=?, vincitrice_logo=?, torneo_logo='/img/logo_old_school.png', tabellone_url='', inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=? WHERE id=?");
                 $stmt->bind_param(
                     "ssssiiiii",
                     $competizione,
-                    $categoria,
+                    $premio,
                     $vincitrice,
                     $logo,
                     $im2,
@@ -190,7 +190,7 @@ if (!$conn || $conn->connect_error) {
 <body class="admin-page">
   <?php include __DIR__ . '/../includi/header.php'; ?>
 
-  <div class="admin-wrapper">
+    <div class="admin-wrapper">
     <h1>Gestione Albo d'oro</h1>
 
     <?php foreach ($messages as $m): ?>
@@ -210,8 +210,8 @@ if (!$conn || $conn->connect_error) {
             <input type="text" name="competizione" required>
           </div>
           <div>
-            <label>Categoria</label>
-            <input type="text" name="categoria" placeholder="Es. Serie A, Silver, etc.">
+            <label>Premio (es. Vincente, Vincente Coppa, Miglior marcatore, MVP)</label>
+            <input type="text" name="premio" placeholder="Vincente" value="Vincente">
           </div>
           <div>
             <label>Vincitrice*</label>
@@ -257,6 +257,7 @@ if (!$conn || $conn->connect_error) {
           <thead>
             <tr>
               <th>Competizione</th>
+              <th>Premio</th>
               <th>Vincitrice</th>
               <th>Periodo</th>
               <th>Azioni</th>
@@ -267,8 +268,9 @@ if (!$conn || $conn->connect_error) {
               <tr>
                 <td>
                   <strong><?= h($row['competizione']) ?></strong><br>
-                  <span class="pill"><?= h($row['categoria']) ?></span>
+                  <span class="pill">ID #<?= (int)$row['id'] ?></span>
                 </td>
+                <td><?= h($row['premio'] ?: 'Vincente') ?></td>
                 <td><?= h($row['vincitrice']) ?></td>
                 <td>
                   <?php
@@ -289,7 +291,7 @@ if (!$conn || $conn->connect_error) {
                       <input type="hidden" name="azione" value="update">
                       <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
                       <label>Competizione<input type="text" name="competizione" value="<?= h($row['competizione']) ?>" required></label>
-                      <label>Categoria<input type="text" name="categoria" value="<?= h($row['categoria']) ?>"></label>
+                      <label>Premio<input type="text" name="premio" value="<?= h($row['premio']) ?>"></label>
                       <label>Vincitrice<input type="text" name="vincitrice" value="<?= h($row['vincitrice']) ?>" required></label>
                       <div class="file-input">
                         <label class="file-label">
@@ -315,5 +317,21 @@ if (!$conn || $conn->connect_error) {
       <?php endif; ?>
     </div>
   </div>
+
+  <div id="footer-container"></div>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      fetch("/includi/footer.html")
+        .then(r => r.text())
+        .then(html => {
+          const footer = document.getElementById("footer-container");
+          if (footer) footer.innerHTML = html;
+        })
+        .catch(err => console.error("Errore nel caricamento del footer:", err));
+      if (typeof initHeaderInteractions === "function") {
+        initHeaderInteractions();
+      }
+    });
+  </script>
 </body>
 </html>
