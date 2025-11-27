@@ -244,14 +244,16 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
     .recaptcha-box {
       margin: 12px 0 6px;
       display: flex;
-      justify-content: flex-start;
+      justify-content: center;
       align-items: center;
       transform-origin: left top;
       min-height: 78px;
+      width: 100%;
     }
     .recaptcha-box .g-recaptcha {
       transform: scale(1);
       transform-origin: left top;
+      margin: 0 auto;
     }
     @media (max-width: 640px) {
       .recaptcha-box .g-recaptcha {
