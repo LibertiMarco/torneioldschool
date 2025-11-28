@@ -53,10 +53,52 @@ function handleUpload(string $field, ?string $existing = null): ?string {
     return '/img/scudetti/' . $filename;
 }
 
+function ensureAlboSchema(mysqli $conn): void {
+    // crea tabella se non esiste
+    $conn->query("
+        CREATE TABLE IF NOT EXISTS albo (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            competizione VARCHAR(255) NOT NULL,
+            premio VARCHAR(100) NOT NULL DEFAULT 'Vincente',
+            vincitrice VARCHAR(255) NOT NULL,
+            vincitrice_logo VARCHAR(255) DEFAULT NULL,
+            torneo_logo VARCHAR(255) DEFAULT NULL,
+            tabellone_url VARCHAR(255) DEFAULT NULL,
+            inizio_mese TINYINT UNSIGNED DEFAULT NULL,
+            inizio_anno SMALLINT UNSIGNED DEFAULT NULL,
+            fine_mese TINYINT UNSIGNED DEFAULT NULL,
+            fine_anno SMALLINT UNSIGNED DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ");
+
+    $cols = [];
+    if ($res = $conn->query("SHOW COLUMNS FROM albo")) {
+        while ($c = $res->fetch_assoc()) {
+            $cols[strtolower($c['Field'])] = true;
+        }
+    }
+    $alter = [];
+    if (empty($cols['competizione'])) $alter[] = "ADD COLUMN competizione VARCHAR(255) NOT NULL AFTER id";
+    if (empty($cols['premio'])) $alter[] = "ADD COLUMN premio VARCHAR(100) NOT NULL DEFAULT 'Vincente' AFTER competizione";
+    if (empty($cols['vincitrice'])) $alter[] = "ADD COLUMN vincitrice VARCHAR(255) NOT NULL AFTER premio";
+    if (empty($cols['vincitrice_logo'])) $alter[] = "ADD COLUMN vincitrice_logo VARCHAR(255) DEFAULT NULL AFTER vincitrice";
+    if (empty($cols['torneo_logo'])) $alter[] = "ADD COLUMN torneo_logo VARCHAR(255) DEFAULT NULL AFTER vincitrice_logo";
+    if (empty($cols['tabellone_url'])) $alter[] = "ADD COLUMN tabellone_url VARCHAR(255) DEFAULT NULL AFTER torneo_logo";
+    if (empty($cols['inizio_mese'])) $alter[] = "ADD COLUMN inizio_mese TINYINT UNSIGNED DEFAULT NULL AFTER tabellone_url";
+    if (empty($cols['inizio_anno'])) $alter[] = "ADD COLUMN inizio_anno SMALLINT UNSIGNED DEFAULT NULL AFTER inizio_mese";
+    if (empty($cols['fine_mese'])) $alter[] = "ADD COLUMN fine_mese TINYINT UNSIGNED DEFAULT NULL AFTER inizio_anno";
+    if (empty($cols['fine_anno'])) $alter[] = "ADD COLUMN fine_anno SMALLINT UNSIGNED DEFAULT NULL AFTER fine_mese";
+    foreach ($alter as $stmt) {
+        $conn->query("ALTER TABLE albo {$stmt}");
+    }
+}
+
 if (!$conn || $conn->connect_error) {
     $errors[] = "Connessione al database non disponibile";
 } else {
     $conn->set_charset('utf8mb4');
+    ensureAlboSchema($conn);
 
     $azione = $_POST['azione'] ?? '';
 

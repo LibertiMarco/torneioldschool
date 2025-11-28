@@ -11,6 +11,16 @@ if (!$conn || $conn->connect_error) {
 
 $conn->set_charset('utf8mb4');
 
+function getAlboColumns(mysqli $conn): array {
+    $cols = [];
+    if ($res = $conn->query("SHOW COLUMNS FROM albo")) {
+        while ($c = $res->fetch_assoc()) {
+            $cols[strtolower($c['Field'])] = true;
+        }
+    }
+    return $cols;
+}
+
 function dateFromParts(?int $month, ?int $year): string {
     if (empty($year)) return '';
     $m = ($month && $month >= 1 && $month <= 12) ? $month : 1;
@@ -22,9 +32,11 @@ function fetchAlboCustom(mysqli $conn): array {
     if (!$check || $check->num_rows === 0) {
         return [];
     }
+    $cols = getAlboColumns($conn);
+    $premioCol = isset($cols['premio']) ? 'premio' : (isset($cols['categoria']) ? 'categoria' : "'' AS premio");
 
     $sql = "
-        SELECT id, competizione, premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url,
+        SELECT id, competizione, {$premioCol} AS premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url,
                inizio_mese, inizio_anno, fine_mese, fine_anno, created_at
         FROM albo
         ORDER BY COALESCE(fine_anno, inizio_anno, YEAR(created_at)) DESC,
