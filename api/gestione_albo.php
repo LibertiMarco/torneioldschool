@@ -119,8 +119,8 @@ if (!$conn || $conn->connect_error) {
                 }
                 $logo = handleUpload('vincitrice_logo_file', null);
 
+                $torneo_logo_path = handleUpload('torneo_logo_file', null) ?? '/img/logo_old_school.png';
                 $stmt = $conn->prepare("INSERT INTO albo (competizione, premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url, inizio_mese, inizio_anno, fine_mese, fine_anno) VALUES (?,?,?,?,?,?,?,?,?,?)");
-                $torneo_logo = '/img/logo_old_school.png';
                 $tabellone_url = '';
                 $im = $inizio_mese ?: null;
                 $ia = $inizio_anno ?: null;
@@ -132,7 +132,7 @@ if (!$conn || $conn->connect_error) {
                     $premio,
                     $vincitrice,
                     $logo,
-                    $torneo_logo,
+                    $torneo_logo_path,
                     $tabellone_url,
                     $im,
                     $ia,
@@ -155,19 +155,28 @@ if (!$conn || $conn->connect_error) {
                 $fetch->close();
 
                 $logo = handleUpload('vincitrice_logo_file', $currentLogo);
+                $currentTorneoLogo = null;
+                $fetch2 = $conn->prepare("SELECT torneo_logo FROM albo WHERE id=?");
+                $fetch2->bind_param("i", $id);
+                $fetch2->execute();
+                $fetch2->bind_result($currentTorneoLogo);
+                $fetch2->fetch();
+                $fetch2->close();
+                $torneo_logo_path = handleUpload('torneo_logo_file', $currentTorneoLogo ?? '/img/logo_old_school.png');
 
                 $im2 = $inizio_mese ?: null;
                 $ia2 = $inizio_anno ?: null;
                 $fm2 = $fine_mese ?: null;
                 $fa2 = $fine_anno ?: null;
 
-                $stmt = $conn->prepare("UPDATE albo SET competizione=?, premio=?, vincitrice=?, vincitrice_logo=?, torneo_logo='/img/logo_old_school.png', tabellone_url='', inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=? WHERE id=?");
+                $stmt = $conn->prepare("UPDATE albo SET competizione=?, premio=?, vincitrice=?, vincitrice_logo=?, torneo_logo=?, tabellone_url='', inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=? WHERE id=?");
                 $stmt->bind_param(
-                    "ssssiiiii",
+                    "ssssiiiiii",
                     $competizione,
                     $premio,
                     $vincitrice,
                     $logo,
+                    $torneo_logo_path,
                     $im2,
                     $ia2,
                     $fm2,
@@ -214,6 +223,8 @@ if (!$conn || $conn->connect_error) {
     .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
     .btn-primary { background: #15293e; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 700; }
     .btn-ghost { background: #eef2f7; color: #15293e; border: 1px solid #d7dce5; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+    .btn-danger { background: #dc2626; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 700; }
+    .btn-warning { background: #f59e0b; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 700; }
     .table { width: 100%; border-collapse: collapse; }
     .table th, .table td { padding: 10px; border-bottom: 1px solid #e5e8f0; text-align: left; }
     .pill { display: inline-block; background: #eef2f7; color: #15293e; padding: 4px 8px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }
@@ -243,6 +254,15 @@ if (!$conn || $conn->connect_error) {
     <?php endforeach; ?>
 
     <div class="admin-card-inline">
+      <h3>Azioni</h3>
+      <div class="actions">
+        <button class="btn-primary" type="button" onclick="togglePanel('panel-create')">Crea</button>
+        <button class="btn-warning" type="button" onclick="togglePanel('panel-update')">Modifica</button>
+        <button class="btn-danger" type="button" onclick="togglePanel('panel-delete')">Elimina</button>
+      </div>
+    </div>
+
+    <div class="admin-card-inline" id="panel-create">
       <h3>Nuova voce</h3>
       <form method="POST" enctype="multipart/form-data">
         <input type="hidden" name="azione" value="create">
@@ -265,6 +285,14 @@ if (!$conn || $conn->connect_error) {
               <span class="file-btn">Scegli file</span>
               <span class="file-name">Nessun file selezionato</span>
               <input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
+            </label>
+          </div>
+          <div class="file-input">
+            <label>Logo torneo (upload)</label>
+            <label class="file-label">
+              <span class="file-btn">Scegli file</span>
+              <span class="file-name">Nessun file selezionato</span>
+              <input type="file" name="torneo_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
             </label>
           </div>
           <div>
@@ -340,6 +368,13 @@ if (!$conn || $conn->connect_error) {
                           <span class="file-btn">Scegli file</span>
                           <span class="file-name"><?= h($row['vincitrice_logo'] ?: 'Nessun file selezionato') ?></span>
                           <input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
+                        </label>
+                      </div>
+                      <div class="file-input">
+                        <label class="file-label">
+                          <span class="file-btn">Scegli logo torneo</span>
+                          <span class="file-name"><?= h($row['torneo_logo'] ?: 'Nessun file selezionato') ?></span>
+                          <input type="file" name="torneo_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
                         </label>
                       </div>
                       <label>Inizio mese<input type="number" name="inizio_mese" min="1" max="12" value="<?= h($row['inizio_mese']) ?>"></label>

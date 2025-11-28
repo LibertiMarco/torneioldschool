@@ -53,14 +53,14 @@ function fetchAlboCustom(mysqli $conn): array {
     while ($row = $res->fetch_assoc()) {
         $anno = $row['fine_anno'] ?: $row['inizio_anno'] ?: '';
         $rows[] = [
-            'torneo' => $row['competizione'],
-            'categoria' => $row['premio'],
+            'competizione' => $row['competizione'],
+            'premio' => $row['premio'],
             'stato' => 'archivio',
             'data_inizio' => dateFromParts((int)$row['inizio_mese'], (int)$row['inizio_anno']),
             'data_fine' => dateFromParts((int)$row['fine_mese'], (int)$row['fine_anno']),
             'anno' => $anno,
             'filetorneo' => $row['tabellone_url'],
-            'torneo_img' => $row['torneo_logo'],
+            'torneo_logo' => $row['torneo_logo'],
             'vincitrice' => $row['vincitrice'],
             'logo_vincitrice' => $row['vincitrice_logo'],
         ];
@@ -127,9 +127,35 @@ function fetchAlboFromTornei(mysqli $conn): array {
     return $albo;
 }
 
-$albo = fetchAlboCustom($conn);
-if (empty($albo)) {
-    $albo = fetchAlboFromTornei($conn);
+$raw = fetchAlboCustom($conn);
+if (empty($raw)) {
+    $raw = fetchAlboFromTornei($conn);
 }
 
-echo json_encode(['data' => $albo], JSON_UNESCAPED_UNICODE);
+// Raggruppa per competizione e raccoglie premi multipli
+$grouped = [];
+foreach ($raw as $item) {
+    $key = $item['competizione'];
+    if (!isset($grouped[$key])) {
+        $grouped[$key] = [
+            'competizione' => $item['competizione'],
+            'torneo_logo' => $item['torneo_logo'] ?? $item['torneo_img'] ?? '/img/logo_old_school.png',
+            'data_inizio' => $item['data_inizio'] ?? '',
+            'data_fine' => $item['data_fine'] ?? '',
+            'anno' => $item['anno'] ?? '',
+            'premi' => [],
+        ];
+    }
+    $grouped[$key]['premi'][] = [
+        'premio' => $item['premio'] ?? $item['categoria'] ?? 'Premio',
+        'vincitrice' => $item['vincitrice'] ?? '',
+        'logo_vincitrice' => $item['logo_vincitrice'] ?? '',
+    ];
+}
+
+// Ordina per anno e data_fine
+usort($grouped, function ($a, $b) {
+    return strcmp($b['anno'] ?? '', $a['anno'] ?? '');
+});
+
+echo json_encode(['data' => array_values($grouped)], JSON_UNESCAPED_UNICODE);
