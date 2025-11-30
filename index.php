@@ -258,11 +258,8 @@ function renderHallCard(item) {
     const fileLink = normalizePath(item.filetorneo);
     const periodo = formatPeriodo(item.data_inizio, item.data_fine, item.anno);
     const premi = Array.isArray(item.premi) ? item.premi : [];
-    // Scegli il primo premio diverso da "capocannoniere" per il badge in alto
-    const badge = (premi.find(p => {
-      const nome = (p?.premio || '').toLowerCase();
-      return nome && !nome.includes('capocannon');
-    })?.premio) || '';
+    // Nessun badge testuale richiesto in alto
+    const badge = '';
 
     const premiList = premi.map(p => {
       const logo = p.logo_vincitrice || '/img/tornei/pallone.png';
