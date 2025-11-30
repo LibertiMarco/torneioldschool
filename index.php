@@ -258,7 +258,11 @@ function renderHallCard(item) {
     const fileLink = normalizePath(item.filetorneo);
     const periodo = formatPeriodo(item.data_inizio, item.data_fine, item.anno);
     const premi = Array.isArray(item.premi) ? item.premi : [];
-    const badge = (premi[0]?.premio) || 'Torneo';
+    // Scegli il primo premio diverso da "capocannoniere" per il badge in alto
+    const badge = (premi.find(p => {
+      const nome = (p?.premio || '').toLowerCase();
+      return nome && !nome.includes('capocannon');
+    })?.premio) || '';
 
     const premiList = premi.map(p => {
       const logo = p.logo_vincitrice || '/img/tornei/pallone.png';
@@ -280,7 +284,7 @@ function renderHallCard(item) {
     return `
       <article class="hof-card">
         <div class="hof-top">
-          <span class="hof-badge">${badge}</span>
+          ${badge ? `<span class="hof-badge">${badge}</span>` : '<span class="hof-badge" style="visibility:hidden;"></span>'}
           <span class="hof-year">${item.anno || ''}</span>
         </div>
         <div class="hof-body">
