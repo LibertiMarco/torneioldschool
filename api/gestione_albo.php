@@ -210,7 +210,7 @@ if (!$conn || $conn->connect_error) {
 
   <main class="admin-wrapper">
     <h1>Gestione Albo d'oro</h1>
-    <p>Inserisci, modifica o elimina le voci dell'albo d'oro con lo stesso look dei pannelli blog.</p>
+    <p>Inserisci, modifica o elimina le voci dell'albo d'oro</p>
 
     <?php foreach ($messages as $m): ?>
       <div class="msg ok"><?= h($m) ?></div>
