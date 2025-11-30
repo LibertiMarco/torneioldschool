@@ -316,7 +316,7 @@ async function loadHallOfFame() {
     try {
         const response = await fetch('/api/albo_doro.php');
         const payload = await response.json();
-        const data = Array.isArray(payload.data) ? payload.data.slice(0, 3) : [];
+        const data = Array.isArray(payload.data) ? payload.data.slice(0, 2) : [];
 
         if (!data.length) {
             grid.innerHTML = '<p class="empty-state">Nessuna vincitrice registrata.</p>';
