@@ -1,10 +1,12 @@
 <?php
 require_once __DIR__ . '/env_loader.php';
 
-function env_or_default(string $key, string $default = ''): string
-{
-    $value = getenv($key);
-    return ($value !== false && $value !== '') ? $value : $default;
+if (!function_exists('env_or_default')) {
+    function env_or_default(string $key, string $default = ''): string
+    {
+        $value = getenv($key);
+        return ($value !== false && $value !== '') ? $value : $default;
+    }
 }
 
 $host = env_or_default('DB_HOST', 'localhost');
