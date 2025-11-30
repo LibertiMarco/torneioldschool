@@ -136,20 +136,25 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $currentLogo = null;
                 $currentTorneoLogo = null;
-                $fetch = $conn->prepare("SELECT vincitrice_logo, torneo_logo FROM albo WHERE id=?");
+                $currentInizioMese = null;
+                $currentInizioAnno = null;
+                $currentFineMese = null;
+                $currentFineAnno = null;
+                $fetch = $conn->prepare("SELECT vincitrice_logo, torneo_logo, inizio_mese, inizio_anno, fine_mese, fine_anno FROM albo WHERE id=?");
                 $fetch->bind_param("i", $id);
                 $fetch->execute();
-                $fetch->bind_result($currentLogo, $currentTorneoLogo);
+                $fetch->bind_result($currentLogo, $currentTorneoLogo, $currentInizioMese, $currentInizioAnno, $currentFineMese, $currentFineAnno);
                 $fetch->fetch();
                 $fetch->close();
 
                 $logo = handleUpload('vincitrice_logo_file', $currentLogo);
                 $torneo_logo_path = $currentTorneoLogo ?: $defaultTorneoLogo;
 
-                $im2 = $inizio_mese ?: null;
-                $ia2 = $inizio_anno ?: null;
-                $fm2 = $fine_mese ?: null;
-                $fa2 = $fine_anno ?: null;
+                // Se i campi data restano vuoti, manteniamo i valori esistenti
+                $im2 = $inizio_mese > 0 ? $inizio_mese : ($currentInizioMese ?: null);
+                $ia2 = $inizio_anno > 0 ? $inizio_anno : ($currentInizioAnno ?: null);
+                $fm2 = $fine_mese > 0 ? $fine_mese : ($currentFineMese ?: null);
+                $fa2 = $fine_anno > 0 ? $fine_anno : ($currentFineAnno ?: null);
 
                 $stmt = $conn->prepare("UPDATE albo SET competizione=?, premio=?, vincitrice=?, vincitrice_logo=?, torneo_logo=?, tabellone_url='', inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=? WHERE id=?");
                 $stmt->bind_param(
@@ -302,6 +307,13 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     .sort-list li { background: #f8fafc; border: 1px solid #e5eaf0; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; cursor: grab; box-shadow: 0 6px 16px rgba(0,0,0,0.05); }
     .sort-list li.dragging { opacity: 0.7; }
     .drag-handle { font-size: 1rem; color: #1f3f63; }
+    .confirm-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); backdrop-filter: blur(2px); z-index: 9999; }
+    .confirm-modal.active { display: flex; }
+    .confirm-card { background: #fff; border-radius: 14px; padding: 22px; width: min(420px, 90vw); box-shadow: 0 18px 34px rgba(0,0,0,0.15); border: 1px solid #e5eaf0; }
+    .confirm-card h4 { margin: 0 0 8px; color: #15293e; }
+    .confirm-card p { margin: 0 0 16px; color: #345; }
+    .confirm-actions { display: flex; gap: 12px; justify-content: center; }
+    .confirm-actions button { flex: 1 1 0; min-width: 140px; text-align: center; }
     @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -454,7 +466,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php if (empty($albo)): ?>
         <p>Nessun record presente.</p>
       <?php else: ?>
-        <form method="POST">
+        <form method="POST" id="formDelete">
           <input type="hidden" name="azione" value="delete">
           <div class="form-grid">
             <div>
@@ -468,7 +480,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
           </div>
           <div class="actions">
-            <button class="btn-danger" type="submit" onclick="return confirm('Eliminare questa voce?')">Elimina</button>
+            <button class="btn-danger" type="button" id="btnAskDelete">Elimina</button>
           </div>
         </form>
       <?php endif; ?>
@@ -594,6 +606,50 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!Object.keys(order).length) return;
         ordineInput.value = JSON.stringify(order);
         document.getElementById('formSort')?.submit();
+      });
+
+      // Modale conferma eliminazione
+      const formDelete = document.getElementById('formDelete');
+      const btnAskDelete = document.getElementById('btnAskDelete');
+      const selectDelete = formDelete?.querySelector('select[name="id"]');
+      const modalDel = document.createElement('div');
+      modalDel.className = 'confirm-modal';
+      modalDel.innerHTML = `
+        <div class="confirm-card">
+          <h4>Conferma eliminazione</h4>
+          <p id="deleteText">Vuoi eliminare questa voce dell'albo?</p>
+          <div class="confirm-actions">
+            <button type="button" class="btn-ghost" id="btnCancelDel">Annulla</button>
+            <button type="button" class="btn-danger" id="btnConfirmDel">Elimina</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modalDel);
+      const deleteText = modalDel.querySelector('#deleteText');
+      const btnCancelDel = modalDel.querySelector('#btnCancelDel');
+      const btnConfirmDel = modalDel.querySelector('#btnConfirmDel');
+
+      btnAskDelete?.addEventListener('click', () => {
+        if (!selectDelete || !selectDelete.value) {
+          alert('Seleziona una voce da eliminare.');
+          return;
+        }
+        const selectedLabel = selectDelete.options[selectDelete.selectedIndex]?.text || '';
+        if (deleteText) deleteText.textContent = `Eliminare "${selectedLabel}"?`;
+        modalDel.classList.add('active');
+      });
+
+      btnCancelDel?.addEventListener('click', () => {
+        modalDel.classList.remove('active');
+      });
+      btnConfirmDel?.addEventListener('click', () => {
+        formDelete?.submit();
+        modalDel.classList.remove('active');
+      });
+      modalDel.addEventListener('click', (e) => {
+        if (e.target === modalDel) {
+          modalDel.classList.remove('active');
+        }
       });
 
       fetch("/includi/footer.html")
