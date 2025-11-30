@@ -101,7 +101,10 @@ CREATE TABLE IF NOT EXISTS giocatori (
     rossi INT NOT NULL DEFAULT 0,
     media_voti DECIMAL(4,2) DEFAULT NULL,
     foto VARCHAR(255) NOT NULL DEFAULT '/img/giocatori/unknown.jpg',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    utente_id INT UNSIGNED DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_giocatore_utente (utente_id),
+    CONSTRAINT fk_giocatore_utente FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Partite (api/crud/Partita.php, api/get_partite*.php, tornei/Script-SerieA.js)

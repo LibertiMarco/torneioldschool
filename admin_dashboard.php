@@ -44,6 +44,12 @@ header('X-Robots-Tag: noindex, nofollow', true);
             </div>
 
             <div class="admin-card">
+                <h3>Account - Giocatori</h3>
+                <p>Associa un account utente al relativo giocatore (solo admin).</p><br>
+                <a href="api/gestione_account_giocatore.php">Abbina</a>
+            </div>
+
+            <div class="admin-card">
                 <h3>Calendario & Risultati</h3>
                 <p>Inserisci o aggiorna date e punteggi dei tornei.</p><br>
                 <a href="api/gestione_partite.php">Apri</a>
