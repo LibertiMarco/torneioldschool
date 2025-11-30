@@ -286,36 +286,49 @@ if (!$conn || $conn->connect_error) {
       <?php if (empty($albo)): ?>
         <p>Nessun record presente.</p>
       <?php else: ?>
-        <?php foreach ($albo as $row): ?>
-          <form method="POST" enctype="multipart/form-data" class="form-grid" style="margin-bottom:14px; border-bottom:1px solid #e5e8f0; padding-bottom:12px;">
-            <input type="hidden" name="azione" value="update">
-            <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-            <label>Competizione<input type="text" name="competizione" value="<?= h($row['competizione']) ?>" required></label>
-            <label>Premio<input type="text" name="premio" value="<?= h($row['premio']) ?>"></label>
-            <label>Vincitrice<input type="text" name="vincitrice" value="<?= h($row['vincitrice']) ?>" required></label>
-            <div class="file-input">
-              <label class="file-label">
-                <span class="file-btn">Logo vincitrice</span>
-                <span class="file-name"><?= h($row['vincitrice_logo'] ?: 'Nessun file selezionato') ?></span>
-                <input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
-              </label>
-            </div>
-            <div class="file-input">
-              <label class="file-label">
-                <span class="file-btn">Logo torneo</span>
-                <span class="file-name"><?= h($row['torneo_logo'] ?: 'Nessun file selezionato') ?></span>
-                <input type="file" name="torneo_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
-              </label>
-            </div>
-            <label>Inizio mese<input type="number" name="inizio_mese" min="1" max="12" value="<?= h($row['inizio_mese']) ?>"></label>
-            <label>Inizio anno<input type="number" name="inizio_anno" min="2000" max="2100" value="<?= h($row['inizio_anno']) ?>"></label>
-            <label>Fine mese<input type="number" name="fine_mese" min="1" max="12" value="<?= h($row['fine_mese']) ?>"></label>
-            <label>Fine anno<input type="number" name="fine_anno" min="2000" max="2100" value="<?= h($row['fine_anno']) ?>"></label>
-            <div class="actions" style="grid-column: 1/-1;">
-              <button class="btn-primary" type="submit">Aggiorna</button>
-            </div>
-          </form>
-        <?php endforeach; ?>
+        <div class="form-grid" style="margin-bottom:12px;">
+          <label>
+            Seleziona torneo
+            <select id="selCompetizione">
+              <option value="">-- scegli torneo --</option>
+            </select>
+          </label>
+          <label>
+            Seleziona premio
+            <select id="selRecord">
+              <option value="">-- scegli premio --</option>
+            </select>
+          </label>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="form-grid" id="formUpdate">
+          <input type="hidden" name="azione" value="update">
+          <input type="hidden" name="id" id="upd_id">
+          <label>Competizione<input type="text" name="competizione" id="upd_competizione" required></label>
+          <label>Premio<input type="text" name="premio" id="upd_premio"></label>
+          <label>Vincitrice<input type="text" name="vincitrice" id="upd_vincitrice" required></label>
+          <div class="file-input">
+            <label class="file-label">
+              <span class="file-btn">Logo vincitrice</span>
+              <span class="file-name" id="upd_vincitrice_logo_name">Nessun file selezionato</span>
+              <input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp" onchange="document.getElementById('upd_vincitrice_logo_name').textContent = this.files?.[0]?.name || (this.dataset.current || 'Nessun file selezionato');" data-current="">
+            </label>
+          </div>
+          <div class="file-input">
+            <label class="file-label">
+              <span class="file-btn">Logo torneo</span>
+              <span class="file-name" id="upd_torneo_logo_name">Nessun file selezionato</span>
+              <input type="file" name="torneo_logo_file" accept="image/png,image/jpeg,image/webp" onchange="document.getElementById('upd_torneo_logo_name').textContent = this.files?.[0]?.name || (this.dataset.current || 'Nessun file selezionato');" data-current="">
+            </label>
+          </div>
+          <label>Inizio mese<input type="number" name="inizio_mese" id="upd_inizio_mese" min="1" max="12"></label>
+          <label>Inizio anno<input type="number" name="inizio_anno" id="upd_inizio_anno" min="2000" max="2100"></label>
+          <label>Fine mese<input type="number" name="fine_mese" id="upd_fine_mese" min="1" max="12"></label>
+          <label>Fine anno<input type="number" name="fine_anno" id="upd_fine_anno" min="2000" max="2100"></label>
+          <div class="actions" style="grid-column: 1/-1;">
+            <button class="btn-primary" type="submit">Aggiorna</button>
+          </div>
+        </form>
       <?php endif; ?>
     </div>
 
@@ -328,11 +341,11 @@ if (!$conn || $conn->connect_error) {
           <input type="hidden" name="azione" value="delete">
           <div class="form-grid">
             <div>
-              <label>Seleziona ID da eliminare</label>
+              <label>Seleziona da eliminare</label>
               <select name="id" required>
                 <option value="">--</option>
                 <?php foreach ($albo as $row): ?>
-                  <option value="<?= (int)$row['id'] ?>">ID #<?= (int)$row['id'] ?> - <?= h($row['competizione']) ?> (<?= h($row['premio']) ?>)</option>
+                  <option value="<?= (int)$row['id'] ?>"><?= h($row['competizione']) ?><?= $row['premio'] ? ' - ' . h($row['premio']) : '' ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -359,6 +372,72 @@ if (!$conn || $conn->connect_error) {
       }
       tabButtons.forEach(btn => btn.addEventListener('click', () => showPanel(btn.dataset.tab)));
       showPanel('panel-create');
+
+      // Gestione selezione per modifica
+      const alboData = <?= json_encode($albo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+      const selCompetizione = document.getElementById('selCompetizione');
+      const selRecord = document.getElementById('selRecord');
+      const formUpd = document.getElementById('formUpdate');
+      const fields = {
+        id: document.getElementById('upd_id'),
+        competizione: document.getElementById('upd_competizione'),
+        premio: document.getElementById('upd_premio'),
+        vincitrice: document.getElementById('upd_vincitrice'),
+        inizio_mese: document.getElementById('upd_inizio_mese'),
+        inizio_anno: document.getElementById('upd_inizio_anno'),
+        fine_mese: document.getElementById('upd_fine_mese'),
+        fine_anno: document.getElementById('upd_fine_anno'),
+        vincitrice_logo: document.querySelector('input[name="vincitrice_logo_file"]'),
+        torneo_logo: document.querySelector('input[name="torneo_logo_file"]'),
+        vincitrice_logo_name: document.getElementById('upd_vincitrice_logo_name'),
+        torneo_logo_name: document.getElementById('upd_torneo_logo_name'),
+      };
+
+      function populateCompetizioni() {
+        if (!selCompetizione) return;
+        const comps = Array.from(new Set(alboData.map(r => r.competizione).filter(Boolean))).sort();
+        selCompetizione.innerHTML = '<option value="">-- scegli torneo --</option>' +
+          comps.map(c => `<option value="${c}">${c}</option>`).join('');
+      }
+
+      function populatePremi(comp) {
+        if (!selRecord) return;
+        const filtered = alboData.filter(r => r.competizione === comp);
+        selRecord.innerHTML = '<option value="">-- scegli premio --</option>' +
+          filtered.map(r => `<option value="${r.id}">${r.premio || 'Premio'}</option>`).join('');
+      }
+
+      function fillForm(id) {
+        const rec = alboData.find(r => Number(r.id) === Number(id));
+        if (!rec || !formUpd) return;
+        fields.id.value = rec.id || '';
+        fields.competizione.value = rec.competizione || '';
+        fields.premio.value = rec.premio || '';
+        fields.vincitrice.value = rec.vincitrice || '';
+        fields.inizio_mese.value = rec.inizio_mese || '';
+        fields.inizio_anno.value = rec.inizio_anno || '';
+        fields.fine_mese.value = rec.fine_mese || '';
+        fields.fine_anno.value = rec.fine_anno || '';
+        if (fields.vincitrice_logo) {
+          fields.vincitrice_logo.dataset.current = rec.vincitrice_logo || 'Nessun file selezionato';
+          fields.vincitrice_logo.value = '';
+        }
+        if (fields.vincitrice_logo_name) fields.vincitrice_logo_name.textContent = rec.vincitrice_logo || 'Nessun file selezionato';
+        if (fields.torneo_logo) {
+          fields.torneo_logo.dataset.current = rec.torneo_logo || 'Nessun file selezionato';
+          fields.torneo_logo.value = '';
+        }
+        if (fields.torneo_logo_name) fields.torneo_logo_name.textContent = rec.torneo_logo || 'Nessun file selezionato';
+      }
+
+      selCompetizione?.addEventListener('change', () => {
+        populatePremi(selCompetizione.value);
+        fields.id.value = '';
+        selRecord.value = '';
+      });
+      selRecord?.addEventListener('change', () => fillForm(selRecord.value));
+
+      populateCompetizioni();
 
       fetch("/includi/footer.html")
         .then(r => r.text())
