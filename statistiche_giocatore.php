@@ -131,6 +131,22 @@ $seo = [
         .page-title { margin: 0 0 12px; color: #15293e; }
         .back-link { display: inline-flex; align-items: center; gap: 6px; color: #15293e; text-decoration: none; font-weight: 600; margin-bottom: 14px; }
         .back-link:hover { color: #0f1f2c; }
+        /* Stile coerente con il calendario */
+        .calendar-list { display: grid; gap: 12px; }
+        .calendar-list .match-card { border: 1px solid #ddd; border-radius: 14px; background: #fff; padding: 18px 0; box-shadow: 0 3px 8px rgba(0,0,0,0.1); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .calendar-list .match-card:hover { transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .calendar-list .match-header { display: flex; justify-content: space-between; font-size: 1rem; padding: 0 16px 8px 16px; color: #1a2d44; font-weight: 600; }
+        .calendar-list .match-body { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; padding: 6px 16px 0 16px; }
+        .calendar-list .team { display: flex; justify-content: flex-start; align-items: center; gap: 8px; }
+        .calendar-list .team.away { justify-content: flex-end; }
+        .calendar-list .team-name { font-weight: 700; color: #15293e; text-align: right; }
+        .calendar-list .team.away .team-name { text-align: left; }
+        .calendar-list .match-center { display: grid; gap: 6px; justify-items: center; color: #5f6b7b; font-weight: 700; }
+        .calendar-list .vs { font-size: 1.1rem; color: #15293e; }
+        @media (max-width: 640px) {
+            .calendar-list .match-body { grid-template-columns: 1fr; text-align: center; }
+            .calendar-list .team, .calendar-list .team.away { justify-content: center; }
+        }
         @media (max-width: 640px) {
             .player-hero { grid-template-columns: 1fr; text-align: center; }
             .player-hero img { margin: 0 auto; }
@@ -201,15 +217,28 @@ $seo = [
             <?php if (empty($prossimePartite)): ?>
                 <p class="muted">Nessuna partita programmata.</p>
             <?php else: ?>
-                <ul class="simple-list">
+                <div class="calendar-list">
                     <?php foreach ($prossimePartite as $p): ?>
-                        <li>
-                            <strong><?= h($p['squadra_casa']) ?> vs <?= h($p['squadra_ospite']) ?></strong>
-                            <div class="muted"><?= h($p['torneo']) ?> · <?= h($p['campo']) ?></div>
-                            <div class="muted"><?= h($p['data_partita']) ?> <?= h($p['ora_partita']) ?></div>
-                        </li>
+                        <div class="match-card">
+                            <div class="match-header">
+                                <span><?= h($p['torneo']) ?></span>
+                                <span><?= h($p['data_partita']) ?> <?= h($p['ora_partita']) ?></span>
+                            </div>
+                            <div class="match-body">
+                                <div class="team home">
+                                    <div class="team-name"><?= h($p['squadra_casa']) ?></div>
+                                </div>
+                                <div class="match-center">
+                                    <span class="vs">VS</span>
+                                    <div class="muted"><?= h($p['campo']) ?></div>
+                                </div>
+                                <div class="team away">
+                                    <div class="team-name"><?= h($p['squadra_ospite']) ?></div>
+                                </div>
+                            </div>
+                        </div>
                     <?php endforeach; ?>
-                </ul>
+                </div>
             <?php endif; ?>
         </section>
 
@@ -218,15 +247,32 @@ $seo = [
             <?php if (empty($partiteGiocate)): ?>
                 <p class="muted">Nessuna partita giocata trovata.</p>
             <?php else: ?>
-                <ul class="simple-list">
+                <div class="calendar-list">
                     <?php foreach ($partiteGiocate as $p): ?>
-                        <li>
-                            <strong><?= h($p['squadra_casa']) ?> <?= $p['gol_casa'] !== null ? (int)$p['gol_casa'] : '-' ?> - <?= $p['gol_ospite'] !== null ? (int)$p['gol_ospite'] : '-' ?> <?= h($p['squadra_ospite']) ?></strong>
-                            <div class="muted"><?= h($p['torneo']) ?> · <?= h($p['campo']) ?></div>
-                            <div class="muted"><?= h($p['data_partita']) ?> <?= h($p['ora_partita']) ?></div>
-                        </li>
+                        <div class="match-card">
+                            <div class="match-header">
+                                <span><?= h($p['torneo']) ?></span>
+                                <span><?= h($p['data_partita']) ?> <?= h($p['ora_partita']) ?></span>
+                            </div>
+                            <div class="match-body">
+                                <div class="team home">
+                                    <div class="team-name"><?= h($p['squadra_casa']) ?></div>
+                                </div>
+                                <div class="match-center">
+                                    <span class="vs">
+                                        <?= $p['gol_casa'] !== null ? (int)$p['gol_casa'] : '-' ?>
+                                        -
+                                        <?= $p['gol_ospite'] !== null ? (int)$p['gol_ospite'] : '-' ?>
+                                    </span>
+                                    <div class="muted"><?= h($p['campo']) ?></div>
+                                </div>
+                                <div class="team away">
+                                    <div class="team-name"><?= h($p['squadra_ospite']) ?></div>
+                                </div>
+                            </div>
+                        </div>
                     <?php endforeach; ?>
-                </ul>
+                </div>
             <?php endif; ?>
         </section>
     <?php endif; ?>
