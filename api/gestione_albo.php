@@ -9,6 +9,10 @@ require_once __DIR__ . '/../includi/db.php';
 
 $messages = [];
 $errors = [];
+$albo = [];
+$competizioniList = [];
+$alboDelete = [];
+$orderColumnAvailable = false;
 
 function h($str) {
     return htmlspecialchars((string)$str, ENT_QUOTES, 'UTF-8');
@@ -53,16 +57,35 @@ function handleUpload(string $field, ?string $existing = null): ?string {
     return '/img/scudetti/' . $filename;
 }
 
+function ensureOrdinamentoColumn(mysqli $conn, array &$errors): bool {
+    $check = $conn->query("SHOW COLUMNS FROM albo LIKE 'ordinamento'");
+    if ($check && $check->num_rows > 0) {
+        return true;
+    }
+    if (!$check) {
+        $errors[] = "Impossibile verificare la colonna di ordinamento.";
+        return false;
+    }
+    if ($conn->query("ALTER TABLE albo ADD COLUMN ordinamento INT DEFAULT NULL")) {
+        return true;
+    }
+    $errors[] = "Non riesco ad aggiungere la colonna 'ordinamento' per l'ordinamento manuale.";
+    return false;
+}
+
 if (!$conn || $conn->connect_error) {
     $errors[] = "Connessione al database non disponibile";
 } else {
     $conn->set_charset('utf8mb4');
     $azione = $_POST['azione'] ?? '';
+    $orderColumnAvailable = false;
 
     // Controllo presenza tabella
     $exists = $conn->query("SHOW TABLES LIKE 'albo'");
     if (!$exists || $exists->num_rows === 0) {
         $errors[] = "La tabella 'albo' non esiste. Creala prima di usare questa pagina.";
+    } else {
+        $orderColumnAvailable = ensureOrdinamentoColumn($conn, $errors);
     }
 
     if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -149,6 +172,25 @@ if (!$conn || $conn->connect_error) {
                 $stmt->execute();
                 $stmt->close();
                 $messages[] = "Record eliminato.";
+            } elseif ($azione === 'sort' && $orderColumnAvailable) {
+                $ordine = json_decode($_POST['ordine'] ?? '[]', true);
+                if (!is_array($ordine) || empty($ordine)) {
+                    throw new Exception('Nessun ordine ricevuto.');
+                }
+                $stmt = $conn->prepare("UPDATE albo SET ordinamento=? WHERE competizione=?");
+                if (!$stmt) {
+                    throw new Exception('Impossibile salvare il nuovo ordine.');
+                }
+                $pos = 1;
+                foreach ($ordine as $comp) {
+                    $comp = trim((string)$comp);
+                    if ($comp === '') continue;
+                    $stmt->bind_param("is", $pos, $comp);
+                    $stmt->execute();
+                    $pos++;
+                }
+                $stmt->close();
+                $messages[] = "Ordine aggiornato correttamente.";
             }
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
@@ -157,12 +199,37 @@ if (!$conn || $conn->connect_error) {
 
     $albo = [];
     if (empty($errors)) {
-        $res = $conn->query("SELECT * FROM albo ORDER BY COALESCE(fine_anno, inizio_anno, YEAR(created_at)) DESC, COALESCE(fine_mese, inizio_mese, MONTH(created_at)) DESC, id DESC");
+        $orderPrefix = $orderColumnAvailable ? "COALESCE(ordinamento, 999999)," : "";
+        $res = $conn->query("SELECT * FROM albo ORDER BY {$orderPrefix} COALESCE(fine_anno, inizio_anno, YEAR(created_at)) DESC, COALESCE(fine_mese, inizio_mese, MONTH(created_at)) DESC, id DESC");
         if ($res) {
             while ($row = $res->fetch_assoc()) {
                 $albo[] = $row;
             }
         }
+
+        // Lista competizioni per ordinamento manuale
+        $competizioniList = [];
+        $fallbackIndex = 1;
+        foreach ($albo as $row) {
+            $comp = $row['competizione'] ?? '';
+            if ($comp === '') continue;
+            if (!isset($competizioniList[$comp])) {
+                $competizioniList[$comp] = [
+                    'competizione' => $comp,
+                    'ordinamento' => isset($row['ordinamento']) ? (int)$row['ordinamento'] : $fallbackIndex++
+                ];
+            }
+        }
+        $competizioniList = array_values($competizioniList);
+        usort($competizioniList, function($a, $b) {
+            return ($a['ordinamento'] ?? PHP_INT_MAX) <=> ($b['ordinamento'] ?? PHP_INT_MAX);
+        });
+
+        // Lista per elimina (dal più recente)
+        $alboDelete = $albo;
+        usort($alboDelete, function($a, $b) {
+            return ($b['id'] ?? 0) <=> ($a['id'] ?? 0);
+        });
     }
 }
 ?>
@@ -202,6 +269,10 @@ if (!$conn || $conn->connect_error) {
     .msg.ok { background: #e8f6ef; color: #065f46; border: 1px solid #34d399; }
     .msg.err { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
     .hidden { display: none !important; }
+    .sort-list { list-style: none; padding: 0; margin: 0 0 12px; display: flex; flex-direction: column; gap: 10px; }
+    .sort-list li { background: #f8fafc; border: 1px solid #e5eaf0; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; cursor: grab; box-shadow: 0 6px 16px rgba(0,0,0,0.05); }
+    .sort-list li.dragging { opacity: 0.7; }
+    .drag-handle { font-size: 1rem; color: #1f3f63; }
     @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -222,6 +293,7 @@ if (!$conn || $conn->connect_error) {
     <div class="tab-buttons">
       <button type="button" data-tab="panel-create" class="active">Crea</button>
       <button type="button" data-tab="panel-update">Modifica</button>
+      <button type="button" data-tab="panel-sort">Ordina</button>
       <button type="button" data-tab="panel-delete">Elimina</button>
     </div>
 
@@ -332,6 +404,32 @@ if (!$conn || $conn->connect_error) {
       <?php endif; ?>
     </div>
 
+    <div class="panel-card hidden" id="panel-sort">
+      <h3>Ordina competizioni</h3>
+      <?php if (!$orderColumnAvailable): ?>
+        <p>Colonna di ordinamento non disponibile. Controlla i permessi del database e riprova.</p>
+      <?php elseif (empty($competizioniList)): ?>
+        <p>Nessuna competizione da ordinare.</p>
+      <?php else: ?>
+        <p>Trascina per riordinare le competizioni. Il nuovo ordine verrà usato nella home e nella pagina albo.</p>
+        <form method="POST" id="formSort">
+          <input type="hidden" name="azione" value="sort">
+          <input type="hidden" name="ordine" id="ordineInput">
+        </form>
+        <ul class="sort-list" id="sortList">
+          <?php foreach ($competizioniList as $comp): ?>
+            <li draggable="true" data-comp="<?= h($comp['competizione']) ?>">
+              <span class="drag-handle">&#9776;</span>
+              <span><?= h($comp['competizione']) ?></span>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+        <div class="actions">
+          <button class="btn-primary" type="button" id="btnSaveOrder">Salva ordine</button>
+        </div>
+      <?php endif; ?>
+    </div>
+
     <div class="panel-card hidden" id="panel-delete">
       <h3>Elimina</h3>
       <?php if (empty($albo)): ?>
@@ -344,7 +442,7 @@ if (!$conn || $conn->connect_error) {
               <label>Seleziona da eliminare</label>
               <select name="id" required>
                 <option value="">--</option>
-                <?php foreach ($albo as $row): ?>
+                <?php foreach ($alboDelete as $row): ?>
                   <option value="<?= (int)$row['id'] ?>"><?= h($row['competizione']) ?><?= $row['premio'] ? ' - ' . h($row['premio']) : '' ?></option>
                 <?php endforeach; ?>
               </select>
@@ -361,7 +459,7 @@ if (!$conn || $conn->connect_error) {
   <div id="footer-container"></div>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const panels = ["panel-create", "panel-update", "panel-delete"];
+      const panels = ["panel-create", "panel-update", "panel-sort", "panel-delete"];
       const tabButtons = document.querySelectorAll('.tab-buttons button');
       function showPanel(id) {
         panels.forEach(pid => {
@@ -438,6 +536,44 @@ if (!$conn || $conn->connect_error) {
       selRecord?.addEventListener('change', () => fillForm(selRecord.value));
 
       populateCompetizioni();
+
+      // Drag & drop ordine competizioni
+      const sortList = document.getElementById('sortList');
+      const ordineInput = document.getElementById('ordineInput');
+      const btnSaveOrder = document.getElementById('btnSaveOrder');
+      let draggedEl = null;
+
+      function serializeOrder() {
+        return Array.from(sortList?.querySelectorAll('li') || []).map(li => li.dataset.comp);
+      }
+
+      sortList?.addEventListener('dragstart', (e) => {
+        const li = e.target.closest('li');
+        if (!li) return;
+        draggedEl = li;
+        li.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      sortList?.addEventListener('dragend', (e) => {
+        if (draggedEl) draggedEl.classList.remove('dragging');
+        draggedEl = null;
+      });
+      sortList?.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const li = e.target.closest('li');
+        if (!li || li === draggedEl) return;
+        const rect = li.getBoundingClientRect();
+        const after = (e.clientY - rect.top) > rect.height / 2;
+        sortList.insertBefore(draggedEl, after ? li.nextSibling : li);
+      });
+      sortList?.addEventListener('drop', (e) => e.preventDefault());
+
+      btnSaveOrder?.addEventListener('click', () => {
+        if (!sortList || !ordineInput) return;
+        const order = serializeOrder();
+        ordineInput.value = JSON.stringify(order);
+        document.getElementById('formSort')?.submit();
+      });
 
       fetch("/includi/footer.html")
         .then(r => r.text())

@@ -34,12 +34,15 @@ function fetchAlboCustom(mysqli $conn): array {
     }
     $cols = getAlboColumns($conn);
     $premioCol = isset($cols['premio']) ? 'premio' : (isset($cols['categoria']) ? 'categoria' : "'' AS premio");
+    $hasSort = isset($cols['ordinamento']);
+    $sortSelect = $hasSort ? ', ordinamento' : '';
+    $sortOrder = $hasSort ? 'COALESCE(ordinamento, 999999),' : '';
 
     $sql = "
         SELECT id, competizione, {$premioCol} AS premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url,
-               inizio_mese, inizio_anno, fine_mese, fine_anno, created_at
+               inizio_mese, inizio_anno, fine_mese, fine_anno, created_at{$sortSelect}
         FROM albo
-        ORDER BY COALESCE(fine_anno, inizio_anno, YEAR(created_at)) DESC,
+        ORDER BY {$sortOrder} COALESCE(fine_anno, inizio_anno, YEAR(created_at)) DESC,
                  COALESCE(fine_mese, inizio_mese, MONTH(created_at)) DESC,
                  id DESC
     ";
@@ -63,6 +66,7 @@ function fetchAlboCustom(mysqli $conn): array {
             'torneo_logo' => $row['torneo_logo'],
             'vincitrice' => $row['vincitrice'],
             'logo_vincitrice' => $row['vincitrice_logo'],
+            'ordinamento' => $hasSort ? (int)$row['ordinamento'] : null,
         ];
     }
     return $rows;
@@ -146,6 +150,7 @@ foreach ($raw as $item) {
             'data_inizio' => $item['data_inizio'] ?? '',
             'data_fine' => $item['data_fine'] ?? '',
             'anno' => $item['anno'] ?? '',
+            'ordinamento' => $item['ordinamento'] ?? null,
             'filetorneo' => $item['tabellone_url'] ?? $item['filetorneo'] ?? '',
             'premi' => [],
         ];
@@ -159,6 +164,11 @@ foreach ($raw as $item) {
 
 // Ordina per anno e data_fine
 usort($grouped, function ($a, $b) {
+    $ao = $a['ordinamento'] ?? null;
+    $bo = $b['ordinamento'] ?? null;
+    if ($ao !== null || $bo !== null) {
+        return ($ao ?? PHP_INT_MAX) <=> ($bo ?? PHP_INT_MAX);
+    }
     return strcmp($b['anno'] ?? '', $a['anno'] ?? '');
 });
 
