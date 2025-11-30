@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
     header("Location: /index.php");
@@ -23,7 +23,7 @@ function handleUpload(string $field, ?string $existing = null): ?string {
     $name = $_FILES[$field]['name'];
     $size = (int)$_FILES[$field]['size'];
 
-    if ($size > 2 * 1024 * 1024) { // 2MB
+    if ($size > 2 * 1024 * 1024) {
         throw new Exception('Immagine troppo grande (max 2MB).');
     }
 
@@ -53,56 +53,19 @@ function handleUpload(string $field, ?string $existing = null): ?string {
     return '/img/scudetti/' . $filename;
 }
 
-function ensureAlboSchema(mysqli $conn): void {
-    // crea tabella se non esiste
-    $conn->query("
-        CREATE TABLE IF NOT EXISTS albo (
-            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            competizione VARCHAR(255) NOT NULL,
-            premio VARCHAR(100) NOT NULL DEFAULT 'Vincente',
-            vincitrice VARCHAR(255) NOT NULL,
-            vincitrice_logo VARCHAR(255) DEFAULT NULL,
-            torneo_logo VARCHAR(255) DEFAULT NULL,
-            tabellone_url VARCHAR(255) DEFAULT NULL,
-            inizio_mese TINYINT UNSIGNED DEFAULT NULL,
-            inizio_anno SMALLINT UNSIGNED DEFAULT NULL,
-            fine_mese TINYINT UNSIGNED DEFAULT NULL,
-            fine_anno SMALLINT UNSIGNED DEFAULT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    ");
-
-    $cols = [];
-    if ($res = $conn->query("SHOW COLUMNS FROM albo")) {
-        while ($c = $res->fetch_assoc()) {
-            $cols[strtolower($c['Field'])] = true;
-        }
-    }
-    $alter = [];
-    if (empty($cols['competizione'])) $alter[] = "ADD COLUMN competizione VARCHAR(255) NOT NULL AFTER id";
-    if (empty($cols['premio'])) $alter[] = "ADD COLUMN premio VARCHAR(100) NOT NULL DEFAULT 'Vincente' AFTER competizione";
-    if (empty($cols['vincitrice'])) $alter[] = "ADD COLUMN vincitrice VARCHAR(255) NOT NULL AFTER premio";
-    if (empty($cols['vincitrice_logo'])) $alter[] = "ADD COLUMN vincitrice_logo VARCHAR(255) DEFAULT NULL AFTER vincitrice";
-    if (empty($cols['torneo_logo'])) $alter[] = "ADD COLUMN torneo_logo VARCHAR(255) DEFAULT NULL AFTER vincitrice_logo";
-    if (empty($cols['tabellone_url'])) $alter[] = "ADD COLUMN tabellone_url VARCHAR(255) DEFAULT NULL AFTER torneo_logo";
-    if (empty($cols['inizio_mese'])) $alter[] = "ADD COLUMN inizio_mese TINYINT UNSIGNED DEFAULT NULL AFTER tabellone_url";
-    if (empty($cols['inizio_anno'])) $alter[] = "ADD COLUMN inizio_anno SMALLINT UNSIGNED DEFAULT NULL AFTER inizio_mese";
-    if (empty($cols['fine_mese'])) $alter[] = "ADD COLUMN fine_mese TINYINT UNSIGNED DEFAULT NULL AFTER inizio_anno";
-    if (empty($cols['fine_anno'])) $alter[] = "ADD COLUMN fine_anno SMALLINT UNSIGNED DEFAULT NULL AFTER fine_mese";
-    foreach ($alter as $stmt) {
-        $conn->query("ALTER TABLE albo {$stmt}");
-    }
-}
-
 if (!$conn || $conn->connect_error) {
     $errors[] = "Connessione al database non disponibile";
 } else {
     $conn->set_charset('utf8mb4');
-    ensureAlboSchema($conn);
-
     $azione = $_POST['azione'] ?? '';
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Controllo presenza tabella
+    $exists = $conn->query("SHOW TABLES LIKE 'albo'");
+    if (!$exists || $exists->num_rows === 0) {
+        $errors[] = "La tabella 'albo' non esiste. Creala prima di usare questa pagina.";
+    }
+
+    if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $competizione = trim($_POST['competizione'] ?? '');
         $premio = trim($_POST['premio'] ?? 'Vincente');
         $vincitrice = trim($_POST['vincitrice'] ?? '');
@@ -118,8 +81,8 @@ if (!$conn || $conn->connect_error) {
                     throw new Exception('Compila almeno competizione e vincitrice.');
                 }
                 $logo = handleUpload('vincitrice_logo_file', null);
-
                 $torneo_logo_path = handleUpload('torneo_logo_file', null) ?? '/img/logo_old_school.png';
+
                 $stmt = $conn->prepare("INSERT INTO albo (competizione, premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url, inizio_mese, inizio_anno, fine_mese, fine_anno) VALUES (?,?,?,?,?,?,?,?,?,?)");
                 $tabellone_url = '';
                 $im = $inizio_mese ?: null;
@@ -147,21 +110,15 @@ if (!$conn || $conn->connect_error) {
                     throw new Exception('Compila almeno competizione e vincitrice.');
                 }
                 $currentLogo = null;
-                $fetch = $conn->prepare("SELECT vincitrice_logo FROM albo WHERE id=?");
+                $currentTorneoLogo = null;
+                $fetch = $conn->prepare("SELECT vincitrice_logo, torneo_logo FROM albo WHERE id=?");
                 $fetch->bind_param("i", $id);
                 $fetch->execute();
-                $fetch->bind_result($currentLogo);
+                $fetch->bind_result($currentLogo, $currentTorneoLogo);
                 $fetch->fetch();
                 $fetch->close();
 
                 $logo = handleUpload('vincitrice_logo_file', $currentLogo);
-                $currentTorneoLogo = null;
-                $fetch2 = $conn->prepare("SELECT torneo_logo FROM albo WHERE id=?");
-                $fetch2->bind_param("i", $id);
-                $fetch2->execute();
-                $fetch2->bind_result($currentTorneoLogo);
-                $fetch2->fetch();
-                $fetch2->close();
                 $torneo_logo_path = handleUpload('torneo_logo_file', $currentTorneoLogo ?? '/img/logo_old_school.png');
 
                 $im2 = $inizio_mese ?: null;
@@ -199,10 +156,12 @@ if (!$conn || $conn->connect_error) {
     }
 
     $albo = [];
-    $res = $conn->query("SELECT * FROM albo ORDER BY COALESCE(fine_anno, inizio_anno, YEAR(created_at)) DESC, COALESCE(fine_mese, inizio_mese, MONTH(created_at)) DESC, id DESC");
-    if ($res) {
-        while ($row = $res->fetch_assoc()) {
-            $albo[] = $row;
+    if (empty($errors)) {
+        $res = $conn->query("SELECT * FROM albo ORDER BY COALESCE(fine_anno, inizio_anno, YEAR(created_at)) DESC, COALESCE(fine_mese, inizio_mese, MONTH(created_at)) DESC, id DESC");
+        if ($res) {
+            while ($row = $res->fetch_assoc()) {
+                $albo[] = $row;
+            }
         }
     }
 }
@@ -212,38 +171,36 @@ if (!$conn || $conn->connect_error) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestione Albo d'oro</title>
+  <title>Gestione Albo d'oro (versione 2)</title>
   <link rel="stylesheet" href="/style.min.css?v=20251204">
   <style>
     .admin-wrapper { max-width: 1100px; margin: 0 auto; padding: 30px 16px 60px; }
     .admin-card-inline { background: #fff; border: 1px solid #e5e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 6px 16px rgba(0,0,0,0.08); margin-bottom: 20px; }
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
     .form-grid label { font-weight: 700; color: #15293e; font-size: 0.95rem; }
-    .form-grid input { width: 100%; padding: 8px 10px; border: 1px solid #d7dce5; border-radius: 8px; }
+    .form-grid input, .form-grid select { width: 100%; padding: 8px 10px; border: 1px solid #d7dce5; border-radius: 8px; }
     .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
     .btn-primary { background: #15293e; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 700; }
     .btn-ghost { background: #eef2f7; color: #15293e; border: 1px solid #d7dce5; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
     .btn-danger { background: #dc2626; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 700; }
     .btn-warning { background: #f59e0b; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 700; }
-    .table { width: 100%; border-collapse: collapse; }
-    .table th, .table td { padding: 10px; border-bottom: 1px solid #e5e8f0; text-align: left; }
-    .pill { display: inline-block; background: #eef2f7; color: #15293e; padding: 4px 8px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }
-    .msg { padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; }
-    .msg.ok { background: #e7f6ec; color: #14532d; border: 1px solid #bbf7d0; }
-    .msg.err { background: #fef2f2; color: #991b1b; border: 1px solid #fecdd3; }
     .file-input { display: block; }
     .file-label { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fafc; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
     .file-label:hover { border-color: #15293e; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
     .file-btn { background: #15293e; color: #fff; padding: 8px 12px; border-radius: 8px; font-weight: 700; font-size: 0.95rem; }
     .file-name { color: #475569; font-weight: 600; font-size: 0.95rem; }
     .file-input input[type="file"] { display: none; }
+    .pill { display: inline-block; background: #eef2f7; color: #15293e; padding: 4px 8px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }
+    .msg { padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; }
+    .msg.ok { background: #e7f6ec; color: #14532d; border: 1px solid #bbf7d0; }
+    .msg.err { background: #fef2f2; color: #991b1b; border: 1px solid #fecdd3; }
     @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body class="admin-page">
   <?php include __DIR__ . '/../includi/header.php'; ?>
 
-    <div class="admin-wrapper">
+  <div class="admin-wrapper">
     <h1>Gestione Albo d'oro</h1>
 
     <?php foreach ($messages as $m): ?>
@@ -262,7 +219,7 @@ if (!$conn || $conn->connect_error) {
       </div>
     </div>
 
-    <div class="admin-card-inline" id="panel-create">
+    <div class="admin-card-inline" id="panel-create" style="display:none;">
       <h3>Nuova voce</h3>
       <form method="POST" enctype="multipart/form-data">
         <input type="hidden" name="azione" value="create">
@@ -318,79 +275,66 @@ if (!$conn || $conn->connect_error) {
       </form>
     </div>
 
-    <div class="admin-card-inline">
-      <h3>Voci esistenti</h3>
+    <div class="admin-card-inline" id="panel-update" style="display:none;">
+      <h3>Modifica</h3>
       <?php if (empty($albo)): ?>
         <p>Nessun record presente.</p>
       <?php else: ?>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Competizione</th>
-              <th>Premio</th>
-              <th>Vincitrice</th>
-              <th>Periodo</th>
-              <th>Azioni</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php foreach ($albo as $row): ?>
-              <tr>
-                <td>
-                  <strong><?= h($row['competizione']) ?></strong><br>
-                  <span class="pill">ID #<?= (int)$row['id'] ?></span>
-                </td>
-                <td><?= h($row['premio'] ?: 'Vincente') ?></td>
-                <td><?= h($row['vincitrice']) ?></td>
-                <td>
-                  <?php
-                    $inizio = ($row['inizio_mese'] ? str_pad($row['inizio_mese'], 2, '0', STR_PAD_LEFT) : '--') . '/' . ($row['inizio_anno'] ?: '--');
-                    $fine = ($row['fine_mese'] ? str_pad($row['fine_mese'], 2, '0', STR_PAD_LEFT) : '--') . '/' . ($row['fine_anno'] ?: '--');
-                    echo h($inizio . ' - ' . $fine);
-                  ?>
-                </td>
-                <td>
-                  <form method="POST" style="display:inline-block;">
-                    <input type="hidden" name="azione" value="delete">
-                    <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                    <button class="btn-ghost" type="submit" onclick="return confirm('Eliminare questa voce?')">Elimina</button>
-                  </form>
-                  <details>
-                    <summary>Modifica</summary>
-                    <form method="POST" enctype="multipart/form-data" class="form-grid" style="margin-top:8px;">
-                      <input type="hidden" name="azione" value="update">
-                      <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                      <label>Competizione<input type="text" name="competizione" value="<?= h($row['competizione']) ?>" required></label>
-                      <label>Premio<input type="text" name="premio" value="<?= h($row['premio']) ?>"></label>
-                      <label>Vincitrice<input type="text" name="vincitrice" value="<?= h($row['vincitrice']) ?>" required></label>
-                      <div class="file-input">
-                        <label class="file-label">
-                          <span class="file-btn">Scegli file</span>
-                          <span class="file-name"><?= h($row['vincitrice_logo'] ?: 'Nessun file selezionato') ?></span>
-                          <input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
-                        </label>
-                      </div>
-                      <div class="file-input">
-                        <label class="file-label">
-                          <span class="file-btn">Scegli logo torneo</span>
-                          <span class="file-name"><?= h($row['torneo_logo'] ?: 'Nessun file selezionato') ?></span>
-                          <input type="file" name="torneo_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
-                        </label>
-                      </div>
-                      <label>Inizio mese<input type="number" name="inizio_mese" min="1" max="12" value="<?= h($row['inizio_mese']) ?>"></label>
-                      <label>Inizio anno<input type="number" name="inizio_anno" min="2000" max="2100" value="<?= h($row['inizio_anno']) ?>"></label>
-                      <label>Fine mese<input type="number" name="fine_mese" min="1" max="12" value="<?= h($row['fine_mese']) ?>"></label>
-                      <label>Fine anno<input type="number" name="fine_anno" min="2000" max="2100" value="<?= h($row['fine_anno']) ?>"></label>
-                      <div class="actions" style="grid-column: 1/-1;">
-                        <button class="btn-primary" type="submit">Aggiorna</button>
-                      </div>
-                    </form>
-                  </details>
-                </td>
-              </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
+        <?php foreach ($albo as $row): ?>
+          <form method="POST" enctype="multipart/form-data" class="form-grid" style="margin-bottom:14px; border-bottom:1px solid #e5e8f0; padding-bottom:12px;">
+            <input type="hidden" name="azione" value="update">
+            <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
+            <label>Competizione<input type="text" name="competizione" value="<?= h($row['competizione']) ?>" required></label>
+            <label>Premio<input type="text" name="premio" value="<?= h($row['premio']) ?>"></label>
+            <label>Vincitrice<input type="text" name="vincitrice" value="<?= h($row['vincitrice']) ?>" required></label>
+            <div class="file-input">
+              <label class="file-label">
+                <span class="file-btn">Logo vincitrice</span>
+                <span class="file-name"><?= h($row['vincitrice_logo'] ?: 'Nessun file selezionato') ?></span>
+                <input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
+              </label>
+            </div>
+            <div class="file-input">
+              <label class="file-label">
+                <span class="file-btn">Logo torneo</span>
+                <span class="file-name"><?= h($row['torneo_logo'] ?: 'Nessun file selezionato') ?></span>
+                <input type="file" name="torneo_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
+              </label>
+            </div>
+            <label>Inizio mese<input type="number" name="inizio_mese" min="1" max="12" value="<?= h($row['inizio_mese']) ?>"></label>
+            <label>Inizio anno<input type="number" name="inizio_anno" min="2000" max="2100" value="<?= h($row['inizio_anno']) ?>"></label>
+            <label>Fine mese<input type="number" name="fine_mese" min="1" max="12" value="<?= h($row['fine_mese']) ?>"></label>
+            <label>Fine anno<input type="number" name="fine_anno" min="2000" max="2100" value="<?= h($row['fine_anno']) ?>"></label>
+            <div class="actions" style="grid-column: 1/-1;">
+              <button class="btn-primary" type="submit">Aggiorna</button>
+            </div>
+          </form>
+        <?php endforeach; ?>
+      <?php endif; ?>
+    </div>
+
+    <div class="admin-card-inline" id="panel-delete" style="display:none;">
+      <h3>Elimina</h3>
+      <?php if (empty($albo)): ?>
+        <p>Nessun record presente.</p>
+      <?php else: ?>
+        <form method="POST">
+          <input type="hidden" name="azione" value="delete">
+          <div class="form-grid">
+            <div>
+              <label>Seleziona ID da eliminare</label>
+              <select name="id" required>
+                <option value="">--</option>
+                <?php foreach ($albo as $row): ?>
+                  <option value="<?= (int)$row['id'] ?>">ID #<?= (int)$row['id'] ?> - <?= h($row['competizione']) ?> (<?= h($row['premio']) ?>)</option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn-danger" type="submit" onclick="return confirm('Eliminare questa voce?')">Elimina</button>
+          </div>
+        </form>
       <?php endif; ?>
     </div>
   </div>
@@ -398,6 +342,14 @@ if (!$conn || $conn->connect_error) {
   <div id="footer-container"></div>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
+      const panels = ["panel-create", "panel-update", "panel-delete"];
+      window.togglePanel = (id) => {
+        panels.forEach(pid => {
+          const el = document.getElementById(pid);
+          if (el) el.style.display = (pid === id) ? "block" : "none";
+        });
+      };
+
       fetch("/includi/footer.html")
         .then(r => r.text())
         .then(html => {
