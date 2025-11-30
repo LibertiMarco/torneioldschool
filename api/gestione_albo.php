@@ -285,12 +285,12 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     .form-grid label { font-weight: 700; color: #15293e; font-size: 0.95rem; display: flex; flex-direction: column; gap: 6px; }
     .form-grid input, .form-grid select { width: 100%; padding: 10px 12px; border: 1px solid #d7dce5; border-radius: 10px; background: #fff; }
     .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-    .btn-primary { background: linear-gradient(135deg, #15293e, #1f3f63); color: #fff; border: none; border-radius: 10px; padding: 11px 16px; cursor: pointer; font-weight: 800; box-shadow: 0 10px 22px rgba(21,41,62,0.22); transition: transform .15s, box-shadow .15s; }
+    .btn-primary { background: linear-gradient(135deg, #15293e, #1f3f63); color: #fff; border: 1px solid #15293e; border-radius: 10px; padding: 11px 16px; cursor: pointer; font-weight: 800; box-shadow: 0 10px 22px rgba(21,41,62,0.22); transition: transform .15s, box-shadow .15s; }
     .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 14px 26px rgba(21,41,62,0.28); }
-    .btn-ghost { background: #f8f9fc; color: #1c2a3a; border: 1px solid #d7dce5; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: 700; }
-    .btn-danger { background: linear-gradient(135deg, #d72638, #b1172a); color: #fff; border: none; border-radius: 10px; padding: 11px 16px; cursor: pointer; font-weight: 800; box-shadow: 0 10px 22px rgba(183,23,42,0.25); transition: transform .15s, box-shadow .15s; }
+    .btn-ghost { background: #f8f9fc; color: #1c2a3a; border: 1px solid #15293e; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: 700; }
+    .btn-danger { background: linear-gradient(135deg, #d72638, #b1172a); color: #fff; border: 1px solid #15293e; border-radius: 10px; padding: 11px 16px; cursor: pointer; font-weight: 800; box-shadow: 0 10px 22px rgba(183,23,42,0.25); transition: transform .15s, box-shadow .15s; }
     .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(183,23,42,0.35); }
-    .btn-warning { background: linear-gradient(135deg, #f59e0b, #f97316); color: #fff; border: none; border-radius: 10px; padding: 11px 16px; cursor: pointer; font-weight: 800; box-shadow: 0 10px 22px rgba(249,115,22,0.25); }
+    .btn-warning { background: linear-gradient(135deg, #f59e0b, #f97316); color: #fff; border: 1px solid #15293e; border-radius: 10px; padding: 11px 16px; cursor: pointer; font-weight: 800; box-shadow: 0 10px 22px rgba(249,115,22,0.25); }
     .file-input { display: block; }
     .file-label { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
     .file-label:hover { border-color: #15293e; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
@@ -306,8 +306,8 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     .sort-list { list-style: none; padding: 0; margin: 0 0 12px; display: flex; flex-direction: column; gap: 10px; }
     .sort-list li { background: #f8fafc; border: 1px solid #e5eaf0; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 6px 16px rgba(0,0,0,0.05); }
     .sort-actions { margin-left: auto; display: flex; gap: 6px; }
-    .sort-btn { border: 1px solid #d5dbe4; background: #fff; color: #1c2a3a; border-radius: 8px; padding: 6px 10px; font-weight: 700; cursor: pointer; }
-    .sort-btn:hover { border-color: #1f3f63; color: #1f3f63; }
+    .sort-btn { border: 1px solid #15293e; background: #fff; color: #1c2a3a; border-radius: 8px; padding: 6px 10px; font-weight: 700; cursor: pointer; }
+    .sort-btn:hover { border-color: #15293e; color: #15293e; }
     .confirm-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); backdrop-filter: blur(2px); z-index: 9999; }
     .confirm-modal.active { display: flex; }
     .confirm-card { background: #fff; border-radius: 14px; padding: 22px; width: min(420px, 90vw); box-shadow: 0 18px 34px rgba(0,0,0,0.15); border: 1px solid #e5eaf0; }
