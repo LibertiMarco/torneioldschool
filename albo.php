@@ -17,20 +17,33 @@ $pageSeo = [
   <?php render_seo_tags($pageSeo); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
   <style>
-    .albo-page { max-width: 1100px; margin: 0 auto; padding: 40px 16px 80px; display: flex; flex-direction: column; gap: 20px; }
-    .albo-filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+    .albo-page { max-width: 1100px; margin: 0 auto; padding: 88px 16px 90px; display: flex; flex-direction: column; gap: 20px; }
+    .albo-page h1 { margin: 0 0 8px; }
+    .albo-filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0 12px; }
     .albo-filters label { font-weight: 700; color: #15293e; }
-    .albo-select { padding: 10px 12px; border: 1px solid #d7dce5; border-radius: 10px; min-width: 220px; background: #fff; }
+    .albo-select {
+      padding: 12px 14px;
+      border: 1px solid #cfd6e3;
+      border-radius: 999px;
+      min-width: 240px;
+      background: linear-gradient(145deg, #f7f9fc, #eef2f7);
+      font-weight: 700;
+      color: #15293e;
+      box-shadow: 0 8px 18px rgba(21,41,62,0.08);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .albo-select:hover { transform: translateY(-1px); border-color: #9fb2d4; box-shadow: 0 12px 24px rgba(21,41,62,0.12); }
+    .albo-select:focus { outline: none; border-color: #4f6fbf; box-shadow: 0 0 0 3px rgba(79,111,191,0.22); }
     .albo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
     .albo-card { background: #fff; border: 1px solid #e5e9f2; border-radius: 14px; padding: 16px; box-shadow: 0 10px 28px rgba(21,41,62,0.08); }
     .albo-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
     .albo-pill { background: #eef2f7; padding: 6px 10px; border-radius: 999px; font-weight: 800; color: #15293e; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.85rem; }
-    .albo-logo { width: 72px; height: 72px; border-radius: 14px; object-fit: cover; border: 1px solid #e5e8f0; background: #f5f7fb; }
-    .albo-title { font-size: 1.25rem; font-weight: 800; color: #15293e; margin: 0 0 6px; }
+    .albo-logo { width: 88px; height: 88px; border-radius: 16px; object-fit: cover; border: 1px solid #e5e8f0; background: #f5f7fb; }
+    .albo-title { font-size: 1.28rem; font-weight: 800; color: #15293e; margin: 0 0 6px; }
     .albo-meta { color: #54657a; font-weight: 600; font-size: 0.95rem; margin-bottom: 12px; }
     .albo-premi { display: flex; flex-direction: column; gap: 10px; }
     .albo-premio { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #e5e8f0; border-radius: 12px; background: #f8fafc; }
-    .albo-premio img { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; background: #fff; border: 1px solid #dfe4ed; }
+    .albo-premio img { width: 64px; height: 64px; border-radius: 14px; object-fit: cover; background: #fff; border: 1px solid #dfe4ed; }
     .albo-premio .tit { font-weight: 800; color: #15293e; }
     .albo-premio .vic { font-weight: 700; color: #0f172a; }
   </style>
