@@ -174,34 +174,43 @@ if (!$conn || $conn->connect_error) {
   <title>Gestione Albo d'oro (versione 2)</title>
   <link rel="stylesheet" href="/style.min.css?v=20251204">
   <style>
-    .admin-wrapper { max-width: 1100px; margin: 0 auto; padding: 30px 16px 60px; }
-    .admin-card-inline { background: #fff; border: 1px solid #e5e8f0; border-radius: 12px; padding: 18px; box-shadow: 0 6px 16px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    body { display: flex; flex-direction: column; min-height: 100vh; background: linear-gradient(180deg, #f6f8fb 0%, #eef3f9 100%); }
+    main.admin-wrapper { max-width: 1100px; margin: 0 auto; padding: 36px 16px 70px; flex: 1 0 auto; }
+    .admin-card-inline { background: #fff; border: 1px solid #e5e8f0; border-radius: 14px; padding: 18px; box-shadow: 0 12px 30px rgba(0,0,0,0.06); margin-bottom: 20px; }
+    .panel-card { background: #fff; border: 1px solid #e5eaf0; border-radius: 14px; padding: 18px; box-shadow: 0 12px 30px rgba(0,0,0,0.06); margin-bottom: 20px; }
+    .tab-buttons { display: flex; gap: 12px; margin: 10px 0 18px; flex-wrap: wrap; }
+    .tab-buttons button { padding: 12px 16px; border: 1px solid #cbd5e1; background: #ecf1f7; cursor: pointer; border-radius: 10px; font-weight: 700; color: #1c2a3a; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: all .2s; }
+    .tab-buttons button:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+    .tab-buttons button.active { background: linear-gradient(135deg, #15293e, #1f3f63); color: #fff; border-color: #15293e; box-shadow: 0 8px 20px rgba(21,41,62,0.25); }
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-    .form-grid label { font-weight: 700; color: #15293e; font-size: 0.95rem; }
-    .form-grid input, .form-grid select { width: 100%; padding: 8px 10px; border: 1px solid #d7dce5; border-radius: 8px; }
+    .form-grid label { font-weight: 700; color: #15293e; font-size: 0.95rem; display: flex; flex-direction: column; gap: 6px; }
+    .form-grid input, .form-grid select { width: 100%; padding: 10px 12px; border: 1px solid #d7dce5; border-radius: 10px; background: #fff; }
     .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-    .btn-primary { background: #15293e; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 700; }
-    .btn-ghost { background: #eef2f7; color: #15293e; border: 1px solid #d7dce5; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
-    .btn-danger { background: #dc2626; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 700; }
-    .btn-warning { background: #f59e0b; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 700; }
+    .btn-primary { background: linear-gradient(135deg, #15293e, #1f3f63); color: #fff; border: none; border-radius: 10px; padding: 11px 16px; cursor: pointer; font-weight: 800; box-shadow: 0 10px 22px rgba(21,41,62,0.22); transition: transform .15s, box-shadow .15s; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 14px 26px rgba(21,41,62,0.28); }
+    .btn-ghost { background: #f8f9fc; color: #1c2a3a; border: 1px solid #d7dce5; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-weight: 700; }
+    .btn-danger { background: linear-gradient(135deg, #d72638, #b1172a); color: #fff; border: none; border-radius: 10px; padding: 11px 16px; cursor: pointer; font-weight: 800; box-shadow: 0 10px 22px rgba(183,23,42,0.25); transition: transform .15s, box-shadow .15s; }
+    .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(183,23,42,0.35); }
+    .btn-warning { background: linear-gradient(135deg, #f59e0b, #f97316); color: #fff; border: none; border-radius: 10px; padding: 11px 16px; cursor: pointer; font-weight: 800; box-shadow: 0 10px 22px rgba(249,115,22,0.25); }
     .file-input { display: block; }
-    .file-label { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fafc; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
+    .file-label { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
     .file-label:hover { border-color: #15293e; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-    .file-btn { background: #15293e; color: #fff; padding: 8px 12px; border-radius: 8px; font-weight: 700; font-size: 0.95rem; }
+    .file-btn { background: #15293e; color: #fff; padding: 8px 12px; border-radius: 9px; font-weight: 700; font-size: 0.95rem; }
     .file-name { color: #475569; font-weight: 600; font-size: 0.95rem; }
     .file-input input[type="file"] { display: none; }
-    .pill { display: inline-block; background: #eef2f7; color: #15293e; padding: 4px 8px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }
-    .msg { padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; }
-    .msg.ok { background: #e7f6ec; color: #14532d; border: 1px solid #bbf7d0; }
-    .msg.err { background: #fef2f2; color: #991b1b; border: 1px solid #fecdd3; }
+    .msg { padding: 10px 12px; border-radius: 10px; margin-bottom: 10px; font-weight: 700; }
+    .msg.ok { background: #e8f6ef; color: #065f46; border: 1px solid #34d399; }
+    .msg.err { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
+    .hidden { display: none !important; }
     @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body class="admin-page">
   <?php include __DIR__ . '/../includi/header.php'; ?>
 
-  <div class="admin-wrapper">
+  <main class="admin-wrapper">
     <h1>Gestione Albo d'oro</h1>
+    <p>Inserisci, modifica o elimina le voci dell'albo d'oro con lo stesso look dei pannelli blog.</p>
 
     <?php foreach ($messages as $m): ?>
       <div class="msg ok"><?= h($m) ?></div>
@@ -210,16 +219,13 @@ if (!$conn || $conn->connect_error) {
       <div class="msg err"><?= h($e) ?></div>
     <?php endforeach; ?>
 
-    <div class="admin-card-inline">
-      <h3>Azioni</h3>
-      <div class="actions">
-        <button class="btn-primary" type="button" onclick="togglePanel('panel-create')">Crea</button>
-        <button class="btn-warning" type="button" onclick="togglePanel('panel-update')">Modifica</button>
-        <button class="btn-danger" type="button" onclick="togglePanel('panel-delete')">Elimina</button>
-      </div>
+    <div class="tab-buttons">
+      <button type="button" data-tab="panel-create" class="active">Crea</button>
+      <button type="button" data-tab="panel-update">Modifica</button>
+      <button type="button" data-tab="panel-delete">Elimina</button>
     </div>
 
-    <div class="admin-card-inline" id="panel-create" style="display:none;">
+    <div class="panel-card" id="panel-create">
       <h3>Nuova voce</h3>
       <form method="POST" enctype="multipart/form-data">
         <input type="hidden" name="azione" value="create">
@@ -275,7 +281,7 @@ if (!$conn || $conn->connect_error) {
       </form>
     </div>
 
-    <div class="admin-card-inline" id="panel-update" style="display:none;">
+    <div class="panel-card hidden" id="panel-update">
       <h3>Modifica</h3>
       <?php if (empty($albo)): ?>
         <p>Nessun record presente.</p>
@@ -313,7 +319,7 @@ if (!$conn || $conn->connect_error) {
       <?php endif; ?>
     </div>
 
-    <div class="admin-card-inline" id="panel-delete" style="display:none;">
+    <div class="panel-card hidden" id="panel-delete">
       <h3>Elimina</h3>
       <?php if (empty($albo)): ?>
         <p>Nessun record presente.</p>
@@ -337,18 +343,22 @@ if (!$conn || $conn->connect_error) {
         </form>
       <?php endif; ?>
     </div>
-  </div>
+  </main>
 
   <div id="footer-container"></div>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const panels = ["panel-create", "panel-update", "panel-delete"];
-      window.togglePanel = (id) => {
+      const tabButtons = document.querySelectorAll('.tab-buttons button');
+      function showPanel(id) {
         panels.forEach(pid => {
           const el = document.getElementById(pid);
-          if (el) el.style.display = (pid === id) ? "block" : "none";
+          if (el) el.classList.toggle('hidden', pid !== id);
         });
-      };
+        tabButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === id));
+      }
+      tabButtons.forEach(btn => btn.addEventListener('click', () => showPanel(btn.dataset.tab)));
+      showPanel('panel-create');
 
       fetch("/includi/footer.html")
         .then(r => r.text())
