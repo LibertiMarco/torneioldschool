@@ -1,12 +1,20 @@
 <?php
 session_start();
+require_once __DIR__ . '/includi/seo.php';
+$baseUrl = seo_base_url();
+$pageSeo = [
+  'title' => 'Albo d\'oro | Tornei Old School',
+  'description' => 'Tutte le vincitrici dei tornei Old School con premi e tabelloni stagione per stagione.',
+  'url' => $baseUrl . '/albo.php',
+  'canonical' => $baseUrl . '/albo.php',
+];
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Albo d'oro</title>
+  <?php render_seo_tags($pageSeo); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
   <style>
     .albo-page { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; display: flex; flex-direction: column; gap: 20px; }
