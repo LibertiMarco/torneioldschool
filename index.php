@@ -105,7 +105,7 @@ $localSchema = [
             <h2>Le vincitrici dei nostri tornei</h2>
             <p>Uno sguardo rapido a tutte le squadre che hanno conquistato i nostri trofei.</p>
           </div>
-          <a href="/tornei.php" class="hero-btn hero-btn--ghost hero-btn--small">Tutti i tornei</a>
+          <a href="/albo.php" class="hero-btn hero-btn--ghost hero-btn--small">Albo completo</a>
         </div>
 
         <div id="hallOfFameGrid" class="hof-grid">
@@ -254,36 +254,49 @@ function normalizePath(path) {
 }
 
 function renderHallCard(item) {
-    const torneoLogo = item.torneo_img || '/img/tornei/pallone.png';
-    const winnerLogo = item.logo_vincitrice || '/img/tornei/pallone.png';
+    const torneoLogo = item.torneo_logo || item.torneo_img || '/img/logo_old_school.png';
     const fileLink = normalizePath(item.filetorneo);
     const periodo = formatPeriodo(item.data_inizio, item.data_fine, item.anno);
+    const premi = Array.isArray(item.premi) ? item.premi : [];
+    const badge = (premi[0]?.premio) || 'Torneo';
+
+    const premiList = premi.map(p => {
+      const logo = p.logo_vincitrice || '/img/tornei/pallone.png';
+      const premioNome = p.premio || 'Premio';
+      const winner = p.vincitrice || '';
+      return `
+        <div class="hof-winner-row">
+          <div class="hof-logo hof-logo--small">
+            <img src="${logo}" alt="Logo ${winner}" onerror="this.src='/img/tornei/pallone.png';">
+          </div>
+          <div>
+            <p class="hof-label">${premioNome}</p>
+            <span class="hof-winner-name">${winner}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
 
     return `
       <article class="hof-card">
         <div class="hof-top">
-          <span class="hof-badge">${item.categoria || 'Torneo'}</span>
+          <span class="hof-badge">${badge}</span>
           <span class="hof-year">${item.anno || ''}</span>
         </div>
         <div class="hof-body">
           <div class="hof-tournament">
             <div class="hof-logo">
-              <img src="${torneoLogo}" alt="Logo ${item.torneo}" onerror="this.src='/img/tornei/pallone.png';">
+              <img src="${torneoLogo}" alt="Logo ${item.competizione}" onerror="this.src='/img/logo_old_school.png';">
             </div>
             <div>
               <p class="hof-label">Torneo</p>
-              <h3>${item.torneo}</h3>
+              <h3>${item.competizione || ''}</h3>
               <p class="hof-meta">${periodo}</p>
             </div>
           </div>
           <div class="hof-winner">
-            <p class="hof-label">Vincitrice</p>
-            <div class="hof-winner-row">
-              <div class="hof-logo hof-logo--small">
-                <img src="${winnerLogo}" alt="Logo ${item.vincitrice}" onerror="this.src='/img/tornei/pallone.png';">
-              </div>
-              <span class="hof-winner-name">${item.vincitrice}</span>
-            </div>
+            <p class="hof-label">Premi</p>
+            ${premiList}
           </div>
         </div>
         <div class="hof-actions">
@@ -303,7 +316,7 @@ async function loadHallOfFame() {
     try {
         const response = await fetch('/api/albo_doro.php');
         const payload = await response.json();
-        const data = Array.isArray(payload.data) ? payload.data : [];
+        const data = Array.isArray(payload.data) ? payload.data.slice(0, 3) : [];
 
         if (!data.length) {
             grid.innerHTML = '<p class="empty-state">Nessuna vincitrice registrata.</p>';

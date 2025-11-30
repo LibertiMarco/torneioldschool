@@ -111,16 +111,18 @@ function fetchAlboFromTornei(mysqli $conn): array {
         }
 
         $albo[] = [
-            'torneo' => $row['torneo'],
+            // Uniformiamo le chiavi con quelle usate dall'albo personalizzato
+            'competizione' => $row['torneo'],
+            'premio' => $row['categoria'],
             'categoria' => $row['categoria'],
             'stato' => $row['stato'],
-            'data_inizio' => $row['data_inizio'],
-            'data_fine' => $row['data_fine'],
+            'data_inizio' => $row['data_inizio'] ?: '',
+            'data_fine' => $row['data_fine'] ?: '',
             'anno' => $anno,
-            'filetorneo' => $row['filetorneo'],
-            'torneo_img' => $row['torneo_img'],
-            'vincitrice' => $row['vincitrice'],
-            'logo_vincitrice' => $row['logo_vincitrice'],
+            'filetorneo' => $row['filetorneo'] ?: '',
+            'torneo_logo' => $row['torneo_img'],
+            'vincitrice' => $row['vincitrice'] ?: '',
+            'logo_vincitrice' => $row['logo_vincitrice'] ?: '',
         ];
     }
 
@@ -135,14 +137,16 @@ if (empty($raw)) {
 // Raggruppa per competizione e raccoglie premi multipli
 $grouped = [];
 foreach ($raw as $item) {
-    $key = $item['competizione'];
+    $key = $item['competizione'] ?? ($item['torneo'] ?? 'Torneo');
+    $competizione = $item['competizione'] ?? ($item['torneo'] ?? 'Torneo');
     if (!isset($grouped[$key])) {
         $grouped[$key] = [
-            'competizione' => $item['competizione'],
+            'competizione' => $competizione,
             'torneo_logo' => $item['torneo_logo'] ?? $item['torneo_img'] ?? '/img/logo_old_school.png',
             'data_inizio' => $item['data_inizio'] ?? '',
             'data_fine' => $item['data_fine'] ?? '',
             'anno' => $item['anno'] ?? '',
+            'filetorneo' => $item['tabellone_url'] ?? $item['filetorneo'] ?? '',
             'premi' => [],
         ];
     }
