@@ -1,9 +1,5 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header("Location: /login.php");
-    exit;
-}
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -58,6 +54,7 @@ if (!isset($_SESSION['user_id'])) {
     function renderCard(item) {
       const periodo = formatPeriodo(item.data_inizio, item.data_fine, item.anno);
       const logoTorneo = item.torneo_logo || '/img/logo_old_school.png';
+      const nomeTorneo = item.competizione || 'Torneo';
       const premi = (item.premi || []).map(p => `
         <div class="albo-premio">
           <img src="${p.logo_vincitrice || '/img/tornei/pallone.png'}" alt="">
@@ -71,11 +68,11 @@ if (!isset($_SESSION['user_id'])) {
         <article class="albo-card">
           <div class="albo-header">
             <span class="albo-pill">${item.anno || ''}</span>
-            <img class="albo-logo" src="${logoTorneo}" alt="${item.competizione}" onerror="this.src='/img/logo_old_school.png'">
+            <img class="albo-logo" src="${logoTorneo}" alt="${nomeTorneo}" onerror="this.src='/img/logo_old_school.png'">
           </div>
           <div>
             <p class="albo-meta">Torneo</p>
-            <h3 class="albo-title">${item.competizione}</h3>
+            <h3 class="albo-title">${nomeTorneo}</h3>
             <p class="albo-meta">${periodo}</p>
           </div>
           <div class="albo-premi">

@@ -300,10 +300,9 @@ function renderHallCard(item) {
             ${premiList}
           </div>
         </div>
-        <div class="hof-actions">
-          <a href="/tornei.php" class="hero-btn hero-btn--ghost hero-btn--small">Scheda tornei</a>
-          ${fileLink ? `<a class="hof-link" href="${fileLink}" target="_blank" rel="noopener">Tabellone</a>` : ''}
-        </div>
+        ${fileLink ? `<div class="hof-actions">
+          <a class="hof-link" href="${fileLink}" target="_blank" rel="noopener">Tabellone</a>
+        </div>` : ''}
       </article>
     `;
 }
