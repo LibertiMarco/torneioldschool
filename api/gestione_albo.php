@@ -13,6 +13,8 @@ $albo = [];
 $competizioniList = [];
 $alboDelete = [];
 $orderColumnAvailable = false;
+$sortGroups = [];
+$defaultTorneoLogo = '/img/logo_old_school.png';
 
 function h($str) {
     return htmlspecialchars((string)$str, ENT_QUOTES, 'UTF-8');
@@ -88,7 +90,7 @@ if (!$conn || $conn->connect_error) {
         $orderColumnAvailable = ensureOrdinamentoColumn($conn, $errors);
     }
 
-    if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $competizione = trim($_POST['competizione'] ?? '');
         $premio = trim($_POST['premio'] ?? 'Vincente');
         $vincitrice = trim($_POST['vincitrice'] ?? '');
@@ -104,7 +106,7 @@ if (!$conn || $conn->connect_error) {
                     throw new Exception('Compila almeno competizione e vincitrice.');
                 }
                 $logo = handleUpload('vincitrice_logo_file', null);
-                $torneo_logo_path = handleUpload('torneo_logo_file', null) ?? '/img/logo_old_school.png';
+                $torneo_logo_path = $defaultTorneoLogo;
 
                 $stmt = $conn->prepare("INSERT INTO albo (competizione, premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url, inizio_mese, inizio_anno, fine_mese, fine_anno) VALUES (?,?,?,?,?,?,?,?,?,?)");
                 $tabellone_url = '';
@@ -142,7 +144,7 @@ if (!$conn || $conn->connect_error) {
                 $fetch->close();
 
                 $logo = handleUpload('vincitrice_logo_file', $currentLogo);
-                $torneo_logo_path = handleUpload('torneo_logo_file', $currentTorneoLogo ?? '/img/logo_old_school.png');
+                $torneo_logo_path = $currentTorneoLogo ?: $defaultTorneoLogo;
 
                 $im2 = $inizio_mese ?: null;
                 $ia2 = $inizio_anno ?: null;
@@ -177,17 +179,20 @@ if (!$conn || $conn->connect_error) {
                 if (!is_array($ordine) || empty($ordine)) {
                     throw new Exception('Nessun ordine ricevuto.');
                 }
-                $stmt = $conn->prepare("UPDATE albo SET ordinamento=? WHERE competizione=?");
+                $stmt = $conn->prepare("UPDATE albo SET ordinamento=? WHERE id=?");
                 if (!$stmt) {
                     throw new Exception('Impossibile salvare il nuovo ordine.');
                 }
-                $pos = 1;
-                foreach ($ordine as $comp) {
-                    $comp = trim((string)$comp);
-                    if ($comp === '') continue;
-                    $stmt->bind_param("is", $pos, $comp);
-                    $stmt->execute();
-                    $pos++;
+                foreach ($ordine as $comp => $ids) {
+                    if (!is_array($ids)) continue;
+                    $pos = 1;
+                    foreach ($ids as $idOrd) {
+                        $idOrd = (int)$idOrd;
+                        if ($idOrd <= 0) continue;
+                        $stmt->bind_param("ii", $pos, $idOrd);
+                        $stmt->execute();
+                        $pos++;
+                    }
                 }
                 $stmt->close();
                 $messages[] = "Ordine aggiornato correttamente.";
@@ -224,6 +229,28 @@ if (!$conn || $conn->connect_error) {
         usort($competizioniList, function($a, $b) {
             return ($a['ordinamento'] ?? PHP_INT_MAX) <=> ($b['ordinamento'] ?? PHP_INT_MAX);
         });
+
+        // Gruppi per ordinamento interno (competizione -> premi)
+        $sortGroups = [];
+        foreach ($albo as $row) {
+            $comp = $row['competizione'] ?? '';
+            if ($comp === '') continue;
+            if (!isset($sortGroups[$comp])) {
+                $sortGroups[$comp] = [];
+            }
+            $sortGroups[$comp][] = [
+                'id' => (int)$row['id'],
+                'premio' => $row['premio'] ?? '',
+                'vincitrice' => $row['vincitrice'] ?? '',
+                'ordinamento' => isset($row['ordinamento']) ? (int)$row['ordinamento'] : 999999
+            ];
+        }
+        foreach ($sortGroups as &$list) {
+            usort($list, function($a, $b) {
+                return ($a['ordinamento'] ?? PHP_INT_MAX) <=> ($b['ordinamento'] ?? PHP_INT_MAX);
+            });
+        }
+        unset($list);
 
         // Lista per elimina (dal più recente)
         $alboDelete = $albo;
@@ -269,6 +296,8 @@ if (!$conn || $conn->connect_error) {
     .msg.ok { background: #e8f6ef; color: #065f46; border: 1px solid #34d399; }
     .msg.err { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
     .hidden { display: none !important; }
+    .sort-group { margin-bottom: 18px; }
+    .sort-group h4 { margin: 0 0 8px; color: #15293e; }
     .sort-list { list-style: none; padding: 0; margin: 0 0 12px; display: flex; flex-direction: column; gap: 10px; }
     .sort-list li { background: #f8fafc; border: 1px solid #e5eaf0; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; cursor: grab; box-shadow: 0 6px 16px rgba(0,0,0,0.05); }
     .sort-list li.dragging { opacity: 0.7; }
@@ -320,14 +349,6 @@ if (!$conn || $conn->connect_error) {
               <span class="file-btn">Scegli file</span>
               <span class="file-name">Nessun file selezionato</span>
               <input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
-            </label>
-          </div>
-          <div class="file-input">
-            <label>Logo torneo (upload)</label>
-            <label class="file-label">
-              <span class="file-btn">Scegli file</span>
-              <span class="file-name">Nessun file selezionato</span>
-              <input type="file" name="torneo_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
             </label>
           </div>
           <div>
@@ -386,13 +407,6 @@ if (!$conn || $conn->connect_error) {
               <input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp" onchange="document.getElementById('upd_vincitrice_logo_name').textContent = this.files?.[0]?.name || (this.dataset.current || 'Nessun file selezionato');" data-current="">
             </label>
           </div>
-          <div class="file-input">
-            <label class="file-label">
-              <span class="file-btn">Logo torneo</span>
-              <span class="file-name" id="upd_torneo_logo_name">Nessun file selezionato</span>
-              <input type="file" name="torneo_logo_file" accept="image/png,image/jpeg,image/webp" onchange="document.getElementById('upd_torneo_logo_name').textContent = this.files?.[0]?.name || (this.dataset.current || 'Nessun file selezionato');" data-current="">
-            </label>
-          </div>
           <label>Inizio mese<input type="number" name="inizio_mese" id="upd_inizio_mese" min="1" max="12"></label>
           <label>Inizio anno<input type="number" name="inizio_anno" id="upd_inizio_anno" min="2000" max="2100"></label>
           <label>Fine mese<input type="number" name="fine_mese" id="upd_fine_mese" min="1" max="12"></label>
@@ -411,19 +425,24 @@ if (!$conn || $conn->connect_error) {
       <?php elseif (empty($competizioniList)): ?>
         <p>Nessuna competizione da ordinare.</p>
       <?php else: ?>
-        <p>Trascina per riordinare le competizioni. Il nuovo ordine verrà usato nella home e nella pagina albo.</p>
+        <p>Trascina per riordinare le competizioni (premi) all'interno di ogni torneo. Il nuovo ordine verrà usato nella home e nella pagina albo.</p>
         <form method="POST" id="formSort">
           <input type="hidden" name="azione" value="sort">
           <input type="hidden" name="ordine" id="ordineInput">
         </form>
-        <ul class="sort-list" id="sortList">
-          <?php foreach ($competizioniList as $comp): ?>
-            <li draggable="true" data-comp="<?= h($comp['competizione']) ?>">
-              <span class="drag-handle">&#9776;</span>
-              <span><?= h($comp['competizione']) ?></span>
-            </li>
-          <?php endforeach; ?>
-        </ul>
+        <?php foreach ($sortGroups as $comp => $items): ?>
+          <div class="sort-group" data-sort-comp="<?= h($comp) ?>">
+            <h4><?= h($comp) ?></h4>
+            <ul class="sort-list" data-comp="<?= h($comp) ?>">
+              <?php foreach ($items as $item): ?>
+                <li draggable="true" data-id="<?= (int)$item['id'] ?>">
+                  <span class="drag-handle">&#9776;</span>
+                  <span><?= h($item['premio'] ?: 'Premio') ?><?= $item['vincitrice'] ? ' - ' . h($item['vincitrice']) : '' ?></span>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+        <?php endforeach; ?>
         <div class="actions">
           <button class="btn-primary" type="button" id="btnSaveOrder">Salva ordine</button>
         </div>
@@ -486,9 +505,7 @@ if (!$conn || $conn->connect_error) {
         fine_mese: document.getElementById('upd_fine_mese'),
         fine_anno: document.getElementById('upd_fine_anno'),
         vincitrice_logo: document.querySelector('input[name="vincitrice_logo_file"]'),
-        torneo_logo: document.querySelector('input[name="torneo_logo_file"]'),
         vincitrice_logo_name: document.getElementById('upd_vincitrice_logo_name'),
-        torneo_logo_name: document.getElementById('upd_torneo_logo_name'),
       };
 
       function populateCompetizioni() {
@@ -521,11 +538,6 @@ if (!$conn || $conn->connect_error) {
           fields.vincitrice_logo.value = '';
         }
         if (fields.vincitrice_logo_name) fields.vincitrice_logo_name.textContent = rec.vincitrice_logo || 'Nessun file selezionato';
-        if (fields.torneo_logo) {
-          fields.torneo_logo.dataset.current = rec.torneo_logo || 'Nessun file selezionato';
-          fields.torneo_logo.value = '';
-        }
-        if (fields.torneo_logo_name) fields.torneo_logo_name.textContent = rec.torneo_logo || 'Nessun file selezionato';
       }
 
       selCompetizione?.addEventListener('change', () => {
@@ -537,40 +549,49 @@ if (!$conn || $conn->connect_error) {
 
       populateCompetizioni();
 
-      // Drag & drop ordine competizioni
-      const sortList = document.getElementById('sortList');
+      // Drag & drop ordine competizioni (premi) per torneo
+      const sortLists = document.querySelectorAll('.sort-list');
       const ordineInput = document.getElementById('ordineInput');
       const btnSaveOrder = document.getElementById('btnSaveOrder');
       let draggedEl = null;
 
       function serializeOrder() {
-        return Array.from(sortList?.querySelectorAll('li') || []).map(li => li.dataset.comp);
+        const result = {};
+        sortLists.forEach(list => {
+          const comp = list.dataset.comp || '';
+          if (!comp) return;
+          result[comp] = Array.from(list.querySelectorAll('li')).map(li => li.dataset.id);
+        });
+        return result;
       }
 
-      sortList?.addEventListener('dragstart', (e) => {
-        const li = e.target.closest('li');
-        if (!li) return;
-        draggedEl = li;
-        li.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
+      sortLists.forEach(list => {
+        list.addEventListener('dragstart', (e) => {
+          const li = e.target.closest('li');
+          if (!li) return;
+          draggedEl = li;
+          li.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        list.addEventListener('dragend', () => {
+          if (draggedEl) draggedEl.classList.remove('dragging');
+          draggedEl = null;
+        });
+        list.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          const li = e.target.closest('li');
+          if (!li || li === draggedEl) return;
+          const rect = li.getBoundingClientRect();
+          const after = (e.clientY - rect.top) > rect.height / 2;
+          list.insertBefore(draggedEl, after ? li.nextSibling : li);
+        });
+        list.addEventListener('drop', (e) => e.preventDefault());
       });
-      sortList?.addEventListener('dragend', (e) => {
-        if (draggedEl) draggedEl.classList.remove('dragging');
-        draggedEl = null;
-      });
-      sortList?.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const li = e.target.closest('li');
-        if (!li || li === draggedEl) return;
-        const rect = li.getBoundingClientRect();
-        const after = (e.clientY - rect.top) > rect.height / 2;
-        sortList.insertBefore(draggedEl, after ? li.nextSibling : li);
-      });
-      sortList?.addEventListener('drop', (e) => e.preventDefault());
 
       btnSaveOrder?.addEventListener('click', () => {
-        if (!sortList || !ordineInput) return;
+        if (!ordineInput) return;
         const order = serializeOrder();
+        if (!Object.keys(order).length) return;
         ordineInput.value = JSON.stringify(order);
         document.getElementById('formSort')?.submit();
       });
