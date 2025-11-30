@@ -11,8 +11,9 @@ function tos_load_env(): array
     }
 
     $envFile = __DIR__ . '/env.local.php';
-    if (is_readable($envFile)) {
-        $data = include $envFile;
+    if (file_exists($envFile)) {
+        // In alcuni ambienti Windows is_readable() può restituire false anche se il file è accessibile
+        $data = @include $envFile;
         if (is_array($data)) {
             foreach ($data as $key => $value) {
                 if ($key === '' || $value === null) {
@@ -25,6 +26,8 @@ function tos_load_env(): array
                     $_SERVER[$key] = $stringValue;
                 }
             }
+        } else {
+            error_log('env_loader: env.local.php non restituisce un array, variabili non caricate.');
         }
     }
 
