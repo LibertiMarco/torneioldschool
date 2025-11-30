@@ -301,12 +301,13 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     .msg.ok { background: #e8f6ef; color: #065f46; border: 1px solid #34d399; }
     .msg.err { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
     .hidden { display: none !important; }
-    .sort-group { margin-bottom: 18px; }
-    .sort-group h4 { margin: 0 0 8px; color: #15293e; }
+    .sort-controls { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+    .sort-controls select { padding: 10px 12px; border: 1px solid #cfd6e3; border-radius: 10px; background: #fff; font-weight: 700; }
     .sort-list { list-style: none; padding: 0; margin: 0 0 12px; display: flex; flex-direction: column; gap: 10px; }
-    .sort-list li { background: #f8fafc; border: 1px solid #e5eaf0; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; cursor: grab; box-shadow: 0 6px 16px rgba(0,0,0,0.05); }
-    .sort-list li.dragging { opacity: 0.7; }
-    .drag-handle { font-size: 1rem; color: #1f3f63; }
+    .sort-list li { background: #f8fafc; border: 1px solid #e5eaf0; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 6px 16px rgba(0,0,0,0.05); }
+    .sort-actions { margin-left: auto; display: flex; gap: 6px; }
+    .sort-btn { border: 1px solid #d5dbe4; background: #fff; color: #1c2a3a; border-radius: 8px; padding: 6px 10px; font-weight: 700; cursor: pointer; }
+    .sort-btn:hover { border-color: #1f3f63; color: #1f3f63; }
     .confirm-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); backdrop-filter: blur(2px); z-index: 9999; }
     .confirm-modal.active { display: flex; }
     .confirm-card { background: #fff; border-radius: 14px; padding: 22px; width: min(420px, 90vw); box-shadow: 0 18px 34px rgba(0,0,0,0.15); border: 1px solid #e5eaf0; }
@@ -437,24 +438,21 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php elseif (empty($competizioniList)): ?>
         <p>Nessuna competizione da ordinare.</p>
       <?php else: ?>
-        <p>Trascina per riordinare le competizioni (premi) all'interno di ogni torneo. Il nuovo ordine verrà usato nella home e nella pagina albo.</p>
+        <p>Scegli il torneo, poi riordina i premi/competizioni al suo interno (mobile-friendly: usa i pulsanti su/giù).</p>
         <form method="POST" id="formSort">
           <input type="hidden" name="azione" value="sort">
           <input type="hidden" name="ordine" id="ordineInput">
         </form>
-        <?php foreach ($sortGroups as $comp => $items): ?>
-          <div class="sort-group" data-sort-comp="<?= h($comp) ?>">
-            <h4><?= h($comp) ?></h4>
-            <ul class="sort-list" data-comp="<?= h($comp) ?>">
-              <?php foreach ($items as $item): ?>
-                <li draggable="true" data-id="<?= (int)$item['id'] ?>">
-                  <span class="drag-handle">&#9776;</span>
-                  <span><?= h($item['premio'] ?: 'Premio') ?><?= $item['vincitrice'] ? ' - ' . h($item['vincitrice']) : '' ?></span>
-                </li>
-              <?php endforeach; ?>
-            </ul>
-          </div>
-        <?php endforeach; ?>
+        <div class="sort-controls">
+          <label for="sortSelectComp">Torneo</label>
+          <select id="sortSelectComp">
+            <option value="">-- scegli torneo --</option>
+            <?php foreach (array_keys($sortGroups) as $comp): ?>
+              <option value="<?= h($comp) ?>"><?= h($comp) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <ul class="sort-list" id="sortList"></ul>
         <div class="actions">
           <button class="btn-primary" type="button" id="btnSaveOrder">Salva ordine</button>
         </div>
@@ -507,6 +505,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
       const selCompetizione = document.getElementById('selCompetizione');
       const selRecord = document.getElementById('selRecord');
       const formUpd = document.getElementById('formUpdate');
+      const normComp = (v) => (v || '').trim();
       const fields = {
         id: document.getElementById('upd_id'),
         competizione: document.getElementById('upd_competizione'),
@@ -522,14 +521,15 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
       function populateCompetizioni() {
         if (!selCompetizione) return;
-        const comps = Array.from(new Set(alboData.map(r => r.competizione).filter(Boolean))).sort();
+        const comps = Array.from(new Set(alboData.map(r => normComp(r.competizione)).filter(Boolean))).sort();
         selCompetizione.innerHTML = '<option value="">-- scegli torneo --</option>' +
           comps.map(c => `<option value="${c}">${c}</option>`).join('');
       }
 
       function populatePremi(comp) {
         if (!selRecord) return;
-        const filtered = alboData.filter(r => r.competizione === comp);
+        const compNorm = normComp(comp);
+        const filtered = alboData.filter(r => normComp(r.competizione) === compNorm);
         selRecord.innerHTML = '<option value="">-- scegli premio --</option>' +
           filtered.map(r => `<option value="${r.id}">${r.premio || 'Premio'}</option>`).join('');
       }
@@ -538,13 +538,13 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         const rec = alboData.find(r => Number(r.id) === Number(id));
         if (!rec || !formUpd) return;
         fields.id.value = rec.id || '';
-        fields.competizione.value = rec.competizione || '';
-        fields.premio.value = rec.premio || '';
-        fields.vincitrice.value = rec.vincitrice || '';
-        fields.inizio_mese.value = rec.inizio_mese || '';
-        fields.inizio_anno.value = rec.inizio_anno || '';
-        fields.fine_mese.value = rec.fine_mese || '';
-        fields.fine_anno.value = rec.fine_anno || '';
+          fields.competizione.value = rec.competizione || '';
+          fields.premio.value = rec.premio || '';
+          fields.vincitrice.value = rec.vincitrice || '';
+          fields.inizio_mese.value = rec.inizio_mese ?? '';
+          fields.inizio_anno.value = rec.inizio_anno ?? '';
+          fields.fine_mese.value = rec.fine_mese ?? '';
+          fields.fine_anno.value = rec.fine_anno ?? '';
         if (fields.vincitrice_logo) {
           fields.vincitrice_logo.dataset.current = rec.vincitrice_logo || 'Nessun file selezionato';
           fields.vincitrice_logo.value = '';
@@ -561,52 +561,74 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
       populateCompetizioni();
 
-      // Drag & drop ordine competizioni (premi) per torneo
-      const sortLists = document.querySelectorAll('.sort-list');
+      // Ordine competizioni per torneo (mobile friendly)
+      const sortData = <?= json_encode($sortGroups, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+      const sortList = document.getElementById('sortList');
+      const sortSelectComp = document.getElementById('sortSelectComp');
       const ordineInput = document.getElementById('ordineInput');
       const btnSaveOrder = document.getElementById('btnSaveOrder');
-      let draggedEl = null;
 
-      function serializeOrder() {
-        const result = {};
-        sortLists.forEach(list => {
-          const comp = list.dataset.comp || '';
-          if (!comp) return;
-          result[comp] = Array.from(list.querySelectorAll('li')).map(li => li.dataset.id);
+      function renderSortList(comp) {
+        if (!sortList) return;
+        sortList.innerHTML = '';
+        const items = sortData[comp] || [];
+        items.forEach((item, idx) => {
+          const li = document.createElement('li');
+          li.dataset.id = item.id;
+          const label = document.createElement('span');
+          label.textContent = `${item.premio || 'Premio'}${item.vincitrice ? ' - ' + item.vincitrice : ''}`;
+          const actions = document.createElement('div');
+          actions.className = 'sort-actions';
+          const btnUp = document.createElement('button');
+          btnUp.type = 'button';
+          btnUp.className = 'sort-btn';
+          btnUp.textContent = '↑';
+          btnUp.addEventListener('click', () => moveItem(comp, idx, -1));
+          const btnDown = document.createElement('button');
+          btnDown.type = 'button';
+          btnDown.className = 'sort-btn';
+          btnDown.textContent = '↓';
+          btnDown.addEventListener('click', () => moveItem(comp, idx, 1));
+          actions.appendChild(btnUp);
+          actions.appendChild(btnDown);
+          li.appendChild(label);
+          li.appendChild(actions);
+          sortList.appendChild(li);
         });
-        return result;
       }
 
-      sortLists.forEach(list => {
-        list.addEventListener('dragstart', (e) => {
-          const li = e.target.closest('li');
-          if (!li) return;
-          draggedEl = li;
-          li.classList.add('dragging');
-          e.dataTransfer.effectAllowed = 'move';
-        });
-        list.addEventListener('dragend', () => {
-          if (draggedEl) draggedEl.classList.remove('dragging');
-          draggedEl = null;
-        });
-        list.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          const li = e.target.closest('li');
-          if (!li || li === draggedEl) return;
-          const rect = li.getBoundingClientRect();
-          const after = (e.clientY - rect.top) > rect.height / 2;
-          list.insertBefore(draggedEl, after ? li.nextSibling : li);
-        });
-        list.addEventListener('drop', (e) => e.preventDefault());
-      });
+      function moveItem(comp, index, delta) {
+        const arr = sortData[comp];
+        if (!arr) return;
+        const newIndex = index + delta;
+        if (newIndex < 0 || newIndex >= arr.length) return;
+        const [item] = arr.splice(index, 1);
+        arr.splice(newIndex, 0, item);
+        renderSortList(comp);
+      }
 
       btnSaveOrder?.addEventListener('click', () => {
-        if (!ordineInput) return;
-        const order = serializeOrder();
-        if (!Object.keys(order).length) return;
+        if (!ordineInput || !sortSelectComp) return;
+        const order = sortData;
         ordineInput.value = JSON.stringify(order);
         document.getElementById('formSort')?.submit();
       });
+
+      sortSelectComp?.addEventListener('change', () => {
+        const comp = sortSelectComp.value;
+        if (!comp) {
+          sortList.innerHTML = '';
+          return;
+        }
+        renderSortList(comp);
+      });
+      // Se c'è un torneo preselezionato lo renderizziamo
+      if (sortSelectComp && sortSelectComp.value) {
+        renderSortList(sortSelectComp.value);
+      } else if (sortSelectComp && sortSelectComp.options.length > 1) {
+        sortSelectComp.selectedIndex = 1;
+        renderSortList(sortSelectComp.value);
+      }
 
       // Modale conferma eliminazione
       const formDelete = document.getElementById('formDelete');
