@@ -17,17 +17,20 @@ $pageSeo = [
   <?php render_seo_tags($pageSeo); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
   <style>
-    .albo-page { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; display: flex; flex-direction: column; gap: 20px; }
+    .albo-page { max-width: 1100px; margin: 0 auto; padding: 40px 16px 80px; display: flex; flex-direction: column; gap: 20px; }
+    .albo-filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+    .albo-filters label { font-weight: 700; color: #15293e; }
+    .albo-select { padding: 10px 12px; border: 1px solid #d7dce5; border-radius: 10px; min-width: 220px; background: #fff; }
     .albo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
     .albo-card { background: #fff; border: 1px solid #e5e9f2; border-radius: 14px; padding: 16px; box-shadow: 0 10px 28px rgba(21,41,62,0.08); }
     .albo-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
     .albo-pill { background: #eef2f7; padding: 6px 10px; border-radius: 999px; font-weight: 800; color: #15293e; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.85rem; }
-    .albo-logo { width: 50px; height: 50px; border-radius: 12px; object-fit: cover; border: 1px solid #e5e8f0; background: #f5f7fb; }
-    .albo-title { font-size: 1.2rem; font-weight: 800; color: #15293e; margin: 0 0 4px; }
-    .albo-meta { color: #54657a; font-weight: 600; font-size: 0.95rem; margin-bottom: 10px; }
-    .albo-premi { display: flex; flex-direction: column; gap: 8px; }
-    .albo-premio { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #e5e8f0; border-radius: 10px; background: #f8fafc; }
-    .albo-premio img { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; background: #fff; border: 1px solid #dfe4ed; }
+    .albo-logo { width: 72px; height: 72px; border-radius: 14px; object-fit: cover; border: 1px solid #e5e8f0; background: #f5f7fb; }
+    .albo-title { font-size: 1.25rem; font-weight: 800; color: #15293e; margin: 0 0 6px; }
+    .albo-meta { color: #54657a; font-weight: 600; font-size: 0.95rem; margin-bottom: 12px; }
+    .albo-premi { display: flex; flex-direction: column; gap: 10px; }
+    .albo-premio { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #e5e8f0; border-radius: 12px; background: #f8fafc; }
+    .albo-premio img { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; background: #fff; border: 1px solid #dfe4ed; }
     .albo-premio .tit { font-weight: 800; color: #15293e; }
     .albo-premio .vic { font-weight: 700; color: #0f172a; }
   </style>
@@ -36,6 +39,12 @@ $pageSeo = [
   <?php include __DIR__ . '/includi/header.php'; ?>
   <main class="albo-page">
     <h1>Albo d'oro completo</h1>
+    <div class="albo-filters">
+      <label for="filterCompetizione">Torneo</label>
+      <select id="filterCompetizione" class="albo-select">
+        <option value="">Tutti i tornei</option>
+      </select>
+    </div>
     <div id="alboGrid" class="albo-grid">
       <p>Caricamento...</p>
     </div>
@@ -90,21 +99,44 @@ $pageSeo = [
       `;
     }
 
+    const grid = document.getElementById('alboGrid');
+    const select = document.getElementById('filterCompetizione');
+    let alboData = [];
+
+    function renderList(items) {
+      if (!items.length) {
+        grid.innerHTML = '<p>Nessun dato disponibile.</p>';
+        return;
+      }
+      grid.innerHTML = items.map(renderCard).join('');
+    }
+
+    function populateSelect(items) {
+      const unique = Array.from(new Set(items.map(i => i.competizione).filter(Boolean))).sort();
+      select.innerHTML = '<option value=\"\">Tutti i tornei</option>' + unique.map(name => `<option value=\"${name}\">${name}</option>`).join('');
+    }
+
+    function applyFilter() {
+      const val = select.value;
+      if (!val) {
+        renderList(alboData);
+      } else {
+        renderList(alboData.filter(i => i.competizione === val));
+      }
+    }
+
     fetch('/api/albo_doro.php')
       .then(r => r.json())
       .then(data => {
-        const list = Array.isArray(data.data) ? data.data : [];
-        const grid = document.getElementById('alboGrid');
-        if (!list.length) {
-          grid.innerHTML = '<p>Nessun dato disponibile.</p>';
-          return;
-        }
-        grid.innerHTML = list.map(renderCard).join('');
+        alboData = Array.isArray(data.data) ? data.data : [];
+        populateSelect(alboData);
+        applyFilter();
       })
       .catch(() => {
-        const grid = document.getElementById('alboGrid');
         grid.innerHTML = '<p>Errore nel caricamento.</p>';
       });
+
+    select.addEventListener('change', applyFilter);
 
     document.addEventListener("DOMContentLoaded", () => {
       fetch("/includi/footer.html")
