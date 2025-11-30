@@ -1,5 +1,19 @@
 <?php
 require_once __DIR__ . '/security.php';
+$hasPlayerProfile = false;
+if (isset($_SESSION['user_id'])) {
+    // Verifica se l'utente ha un giocatore associato per mostrare il link dedicato
+    require_once __DIR__ . '/db.php';
+    $stmt = $conn->prepare("SELECT id FROM giocatori WHERE utente_id = ? LIMIT 1");
+    if ($stmt) {
+        $stmt->bind_param("i", $_SESSION['user_id']);
+        if ($stmt->execute()) {
+            $stmt->store_result();
+            $hasPlayerProfile = $stmt->num_rows > 0;
+        }
+        $stmt->close();
+    }
+}
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $sessionAvatar = $_SESSION['avatar'] ?? '';
@@ -50,6 +64,9 @@ if (!empty($sessionAvatar)) {
                 ?>
                 <span class="welcome-text">Ciao, <?= htmlspecialchars($nome_completo) ?></span>
                 <a href="/account.php">Il mio account</a>
+                <?php if ($hasPlayerProfile): ?>
+                    <a href="/statistiche_giocatore.php">Statistiche giocatore</a>
+                <?php endif; ?>
 
                 <?php if ($_SESSION['ruolo'] === 'admin'): ?>
                     <a href="/admin_dashboard.php">Gestione Sito</a>
