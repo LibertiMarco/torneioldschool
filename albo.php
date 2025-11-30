@@ -42,10 +42,11 @@ $pageSeo = [
     .albo-title { font-size: 1.28rem; font-weight: 800; color: #15293e; margin: 0 0 6px; }
     .albo-meta { color: #54657a; font-weight: 600; font-size: 0.95rem; margin-bottom: 12px; }
     .albo-premi { display: flex; flex-direction: column; gap: 10px; }
-    .albo-premio { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #e5e8f0; border-radius: 12px; background: #f8fafc; }
-    .albo-premio img { width: 64px; height: 64px; border-radius: 14px; object-fit: cover; background: #fff; border: 1px solid #dfe4ed; }
-    .albo-premio .tit { font-weight: 800; color: #15293e; }
-    .albo-premio .vic { font-weight: 700; color: #0f172a; }
+    .albo-premio { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid #e5e8f0; border-radius: 12px; background: #f8fafc; }
+    .albo-premio-title { text-align: center; font-weight: 800; color: #15293e; font-size: 1rem; letter-spacing: 0.2px; }
+    .albo-premio-body { display: flex; align-items: center; gap: 14px; justify-content: flex-start; }
+    .albo-premio img { width: 78px; height: 78px; border-radius: 16px; object-fit: cover; background: #fff; border: 1px solid #dfe4ed; }
+    .albo-premio .vic { font-weight: 800; color: #0f172a; font-size: 1.02rem; }
   </style>
 </head>
 <body>
@@ -87,9 +88,9 @@ $pageSeo = [
       const nomeTorneo = item.competizione || 'Torneo';
       const premi = (item.premi || []).map(p => `
         <div class="albo-premio">
-          <img src="${p.logo_vincitrice || '/img/tornei/pallone.png'}" alt="">
-          <div>
-            <div class="tit">${p.premio || ''}</div>
+          <div class="albo-premio-title">${p.premio || ''}</div>
+          <div class="albo-premio-body">
+            <img src="${p.logo_vincitrice || '/img/tornei/pallone.png'}" alt="">
             <div class="vic">${p.vincitrice || ''}</div>
           </div>
         </div>
