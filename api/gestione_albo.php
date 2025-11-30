@@ -34,8 +34,13 @@ function handleUpload(string $field, ?string $existing = null): ?string {
     }
 
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
-    $mime = finfo_file($finfo, $tmp);
-    finfo_close($finfo);
+    $mime = $finfo ? finfo_file($finfo, $tmp) : false;
+    if ($finfo instanceof finfo) {
+        unset($finfo); // evitare finfo_close deprecato
+    }
+    if (!$mime) {
+        throw new Exception('Impossibile determinare il tipo di file caricato.');
+    }
     $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
     if (!isset($allowed[$mime])) {
         throw new Exception('Formato immagine non valido. Solo JPG, PNG, WEBP.');

@@ -29,7 +29,7 @@ class torneo {
     /**
      * Crea un nuovo torneo
      */
-    public function crea($nome, $stato, $data_inizio, $data_fine, $img = null, $filetorneo, $categoria) {
+    public function crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $img = null) {
         if (empty($img)) {
             $img = "/img/tornei/pallone.png";
         }
@@ -95,6 +95,13 @@ class torneo {
 
         $stmt->execute();
         return $stmt->get_result();
+    }
+
+    /**
+     * Restituisce l'ultimo errore MySQL (per logging diagnostico)
+     */
+    public function getLastError(): string {
+        return $this->conn ? (string)$this->conn->error : '';
     }
 }
 ?>

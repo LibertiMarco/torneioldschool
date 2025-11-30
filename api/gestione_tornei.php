@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
     header("Location: /index.php");
@@ -94,8 +94,13 @@ function salvaImmagineTorneo($nomeTorneo, $fileField) {
     ];
 
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
-    $mime = finfo_file($finfo, $_FILES[$fileField]['tmp_name']);
-    finfo_close($finfo);
+    $mime = $finfo ? finfo_file($finfo, $_FILES[$fileField]['tmp_name']) : false;
+    if ($finfo instanceof finfo) {
+        unset($finfo);
+    }
+    if (!$mime) {
+        return null;
+    }
     if (!isset($allowed[$mime])) {
         return null;
     }
@@ -171,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     $categoria = trim($_POST['categoria']);
     $img = salvaImmagineTorneo($nome, 'img_upload');
 
-    if ($torneo->crea($nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria)) {
+    if ($torneo->crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $img)) {
         creaFileTorneoDaTemplate($nome, $slug);
     }
     header("Location: gestione_tornei.php");
@@ -221,7 +226,15 @@ if (isset($_GET['elimina'])) {
 }
 
 // --- LISTA TORNEI ---
+$torneiRows = [];
 $lista = $torneo->getAll();
+if ($lista instanceof mysqli_result) {
+    while ($row = $lista->fetch_assoc()) {
+        $torneiRows[] = $row;
+    }
+} else {
+    error_log('Errore nel recupero dei tornei: ' . $torneo->getLastError());
+}
 ?>
 
 <!DOCTYPE html>
@@ -376,11 +389,12 @@ $lista = $torneo->getAll();
                     <label>Seleziona Torneo</label>
                     <select name="id" id="selectTorneo" required>
                         <option value="">-- Seleziona un torneo --</option>
-                        <?php
-                        $lista2 = $torneo->getAll();
-                        while ($row = $lista2->fetch_assoc()): ?>
+                        <?php foreach ($torneiRows as $row): ?>
                             <option value="<?= $row['id'] ?>"><?= htmlspecialchars($row['nome']) ?></option>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
+                        <?php if (empty($torneiRows)): ?>
+                            <option value="" disabled>Nessun torneo disponibile</option>
+                        <?php endif; ?>
                     </select>
                 </div>
                         
@@ -412,7 +426,6 @@ $lista = $torneo->getAll();
             <!-- SEZIONE ELIMINA -->
             <section class="admin-table-section form-elimina hidden">
                 <h2>Elimina Torneo</h2>
-                <?php $lista = $torneo->getAll(); ?>
                 <table class="admin-table" id="tabellaTornei">
                     <thead>
                         <tr>
@@ -423,16 +436,22 @@ $lista = $torneo->getAll();
                         </tr>
                     </thead>
                     <tbody>
-                        <?php while ($row = $lista->fetch_assoc()): ?>
-                            <tr data-id="<?= $row['id'] ?>"> <!-- memorizziamo lâ€™ID come attributo -->
-                                <td><?= htmlspecialchars($row['nome']) ?></td>
-                                <td><?= htmlspecialchars($row['stato']) ?></td>
-                                <td><?= htmlspecialchars($row['categoria']) ?></td>
-                                <td>
-                                      <a href="#" class="btn-danger delete-btn" data-id="<?= $row['id'] ?>" data-label="<?= htmlspecialchars($row['nome']) ?>" data-type="torneo">Elimina</a>
-                                </td>
+                        <?php if (empty($torneiRows)): ?>
+                            <tr>
+                                <td colspan="4">Nessun torneo disponibile.</td>
                             </tr>
-                        <?php endwhile; ?>
+                        <?php else: ?>
+                            <?php foreach ($torneiRows as $row): ?>
+                                <tr data-id="<?= $row['id'] ?>"> <!-- memorizziamo l'ID come attributo -->
+                                    <td><?= htmlspecialchars($row['nome']) ?></td>
+                                    <td><?= htmlspecialchars($row['stato']) ?></td>
+                                    <td><?= htmlspecialchars($row['categoria']) ?></td>
+                                    <td>
+                                          <a href="#" class="btn-danger delete-btn" data-id="<?= $row['id'] ?>" data-label="<?= htmlspecialchars($row['nome']) ?>" data-type="torneo">Elimina</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </section>
@@ -596,3 +615,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+

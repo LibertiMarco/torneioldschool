@@ -116,8 +116,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errorMessage = "La foto deve essere inferiore a 2MB.";
             } else {
                 $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                $mime = finfo_file($finfo, $_FILES['avatar']['tmp_name']);
-                finfo_close($finfo);
+                $mime = $finfo ? finfo_file($finfo, $_FILES['avatar']['tmp_name']) : false;
+                if ($finfo instanceof finfo) {
+                    unset($finfo); // finfo_close deprecato, lasciamo al GC
+                }
+                if (!$mime) {
+                    $errorMessage = "Impossibile determinare il formato dell'immagine.";
+                }
 
                 $allowed = [
                     'image/jpeg' => 'jpg',
@@ -126,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'image/webp' => 'webp'
                 ];
 
-                if (!isset($allowed[$mime])) {
+                if (!$errorMessage && !isset($allowed[$mime])) {
                     $errorMessage = "Formato immagine non valido. Usa JPG, PNG, GIF o WEBP.";
                 } else {
                     $uploadDir = __DIR__ . '/img/utenti';

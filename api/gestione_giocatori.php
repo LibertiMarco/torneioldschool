@@ -55,8 +55,13 @@ function salvaFotoGiocatore($nome, $cognome, $fieldName, $fotoEsistente = null) 
         'image/jpg' => 'jpg'
     ];
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
-    $mime = finfo_file($finfo, $_FILES[$fieldName]['tmp_name']);
-    finfo_close($finfo);
+    $mime = $finfo ? finfo_file($finfo, $_FILES[$fieldName]['tmp_name']) : false;
+    if ($finfo instanceof finfo) {
+        unset($finfo);
+    }
+    if (!$mime) {
+        return $fotoEsistente ?: '/img/giocatori/unknown.jpg';
+    }
     if (!isset($allowed[$mime])) {
         return $fotoEsistente ?: '/img/giocatori/unknown.jpg';
     }
@@ -144,8 +149,13 @@ function salvaFotoAssociazione($nome, $cognome, $fieldName, $fotoEsistente = nul
         'image/gif'  => 'gif'
     ];
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
-    $mime = finfo_file($finfo, $_FILES[$fieldName]['tmp_name']);
-    finfo_close($finfo);
+    $mime = $finfo ? finfo_file($finfo, $_FILES[$fieldName]['tmp_name']) : false;
+    if ($finfo instanceof finfo) {
+        unset($finfo);
+    }
+    if (!$mime) {
+        return null;
+    }
     if (!isset($allowed[$mime])) {
         return null;
     }
