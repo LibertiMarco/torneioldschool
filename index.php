@@ -247,7 +247,7 @@ function formatPeriodo(inizio, fine, anno) {
 }
 
 function normalizePath(path) {
-    if (!path) return '';
+    if (!path || path === '0' || path === 0) return '';
     if (/^https?:\/\//i.test(path)) return path;
     if (path.startsWith('/')) return path;
     return '/' + path.replace(/^\/+/, '');

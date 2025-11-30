@@ -55,6 +55,10 @@ function fetchAlboCustom(mysqli $conn): array {
     $rows = [];
     while ($row = $res->fetch_assoc()) {
         $anno = $row['fine_anno'] ?: $row['inizio_anno'] ?: '';
+        $tabUrl = trim((string)($row['tabellone_url'] ?? ''));
+        if ($tabUrl === '' || $tabUrl === '0') {
+            $tabUrl = '';
+        }
         $rows[] = [
             'competizione' => $row['competizione'],
             'premio' => $row['premio'],
@@ -62,7 +66,7 @@ function fetchAlboCustom(mysqli $conn): array {
             'data_inizio' => dateFromParts((int)$row['inizio_mese'], (int)$row['inizio_anno']),
             'data_fine' => dateFromParts((int)$row['fine_mese'], (int)$row['fine_anno']),
             'anno' => $anno,
-            'filetorneo' => $row['tabellone_url'],
+            'filetorneo' => $tabUrl,
             'torneo_logo' => $row['torneo_logo'],
             'vincitrice' => $row['vincitrice'],
             'logo_vincitrice' => $row['vincitrice_logo'],
@@ -114,6 +118,11 @@ function fetchAlboFromTornei(mysqli $conn): array {
             $anno = date('Y', strtotime($row['data_inizio']));
         }
 
+        $tabUrl = trim((string)($row['filetorneo'] ?? ''));
+        if ($tabUrl === '' || $tabUrl === '0') {
+            $tabUrl = '';
+        }
+
         $albo[] = [
             // Uniformiamo le chiavi con quelle usate dall'albo personalizzato
             'competizione' => $row['torneo'],
@@ -123,7 +132,7 @@ function fetchAlboFromTornei(mysqli $conn): array {
             'data_inizio' => $row['data_inizio'] ?: '',
             'data_fine' => $row['data_fine'] ?: '',
             'anno' => $anno,
-            'filetorneo' => $row['filetorneo'] ?: '',
+            'filetorneo' => $tabUrl,
             'torneo_logo' => $row['torneo_img'],
             'vincitrice' => $row['vincitrice'] ?: '',
             'logo_vincitrice' => $row['logo_vincitrice'] ?: '',
@@ -151,7 +160,7 @@ foreach ($raw as $item) {
             'data_fine' => $item['data_fine'] ?? '',
             'anno' => $item['anno'] ?? '',
             'ordinamento' => $item['ordinamento'] ?? null,
-            'filetorneo' => $item['tabellone_url'] ?? $item['filetorneo'] ?? '',
+            'filetorneo' => ($item['filetorneo'] ?? ''),
             'premi' => [],
         ];
     }
