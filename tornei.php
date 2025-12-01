@@ -8,6 +8,7 @@ if (!isset($_SESSION['user_id'])) {
 
 // === CONNESSIONE AL DATABASE ===
 require_once __DIR__ . '/includi/db.php'; // contiene $conn
+require_once __DIR__ . '/includi/seo.php';
 
 // === FUNZIONE PER FORMATTARE LE DATE ===
 if (!function_exists('formattaData')) {
@@ -44,7 +45,7 @@ if ($result && $result->num_rows > 0) {
     }
   }
 }
-require_once __DIR__ . '/includi/seo.php';
+
 $baseUrl = seo_base_url();
 $torneiSeo = [
   'title' => 'Tornei calcetto Napoli (5, 6, 8) - Calendari e risultati | Tornei Old School',
@@ -66,137 +67,62 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
   <?php render_jsonld($torneiBreadcrumbs); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
   <style>
-    .tournaments-page {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 50px 20px 80px;
+    .content {
+      margin-top: 30px;
+      padding-top: 10px;
     }
-    .page-hero {
-      margin-bottom: 30px;
-    }
-    .page-eyebrow {
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-weight: 800;
-      color: #5b6b82;
-      margin: 0;
-      font-size: 0.9rem;
-    }
-    .page-hero h1 {
-      margin: 6px 0;
-      color: #15293e;
-      font-size: 2rem;
-    }
-    .page-hero p {
-      margin: 0;
-      color: #4c5b71;
-    }
-    .section-title {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-    .section-title h2 {
-      margin: 0;
-      color: #15293e;
-    }
-    .status-pill {
-      padding: 6px 10px;
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 0.9rem;
-      background: #e8edf5;
-      color: #1a2d44;
-    }
-    .status-pill.live { background: #e8f7f0; color: #0f5132; }
-    .status-pill.next { background: #f6f1ff; color: #5b3ba3; }
-    .status-pill.done { background: #f4f6f8; color: #475569; }
 
-    .tournament-grid {
+    /* Card tornei: layout invariato, look piu' pulito */
+    .news-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 18px;
+      gap: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      max-width: 1100px;
+      margin: 0 auto;
+      justify-content: start;
     }
-    .tournament-card {
-      display: block;
-      text-decoration: none;
-      color: inherit;
+    .news-grid article {
       background: #fff;
-      border-radius: 16px;
+      border-radius: 14px;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      max-width: 280px;
+      margin: 0 auto;
       border: 1px solid #e5e9f0;
-      box-shadow: 0 14px 35px rgba(15, 31, 51, 0.08);
+      box-shadow: 0 12px 28px rgba(15, 31, 51, 0.1);
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .tournament-card:hover {
+    .news-grid article:hover {
       transform: translateY(-6px);
-      box-shadow: 0 18px 45px rgba(15, 31, 51, 0.12);
+      box-shadow: 0 16px 36px rgba(15, 31, 51, 0.14);
     }
-    .tournament-cover {
-      position: relative;
-      height: 170px;
+    .news-grid article img {
+      width: 100%;
+      height: 160px; /* grandezza immagine invariata */
+      object-fit: cover;
       background: linear-gradient(135deg, #15293e, #1f3f63);
     }
-    .tournament-cover img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    .category-pill {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      background: rgba(0, 0, 0, 0.7);
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-weight: 700;
-      font-size: 0.9rem;
-    }
-    .tournament-body {
-      padding: 16px;
-      display: grid;
-      gap: 8px;
-    }
-    .tournament-name {
-      font-size: 1.1rem;
-      font-weight: 800;
+    .news-grid article h3 {
+      min-height: 45px;
+      padding: 10px 12px 0;
+      font-size: 18px;
       color: #15293e;
       margin: 0;
     }
-    .tournament-meta {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
+    .news-grid article .categoria {
+      font-size: 0.9rem;
+      color: #5b6b82;
+      font-weight: 600;
+    }
+    .news-grid article p {
+      padding: 0 12px 14px;
+      margin-top: auto;
       color: #4c5b71;
       font-weight: 600;
-      flex-wrap: wrap;
     }
-    .muted { color: #4c5b71; }
-    .tournament-dates {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .tournament-status {
-      padding: 6px 10px;
-      border-radius: 10px;
-      font-size: 0.85rem;
-      font-weight: 800;
-      background: #f2f6ff;
-      color: #1a2d44;
-    }
-    .tournament-status.live { background: #e8f7f0; color: #0f5132; }
-    .tournament-status.next { background: #f6f1ff; color: #5b3ba3; }
-    .tournament-status.done { background: #f4f6f8; color: #475569; }
-    .empty-state {
-      color: #5f6b7b;
-      margin: 0;
-    }
+
     /* Popup accesso */
     .popup-accesso {
       position: fixed;
@@ -228,9 +154,29 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
     }
     .popup-accesso button:hover { background: #0e1d2e; }
 
-    @media (max-width: 640px) {
-      .tournaments-page { padding: 40px 16px 70px; }
-      .tournament-cover { height: 150px; }
+    /* Mobile */
+    @media (max-width: 768px) {
+      .news-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        justify-items: center;
+      }
+      .news-grid article {
+        width: 95%;
+        max-width: 500px;
+        border-radius: 14px;
+      }
+      .news-grid article img {
+        height: 200px; /* dimensione immagine mobile invariata */
+      }
+      .news-grid article h3 {
+        font-size: 20px;
+        padding: 12px 14px 6px;
+      }
+      .news-grid article p {
+        font-size: 16px;
+        padding: 0 14px 14px;
+      }
     }
   </style>
 </head>
@@ -241,132 +187,88 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
   <div id="header-container"></div>
 
   <!-- CONTENUTO PRINCIPALE -->
-  <div class="content tournaments-page">
-    <div class="page-hero">
-      <p class="page-eyebrow">Calendari & risultati</p>
-      <h1>I tornei Old School</h1>
-      <p>Scopri i tornei in corso, quelli in programma e gli archivi terminati con calendari, risultati e tabelloni.</p>
-    </div>
+  <div class="content">
 
     <!-- TORNEI IN CORSO -->
-    <section class="tournament-section" style="margin-top:30px;">
-      <div class="section-title">
-        <h2>Tornei in corso</h2>
-        <span class="status-pill live">In corso</span>
-      </div>
-      <div class="tournament-grid">
+    <section class="home-news" style="margin-top:50px;">
+      <h2>Tornei in corso</h2>
+      <div class="news-grid">
         <?php if (!empty($tornei['in corso'])): ?>
           <?php foreach ($tornei['in corso'] as $t): ?>
-            <?php
-              $link = !empty($t['filetorneo']) ? 'tornei/' . htmlspecialchars($t['filetorneo']) : '#';
-              $img = !empty($t['img']) ? $t['img'] : '/img/tornei/pallone.png';
-              $dates = (!empty($t['data_inizio']) || !empty($t['data_fine']))
-                ? 'Dal ' . htmlspecialchars(formattaData($t['data_inizio'])) . (!empty($t['data_fine']) ? ' - ' . htmlspecialchars(formattaData($t['data_fine'])) : '')
-                : '';
-            ?>
-            <a class="tournament-card" href="<?= htmlspecialchars($link) ?>">
-              <div class="tournament-cover">
-                <img src="<?= htmlspecialchars($img) ?>" alt="<?= htmlspecialchars($t['nome']) ?>" onerror="this.src='/img/tornei/pallone.png';">
-                <?php if (!empty($t['categoria'])): ?>
-                  <span class="category-pill"><?= htmlspecialchars($t['categoria']) ?></span>
+            <?php $link = !empty($t['filetorneo']) ? 'tornei/' . htmlspecialchars($t['filetorneo']) : '#'; ?>
+            <article>
+              <a href="<?= htmlspecialchars($link) ?>" style="text-decoration:none; color:inherit;">
+                <img src="<?= htmlspecialchars($t['img'] ?: 'img/default.jpg') ?>" alt="<?= htmlspecialchars($t['nome']) ?>" onerror="this.src='/img/tornei/pallone.png';">
+                <h3>
+                  <?= htmlspecialchars($t['nome']) ?>
+                  <?php if (!empty($t['categoria'])): ?>
+                    <span class="categoria">(<?= htmlspecialchars($t['categoria']) ?>)</span>
+                  <?php endif; ?>
+                </h3>
+                <?php if (!empty($t['data_inizio']) || !empty($t['data_fine'])): ?>
+                  <p>Dal <?= htmlspecialchars(formattaData($t['data_inizio'])) ?><?php if (!empty($t['data_fine'])): ?> - <?= htmlspecialchars(formattaData($t['data_fine'])) ?><?php endif; ?></p>
                 <?php endif; ?>
-              </div>
-              <div class="tournament-body">
-                <div class="tournament-name"><?= htmlspecialchars($t['nome']) ?></div>
-                <?php if ($dates): ?>
-                  <div class="tournament-dates"><?= $dates ?></div>
-                <?php endif; ?>
-                <div class="tournament-meta">
-                  <span class="tournament-status live">Live</span>
-                  <span class="muted">Calendario e risultati</span>
-                </div>
-              </div>
-            </a>
+              </a>
+            </article>
           <?php endforeach; ?>
         <?php else: ?>
-          <p class="empty-state">Nessun torneo in corso al momento.</p>
+          <p>Nessun torneo in corso al momento.</p>
         <?php endif; ?>
       </div>
     </section>
 
     <!-- TORNEI PROGRAMMATI -->
-    <section class="tournament-section" style="margin-top:40px;">
-      <div class="section-title">
-        <h2>Tornei programmati</h2>
-        <span class="status-pill next">In arrivo</span>
-      </div>
-      <div class="tournament-grid">
+    <section class="home-news" style="margin-top:50px;">
+      <h2>Tornei programmati</h2>
+      <div class="news-grid">
         <?php if (!empty($tornei['programmato'])): ?>
           <?php foreach ($tornei['programmato'] as $t): ?>
-            <?php
-              $link = !empty($t['filetorneo']) ? 'tornei/' . htmlspecialchars($t['filetorneo']) : '#';
-              $img = !empty($t['img']) ? $t['img'] : '/img/tornei/pallone.png';
-              $dates = (!empty($t['data_inizio']) || !empty($t['data_fine']))
-                ? 'Dal ' . htmlspecialchars(formattaData($t['data_inizio'])) . (!empty($t['data_fine']) ? ' - ' . htmlspecialchars(formattaData($t['data_fine'])) : '')
-                : '';
-            ?>
-            <a class="tournament-card" href="<?= htmlspecialchars($link) ?>">
-              <div class="tournament-cover">
-                <img src="<?= htmlspecialchars($img) ?>" alt="<?= htmlspecialchars($t['nome']) ?>" onerror="this.src='/img/tornei/pallone.png';">
-                <?php if (!empty($t['categoria'])): ?>
-                  <span class="category-pill"><?= htmlspecialchars($t['categoria']) ?></span>
+            <?php $link = !empty($t['filetorneo']) ? 'tornei/' . htmlspecialchars($t['filetorneo']) : '#'; ?>
+            <article>
+              <a href="<?= htmlspecialchars($link) ?>" style="text-decoration:none; color:inherit;">
+                <img src="<?= htmlspecialchars($t['img'] ?: 'img/default.jpg') ?>" alt="<?= htmlspecialchars($t['nome']) ?>" onerror="this.src='/img/tornei/pallone.png';">
+                <h3>
+                  <?= htmlspecialchars($t['nome']) ?>
+                  <?php if (!empty($t['categoria'])): ?>
+                    <span class="categoria">(<?= htmlspecialchars($t['categoria']) ?>)</span>
+                  <?php endif; ?>
+                </h3>
+                <?php if (!empty($t['data_inizio']) || !empty($t['data_fine'])): ?>
+                  <p>Dal <?= htmlspecialchars(formattaData($t['data_inizio'])) ?><?php if (!empty($t['data_fine'])): ?> - <?= htmlspecialchars(formattaData($t['data_fine'])) ?><?php endif; ?></p>
                 <?php endif; ?>
-              </div>
-              <div class="tournament-body">
-                <div class="tournament-name"><?= htmlspecialchars($t['nome']) ?></div>
-                <?php if ($dates): ?>
-                  <div class="tournament-dates"><?= $dates ?></div>
-                <?php endif; ?>
-                <div class="tournament-meta">
-                  <span class="tournament-status next">Prossimo</span>
-                  <span class="muted">Calendario e risultati</span>
-                </div>
-              </div>
-            </a>
+              </a>
+            </article>
           <?php endforeach; ?>
         <?php else: ?>
-          <p class="empty-state">Nessun torneo programmato al momento.</p>
+          <p>Nessun torneo programmato al momento.</p>
         <?php endif; ?>
       </div>
     </section>
 
     <!-- TORNEI TERMINATI -->
-    <section class="tournament-section" style="margin-top:40px; margin-bottom:80px;">
-      <div class="section-title">
-        <h2>Tornei terminati</h2>
-        <span class="status-pill done">Archivio</span>
-      </div>
-      <div class="tournament-grid">
+    <section class="home-news" style="margin-top:50px; margin-bottom:80px;">
+      <h2>Tornei terminati</h2>
+      <div class="news-grid">
         <?php if (!empty($tornei['terminato'])): ?>
           <?php foreach ($tornei['terminato'] as $t): ?>
-            <?php
-              $link = !empty($t['filetorneo']) ? 'tornei/' . htmlspecialchars($t['filetorneo']) : '#';
-              $img = !empty($t['img']) ? $t['img'] : '/img/tornei/pallone.png';
-              $dates = (!empty($t['data_inizio']) || !empty($t['data_fine']))
-                ? 'Dal ' . htmlspecialchars(formattaData($t['data_inizio'])) . (!empty($t['data_fine']) ? ' - ' . htmlspecialchars(formattaData($t['data_fine'])) : '')
-                : '';
-            ?>
-            <a class="tournament-card" href="<?= htmlspecialchars($link) ?>">
-              <div class="tournament-cover">
-                <img src="<?= htmlspecialchars($img) ?>" alt="<?= htmlspecialchars($t['nome']) ?>" onerror="this.src='/img/tornei/pallone.png';">
-                <?php if (!empty($t['categoria'])): ?>
-                  <span class="category-pill"><?= htmlspecialchars($t['categoria']) ?></span>
+            <?php $link = !empty($t['filetorneo']) ? 'tornei/' . htmlspecialchars($t['filetorneo']) : '#'; ?>
+            <article>
+              <a href="<?= htmlspecialchars($link) ?>" style="text-decoration:none; color:inherit;">
+                <img src="<?= htmlspecialchars($t['img'] ?: 'img/default.jpg') ?>" alt="<?= htmlspecialchars($t['nome']) ?>" onerror="this.src='/img/tornei/pallone.png';">
+                <h3>
+                  <?= htmlspecialchars($t['nome']) ?>
+                  <?php if (!empty($t['categoria'])): ?>
+                    <span class="categoria">(<?= htmlspecialchars($t['categoria']) ?>)</span>
+                  <?php endif; ?>
+                </h3>
+                <?php if (!empty($t['data_inizio']) || !empty($t['data_fine'])): ?>
+                  <p>Dal <?= htmlspecialchars(formattaData($t['data_inizio'])) ?><?php if (!empty($t['data_fine'])): ?> - <?= htmlspecialchars(formattaData($t['data_fine'])) ?><?php endif; ?></p>
                 <?php endif; ?>
-              </div>
-              <div class="tournament-body">
-                <div class="tournament-name"><?= htmlspecialchars($t['nome']) ?></div>
-                <?php if ($dates): ?>
-                  <div class="tournament-dates"><?= $dates ?></div>
-                <?php endif; ?>
-                <div class="tournament-meta">
-                  <span class="tournament-status done">Terminato</span>
-                  <span class="muted">Calendario e risultati</span>
-                </div>
-              </div>
-            </a>
+              </a>
+            </article>
           <?php endforeach; ?>
         <?php else: ?>
-          <p class="empty-state">Nessun torneo terminato al momento.</p>
+          <p>Nessun torneo terminato al momento.</p>
         <?php endif; ?>
       </div>
     </section>
@@ -406,4 +308,3 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
   </script>
 </body>
 </html>
-
