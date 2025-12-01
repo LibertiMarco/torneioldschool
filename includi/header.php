@@ -61,21 +61,58 @@ if (!empty($sessionAvatar)) {
                   $nome = $_SESSION['nome'] ?? '';
                   $cognome = $_SESSION['cognome'] ?? '';
                   $nome_completo = trim($nome . ' ' . $cognome);
+                  $nome_display = $nome_completo !== '' ? $nome_completo : 'Utente';
                 ?>
-                <span class="welcome-text">Ciao, <?= htmlspecialchars($nome_completo) ?></span>
-                <a href="/account.php">Il mio account</a>
-                <?php if ($hasPlayerProfile): ?>
-                    <a href="/statistiche_giocatore.php">Statistiche giocatore</a>
-                <?php endif; ?>
+                <div class="user-card">
+                    <div class="user-card__avatar">
+                        <img src="<?= htmlspecialchars($avatarUrl) ?>" alt="Profilo utente">
+                    </div>
+                    <div class="user-card__text">
+                        <span class="welcome-label">Ciao,</span>
+                        <span class="welcome-name"><?= htmlspecialchars($nome_display) ?></span>
+                    </div>
+                </div>
+                <div class="user-actions">
+                    <a class="user-menu-item" href="/account.php">
+                        <span>Il mio account</span>
+                        <span class="item-arrow">></span>
+                    </a>
+                    <?php if ($hasPlayerProfile): ?>
+                        <a class="user-menu-item" href="/statistiche_giocatore.php">
+                            <span>Statistiche giocatore</span>
+                            <span class="item-arrow">></span>
+                        </a>
+                    <?php endif; ?>
 
-                <?php if ($_SESSION['ruolo'] === 'admin'): ?>
-                    <a href="/admin_dashboard.php">Gestione Sito</a>
-                <?php endif; ?>
+                    <?php if ($_SESSION['ruolo'] === 'admin'): ?>
+                        <a class="user-menu-item" href="/admin_dashboard.php">
+                            <span>Gestione Sito</span>
+                            <span class="item-arrow">></span>
+                        </a>
+                    <?php endif; ?>
 
-                <a href="/logout.php">Logout</a>
+                    <a class="user-menu-item" href="/logout.php">
+                        <span>Logout</span>
+                        <span class="item-arrow">></span>
+                    </a>
+                </div>
             <?php else: ?>
-                <a href="/register.php">Iscriviti</a>
-                <a href="/login.php">Accedi</a>
+                <div class="user-card guest-card">
+                    <div class="user-card__text">
+                        <span class="welcome-label">Ciao!</span>
+                        <span class="welcome-name">Accedi o registrati</span>
+                    </div>
+                </div>
+                <div class="user-actions">
+                    <a class="user-menu-item" href="/register.php">
+                        <span>Iscriviti</span>
+                        <span class="item-arrow">></span>
+                    </a>
+                    <a class="user-menu-item" href="/login.php">
+                        <span>Accedi</span>
+                        <span class="item-arrow">></span>
+                    </a>
+                </div>
             <?php endif; ?>
         </div>
     </div>
@@ -131,6 +168,17 @@ if (!empty($sessionAvatar)) {
 }
 
 /* USER BTN */
+.user-dropdown {
+    position: relative;
+}
+
+.user-btn {
+    background: transparent;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+}
+
 .user-btn img {
     width: 34px;
     height: 34px;
@@ -144,23 +192,104 @@ if (!empty($sessionAvatar)) {
 .user-menu {
     display: none;
     position: absolute;
-    right: 10px;
+    right: 0;
     top: 58px;
-    background: white;
-    border-radius: 8px;
+    width: 240px;
+    background: #0f1f33;
+    border-radius: 14px;
     padding: 12px;
-    box-shadow: 0 3px 20px rgba(0,0,0,0.25);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.28);
+    border: 1px solid #233854;
+    color: #e7edf7;
+}
+
+.user-menu::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    right: 18px;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid #0f1f33;
 }
 
 .user-menu.open {
     display: block;
 }
 
-.user-menu a {
-    display: block;
-    padding: 8px 0;
-    color: #15293e;
+.user-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: linear-gradient(135deg, #15293e, #1f3f63);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.guest-card {
+    justify-content: flex-start;
+}
+
+.user-card__avatar img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255,255,255,0.55);
+    background: #0f1f33;
+}
+
+.user-card__text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    color: #f7f9fd;
+}
+
+.welcome-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: rgba(247, 249, 253, 0.8);
+}
+
+.welcome-name {
+    font-weight: 700;
+    font-size: 16px;
+    color: #fff;
+}
+
+.user-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.user-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    color: #e7edf7;
     text-decoration: none;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s ease, transform 0.15s ease, color 0.2s ease;
+}
+
+.user-menu-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    transform: translateX(2px);
+}
+
+.item-arrow {
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 700;
 }
 
 /* ----- MOBILE ----- */
