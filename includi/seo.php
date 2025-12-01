@@ -87,7 +87,8 @@ if (!function_exists('seo_base_url')) {
             'name' => $siteName,
             'url' => $baseRoot . '/',
             'logo' => $logoForSchema,
-            '@type' => 'Organization',
+            '@type' => 'SportsOrganization',
+            'sport' => $meta['sport'] ?? 'Calcio a 5, calcio a 6 e calciotto (8)',
         ]);
         $websiteSchema = [
             '@context' => 'https://schema.org',

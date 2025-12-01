@@ -2,8 +2,8 @@
 require_once __DIR__ . '/includi/seo.php';
 $baseUrl = seo_base_url();
 $homeSeo = [
-  'title' => 'Tornei calcio a 5 Napoli | Tornei Old School',
-  'description' => 'Tornei amatoriali di calcio a 5 a Napoli: iscrizioni, calendari, classifiche e partite con aggiornamenti in tempo reale.',
+  'title' => 'Tornei calcio Napoli (5, 6, 8) | Tornei Old School',
+  'description' => 'Tornei amatoriali di calcio a 5, calcio a 6 e calciotto (8) a Napoli: iscrizioni, calendari, classifiche e partite con aggiornamenti in tempo reale.',
   'url' => $baseUrl . '/',
   'canonical' => $baseUrl . '/',
 ];
@@ -43,8 +43,8 @@ $localSchema = [
       <!-- HERO PRINCIPALE -->
       <section class="home-hero">
         <div class="hero-overlay">
-          <h1>TORNEI</h1>
-          <p>Accedi a tutte le informazioni e alle regole dei nostri tornei!</p>
+          <h1>Tornei calcetto Napoli</h1>
+          <p>Tornei di calcio a 5, 6 e calciotto (8) a Napoli: iscrizioni, calendari, regolamenti e risultati live.</p>
           <a href="/tornei.php" class="hero-btn">Tornei</a>
         </div>
       </section>
