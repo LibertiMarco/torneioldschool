@@ -298,7 +298,6 @@ $seo = [
 <?php include __DIR__ . '/includi/header.php'; ?>
 
 <main class="page-container player-page">
-    <a class="back-link" href="/account.php">< Torna al tuo account</a>
     <h1 class="page-title">Statistiche giocatore</h1>
 
     <?php if (isset($msg)): ?>
