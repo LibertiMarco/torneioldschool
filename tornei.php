@@ -20,6 +20,12 @@ if (!function_exists('formattaData')) {
   }
 }
 
+function formattaMeseAnno($data) {
+  if (empty($data) || $data === '0000-00-00') return '';
+  $ts = strtotime($data);
+  return $ts ? date('m/y', $ts) : '';
+}
+
 // === DATI UTENTE DALLA SESSIONE ===
 $utente_loggato = isset($_SESSION['user_id']);
 $ruolo = $_SESSION['ruolo'] ?? 'utente';
@@ -122,6 +128,37 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       color: #4c5b71;
       font-weight: 600;
     }
+    .tornei-switch {
+      display: inline-flex;
+      gap: 8px;
+      margin: 20px 0 10px;
+      padding: 6px;
+      background: #e9edf4;
+      border-radius: 999px;
+      border: 1px solid #d7deea;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    }
+    .tornei-switch button {
+      border: none;
+      background: transparent;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-weight: 700;
+      color: #15293e;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .tornei-switch button.active {
+      background: linear-gradient(135deg, #15293e, #1f3f63);
+      color: #fff;
+      box-shadow: 0 8px 20px rgba(21, 41, 62, 0.18);
+    }
+    .tornei-section {
+      display: none;
+    }
+    .tornei-section.active {
+      display: block;
+    }
 
     /* Popup accesso */
     .popup-accesso {
@@ -189,13 +226,24 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
   <!-- CONTENUTO PRINCIPALE -->
   <div class="content">
 
+    <div class="tornei-switch" aria-label="Filtra tornei">
+      <button type="button" class="active" data-target="incorso">Tornei in corso</button>
+      <button type="button" data-target="programmati">Tornei programmati</button>
+      <button type="button" data-target="terminati">Tornei terminati</button>
+    </div>
+
     <!-- TORNEI IN CORSO -->
-    <section class="home-news" style="margin-top:50px;">
+    <section class="home-news tornei-section active" id="tornei-incorso" style="margin-top:20px;">
       <h2>Tornei in corso</h2>
       <div class="news-grid">
         <?php if (!empty($tornei['in corso'])): ?>
           <?php foreach ($tornei['in corso'] as $t): ?>
             <?php $link = !empty($t['filetorneo']) ? 'tornei/' . htmlspecialchars($t['filetorneo']) : '#'; ?>
+            <?php
+              $start = formattaMeseAnno($t['data_inizio']);
+              $end = formattaMeseAnno($t['data_fine']);
+              $range = ($start || $end) ? trim($start . ($end ? ' - ' . $end : '')) : '';
+            ?>
             <article>
               <a href="<?= htmlspecialchars($link) ?>" style="text-decoration:none; color:inherit;">
                 <img src="<?= htmlspecialchars($t['img'] ?: 'img/default.jpg') ?>" alt="<?= htmlspecialchars($t['nome']) ?>" onerror="this.src='/img/tornei/pallone.png';">
@@ -205,8 +253,8 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
                     <span class="categoria">(<?= htmlspecialchars($t['categoria']) ?>)</span>
                   <?php endif; ?>
                 </h3>
-                <?php if (!empty($t['data_inizio']) || !empty($t['data_fine'])): ?>
-                  <p>Dal <?= htmlspecialchars(formattaData($t['data_inizio'])) ?><?php if (!empty($t['data_fine'])): ?> - <?= htmlspecialchars(formattaData($t['data_fine'])) ?><?php endif; ?></p>
+                <?php if ($range): ?>
+                  <p><?= htmlspecialchars($range) ?></p>
                 <?php endif; ?>
               </a>
             </article>
@@ -218,12 +266,17 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
     </section>
 
     <!-- TORNEI PROGRAMMATI -->
-    <section class="home-news" style="margin-top:50px;">
+    <section class="home-news tornei-section" id="tornei-programmati" style="margin-top:20px;">
       <h2>Tornei programmati</h2>
       <div class="news-grid">
         <?php if (!empty($tornei['programmato'])): ?>
           <?php foreach ($tornei['programmato'] as $t): ?>
             <?php $link = !empty($t['filetorneo']) ? 'tornei/' . htmlspecialchars($t['filetorneo']) : '#'; ?>
+            <?php
+              $start = formattaMeseAnno($t['data_inizio']);
+              $end = formattaMeseAnno($t['data_fine']);
+              $range = ($start || $end) ? trim($start . ($end ? ' - ' . $end : '')) : '';
+            ?>
             <article>
               <a href="<?= htmlspecialchars($link) ?>" style="text-decoration:none; color:inherit;">
                 <img src="<?= htmlspecialchars($t['img'] ?: 'img/default.jpg') ?>" alt="<?= htmlspecialchars($t['nome']) ?>" onerror="this.src='/img/tornei/pallone.png';">
@@ -233,8 +286,8 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
                     <span class="categoria">(<?= htmlspecialchars($t['categoria']) ?>)</span>
                   <?php endif; ?>
                 </h3>
-                <?php if (!empty($t['data_inizio']) || !empty($t['data_fine'])): ?>
-                  <p>Dal <?= htmlspecialchars(formattaData($t['data_inizio'])) ?><?php if (!empty($t['data_fine'])): ?> - <?= htmlspecialchars(formattaData($t['data_fine'])) ?><?php endif; ?></p>
+                <?php if ($range): ?>
+                  <p><?= htmlspecialchars($range) ?></p>
                 <?php endif; ?>
               </a>
             </article>
@@ -246,12 +299,17 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
     </section>
 
     <!-- TORNEI TERMINATI -->
-    <section class="home-news" style="margin-top:50px; margin-bottom:80px;">
+    <section class="home-news tornei-section" id="tornei-terminati" style="margin-top:20px; margin-bottom:80px;">
       <h2>Tornei terminati</h2>
       <div class="news-grid">
         <?php if (!empty($tornei['terminato'])): ?>
           <?php foreach ($tornei['terminato'] as $t): ?>
             <?php $link = !empty($t['filetorneo']) ? 'tornei/' . htmlspecialchars($t['filetorneo']) : '#'; ?>
+            <?php
+              $start = formattaMeseAnno($t['data_inizio']);
+              $end = formattaMeseAnno($t['data_fine']);
+              $range = ($start || $end) ? trim($start . ($end ? ' - ' . $end : '')) : '';
+            ?>
             <article>
               <a href="<?= htmlspecialchars($link) ?>" style="text-decoration:none; color:inherit;">
                 <img src="<?= htmlspecialchars($t['img'] ?: 'img/default.jpg') ?>" alt="<?= htmlspecialchars($t['nome']) ?>" onerror="this.src='/img/tornei/pallone.png';">
@@ -261,8 +319,8 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
                     <span class="categoria">(<?= htmlspecialchars($t['categoria']) ?>)</span>
                   <?php endif; ?>
                 </h3>
-                <?php if (!empty($t['data_inizio']) || !empty($t['data_fine'])): ?>
-                  <p>Dal <?= htmlspecialchars(formattaData($t['data_inizio'])) ?><?php if (!empty($t['data_fine'])): ?> - <?= htmlspecialchars(formattaData($t['data_fine'])) ?><?php endif; ?></p>
+                <?php if ($range): ?>
+                  <p><?= htmlspecialchars($range) ?></p>
                 <?php endif; ?>
               </a>
             </article>
@@ -304,6 +362,26 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
           document.getElementById("header-container").innerHTML = d;
           initHeaderInteractions();
         });
+
+      // Switch tornei
+      const tabs = document.querySelectorAll(".tornei-switch button");
+      const sections = {
+        "incorso": document.getElementById("tornei-incorso"),
+        "programmati": document.getElementById("tornei-programmati"),
+        "terminati": document.getElementById("tornei-terminati"),
+      };
+
+      tabs.forEach(btn => {
+        btn.addEventListener("click", () => {
+          const target = btn.dataset.target || "";
+          tabs.forEach(b => b.classList.toggle("active", b === btn));
+          Object.keys(sections).forEach(key => {
+            if (sections[key]) {
+              sections[key].classList.toggle("active", key === target);
+            }
+          });
+        });
+      });
     });
   </script>
 </body>
