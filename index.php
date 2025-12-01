@@ -7,12 +7,6 @@ $homeSeo = [
   'url' => $baseUrl . '/',
   'canonical' => $baseUrl . '/',
 ];
-$orgSchema = seo_org_schema([
-  'name' => 'Tornei Old School',
-  'url' => $baseUrl . '/',
-  'sport' => 'Calcio',
-  'logo' => $baseUrl . '/img/logo_old_school.png',
-]);
 $localSchema = [
   '@context' => 'https://schema.org',
   '@type' => 'SportsActivityLocation',
@@ -33,7 +27,6 @@ $localSchema = [
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <?php render_seo_tags($homeSeo); ?>
-  <?php render_jsonld($orgSchema); ?>
   <?php render_jsonld($localSchema); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
 </head>

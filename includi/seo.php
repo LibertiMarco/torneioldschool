@@ -78,6 +78,28 @@ if (!function_exists('seo_base_url')) {
         echo '<meta name="twitter:image" content="' . seo_clean($image) . '">' . "\n";
 
         render_analytics_bootstrap();
+
+        // Schema markup di base per brand/logo e sito
+        $baseRoot = rtrim($base, '/');
+        $logoForSchema = $meta['logo'] ?? $image;
+
+        $orgSchema = seo_org_schema([
+            'name' => $siteName,
+            'url' => $baseRoot . '/',
+            'logo' => $logoForSchema,
+            '@type' => 'Organization',
+        ]);
+        $websiteSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            '@id' => $baseRoot . '/#website',
+            'url' => $baseRoot . '/',
+            'name' => $siteName,
+            'publisher' => ['@id' => $orgSchema['@id'] ?? ($baseRoot . '/#organization')],
+        ];
+
+        render_jsonld($orgSchema);
+        render_jsonld($websiteSchema);
     }
 
     function render_jsonld(array $schema): void
@@ -123,15 +145,28 @@ if (!function_exists('seo_base_url')) {
         $url = $data['url'] ?? $base;
         $name = $data['name'] ?? 'Tornei Old School';
         $sport = $data['sport'] ?? 'Calcio';
+        $type = $data['@type'] ?? $data['type'] ?? 'SportsOrganization';
+        $sameAs = $data['sameAs'] ?? [];
+        $id = $data['@id'] ?? $data['id'] ?? (rtrim($url, '/') . '/#organization');
 
-        return [
+        $schema = [
             '@context' => 'https://schema.org',
-            '@type' => 'SportsOrganization',
+            '@type' => $type,
+            '@id' => $id,
             'name' => $name,
             'url' => $url,
-            'sport' => $sport,
             'logo' => $logo,
         ];
+
+        if ($type === 'SportsOrganization' && $sport !== '') {
+            $schema['sport'] = $sport;
+        }
+
+        if (is_array($sameAs) && !empty($sameAs)) {
+            $schema['sameAs'] = array_values($sameAs);
+        }
+
+        return $schema;
     }
 
     function seo_event_schema(array $data): array
