@@ -167,25 +167,119 @@ $seo = [
         .page-title { margin: 0 0 12px; color: #15293e; }
         .back-link { display: inline-flex; align-items: center; gap: 6px; color: #15293e; text-decoration: none; font-weight: 600; margin-bottom: 14px; }
         .back-link:hover { color: #0f1f2c; }
-        /* Stile coerente con il calendario */
+        /* Stile coerente con il calendario (anche per partite giocate) */
         .calendar-list { display: grid; gap: 12px; }
-        .calendar-list .match-card { display: block; text-decoration: none; color: inherit; border: 1px solid #ddd; border-radius: 14px; background: #fff; padding: 18px 0; box-shadow: 0 3px 8px rgba(0,0,0,0.1); transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .calendar-list .match-card:hover { transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-        .calendar-list .match-header { display: flex; justify-content: space-between; font-size: 1rem; padding: 0 16px 8px 16px; color: #1a2d44; font-weight: 600; gap: 10px; flex-wrap: wrap; }
-        .calendar-list .match-body { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; padding: 6px 16px 0 16px; }
-        .calendar-list .team { display: flex; justify-content: flex-start; align-items: center; gap: 8px; }
-        .calendar-list .team.away { justify-content: flex-end; }
-        .calendar-list .team img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: #f6f8fb; border: 1px solid #e5e8ee; }
-        .calendar-list .team-name { font-weight: 700; color: #15293e; text-align: right; }
-        .calendar-list .team.away .team-name { text-align: left; }
-        .calendar-list .match-center { display: grid; gap: 6px; justify-items: center; color: #5f6b7b; font-weight: 700; }
-        .calendar-list .vs { font-size: 1.1rem; color: #15293e; }
+        .calendar-list .match-card {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            border: 1px solid #dfe6f0;
+            border-radius: 14px;
+            background: #fff;
+            padding: 12px 12px 14px;
+            box-shadow: 0 6px 14px rgba(15,31,51,0.08);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+        .calendar-list .match-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(15,31,51,0.14);
+        }
+        .match-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 0 4px 6px;
+            font-size: 0.95rem;
+            color: #1a2d44;
+            font-weight: 600;
+        }
+        .match-top-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
         .match-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-        .match-time { color: #4c5b71; font-weight: 600; }
-        .match-badge { background: #e8edf5; color: #1a2d44; padding: 4px 8px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; }
+        .match-time { color: #4c5b71; font-weight: 700; }
+        .match-badge {
+            background: #e8edf5;
+            color: #1a2d44;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 0.83rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+        .match-location {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 4px 10px;
+            color: #4c5b71;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .match-location-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #d80000;
+            box-shadow: 0 0 0 4px rgba(216,0,0,0.12);
+            flex-shrink: 0;
+        }
+        .calendar-list .match-body {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 8px 0 8px;
+        }
+        .calendar-list .team {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+        .calendar-list .team.away { justify-content: flex-end; }
+        .calendar-list .team img {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #f6f8fb;
+            border: 1px solid #e5e8ee;
+        }
+        .calendar-list .team-name {
+            font-weight: 800;
+            color: #15293e;
+            text-align: right;
+            font-size: 0.98rem;
+            letter-spacing: 0.01em;
+        }
+        .calendar-list .team.away .team-name { text-align: left; }
+        .calendar-list .match-center {
+            display: grid;
+            gap: 4px;
+            justify-items: center;
+            color: #5f6b7b;
+            font-weight: 700;
+            min-width: 80px;
+        }
+        .calendar-list .vs { font-size: 1.05rem; color: #1f3f63; }
+        .calendar-list .score {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #0f1f33;
+            letter-spacing: 0.02em;
+        }
+        .match-subtext { color: #5f6b7b; font-size: 0.9rem; }
         @media (max-width: 640px) {
             .calendar-list .match-body { grid-template-columns: 1fr; text-align: center; }
             .calendar-list .team, .calendar-list .team.away { justify-content: center; }
+            .calendar-list .team-name { text-align: center !important; }
         }
         @media (max-width: 640px) {
             .player-hero { grid-template-columns: 1fr; text-align: center; }
@@ -265,14 +359,20 @@ $seo = [
                           $logoCasa = !empty($p['logo_casa']) ? $p['logo_casa'] : $defaultTeamLogo;
                           $logoOspite = !empty($p['logo_ospite']) ? $p['logo_ospite'] : $defaultTeamLogo;
                         ?>
-                        <a class="match-card" href="<?= h($link) ?>">
-                            <div class="match-header">
-                                <div class="match-meta">
+                        <a class="match-card upcoming" href="<?= h($link) ?>">
+                            <div class="match-top">
+                                <div class="match-top-left">
                                     <?php if ($stage): ?><span class="match-badge"><?= h($stage) ?></span><?php endif; ?>
                                     <span class="muted"><?= h($p['torneo']) ?></span>
                                 </div>
                                 <span class="match-time"><?= h(format_match_datetime($p['data_partita'], $p['ora_partita'])) ?></span>
                             </div>
+                            <?php if (!empty($p['campo'])): ?>
+                                <div class="match-location">
+                                    <span class="match-location-dot"></span>
+                                    <span><?= h($p['campo']) ?></span>
+                                </div>
+                            <?php endif; ?>
                             <div class="match-body">
                                 <div class="team home">
                                     <img src="<?= h($logoCasa) ?>" alt="Logo <?= h($p['squadra_casa']) ?>" onerror="this.src='<?= h($defaultTeamLogo) ?>';">
@@ -280,7 +380,7 @@ $seo = [
                                 </div>
                                 <div class="match-center">
                                     <span class="vs">VS</span>
-                                    <div class="muted"><?= h($p['campo']) ?></div>
+                                    <div class="match-subtext"><?= h($p['campo']) ?></div>
                                 </div>
                                 <div class="team away">
                                     <div class="team-name"><?= h($p['squadra_ospite']) ?></div>
@@ -308,22 +408,28 @@ $seo = [
                           $scoreHome = $p['gol_casa'] !== null ? (int)$p['gol_casa'] : '-';
                           $scoreAway = $p['gol_ospite'] !== null ? (int)$p['gol_ospite'] : '-';
                         ?>
-                        <a class="match-card" href="<?= h($link) ?>">
-                            <div class="match-header">
-                                <div class="match-meta">
+                        <a class="match-card played" href="<?= h($link) ?>">
+                            <div class="match-top">
+                                <div class="match-top-left">
                                     <?php if ($stage): ?><span class="match-badge"><?= h($stage) ?></span><?php endif; ?>
                                     <span class="muted"><?= h($p['torneo']) ?></span>
                                 </div>
                                 <span class="match-time"><?= h(format_match_datetime($p['data_partita'], $p['ora_partita'])) ?></span>
                             </div>
+                            <?php if (!empty($p['campo'])): ?>
+                                <div class="match-location">
+                                    <span class="match-location-dot"></span>
+                                    <span><?= h($p['campo']) ?></span>
+                                </div>
+                            <?php endif; ?>
                             <div class="match-body">
                                 <div class="team home">
                                     <img src="<?= h($logoCasa) ?>" alt="Logo <?= h($p['squadra_casa']) ?>" onerror="this.src='<?= h($defaultTeamLogo) ?>';">
                                     <div class="team-name"><?= h($p['squadra_casa']) ?></div>
                                 </div>
                                 <div class="match-center">
-                                    <span class="vs"><?= $scoreHome ?> - <?= $scoreAway ?></span>
-                                    <div class="muted"><?= h($p['campo']) ?></div>
+                                    <span class="score"><?= $scoreHome ?> - <?= $scoreAway ?></span>
+                                    <div class="match-subtext"><?= h($p['campo']) ?></div>
                                 </div>
                                 <div class="team away">
                                     <div class="team-name"><?= h($p['squadra_ospite']) ?></div>
