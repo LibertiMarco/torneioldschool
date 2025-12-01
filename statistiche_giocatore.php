@@ -276,21 +276,16 @@ $seo = [
             letter-spacing: 0.02em;
         }
         .match-subtext { color: #5f6b7b; font-size: 0.9rem; }
-        @media (max-width: 640px) {
-            .calendar-list .match-body { grid-template-columns: 1fr; text-align: center; }
-            .calendar-list .team, .calendar-list .team.away { justify-content: center; }
-            .calendar-list .team-name { text-align: center !important; }
-        }
         @media (max-width: 600px) {
             .calendar-list .match-card { padding: 10px 10px 12px; }
             .match-top { flex-direction: column; align-items: flex-start; gap: 4px; font-size: 0.9rem; }
             .match-time { width: 100%; text-align: left; }
             .match-location { padding: 2px 4px 10px; font-size: 0.9rem; }
-            .calendar-list .match-body { gap: 8px; }
-            .calendar-list .team img { width: 32px; height: 32px; }
-            .calendar-list .team-name { font-size: 0.95rem; }
-            .calendar-list .vs { font-size: 1rem; }
-            .calendar-list .score { font-size: 1.15rem; }
+            .calendar-list .match-body { gap: 8px; grid-template-columns: 1fr auto 1fr; }
+            .calendar-list .team img { width: 30px; height: 30px; }
+            .calendar-list .team-name { font-size: 0.9rem; }
+            .calendar-list .vs { font-size: 0.98rem; }
+            .calendar-list .score { font-size: 1.1rem; }
         }
         @media (max-width: 640px) {
             .player-hero { grid-template-columns: 1fr; text-align: center; }
@@ -314,7 +309,6 @@ $seo = [
             <div>
                 <div class="badge">Profilo giocatore</div>
                 <h2 style="margin:8px 0 4px;"><?= h($giocatore['nome'] . ' ' . $giocatore['cognome']) ?></h2>
-                <p style="margin:0; color: rgba(255,255,255,0.8);">Ruolo: <?= h($giocatore['ruolo']) ?></p>
                 <div class="hero-stats">
                     <span class="stat-chip">Presenze: <?= (int)$giocatore['presenze'] ?></span>
                     <span class="stat-chip">Gol: <?= (int)$giocatore['reti'] ?></span>
@@ -344,12 +338,12 @@ $seo = [
                                 </div>
                             </div>
                             <div class="team-stats">
-                                <span>P: <?= (int)$s['presenze'] ?></span>
-                                <span>G: <?= (int)$s['reti'] ?></span>
-                                <span>A: <?= (int)$s['assist'] ?></span>
-                                <span>Gialli: <?= (int)$s['gialli'] ?></span>
-                                <span>Rossi: <?= (int)$s['rossi'] ?></span>
-                                <span>MV: <?= $s['media_voti'] !== null ? h($s['media_voti']) : 'N/D' ?></span>
+                                <span><strong>P:</strong> <?= (int)$s['presenze'] ?></span>
+                                <span><strong>G:</strong> <?= (int)$s['reti'] ?></span>
+                                <span><strong>A:</strong> <?= (int)$s['assist'] ?></span>
+                                <span><strong>Gialli:</strong> <?= (int)$s['gialli'] ?></span>
+                                <span><strong>Rossi:</strong> <?= (int)$s['rossi'] ?></span>
+                                <span><strong>MV:</strong> <?= $s['media_voti'] !== null ? h($s['media_voti']) : 'N/D' ?></span>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -391,7 +385,6 @@ $seo = [
                                 </div>
                                 <div class="match-center">
                                     <span class="vs">VS</span>
-                                    <div class="match-subtext"><?= h($p['campo']) ?></div>
                                 </div>
                                 <div class="team away">
                                     <div class="team-name"><?= h($p['squadra_ospite']) ?></div>
@@ -440,7 +433,6 @@ $seo = [
                                 </div>
                                 <div class="match-center">
                                     <span class="score"><?= $scoreHome ?> - <?= $scoreAway ?></span>
-                                    <div class="match-subtext"><?= h($p['campo']) ?></div>
                                 </div>
                                 <div class="team away">
                                     <div class="team-name"><?= h($p['squadra_ospite']) ?></div>
