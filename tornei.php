@@ -237,13 +237,6 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
   <!-- CONTENUTO PRINCIPALE -->
   <div class="content">
 
-    <!-- HERO -->
-    <section class="home-hero">
-      <div class="hero-overlay">
-        <h1>Tornei calcio Napoli</h1>
-      </div>
-    </section>
-
     <!-- TORNEI IN CORSO -->
     <section class="home-news" style="margin-top:50px;">
       <h2>Tornei in corso</h2>
