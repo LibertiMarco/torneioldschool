@@ -122,7 +122,7 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
     .banner {
       position: relative;
       width: 100%;
-      height: 160px; /* più basso */
+      height: 160px; /* piÃƒÂ¹ basso */
       background: #f4f6fb;
       display: flex;
       align-items: center;
@@ -343,7 +343,7 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
     <div class="banner">Chi Siamo</div>
 
     <section class="about-container">
-      <h2 class="about-subtitle">Passione, amicizia e sport — lo spirito Old School</h2>
+      <h2 class="about-subtitle">Passione, amicizia e sport - lo spirito Old School</h2>
 
       <p class="about-text">
         Siamo <strong>Frank</strong> ed <strong>Emanuele</strong>, due amici con la stessa visione:  
@@ -351,18 +351,18 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
       </p>
 
       <p class="about-text">
-        Organizziamo <strong>tornei amatoriali di calcio a 5 e calcio a 8</strong> — e, qualche volta, anche di altri sport —  
+        Organizziamo <strong>tornei amatoriali di calcio a 5 e calcio a 8</strong> - e, qualche volta, anche di altri sport -  
         nella zona di <strong>Napoli Nord</strong>.  
-        I nostri eventi non hanno premi in denaro, ma offrono qualcosa di molto più importante:  
+        I nostri eventi non hanno premi in denaro, ma offrono qualcosa di molto piÃ¹ importante:  
         <strong>unione, amicizia e divertimento puro</strong>.
       </p>
 
       <p class="about-text">
-        Ogni torneo è pensato per essere un’esperienza completa:  
-        arbitri qualificati, sistema <strong>VAR</strong>, <strong>highlights</strong>, completini personalizzati e anche <strong>contenuti TikTok</strong> per far rivivere i momenti più belli di ogni partita.
+        Ogni torneo Ã¨ pensato per essere un'esperienza completa:  
+        arbitri qualificati, sistema <strong>VAR</strong>, <strong>highlights</strong>, completini personalizzati e anche <strong>contenuti TikTok</strong> per far rivivere i momenti piÃ¹ belli di ogni partita.
       </p>
 
-      <p class="about-highlight">Tornei Old School — il calcio come una volta, con lo spirito di oggi.</p>
+      <p class="about-highlight">Tornei Old School - il calcio come una volta, con lo spirito di oggi.</p>
 
       <div class="team-switch">
         <button class="team-tab active" data-target="organizzatori">Organizzatori</button>
@@ -378,7 +378,7 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
           </div>
           <div class="member">
             <h3>Emanuele</h3>
-            <p>Creativo e appassionato di comunicazione, cura i social, i video e l�?Tesperienza digitale dei nostri tornei.</p>
+            <p>Creativo e appassionato di comunicazione, cura i social, i video e l'esperienza digitale dei nostri tornei.</p>
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-﻿﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
@@ -85,14 +85,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if (!preg_match($pattern, $password)) {
                 $error = "La password deve avere almeno 8 caratteri, una maiuscola, un numero e un simbolo speciale.";
             } else {
-                // Verifica se l'email esiste gi�
+                // Verifica se l'email esiste gia
                 $check = $conn->prepare("SELECT id FROM utenti WHERE email = ?");
                 $check->bind_param("s", $email);
                 $check->execute();
                 $result = $check->get_result();
 
                 if ($result->num_rows > 0) {
-                    $error = "Esiste gi� un account con questa email.";
+                    $error = "Esiste gia un account con questa email.";
                 } else {
                     // Gestione avatar (opzionale)
                     if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] !== UPLOAD_ERR_NO_FILE) {
@@ -143,7 +143,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         try {
                             $tokenVerifica = bin2hex(random_bytes(32));
                         } catch (Exception $e) {
-                            $error = "Errore tecnico nella generazione del token. Riprova pi� tardi.";
+                            $error = "Errore tecnico nella generazione del token. Riprova piu tardi.";
                         }
                     }
 
@@ -168,7 +168,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             if (inviaEmailVerifica($email, $nome, $tokenVerifica)) {
                                 $successMessage = "Registrazione completata! Ti abbiamo inviato una email di conferma a {$email}.";
                             } else {
-                                $successMessage = "Registrazione riuscita, ma non � stato possibile inviare l'email di conferma. Contattaci per ricevere assistenza.";
+                                $successMessage = "Registrazione riuscita, ma non e stato possibile inviare l'email di conferma. Contattaci per ricevere assistenza.";
                             }
                             $_POST = [];
                         } else {
@@ -639,7 +639,7 @@ $captchaQuestion = captcha_generate('register_form');?>
       </form>
 
         <div class="register-footer">
-          <p>Hai gi� un account? <a href="login.php">Accedi</a></p>
+          <p>Hai gia un account? <a href="login.php">Accedi</a></p>
         </div>
       </div>
     </div>

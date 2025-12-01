@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // === AVVIO SESSIONE ===
 session_start();
 if (!isset($_SESSION['user_id'])) {
@@ -210,7 +210,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
 
     .news-grid article img {
         width: 100%;
-        height: 200px;                            /* PiÃ¹ grande come prima */
+        height: 200px;                            /* Piu grande come prima */
         object-fit: cover;
         border-radius: 12px 12px 0 0;
     }
@@ -247,7 +247,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
 
     <!-- TORNEI IN CORSO -->
     <section class="home-news" style="margin-top:50px;">
-      <h2>âš½ï¸ Tornei in corso</h2>
+      <h2>Tornei in corso</h2>
       <div class="news-grid">
         <?php if (!empty($tornei['in corso'])): ?>
           <?php foreach ($tornei['in corso'] as $t): ?>
@@ -262,10 +262,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
                   <?php endif; ?>
                 </h3>
                 <?php if (!empty($t['data_inizio']) || !empty($t['data_fine'])): ?>
-                  <p>ðŸ“… 
-                    <?= htmlspecialchars(formattaData($t['data_inizio'])) ?>
-                    <?php if (!empty($t['data_fine'])): ?> - <?= htmlspecialchars(formattaData($t['data_fine'])) ?><?php endif; ?>
-                  </p>
+                  <p>Dal <?= htmlspecialchars(formattaData($t['data_inizio'])) ?><?php if (!empty($t['data_fine'])): ?> - <?= htmlspecialchars(formattaData($t['data_fine'])) ?><?php endif; ?></p>
                 <?php endif; ?>
               </a>
             </article>
@@ -278,7 +275,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
 
     <!-- TORNEI PROGRAMMATI -->
     <section class="home-news" style="margin-top:50px;">
-      <h2>â³ Tornei programmati</h2>
+      <h2>Tornei programmati</h2>
       <div class="news-grid">
         <?php if (!empty($tornei['programmato'])): ?>
           <?php foreach ($tornei['programmato'] as $t): ?>
@@ -293,10 +290,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
                   <?php endif; ?>
                 </h3>
                 <?php if (!empty($t['data_inizio']) || !empty($t['data_fine'])): ?>
-                  <p>ðŸ“… 
-                    <?= htmlspecialchars(formattaData($t['data_inizio'])) ?>
-                    <?php if (!empty($t['data_fine'])): ?> - <?= htmlspecialchars(formattaData($t['data_fine'])) ?><?php endif; ?>
-                  </p>
+                  <p>Dal <?= htmlspecialchars(formattaData($t['data_inizio'])) ?><?php if (!empty($t['data_fine'])): ?> - <?= htmlspecialchars(formattaData($t['data_fine'])) ?><?php endif; ?></p>
                 <?php endif; ?>
               </a>
             </article>
@@ -309,7 +303,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
 
     <!-- TORNEI TERMINATI -->
     <section class="home-news" style="margin-top:50px; margin-bottom:80px;">
-      <h2>ðŸ Tornei terminati</h2>
+      <h2>Tornei terminati</h2>
       <div class="news-grid">
         <?php if (!empty($tornei['terminato'])): ?>
           <?php foreach ($tornei['terminato'] as $t): ?>
@@ -324,10 +318,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
                   <?php endif; ?>
                 </h3>
                 <?php if (!empty($t['data_inizio']) || !empty($t['data_fine'])): ?>
-                  <p>ðŸ“… 
-                    <?= htmlspecialchars(formattaData($t['data_inizio'])) ?>
-                    <?php if (!empty($t['data_fine'])): ?> - <?= htmlspecialchars(formattaData($t['data_fine'])) ?><?php endif; ?>
-                  </p>
+                  <p>Dal <?= htmlspecialchars(formattaData($t['data_inizio'])) ?><?php if (!empty($t['data_fine'])): ?> - <?= htmlspecialchars(formattaData($t['data_fine'])) ?><?php endif; ?></p>
                 <?php endif; ?>
               </a>
             </article>

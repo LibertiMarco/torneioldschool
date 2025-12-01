@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/includi/security.php';
 if (!isset($_SESSION['user_id'])) {
     header("Location: /login.php");
@@ -171,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $hashAttuale = $resPwd['password'] ?? '';
             if (!password_verify($currentPassword, $hashAttuale)) {
-                $errorMessage = "La password attuale non è corretta.";
+                $errorMessage = "La password attuale non Ã¨ corretta.";
             }
         }
     }
@@ -565,7 +565,7 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
               <h3>Consensi marketing e preferenze</h3>
               <div class="consent-row">
                 <input type="checkbox" id="consenso_newsletter" name="consenso_newsletter" <?= !empty($consents['newsletter']) ? 'checked' : '' ?>>
-                <label for="consenso_newsletter">Newsletter con novit� e calendari tornei (facoltativo).</label>
+                <label for="consenso_newsletter">Newsletter con novita e calendari tornei (facoltativo).</label>
               </div>
               <div class="consent-row">
                 <input type="checkbox" id="consenso_marketing" name="consenso_marketing" <?= !empty($consents['marketing']) ? 'checked' : '' ?>>
