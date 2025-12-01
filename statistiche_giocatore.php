@@ -281,6 +281,17 @@ $seo = [
             .calendar-list .team, .calendar-list .team.away { justify-content: center; }
             .calendar-list .team-name { text-align: center !important; }
         }
+        @media (max-width: 600px) {
+            .calendar-list .match-card { padding: 10px 10px 12px; }
+            .match-top { flex-direction: column; align-items: flex-start; gap: 4px; font-size: 0.9rem; }
+            .match-time { width: 100%; text-align: left; }
+            .match-location { padding: 2px 4px 10px; font-size: 0.9rem; }
+            .calendar-list .match-body { gap: 8px; }
+            .calendar-list .team img { width: 32px; height: 32px; }
+            .calendar-list .team-name { font-size: 0.95rem; }
+            .calendar-list .vs { font-size: 1rem; }
+            .calendar-list .score { font-size: 1.15rem; }
+        }
         @media (max-width: 640px) {
             .player-hero { grid-template-columns: 1fr; text-align: center; }
             .player-hero img { margin: 0 auto; }
