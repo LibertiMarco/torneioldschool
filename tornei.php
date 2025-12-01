@@ -83,8 +83,8 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       display: grid;
       gap: 20px;
       grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      max-width: 1100px;
-      margin: 0 auto;
+      width: 100%;
+      margin: 0;
       justify-content: start;
     }
     .news-grid article {
