@@ -278,21 +278,22 @@ if (!empty($sessionAvatar)) {
     padding: 10px 12px;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.03);
-    color: #e7edf7;
+    color: #f7fbff !important;
     text-decoration: none;
     font-weight: 600;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: background 0.2s ease, transform 0.15s ease, color 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: background 0.2s ease, transform 0.15s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .user-menu-item:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: #fff;
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff !important;
+    border-color: rgba(255, 255, 255, 0.16);
     transform: translateX(2px);
 }
 
 .item-arrow {
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.8);
     font-weight: 700;
 }
 
