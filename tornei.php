@@ -240,8 +240,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
     <!-- HERO -->
     <section class="home-hero">
       <div class="hero-overlay">
-        <h1>Tornei calcetto Napoli</h1>
-        <p>Tornei di calcio a 5, 6 e calciotto (8) a Napoli: scopri i tornei in corso, programmati e quelli gia conclusi.</p>
+        <h1>Tornei calcio Napoli</h1>
       </div>
     </section>
 
