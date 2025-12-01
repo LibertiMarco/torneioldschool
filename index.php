@@ -44,7 +44,7 @@ $localSchema = [
       <section class="home-hero">
         <div class="hero-overlay">
           <h1>Tornei calcetto Napoli</h1>
-          <p>Tornei di calcio a 5, 6 e calciotto (8) a Napoli: iscrizioni, calendari, regolamenti e risultati live.</p>
+          <p>Tornei di calcio a 5, 6 e 8 a Napoli: iscrizioni, calendari, classifiche, regolamenti e risultati.</p>
           <a href="/tornei.php" class="hero-btn">Tornei</a>
         </div>
       </section>
