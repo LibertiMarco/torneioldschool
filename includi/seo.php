@@ -55,6 +55,7 @@ if (!function_exists('seo_base_url')) {
         $image = $meta['image'] ?? ($base . '/img/logo_old_school.png');
         $type = $meta['type'] ?? 'website';
         $siteName = $meta['site_name'] ?? 'Tornei Old School';
+        $siteAltName = $meta['site_alternate_name'] ?? null;
         $icon = $meta['icon'] ?? ($base . '/img/logo_old_school.png');
         $appleIcon = $meta['apple_icon'] ?? ($base . '/img/logo_old_school.png');
 
@@ -89,6 +90,7 @@ if (!function_exists('seo_base_url')) {
             'logo' => $logoForSchema,
             '@type' => 'SportsOrganization',
             'sport' => $meta['sport'] ?? 'Calcio a 5, calcio a 6 e calciotto (8)',
+            'alternateName' => $siteAltName,
         ]);
         $websiteSchema = [
             '@context' => 'https://schema.org',
@@ -98,6 +100,9 @@ if (!function_exists('seo_base_url')) {
             'name' => $siteName,
             'publisher' => ['@id' => $orgSchema['@id'] ?? ($baseRoot . '/#organization')],
         ];
+        if (!empty($siteAltName)) {
+            $websiteSchema['alternateName'] = $siteAltName;
+        }
 
         render_jsonld($orgSchema);
         render_jsonld($websiteSchema);
@@ -148,6 +153,7 @@ if (!function_exists('seo_base_url')) {
         $sport = $data['sport'] ?? 'Calcio';
         $type = $data['@type'] ?? $data['type'] ?? 'SportsOrganization';
         $sameAs = $data['sameAs'] ?? [];
+        $alternateName = $data['alternateName'] ?? $data['site_alternate_name'] ?? null;
         $id = $data['@id'] ?? $data['id'] ?? (rtrim($url, '/') . '/#organization');
 
         $schema = [
@@ -165,6 +171,9 @@ if (!function_exists('seo_base_url')) {
 
         if (is_array($sameAs) && !empty($sameAs)) {
             $schema['sameAs'] = array_values($sameAs);
+        }
+        if (!empty($alternateName)) {
+            $schema['alternateName'] = $alternateName;
         }
 
         return $schema;
