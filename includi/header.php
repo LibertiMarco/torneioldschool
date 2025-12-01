@@ -2,16 +2,20 @@
 require_once __DIR__ . '/security.php';
 $hasPlayerProfile = false;
 if (isset($_SESSION['user_id'])) {
-    // Verifica se l'utente ha un giocatore associato per mostrare il link dedicato
-    require_once __DIR__ . '/db.php';
-    $stmt = $conn->prepare("SELECT id FROM giocatori WHERE utente_id = ? LIMIT 1");
-    if ($stmt) {
-        $stmt->bind_param("i", $_SESSION['user_id']);
-        if ($stmt->execute()) {
-            $stmt->store_result();
-            $hasPlayerProfile = $stmt->num_rows > 0;
+    // Usa la connessione solo se disponibile, altrimenti evita fatal error
+    if (!isset($conn) || !($conn instanceof mysqli)) {
+        require_once __DIR__ . '/db.php';
+    }
+    if (isset($conn) && $conn instanceof mysqli) {
+        $stmt = $conn->prepare("SELECT id FROM giocatori WHERE utente_id = ? LIMIT 1");
+        if ($stmt) {
+            $stmt->bind_param("i", $_SESSION['user_id']);
+            if ($stmt->execute()) {
+                $stmt->store_result();
+                $hasPlayerProfile = $stmt->num_rows > 0;
+            }
+            $stmt->close();
         }
-        $stmt->close();
     }
 }
 
