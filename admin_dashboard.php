@@ -68,6 +68,12 @@ header('X-Robots-Tag: noindex, nofollow', true);
       </div>
 
       <div class="admin-card">
+        <h3>Gestione Staff</h3>
+        <p>Aggiungi arbitri, videomaker e altri ruoli dello staff.</p><br>
+        <a href="api/gestione_staff.php">Gestisci</a>
+      </div>
+
+      <div class="admin-card">
         <h3>Albo d'oro</h3>
         <p>Inserisci e aggiorna le vincitrici dei tornei.</p><br>
         <a href="api/gestione_albo.php">Gestisci</a>

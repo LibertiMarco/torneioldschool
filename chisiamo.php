@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/includi/seo.php';
+require_once __DIR__ . '/includi/db.php';
+
 $baseUrl = seo_base_url();
 $aboutSeo = [
   'title' => 'Chi siamo - Tornei Old School',
@@ -11,15 +13,76 @@ $aboutBreadcrumbs = seo_breadcrumb_schema([
   ['name' => 'Home', 'url' => $baseUrl . '/'],
   ['name' => 'Chi siamo', 'url' => $baseUrl . '/chisiamo.php'],
 ]);
-$arbitri = [
-  ['nome' => 'Arbitro 1', 'foto' => '/img/giocatori/unknown.jpg'],
-  ['nome' => 'Arbitro 2', 'foto' => '/img/giocatori/unknown.jpg'],
-  ['nome' => 'Arbitro 3', 'foto' => '/img/giocatori/unknown.jpg'],
+
+$staffCategories = [
+  'arbitro' => [
+    'label' => 'Arbitri',
+    'description' => 'Direzione di gara affidata al nostro team di ufficiali.',
+    'fallback_role' => 'Arbitro',
+  ],
+  'videomaker' => [
+    'label' => 'Videomaker',
+    'description' => 'Riprese, highlights e contenuti social dei nostri match.',
+    'fallback_role' => 'Videomaker',
+  ],
+  'organizzazione' => [
+    'label' => 'Organizzazione',
+    'description' => 'Coordinamento e logistica degli eventi.',
+    'fallback_role' => 'Organizzatore',
+  ],
+  'staff' => [
+    'label' => 'Staff',
+    'description' => 'Supporto in campo e fuori.',
+    'fallback_role' => 'Staff',
+  ],
 ];
-$videomaker = [
-  ['nome' => 'Videomaker 1', 'foto' => '/img/giocatori/unknown.jpg'],
-  ['nome' => 'Videomaker 2', 'foto' => '/img/giocatori/unknown.jpg'],
+
+$defaultStaff = [
+  'arbitro' => [
+    ['nome' => 'Arbitro 1', 'foto' => '/img/giocatori/unknown.jpg'],
+    ['nome' => 'Arbitro 2', 'foto' => '/img/giocatori/unknown.jpg'],
+    ['nome' => 'Arbitro 3', 'foto' => '/img/giocatori/unknown.jpg'],
+  ],
+  'videomaker' => [
+    ['nome' => 'Videomaker 1', 'foto' => '/img/giocatori/unknown.jpg'],
+    ['nome' => 'Videomaker 2', 'foto' => '/img/giocatori/unknown.jpg'],
+  ],
 ];
+
+function load_staff_from_db(mysqli $conn, array $defaults): array {
+  $data = $defaults;
+  $exists = $conn->query("SHOW TABLES LIKE 'staff'");
+  if (!$exists || $exists->num_rows === 0) {
+    return $data;
+  }
+  $res = $conn->query("SELECT nome, ruolo, categoria, foto, ordinamento FROM staff ORDER BY categoria, COALESCE(ordinamento, 9999), nome");
+  if ($res instanceof mysqli_result) {
+    $data = [];
+    while ($row = $res->fetch_assoc()) {
+      $cat = strtolower(trim($row['categoria'] ?? 'staff'));
+      if (!isset($data[$cat])) {
+        $data[$cat] = [];
+      }
+      $data[$cat][] = [
+        'nome' => $row['nome'] ?: 'Staff',
+        'ruolo' => $row['ruolo'] ?? '',
+        'foto' => $row['foto'] ?: '/img/giocatori/unknown.jpg',
+      ];
+    }
+    $res->free();
+    foreach ($defaults as $cat => $list) {
+      if (empty($data[$cat])) {
+        $data[$cat] = $list;
+      }
+    }
+  }
+  return $data;
+}
+
+$staffData = $defaultStaff;
+if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
+  $staffData = load_staff_from_db($conn, $defaultStaff);
+}
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -321,41 +384,68 @@ $videomaker = [
       </div>
 
       <div class="team-panel" id="panel-staff">
-        <div class="staff-section">
-          <div class="staff-header">
-            <span class="staff-pill">Arbitri</span>
-            <p class="staff-role">Direzione di gara affidata al nostro team di ufficiali.</p>
-          </div>
-          <div class="staff-grid">
-            <?php foreach ($arbitri as $arb): ?>
-              <div class="staff-card">
-                <img src="<?= htmlspecialchars($arb['foto']) ?>" alt="Foto <?= htmlspecialchars($arb['nome']) ?>" onerror="this.src='/img/giocatori/unknown.jpg';">
-                <div>
-                  <p class="staff-name"><?= htmlspecialchars($arb['nome']) ?></p>
-                  <p class="staff-role">Arbitro</p>
+        <?php
+        $categoryOrder = ['arbitro', 'videomaker', 'organizzazione', 'staff'];
+        $rendered = [];
+        foreach ($categoryOrder as $catKey):
+          $members = $staffData[$catKey] ?? [];
+          if (empty($members)) continue;
+          $rendered[$catKey] = true;
+          $label = $staffCategories[$catKey]['label'] ?? ucfirst($catKey);
+          $desc = $staffCategories[$catKey]['description'] ?? 'Staff';
+          $fallbackRole = $staffCategories[$catKey]['fallback_role'] ?? ucfirst($catKey);
+        ?>
+          <div class="staff-section">
+            <div class="staff-header">
+              <span class="staff-pill"><?= htmlspecialchars($label) ?></span>
+              <p class="staff-role"><?= htmlspecialchars($desc) ?></p>
+            </div>
+            <div class="staff-grid">
+              <?php foreach ($members as $member): ?>
+                <?php
+                  $role = trim($member['ruolo'] ?? '');
+                  $roleToShow = $role !== '' ? $role : $fallbackRole;
+                ?>
+                <div class="staff-card">
+                  <img src="<?= htmlspecialchars($member['foto']) ?>" alt="Foto <?= htmlspecialchars($member['nome']) ?>" onerror="this.src='/img/giocatori/unknown.jpg';">
+                  <div>
+                    <p class="staff-name"><?= htmlspecialchars($member['nome']) ?></p>
+                    <p class="staff-role"><?= htmlspecialchars($roleToShow) ?></p>
+                  </div>
                 </div>
-              </div>
-            <?php endforeach; ?>
+              <?php endforeach; ?>
+            </div>
           </div>
-        </div>
+        <?php endforeach; ?>
 
-        <div class="staff-section">
-          <div class="staff-header">
-            <span class="staff-pill">Videomaker</span>
-            <p class="staff-role">Riprese, highlights e contenuti social dei nostri match.</p>
-          </div>
-          <div class="staff-grid">
-            <?php foreach ($videomaker as $video): ?>
-              <div class="staff-card">
-                <img src="<?= htmlspecialchars($video['foto']) ?>" alt="Foto <?= htmlspecialchars($video['nome']) ?>" onerror="this.src='/img/giocatori/unknown.jpg';">
-                <div>
-                  <p class="staff-name"><?= htmlspecialchars($video['nome']) ?></p>
-                  <p class="staff-role">Videomaker</p>
+        <?php foreach ($staffData as $catKey => $members):
+          if (isset($rendered[$catKey]) || empty($members)) continue;
+          $label = $staffCategories[$catKey]['label'] ?? ucwords(str_replace('_', ' ', $catKey));
+          $desc = $staffCategories[$catKey]['description'] ?? 'Staff';
+          $fallbackRole = $staffCategories[$catKey]['fallback_role'] ?? ucfirst($catKey);
+        ?>
+          <div class="staff-section">
+            <div class="staff-header">
+              <span class="staff-pill"><?= htmlspecialchars($label) ?></span>
+              <p class="staff-role"><?= htmlspecialchars($desc) ?></p>
+            </div>
+            <div class="staff-grid">
+              <?php foreach ($members as $member): ?>
+                <?php
+                  $role = trim($member['ruolo'] ?? '');
+                  $roleToShow = $role !== '' ? $role : $fallbackRole;
+                ?>
+                <div class="staff-card">
+                  <img src="<?= htmlspecialchars($member['foto']) ?>" alt="Foto <?= htmlspecialchars($member['nome']) ?>" onerror="this.src='/img/giocatori/unknown.jpg';">
+                  <div>
+                    <p class="staff-name"><?= htmlspecialchars($member['nome']) ?></p>
+                    <p class="staff-role"><?= htmlspecialchars($roleToShow) ?></p>
+                  </div>
                 </div>
-              </div>
-            <?php endforeach; ?>
+              <?php endforeach; ?>
+            </div>
           </div>
-        </div>
+        <?php endforeach; ?>
       </div>
 
       <a href="contatti.php" class="cta-button">Contatti</a>

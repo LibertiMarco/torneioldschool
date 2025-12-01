@@ -19,6 +19,7 @@ DROP TABLE IF EXISTS squadre;
 DROP TABLE IF EXISTS tornei;
 DROP TABLE IF EXISTS utenti;
 DROP TABLE IF EXISTS albo;
+DROP TABLE IF EXISTS staff;
 
 -- Utenti (login.php, register.php, api/gestione_utenti.php, api/blog.php)
 CREATE TABLE IF NOT EXISTS utenti (
@@ -53,6 +54,19 @@ CREATE TABLE IF NOT EXISTS albo (
     fine_mese TINYINT UNSIGNED DEFAULT NULL,
     fine_anno SMALLINT UNSIGNED DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Staff (chisiamo.php, api/gestione_staff.php)
+CREATE TABLE IF NOT EXISTS staff (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(150) NOT NULL,
+    ruolo VARCHAR(150) DEFAULT NULL,
+    categoria VARCHAR(60) NOT NULL DEFAULT 'staff',
+    foto VARCHAR(255) DEFAULT '/img/giocatori/unknown.jpg',
+    ordinamento INT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_staff_categoria (categoria),
+    KEY idx_staff_ordinamento (ordinamento)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tornei (tornei.php, api/gestione_tornei.php, api/crud/Torneo.php)
