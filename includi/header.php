@@ -153,6 +153,10 @@ if (!empty($sessionAvatar)) {
     align-items: center;
     justify-content: center;
     line-height: 0;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
 }
 
 .header-logo a {
@@ -191,10 +195,14 @@ if (!empty($sessionAvatar)) {
 
 /* USER BTN */
 .user-dropdown {
-    position: relative;
-    margin-left: auto;
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 0;
     display: flex;
     align-items: center;
+    z-index: 2;
 }
 
 .user-btn {
@@ -340,6 +348,12 @@ if (!empty($sessionAvatar)) {
         transform: translateY(-50%);
     }
 
+    .header-logo {
+        position: static;
+        transform: none;
+        margin: 0 auto;
+    }
+
     .header-nav {
         position: absolute;
         left: 15px;
@@ -383,11 +397,7 @@ if (!empty($sessionAvatar)) {
     }
 
     .user-dropdown {
-        position: absolute;
         right: 16px;
-        top: 50%;
-        transform: translateY(-50%);
-        margin-left: 0;
     }
 }
 </style>
