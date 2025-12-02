@@ -147,9 +147,24 @@ if (!empty($sessionAvatar)) {
 }
 
 /* LOGO NITIDO */
+.header-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-logo a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .header-logo img {
-    height: 46px;
-    width: auto;
+    width: 52px;
+    height: 52px;
+    display: block;
+    object-fit: contain;
+    border-radius: 50%;
 }
 
 /* NAV DESKTOP */
@@ -347,6 +362,11 @@ if (!empty($sessionAvatar)) {
 
     .site-header {
         justify-content: space-between;
+    }
+
+    .header-logo img {
+        width: 48px;
+        height: 48px;
     }
 }
 </style>
