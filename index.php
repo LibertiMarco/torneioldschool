@@ -215,7 +215,10 @@ async function loadTopScorers() {
             list.innerHTML = '<p class="empty-state">Nessun dato disponibile al momento.</p>';
             return;
         }
-        list.innerHTML = items.map((p, idx) => renderHomeLeaderCard(p, idx + 1, p.torneo || '', currentOrderHome)).join('');
+        list.innerHTML = items.map((p, idx) => {
+          const rank = p.posizione ?? (idx + 1);
+          return renderHomeLeaderCard(p, rank, p.torneo || '', currentOrderHome);
+        }).join('');
     } catch (error) {
         console.error('Errore nel caricamento classifica giocatori:', error);
         list.innerHTML = '<p class="empty-state">Errore nel recupero della classifica.</p>';

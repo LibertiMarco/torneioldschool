@@ -141,6 +141,107 @@ function mostraClassifica(classifica) {
   }
 }
 
+// ====================== MARCATORI TORNEO ======================
+const MARCATORI_PER_PAGE = 15;
+let marcatoriData = [];
+let marcatoriPage = 1;
+let marcatoriRanks = [];
+
+function buildMarcatoriRanks() {
+  marcatoriRanks = [];
+  if (!Array.isArray(marcatoriData) || !marcatoriData.length) return;
+
+  let lastKey = null;
+  let lastRank = 0;
+  marcatoriData.forEach((p, idx) => {
+    const gol = Number(p.gol ?? 0);
+    const pres = Number(p.presenze ?? 0);
+    const key = `${gol}|${pres}`;
+
+    if (key === lastKey) {
+      marcatoriRanks[idx] = lastRank;
+    } else {
+      lastRank = idx + 1;
+      marcatoriRanks[idx] = lastRank;
+      lastKey = key;
+    }
+  });
+}
+
+function renderMarcatoriPagina(page = 1) {
+  const body = document.getElementById("marcatoriBody");
+  if (!body) return;
+
+  if (!Array.isArray(marcatoriData) || marcatoriData.length === 0) {
+    body.innerHTML = `<tr><td colspan="5">Nessun dato marcatori</td></tr>`;
+    const info = document.getElementById("marcatoriPageInfo");
+    if (info) info.textContent = "";
+    if (document.getElementById("prevMarcatori")) document.getElementById("prevMarcatori").disabled = true;
+    if (document.getElementById("nextMarcatori")) document.getElementById("nextMarcatori").disabled = true;
+    return;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(marcatoriData.length / MARCATORI_PER_PAGE));
+  marcatoriPage = Math.min(Math.max(1, page), totalPages);
+  const start = (marcatoriPage - 1) * MARCATORI_PER_PAGE;
+  const slice = marcatoriData.slice(start, start + MARCATORI_PER_PAGE);
+
+  body.innerHTML = "";
+  slice.forEach((p, idx) => {
+    const globalIdx = start + idx;
+    const rank = marcatoriRanks[globalIdx] ?? globalIdx + 1;
+    const logo = resolveLogoPath(p.squadra, p.logo);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${rank}</td>
+      <td>
+        <div class="scorer-player">
+          <span class="scorer-name">${p.nome ?? ''} ${p.cognome ?? ''}</span>
+          <img class="scorer-logo-inline" src="${logo}" alt="${p.squadra || ''}">
+        </div>
+      </td>
+      <td>
+        <div class="scorer-team">
+          <img src="${logo}" alt="${p.squadra || ''}">
+          <span>${p.squadra || ''}</span>
+        </div>
+      </td>
+      <td>${p.gol ?? 0}</td>
+      <td>${p.presenze ?? 0}</td>
+    `;
+    body.appendChild(tr);
+  });
+
+  const prevBtn = document.getElementById("prevMarcatori");
+  const nextBtn = document.getElementById("nextMarcatori");
+  const info = document.getElementById("marcatoriPageInfo");
+  if (info) info.textContent = `Pagina ${marcatoriPage} di ${totalPages}`;
+  if (prevBtn) prevBtn.disabled = marcatoriPage <= 1;
+  if (nextBtn) nextBtn.disabled = marcatoriPage >= totalPages;
+}
+
+async function caricaMarcatori(torneoSlug = TORNEO) {
+  const body = document.getElementById("marcatoriBody");
+  if (!body) return;
+  body.innerHTML = `<tr><td colspan="5">Caricamento...</td></tr>`;
+  try {
+    const res = await fetch(`/api/classifica_marcatori.php?torneo=${encodeURIComponent(torneoSlug)}`);
+    const data = await res.json();
+    if (!Array.isArray(data) || !data.length) {
+      marcatoriData = [];
+      marcatoriRanks = [];
+      renderMarcatoriPagina(1);
+      return;
+    }
+    marcatoriData = data;
+    buildMarcatoriRanks();
+    renderMarcatoriPagina(1);
+  } catch (err) {
+    console.error("Errore nel caricamento marcatori:", err);
+    body.innerHTML = `<tr><td colspan="5">Errore caricamento marcatori</td></tr>`;
+  }
+}
+
 
 // ====================== CALENDARIO (GIRONE) ======================
 const roundLabelByKey = {
@@ -536,6 +637,8 @@ document.addEventListener("DOMContentLoaded", () => {
   caricaClassifica();
   const faseCalendario = document.getElementById("faseCalendario");
   const giornataSelect = document.getElementById("giornataSelect");
+  const prevMarcatoriBtn = document.getElementById("prevMarcatori");
+  const nextMarcatoriBtn = document.getElementById("nextMarcatori");
 
   const triggerCalendario = () => {
     const faseVal = (faseCalendario?.value || "REGULAR").toUpperCase();
@@ -545,6 +648,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   caricaCalendario("", "REGULAR");
   caricaSquadrePerRosa();
+  caricaMarcatori();
   if (heroImg) {
     fetch(`/api/get_torneo_by_slug.php?slug=${encodeURIComponent(TORNEO)}`)
       .then(res => res.json())
@@ -566,6 +670,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (giornataSelect) giornataSelect.value = "";
       triggerCalendario();
     });
+  }
+
+  if (prevMarcatoriBtn) {
+    prevMarcatoriBtn.addEventListener("click", () => renderMarcatoriPagina(marcatoriPage - 1));
+  }
+  if (nextMarcatoriBtn) {
+    nextMarcatoriBtn.addEventListener("click", () => renderMarcatoriPagina(marcatoriPage + 1));
   }
 
   // cambio fase girone/eliminazione
@@ -607,5 +718,8 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     document.querySelectorAll(".tab-section").forEach(s => s.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById(btn.dataset.tab).classList.add("active");
+    if (btn.dataset.tab === "marcatori") {
+      renderMarcatoriPagina(marcatoriPage);
+    }
   });
 });

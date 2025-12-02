@@ -142,6 +142,28 @@ function mostraClassifica(classifica) {
 const MARCATORI_PER_PAGE = 15;
 let marcatoriData = [];
 let marcatoriPage = 1;
+let marcatoriRanks = [];
+
+function buildMarcatoriRanks() {
+  marcatoriRanks = [];
+  if (!Array.isArray(marcatoriData) || !marcatoriData.length) return;
+
+  let lastKey = null;
+  let lastRank = 0;
+  marcatoriData.forEach((p, idx) => {
+    const gol = Number(p.gol ?? 0);
+    const pres = Number(p.presenze ?? 0);
+    const key = `${gol}|${pres}`;
+
+    if (key === lastKey) {
+      marcatoriRanks[idx] = lastRank;
+    } else {
+      lastRank = idx + 1;
+      marcatoriRanks[idx] = lastRank;
+      lastKey = key;
+    }
+  });
+}
 
 function renderMarcatoriPagina(page = 1) {
   const body = document.getElementById("marcatoriBody");
@@ -163,10 +185,12 @@ function renderMarcatoriPagina(page = 1) {
 
   body.innerHTML = "";
   slice.forEach((p, idx) => {
+    const globalIdx = start + idx;
+    const rank = marcatoriRanks[globalIdx] ?? globalIdx + 1;
     const logo = resolveLogoPath(p.squadra, p.logo);
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${start + idx + 1}</td>
+      <td>${rank}</td>
       <td>
         <div class="scorer-player">
           <span class="scorer-name">${p.nome ?? ''} ${p.cognome ?? ''}</span>
@@ -202,10 +226,12 @@ async function caricaMarcatori(torneoSlug = TORNEO) {
     const data = await res.json();
     if (!Array.isArray(data) || !data.length) {
       marcatoriData = [];
+      marcatoriRanks = [];
       renderMarcatoriPagina(1);
       return;
     }
     marcatoriData = data;
+    buildMarcatoriRanks();
     renderMarcatoriPagina(1);
   } catch (err) {
     console.error("Errore nel caricamento marcatori:", err);

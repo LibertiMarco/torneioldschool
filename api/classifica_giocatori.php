@@ -49,6 +49,10 @@ $orderClause = $ordine === 'presenze'
     ? 'ORDER BY g.presenze DESC, g.reti DESC, g.cognome ASC, g.nome ASC'
     : 'ORDER BY g.reti DESC, g.presenze DESC, g.cognome ASC, g.nome ASC';
 
+// Colonne chiave per il ranking (competizione: 1,1,3 in caso di pari)
+$rankPrimary = $ordine === 'presenze' ? 'g.presenze' : 'g.reti';
+$rankSecondary = $ordine === 'presenze' ? 'g.reti' : 'g.presenze';
+
 // Query dati
 $sql = "
     SELECT *
@@ -64,9 +68,15 @@ $sql = "
             g.reti AS gol,
             g.presenze,
             g.media_voti,
-            @rownum := @rownum + 1 AS posizione
+            @rownum := @rownum + 1 AS rownum_seq,
+            @rank := CASE 
+                WHEN @prev1 = $rankPrimary AND @prev2 = $rankSecondary THEN @rank 
+                ELSE @rownum 
+            END AS posizione,
+            @prev1 := $rankPrimary,
+            @prev2 := $rankSecondary
         FROM giocatori g
-        CROSS JOIN (SELECT @rownum := 0) AS r
+        CROSS JOIN (SELECT @rownum := 0, @rank := 0, @prev1 := NULL, @prev2 := NULL) AS r
         $whereBase
         $orderClause
     ) AS ordered
