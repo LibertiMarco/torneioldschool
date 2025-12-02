@@ -6030,85 +6030,6 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
     cursor: pointer;
 }
 
-#btnBack {
-    position: fixed;
-    top: 15px;
-    left: 15px;
-    background: #fff;
-    border: 2px solid #15293e;
-    border-radius: 8px;
-    padding: 8px 14px;
-    font-size: 20px;
-    cursor: pointer;
-    z-index: 9999;
-    transition: 0.2s;
-}
-
-#btnBack:hover {
-    background: #15293e;
-    color: #fff;
-}
-/* Contenitore titolo con freccia */
-.titolo-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-/* ✅ Freccia massiccia */
-#btnBack {
-    font-size: 32px;           /* più grande */
-    font-weight: 900;          /* massiccia */
-    line-height: 1;
-    background: #fff;
-    border: 2px solid #15293e;
-    border-radius: 10px;
-    padding: 5px 14px 8px 14px;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-#btnBack:hover {
-    background: #d80000;
-    color: #fff;
-}
-
-/* Titolo allineato perfettamente */
-.titolo {
-    margin: 0;
-}
-
-#btnBack {
-    position: fixed;
-    top: 15px;
-    left: 15px;
-    z-index: 9999; /* sopra tutto */
-    margin-top: 125px;
-}
-
-
-@media (max-width: 768px) {
-  
-  #btnBack {
-    margin-top: 105px;  /* ✅ spinge SOLO la freccia verso il basso */
-    top: 15px;
-    left: 15px;
-    z-index: 9999; /* sopra tutto */
-    margin-top: 125px;
-  }
-}
-
-@media (max-width: 485px) {
-    #btnBack {
-        font-size: 24px;
-        padding: 4px 10px;
-        border-width: 1.5px;
-        top: 3px;
-        left: 10px;
-    }
-}
-
 /* ✅ Rende la tabella giocatori scorrevole da mobile */
 #tabellaGiocatori {
     display: block;
@@ -6661,37 +6582,42 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 /* ===== BACK BUTTON (partite) ===== */
 #btnBack {
   position: fixed;
-  top: 92px;
+  top: 76px;
   left: 16px;
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   display: grid;
   place-items: center;
   padding: 0;
   margin: 0;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.5);
   background: linear-gradient(135deg, #15293e, #1f3f63);
   color: #fff;
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 26px;
+  font-weight: 900;
   line-height: 1;
   cursor: pointer;
   z-index: 9999;
-  box-shadow: 0 12px 26px rgba(21, 41, 62, 0.28);
+  box-shadow: 0 14px 30px rgba(21, 41, 62, 0.3);
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
 #btnBack:hover {
   background: linear-gradient(135deg, #1f3f63, #15293e);
-  border-color: rgba(255, 255, 255, 0.55);
+  border-color: rgba(255, 255, 255, 0.65);
   transform: translateY(-1px);
-  box-shadow: 0 16px 32px rgba(21, 41, 62, 0.32);
+  box-shadow: 0 18px 36px rgba(21, 41, 62, 0.32);
 }
 
 #btnBack:active {
   transform: translateY(0);
-  box-shadow: 0 8px 18px rgba(21, 41, 62, 0.3);
+  box-shadow: 0 10px 22px rgba(21, 41, 62, 0.28);
+}
+
+#btnBack:focus-visible {
+  outline: 2px solid rgba(216, 0, 0, 0.6);
+  outline-offset: 3px;
 }
 
 .titolo-row {
@@ -6707,21 +6633,21 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
 @media (max-width: 768px) {
   #btnBack {
-    top: 82px;
+    top: 70px;
     left: 12px;
-    width: 44px;
-    height: 44px;
-    font-size: 20px;
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
   }
 }
 
 @media (max-width: 485px) {
   #btnBack {
-    top: 74px;
+    top: 64px;
     left: 10px;
-    width: 40px;
-    height: 40px;
-    font-size: 18px;
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
     border-radius: 12px;
   }
 }

@@ -144,7 +144,7 @@ if (!empty($sessionAvatar)) {
 }
 
 .header-spacer {
-    height: 80px;
+    height: 72px;
     width: 100%;
 }
 
@@ -154,10 +154,6 @@ if (!empty($sessionAvatar)) {
     align-items: center;
     justify-content: center;
     line-height: 0;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 2;
 }
 
 .header-logo a {
@@ -179,6 +175,8 @@ if (!empty($sessionAvatar)) {
     display: flex;
     gap: 20px;
     align-items: center;
+    flex: 1;
+    justify-content: center;
 }
 
 .header-nav a {
@@ -196,14 +194,10 @@ if (!empty($sessionAvatar)) {
 
 /* USER BTN */
 .user-dropdown {
-    position: absolute;
-    right: 18px;
-    top: 50%;
-    transform: translateY(-50%);
-    margin-left: 0;
+    position: relative;
+    margin-left: auto;
     display: flex;
     align-items: center;
-    z-index: 2;
 }
 
 .user-btn {
@@ -371,6 +365,7 @@ if (!empty($sessionAvatar)) {
         border-radius: 12px;
         box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
         z-index: 2000;
+        flex: 0 0 auto;
     }
 
     .header-nav.open {
@@ -392,13 +387,21 @@ if (!empty($sessionAvatar)) {
         position: fixed;
     }
 
+    .header-spacer {
+        height: 68px;
+    }
+
     .header-logo img {
         width: 48px;
         height: 48px;
     }
 
     .user-dropdown {
+        position: absolute;
         right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-left: 0;
     }
 }
 </style>
