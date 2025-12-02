@@ -334,6 +334,10 @@ if (!empty($sessionAvatar)) {
 
     .mobile-menu-btn {
         display: block;
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
     }
 
     .header-nav {
@@ -367,12 +371,23 @@ if (!empty($sessionAvatar)) {
     }
 
     .site-header {
-        justify-content: space-between;
+        justify-content: center;
+        padding-left: 54px;
+        padding-right: 54px;
+        position: fixed;
     }
 
     .header-logo img {
         width: 48px;
         height: 48px;
+    }
+
+    .user-dropdown {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-left: 0;
     }
 }
 </style>
