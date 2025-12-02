@@ -372,7 +372,13 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
         .then(r => r.text())
         .then(d => {
           document.getElementById("header-container").innerHTML = d;
-          initHeaderInteractions();
+          if (typeof initHeaderInteractions === "function") {
+            initHeaderInteractions();
+          } else if (typeof window.initHeaderInteractions === "function") {
+            window.initHeaderInteractions();
+          } else {
+            console.warn("initHeaderInteractions non disponibile, uso solo fallback inline");
+          }
 
           // Fallback: se il toggle mobile non risponde, aggancia manualmente i listener
           const headerEl = document.querySelector(".site-header");
