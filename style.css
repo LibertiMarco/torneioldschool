@@ -375,6 +375,8 @@ body {
 @media (max-width: 720px) {
   #marcatori .table-wrapper {
     overflow-x: visible;
+    margin-left: 12px;
+    margin-right: 12px;
   }
 
   #marcatori th,
