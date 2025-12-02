@@ -273,13 +273,18 @@ body {
 /* ================= CLASSIFICA MARCATORI ================= */
 #marcatori .table-wrapper {
   margin-top: 12px;
-  margin-left: 10px;
-  margin-right: 10px;
+  margin-left: 30px;
+  margin-right: 30px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   border: 1px solid #ddd;
   border-radius: 10px;
   box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+#marcatori h2 {
+  text-align: left;
+  margin-left: 30px;
 }
 
 #marcatori .marcatori-table {
