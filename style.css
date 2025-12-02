@@ -2942,7 +2942,7 @@ body {
 
 #playoffContainer .team {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
 }
 
@@ -2967,6 +2967,8 @@ body {
   white-space: normal;
   overflow: visible;
   text-overflow: unset;
+  word-break: break-word;
+  line-height: 1.25;
 }
 
 #playoffContainer .match-center {
