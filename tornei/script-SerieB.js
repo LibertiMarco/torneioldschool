@@ -152,8 +152,7 @@ function buildMarcatoriRanks() {
   let lastRank = 0;
   marcatoriData.forEach((p, idx) => {
     const gol = Number(p.gol ?? 0);
-    const pres = Number(p.presenze ?? 0);
-    const key = `${gol}|${pres}`;
+    const key = `${gol}`; // ranking per ex aequo basato solo sui gol
 
     if (key === lastKey) {
       marcatoriRanks[idx] = lastRank;
