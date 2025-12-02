@@ -129,7 +129,8 @@ if (!empty($sessionAvatar)) {
 .site-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 16px;
     background: #15293e;
     padding: 10px 18px;
     position: fixed;
@@ -151,6 +152,7 @@ if (!empty($sessionAvatar)) {
     display: flex;
     align-items: center;
     justify-content: center;
+    line-height: 0;
 }
 
 .header-logo a {
@@ -171,6 +173,7 @@ if (!empty($sessionAvatar)) {
 .header-nav {
     display: flex;
     gap: 20px;
+    align-items: center;
 }
 
 .header-nav a {
@@ -189,6 +192,9 @@ if (!empty($sessionAvatar)) {
 /* USER BTN */
 .user-dropdown {
     position: relative;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
 }
 
 .user-btn {
