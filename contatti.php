@@ -338,7 +338,9 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
         initHeaderInteractions();
         const header = document.querySelector(".site-header");
         window.addEventListener("scroll", () => {
-          header?.classList.toggle("scrolled", window.scrollY > 50);
+          if (header) {
+            header.classList.toggle("scrolled", window.scrollY > 50);
+          }
         });
       });
 

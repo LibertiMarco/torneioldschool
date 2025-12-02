@@ -650,7 +650,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           const shouldShow = target.type === 'password';
           target.type = shouldShow ? 'text' : 'password';
           btn.classList.toggle('is-visible', shouldShow);
-          const labelBase = btn.getAttribute('aria-label')?.includes('conferma') ? 'conferma password' : 'password';
+          const ariaLabel = btn.getAttribute('aria-label') || '';
+          const labelBase = ariaLabel.indexOf('conferma') !== -1 ? 'conferma password' : 'password';
           btn.setAttribute('aria-label', shouldShow ? `Nascondi ${labelBase}` : `Mostra ${labelBase}`);
         });
       });

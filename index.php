@@ -374,21 +374,23 @@ loadHallOfFame();
       }
 
       const dropdown = document.querySelector(".dropdown");
-      const btn = dropdown?.querySelector(".dropbtn");
-      const menu = dropdown?.querySelector(".dropdown-content");
-      if (btn && menu) {
-        btn.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          dropdown.classList.toggle("open");
-          menu.style.display = dropdown.classList.contains("open") ? "block" : "none";
-        });
-        document.addEventListener("click", (e) => {
-          if (!dropdown.contains(e.target)) {
-            dropdown.classList.remove("open");
-            menu.style.display = "none";
-          }
-        });
+      if (dropdown) {
+        const btn = dropdown.querySelector(".dropbtn");
+        const menu = dropdown.querySelector(".dropdown-content");
+        if (btn && menu) {
+          btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropdown.classList.toggle("open");
+            menu.style.display = dropdown.classList.contains("open") ? "block" : "none";
+          });
+          document.addEventListener("click", (e) => {
+            if (!dropdown.contains(e.target)) {
+              dropdown.classList.remove("open");
+              menu.style.display = "none";
+            }
+          });
+        }
       }
     }
   });

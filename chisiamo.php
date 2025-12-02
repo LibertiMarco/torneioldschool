@@ -469,7 +469,9 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
         initHeaderInteractions();
         const header = document.querySelector(".site-header");
         window.addEventListener("scroll", () => {
-          header?.classList.toggle("scrolled", window.scrollY > 50);
+          if (header) {
+            header.classList.toggle("scrolled", window.scrollY > 50);
+          }
         });
       });
 

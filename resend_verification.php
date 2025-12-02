@@ -226,7 +226,9 @@ $captchaQuestion = captcha_generate('resend_form');?>
       .then(r => r.text())
       .then(html => {
         document.getElementById("header-container").innerHTML = html;
-        initHeaderInteractions?.();
+        if (typeof initHeaderInteractions === 'function') {
+          initHeaderInteractions();
+        }
       });
   </script>
 </body>

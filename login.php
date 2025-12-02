@@ -359,7 +359,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         initHeaderInteractions();
         const header = document.querySelector(".site-header");
         window.addEventListener("scroll", () => {
-          header?.classList.toggle("scrolled", window.scrollY > 50);
+          if (header) {
+            header.classList.toggle("scrolled", window.scrollY > 50);
+          }
         });
       });
 

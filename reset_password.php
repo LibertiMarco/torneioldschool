@@ -216,7 +216,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$error) {
       .then(r => r.text())
       .then(html => {
         document.getElementById("header-container").innerHTML = html;
-        initHeaderInteractions?.();
+        if (typeof initHeaderInteractions === 'function') {
+          initHeaderInteractions();
+        }
       });
   </script>
 </body>

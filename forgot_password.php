@@ -230,7 +230,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       .then(r => r.text())
       .then(html => {
         document.getElementById("header-container").innerHTML = html;
-        initHeaderInteractions?.();
+        if (typeof initHeaderInteractions === 'function') {
+          initHeaderInteractions();
+        }
       });
 
     // Lazy-load reCAPTCHA al primo tocco/focus sul form
