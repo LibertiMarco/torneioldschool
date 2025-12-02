@@ -2964,9 +2964,9 @@ body {
   font-weight: 700;
   font-size: 1.05rem;
   color: #15293e;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
 }
 
 #playoffContainer .match-center {
