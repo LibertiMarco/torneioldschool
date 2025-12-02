@@ -132,7 +132,8 @@ if (!empty($sessionAvatar)) {
     justify-content: flex-start;
     gap: 16px;
     background: #15293e;
-    padding: 10px 18px;
+    padding: 14px 22px;
+    min-height: 72px;
     position: fixed;
     top: 0;
     left: 0;
@@ -143,7 +144,7 @@ if (!empty($sessionAvatar)) {
 }
 
 .header-spacer {
-    height: 74px;
+    height: 80px;
     width: 100%;
 }
 
@@ -386,8 +387,8 @@ if (!empty($sessionAvatar)) {
 
     .site-header {
         justify-content: center;
-        padding-left: 54px;
-        padding-right: 54px;
+        padding: 12px 16px;
+        min-height: 68px;
         position: fixed;
     }
 
@@ -397,7 +398,7 @@ if (!empty($sessionAvatar)) {
     }
 
     .user-dropdown {
-        right: 16px;
+        right: 12px;
     }
 }
 </style>
