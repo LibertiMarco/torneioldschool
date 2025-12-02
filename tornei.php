@@ -14,16 +14,28 @@ require_once __DIR__ . '/includi/seo.php';
 if (!function_exists('formattaData')) {
   function formattaData($data) {
     if (empty($data) || $data === '0000-00-00') return '';
-    $timestamp = strtotime($data);
-    setlocale(LC_TIME, 'it_IT.UTF-8', 'it_IT', 'Italian_Italy.1252');
-    return strftime('%d %B', $timestamp);
+    $ts = strtotime($data);
+    if (!$ts) return '';
+
+    // Usa IntlDateFormatter per evitare strftime (deprecato)
+    $fmt = class_exists('IntlDateFormatter')
+      ? new IntlDateFormatter('it_IT', IntlDateFormatter::NONE, IntlDateFormatter::NONE, 'Europe/Rome', IntlDateFormatter::GREGORIAN, 'd MMMM')
+      : null;
+
+    return $fmt ? $fmt->format($ts) : date('d F', $ts);
   }
 }
 
 function formattaMeseAnno($data) {
   if (empty($data) || $data === '0000-00-00') return '';
   $ts = strtotime($data);
-  return $ts ? date('m/y', $ts) : '';
+  if (!$ts) return '';
+
+  $fmt = class_exists('IntlDateFormatter')
+    ? new IntlDateFormatter('it_IT', IntlDateFormatter::NONE, IntlDateFormatter::NONE, 'Europe/Rome', IntlDateFormatter::GREGORIAN, 'MM/yy')
+    : null;
+
+  return $fmt ? $fmt->format($ts) : date('m/y', $ts);
 }
 
 // === DATI UTENTE DALLA SESSIONE ===
@@ -361,6 +373,58 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
         .then(d => {
           document.getElementById("header-container").innerHTML = d;
           initHeaderInteractions();
+
+          // Fallback: se il toggle mobile non risponde, aggancia manualmente i listener
+          const header = document.querySelector(".site-header");
+          if (header) {
+            const mobileBtn = header.querySelector("#mobileMenuBtn");
+            const mainNav = header.querySelector("#mainNav");
+            const userBtn = header.querySelector("#userBtn");
+            const userMenu = header.querySelector("#userMenu");
+
+            const toggleWorks = (() => {
+              if (!mobileBtn || !mainNav) return false;
+              const wasOpen = mainNav.classList.contains("open");
+              mobileBtn.click();
+              const changed = mainNav.classList.contains("open");
+              if (changed !== wasOpen) {
+                mainNav.classList.toggle("open");
+                return true;
+              }
+              return false;
+            })();
+
+            if (!toggleWorks && mobileBtn && mainNav) {
+              const closeMenus = () => {
+                mainNav.classList.remove("open");
+                if (userMenu) userMenu.classList.remove("open");
+              };
+
+              mobileBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const isOpen = mainNav.classList.toggle("open");
+                if (isOpen && userMenu) userMenu.classList.remove("open");
+              });
+
+              if (userBtn && userMenu) {
+                userBtn.addEventListener("click", (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const isOpen = userMenu.classList.toggle("open");
+                  if (isOpen && mainNav) mainNav.classList.remove("open");
+                });
+              }
+
+              document.addEventListener("click", (e) => {
+                if (!header.contains(e.target)) closeMenus();
+              });
+
+              window.addEventListener("resize", () => {
+                if (window.innerWidth > 768) closeMenus();
+              });
+            }
+          }
         });
 
       // Switch tornei

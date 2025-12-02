@@ -229,7 +229,7 @@
     <div class="regola">
       <h3>📅 Calendario</h3>
       <ul>
-        <li>Le partite si disputano principalmente <strong>il lunedì e il martedì</strong>.</li>
+        <li>Le partite si disputano principalmente <strong>il mercoledì e il giovedì</strong>.</li>
         <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedì o venerdì</strong>.</li>
       </ul>
     </div>
@@ -296,11 +296,64 @@
           document.getElementById("header-container").innerHTML = data;
           initHeaderInteractions();
 
-          const header = document.querySelector(".site-header");
-          window.addEventListener("scroll", () => {
-            if (window.scrollY > 50) header.classList.add("scrolled");
-            else header.classList.remove("scrolled");
-          });
+          // Fallback: se il toggle mobile non risponde, aggancia manualmente i listener
+          const headerEl = document.querySelector(".site-header");
+          if (headerEl) {
+            const mobileBtn = headerEl.querySelector("#mobileMenuBtn");
+            const mainNav = headerEl.querySelector("#mainNav");
+            const userBtn = headerEl.querySelector("#userBtn");
+            const userMenu = headerEl.querySelector("#userMenu");
+
+            const toggleWorks = (() => {
+              if (!mobileBtn || !mainNav) return false;
+              const wasOpen = mainNav.classList.contains("open");
+              mobileBtn.click();
+              const changed = mainNav.classList.contains("open");
+              if (changed !== wasOpen) {
+                mainNav.classList.toggle("open");
+                return true;
+              }
+              return false;
+            })();
+
+            if (!toggleWorks && mobileBtn && mainNav) {
+              const closeMenus = () => {
+                mainNav.classList.remove("open");
+                if (userMenu) userMenu.classList.remove("open");
+              };
+
+              mobileBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const isOpen = mainNav.classList.toggle("open");
+                if (isOpen && userMenu) userMenu.classList.remove("open");
+              });
+
+              if (userBtn && userMenu) {
+                userBtn.addEventListener("click", (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const isOpen = userMenu.classList.toggle("open");
+                  if (isOpen && mainNav) mainNav.classList.remove("open");
+                });
+              }
+
+              document.addEventListener("click", (e) => {
+                if (!headerEl.contains(e.target)) closeMenus();
+              });
+
+              window.addEventListener("resize", () => {
+                if (window.innerWidth > 768) closeMenus();
+              });
+            }
+          }
+
+          if (headerEl) {
+            window.addEventListener("scroll", () => {
+              if (window.scrollY > 50) headerEl.classList.add("scrolled");
+              else headerEl.classList.remove("scrolled");
+            });
+          }
 
           const dropdown = document.querySelector(".dropdown");
           const btn = dropdown?.querySelector(".dropbtn");
