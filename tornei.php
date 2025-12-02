@@ -375,12 +375,23 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
           initHeaderInteractions();
 
           // Fallback: se il toggle mobile non risponde, aggancia manualmente i listener
-          const header = document.querySelector(".site-header");
-          if (header) {
-            const mobileBtn = header.querySelector("#mobileMenuBtn");
-            const mainNav = header.querySelector("#mainNav");
-            const userBtn = header.querySelector("#userBtn");
-            const userMenu = header.querySelector("#userMenu");
+          const headerEl = document.querySelector(".site-header");
+          if (headerEl) {
+            const mobileBtn = headerEl.querySelector("#mobileMenuBtn");
+            const mainNav = headerEl.querySelector("#mainNav");
+            const userBtn = headerEl.querySelector("#userBtn");
+            const userMenu = headerEl.querySelector("#userMenu");
+            let fallbackBound = false;
+
+            const applyDisplay = (open) => {
+              if (!mainNav) return;
+              mainNav.classList.toggle("open", open);
+              if (window.matchMedia("(max-width: 768px)").matches) {
+                mainNav.style.display = open ? "flex" : "none";
+              } else {
+                mainNav.style.display = "";
+              }
+            };
 
             const toggleWorks = (() => {
               if (!mobileBtn || !mainNav) return false;
@@ -394,16 +405,19 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
               return false;
             })();
 
-            if (!toggleWorks && mobileBtn && mainNav) {
+            if (!toggleWorks && mobileBtn && mainNav && !fallbackBound) {
+              fallbackBound = true;
+
               const closeMenus = () => {
-                mainNav.classList.remove("open");
+                applyDisplay(false);
                 if (userMenu) userMenu.classList.remove("open");
               };
 
               mobileBtn.addEventListener("click", (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const isOpen = mainNav.classList.toggle("open");
+                const isOpen = !mainNav.classList.contains("open");
+                applyDisplay(isOpen);
                 if (isOpen && userMenu) userMenu.classList.remove("open");
               });
 
@@ -412,12 +426,12 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
                   e.preventDefault();
                   e.stopPropagation();
                   const isOpen = userMenu.classList.toggle("open");
-                  if (isOpen && mainNav) mainNav.classList.remove("open");
+                  if (isOpen) applyDisplay(false);
                 });
               }
 
               document.addEventListener("click", (e) => {
-                if (!header.contains(e.target)) closeMenus();
+                if (!headerEl.contains(e.target)) closeMenus();
               });
 
               window.addEventListener("resize", () => {
