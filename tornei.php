@@ -382,6 +382,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
             const userBtn = headerEl.querySelector("#userBtn");
             const userMenu = headerEl.querySelector("#userMenu");
             let fallbackBound = false;
+            let forceBound = false;
 
             const applyDisplay = (open) => {
               if (!mainNav) return;
@@ -404,6 +405,21 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
               }
               return false;
             })();
+
+            // Forza il toggle mobile anche se il test sopra sembra ok
+            if (mobileBtn && mainNav && !forceBound) {
+              forceBound = true;
+              mobileBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof e.stopImmediatePropagation === "function") {
+                  e.stopImmediatePropagation();
+                }
+                const isOpen = !mainNav.classList.contains("open");
+                applyDisplay(isOpen);
+                if (isOpen && userMenu) userMenu.classList.remove("open");
+              }, { capture: true });
+            }
 
             if (!toggleWorks && mobileBtn && mainNav && !fallbackBound) {
               fallbackBound = true;
