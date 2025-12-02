@@ -291,7 +291,7 @@ body {
 
 #marcatori th,
 #marcatori td {
-  padding: 12px 14px;
+  padding: 12px 18px;
   text-align: left;
   white-space: nowrap;
 }
@@ -2942,7 +2942,7 @@ body {
 
 #playoffContainer .team {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
 }
 
@@ -2964,11 +2964,29 @@ body {
   font-weight: 700;
   font-size: 1.05rem;
   color: #15293e;
-  white-space: normal;
+  white-space: nowrap;
   overflow: visible;
   text-overflow: unset;
-  word-break: break-word;
-  line-height: 1.25;
+  word-break: normal;
+  line-height: 1.1;
+}
+
+@media (min-width: 900px) {
+  #playoffContainer .team {
+    gap: 14px;
+  }
+  #playoffContainer .team-logo {
+    width: 48px;
+    height: 48px;
+  }
+  #playoffContainer .team-side {
+    max-width: 260px;
+    flex: 1;
+  }
+  #playoffContainer .team-name {
+    font-size: 1.15rem;
+    letter-spacing: 0.3px;
+  }
 }
 
 #playoffContainer .match-center {
