@@ -763,6 +763,9 @@ document.addEventListener("DOMContentLoaded", () => {
   caricaClassifica();
   const faseCalendario = document.getElementById("faseCalendario");
   const giornataSelect = document.getElementById("giornataSelect");
+  if (faseCalendario) {
+    faseCalendario.value = "REGULAR";
+  }
   const prevMarcatoriBtn = document.getElementById("prevMarcatori");
   const nextMarcatoriBtn = document.getElementById("nextMarcatori");
 

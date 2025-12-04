@@ -924,6 +924,9 @@ document.addEventListener("DOMContentLoaded", () => {
   caricaClassifica();
   const faseCalendario = document.getElementById("faseCalendario");
   const giornataSelect = document.getElementById("giornataSelect");
+  if (faseCalendario) {
+    faseCalendario.value = "REGULAR";
+  }
 
   const triggerCalendario = () => {
     const faseVal = (faseCalendario?.value || "REGULAR").toUpperCase();
