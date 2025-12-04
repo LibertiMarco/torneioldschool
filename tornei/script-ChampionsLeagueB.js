@@ -338,7 +338,7 @@ const roundLabelByKey = {
   "KO": "Fase eliminazione"
 };
 
-function updateGiornataFilter(faseSelezionata, giornateDisponibili = []) {
+function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], selected = "") {
   const wrapper = document.getElementById("wrapperGiornataSelect");
   const select = document.getElementById("giornataSelect");
   const label = wrapper ? wrapper.querySelector("label[for='giornataSelect']") : null;
@@ -349,31 +349,37 @@ function updateGiornataFilter(faseSelezionata, giornateDisponibili = []) {
   if (label) label.textContent = isRegular ? "Giornata:" : "Turno:";
 
   select.innerHTML = "";
-  select.append(new Option(isRegular ? "Tutte" : "Tutti i turni", ""));
-
   if (isRegular) {
+    select.append(new Option("Tutte", ""));
+
     giornateDisponibili.forEach(g => {
       select.add(new Option(`Giornata ${g}`, g));
     });
+    select.value = String(selected || "");
     return;
   }
 
   const disponibili = new Set(giornateDisponibili.map(String));
-  const orderedRounds = ["4", "3", "2", "1"];
-  let added = false;
+  const orderedRounds = ["1", "2", "3", "4"]; // Finale -> Ottavi
+  let firstVal = "";
+
   orderedRounds.forEach(g => {
     if (disponibili.has(g)) {
       select.add(new Option(roundLabelByKey[g] || `Fase ${g}`, g));
-      added = true;
+      if (!firstVal) firstVal = g;
     }
   });
 
-  if (!added) {
+  if (!select.options.length) {
     giornateDisponibili.forEach(g => {
       const key = String(g);
       select.add(new Option(roundLabelByKey[key] || `Fase ${key}`, key));
+      if (!firstVal) firstVal = key;
     });
   }
+
+  const target = selected ? String(selected) : firstVal;
+  if (target) select.value = target;
 }
 
 async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REGULAR") {
@@ -404,9 +410,9 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
     const wrapperGiornata = document.getElementById("wrapperGiornataSelect");
     const giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
 
-    updateGiornataFilter(faseSelezionata, giornateDisponibili);
+    updateGiornataFilter(faseSelezionata, giornateDisponibili, giornataSelezionata);
 
-    const selectedRound = giornataSelect ? String(giornataSelect.value || giornataSelezionata || "") : "";
+    const selectedRound = giornataSelect ? String(giornataSelect.value || "") : "";
     const giornateDaMostrare = selectedRound ? [selectedRound] : giornateDisponibili;
 
     giornateDaMostrare.forEach(numGiornata => {
