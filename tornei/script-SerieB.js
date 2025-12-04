@@ -715,30 +715,41 @@ async function caricaPlayoff(tipoCoppa) {
           const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
           const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
           const dataStr = formattaData(partita.data_partita);
-          const legLabel = partita.fase_leg ? ` · ${partita.fase_leg}` : "";
+          const legLabel = (partita.fase_leg || "").trim();
+          const statusLabel = giocata ? "Chiuso" : "Programmato";
 
           const match = document.createElement("div");
-          match.className = "bracket-match";
+          match.className = "bracket-match" + (giocata ? " is-played" : "");
+          match.style.cursor = giocata ? "pointer" : "default";
           match.innerHTML = `
+            <div class="bracket-head">
+              <span class="bracket-status ${giocata ? "played" : "upcoming"}">${statusLabel}</span>
+              ${legLabel ? `<span class="bracket-leg">${legLabel}</span>` : ""}
+            </div>
             <div class="bracket-team">
               <div class="team-side">
                 <img class="team-logo" src="${logoCasa}" alt="${partita.squadra_casa}">
                 <span class="team-name">${partita.squadra_casa}</span>
               </div>
-              <span class="team-score">${giocata ? partita.gol_casa : '-'}</span>
+              <span class="team-score">${giocata ? partita.gol_casa : "-"}</span>
             </div>
             <div class="bracket-team">
               <div class="team-side">
                 <img class="team-logo" src="${logoOspite}" alt="${partita.squadra_ospite}">
                 <span class="team-name">${partita.squadra_ospite}</span>
               </div>
-              <span class="team-score">${giocata ? partita.gol_ospite : '-'}</span>
+              <span class="team-score">${giocata ? partita.gol_ospite : "-"}</span>
             </div>
             <div class="bracket-meta">
-              <span>${dataStr}${partita.ora_partita ? ' · ' + partita.ora_partita.slice(0,5) : ''}${legLabel}</span>
+              <span>${dataStr}${partita.ora_partita ? ' · ' + partita.ora_partita.slice(0,5) : ''}${legLabel ? ' · ' + legLabel : ''}</span>
               <span>${partita.campo || 'Campo da definire'}</span>
             </div>
           `;
+          if (giocata) {
+            match.addEventListener("click", () => {
+              window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${encodeURIComponent(TORNEO)}`;
+            });
+          }
           col.appendChild(match);
         });
 

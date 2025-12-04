@@ -498,126 +498,33 @@ async function caricaPlayoff(tipoCoppa) {
   const faseParam = (tipoCoppa || "gold").toUpperCase(); // GOLD / SILVER
   const container = document.getElementById("playoffContainer");
 
-  container.innerHTML = `
-    <h3 class="bracket-titolo">Playoff ${tipoCoppa === "gold" ? "COPPA GOLD" : "COPPA SILVER"}</h3>
-    <div id="fasiPlayoff"></div>
-  `;
-
-  try {
-    const res = await fetch(`/api/get_partite.php?torneo=${encodeURIComponent(TORNEO)}&fase=${faseParam}`);
-    const data = await res.json();
-
-    if (data.error) {
-      container.innerHTML += `<p>Errore nel caricamento delle partite playoff.</p>`;
-      return;
-    }
-
-    const fasiMap = {
-      1: "Finale",
-      2: "Semifinali",
-      3: "Quarti di finale",
-      4: "Ottavi di finale"
-    };
-
-    const fasiContainer = document.getElementById("fasiPlayoff");
-    fasiContainer.innerHTML = "";
-
-    // ordina e mostra solo giornate 1–4
-    const giornate = Object.keys(data)
-      .map(g => parseInt(g))
-      .filter(g => g >= 1 && g <= 4)
-      .sort((a, b) => a - b);
-
-    giornate.forEach(g => {
-      const nomeFase = fasiMap[g] || `Fase ${g}`;
-      const faseDiv = document.createElement("div");
-      faseDiv.classList.add("fase-playoff");
-
-      const titolo = document.createElement("h3");
-      titolo.textContent = nomeFase;
-      faseDiv.appendChild(titolo);
-
-      data[g].forEach(partita => {
-        const partitaDiv = document.createElement("div");
-        partitaDiv.classList.add("match-card");
-
-        const dataStr = formattaData(partita.data_partita);
-        const stadio = partita.campo || "Campo da definire";
-        const giocata = partita.giocata == 1;
-        const golCasa = giocata ? partita.gol_casa : null;
-        const golOspite = giocata ? partita.gol_ospite : null;
-
-        const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
-        const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
-
-        partitaDiv.innerHTML = `
-          <div class="match-header">
-            <span>
-              ${stadio}
-              ${
-                stadio && stadio !== "Campo da definire"
-                  ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stadio)}"
-                        target="_blank"
-                        class="maps-link">📍</a>`
-                  : ""
-              }
-            </span>
-            <span>
-              ${dataStr}${partita.ora_partita ? " - " + partita.ora_partita.slice(0,5) : ""}
-            </span>
-          </div>
-
-          <div class="match-body">
-            <div class="team home">
-              <img src="${logoCasa}" alt="${partita.squadra_casa}" class="team-logo">
-              <span class="team-name">${partita.squadra_casa}</span>
-            </div>
-
-            <div class="match-center">
-              ${
-                giocata
-                  ? `<span class="score">${golCasa}</span>
-                     <span class="dash">-</span>
-                     <span class="score">${golOspite}</span>`
-                  : `<span class="vs">VS</span>`
-              }
-            </div>
-
-            <div class="team away">
-              <span class="team-name">${partita.squadra_ospite}</span>
-              <img src="${logoOspite}" alt="${partita.squadra_ospite}" class="team-logo">
-            </div>
-          </div>
-        `;
-
-        faseDiv.appendChild(partitaDiv);
-      });
-
-      fasiContainer.appendChild(faseDiv);
-    });
-
-  } catch (err) {
-    console.error("Errore nel caricamento playoff:", err);
-    container.innerHTML += `<p>Errore nel caricamento playoff.</p>`;
-  }
-}
-
-// override con filtro andata/ritorno semifinali in stile bracket
-async function caricaPlayoff(tipoCoppa) {
-  const faseParam = (tipoCoppa || "gold").toUpperCase(); // GOLD / SILVER
-  const container = document.getElementById("playoffContainer");
+  (function ensureBracketStyles() {
+    if (window.__BRACKET_STYLES__) return;
+    window.__BRACKET_STYLES__ = true;
+    const style = document.createElement("style");
+    style.textContent = `
+      .bracket-wrapper { display: flex; gap: 12px; overflow-x: auto; padding: 6px 2px; }
+      .bracket-col { flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 10px; }
+      .bracket-col-title { font-weight: 800; color: #15293e; margin: 4px 2px; }
+      .bracket-match { background: #fff; border: 1px solid #dce3ef; border-radius: 14px; padding: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.06); display: flex; flex-direction: column; gap: 8px; transition: transform .15s, box-shadow .15s, border-color .15s; cursor: default; }
+      .bracket-match.is-played { border-color: #15293e; cursor: pointer; }
+      .bracket-match.is-played:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(0,0,0,0.1); }
+      .bracket-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .bracket-status { font-size: 12px; font-weight: 800; padding: 4px 8px; border-radius: 999px; background: #eef3ff; color: #15293e; text-transform: uppercase; }
+      .bracket-status.played { background: #15293e; color: #fff; }
+      .bracket-leg { font-size: 12px; font-weight: 700; color: #4c5b71; }
+      .bracket-team { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+      .bracket-team .team-side { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+      .bracket-team .team-name { font-weight: 800; color: #15293e; text-transform: none; white-space: normal; word-break: break-word; }
+      .bracket-team .team-logo { width: 34px; height: 34px; object-fit: contain; }
+      .bracket-team .team-score { font-weight: 800; font-size: 18px; color: #15293e; min-width: 24px; text-align: right; }
+      .bracket-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: #4c5b71; }
+    `;
+    document.head.appendChild(style);
+  })();
 
   container.innerHTML = `
     <h3 class="bracket-titolo">Playoff ${tipoCoppa === "gold" ? "COPPA GOLD" : "COPPA SILVER"}</h3>
-    <div class="leg-filter" id="playoffLegFilterWrap" style="display:none; gap: 8px; align-items: center; margin: 10px 0;">
-      <label for="playoffLegFilter">Semifinali:</label>
-      <select id="playoffLegFilter">
-        <option value="">Tutte</option>
-        <option value="ANDATA">Andata</option>
-        <option value="RITORNO">Ritorno</option>
-      </select>
-    </div>
-    <div class="phase-filter" id="playoffPhaseFilters"></div>
     <div class="bracket-wrapper" id="fasiPlayoff"></div>
   `;
 
@@ -630,136 +537,73 @@ async function caricaPlayoff(tipoCoppa) {
       return;
     }
 
-    const fasiMap = {
-      1: "Finale",
-      2: "Semifinali",
-      3: "Quarti di finale",
-      4: "Ottavi di finale"
-    };
-
+    const fasiMap = { 1: "Finale", 2: "Semifinali", 3: "Quarti di finale", 4: "Ottavi di finale" };
     const fasiContainer = document.getElementById("fasiPlayoff");
-    const legWrap = document.getElementById("playoffLegFilterWrap");
-    const legSelect = document.getElementById("playoffLegFilter");
-    const phaseFilter = document.getElementById("playoffPhaseFilters");
-    let currentLeg = "";
-    let currentPhase = "";
+    fasiContainer.innerHTML = "";
+    const ordineGiornate = [4, 3, 2, 1];
 
-    const hasSemiLegs = Object.values(data || {}).some(arr =>
-      (arr || []).some(p => (p.fase_round || "").toUpperCase() === "SEMIFINALE" && p.fase_leg)
-    );
-    if (legWrap && hasSemiLegs) {
-      legWrap.style.display = "flex";
-    } else if (legWrap) {
-      legWrap.style.display = "none";
-    }
+    ordineGiornate.forEach(g => {
+      const matchList = data[g] || [];
+      if (!matchList.length) return;
 
-    if (phaseFilter) {
-      phaseFilter.innerHTML = "";
-      const phases =
-        tipoCoppa.toLowerCase() === "gold"
-          ? [
-              { label: "Tutte", val: "" },
-              { label: "Ottavi", val: "4" },
-              { label: "Quarti", val: "3" },
-              { label: "Semifinali", val: "2" },
-              { label: "Finale", val: "1" },
-            ]
-          : [
-              { label: "Tutte", val: "" },
-              { label: "Semifinali", val: "2" },
-              { label: "Finale", val: "1" },
-            ];
-      phases.forEach(ph => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "phase-btn" + (ph.val === "" ? " active" : "");
-        btn.dataset.phase = ph.val;
-        btn.textContent = ph.label;
-        btn.onclick = () => {
-          phaseFilter.querySelectorAll(".phase-btn").forEach(b => b.classList.remove("active"));
-          btn.classList.add("active");
-          currentPhase = ph.val;
-          renderPlayoff();
-        };
-        phaseFilter.appendChild(btn);
+      const col = document.createElement("div");
+      col.className = "bracket-col";
+      const titolo = document.createElement("div");
+      titolo.className = "bracket-col-title";
+      titolo.textContent = fasiMap[g] || `Fase ${g}`;
+      col.appendChild(titolo);
+
+      matchList.forEach(partita => {
+        const giocata = partita.giocata == 1 && partita.gol_casa !== null && partita.gol_ospite !== null;
+        const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
+        const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
+        const dataStr = formattaData(partita.data_partita);
+        const legLabel = (partita.fase_leg || "").trim();
+        const statusLabel = giocata ? "Chiuso" : "Programmato";
+
+        const match = document.createElement("div");
+        match.className = "bracket-match" + (giocata ? " is-played" : "");
+        match.style.cursor = giocata ? "pointer" : "default";
+        match.innerHTML = `
+          <div class="bracket-head">
+            <span class="bracket-status ${giocata ? "played" : "upcoming"}">${statusLabel}</span>
+            ${legLabel ? `<span class="bracket-leg">${legLabel}</span>` : ""}
+          </div>
+          <div class="bracket-team">
+            <div class="team-side">
+              <img class="team-logo" src="${logoCasa}" alt="${partita.squadra_casa}">
+              <span class="team-name">${partita.squadra_casa}</span>
+            </div>
+            <span class="team-score">${giocata ? partita.gol_casa : "-"}</span>
+          </div>
+          <div class="bracket-team">
+            <div class="team-side">
+              <img class="team-logo" src="${logoOspite}" alt="${partita.squadra_ospite}">
+              <span class="team-name">${partita.squadra_ospite}</span>
+            </div>
+            <span class="team-score">${giocata ? partita.gol_ospite : "-"}</span>
+          </div>
+          <div class="bracket-meta">
+            <span>${dataStr}${partita.ora_partita ? ' · ' + partita.ora_partita.slice(0,5) : ''}${legLabel ? ' · ' + legLabel : ''}</span>
+            <span>${partita.campo || 'Campo da definire'}</span>
+          </div>
+        `;
+        if (giocata) {
+          match.addEventListener("click", () => {
+            window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${encodeURIComponent(TORNEO)}`;
+          });
+        }
+        col.appendChild(match);
       });
-    }
 
-    const renderPlayoff = (newLeg) => {
-      if (typeof newLeg !== "undefined") currentLeg = newLeg;
-      if (!fasiContainer) return;
-      fasiContainer.innerHTML = "";
-      const ordineGiornate = [4, 3, 2, 1]; // Ottavi -> Quarti -> Semi -> Finale
+      fasiContainer.appendChild(col);
+    });
 
-      ordineGiornate.forEach(g => {
-        if (currentPhase && String(g) !== currentPhase) return;
-        const matchList = (data[g] || []).filter(p => {
-          const leg = (p.fase_leg || "").toUpperCase();
-          const isSemi = (p.fase_round || "").toUpperCase() === "SEMIFINALE";
-          if (currentLeg && isSemi && leg) {
-            return leg === currentLeg;
-          }
-          return true;
-        });
-        if (!matchList.length) return;
-
-        const col = document.createElement("div");
-        col.className = "bracket-col";
-        const titolo = document.createElement("div");
-        titolo.className = "bracket-col-title";
-        titolo.textContent = fasiMap[g] || `Fase ${g}`;
-        col.appendChild(titolo);
-
-        matchList.forEach(partita => {
-          const giocata = partita.giocata == 1 && partita.gol_casa !== null && partita.gol_ospite !== null;
-          const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
-          const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
-          const dataStr = formattaData(partita.data_partita);
-          const legLabel = partita.fase_leg ? ` · ${partita.fase_leg}` : "";
-
-          const match = document.createElement("div");
-          match.className = "bracket-match";
-          match.innerHTML = `
-            <div class="bracket-team">
-              <div class="team-side">
-                <img class="team-logo" src="${logoCasa}" alt="${partita.squadra_casa}">
-                <span class="team-name">${partita.squadra_casa}</span>
-              </div>
-              <span class="team-score">${giocata ? partita.gol_casa : '-'}</span>
-            </div>
-            <div class="bracket-team">
-              <div class="team-side">
-                <img class="team-logo" src="${logoOspite}" alt="${partita.squadra_ospite}">
-                <span class="team-name">${partita.squadra_ospite}</span>
-              </div>
-              <span class="team-score">${giocata ? partita.gol_ospite : '-'}</span>
-            </div>
-            <div class="bracket-meta">
-              <span>${dataStr}${partita.ora_partita ? ' · ' + partita.ora_partita.slice(0,5) : ''}${legLabel}</span>
-              <span>${partita.campo || 'Campo da definire'}</span>
-            </div>
-          `;
-          col.appendChild(match);
-        });
-
-        fasiContainer.appendChild(col);
-      });
-    };
-
-    renderPlayoff("");
-    if (legSelect) {
-      legSelect.onchange = () => renderPlayoff((legSelect.value || "").toUpperCase());
-    }
   } catch (err) {
     console.error("Errore nel caricamento playoff:", err);
     container.innerHTML += `<p>Errore nel caricamento playoff.</p>`;
   }
-}
-
-
-
-
-// ====================== ROSE SQUADRE ======================
+}// ====================== ROSE SQUADRE ======================
 async function caricaSquadrePerRosa() {
   try {
     const res = await fetch(`/api/leggiClassifica.php?torneo=${TORNEO}`);
