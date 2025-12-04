@@ -1,4 +1,4 @@
-const TORNEO = "ChampionsLeagueA"; // Nome base del torneo nel DB (fase girone)
+﻿const TORNEO = "ChampionsLeagueA"; // Nome base del torneo nel DB (fase girone)
 const GOLD_SPOTS = 16;              // prime 16 in Coppa Gold
 const TEAM_COUNT = 18;              // totale squadre in regular
 const SILVER_SPOTS = TEAM_COUNT - GOLD_SPOTS; // ultime 2 in finale Silver
@@ -15,7 +15,7 @@ function updateFavTournamentButton() {
   if (!btn) return;
   const isFav = favState.tournaments.has(TORNEO);
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "★ Torneo seguito" : "☆ Segui torneo";
+            btn.textContent = isFav ? ★ Torneo seguito : ☆ Segui torneo;
 }
 
 function updateFavTeamButton(squadra, btnEl) {
@@ -23,7 +23,7 @@ function updateFavTeamButton(squadra, btnEl) {
   if (!btn || !squadra) return;
   const isFav = favState.teams.has(teamKey(squadra));
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "★ Segui squadra" : "☆ Segui squadra";
+            btn.textContent = isFav ? ★ Segui squadra : ☆ Segui squadra;
 }
 
 async function toggleTournamentFollow(btn) {
@@ -201,7 +201,7 @@ function mostraClassifica(classifica) {
   const faseSelect = document.getElementById("faseSelect");
   const legendaEsistente = document.querySelector(".legenda-coppe");
 
-  // rimuove eventuale legenda già presente
+  // rimuove eventuale legenda giÃ  presente
   if (legendaEsistente) legendaEsistente.remove();
 
   // crea legenda solo se siamo in fase girone
@@ -209,8 +209,8 @@ function mostraClassifica(classifica) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
-      <div class="box gold-box">🏆 COPPA GOLD</div>
-      <div class="box silver-box">🥈 COPPA SILVER</div>
+      <div class="box gold-box">ðŸ† COPPA GOLD</div>
+      <div class="box silver-box">ðŸ¥ˆ COPPA SILVER</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
@@ -405,7 +405,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         const partitaDiv = document.createElement("div");
         partitaDiv.classList.add("match-card");
       
-        // ✅ Rende cliccabile la match-card solo se giocata
+        // âœ… Rende cliccabile la match-card solo se giocata
         if (String(partita.giocata) === "1") {
           partitaDiv.style.cursor = "pointer";
           partitaDiv.onclick = () => {
@@ -430,7 +430,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
                 stadio && stadio !== "Campo da definire"
                   ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stadio)}"
                         target="_blank"
-                        class="maps-link">📍</a>`
+                        class="maps-link">ðŸ“</a>`
                   : ""
               }
             </span>
@@ -499,7 +499,7 @@ async function caricaPlayoff(tipoCoppa) {
     const fasiContainer = document.getElementById("fasiPlayoff");
     fasiContainer.innerHTML = "";
 
-    // ordina e mostra solo giornate 1–4
+    // ordina e mostra solo giornate 1â€“4
     const giornate = Object.keys(data)
       .map(g => parseInt(g))
       .filter(g => g >= 1 && g <= 4)
@@ -535,7 +535,7 @@ async function caricaPlayoff(tipoCoppa) {
                 stadio && stadio !== "Campo da definire"
                   ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stadio)}"
                         target="_blank"
-                        class="maps-link">📍</a>`
+                        class="maps-link">ðŸ“</a>`
                   : ""
               }
             </span>
@@ -591,10 +591,10 @@ async function caricaSquadrePerRosa() {
     const select = document.getElementById("selectSquadra");
     select.innerHTML = ""; // Pulisce eventuali opzioni precedenti
 
-    // 1️⃣ Ordina le squadre in ordine alfabetico (A → Z)
+    // 1ï¸âƒ£ Ordina le squadre in ordine alfabetico (A â†’ Z)
     squadre.sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }));
 
-    // 2️⃣ Popola la select e imposta la prima come selezionata
+    // 2ï¸âƒ£ Popola la select e imposta la prima come selezionata
     squadre.forEach((sq, index) => {
       if (sq.logo) {
         teamLogos[sq.nome] = sq.logo;
@@ -606,12 +606,13 @@ async function caricaSquadrePerRosa() {
       select.appendChild(opt);
     });
 
-    // 3️⃣ Mostra subito la rosa della prima squadra
+    // 3ï¸âƒ£ Mostra subito la rosa della prima squadra
     if (squadre.length > 0) {
+      if (favState.tournaments.has(TORNEO)) setAllTeamsFollowed();
       caricaRosaSquadra(squadre[0].nome);
     }
 
-    // 4️⃣ Evento cambio squadra
+    // 4ï¸âƒ£ Evento cambio squadra
     select.addEventListener("change", () => {
       const squadra = select.value;
       if (squadra) caricaRosaSquadra(squadra);
@@ -641,7 +642,7 @@ async function caricaRosaSquadra(squadra) {
     header.innerHTML = `
       <img src="${squadraLogo}" alt="${squadra}" class="team-logo-large">
       <h3>${squadra}</h3>
-      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn">☆ Segui squadra</button>
+      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn">â˜† Segui squadra</button>
     `;
     const favBtn = header.querySelector(".fav-team-btn");
     if (favBtn) {
@@ -785,7 +786,7 @@ document.addEventListener("DOMContentLoaded", () => {
       classificaWrapper.style.display = "none";
       playoffContainer.style.display = "block";
 
-      // se non è selezionata nessuna coppa ancora, default gold
+      // se non Ã¨ selezionata nessuna coppa ancora, default gold
       if (!coppaSelect.value) {
         coppaSelect.value = "gold";
       }
@@ -822,3 +823,8 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
+
+
+
+
+
