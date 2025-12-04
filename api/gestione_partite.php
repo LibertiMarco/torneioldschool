@@ -305,8 +305,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $campo = sanitize_text($_POST['campo_mod'] ?? '');
     $roundSelezionato = sanitize_text($_POST['round_eliminazione_mod'] ?? '');
     $giornata = sanitize_int($_POST['giornata_mod'] ?? '');
-    // di default, in modifica settiamo giocata a true
-    $giocata = 1;
+    // usa il flag inviato dal form; non forziamo piï¿½ true di default
+    $giocata = isset($_POST['giocata_mod']) && $_POST['giocata_mod'] === '1' ? 1 : 0;
     $gol_casa = sanitize_int($_POST['gol_casa_mod'] ?? '0');
     $gol_ospite = sanitize_int($_POST['gol_ospite_mod'] ?? '0');
     $link_youtube = sanitize_text($_POST['link_youtube_mod'] ?? '');
