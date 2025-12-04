@@ -3,6 +3,83 @@ const GOLD_SPOTS = 16;              // prime 16 in Coppa Gold
 const TEAM_COUNT = 18;              // totale squadre in regular
 const SILVER_SPOTS = TEAM_COUNT - GOLD_SPOTS; // ultime 2 in finale Silver
 const teamLogos = {};
+const favState = { tournaments: new Set(), teams: new Set() };
+let currentRosaTeam = "";
+
+function teamKey(name = "") {
+  return `${TORNEO}|||${name}`;
+}
+
+function updateFavTournamentButton() {
+  const btn = document.getElementById("favTournamentBtn");
+  if (!btn) return;
+  const isFav = favState.tournaments.has(TORNEO);
+  btn.classList.toggle("is-fav", isFav);
+  btn.textContent = isFav ? "★ Torneo seguito" : "☆ Segui torneo";
+}
+
+function updateFavTeamButton(squadra, btnEl) {
+  const btn = btnEl || document.querySelector(".fav-team-btn");
+  if (!btn || !squadra) return;
+  const isFav = favState.teams.has(teamKey(squadra));
+  btn.classList.toggle("is-fav", isFav);
+  btn.textContent = isFav ? "★ Segui squadra" : "☆ Segui squadra";
+}
+
+async function toggleTournamentFollow(btn) {
+  const wantFollow = !favState.tournaments.has(TORNEO);
+  const fd = new FormData();
+  fd.append("tipo", "torneo");
+  fd.append("azione", wantFollow ? "follow" : "unfollow");
+  fd.append("torneo", TORNEO);
+  try {
+    const res = await fetch("/api/follow.php", { method: "POST", body: fd, credentials: "include" });
+    const data = await res.json();
+    if (!data.error) {
+      if (data.followed) favState.tournaments.add(TORNEO);
+      else favState.tournaments.delete(TORNEO);
+    }
+  } catch (e) {
+    console.error("Errore follow torneo", e);
+  }
+  updateFavTournamentButton(btn);
+}
+
+async function toggleTeamFollow(squadra, btn) {
+  if (!squadra) return;
+  const key = teamKey(squadra);
+  const wantFollow = !favState.teams.has(key);
+  const fd = new FormData();
+  fd.append("tipo", "squadra");
+  fd.append("azione", wantFollow ? "follow" : "unfollow");
+  fd.append("torneo", TORNEO);
+  fd.append("squadra", squadra);
+  try {
+    const res = await fetch("/api/follow.php", { method: "POST", body: fd, credentials: "include" });
+    const data = await res.json();
+    if (!data.error) {
+      if (data.followed) favState.teams.add(key);
+      else favState.teams.delete(key);
+    }
+  } catch (e) {
+    console.error("Errore follow squadra", e);
+  }
+  updateFavTeamButton(squadra, btn);
+}
+
+async function loadFavorites() {
+  try {
+    const res = await fetch("/api/follow.php", { credentials: "include" });
+    if (!res.ok) return;
+    const data = await res.json();
+    favState.tournaments = new Set(data.tournaments || []);
+    favState.teams = new Set((data.teams || []).map(t => `${t.torneo}|||${t.squadra}`));
+    updateFavTournamentButton();
+    if (currentRosaTeam) updateFavTeamButton(currentRosaTeam);
+  } catch (e) {
+    console.error("Errore caricamento preferiti", e);
+  }
+}
 
 function normalizeLogoName(name = "") {
   return name.replace(/[^A-Za-z0-9]/g, "");
@@ -548,6 +625,7 @@ async function caricaSquadrePerRosa() {
 
 
 async function caricaRosaSquadra(squadra) {
+  currentRosaTeam = squadra;
   try {
     const res = await fetch(`/api/get_rosa.php?torneo=${TORNEO}&squadra=${encodeURIComponent(squadra)}`);
     const data = await res.json();
@@ -563,7 +641,13 @@ async function caricaRosaSquadra(squadra) {
     header.innerHTML = `
       <img src="${squadraLogo}" alt="${squadra}" class="team-logo-large">
       <h3>${squadra}</h3>
+      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn">☆ Segui squadra</button>
     `;
+    const favBtn = header.querySelector(".fav-team-btn");
+    if (favBtn) {
+      updateFavTeamButton(squadra, favBtn);
+      favBtn.addEventListener("click", () => toggleTeamFollow(squadra, favBtn));
+    }
     container.appendChild(header);
 
     // elenco giocatori
@@ -642,6 +726,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const heroImg = document.getElementById("torneoHeroImg");
   const torneoTitle = document.querySelector(".torneo-title .titolo");
   const loadClassifica = (slug) => caricaClassifica(slug || TORNEO);
+  const favTorneoBtn = document.getElementById("favTournamentBtn");
+  if (favTorneoBtn) {
+    favTorneoBtn.addEventListener("click", () => toggleTournamentFollow(favTorneoBtn));
+  }
+  loadFavorites();
 
   // carico subito la parte girone
   caricaClassifica();

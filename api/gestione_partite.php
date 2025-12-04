@@ -78,6 +78,11 @@ function giornata_to_roundLabel(?int $giornata, array $map): ?string {
   return $flip[$giornata] ?? null;
 }
 
+// Assicura che le colonne/tabella di supporto notifiche esistano
+ensure_notifiche_table($conn);
+ensure_follow_table($conn);
+ensure_partite_notifica_flag($conn);
+
 // ==== NOTIFICHE ====
 function ensure_notifiche_table(mysqli $conn): void {
   $conn->query("
@@ -94,6 +99,13 @@ function ensure_notifiche_table(mysqli $conn): void {
       CONSTRAINT fk_notifiche_user FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
   ");
+}
+
+function ensure_partite_notifica_flag(mysqli $conn): void {
+  $col = $conn->query("SHOW COLUMNS FROM partite LIKE 'notifica_esito_inviata'");
+  if ($col && $col->num_rows === 0) {
+    $conn->query("ALTER TABLE partite ADD COLUMN notifica_esito_inviata TINYINT(1) NOT NULL DEFAULT 0");
+  }
 }
 
 function ensure_follow_table(mysqli $conn): void {
@@ -271,22 +283,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           );
           if ($stmt->execute()) {
             $successo = 'Partita creata correttamente.';
-            $matchLabel = $casa . ' - ' . $ospite;
-            $whenLabel = trim($data . ' ' . $ora);
-            $uids = array_unique(array_merge(
-              get_utenti_per_squadre($conn, $torneo, [$casa, $ospite]),
-              get_followers_torneo($conn, $torneo),
-              get_followers_squadre($conn, $torneo, [$casa, $ospite])
-            ));
-            push_notifica_users(
-              $conn,
-              $uids,
-              'match_create',
-              'Nuova partita in calendario',
-              $matchLabel . ($whenLabel ? ' • ' . $whenLabel : ''),
-              '/tornei.php'
-            );
-          } else {
+            } else {
             $errore = 'Inserimento non riuscito.';
           }
           $stmt->close();
@@ -349,22 +346,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         if ($stmt->execute()) {
           $successo = 'Partita aggiornata correttamente.';
-          $matchLabel = $casa . ' - ' . $ospite;
-          $scoreLabel = $gol_casa . ' - ' . $gol_ospite;
-          $whenLabel = trim($data . ' ' . $ora);
-          $uids = array_unique(array_merge(
-            get_utenti_per_squadre($conn, $torneo, [$casa, $ospite]),
-            get_followers_torneo($conn, $torneo),
-            get_followers_squadre($conn, $torneo, [$casa, $ospite])
-          ));
-          push_notifica_users(
-            $conn,
-            $uids,
-            'match_update',
-            'Risultato aggiornato',
-            $matchLabel . ' • ' . $scoreLabel . ($whenLabel ? ' • ' . $whenLabel : ''),
-            '/tornei.php'
-          );
         } else {
           $errore = 'Aggiornamento non riuscito.';
         }
@@ -1233,4 +1214,5 @@ if ($res) {
 
 </body>
 </html>
+
 
