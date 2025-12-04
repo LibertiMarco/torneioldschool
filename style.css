@@ -2926,6 +2926,16 @@ body {
   gap: 10px;
 }
 
+#playoffContainer .team-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: none;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+
 #playoffContainer .team.home {
   justify-content: flex-start;
 }
@@ -2944,11 +2954,11 @@ body {
   font-weight: 700;
   font-size: 1.05rem;
   color: #15293e;
-  white-space: nowrap;
+  white-space: normal;
   overflow: visible;
   text-overflow: unset;
-  word-break: normal;
-  line-height: 1.1;
+  word-break: break-word;
+  line-height: 1.15;
 }
 
 @media (min-width: 900px) {
