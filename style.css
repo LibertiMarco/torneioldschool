@@ -386,16 +386,16 @@ body {
 
 @media (max-width: 640px) {
   .scorer-card {
-    grid-template-columns: 36px 60px 1fr;
-    grid-template-areas:
-      "rank avatar goals"
-      "rank info goals";
-    row-gap: 6px;
+    grid-template-columns: 40px 56px 1fr 60px;
+    padding: 10px 12px;
+    gap: 10px;
   }
-  .scorer-rank { grid-area: rank; }
-  .scorer-avatar { grid-area: avatar; }
-  .scorer-info { grid-area: info; }
-  .scorer-goals { grid-area: goals; align-items: flex-end; }
+  .scorer-rank { font-size: 16px; }
+  .scorer-avatar img { width: 52px; height: 52px; }
+  .scorer-name { font-size: 16px; }
+  .scorer-teamline { font-size: 12px; gap: 6px; }
+  .scorer-team-logo { width: 22px; height: 22px; }
+  .scorer-goals .goals-number { font-size: 22px; }
 }
 
 .marcatori-pagination {
