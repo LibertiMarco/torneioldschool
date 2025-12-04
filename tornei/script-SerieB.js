@@ -716,14 +716,11 @@ async function caricaPlayoff(tipoCoppa) {
           const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
           const dataStr = formattaData(partita.data_partita);
           const legLabel = (partita.fase_leg || "").trim();
-          const statusLabel = giocata ? "Chiuso" : "Programmato";
-
           const match = document.createElement("div");
           match.className = "bracket-match" + (giocata ? " is-played" : "");
           match.style.cursor = giocata ? "pointer" : "default";
           match.innerHTML = `
             <div class="bracket-head">
-              <span class="bracket-status ${giocata ? "played" : "upcoming"}">${statusLabel}</span>
               ${legLabel ? `<span class="bracket-leg">${legLabel}</span>` : ""}
             </div>
             <div class="bracket-team">
