@@ -20,7 +20,7 @@ $defaultTab = $_SESSION['flash_tab'] ?? 'crea';
 unset($_SESSION['flash_error'], $_SESSION['flash_success'], $_SESSION['flash_tab']);
 
 function sanitizeTorneoSlugValue($value) {
-    $value = preg_replace('/\.html$/i', '', $value);
+    $value = preg_replace('/\.(html?|php)$/i', '', $value);
     $value = preg_replace('/[^A-Za-z0-9_-]/', '', $value);
     return $value;
 }

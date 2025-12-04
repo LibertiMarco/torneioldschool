@@ -26,7 +26,7 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug) {
         return;
     }
 
-    $htmlTemplate = $baseDir . '/SerieA.html';
+    $htmlTemplate = $baseDir . '/SerieA.php';
     $jsTemplate = $baseDir . '/script-SerieA.js';
     if (!file_exists($htmlTemplate) || !file_exists($jsTemplate)) {
         return;
@@ -47,7 +47,7 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug) {
 
     $jsContent = str_replace('SerieA', $slug, $jsContent);
 
-    @file_put_contents($baseDir . '/' . $slug . '.html', $htmlContent);
+    @file_put_contents($baseDir . '/' . $slug . '.php', $htmlContent);
     @file_put_contents($baseDir . '/' . $newScriptName, $jsContent);
 }
 
@@ -59,14 +59,18 @@ function eliminaFileTorneo($fileName) {
     if (!$baseDir) {
         return;
     }
-    $slug = preg_replace('/\.html$/i', '', $fileName);
+    $slug = preg_replace('/\.(html?|php)$/i', '', $fileName);
     if ($slug === '') {
         return;
     }
+    $phpPath = $baseDir . '/' . $slug . '.php';
     $htmlPath = $baseDir . '/' . $slug . '.html';
     $jsPath = $baseDir . '/script-' . $slug . '.js';
+    if (file_exists($phpPath)) {
+        @unlink($phpPath);
+    }
     if (file_exists($htmlPath)) {
-        @unlink($htmlPath);
+        @unlink($htmlPath); // rimuove eventuali vecchie versioni statiche
     }
     if (file_exists($jsPath)) {
         @unlink($jsPath);
@@ -171,9 +175,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     $stato = $_POST['stato'];
     $data_inizio = $_POST['data_inizio'];
     $data_fine = $_POST['data_fine'];
-    $rawFile = preg_replace('/\.html$/i', '', trim($_POST['filetorneo']));
+    $rawFile = preg_replace('/\.(html?|php)$/i', '', trim($_POST['filetorneo']));
     $slug = sanitizeTorneoSlug($rawFile);
-    $filetorneo = $slug . '.html';
+    $filetorneo = $slug . '.php';
     $categoria = trim($_POST['categoria']);
     $img = salvaImmagineTorneo($nome, 'img_upload');
 
@@ -191,9 +195,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $stato = $_POST['stato'];
     $data_inizio = $_POST['data_inizio'];
     $data_fine = $_POST['data_fine'];
-    $rawFile = preg_replace('/\.html$/i', '', trim($_POST['filetorneo']));
+    $rawFile = preg_replace('/\.(html?|php)$/i', '', trim($_POST['filetorneo']));
     $slug = sanitizeTorneoSlug($rawFile);
-    $filetorneo = $slug . '.html';
+    $filetorneo = $slug . '.php';
     $categoria = trim($_POST['categoria']);
     $record = $torneo->getById($id);
     $img = salvaImmagineTorneo($nome, 'img_upload_mod');
@@ -210,13 +214,13 @@ if (isset($_GET['elimina'])) {
     $id = (int)$_GET['elimina'];
     $record = $torneo->getById($id);
 
-    if ($record) {
+        if ($record) {
         eliminaFileTorneo($record['filetorneo'] ?? null);
         eliminaImmagineTorneo($record['img'] ?? null);
 
         $torneoSlug = '';
         if (!empty($record['filetorneo'])) {
-            $torneoSlug = sanitizeTorneoSlug(preg_replace('/\.html$/i', '', $record['filetorneo']));
+            $torneoSlug = sanitizeTorneoSlug(preg_replace('/\.(html?|php)$/i', '', $record['filetorneo']));
         }
         $squadraModel->eliminaByTorneo($torneoSlug);
     }

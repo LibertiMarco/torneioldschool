@@ -25,7 +25,7 @@ $roundMap = [
 $torneiRes = $conn->query("SELECT nome, filetorneo FROM tornei WHERE stato <> 'terminato' ORDER BY nome ASC");
 if ($torneiRes) {
   while ($row = $torneiRes->fetch_assoc()) {
-    $slug = preg_replace('/\.html$/i', '', $row['filetorneo'] ?? '');
+    $slug = preg_replace('/\.(html?|php)$/i', '', $row['filetorneo'] ?? '');
     $torneiDisponibili[] = [
       'nome' => $row['nome'] ?: $slug,
       'slug' => $slug,

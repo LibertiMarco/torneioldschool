@@ -1,9 +1,12 @@
+<?php
+require_once __DIR__ . '/../includi/require_login.php';
+?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Serie A - Tornei Old School</title>
+  <title>Champions League A - Tornei Old School</title>
   <link rel="stylesheet" href="../style.css" />
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
@@ -110,9 +113,9 @@
   <!-- CONTENUTO PRINCIPALE -->
   <main class="content">
     <div class="torneo-hero">
-      <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Serie A">
+      <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Champions League A">
       <div class="torneo-title">
-        <h1 class="titolo">Serie A</h1>
+        <h1 class="titolo">Champions League A</h1>
         <button type="button" class="fav-toggle" id="favTournamentBtn">☆ Segui torneo</button>
       </div>
     </div>
@@ -217,7 +220,7 @@
     <div class="regola">
       <h3>🏟️ Struttura del Campionato</h3>
       <p>
-        Il torneo è composto da <strong>20 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
+        Il torneo è composto da <strong>18 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
       </p>
     </div>
 
@@ -237,7 +240,7 @@
       <h3>🏆 Fase 2 — Coppe</h3>
       <ul>
         <li>Le <strong>prime 16</strong> classificate accedono alla <span class="gold">Coppa Gold</span>.</li>
-        <li>Le <strong>ultime 4</strong> accedono alla <span class="silver">Coppa Silver</span>.</li>
+        <li>Le <strong>ultime 2</strong> si sfidano nella <span class="silver">finale di Coppa Silver</span>.</li>
         <li>Entrambe le coppe prevedono una <strong>premiazione con trofeo</strong> per la vincitrice.</li>
       </ul>
     </div>
@@ -320,32 +323,97 @@
           document.getElementById("header-container").innerHTML = data;
           initHeaderInteractions();
 
-          const header = document.querySelector(".site-header");
-          window.addEventListener("scroll", () => {
-            if (window.scrollY > 50) header.classList.add("scrolled");
-            else header.classList.remove("scrolled");
-          });
+          // Fallback: se il toggle mobile non risponde, aggancia manualmente i listener
+          const headerEl = document.querySelector(".site-header");
+          if (headerEl) {
+            const mobileBtn = headerEl.querySelector("#mobileMenuBtn");
+            const mainNav = headerEl.querySelector("#mainNav");
+            const userBtn = headerEl.querySelector("#userBtn");
+            const userMenu = headerEl.querySelector("#userMenu");
+            let fallbackBound = false;
 
-          const dropdown = document.querySelector(".dropdown");
-          if (dropdown) {
-            const btn = dropdown.querySelector(".dropbtn");
-            const menu = dropdown.querySelector(".dropdown-content");
+            const applyDisplay = (open) => {
+              if (!mainNav) return;
+              mainNav.classList.toggle("open", open);
+              if (window.matchMedia("(max-width: 768px)").matches) {
+                mainNav.style.display = open ? "flex" : "none";
+              } else {
+                mainNav.style.display = "";
+              }
+            };
 
-            if (btn && menu) {
-              btn.addEventListener("click", (e) => {
+            const toggleWorks = (() => {
+              if (!mobileBtn || !mainNav) return false;
+              const wasOpen = mainNav.classList.contains("open");
+              mobileBtn.click();
+              const changed = mainNav.classList.contains("open");
+              if (changed !== wasOpen) {
+                mainNav.classList.toggle("open");
+                return true;
+              }
+              return false;
+            })();
+
+            if (!toggleWorks && mobileBtn && mainNav && !fallbackBound) {
+              fallbackBound = true;
+
+              const closeMenus = () => {
+                applyDisplay(false);
+                if (userMenu) userMenu.classList.remove("open");
+              };
+
+              mobileBtn.addEventListener("click", (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                dropdown.classList.toggle("open");
-                menu.style.display = dropdown.classList.contains("open") ? "block" : "none";
+                const isOpen = !mainNav.classList.contains("open");
+                applyDisplay(isOpen);
+                if (isOpen && userMenu) userMenu.classList.remove("open");
               });
 
+              if (userBtn && userMenu) {
+                userBtn.addEventListener("click", (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const isOpen = userMenu.classList.toggle("open");
+                  if (isOpen) applyDisplay(false);
+                });
+              }
+
               document.addEventListener("click", (e) => {
-                if (!dropdown.contains(e.target)) {
-                  dropdown.classList.remove("open");
-                  menu.style.display = "none";
-                }
+                if (!headerEl.contains(e.target)) closeMenus();
+              });
+
+              window.addEventListener("resize", () => {
+                if (window.innerWidth > 768) closeMenus();
               });
             }
+          }
+
+          if (headerEl) {
+            window.addEventListener("scroll", () => {
+              if (window.scrollY > 50) headerEl.classList.add("scrolled");
+              else headerEl.classList.remove("scrolled");
+            });
+          }
+
+          const dropdown = document.querySelector(".dropdown");
+          const btn = dropdown?.querySelector(".dropbtn");
+          const menu = dropdown?.querySelector(".dropdown-content");
+
+          if (btn && menu) {
+            btn.addEventListener("click", (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              dropdown.classList.toggle("open");
+              menu.style.display = dropdown.classList.contains("open") ? "block" : "none";
+            });
+
+            document.addEventListener("click", (e) => {
+              if (!dropdown.contains(e.target)) {
+                dropdown.classList.remove("open");
+                menu.style.display = "none";
+              }
+            });
           }
         })
         .catch(error => console.error("Errore nel caricamento dell'header:", error));
@@ -363,7 +431,7 @@
   </script>
 
   <!-- SCRIPT: SERIE A -->
-  <script src="script-SerieA.js"></script>
+  <script src="script-ChampionsLeagueA.js"></script>
 
 </body>
 </html>

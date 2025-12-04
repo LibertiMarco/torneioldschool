@@ -14,9 +14,10 @@ if ($slug === '') {
 
 require_once __DIR__ . '/../includi/db.php';
 
-$filename = $slug . '.html';
-$stmt = $conn->prepare("SELECT nome, img, categoria FROM tornei WHERE filetorneo = ? LIMIT 1");
-$stmt->bind_param('s', $filename);
+$filenamePhp = $slug . '.php';
+$filenameHtml = $slug . '.html';
+$stmt = $conn->prepare("SELECT nome, img, categoria FROM tornei WHERE filetorneo IN (?, ?) ORDER BY (filetorneo LIKE '%.php') DESC LIMIT 1");
+$stmt->bind_param('ss', $filenamePhp, $filenameHtml);
 $stmt->execute();
 $result = $stmt->get_result();
 

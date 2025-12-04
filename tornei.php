@@ -38,6 +38,26 @@ function formattaMeseAnno($data) {
   return $fmt ? $fmt->format($ts) : date('m/y', $ts);
 }
 
+/**
+ * Restituisce il percorso del file torneo forzando l'estensione .php e gestendo valori vuoti.
+ */
+function resolveTorneoLink(?string $filetorneo): string {
+  $value = trim((string)$filetorneo);
+  if ($value === '' || $value === '0') {
+    return '#';
+  }
+  if (preg_match('#^https?://#i', $value)) {
+    return $value;
+  }
+  $value = ltrim($value, '/');
+  $slug = preg_replace('/\.(html?|php)$/i', '', $value);
+  $slug = preg_replace('/[^A-Za-z0-9_-]/', '', $slug);
+  if ($slug === '') {
+    return '#';
+  }
+  return 'tornei/' . $slug . '.php';
+}
+
 // === DATI UTENTE DALLA SESSIONE ===
 $utente_loggato = isset($_SESSION['user_id']);
 $ruolo = $_SESSION['ruolo'] ?? 'utente';
@@ -250,7 +270,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       <div class="news-grid">
         <?php if (!empty($tornei['in corso'])): ?>
           <?php foreach ($tornei['in corso'] as $t): ?>
-            <?php $link = !empty($t['filetorneo']) ? 'tornei/' . htmlspecialchars($t['filetorneo']) : '#'; ?>
+            <?php $link = resolveTorneoLink($t['filetorneo'] ?? ''); ?>
             <?php
               $start = formattaMeseAnno($t['data_inizio']);
               $end = formattaMeseAnno($t['data_fine']);
@@ -283,7 +303,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       <div class="news-grid">
         <?php if (!empty($tornei['programmato'])): ?>
           <?php foreach ($tornei['programmato'] as $t): ?>
-            <?php $link = !empty($t['filetorneo']) ? 'tornei/' . htmlspecialchars($t['filetorneo']) : '#'; ?>
+            <?php $link = resolveTorneoLink($t['filetorneo'] ?? ''); ?>
             <?php
               $start = formattaMeseAnno($t['data_inizio']);
               $end = formattaMeseAnno($t['data_fine']);
@@ -316,7 +336,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       <div class="news-grid">
         <?php if (!empty($tornei['terminato'])): ?>
           <?php foreach ($tornei['terminato'] as $t): ?>
-            <?php $link = !empty($t['filetorneo']) ? 'tornei/' . htmlspecialchars($t['filetorneo']) : '#'; ?>
+            <?php $link = resolveTorneoLink($t['filetorneo'] ?? ''); ?>
             <?php
               $start = formattaMeseAnno($t['data_inizio']);
               $end = formattaMeseAnno($t['data_fine']);

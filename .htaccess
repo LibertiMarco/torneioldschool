@@ -20,6 +20,9 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 RewriteRule ^robots\.txt$ robots.php [L]
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
 
+# Pagine torneo: instrada i vecchi percorsi .html verso i nuovi file .php protetti
+RewriteRule ^tornei/(.+)\.html$ /tornei/$1.php [L,QSA,NC]
+
 # Compressione di testo (fallback a deflate se brotli non disponibile)
 <IfModule mod_brotli.c>
   AddOutputFilterByType BROTLI_COMPRESS text/html text/plain text/xml text/css text/javascript application/javascript application/json application/xml image/svg+xml
