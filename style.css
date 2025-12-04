@@ -2778,6 +2778,29 @@ body {
   flex-direction: column;
   gap: 2px;
 }
+.bracket-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  padding-right: 8px;
+}
+.bracket-connector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #4c5b71;
+  font-weight: 700;
+  padding: 2px 4px 6px;
+}
+.bracket-connector::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #dce3ef;
+  border-radius: 999px;
+}
 
 .fase-label {
   font-weight: 700;

@@ -522,6 +522,9 @@ async function caricaPlayoff(tipoCoppa) {
       .bracket-team .team-logo { width: 34px; height: 34px; object-fit: contain; }
       .bracket-team .team-score { font-weight: 800; font-size: 18px; color: #15293e; min-width: 24px; text-align: right; }
       .bracket-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: #4c5b71; }
+      .bracket-pair { display: flex; flex-direction: column; gap: 10px; position: relative; padding-right: 8px; }
+      .bracket-connector { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #4c5b71; font-weight: 700; padding: 2px 4px 6px; }
+      .bracket-connector::after { content: ""; flex: 1; height: 1px; background: #dce3ef; border-radius: 999px; }
     `;
     document.head.appendChild(style);
   })();
@@ -556,7 +559,11 @@ async function caricaPlayoff(tipoCoppa) {
       titolo.textContent = fasiMap[g] || `Fase ${g}`;
       col.appendChild(titolo);
 
-      matchList.forEach(partita => {
+      const nextLabelMap = { 4: "Quarti", 3: "Semifinale", 2: "Finale" };
+      const nextLabel = nextLabelMap[g];
+      let pairBuffer = [];
+
+      matchList.forEach((partita, idx) => {
         const giocata = partita.giocata == 1 && partita.gol_casa !== null && partita.gol_ospite !== null;
         const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
         const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
@@ -593,7 +600,21 @@ async function caricaPlayoff(tipoCoppa) {
             window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${encodeURIComponent(TORNEO)}`;
           });
         }
-        col.appendChild(match);
+
+        pairBuffer.push(match);
+        const isPairComplete = pairBuffer.length === 2;
+        const isLastMatch = idx === matchList.length - 1;
+
+        if (isPairComplete || isLastMatch) {
+          pairBuffer.forEach(m => col.appendChild(m));
+          if (isPairComplete && nextLabel) {
+            const connector = document.createElement("div");
+            connector.className = "bracket-connector";
+            connector.innerHTML = `<span>&rarr; ${nextLabel}</span>`;
+            col.appendChild(connector);
+          }
+          pairBuffer = [];
+        }
       });
 
       fasiContainer.appendChild(col);
@@ -846,3 +867,6 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
+
+
+

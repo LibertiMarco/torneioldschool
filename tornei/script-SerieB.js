@@ -710,7 +710,11 @@ async function caricaPlayoff(tipoCoppa) {
         titolo.textContent = fasiMap[g] || `Fase ${g}`;
         col.appendChild(titolo);
 
-        matchList.forEach(partita => {
+        const nextLabelMap = { 4: "Quarti", 3: "Semifinale", 2: "Finale" };
+        const nextLabel = nextLabelMap[g];
+        let pairBuffer = [];
+
+        matchList.forEach((partita, idx) => {
           const giocata = partita.giocata == 1 && partita.gol_casa !== null && partita.gol_ospite !== null;
           const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
           const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
@@ -747,7 +751,21 @@ async function caricaPlayoff(tipoCoppa) {
               window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${encodeURIComponent(TORNEO)}`;
             });
           }
-          col.appendChild(match);
+
+          pairBuffer.push(match);
+          const isPairComplete = pairBuffer.length === 2;
+          const isLastMatch = idx === matchList.length - 1;
+
+          if (isPairComplete || isLastMatch) {
+            pairBuffer.forEach(m => col.appendChild(m));
+            if (isPairComplete && nextLabel) {
+              const connector = document.createElement("div");
+              connector.className = "bracket-connector";
+              connector.innerHTML = `<span>&rarr; ${nextLabel}</span>`;
+              col.appendChild(connector);
+            }
+            pairBuffer = [];
+          }
         });
 
         fasiContainer.appendChild(col);
@@ -1028,3 +1046,6 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     });
   }
 });
+
+
+
