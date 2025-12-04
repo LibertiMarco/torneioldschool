@@ -337,6 +337,44 @@ const roundLabelByKey = {
   "KO": "Fase eliminazione"
 };
 
+function updateGiornataFilter(faseSelezionata, giornateDisponibili = []) {
+  const wrapper = document.getElementById("wrapperGiornataSelect");
+  const select = document.getElementById("giornataSelect");
+  const label = wrapper ? wrapper.querySelector("label[for='giornataSelect']") : null;
+  if (!select) return;
+  const isRegular = (faseSelezionata || "").toUpperCase() === "REGULAR";
+
+  if (wrapper) wrapper.style.display = "flex";
+  if (label) label.textContent = isRegular ? "Giornata:" : "Turno:";
+
+  select.innerHTML = "";
+  select.append(new Option(isRegular ? "Tutte" : "Tutti i turni", ""));
+
+  if (isRegular) {
+    giornateDisponibili.forEach(g => {
+      select.add(new Option(`Giornata ${g}`, g));
+    });
+    return;
+  }
+
+  const disponibili = new Set(giornateDisponibili.map(String));
+  const orderedRounds = ["4", "3", "2", "1"];
+  let added = false;
+  orderedRounds.forEach(g => {
+    if (disponibili.has(g)) {
+      select.add(new Option(roundLabelByKey[g] || `Fase ${g}`, g));
+      added = true;
+    }
+  });
+
+  if (!added) {
+    giornateDisponibili.forEach(g => {
+      const key = String(g);
+      select.add(new Option(roundLabelByKey[key] || `Fase ${key}`, key));
+    });
+  }
+}
+
 async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REGULAR") {
   try {
     const faseParam = faseSelezionata && faseSelezionata !== "REGULAR" ? `&fase=${faseSelezionata}` : "";
@@ -365,29 +403,10 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
     const wrapperGiornata = document.getElementById("wrapperGiornataSelect");
     const giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
 
-    if (wrapperGiornata) {
-      const isRegular = (faseSelezionata || "").toUpperCase() === "REGULAR";
-      wrapperGiornata.style.display = isRegular ? "flex" : "none";
-    }
+    updateGiornataFilter(faseSelezionata, giornateDisponibili);
 
-    if (giornataSelect) {
-      if (giornataSelect.options.length <= 1 || giornataSelezionata === "") {
-        giornataSelect.innerHTML = '<option value="">Tutte</option>';
-        if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
-          giornateDisponibili.forEach(g => {
-            const opt = document.createElement("option");
-            opt.value = g;
-            opt.textContent = `Giornata ${g}`;
-            giornataSelect.appendChild(opt);
-          });
-        }
-      }
-    }
-
-    // Filtra le giornate mostrate
-    const giornateDaMostrare = giornataSelezionata && faseSelezionata === "REGULAR"
-      ? [giornataSelezionata]
-      : giornateDisponibili;
+    const selectedRound = giornataSelect ? String(giornataSelect.value || giornataSelezionata || "") : "";
+    const giornateDaMostrare = selectedRound ? [selectedRound] : giornateDisponibili;
 
     giornateDaMostrare.forEach(numGiornata => {
       const giornataDiv = document.createElement("div");
