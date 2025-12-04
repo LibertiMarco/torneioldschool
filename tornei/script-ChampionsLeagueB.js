@@ -23,7 +23,8 @@ function updateFavTeamButton(squadra, btnEl) {
   if (!btn || !squadra) return;
   const isFav = favState.teams.has(teamKey(squadra));
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "★ Segui squadra" : "☆ Segui squadra";
+  btn.textContent = isFav ? "★" : "☆";
+  btn.setAttribute("aria-label", isFav ? "Smetti di seguire la squadra" : "Segui la squadra");
 }
 
 async function toggleTournamentFollow(btn) {
@@ -635,14 +636,14 @@ async function caricaRosaSquadra(squadra) {
     container.innerHTML = "";
 
     // intestazione con logo + nome squadra
-    const header = document.createElement("div");
-    header.classList.add("rosa-header");
-    const squadraLogo = resolveLogoPath(squadra, (data[0] && data[0].logo_squadra) || teamLogos[squadra]);
+  const header = document.createElement("div");
+  header.classList.add("rosa-header");
+  const squadraLogo = resolveLogoPath(squadra, (data[0] && data[0].logo_squadra) || teamLogos[squadra]);
 
-    header.innerHTML = `
+  header.innerHTML = `
       <img src="${squadraLogo}" alt="${squadra}" class="team-logo-large">
       <h3>${squadra}</h3>
-      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn">☆ Segui squadra</button>
+      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn" aria-label="Segui la squadra">☆</button>
     `;
     const favBtn = header.querySelector(".fav-team-btn");
     if (favBtn) {
