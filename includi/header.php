@@ -55,7 +55,8 @@ if (!empty($sessionAvatar)) {
 
     <div class="header-actions">
       <?php if ($isLoggedIn): ?>
-        <!-- NOTIFICHE -->
+        <!-- NOTIFICHE disabilitate temporaneamente -->
+        <!--
         <div class="notif-dropdown">
           <button id="notifBtn" class="notif-btn" aria-haspopup="true" aria-expanded="false" aria-label="Notifiche">
             <svg class="notif-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -65,6 +66,7 @@ if (!empty($sessionAvatar)) {
           </button>
           <div id="notifMenu" class="notif-menu" role="menu" aria-label="Notifiche"></div>
         </div>
+        -->
       <?php endif; ?>
 
       <!-- MENU UTENTE -->
@@ -568,29 +570,14 @@ if (!empty($sessionAvatar)) {
   function closeMenus(header, state) {
     if (state.mainNav) state.mainNav.classList.remove("open");
     if (state.userMenu) state.userMenu.classList.remove("open");
-    if (state.notifMenu) state.notifMenu.classList.remove("open");
-    if (state.notifBtn) state.notifBtn.setAttribute("aria-expanded", "false");
+    // notifiche disabilitate
+    // if (state.notifMenu) state.notifMenu.classList.remove("open");
+    // if (state.notifBtn) state.notifBtn.setAttribute("aria-expanded", "false");
   }
 
   function renderNotifs(menuEl, badgeEl, list) {
-    if (!menuEl || !badgeEl) return;
-    if (!Array.isArray(list)) list = [];
-    if (!list.length) {
-      badgeEl.style.display = "none";
-      menuEl.innerHTML = '<div class="notif-empty">Nessuna notifica</div>';
-      return;
-    }
-    badgeEl.textContent = list.length;
-    badgeEl.style.display = "inline-flex";
-    menuEl.innerHTML = list.map(function(n) {
-      return (
-        '<div class="notif-item">' +
-          '<div class="notif-title">' + (n.title || 'Notifica') + '</div>' +
-          '<div class="notif-text">' + (n.text || '') + '</div>' +
-          '<div class="notif-meta">' + (n.time || '') + '</div>' +
-        '</div>'
-      );
-    }).join("");
+    // notifiche disabilitate
+    return;
   }
 
   function setupHeader() {
@@ -600,10 +587,8 @@ if (!empty($sessionAvatar)) {
     var mainNav = header.querySelector("#mainNav");
     var userBtn = header.querySelector("#userBtn");
     var userMenu = header.querySelector("#userMenu");
-    var notifBtn = header.querySelector("#notifBtn");
-    var notifMenu = header.querySelector("#notifMenu");
-    var notifBadge = header.querySelector("#notifBadge");
-    var state = { mainNav: mainNav, userMenu: userMenu, notifBtn: notifBtn, notifMenu: notifMenu, notifBadge: notifBadge };
+    // notifiche disabilitate
+    var state = { mainNav: mainNav, userMenu: userMenu, notifBtn: null, notifMenu: null, notifBadge: null };
 
     if (mobileBtn && mainNav) {
       mobileBtn.addEventListener("click", function (e) {
@@ -620,41 +605,11 @@ if (!empty($sessionAvatar)) {
         e.stopPropagation();
         var isOpen = userMenu.classList.toggle("open");
         if (isOpen && mainNav) mainNav.classList.remove("open");
-        if (isOpen && notifMenu) notifMenu.classList.remove("open");
+        // notifiche disabilitate
       });
     }
 
-    function loadNotifs(markRead) {
-      if (!notifMenu || !notifBadge) return;
-      const url = "/api/notifications.php" + (markRead ? "?mark_read=1" : "");
-      fetch(url, { credentials: "include" })
-        .then(function(res) { return res.ok ? res.json() : { notifications: [], unread: 0 }; })
-        .then(function(data) {
-          var list = data.notifications || [];
-          var unread = data.unread || 0;
-          if (!Array.isArray(list)) list = [];
-          renderNotifs(notifMenu, notifBadge, list);
-          if (unread > 0) {
-            notifBadge.textContent = unread;
-            notifBadge.style.display = "inline-flex";
-          }
-        })
-        .catch(function() { renderNotifs(notifMenu, notifBadge, []); });
-    }
-
-    if (notifBtn && notifMenu) {
-      notifBtn.addEventListener("click", function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var isOpen = notifMenu.classList.toggle("open");
-        notifBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
-        if (isOpen && mainNav) mainNav.classList.remove("open");
-        if (isOpen && userMenu) userMenu.classList.remove("open");
-        if (isOpen) loadNotifs(true);
-      });
-
-      loadNotifs(false);
-    }
+    // notifiche disabilitate: nessun fetch o pulsante
 
     document.addEventListener("click", function (e) {
       if (header.contains(e.target)) return;

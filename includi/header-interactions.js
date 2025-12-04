@@ -21,13 +21,13 @@
       state.userMenu.classList.remove("open");
     }
 
-    if (state.notifMenu) {
-      state.notifMenu.classList.remove("open");
-    }
-
-    if (state.notifBtn) {
-      state.notifBtn.setAttribute("aria-expanded", "false");
-    }
+    // notifiche disabilitate temporaneamente
+    // if (state.notifMenu) {
+    //   state.notifMenu.classList.remove("open");
+    // }
+    // if (state.notifBtn) {
+    //   state.notifBtn.setAttribute("aria-expanded", "false");
+    // }
   }
 
   function handleDocumentClick(event) {
@@ -70,11 +70,8 @@
     const mainNav = header.querySelector("#mainNav");
     const userBtn = header.querySelector("#userBtn");
     const userMenu = header.querySelector("#userMenu");
-    const notifBtn = header.querySelector("#notifBtn");
-    const notifMenu = header.querySelector("#notifMenu");
-    const notifBadge = header.querySelector("#notifBadge");
-
-    const state = { mainNav, userMenu, notifBtn, notifMenu, notifBadge };
+    // notifiche disabilitate temporaneamente
+    const state = { mainNav, userMenu };
     headerStates.set(header, state);
 
     if (mobileBtn && mainNav) {
@@ -98,69 +95,10 @@
         if (isOpen && mainNav) {
           mainNav.classList.remove("open");
         }
-        if (isOpen && notifMenu) {
-          notifMenu.classList.remove("open");
-          notifBtn?.setAttribute("aria-expanded", "false");
-        }
+        // notifiche disabilitate
       });
     }
-
-    function renderNotifs(list) {
-      if (!notifMenu || !notifBadge) return;
-      const items = Array.isArray(list) ? list : [];
-      if (!items.length) {
-        notifBadge.style.display = "none";
-        notifMenu.innerHTML = '<div class="notif-empty">Nessuna notifica</div>';
-        return;
-      }
-      notifMenu.innerHTML = items
-        .map((n) => {
-          return `
-            <div class="notif-item">
-              <div class="notif-title">${n.title || "Notifica"}</div>
-              <div class="notif-text">${n.text || ""}</div>
-              <div class="notif-meta">${n.time || ""}</div>
-            </div>
-          `;
-        })
-        .join("");
-    }
-
-    function loadNotifs(markRead) {
-      if (!notifBtn || !notifMenu) return;
-      const url = "/api/notifications.php" + (markRead ? "?mark_read=1" : "");
-      fetch(url, { credentials: "include" })
-        .then((res) => (res.ok ? res.json() : { notifications: [], unread: 0 }))
-        .then((data) => {
-          const list = data.notifications || [];
-          const unread = data.unread || 0;
-          renderNotifs(list);
-          if (notifBadge) {
-            if (unread > 0) {
-              notifBadge.textContent = unread;
-              notifBadge.style.display = "inline-flex";
-            } else {
-              notifBadge.style.display = "none";
-            }
-          }
-        })
-        .catch(() => {
-          renderNotifs([]);
-        });
-    }
-
-    if (notifBtn && notifMenu) {
-      notifBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const isOpen = notifMenu.classList.toggle("open");
-        notifBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
-        if (isOpen && mainNav) mainNav.classList.remove("open");
-        if (isOpen && userMenu) userMenu.classList.remove("open");
-        if (isOpen) loadNotifs(true);
-      });
-      loadNotifs(false);
-    }
+    // notifiche disabilitate: blocco fetch/render e pulsante
   }
 
   function resolveScope(root) {
