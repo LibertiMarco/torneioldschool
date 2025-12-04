@@ -38,6 +38,36 @@ function clean_str(?string $v): string {
     return trim((string)$v);
 }
 
+function add_squad_follows(mysqli $conn, int $userId, string $torneoSlug): void {
+    $stmt = $conn->prepare("SELECT nome FROM squadre WHERE torneo = ?");
+    if (!$stmt) return;
+    $stmt->bind_param('s', $torneoSlug);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $squads = [];
+    while ($row = $res->fetch_assoc()) {
+        if (!empty($row['nome'])) $squads[] = $row['nome'];
+    }
+    $stmt->close();
+    if (empty($squads)) return;
+
+    $ins = $conn->prepare("INSERT IGNORE INTO seguiti (utente_id, tipo, torneo_slug, squadra_nome) VALUES (?, 'squadra', ?, ?)");
+    if (!$ins) return;
+    foreach ($squads as $sq) {
+        $ins->bind_param('iss', $userId, $torneoSlug, $sq);
+        $ins->execute();
+    }
+    $ins->close();
+}
+
+function remove_squad_follows(mysqli $conn, int $userId, string $torneoSlug): void {
+    $del = $conn->prepare("DELETE FROM seguiti WHERE utente_id = ? AND tipo = 'squadra' AND torneo_slug = ?");
+    if (!$del) return;
+    $del->bind_param('is', $userId, $torneoSlug);
+    $del->execute();
+    $del->close();
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $resT = [];
     $resS = [];
@@ -89,6 +119,9 @@ if ($azione === 'unfollow') {
         $stmt->execute();
         $stmt->close();
     }
+    if ($tipo === 'torneo') {
+        remove_squad_follows($conn, $userId, $torneo);
+    }
     respond(['status' => 'ok', 'followed' => false]);
 }
 
@@ -99,6 +132,10 @@ if ($stmt) {
     $stmt->bind_param('isss', $userId, $tipo, $torneo, $squadraVal);
     $stmt->execute();
     $stmt->close();
+}
+
+if ($tipo === 'torneo') {
+    add_squad_follows($conn, $userId, $torneo);
 }
 
 respond(['status' => 'ok', 'followed' => true]);
