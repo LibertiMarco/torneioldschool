@@ -165,15 +165,17 @@ function buildMarcatoriRanks() {
 }
 
 function renderMarcatoriPagina(page = 1) {
-  const body = document.getElementById("marcatoriBody");
-  if (!body) return;
+  const list = document.getElementById("marcatoriList");
+  if (!list) return;
 
   if (!Array.isArray(marcatoriData) || marcatoriData.length === 0) {
-    body.innerHTML = `<tr><td colspan="5">Nessun dato marcatori</td></tr>`;
+    list.innerHTML = `<div class="marcatori-empty">Nessun dato marcatori</div>`;
     const info = document.getElementById("marcatoriPageInfo");
     if (info) info.textContent = "";
-    if (document.getElementById("prevMarcatori")) document.getElementById("prevMarcatori").disabled = true;
-    if (document.getElementById("nextMarcatori")) document.getElementById("nextMarcatori").disabled = true;
+    const prev = document.getElementById("prevMarcatori");
+    const next = document.getElementById("nextMarcatori");
+    if (prev) prev.disabled = true;
+    if (next) next.disabled = true;
     return;
   }
 
@@ -182,30 +184,34 @@ function renderMarcatoriPagina(page = 1) {
   const start = (marcatoriPage - 1) * MARCATORI_PER_PAGE;
   const slice = marcatoriData.slice(start, start + MARCATORI_PER_PAGE);
 
-  body.innerHTML = "";
+  list.innerHTML = "";
   slice.forEach((p, idx) => {
     const globalIdx = start + idx;
     const rank = marcatoriRanks[globalIdx] ?? globalIdx + 1;
     const logo = resolveLogoPath(p.squadra, p.logo);
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${rank}</td>
-      <td>
-        <div class="scorer-player">
-          <span class="scorer-name">${p.nome ?? ''} ${p.cognome ?? ''}</span>
-          <img class="scorer-logo-inline" src="${logo}" alt="${p.squadra || ''}">
+    const foto = p.foto || FALLBACK_AVATAR;
+    const nomeCompleto = `${p.nome ?? ''} ${p.cognome ?? ''}`.trim();
+
+    const card = document.createElement("div");
+    card.className = "scorer-card";
+    card.innerHTML = `
+      <div class="scorer-rank">${rank}</div>
+      <div class="scorer-avatar">
+        <img src="${foto}" alt="${nomeCompleto}" onerror="this.onerror=null; this.src='${FALLBACK_AVATAR}';">
+      </div>
+      <div class="scorer-info">
+        <div class="scorer-name">${nomeCompleto || 'Giocatore'}</div>
+        <div class="scorer-teamline">
+          <img src="${logo}" alt="${p.squadra || ''}" class="scorer-team-logo">
+          <span class="scorer-team-name">${p.squadra || ''}</span>
         </div>
-      </td>
-      <td>
-        <div class="scorer-team">
-          <img src="${logo}" alt="${p.squadra || ''}">
-          <span>${p.squadra || ''}</span>
-        </div>
-      </td>
-      <td>${p.gol ?? 0}</td>
-      <td>${p.presenze ?? 0}</td>
+      </div>
+      <div class="scorer-goals">
+        <span class="goals-number">${p.gol ?? 0}</span>
+        <span class="goals-label">Gol</span>
+      </div>
     `;
-    body.appendChild(tr);
+    list.appendChild(card);
   });
 
   const prevBtn = document.getElementById("prevMarcatori");
@@ -217,9 +223,9 @@ function renderMarcatoriPagina(page = 1) {
 }
 
 async function caricaMarcatori(torneoSlug = TORNEO) {
-  const body = document.getElementById("marcatoriBody");
-  if (!body) return;
-  body.innerHTML = `<tr><td colspan="5">Caricamento...</td></tr>`;
+  const list = document.getElementById("marcatoriList");
+  if (!list) return;
+  list.innerHTML = `<div class="marcatori-empty">Caricamento...</div>`;
   try {
     const res = await fetch(`/api/classifica_marcatori.php?torneo=${encodeURIComponent(torneoSlug)}`);
     const data = await res.json();
@@ -733,12 +739,17 @@ async function caricaRosaSquadra(squadra) {
       const foto = giocatore.foto || FALLBACK_AVATAR;
 
       card.innerHTML = `
-  <div class="player-name-row">
-    <h4 class="player-name">${nomeCompleto}${ruoloBadge}${captainBadge}</h4>
-  </div>
+        <div class="player-name-row">
+          <h4 class="player-name">${nomeCompleto}${ruoloBadge}${captainBadge}</h4>
+        </div>
 
-  <div class="player-bottom">
-    <div class="player-photo">
+        <div class="player-team-row">
+          <img src="${squadraLogo}" alt="${squadra}" class="player-team-logo">
+          <span class="player-team-name">${squadra}</span>
+        </div>
+
+        <div class="player-bottom">
+          <div class="player-photo">
             <img src="${foto}" 
                  alt="${nomeCompleto}"
                  onerror="this.onerror=null; this.src='${FALLBACK_AVATAR}';">

@@ -53,72 +53,81 @@ if (!empty($sessionAvatar)) {
         <a href="/contatti.php">Contatti</a>
     </nav>
 
-    <!-- MENU UTENTE -->
-    <div class="user-dropdown">
-        <button id="userBtn" class="user-btn">
-            <img src="<?= htmlspecialchars($avatarUrl) ?>" alt="Profilo utente">
-        </button>
-
-        <div id="userMenu" class="user-menu">
-            <?php if (isset($_SESSION['user_id'])): ?>
-                <?php 
-                  $nome = $_SESSION['nome'] ?? '';
-                  $cognome = $_SESSION['cognome'] ?? '';
-                  $nome_completo = trim($nome . ' ' . $cognome);
-                  $nome_display = $nome_completo !== '' ? $nome_completo : 'Utente';
-                ?>
-                <div class="user-card">
-                    <div class="user-card__avatar">
-                        <img src="<?= htmlspecialchars($avatarUrl) ?>" alt="Profilo utente">
-                    </div>
-                    <div class="user-card__text">
-                        <span class="welcome-label">Ciao,</span>
-                        <span class="welcome-name"><?= htmlspecialchars($nome_display) ?></span>
-                    </div>
-                </div>
-                <div class="user-actions">
-                    <a class="user-menu-item" href="/account.php">
-                        <span>Il mio account</span>
-                        <span class="item-arrow">></span>
-                    </a>
-                    <?php if ($hasPlayerProfile): ?>
-                        <a class="user-menu-item" href="/statistiche_giocatore.php">
-                            <span>Statistiche giocatore</span>
-                            <span class="item-arrow">></span>
-                        </a>
-                    <?php endif; ?>
-
-                    <?php if ($_SESSION['ruolo'] === 'admin'): ?>
-                        <a class="user-menu-item" href="/admin_dashboard.php">
-                            <span>Gestione Sito</span>
-                            <span class="item-arrow">></span>
-                        </a>
-                    <?php endif; ?>
-
-                    <a class="user-menu-item" href="/logout.php">
-                        <span>Logout</span>
-                        <span class="item-arrow">></span>
-                    </a>
-                </div>
-            <?php else: ?>
-                <div class="user-card guest-card">
-                    <div class="user-card__text">
-                        <span class="welcome-label">Ciao!</span>
-                        <span class="welcome-name">Accedi o registrati</span>
-                    </div>
-                </div>
-                <div class="user-actions">
-                    <a class="user-menu-item" href="/register.php">
-                        <span>Iscriviti</span>
-                        <span class="item-arrow">></span>
-                    </a>
-                    <a class="user-menu-item" href="/login.php">
-                        <span>Accedi</span>
-                        <span class="item-arrow">></span>
-                    </a>
-                </div>
-            <?php endif; ?>
+    <div class="header-actions">
+      <?php if ($isLoggedIn): ?>
+        <!-- NOTIFICHE -->
+        <div class="notif-dropdown">
+          <button id="notifBtn" class="notif-btn" aria-haspopup="true" aria-expanded="false" aria-label="Notifiche">
+            <svg class="notif-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3.5c-3.04 0-5.5 2.46-5.5 5.5v3.29l-.9 2.09a1 1 0 0 0 .92 1.41h11.96a1 1 0 0 0 .92-1.41l-.9-2.09V9c0-3.04-2.46-5.5-5.5-5.5Zm0 17a2.25 2.25 0 0 1-2.24-2h4.48A2.25 2.25 0 0 1 12 20.5Z" fill="currentColor"/>
+            </svg>
+            <span id="notifBadge" class="notif-badge" aria-hidden="true">0</span>
+          </button>
+          <div id="notifMenu" class="notif-menu" role="menu" aria-label="Notifiche"></div>
         </div>
+      <?php endif; ?>
+
+      <!-- MENU UTENTE -->
+      <div class="user-dropdown">
+          <button id="userBtn" class="user-btn">
+              <img src="<?= htmlspecialchars($avatarUrl) ?>" alt="Profilo utente">
+          </button>
+
+          <div id="userMenu" class="user-menu">
+              <?php if (isset($_SESSION['user_id'])): ?>
+                  <?php 
+                    $nome = $_SESSION['nome'] ?? '';
+                    $cognome = $_SESSION['cognome'] ?? '';
+                    $nome_completo = trim($nome . ' ' . $cognome);
+                    $nome_display = $nome_completo !== '' ? $nome_completo : 'Utente';
+                  ?>
+                  <div class="user-card">
+                      <div class="user-card__avatar">
+                          <img src="<?= htmlspecialchars($avatarUrl) ?>" alt="Profilo utente">
+                      </div>
+                      <div class="user-card__text">
+                          <span class="welcome-label">Ciao,</span>
+                          <span class="welcome-name"><?= htmlspecialchars($nome_display) ?></span>
+                      </div>
+                  </div>
+                  <div class="user-actions">
+                      <a class="user-menu-item" href="/account.php">
+                          <span>Il mio account</span>
+                      </a>
+                      <?php if ($hasPlayerProfile): ?>
+                          <a class="user-menu-item" href="/statistiche_giocatore.php">
+                              <span>Statistiche giocatore</span>
+                          </a>
+                      <?php endif; ?>
+
+                      <?php if ($_SESSION['ruolo'] === 'admin'): ?>
+                          <a class="user-menu-item" href="/admin_dashboard.php">
+                              <span>Gestione Sito</span>
+                          </a>
+                      <?php endif; ?>
+
+                      <a class="user-menu-item" href="/logout.php">
+                          <span>Logout</span>
+                      </a>
+                  </div>
+              <?php else: ?>
+                  <div class="user-card guest-card">
+                      <div class="user-card__text">
+                          <span class="welcome-label">Ciao!</span>
+                          <span class="welcome-name">Accedi o registrati</span>
+                      </div>
+                  </div>
+                  <div class="user-actions">
+                      <a class="user-menu-item" href="/register.php">
+                          <span>Iscriviti</span>
+                      </a>
+                      <a class="user-menu-item" href="/login.php">
+                          <span>Accedi</span>
+                      </a>
+                  </div>
+              <?php endif; ?>
+          </div>
+      </div>
     </div>
 
 </header>
@@ -192,10 +201,133 @@ if (!empty($sessionAvatar)) {
     color: #cdd9ff;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+}
+
+/* NOTIFICHE */
+.notif-dropdown {
+    position: relative;
+}
+
+.notif-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
+    position: relative;
+    padding: 6px;
+}
+
+.notif-btn:hover {
+    background: rgba(255,255,255,0.16);
+    border-color: rgba(255,255,255,0.5);
+    transform: translateY(-1px);
+}
+
+.notif-btn:active {
+    transform: translateY(0);
+}
+
+.notif-icon {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+.notif-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #d80000;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    padding: 4px 6px;
+    border-radius: 999px;
+    min-width: 18px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #fff;
+}
+
+.notif-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 46px;
+    width: 280px;
+    background: #0f1f33;
+    border-radius: 14px;
+    padding: 10px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.28);
+    border: 1px solid #233854;
+    color: #e7edf7;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.notif-menu.open {
+    display: block;
+}
+
+.notif-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 8px;
+}
+
+.notif-item:last-child {
+    margin-bottom: 0;
+}
+
+.notif-title {
+    font-weight: 700;
+    color: #fff;
+    font-size: 14px;
+}
+
+.notif-text {
+    color: #dce5f5;
+    font-size: 13px;
+}
+
+.notif-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #8fa7c7;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.notif-empty {
+    padding: 12px;
+    text-align: center;
+    color: #cfd9e8;
+    font-size: 13px;
+}
+
 /* USER BTN */
 .user-dropdown {
     position: relative;
-    margin-left: auto;
     display: flex;
     align-items: center;
 }
@@ -298,7 +430,7 @@ if (!empty($sessionAvatar)) {
 .user-menu-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     padding: 10px 12px;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.03);
@@ -314,11 +446,6 @@ if (!empty($sessionAvatar)) {
     color: #fff !important;
     border-color: rgba(255, 255, 255, 0.16);
     transform: translateX(2px);
-}
-
-.item-arrow {
-    color: rgba(255, 255, 255, 0.8);
-    font-weight: 700;
 }
 
 /* ----- MOBILE ----- */
@@ -347,6 +474,14 @@ if (!empty($sessionAvatar)) {
         position: static;
         transform: none;
         margin: 0 auto;
+    }
+
+    .header-actions {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        gap: 10px;
     }
 
     .header-nav {
@@ -396,12 +531,14 @@ if (!empty($sessionAvatar)) {
         height: 48px;
     }
 
-    .user-dropdown {
-        position: absolute;
-        right: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        margin-left: 0;
+    .header-actions .notif-btn {
+        width: 36px;
+        height: 36px;
+        padding: 6px;
+    }
+
+    .header-actions .notif-menu {
+        right: -6px;
     }
 }
 </style>
@@ -431,6 +568,29 @@ if (!empty($sessionAvatar)) {
   function closeMenus(header, state) {
     if (state.mainNav) state.mainNav.classList.remove("open");
     if (state.userMenu) state.userMenu.classList.remove("open");
+    if (state.notifMenu) state.notifMenu.classList.remove("open");
+    if (state.notifBtn) state.notifBtn.setAttribute("aria-expanded", "false");
+  }
+
+  function renderNotifs(menuEl, badgeEl, list) {
+    if (!menuEl || !badgeEl) return;
+    if (!Array.isArray(list)) list = [];
+    if (!list.length) {
+      badgeEl.style.display = "none";
+      menuEl.innerHTML = '<div class="notif-empty">Nessuna notifica</div>';
+      return;
+    }
+    badgeEl.textContent = list.length;
+    badgeEl.style.display = "inline-flex";
+    menuEl.innerHTML = list.map(function(n) {
+      return (
+        '<div class="notif-item">' +
+          '<div class="notif-title">' + (n.title || 'Notifica') + '</div>' +
+          '<div class="notif-text">' + (n.text || '') + '</div>' +
+          '<div class="notif-meta">' + (n.time || '') + '</div>' +
+        '</div>'
+      );
+    }).join("");
   }
 
   function setupHeader() {
@@ -440,7 +600,10 @@ if (!empty($sessionAvatar)) {
     var mainNav = header.querySelector("#mainNav");
     var userBtn = header.querySelector("#userBtn");
     var userMenu = header.querySelector("#userMenu");
-    var state = { mainNav: mainNav, userMenu: userMenu };
+    var notifBtn = header.querySelector("#notifBtn");
+    var notifMenu = header.querySelector("#notifMenu");
+    var notifBadge = header.querySelector("#notifBadge");
+    var state = { mainNav: mainNav, userMenu: userMenu, notifBtn: notifBtn, notifMenu: notifMenu, notifBadge: notifBadge };
 
     if (mobileBtn && mainNav) {
       mobileBtn.addEventListener("click", function (e) {
@@ -457,7 +620,40 @@ if (!empty($sessionAvatar)) {
         e.stopPropagation();
         var isOpen = userMenu.classList.toggle("open");
         if (isOpen && mainNav) mainNav.classList.remove("open");
+        if (isOpen && notifMenu) notifMenu.classList.remove("open");
       });
+    }
+
+    function loadNotifs(markRead) {
+      if (!notifMenu || !notifBadge) return;
+      const url = "/api/notifications.php" + (markRead ? "?mark_read=1" : "");
+      fetch(url, { credentials: "include" })
+        .then(function(res) { return res.ok ? res.json() : { notifications: [], unread: 0 }; })
+        .then(function(data) {
+          var list = data.notifications || [];
+          var unread = data.unread || 0;
+          if (!Array.isArray(list)) list = [];
+          renderNotifs(notifMenu, notifBadge, list);
+          if (unread > 0) {
+            notifBadge.textContent = unread;
+            notifBadge.style.display = "inline-flex";
+          }
+        })
+        .catch(function() { renderNotifs(notifMenu, notifBadge, []); });
+    }
+
+    if (notifBtn && notifMenu) {
+      notifBtn.addEventListener("click", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var isOpen = notifMenu.classList.toggle("open");
+        notifBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        if (isOpen && mainNav) mainNav.classList.remove("open");
+        if (isOpen && userMenu) userMenu.classList.remove("open");
+        if (isOpen) loadNotifs(true);
+      });
+
+      loadNotifs(false);
     }
 
     document.addEventListener("click", function (e) {

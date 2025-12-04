@@ -21,6 +21,7 @@ $sql = "
         g.cognome,
         s.nome AS squadra,
         s.logo AS logo,
+        COALESCE(sg.foto, g.foto) AS foto,
         p.torneo,
         SUM(pg.goal) AS gol,
         COUNT(*) AS presenze
@@ -56,6 +57,7 @@ while ($row = $res->fetch_assoc()) {
         'cognome' => $row['cognome'],
         'squadra' => $row['squadra'],
         'logo' => $row['logo'],
+        'foto' => $row['foto'],
         'torneo' => $row['torneo'],
         'gol' => (int)$row['gol'],
         'presenze' => (int)$row['presenze'],

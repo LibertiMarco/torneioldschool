@@ -78,6 +78,116 @@ function giornata_to_roundLabel(?int $giornata, array $map): ?string {
   return $flip[$giornata] ?? null;
 }
 
+// ==== NOTIFICHE ====
+function ensure_notifiche_table(mysqli $conn): void {
+  $conn->query("
+    CREATE TABLE IF NOT EXISTS notifiche (
+      id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      utente_id INT UNSIGNED NOT NULL,
+      tipo VARCHAR(50) NOT NULL DEFAULT 'generic',
+      titolo VARCHAR(255) NOT NULL,
+      testo TEXT NULL,
+      link VARCHAR(255) DEFAULT NULL,
+      letto TINYINT(1) NOT NULL DEFAULT 0,
+      creato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_notifiche_user (utente_id, letto, creato_il),
+      CONSTRAINT fk_notifiche_user FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  ");
+}
+
+function ensure_follow_table(mysqli $conn): void {
+  $conn->query("
+    CREATE TABLE IF NOT EXISTS seguiti (
+      id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      utente_id INT UNSIGNED NOT NULL,
+      tipo ENUM('torneo','squadra') NOT NULL,
+      torneo_slug VARCHAR(255) NOT NULL,
+      squadra_nome VARCHAR(255) DEFAULT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_follow (utente_id, tipo, torneo_slug, squadra_nome),
+      INDEX idx_follow_user (utente_id, tipo),
+      INDEX idx_follow_torneo (torneo_slug, tipo),
+      CONSTRAINT fk_follow_user FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  ");
+}
+
+function get_utenti_per_squadre(mysqli $conn, string $torneo, array $squadre): array {
+  if (empty($squadre)) return [];
+  $place = implode(',', array_fill(0, count($squadre), '?'));
+  $types = str_repeat('s', count($squadre) + 1); // squadre + torneo
+  $sql = "
+    SELECT DISTINCT g.utente_id
+    FROM squadre s
+    JOIN squadre_giocatori sg ON sg.squadra_id = s.id
+    JOIN giocatori g ON g.id = sg.giocatore_id
+    WHERE s.torneo = ? AND s.nome IN ($place) AND g.utente_id IS NOT NULL
+  ";
+  $params = array_merge([$torneo], $squadre);
+  $stmt = $conn->prepare($sql);
+  if (!$stmt) return [];
+  $stmt->bind_param($types, ...$params);
+  $ids = [];
+  if ($stmt->execute()) {
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+      $ids[] = (int)$row['utente_id'];
+    }
+  }
+  $stmt->close();
+  return array_values(array_unique($ids));
+}
+
+function get_followers_torneo(mysqli $conn, string $torneo): array {
+  ensure_follow_table($conn);
+  $stmt = $conn->prepare("SELECT utente_id FROM seguiti WHERE tipo = 'torneo' AND torneo_slug = ?");
+  if (!$stmt) return [];
+  $stmt->bind_param('s', $torneo);
+  $ids = [];
+  if ($stmt->execute()) {
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) $ids[] = (int)$row['utente_id'];
+  }
+  $stmt->close();
+  return $ids;
+}
+
+function get_followers_squadre(mysqli $conn, string $torneo, array $squadre): array {
+  if (empty($squadre)) return [];
+  ensure_follow_table($conn);
+  $place = implode(',', array_fill(0, count($squadre), '?'));
+  $types = 's' . str_repeat('s', count($squadre));
+  $sql = "
+    SELECT utente_id FROM seguiti
+    WHERE tipo = 'squadra' AND torneo_slug = ? AND squadra_nome IN ($place)
+  ";
+  $params = array_merge([$torneo], $squadre);
+  $stmt = $conn->prepare($sql);
+  if (!$stmt) return [];
+  $stmt->bind_param($types, ...$params);
+  $ids = [];
+  if ($stmt->execute()) {
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) $ids[] = (int)$row['utente_id'];
+  }
+  $stmt->close();
+  return $ids;
+}
+
+function push_notifica_users(mysqli $conn, array $userIds, string $tipo, string $titolo, string $testo, string $link = ''): void {
+  if (empty($userIds)) return;
+  ensure_notifiche_table($conn);
+  $stmt = $conn->prepare("INSERT INTO notifiche (utente_id, tipo, titolo, testo, link) VALUES (?, ?, ?, ?, ?)");
+  if (!$stmt) return;
+  foreach ($userIds as $uid) {
+    $uid = (int)$uid;
+    $stmt->bind_param('issss', $uid, $tipo, $titolo, $testo, $link);
+    $stmt->execute();
+  }
+  $stmt->close();
+}
+
 // ===== OPERAZIONI CRUD =====
 function squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, $excludeId = null) {
   $sql = "
@@ -161,6 +271,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           );
           if ($stmt->execute()) {
             $successo = 'Partita creata correttamente.';
+            $matchLabel = $casa . ' - ' . $ospite;
+            $whenLabel = trim($data . ' ' . $ora);
+            $uids = array_unique(array_merge(
+              get_utenti_per_squadre($conn, $torneo, [$casa, $ospite]),
+              get_followers_torneo($conn, $torneo),
+              get_followers_squadre($conn, $torneo, [$casa, $ospite])
+            ));
+            push_notifica_users(
+              $conn,
+              $uids,
+              'match_create',
+              'Nuova partita in calendario',
+              $matchLabel . ($whenLabel ? ' • ' . $whenLabel : ''),
+              '/tornei.php'
+            );
           } else {
             $errore = 'Inserimento non riuscito.';
           }
@@ -224,6 +349,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         if ($stmt->execute()) {
           $successo = 'Partita aggiornata correttamente.';
+          $matchLabel = $casa . ' - ' . $ospite;
+          $scoreLabel = $gol_casa . ' - ' . $gol_ospite;
+          $whenLabel = trim($data . ' ' . $ora);
+          $uids = array_unique(array_merge(
+            get_utenti_per_squadre($conn, $torneo, [$casa, $ospite]),
+            get_followers_torneo($conn, $torneo),
+            get_followers_squadre($conn, $torneo, [$casa, $ospite])
+          ));
+          push_notifica_users(
+            $conn,
+            $uids,
+            'match_update',
+            'Risultato aggiornato',
+            $matchLabel . ' • ' . $scoreLabel . ($whenLabel ? ' • ' . $whenLabel : ''),
+            '/tornei.php'
+          );
         } else {
           $errore = 'Aggiornamento non riuscito.';
         }
@@ -1092,3 +1233,4 @@ if ($res) {
 
 </body>
 </html>
+

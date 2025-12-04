@@ -114,7 +114,8 @@ function salvaImmagineTorneo($nomeTorneo, $fileField) {
         return null;
     }
 
-    $slug = strtolower(preg_replace('/[^a-z0-9]/', '', $nomeTorneo));
+    // Mantiene tutte le lettere (maiuscole incluse) prima di convertirle in minuscolo
+    $slug = strtolower(preg_replace('/[^a-z0-9]/i', '', $nomeTorneo));
     if ($slug === '') {
         $slug = 'torneo';
     }

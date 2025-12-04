@@ -270,93 +270,132 @@ body {
   text-align: center;
 }
 
-/* ================= CLASSIFICA MARCATORI ================= */
-#marcatori .table-wrapper {
-  margin-top: 12px;
-  margin-left: 30px;
-  margin-right: 30px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+/* ================= CLASSIFICA MARCATORI (LISTA) ================= */
+#marcatori {
+  padding-inline: 12px;
 }
 
 #marcatori h2 {
   text-align: left;
-  margin-left: 30px;
+  margin-left: 6px;
 }
 
-#marcatori .marcatori-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 520px;
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-#marcatori th,
-#marcatori td {
-  padding: 12px 18px;
-  text-align: left;
-  white-space: nowrap;
-}
-
-#marcatori th {
-  background: var(--primary);
-  color: #fff;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  position: sticky;
-  top: 0;
-}
-
-#marcatori tbody tr:nth-child(even) td {
-  background: #f7f9fc;
-}
-
-#marcatori tbody tr:hover td {
-  background: #eef3fb;
-}
-
-#marcatori .scorer-player {
+.marcatori-list {
+  margin-top: 12px;
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scorer-card {
+  display: grid;
+  grid-template-columns: 46px 64px 1fr 70px;
   align-items: center;
-  gap: 8px;
-  color: #15293e;
-  font-weight: 600;
+  gap: 12px;
+  background: linear-gradient(135deg, #0f1f33, #15293e);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+  color: #fff;
 }
 
-#marcatori .scorer-name {
-  line-height: 1.2;
+.scorer-rank {
+  font-size: 18px;
+  font-weight: 800;
+  color: #cfe3ff;
+  text-align: center;
 }
 
-#marcatori .scorer-team {
+.scorer-avatar img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.18);
+  background: #0b1827;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+}
+
+.scorer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scorer-name {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #fff;
+}
+
+.scorer-teamline {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #15293e;
-  font-weight: 600;
+  color: #c1d5f5;
+  font-size: 14px;
+  letter-spacing: 0.2px;
 }
 
-#marcatori .scorer-team img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  border-radius: 6px;
-  border: 1px solid #e1e7ef;
-  background: #fff;
-}
-
-#marcatori .scorer-logo-inline {
-  display: none;
+.scorer-team-logo {
   width: 26px;
   height: 26px;
   object-fit: contain;
   border-radius: 6px;
-  border: 1px solid #e1e7ef;
-  background: #fff;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+}
+
+.scorer-team-name {
+  font-weight: 600;
+}
+
+.scorer-goals {
+  text-align: right;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+}
+
+.scorer-goals .goals-number {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+
+.scorer-goals .goals-label {
+  font-size: 12px;
+  color: #9fb3d4;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.marcatori-empty {
+  padding: 16px;
+  text-align: center;
+  color: #8fa7c7;
+  background: #0f1f33;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+@media (max-width: 640px) {
+  .scorer-card {
+    grid-template-columns: 36px 60px 1fr;
+    grid-template-areas:
+      "rank avatar goals"
+      "rank info goals";
+    row-gap: 6px;
+  }
+  .scorer-rank { grid-area: rank; }
+  .scorer-avatar { grid-area: avatar; }
+  .scorer-info { grid-area: info; }
+  .scorer-goals { grid-area: goals; align-items: flex-end; }
 }
 
 .marcatori-pagination {
@@ -373,79 +412,11 @@ body {
 }
 
 @media (max-width: 720px) {
-  #marcatori .table-wrapper {
-    overflow-x: visible;
-    margin-left: 12px;
-    margin-right: 12px;
+  #marcatori {
+    padding-inline: 8px;
   }
-
-  #marcatori th,
-  #marcatori td {
-    padding: 8px 10px;
-    font-size: 13px;
-  }
-
-  /* Evita scroll orizzontale su mobile */
-  #marcatori .marcatori-table {
-    min-width: 0;
-    width: 100%;
-    table-layout: fixed;
-  }
-
-  /* Nasconde solo la colonna Squadra su mobile */
-  #marcatori .marcatori-table th:nth-child(3),
-  #marcatori .marcatori-table td:nth-child(3) {
-    display: none;
-    padding: 0;
-    width: 0;
-  }
-
-  /* Colonne compatte per Giocatore, Gol, Pres. */
-  #marcatori .marcatori-table th:nth-child(1),
-  #marcatori .marcatori-table td:nth-child(1) {
-    width: 14%;
-    min-width: 42px;
-    text-align: center;
-  }
-
-  #marcatori .marcatori-table th:nth-child(2),
-  #marcatori .marcatori-table td:nth-child(2) {
-    width: 52%;
-    min-width: 0;
-  }
-  #marcatori .marcatori-table th:nth-child(4),
-  #marcatori .marcatori-table td:nth-child(4),
-  #marcatori .marcatori-table th:nth-child(5),
-  #marcatori .marcatori-table td:nth-child(5) {
-    width: 17%;
-    min-width: 48px;
-    text-align: center;
-  }
-
-  #marcatori .scorer-name {
-    display: inline-block;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    vertical-align: middle;
-  }
-
-  #marcatori .scorer-player {
-    gap: 6px;
-  }
-
-  #marcatori .scorer-logo-inline {
-    width: 22px;
-    height: 22px;
-  }
-
-  #marcatori .scorer-player {
-    gap: 10px;
-  }
-
-  #marcatori .scorer-logo-inline {
-    display: inline-flex;
+  .marcatori-list {
+    margin-inline: 0;
   }
 }
 
@@ -4602,6 +4573,29 @@ select:focus {
   color: #fff;
   margin: 0;
   font-weight: 800;
+}
+
+#rose .player-team-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+#rose .player-team-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: #0f1f33;
+}
+
+#rose .player-team-name {
+  color: #e7edf7;
+  font-weight: 700;
+  letter-spacing: 0.4px;
 }
 
 #rose .role-badge {
