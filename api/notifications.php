@@ -2,6 +2,7 @@
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 header('X-Robots-Tag: noindex, nofollow', true);
+mysqli_report(MYSQLI_REPORT_OFF);
 
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
@@ -13,29 +14,71 @@ require_once __DIR__ . '/../includi/db.php';
 
 $userId = (int)$_SESSION['user_id'];
 
-// Crea tabella notifiche generiche se manca
-$conn->query("
-    CREATE TABLE IF NOT EXISTS notifiche (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        utente_id INT UNSIGNED NOT NULL,
-        tipo VARCHAR(50) NOT NULL DEFAULT 'generic',
-        titolo VARCHAR(255) NOT NULL,
-        testo TEXT NULL,
-        link VARCHAR(255) DEFAULT NULL,
-        letto TINYINT(1) NOT NULL DEFAULT 0,
-        creato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_notifiche_user (utente_id, letto, creato_il),
-        CONSTRAINT fk_notifiche_user FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-");
+function ensure_notifiche_table(mysqli $conn): void {
+    $sql = "
+        CREATE TABLE IF NOT EXISTS notifiche (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            utente_id INT UNSIGNED NOT NULL,
+            tipo VARCHAR(50) NOT NULL DEFAULT 'generic',
+            titolo VARCHAR(255) NOT NULL,
+            testo TEXT NULL,
+            link VARCHAR(255) DEFAULT NULL,
+            letto TINYINT(1) NOT NULL DEFAULT 0,
+            creato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_notifiche_user (utente_id, letto, creato_il),
+            CONSTRAINT fk_notifiche_user FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ";
+    if (!$conn->query($sql)) {
+        error_log('notifiche table create failed: ' . $conn->error);
+        // fallback senza FK per ambienti limitati
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS notifiche (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                utente_id INT UNSIGNED NOT NULL,
+                tipo VARCHAR(50) NOT NULL DEFAULT 'generic',
+                titolo VARCHAR(255) NOT NULL,
+                testo TEXT NULL,
+                link VARCHAR(255) DEFAULT NULL,
+                letto TINYINT(1) NOT NULL DEFAULT 0,
+                creato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_notifiche_user (utente_id, letto, creato_il)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+    }
+}
+
+ensure_notifiche_table($conn);
+
+$notificheColumns = [];
+$colRes = $conn->query("SHOW COLUMNS FROM notifiche");
+if ($colRes) {
+    while ($c = $colRes->fetch_assoc()) {
+        $notificheColumns[strtolower($c['Field'])] = true;
+    }
+}
+$hasTipoCol = isset($notificheColumns['tipo']);
+if (!$hasTipoCol) {
+    $conn->query("ALTER TABLE notifiche ADD COLUMN tipo VARCHAR(50) NOT NULL DEFAULT 'generic'");
+    // ricarica lo stato colonne
+    $notificheColumns = [];
+    $colRes = $conn->query("SHOW COLUMNS FROM notifiche");
+    if ($colRes) {
+        while ($c = $colRes->fetch_assoc()) {
+            $notificheColumns[strtolower($c['Field'])] = true;
+        }
+    }
+    $hasTipoCol = isset($notificheColumns['tipo']);
+}
 
 $notifications = [];
 $unreadCount = 0;
 $markRead = isset($_GET['mark_read']) && $_GET['mark_read'] === '1';
 
 // Notifiche generiche
+$tipoSelect = $hasTipoCol ? 'tipo' : "'generic' AS tipo";
 $stmt = $conn->prepare("
-    SELECT id, titolo, testo, link, letto, creato_il, tipo
+    SELECT id, titolo, testo, link, letto, creato_il, {$tipoSelect}
     FROM notifiche
     WHERE utente_id = ?
     ORDER BY creato_il DESC
@@ -111,4 +154,3 @@ echo json_encode([
     'unread' => $unreadCount,
     'notifications' => $notifications,
 ], JSON_UNESCAPED_UNICODE);
-*** End Patch
