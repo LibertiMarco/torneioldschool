@@ -2787,19 +2787,68 @@ body {
 }
 .bracket-connector {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
   font-size: 0.75rem;
   color: #4c5b71;
   font-weight: 700;
   padding: 2px 4px 6px;
 }
-.bracket-connector::after {
+.bracket-connector .next-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.bracket-connector .next-label::after {
   content: "";
   flex: 1;
   height: 1px;
   background: #dce3ef;
   border-radius: 999px;
+}
+.bracket-next {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #f7f9fd;
+  border: 1px dashed #dce3ef;
+  border-radius: 10px;
+  padding: 10px;
+}
+.bracket-next .next-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.bracket-next .team-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  white-space: normal;
+}
+.bracket-next .team-logo {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+.bracket-next .team-name {
+  font-weight: 700;
+  color: #15293e;
+  text-transform: none;
+  white-space: normal;
+  word-break: break-word;
+}
+.bracket-next .team-score {
+  font-weight: 800;
+  min-width: 20px;
+  text-align: right;
+  color: #15293e;
+}
+.bracket-next .next-meta {
+  font-size: 11px;
+  color: #4c5b71;
 }
 
 .fase-label {

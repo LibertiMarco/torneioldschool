@@ -703,6 +703,7 @@ async function caricaPlayoff(tipoCoppa) {
         });
         if (!matchList.length) return;
 
+        const nextMatches = data[g - 1] || [];
         const col = document.createElement("div");
         col.className = "bracket-col";
         const titolo = document.createElement("div");
@@ -750,6 +751,52 @@ async function caricaPlayoff(tipoCoppa) {
             match.addEventListener("click", () => {
               window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${encodeURIComponent(TORNEO)}`;
             });
+          }
+
+          pairBuffer.push(match);
+          const isPairComplete = pairBuffer.length === 2;
+          const isLastMatch = idx === matchList.length - 1;
+
+          if (isPairComplete || isLastMatch) {
+            pairBuffer.forEach(m => col.appendChild(m));
+            if (isPairComplete && nextLabel) {
+              const connector = document.createElement("div");
+              connector.className = "bracket-connector";
+              const nextMatch = nextMatches[Math.floor(idx / 2)];
+              let nextHtml = `<span class="next-label">→ ${nextLabel}</span>`;
+              if (nextMatch) {
+                const nLogoCasa = resolveLogoPath(nextMatch.squadra_casa, nextMatch.logo_casa);
+                const nLogoOspite = resolveLogoPath(nextMatch.squadra_ospite, nextMatch.logo_ospite);
+                const nGiocata = nextMatch.giocata == 1 && nextMatch.gol_casa !== null && nextMatch.gol_ospite !== null;
+                const nDate = formattaData(nextMatch.data_partita);
+                const nLeg = (nextMatch.fase_leg || "").trim();
+                nextHtml += `
+                <div class="bracket-next">
+                  <div class="next-row">
+                    <div class="team-side">
+                      <img class="team-logo" src="${nLogoCasa}" alt="${nextMatch.squadra_casa}">
+                      <span class="team-name">${nextMatch.squadra_casa}</span>
+                    </div>
+                    <span class="team-score">${nGiocata ? nextMatch.gol_casa : "-"}</span>
+                  </div>
+                  <div class="next-row">
+                    <div class="team-side">
+                      <img class="team-logo" src="${nLogoOspite}" alt="${nextMatch.squadra_ospite}">
+                      <span class="team-name">${nextMatch.squadra_ospite}</span>
+                    </div>
+                    <span class="team-score">${nGiocata ? nextMatch.gol_ospite : "-"}</span>
+                  </div>
+                  <div class="next-meta">
+                    <span>${nDate}${nextMatch.ora_partita ? ' · ' + nextMatch.ora_partita.slice(0,5) : ''}${nLeg ? ' · ' + nLeg : ''}</span>
+                  </div>
+                </div>`;
+              }
+              connector.innerHTML = nextHtml;
+              col.appendChild(connector);
+            }
+            pairBuffer = [];
+          }
+        });
           }
 
           pairBuffer.push(match);
@@ -1046,6 +1093,7 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     });
   }
 });
+
 
 
 

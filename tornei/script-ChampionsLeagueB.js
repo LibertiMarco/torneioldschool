@@ -524,8 +524,16 @@ async function caricaPlayoff(tipoCoppa) {
       .bracket-team .team-score { font-weight: 800; font-size: 18px; color: #15293e; min-width: 24px; text-align: right; }
       .bracket-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: #4c5b71; }
       .bracket-pair { display: flex; flex-direction: column; gap: 10px; position: relative; padding-right: 8px; }
-      .bracket-connector { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #4c5b71; font-weight: 700; padding: 2px 4px 6px; }
-      .bracket-connector::after { content: ""; flex: 1; height: 1px; background: #dce3ef; border-radius: 999px; }
+      .bracket-connector { display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: #4c5b71; font-weight: 700; padding: 2px 4px 6px; }
+      .bracket-connector .next-label { display: inline-flex; align-items: center; gap: 6px; }
+      .bracket-connector .next-label::after { content: ""; flex: 1; height: 1px; background: #dce3ef; border-radius: 999px; }
+      .bracket-next { display: flex; flex-direction: column; gap: 6px; background: #f7f9fd; border: 1px dashed #dce3ef; border-radius: 10px; padding: 10px; }
+      .bracket-next .next-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+      .bracket-next .team-side { display: inline-flex; align-items: center; gap: 8px; min-width: 0; white-space: normal; }
+      .bracket-next .team-logo { width: 26px; height: 26px; object-fit: contain; }
+      .bracket-next .team-name { font-weight: 700; color: #15293e; text-transform: none; white-space: normal; word-break: break-word; }
+      .bracket-next .team-score { font-weight: 800; min-width: 20px; text-align: right; color: #15293e; }
+      .bracket-next .next-meta { font-size: 11px; color: #4c5b71; }
     `;
     document.head.appendChild(style);
   })();
@@ -552,6 +560,8 @@ async function caricaPlayoff(tipoCoppa) {
     ordineGiornate.forEach(g => {
       const matchList = data[g] || [];
       if (!matchList.length) return;
+
+      const nextMatches = data[g - 1] || [];
 
       const col = document.createElement("div");
       col.className = "bracket-col";
@@ -600,6 +610,52 @@ async function caricaPlayoff(tipoCoppa) {
           match.addEventListener("click", () => {
             window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${encodeURIComponent(TORNEO)}`;
           });
+        }
+
+        pairBuffer.push(match);
+        const isPairComplete = pairBuffer.length === 2;
+        const isLastMatch = idx === matchList.length - 1;
+
+        if (isPairComplete || isLastMatch) {
+          pairBuffer.forEach(m => col.appendChild(m));
+          if (isPairComplete && nextLabel) {
+            const connector = document.createElement("div");
+            connector.className = "bracket-connector";
+            const nextMatch = (data[g - 1] || [])[Math.floor(idx / 2)];
+            let nextHtml = `<span class="next-label">→ ${nextLabel}</span>`;
+            if (nextMatch) {
+              const nLogoCasa = resolveLogoPath(nextMatch.squadra_casa, nextMatch.logo_casa);
+              const nLogoOspite = resolveLogoPath(nextMatch.squadra_ospite, nextMatch.logo_ospite);
+              const nGiocata = nextMatch.giocata == 1 && nextMatch.gol_casa !== null && nextMatch.gol_ospite !== null;
+              const nDate = formattaData(nextMatch.data_partita);
+              const nLeg = (nextMatch.fase_leg || "").trim();
+              nextHtml += `
+                <div class="bracket-next">
+                  <div class="next-row">
+                    <div class="team-side">
+                      <img class="team-logo" src="${nLogoCasa}" alt="${nextMatch.squadra_casa}">
+                      <span class="team-name">${nextMatch.squadra_casa}</span>
+                    </div>
+                    <span class="team-score">${nGiocata ? nextMatch.gol_casa : "-"}</span>
+                  </div>
+                  <div class="next-row">
+                    <div class="team-side">
+                      <img class="team-logo" src="${nLogoOspite}" alt="${nextMatch.squadra_ospite}">
+                      <span class="team-name">${nextMatch.squadra_ospite}</span>
+                    </div>
+                    <span class="team-score">${nGiocata ? nextMatch.gol_ospite : "-"}</span>
+                  </div>
+                  <div class="next-meta">
+                    <span>${nDate}${nextMatch.ora_partita ? ' · ' + nextMatch.ora_partita.slice(0,5) : ''}${nLeg ? ' · ' + nLeg : ''}</span>
+                  </div>
+                </div>`;
+            }
+            connector.innerHTML = nextHtml;
+            col.appendChild(connector);
+          }
+          pairBuffer = [];
+        }
+      });
         }
 
         pairBuffer.push(match);
@@ -868,6 +924,9 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
+
+
+
 
 
 
