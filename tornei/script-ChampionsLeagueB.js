@@ -621,8 +621,8 @@ async function caricaPlayoff(tipoCoppa) {
           if (isPairComplete && nextLabel) {
             const connector = document.createElement("div");
             connector.className = "bracket-connector";
-            const nextMatch = (data[g - 1] || [])[Math.floor(idx / 2)];
-            let nextHtml = `<span class="next-label">→ ${nextLabel}</span>`;
+            const nextMatch = nextMatches[Math.floor(idx / 2)];
+            let nextHtml = `<span class="next-label">&rarr; ${nextLabel}</span>`;
             if (nextMatch) {
               const nLogoCasa = resolveLogoPath(nextMatch.squadra_casa, nextMatch.logo_casa);
               const nLogoOspite = resolveLogoPath(nextMatch.squadra_ospite, nextMatch.logo_ospite);
@@ -651,23 +651,6 @@ async function caricaPlayoff(tipoCoppa) {
                 </div>`;
             }
             connector.innerHTML = nextHtml;
-            col.appendChild(connector);
-          }
-          pairBuffer = [];
-        }
-      });
-        }
-
-        pairBuffer.push(match);
-        const isPairComplete = pairBuffer.length === 2;
-        const isLastMatch = idx === matchList.length - 1;
-
-        if (isPairComplete || isLastMatch) {
-          pairBuffer.forEach(m => col.appendChild(m));
-          if (isPairComplete && nextLabel) {
-            const connector = document.createElement("div");
-            connector.className = "bracket-connector";
-            connector.innerHTML = `<span>&rarr; ${nextLabel}</span>`;
             col.appendChild(connector);
           }
           pairBuffer = [];
@@ -924,6 +907,12 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
+
+
+
+
+
+
 
 
 

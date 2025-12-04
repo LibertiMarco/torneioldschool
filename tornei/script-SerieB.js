@@ -797,23 +797,6 @@ async function caricaPlayoff(tipoCoppa) {
             pairBuffer = [];
           }
         });
-          }
-
-          pairBuffer.push(match);
-          const isPairComplete = pairBuffer.length === 2;
-          const isLastMatch = idx === matchList.length - 1;
-
-          if (isPairComplete || isLastMatch) {
-            pairBuffer.forEach(m => col.appendChild(m));
-            if (isPairComplete && nextLabel) {
-              const connector = document.createElement("div");
-              connector.className = "bracket-connector";
-              connector.innerHTML = `<span>&rarr; ${nextLabel}</span>`;
-              col.appendChild(connector);
-            }
-            pairBuffer = [];
-          }
-        });
 
         fasiContainer.appendChild(col);
       });
