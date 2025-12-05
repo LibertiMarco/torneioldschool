@@ -465,14 +465,15 @@ body {
   gap: 8px;
 }
 #calendario .match-header span:first-child {
-  flex: 0 1 58%;
-  max-width: 58%;
+  flex: 1 1 auto;
+  max-width: 100%;
   min-width: 0;
   text-align: left;
   white-space: normal;
   word-break: break-word;
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
 }
 #calendario .match-header span:last-child {
@@ -553,9 +554,10 @@ body {
     padding: 0 12px 6px 12px;
   }
   #calendario .match-header span:first-child {
-    flex-basis: 65%;
-    max-width: 65%;
+    flex: 1 1 auto;
+    max-width: 100%;
     font-size: 0.9rem;
+    gap: 4px;
   }
   #calendario .match-body {
     grid-template-columns: minmax(0, 1fr) 90px minmax(0, 1fr);
