@@ -1,4 +1,4 @@
-// TEMPLATE BASE: duplica e rinomina questo file per un nuovo torneo.
+﻿// TEMPLATE BASE: duplica e rinomina questo file per un nuovo torneo.
 // Sostituisci TORNEO con lo slug usato nel DB/API e aggiorna eventuali testi.
 const TORNEO = window.__TEMPLATE_TORNEO_SLUG__ || "TEMPLATE_SLUG"; // Nome base del torneo nel DB
 const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
@@ -18,7 +18,7 @@ function updateFavTournamentButton() {
   if (!btn) return;
   const isFav = favState.tournaments.has(TORNEO);
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "★ Torneo seguito" : "☆ Segui torneo";
+  btn.textContent = isFav ? "â˜… Torneo seguito" : "â˜† Segui torneo";
 }
 
 function updateFavTeamButton(squadra, btnEl) {
@@ -26,7 +26,7 @@ function updateFavTeamButton(squadra, btnEl) {
   if (!btn || !squadra) return;
   const isFav = favState.teams.has(teamKey(squadra));
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "★" : "☆";
+  btn.textContent = isFav ? "â˜…" : "â˜†";
   btn.setAttribute("aria-label", isFav ? "Smetti di seguire la squadra" : "Segui la squadra");
 }
 
@@ -198,8 +198,8 @@ function mostraClassifica(classifica) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
-      <div class="box gold-box">★ COPPA GOLD</div>
-      <div class="box silver-box">☆ COPPA SILVER</div>
+      <div class="box gold-box">â˜… COPPA GOLD</div>
+      <div class="box silver-box">â˜† COPPA SILVER</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
@@ -439,11 +439,11 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
                 stadio && stadio !== "Campo da definire"
                   ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stadio)}"
                         target="_blank"
-                        class="maps-link">🗺</a>`
+                        class="maps-link">&#128205;</a>`
                   : ""
               }
             </span>
-            <span>${dataStr}${partita.ora_partita ? " - " + partita.ora_partita.slice(0,5) : ""}</span>
+            <span>${dataStr}${partita.ora_partita ? " - " + partita.ora_partita.slice(0,2) : ""}</span>
           </div>
 
           <div class="match-body">
@@ -463,8 +463,8 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
             </div>
 
             <div class="team away">
-              <span class="team-name">${partita.squadra_ospite}</span>
               <img src="${logoOspite}" alt="${partita.squadra_ospite}" class="team-logo">
+              <span class="team-name">${partita.squadra_ospite}</span>
             </div>
           </div>
         `;
@@ -564,7 +564,7 @@ async function caricaPlayoff(tipoCoppa) {
             <span class="team-score">${giocata ? partita.gol_ospite : "-"}</span>
           </div>
           <div class="bracket-meta">
-            <span>${dataStr}${partita.ora_partita ? ' · ' + partita.ora_partita.slice(0,5) : ''}${legLabel ? ' · ' + legLabel : ''}</span>
+            <span>${dataStr}${partita.ora_partita ? ' - ' + partita.ora_partita.slice(0,2) : ''}${legLabel ? ' - ' + legLabel : ''}</span>
             <span>${partita.campo || 'Campo da definire'}</span>
           </div>
         `;
@@ -638,7 +638,7 @@ async function caricaRosaSquadra(squadra) {
     header.innerHTML = `
       <img src="${squadraLogo}" alt="${squadra}" class="team-logo-large">
       <h3>${squadra}</h3>
-      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn" aria-label="Segui la squadra">☆</button>
+      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn" aria-label="Segui la squadra">â˜†</button>
     `;
     const favBtn = header.querySelector(".fav-team-btn");
     if (favBtn) {
@@ -846,3 +846,5 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
+
+

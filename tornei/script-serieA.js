@@ -452,11 +452,11 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
                 stadio && stadio !== "Campo da definire"
                   ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stadio)}"
                         target="_blank"
-                        class="maps-link">📍</a>`
+                        class="maps-link">&#128205;</a>`
                   : ""
               }
             </span>
-            <span>${dataStr}${partita.ora_partita ? " - " + partita.ora_partita.slice(0,5) : ""}</span>
+            <span>${dataStr}${partita.ora_partita ? " - " + partita.ora_partita.slice(0,2) : ""}</span>
           </div>
       
           <div class="match-body">
@@ -476,8 +476,8 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
             </div>
                   
             <div class="team away">
-              <span class="team-name">${partita.squadra_ospite}</span>
               <img src="${logoOspite}" alt="${partita.squadra_ospite}" class="team-logo">
+              <span class="team-name">${partita.squadra_ospite}</span>
             </div>
           </div>
         `;
@@ -591,7 +591,7 @@ async function caricaPlayoff(tipoCoppa) {
             <span class="team-score">${giocata ? partita.gol_ospite : "-"}</span>
           </div>
           <div class="bracket-meta">
-            <span>${dataStr}${partita.ora_partita ? ' · ' + partita.ora_partita.slice(0,5) : ''}${legLabel ? ' · ' + legLabel : ''}</span>
+            <span>${dataStr}${partita.ora_partita ? ' - ' + partita.ora_partita.slice(0,2) : ''}${legLabel ? ' - ' + legLabel : ''}</span>
             <span>${partita.campo || 'Campo da definire'}</span>
           </div>
         `;
@@ -902,6 +902,8 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     });
   }
 });
+
+
 
 
 

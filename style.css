@@ -506,7 +506,7 @@ body {
   flex-direction: column;
 }
 #calendario .team.away {
-  flex-direction: column-reverse; /* inverti l'ordine per avere logo sopra, nome sotto */
+  flex-direction: column;
 }
 
 #calendario .team-logo {
