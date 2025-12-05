@@ -571,6 +571,14 @@ body {
   margin-left: 6px;
 }
 
+.maps-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff7090'%3E%3Cpath d='M12 2C8.134 2 5 5.1 5 8.933 5 14.5 12 22 12 22s7-7.5 7-13.067C19 5.1 15.866 2 12 2zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z'/%3E%3C/svg%3E") center/contain no-repeat;
+  vertical-align: middle;
+}
+
 .maps-link:hover {
   text-decoration: underline;
 }
@@ -6007,6 +6015,17 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
     margin-left: 6px;
 }
 
+/* Card compatta per righe senza icone (solo voto) */
+.evento-no-icons {
+    padding: 6px 0;
+}
+.evento-no-icons .evento-nome {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.2;
+}
+
 /* Evita overflow dei cognomi lunghi nelle card eventi */
 .evento-mini-row .evento-nome,
 .evento-nome {
@@ -6020,6 +6039,19 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 @media (max-width: 640px) {
   .evento-dettagli {
     flex-wrap: wrap;
+  }
+  .evento-mini-row {
+    padding: 6px 0;
+  }
+  .evento-mini-row .evento-nome,
+  .evento-nome {
+    font-size: 13px;
+  }
+  .evento-no-icons .voto-inline {
+    font-size: 13px;
+  }
+  .icons-after-name {
+    font-size: 16px;
   }
 }
 
@@ -6717,10 +6749,9 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
 /* ===== BACK BUTTON (partite) ===== */
 #btnBack {
-  position: sticky;
-  top: 90px;
-  left: 0;
-  margin-left: 8px;
+  position: fixed;
+  top: 70px;
+  left: 12px;
   width: 52px;
   height: 52px;
   display: grid;
@@ -6770,9 +6801,8 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
 @media (max-width: 768px) {
   #btnBack {
-    top: 82px;
-    left: 0;
-    margin-left: 8px;
+    top: 66px;
+    left: 10px;
     width: 48px;
     height: 48px;
     font-size: 22px;
@@ -6781,9 +6811,8 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
 @media (max-width: 485px) {
   #btnBack {
-    top: 78px;
-    left: 0;
-    margin-left: 6px;
+    top: 62px;
+    left: 8px;
     width: 42px;
     height: 42px;
     font-size: 20px;

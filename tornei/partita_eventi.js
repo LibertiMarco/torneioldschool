@@ -86,7 +86,9 @@ async function caricaPartita() {
           ${campo}
           ${campo !== "Campo da definire" ? `
             <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(campo)}"
-              target="_blank" class="maps-link">🗺</a>` : ""}
+              target="_blank" class="maps-link" aria-label="Apri in Google Maps">
+              <span class="maps-icon" aria-hidden="true"></span>
+            </a>` : ""}
         </span>
 
         <span>${dataStr}${oraStr ? " - " + oraStr : ""}</span>
