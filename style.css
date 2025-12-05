@@ -4924,6 +4924,42 @@ select:focus {
   gap: 20px;
 }
 
+.eventi-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  flex-wrap: wrap;
+}
+
+.eventi-toggle .toggle-label {
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.4px;
+}
+
+.eventi-toggle-btn {
+  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.eventi-toggle-btn.active {
+  background: #d9a441;
+  border-color: #d9a441;
+  color: #0f1f33;
+}
+
+.eventi-toggle-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.2);
+}
+
 /* Card giocatore (stile player-card) */
 .player-card.eventi-card {
   background: #15293e;
@@ -6676,9 +6712,10 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
 /* ===== BACK BUTTON (partite) ===== */
 #btnBack {
-  position: fixed;
-  top: 76px;
-  left: 16px;
+  position: sticky;
+  top: 90px;
+  left: 0;
+  margin-left: 8px;
   width: 52px;
   height: 52px;
   display: grid;
@@ -6728,8 +6765,9 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
 @media (max-width: 768px) {
   #btnBack {
-    top: 70px;
-    left: 12px;
+    top: 82px;
+    left: 0;
+    margin-left: 8px;
     width: 48px;
     height: 48px;
     font-size: 22px;
@@ -6738,8 +6776,9 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
 @media (max-width: 485px) {
   #btnBack {
-    top: 64px;
-    left: 10px;
+    top: 78px;
+    left: 0;
+    margin-left: 6px;
     width: 42px;
     height: 42px;
     font-size: 20px;

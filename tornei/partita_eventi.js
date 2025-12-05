@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // =============================================================
-// ✅ CARICA CARD PARTITA
+// ƒo. CARICA CARD PARTITA
 // =============================================================
 async function caricaPartita() {
     let p = null;
@@ -86,7 +86,7 @@ async function caricaPartita() {
           ${campo}
           ${campo !== "Campo da definire" ? `
             <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(campo)}"
-              target="_blank" class="maps-link">📍</a>` : ""}
+              target="_blank" class="maps-link">🗺</a>` : ""}
         </span>
 
         <span>${dataStr}${oraStr ? " - " + oraStr : ""}</span>
@@ -133,9 +133,12 @@ async function caricaPartita() {
 }
 
 // =============================================================
-// ✅ EVENTI GIOCATORI — CARD DIVISA A SINISTRA / DESTRA
+// ƒo. EVENTI GIOCATORI ƒ?" CARD DIVISA A SINISTRA / DESTRA
 // =============================================================
 async function caricaEventiGiocatori() {
+
+    let showAllEventi = false;
+    let eventiState = null;
 
     try {
         const res = await fetch(`/api/get_eventi_partita.php?partita=${ID_PARTITA}`);
@@ -146,7 +149,6 @@ async function caricaEventiGiocatori() {
 
         const byTeam = { [home]: [], [away]: [] };
 
-        // assegna correttamente squadra
         eventi.forEach(e => {
             const rec = {
                 nome: e.nome,
@@ -162,7 +164,6 @@ async function caricaEventiGiocatori() {
             else if (rec.squadra === away) byTeam[away].push(rec);
         });
 
-        // ordina
         const sortFn = (a, b) =>
             (b.goal - a.goal) ||
             (b.gialli - a.gialli) ||
@@ -171,7 +172,6 @@ async function caricaEventiGiocatori() {
         byTeam[home].sort(sortFn);
         byTeam[away].sort(sortFn);
 
-        // Aggiorna punteggio in header in base agli eventi
         const homeGoals = byTeam[home].reduce((sum, g) => sum + (g.goal || 0), 0);
         const awayGoals = byTeam[away].reduce((sum, g) => sum + (g.goal || 0), 0);
         const scoreHomeEl = document.getElementById("scoreHome");
@@ -179,55 +179,85 @@ async function caricaEventiGiocatori() {
         if (scoreHomeEl) scoreHomeEl.textContent = homeGoals;
         if (scoreAwayEl) scoreAwayEl.textContent = awayGoals;
 
+        const logoHome = logoPathFrom(window.PARTITA, "logo_casa", "squadra_casa");
+        const logoAway = logoPathFrom(window.PARTITA, "logo_ospite", "squadra_ospite");
+        eventiState = { home, away, byTeam, logoHome, logoAway };
+
         const renderList = (arr) => {
-            const filtered = (arr || []).filter(g => (g.goal || 0) > 0 || (g.assist || 0) > 0 || (g.gialli || 0) > 0 || (g.rossi || 0) > 0);
-            if (!filtered.length) return `<div class="evento-mini-row muted">Nessun evento</div>`;
+            const list = Array.isArray(arr) ? arr : [];
+            const filtered = showAllEventi
+              ? list
+              : list.filter(g => (g.goal || 0) > 0 || (g.assist || 0) > 0 || (g.gialli || 0) > 0 || (g.rossi || 0) > 0);
+
+            if (!filtered.length) return `<div class="evento-mini-row muted">Nessun dato</div>`;
+
             return filtered.map(g => {
                 const abbrev = `${g.cognome} ${g.nome.charAt(0).toUpperCase()}.`;
+                const icons = [
+                  ...(new Array(g.goal || 0)).fill("⚽️"),
+                  ...(new Array(g.gialli || 0)).fill("🟨"),
+                  ...(new Array(g.rossi || 0)).fill("🟥"),
+                ].join("");
+                const voto = g.voto !== null && g.voto !== undefined
+                  ? `<span class="voto"><strong>${formatVoto(g.voto)}</strong></span>`
+                  : "";
                 return `
                   <div class="evento-mini-row">
                     <div class="evento-nome">${abbrev}</div>
                     <div class="evento-dettagli">
-                        <span class="icons-after-name">
-                            ${"⚽".repeat(g.goal)}
-                            ${"🟨".repeat(g.gialli)}
-                            ${"🟥".repeat(g.rossi)}
-                        </span>
-                        ${g.voto !== null ? `<span class="voto"><strong>${formatVoto(g.voto)}</strong></span>` : ""}
+                        <span class="icons-after-name">${icons || (showAllEventi ? "—" : "")}</span>
+                        ${voto}
                     </div>
                   </div>
                 `;
             }).join("");
         };
 
-        const logoHome = logoPathFrom(window.PARTITA, "logo_casa", "squadra_casa");
-        const logoAway = logoPathFrom(window.PARTITA, "logo_ospite", "squadra_ospite");
-        document.getElementById("riepilogoEventi").innerHTML = `
-            <div class="stats-card">
-
-                <div class="stats-body">
-                    <div class="team-block">
-                    <div class="team-block-head">
-                      <img src="${logoHome}" class="team-logo" alt="${home}">
-                    </div>
-                      <div class="team-block-body">
-                        ${renderList(byTeam[home])}
+        const renderEventiCard = () => {
+            const container = document.getElementById("riepilogoEventi");
+            if (!container || !eventiState) return;
+            container.innerHTML = `
+                <div class="stats-card">
+                  <div class="eventi-toggle">
+                    <span class="toggle-label">Giocatori:</span>
+                    <button type="button" class="eventi-toggle-btn ${showAllEventi ? "" : "active"}" data-mode="main">Principali</button>
+                    <button type="button" class="eventi-toggle-btn ${showAllEventi ? "active" : ""}" data-mode="all">Tutti</button>
+                  </div>
+                  <div class="stats-body">
+                      <div class="team-block">
+                        <div class="team-block-head">
+                          <img src="${eventiState.logoHome}" class="team-logo" alt="${eventiState.home}">
+                        </div>
+                        <div class="team-block-body">
+                          ${renderList(eventiState.byTeam[eventiState.home])}
+                        </div>
                       </div>
-                    </div>
-                    <div class="team-block">
-                      <div class="team-block-head">
-                        <img src="${logoAway}" class="team-logo" alt="${away}">
+                      <div class="team-block">
+                        <div class="team-block-head">
+                          <img src="${eventiState.logoAway}" class="team-logo" alt="${eventiState.away}">
+                        </div>
+                        <div class="team-block-body">
+                          ${renderList(eventiState.byTeam[eventiState.away])}
+                        </div>
                       </div>
-                      <div class="team-block-body">
-                        ${renderList(byTeam[away])}
-                      </div>
-                    </div>
+                  </div>
                 </div>
+            `;
 
-            </div>
-        `;
+            const toggleBtns = container.querySelectorAll(".eventi-toggle-btn");
+            toggleBtns.forEach(btn => {
+              btn.addEventListener("click", () => {
+                const mode = btn.dataset.mode;
+                showAllEventi = mode === "all";
+                renderEventiCard();
+              });
+            });
+        };
+
+        renderEventiCard();
 
     } catch (err) {
         console.error("Errore eventi partita:", err);
     }
 }
+
