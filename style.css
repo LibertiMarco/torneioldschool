@@ -4947,7 +4947,7 @@ select:focus {
 }
 
 .eventi-toggle-btn {
-  border: 1px solid rgba(255,255,255,0.25);
+  border: 1px solid rgba(21,41,62,0.2);
   background: #fff;
   color: #15293e;
   padding: 6px 14px;
@@ -4958,9 +4958,10 @@ select:focus {
 }
 
 .eventi-toggle-btn.active {
-  background: #15293e;
+  background: #e8effa;
   border-color: #15293e;
-  color: #fff;
+  color: #15293e;
+  box-shadow: 0 6px 14px rgba(21,41,62,0.18);
 }
 
 .eventi-toggle-btn:hover {
@@ -6106,6 +6107,7 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
     padding: 2px 8px;
     border-radius: 8px;
     line-height: 1.2;
+    border: 1px solid #15293e;
 }
 .voto-pill { /* alias per voti inline */
     display: inline-flex;
@@ -6124,7 +6126,7 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
 .voto {
     font-size: 15px;
-    color: white;
+    color: #15293e;
 }
 
 .match-link-container {
