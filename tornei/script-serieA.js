@@ -346,12 +346,11 @@ function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], selecte
 
   select.innerHTML = "";
   if (isRegular) {
-    select.append(new Option("Tutte", ""));
-
     giornateDisponibili.forEach(g => {
       select.add(new Option(`Giornata ${g}`, g));
     });
-    select.value = String(selected || "");
+    const first = giornateDisponibili[0] || "";
+    select.value = String(selected || first);
     return;
   }
 
