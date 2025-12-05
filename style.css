@@ -502,6 +502,12 @@ body {
   width: 100%;
   text-align: center;
 }
+#calendario .team.home {
+  flex-direction: column;
+}
+#calendario .team.away {
+  flex-direction: column-reverse; /* inverti l'ordine per avere logo sopra, nome sotto */
+}
 
 #calendario .team-logo {
   width: 48px;
