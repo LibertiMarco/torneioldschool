@@ -686,17 +686,18 @@ body {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2315293e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 12px center;
+  background: #f9fbff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2315293e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 12px center;
   padding: 10px 38px 10px 14px;
-  border: 1px solid #cfd7e7;
+  border: 1px solid #c4cedf;
   border-radius: 12px;
   font-weight: 700;
+  font-size: 0.95rem;
   color: #15293e;
-  box-shadow: 0 4px 12px rgba(21, 41, 62, 0.12);
+  box-shadow: 0 4px 10px rgba(21, 41, 62, 0.08);
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
   width: 100%;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
+  text-transform: none;
 }
 
 .filtro-fase select:focus,
@@ -705,7 +706,7 @@ body {
 .filtro-rosa select:focus {
   outline: none;
   border-color: #15293e;
-  box-shadow: 0 8px 18px rgba(21, 41, 62, 0.2);
+  box-shadow: 0 8px 16px rgba(21, 41, 62, 0.18);
   transform: translateY(-1px);
 }
 
@@ -714,7 +715,7 @@ body {
 #giornataSelect:hover,
 .filtro-rosa select:hover {
   border-color: #b4c1d8;
-  box-shadow: 0 6px 14px rgba(21, 41, 62, 0.16);
+  box-shadow: 0 6px 12px rgba(21, 41, 62, 0.14);
 }
 
 .filtro-fase-selects {
@@ -726,6 +727,29 @@ body {
 .filtro-fase select,
 .filtro-fase-selects select {
   min-height: 44px;
+}
+
+/* Layout filtri calendario: allineamento */
+.filtro-giornata {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.filtro-giornata .filtro-riga {
+  flex: 1 1 200px;
+  min-width: 200px;
+}
+.filtro-giornata .filtro-riga select {
+  width: 100%;
+}
+.filtro-giornata label,
+.filtro-fase label,
+.filtro-rosa label {
+  font-weight: 700;
+  color: #15293e;
+  margin-bottom: 6px;
+  display: inline-block;
 }
 
 .rosa-header {
