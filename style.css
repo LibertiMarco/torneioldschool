@@ -343,9 +343,9 @@ body {
   width: 26px;
   height: 26px;
   object-fit: contain;
-  border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.06);
+  border: none;
+  background: transparent;
+  border-radius: 0; /* mostra solo il logo senza box */
 }
 
 .scorer-team-name {
@@ -394,7 +394,7 @@ body {
   .scorer-avatar img { width: 52px; height: 52px; }
   .scorer-name { font-size: 16px; }
   .scorer-teamline { font-size: 12px; gap: 6px; }
-  .scorer-team-logo { width: 22px; height: 22px; }
+  .scorer-team-logo { width: 22px; height: 22px; border: none; background: transparent; border-radius: 0; }
   .scorer-goals .goals-number { font-size: 22px; }
 }
 

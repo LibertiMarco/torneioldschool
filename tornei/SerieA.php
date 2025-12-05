@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includi/require_login.php';
+$assetVersion = '20251205';
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -7,7 +8,7 @@ require_once __DIR__ . '/../includi/require_login.php';
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Serie A - Tornei Old School</title>
-  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="../style.css?v=<?= $assetVersion ?>" />
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
   <style>
@@ -294,7 +295,7 @@ require_once __DIR__ . '/../includi/require_login.php';
   <div id="footer-container"></div>
 
   <!-- SCRIPT: HEADER -->
-  <script src="/includi/header-interactions.js"></script>
+  <script src="/includi/header-interactions.js?v=<?= $assetVersion ?>"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
 
@@ -317,7 +318,7 @@ require_once __DIR__ . '/../includi/require_login.php';
       }
 
       // ====== HEADER DINAMICO ======
-      fetch("/includi/header.php")
+      fetch("/includi/header.php?v=<?= $assetVersion ?>")
         .then(response => response.text())
         .then(data => {
           document.getElementById("header-container").innerHTML = data;
@@ -357,7 +358,7 @@ require_once __DIR__ . '/../includi/require_login.php';
 
   <!-- SCRIPT: FOOTER -->
   <script>
-    fetch("/includi/footer.html")
+    fetch("/includi/footer.html?v=<?= $assetVersion ?>")
       .then(response => response.text())
       .then(data => {
         document.getElementById("footer-container").innerHTML = data;
@@ -366,7 +367,7 @@ require_once __DIR__ . '/../includi/require_login.php';
   </script>
 
   <!-- SCRIPT: SERIE A -->
-  <script src="script-SerieA.js"></script>
+  <script src="script-SerieA.js?v=<?= $assetVersion ?>"></script>
 
 </body>
 </html>
