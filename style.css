@@ -483,7 +483,7 @@ body {
 
 #calendario .match-body {
   display: grid;
-  grid-template-columns: 1fr 120px 1fr;
+  grid-template-columns: minmax(0, 1fr) 110px minmax(0, 1fr);
   align-items: center;
   justify-items: center;
   text-align: center;
@@ -493,43 +493,42 @@ body {
 }
 
 #calendario .team {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
+  width: 100%;
 }
 
 #calendario .team.home {
-  justify-content: center;
   text-align: right;
 }
 
 #calendario .team.away {
-  justify-content: center;
   text-align: left;
 }
 
 #calendario .team-logo {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 #calendario .team-name {
   font-weight: 800;
-  font-size: 1.05rem;
+  font-size: 1rem;
   color: #15293e;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 140px;
+  max-width: 150px;
   min-width: 0;
 }
 
 #calendario .match-center {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   font-weight: 800;
 }
 
@@ -555,22 +554,24 @@ body {
     font-size: 0.9rem;
   }
   #calendario .match-body {
-    grid-template-columns: 1fr 90px 1fr;
+    grid-template-columns: minmax(0, 1fr) 90px minmax(0, 1fr);
     gap: 8px;
     padding: 0 12px;
     align-items: center;
   }
   #calendario .team {
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
     min-width: 0;
+    width: 100%;
   }
   #calendario .team-logo {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
   }
   #calendario .team-name {
-    font-size: 0.84rem;
-    max-width: 110px;
+    font-size: 0.82rem;
+    max-width: 105px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
