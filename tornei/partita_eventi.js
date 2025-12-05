@@ -193,6 +193,7 @@ async function caricaEventiGiocatori() {
 
             return filtered.map(g => {
                 const abbrev = `${g.cognome} ${g.nome.charAt(0).toUpperCase()}.`;
+                const hasEvents = (g.goal || 0) > 0 || (g.assist || 0) > 0 || (g.gialli || 0) > 0 || (g.rossi || 0) > 0;
                 const icons = [
                   ...(new Array(g.goal || 0)).fill("⚽️"),
                   ...(new Array(g.gialli || 0)).fill("🟨"),
@@ -201,6 +202,16 @@ async function caricaEventiGiocatori() {
                 const voto = g.voto !== null && g.voto !== undefined
                   ? `<span class="voto"><strong>${formatVoto(g.voto)}</strong></span>`
                   : "";
+
+                // se siamo in "Tutti" ma il giocatore non ha eventi, mostra solo nome + voto sulla stessa riga
+                if (showAllEventi && !hasEvents) {
+                  return `
+                    <div class="evento-mini-row evento-no-icons">
+                      <div class="evento-nome">${abbrev} ${voto ? `<span class="voto-inline">${formatVoto(g.voto)}</span>` : ""}</div>
+                    </div>
+                  `;
+                }
+
                 return `
                   <div class="evento-mini-row">
                     <div class="evento-nome">${abbrev}</div>
@@ -260,4 +271,3 @@ async function caricaEventiGiocatori() {
         console.error("Errore eventi partita:", err);
     }
 }
-
