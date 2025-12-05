@@ -428,19 +428,41 @@
     return base;
   }
 
-  function loadConsent() {
+  function readConsentCookie() {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? normalizeConsent(JSON.parse(saved)) : null;
+      const cookieStr = document.cookie || '';
+      const cookies = cookieStr.split(';').map(c => c.trim());
+      const found = cookies.find(c => c.startsWith(`${STORAGE_KEY}=`));
+      if (!found) return null;
+      const raw = decodeURIComponent(found.split('=')[1] || '');
+      return raw ? normalizeConsent(JSON.parse(raw)) : null;
     } catch (err) {
       return null;
     }
+  }
+
+  function writeConsentCookie(consent) {
+    try {
+      const payload = encodeURIComponent(JSON.stringify(consent));
+      const maxAge = 60 * 60 * 24 * 365; // 1 anno
+      const secure = location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `${STORAGE_KEY}=${payload}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
+    } catch (err) {}
+  }
+
+  function loadConsent() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return normalizeConsent(JSON.parse(saved));
+    } catch (err) {}
+    return readConsentCookie();
   }
 
   function saveConsent(consent) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(consent));
     } catch (err) {}
+    writeConsentCookie(consent);
   }
 
   function syncConsentWithServer(consent) {
