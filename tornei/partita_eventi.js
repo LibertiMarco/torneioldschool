@@ -195,32 +195,22 @@ async function caricaEventiGiocatori() {
 
             return filtered.map(g => {
                 const abbrev = `${g.cognome} ${g.nome.charAt(0).toUpperCase()}.`;
-                const hasEvents = (g.goal || 0) > 0 || (g.assist || 0) > 0 || (g.gialli || 0) > 0 || (g.rossi || 0) > 0;
                 const icons = [
                   ...(new Array(g.goal || 0)).fill("⚽️"),
                   ...(new Array(g.gialli || 0)).fill("🟨"),
                   ...(new Array(g.rossi || 0)).fill("🟥"),
                 ].join("");
-                const voto = g.voto !== null && g.voto !== undefined
-                  ? `<span class="voto"><strong>${formatVoto(g.voto)}</strong></span>`
+                const hasVoto = g.voto !== null && g.voto !== undefined;
+                const voto = hasVoto ? `<span class="voto voto-pill">${formatVoto(g.voto)}</span>` : "";
+                const iconsMarkup = icons ? `<span class="icons-after-name">${icons}</span>` : "";
+                const dettagli = voto || iconsMarkup
+                  ? `<div class="evento-dettagli">${voto}${iconsMarkup}</div>`
                   : "";
-
-                // se siamo in "Tutti" ma il giocatore non ha eventi, mostra solo nome + voto sulla stessa riga
-                if (showAllEventi && !hasEvents) {
-                  return `
-                    <div class="evento-mini-row evento-no-icons">
-                      <div class="evento-nome">${abbrev} ${voto ? `<span class="voto-inline">${formatVoto(g.voto)}</span>` : ""}</div>
-                    </div>
-                  `;
-                }
 
                 return `
                   <div class="evento-mini-row">
                     <div class="evento-nome">${abbrev}</div>
-                    <div class="evento-dettagli">
-                        <span class="icons-after-name">${icons || (showAllEventi ? "—" : "")}</span>
-                        ${voto}
-                    </div>
+                    ${dettagli}
                   </div>
                 `;
             }).join("");

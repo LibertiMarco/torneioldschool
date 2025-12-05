@@ -6104,6 +6104,12 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
     border-radius: 8px;
     line-height: 1.2;
 }
+.voto-pill { /* alias per voti inline */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+}
 
 .evento-no-icons {
     padding: 8px 0;
