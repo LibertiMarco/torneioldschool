@@ -6042,67 +6042,75 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
   }
   .evento-mini-row {
     padding: 6px 0;
+    gap: 8px;
   }
   .evento-mini-row .evento-nome,
   .evento-nome {
-    font-size: 13px;
+    font-size: 12.5px;
   }
   .evento-no-icons .voto-inline {
-    font-size: 13px;
+    font-size: 12.5px;
   }
   .icons-after-name {
-    font-size: 16px;
+    font-size: 14px;
+  }
+  .voto, .voto-inline {
+    padding: 2px 7px;
+    font-size: 12.5px;
   }
 }
 
-/* Rinfresco stile righe eventi */
+/* Stile righe eventi (look più pulito) */
 .evento-mini-row {
-    background: linear-gradient(135deg, #0f1f33, #15293e);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 10px;
-    padding: 10px 12px;
-    margin-bottom: 8px;
+    background: transparent;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+    padding: 8px 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     color: #e8f0ff;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.18);
 }
 
-.evento-mini-row:last-child { margin-bottom: 0; }
+.evento-mini-row:last-child { border-bottom: none; }
 
 .evento-nome {
     font-size: 14px;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.2px;
     font-weight: 700;
-    text-transform: uppercase;
+    text-transform: none;
+    color: #f2f6ff;
 }
 
 .evento-dettagli {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .icons-after-name {
     display: inline-flex;
-    gap: 6px;
-    font-size: 18px;
+    gap: 4px;
+    font-size: 15px;
+    color: #cfd7e7;
 }
 
 .voto, .voto-inline {
-    font-size: 14px;
-    color: #ffd27f;
+    font-size: 13px;
+    color: #fff;
     font-weight: 800;
+    background: #1fa154;
+    padding: 2px 8px;
+    border-radius: 8px;
+    line-height: 1.2;
 }
 
 .evento-no-icons {
-    padding: 8px 10px;
+    padding: 8px 0;
 }
 .evento-no-icons .evento-nome {
     font-size: 14px;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.2px;
 }
 
 .voto {
