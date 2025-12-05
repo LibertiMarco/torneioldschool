@@ -99,7 +99,7 @@ function resolveLogoPath(name, storedPath) {
 function formattaData(data) {
   if (!data) return "";
   const [anno, mese, giorno] = data.split("-");
-  return `${giorno}/${mese}/${anno}`;
+  return `${giorno}/${mese}`;
 }
 
 // Mappa numero giornata -> nome fase playoff
