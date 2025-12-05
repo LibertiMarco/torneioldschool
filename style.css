@@ -538,29 +538,29 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  font-family: "Oswald", "Montserrat", sans-serif;
-  letter-spacing: 0.25px;
+  gap: 12px;
+  font-family: "Poppins", "Oswald", "Montserrat", sans-serif;
+  letter-spacing: 0.2px;
 }
 
 #calendario .score {
-  font-size: 1.45rem;
+  font-size: 1.65rem;
   font-weight: 800;
-  color: #0e1a2f;
+  color: #0a2e63;
   line-height: 1;
 }
 
 #calendario .vs {
-  font-size: 1.08rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  color: #8b95a7;
-  letter-spacing: 0.5px;
+  color: #5f6e85;
+  letter-spacing: 0.6px;
 }
 
 #calendario .dash-cal {
-  font-size: 1.45rem;
+  font-size: 1.65rem;
   font-weight: 800;
-  color: #0e1a2f;
+  color: #0a2e63;
   line-height: 1;
 }
 
@@ -609,14 +609,14 @@ body {
   }
   #calendario .match-center {
     min-width: 70px;
-    gap: 8px;
+    gap: 10px;
   }
   #calendario .match-center .score,
   #calendario .dash-cal {
-    font-size: 1.3rem;
+    font-size: 1.45rem;
   }
   #calendario .match-center .vs {
-    font-size: 1rem;
+    font-size: 1.05rem;
   }
 }
 
