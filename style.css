@@ -535,20 +535,31 @@ body {
 }
 
 #calendario .match-center {
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 #calendario .score {
-  color: #030000e1;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f1f3c;
 }
 
 #calendario .vs {
-  color: #777;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #7b8495;
+}
+
+#calendario .dash-cal {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f1f3c;
+  padding: 0 4px;
 }
 
 @media (max-width: 640px) {
@@ -596,6 +607,15 @@ body {
   }
   #calendario .match-center {
     min-width: 70px;
+    font-size: 1.05rem;
+    gap: 6px;
+  }
+  #calendario .match-center .score,
+  #calendario .dash-cal {
+    font-size: 1.15rem;
+  }
+  #calendario .match-center .vs {
+    font-size: 0.98rem;
   }
 }
 
