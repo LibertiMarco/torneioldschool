@@ -138,8 +138,10 @@ if ($matchId > 0) {
 
   <!-- CONTENUTO -->
   <main class="content" style="margin-top:24px; padding-top:18px;">
-    <button id="btnBack" onclick="history.back()">⟵</button>
-    <h1 class="titolo">Statistiche Partita</h1>
+    <div class="titolo-row">
+      <button id="btnBack" onclick="history.back()">⟵</button>
+      <h1 class="titolo">Statistiche Partita</h1>
+    </div>
 
     <!-- ✅ Qui iniettiamo la STESSA match-card del calendario -->
     <div id="partitaContainer" style="margin-bottom:20px;"></div>
