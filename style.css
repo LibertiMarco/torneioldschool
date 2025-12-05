@@ -552,8 +552,12 @@ body {
     height: 34px;
   }
   #calendario .team-name {
-    font-size: 0.92rem;
-    max-width: 110px;
+    font-size: 0.9rem;
+    max-width: 100%;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.2;
   }
   #calendario .match-center {
     min-width: 70px;
