@@ -97,7 +97,10 @@ function resolveLogoPath(name, storedPath) {
 function formattaData(data) {
   if (!data) return "";
   const [anno, mese, giorno] = data.split("-");
-  return `${giorno}/${mese}`;
+  const d = new Date(Date.UTC(Number(anno), Number(mese) - 1, Number(giorno)));
+  const giorniSettimana = ["Domenica", "Lunedi", "Martedi", "Mercoledi", "Giovedi", "Venerdi", "Sabato"];
+  const giornoSettimana = giorniSettimana[d.getUTCDay()] || "";
+  return `${giornoSettimana} ${giorno}/${mese}`;
 }
 
 // Mappa numero giornata -> nome fase playoff
