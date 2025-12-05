@@ -4928,7 +4928,7 @@ select:focus {
 /* Griglia card giocatori */
 .eventi-giocatori-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 20px;
 }
 
@@ -4947,10 +4947,10 @@ select:focus {
 }
 
 .eventi-toggle-btn {
-  border: 1px solid rgba(255,255,255,0.3);
-  background: rgba(255,255,255,0.08);
-  color: #fff;
-  padding: 6px 12px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: #fff;
+  color: #15293e;
+  padding: 6px 14px;
   border-radius: 999px;
   font-weight: 700;
   cursor: pointer;
@@ -4958,9 +4958,9 @@ select:focus {
 }
 
 .eventi-toggle-btn.active {
-  background: #d9a441;
-  border-color: #d9a441;
-  color: #0f1f33;
+  background: #15293e;
+  border-color: #15293e;
+  color: #fff;
 }
 
 .eventi-toggle-btn:hover {
@@ -6058,6 +6058,9 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
     padding: 2px 7px;
     font-size: 12.5px;
   }
+  .eventi-giocatori-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
 }
 
 /* Stile righe eventi (look più pulito) */
@@ -6097,9 +6100,9 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
 .voto, .voto-inline {
     font-size: 13px;
-    color: #fff;
+    color: #15293e;
     font-weight: 800;
-    background: #1fa154;
+    background: #fff;
     padding: 2px 8px;
     border-radius: 8px;
     line-height: 1.2;
