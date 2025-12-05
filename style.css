@@ -698,6 +698,7 @@ body {
   width: 100%;
   letter-spacing: 0.2px;
   text-transform: none;
+  min-height: 42px;
 }
 
 .filtro-fase select:focus,
@@ -726,7 +727,7 @@ body {
 
 .filtro-fase select,
 .filtro-fase-selects select {
-  min-height: 44px;
+  min-height: 42px;
 }
 
 /* Layout filtri calendario: allineamento */
@@ -749,6 +750,43 @@ body {
   color: #15293e;
   margin-bottom: 6px;
   display: inline-block;
+}
+
+/* Pill toggle per fase/coppa */
+.pill-toggle-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pill-btn--toggle {
+  border-radius: 12px;
+  border: 1px solid #cfd7e7;
+  background: #f9fbff;
+  color: #15293e;
+  padding: 8px 12px;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(21, 41, 62, 0.1);
+}
+.pill-btn--toggle.active {
+  background: #15293e;
+  color: #fff;
+  border-color: #15293e;
+  box-shadow: 0 8px 18px rgba(21, 41, 62, 0.22);
+}
+.pill-btn--toggle:hover {
+  transform: translateY(-1px);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .rosa-header {

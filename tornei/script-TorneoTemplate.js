@@ -712,6 +712,30 @@ async function caricaRosaSquadra(squadra) {
 
 // ====================== GESTIONE UI DINAMICA ======================
 document.addEventListener("DOMContentLoaded", () => {
+  // helper: crea toggle pill dai select
+  const buildPillToggle = (selectEl) => {
+    if (!selectEl) return null;
+    const wrap = document.createElement("div");
+    wrap.className = "pill-toggle-group";
+    Array.from(selectEl.options || []).forEach(opt => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = opt.textContent;
+      btn.dataset.value = opt.value;
+      btn.className = "pill-btn pill-btn--toggle";
+      if (opt.selected) btn.classList.add("active");
+      btn.addEventListener("click", () => {
+        selectEl.value = opt.value;
+        selectEl.dispatchEvent(new Event("change"));
+        wrap.querySelectorAll("button").forEach(b => b.classList.toggle("active", b === btn));
+      });
+      wrap.appendChild(btn);
+    });
+    selectEl.classList.add("visually-hidden");
+    selectEl.after(wrap);
+    return wrap;
+  };
+
   const faseSelect = document.getElementById("faseSelect");
   const coppaSelect = document.getElementById("coppaSelect");
   const classificaWrapper = document.getElementById("classificaWrapper");
@@ -796,6 +820,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     loadClassifica(TORNEO);
   });
+
+  // toggle pill per fase/coppa
+  const faseToggle = buildPillToggle(faseSelect);
+  const coppaToggle = buildPillToggle(coppaSelect);
+  const syncCoppaToggle = () => {
+    const isElim = faseSelect.value === "eliminazione";
+    if (coppaToggle) coppaToggle.style.display = isElim ? "flex" : "none";
+  };
+  if (faseToggle || coppaToggle) {
+    syncCoppaToggle();
+    faseSelect.addEventListener("change", syncCoppaToggle);
+  }
 });
 
 // ====================== GESTIONE TAB NAVIGAZIONE ======================
