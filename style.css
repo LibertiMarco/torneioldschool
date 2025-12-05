@@ -6055,6 +6055,56 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
   }
 }
 
+/* Rinfresco stile righe eventi */
+.evento-mini-row {
+    background: linear-gradient(135deg, #0f1f33, #15293e);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    color: #e8f0ff;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.18);
+}
+
+.evento-mini-row:last-child { margin-bottom: 0; }
+
+.evento-nome {
+    font-size: 14px;
+    letter-spacing: 0.4px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.evento-dettagli {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.icons-after-name {
+    display: inline-flex;
+    gap: 6px;
+    font-size: 18px;
+}
+
+.voto, .voto-inline {
+    font-size: 14px;
+    color: #ffd27f;
+    font-weight: 800;
+}
+
+.evento-no-icons {
+    padding: 8px 10px;
+}
+.evento-no-icons .evento-nome {
+    font-size: 14px;
+    letter-spacing: 0.3px;
+}
+
 .voto {
     font-size: 15px;
     color: white;
@@ -6749,25 +6799,25 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
 /* ===== BACK BUTTON (partite) ===== */
 #btnBack {
-  position: fixed;
-  top: 70px;
-  left: 12px;
-  width: 52px;
-  height: 52px;
+  position: sticky;
+  top: 14px;
+  left: 0;
+  width: 46px;
+  height: 46px;
   display: grid;
   place-items: center;
   padding: 0;
-  margin: 0;
-  border-radius: 14px;
+  margin: 0 0 8px 4px;
+  border-radius: 12px;
   border: 2px solid rgba(255, 255, 255, 0.5);
   background: linear-gradient(135deg, #15293e, #1f3f63);
   color: #fff;
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 900;
   line-height: 1;
   cursor: pointer;
-  z-index: 9999;
-  box-shadow: 0 14px 30px rgba(21, 41, 62, 0.3);
+  z-index: 9;
+  box-shadow: 0 10px 24px rgba(21, 41, 62, 0.28);
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
@@ -6801,22 +6851,23 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
 @media (max-width: 768px) {
   #btnBack {
-    top: 66px;
-    left: 10px;
-    width: 48px;
-    height: 48px;
-    font-size: 22px;
+    top: 10px;
+    left: 0;
+    margin-left: 0;
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
   }
 }
 
 @media (max-width: 485px) {
   #btnBack {
-    top: 62px;
-    left: 8px;
-    width: 42px;
-    height: 42px;
-    font-size: 20px;
-    border-radius: 12px;
+    top: 8px;
+    left: 0;
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+    border-radius: 11px;
   }
 }
 
