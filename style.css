@@ -504,15 +504,15 @@ body {
 }
 
 #calendario .team-logo {
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 #calendario .team-name {
   font-weight: 800;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   color: #15293e;
   white-space: nowrap;
   overflow: hidden;
@@ -522,8 +522,12 @@ body {
 }
 
 #calendario .match-center {
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 #calendario .score {
@@ -558,12 +562,12 @@ body {
     gap: 5px;
   }
   #calendario .team-logo {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
   }
   #calendario .team-name {
-    font-size: 0.8rem;
-    max-width: 90px;
+    font-size: 0.82rem;
+    max-width: 95px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
