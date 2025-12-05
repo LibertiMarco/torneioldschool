@@ -768,7 +768,9 @@ body {
   box-shadow: 0 4px 10px rgba(21, 41, 62, 0.1);
   font-size: 0.95rem;
 }
-.pill-btn--toggle.active {
+.pill-btn--toggle.active,
+.pill-btn--toggle:active,
+.pill-btn--toggle:focus-visible {
   background: #15293e;
   color: #fff;
   border-color: #15293e;
