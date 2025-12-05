@@ -524,7 +524,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 160px;
+  max-width: 140px;
   min-width: 0;
 }
 
@@ -565,12 +565,12 @@ body {
     min-width: 0;
   }
   #calendario .team-logo {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
   }
   #calendario .team-name {
-    font-size: 0.86rem;
-    max-width: 120px;
+    font-size: 0.84rem;
+    max-width: 110px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
