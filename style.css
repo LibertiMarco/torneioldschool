@@ -5532,8 +5532,12 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
   opacity: 0.9;
 }
 .match-card-blue .match-header span:first-child {
-  flex: 1;
+  flex: 0 1 52%;
+  max-width: 52%;
+  min-width: 0;
   text-align: left;
+  white-space: normal;
+  word-break: break-word;
 }
 .match-card-blue .match-header span:last-child {
   flex: 1;
