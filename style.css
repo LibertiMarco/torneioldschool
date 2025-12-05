@@ -678,6 +678,42 @@ body {
   cursor: pointer;
 }
 
+/* Select moderni (fasi, giornata, squadra) */
+.filtro-fase select,
+#faseCalendario,
+#giornataSelect,
+.filtro-rosa select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2315293e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 12px center;
+  padding: 10px 38px 10px 14px;
+  border: 1px solid #cfd7e7;
+  border-radius: 12px;
+  font-weight: 700;
+  color: #15293e;
+  box-shadow: 0 4px 12px rgba(21, 41, 62, 0.12);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+.filtro-fase select:focus,
+#faseCalendario:focus,
+#giornataSelect:focus,
+.filtro-rosa select:focus {
+  outline: none;
+  border-color: #15293e;
+  box-shadow: 0 8px 18px rgba(21, 41, 62, 0.2);
+  transform: translateY(-1px);
+}
+
+.filtro-fase select:hover,
+#faseCalendario:hover,
+#giornataSelect:hover,
+.filtro-rosa select:hover {
+  border-color: #b4c1d8;
+  box-shadow: 0 6px 14px rgba(21, 41, 62, 0.16);
+}
+
 .rosa-header {
   display: flex;
   align-items: center;
