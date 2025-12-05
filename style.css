@@ -5953,6 +5953,9 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 .icons-after-name {
     margin-left: 5px;
     font-size: 18px;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
 }
 
 /* Voto finale staccato dalle icone */
@@ -5961,6 +5964,22 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
     align-items: center;
     justify-content: flex-start;
     gap: 10px;
+}
+
+/* Evita overflow dei cognomi lunghi nelle card eventi */
+.evento-mini-row .evento-nome,
+.evento-nome {
+    overflow-wrap: anywhere;
+    white-space: normal;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .evento-dettagli {
+    flex-wrap: wrap;
+  }
 }
 
 .voto {
