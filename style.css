@@ -546,12 +546,12 @@ body {
 #calendario .score {
   font-size: 1.65rem;
   font-weight: 800;
-  color: #0a2e63;
+  color: #15293e;
   line-height: 1;
 }
 
 #calendario .vs {
-  font-size: 1.1rem;
+  font-size: 2.8rem;
   font-weight: 700;
   color: #5f6e85;
   letter-spacing: 0.6px;
@@ -560,7 +560,7 @@ body {
 #calendario .dash-cal {
   font-size: 1.65rem;
   font-weight: 800;
-  color: #0a2e63;
+  color: #15293e;
   line-height: 1;
 }
 
@@ -616,7 +616,7 @@ body {
     font-size: 1.45rem;
   }
   #calendario .match-center .vs {
-    font-size: 1.05rem;
+    font-size: 2.2rem;
   }
 }
 
