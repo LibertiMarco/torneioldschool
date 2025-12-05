@@ -761,11 +761,12 @@ body {
 .pill-btn--toggle {
   border-radius: 12px;
   border: 1px solid #cfd7e7;
-  background: #f9fbff;
+  background: #eef2f7;
   color: #15293e;
   padding: 8px 12px;
   font-weight: 700;
   box-shadow: 0 4px 10px rgba(21, 41, 62, 0.1);
+  font-size: 0.95rem;
 }
 .pill-btn--toggle.active {
   background: #15293e;

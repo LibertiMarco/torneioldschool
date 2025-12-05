@@ -869,6 +869,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // toggle pill per fase/coppa
   const faseToggle = buildPillToggle(faseSelect);
   const coppaToggle = buildPillToggle(coppaSelect);
+  const faseCalendarioToggle = buildPillToggle(faseCalendario);
   const syncCoppaToggle = () => {
     const isElim = faseSelect.value === "eliminazione";
     if (coppaToggle) coppaToggle.style.display = isElim ? "flex" : "none";

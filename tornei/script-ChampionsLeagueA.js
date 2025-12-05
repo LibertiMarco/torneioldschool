@@ -871,6 +871,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // costruisci toggle pill per selezioni classifica
   const faseToggle = buildPillToggle(faseSelect);
   const coppaToggle = buildPillToggle(coppaSelect);
+  const faseCalendarioToggle = buildPillToggle(faseCalendario);
 
   // mostra/nascondi toggle coppa in base a selezione fase
   const syncCoppaToggle = () => {
