@@ -731,14 +731,13 @@ body {
 
 /* Layout filtri calendario: allineamento */
 .filtro-giornata {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: end;
 }
 .filtro-giornata .filtro-riga {
-  flex: 1 1 200px;
-  min-width: 200px;
+  width: 100%;
 }
 .filtro-giornata .filtro-riga select {
   width: 100%;
