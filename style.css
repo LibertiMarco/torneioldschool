@@ -771,10 +771,10 @@ body {
 .pill-btn--toggle.active,
 .pill-btn--toggle:active,
 .pill-btn--toggle:focus-visible {
-  background: #15293e;
-  color: #fff;
-  border-color: #15293e;
-  box-shadow: 0 8px 18px rgba(21, 41, 62, 0.22);
+  background: #15293e !important;
+  color: #fff !important;
+  border-color: #15293e !important;
+  box-shadow: 0 8px 18px rgba(21, 41, 62, 0.22) !important;
 }
 .pill-btn--toggle:hover {
   transform: translateY(-1px);
