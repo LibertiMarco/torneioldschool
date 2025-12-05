@@ -458,6 +458,19 @@ body {
   border-bottom: 1px solid #eee;
   padding: 0 16px 6px 16px;
 }
+#calendario .match-header span:first-child {
+  flex: 0 1 52%;
+  max-width: 52%;
+  min-width: 0;
+  text-align: left;
+  white-space: normal;
+  word-break: break-word;
+}
+#calendario .match-header span:last-child {
+  flex: 1;
+  text-align: right;
+  min-width: 0;
+}
 
 #calendario .match-body {
   display: grid;
@@ -519,6 +532,10 @@ body {
   #calendario .match-header {
     font-size: 0.95rem;
     padding: 0 12px 6px 12px;
+  }
+  #calendario .match-header span:first-child {
+    flex-basis: 60%;
+    max-width: 60%;
   }
   #calendario .match-body {
     grid-template-columns: 1fr auto 1fr;
