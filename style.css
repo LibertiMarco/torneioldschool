@@ -493,37 +493,31 @@ body {
 }
 
 #calendario .team {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 6px;
   min-width: 0;
   width: 100%;
-}
-
-#calendario .team.home {
-  text-align: right;
-}
-
-#calendario .team.away {
-  text-align: left;
+  text-align: center;
 }
 
 #calendario .team-logo {
-  width: 36px;
-  height: 36px;
+  width: 46px;
+  height: 46px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 #calendario .team-name {
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: #15293e;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 150px;
+  max-width: 120px;
   min-width: 0;
 }
 
@@ -560,18 +554,16 @@ body {
     align-items: center;
   }
   #calendario .team {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 6px;
-    min-width: 0;
-    width: 100%;
+    flex-direction: column;
+    gap: 5px;
   }
   #calendario .team-logo {
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
   }
   #calendario .team-name {
-    font-size: 0.82rem;
-    max-width: 105px;
+    font-size: 0.8rem;
+    max-width: 90px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
