@@ -2539,11 +2539,13 @@ body {
     z-index: 5;
     background-color: #fff;
     text-align: left;
-    min-width: 160px;
-    max-width: 160px;
-    padding-left: 6px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-width: 210px;
+    max-width: 260px;
+    padding-left: 8px;
+    white-space: normal;
+    line-height: 1.3;
+    overflow: visible;
+    text-overflow: unset;
   }
 
   /* 3️⃣ Colonne dopo “Squadra” (scrollabili) */
@@ -2709,16 +2711,18 @@ body {
     z-index: 5;
     background-color: #fff;
     text-align: left;
-    min-width: 160px;
-    max-width: 160px;
-    padding-left: 6px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-width: 210px;
+    max-width: 260px;
+    padding-left: 8px;
+    white-space: normal;
+    line-height: 1.3;
+    overflow: visible;
+    text-overflow: unset;
   }
 
   #tableClassifica td:nth-child(2) .team-info {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 6px;
   }
 
@@ -2732,8 +2736,9 @@ body {
     font-size: 13px;
     font-weight: 600;
     color: #15293e;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
   }
 
   /* 3️⃣ Colonne successive scrollabili */
