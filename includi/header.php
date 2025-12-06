@@ -55,8 +55,6 @@ if (!empty($sessionAvatar)) {
 
     <div class="header-actions">
       <?php if ($isLoggedIn): ?>
-        <!-- NOTIFICHE disabilitate temporaneamente -->
-        <!--
         <div class="notif-dropdown">
           <button id="notifBtn" class="notif-btn" aria-haspopup="true" aria-expanded="false" aria-label="Notifiche">
             <svg class="notif-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -66,7 +64,6 @@ if (!empty($sessionAvatar)) {
           </button>
           <div id="notifMenu" class="notif-menu" role="menu" aria-label="Notifiche"></div>
         </div>
-        -->
       <?php endif; ?>
 
       <!-- MENU UTENTE -->
@@ -570,14 +567,53 @@ if (!empty($sessionAvatar)) {
   function closeMenus(header, state) {
     if (state.mainNav) state.mainNav.classList.remove("open");
     if (state.userMenu) state.userMenu.classList.remove("open");
-    // notifiche disabilitate
-    // if (state.notifMenu) state.notifMenu.classList.remove("open");
-    // if (state.notifBtn) state.notifBtn.setAttribute("aria-expanded", "false");
+    if (state.notifMenu) state.notifMenu.classList.remove("open");
+    if (state.notifBtn) state.notifBtn.setAttribute("aria-expanded", "false");
   }
 
   function renderNotifs(menuEl, badgeEl, list) {
-    // notifiche disabilitate
-    return;
+    if (!menuEl) return;
+    menuEl.innerHTML = "";
+
+    const makeEmpty = (text) => {
+      const div = document.createElement("div");
+      div.className = "notif-empty";
+      div.textContent = text;
+      return div;
+    };
+
+    if (!Array.isArray(list) || list.length === 0) {
+      menuEl.appendChild(makeEmpty("Nessuna notifica"));
+      if (badgeEl) badgeEl.textContent = "0";
+      return;
+    }
+
+    list.forEach((n) => {
+      const item = document.createElement("div");
+      item.className = "notif-item";
+      if (n.link) {
+        item.addEventListener("click", () => { window.location.href = n.link; });
+        item.style.cursor = "pointer";
+      }
+      const title = document.createElement("div");
+      title.className = "notif-title";
+      title.textContent = n.title || "Notifica";
+      const text = document.createElement("div");
+      text.className = "notif-text";
+      text.textContent = n.text || "";
+      const meta = document.createElement("div");
+      meta.className = "notif-meta";
+      meta.textContent = n.time || "";
+      item.appendChild(title);
+      if (n.text) item.appendChild(text);
+      if (n.time) item.appendChild(meta);
+      menuEl.appendChild(item);
+    });
+
+    if (badgeEl) {
+      badgeEl.textContent = "0";
+      badgeEl.style.display = "none";
+    }
   }
 
   function setupHeader() {
@@ -587,8 +623,10 @@ if (!empty($sessionAvatar)) {
     var mainNav = header.querySelector("#mainNav");
     var userBtn = header.querySelector("#userBtn");
     var userMenu = header.querySelector("#userMenu");
-    // notifiche disabilitate
-    var state = { mainNav: mainNav, userMenu: userMenu, notifBtn: null, notifMenu: null, notifBadge: null };
+    var notifBtn = header.querySelector("#notifBtn");
+    var notifMenu = header.querySelector("#notifMenu");
+    var notifBadge = header.querySelector("#notifBadge");
+    var state = { mainNav: mainNav, userMenu: userMenu, notifBtn: notifBtn, notifMenu: notifMenu, notifBadge: notifBadge };
 
     if (mobileBtn && mainNav) {
       mobileBtn.addEventListener("click", function (e) {
@@ -605,11 +643,31 @@ if (!empty($sessionAvatar)) {
         e.stopPropagation();
         var isOpen = userMenu.classList.toggle("open");
         if (isOpen && mainNav) mainNav.classList.remove("open");
-        // notifiche disabilitate
       });
     }
 
-    // notifiche disabilitate: nessun fetch o pulsante
+    if (notifBtn && notifMenu) {
+      notifBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var isOpen = notifMenu.classList.toggle("open");
+        notifBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        if (isOpen) {
+          if (mainNav) mainNav.classList.remove("open");
+          if (userMenu) userMenu.classList.remove("open");
+          notifMenu.innerHTML = '<div class="notif-empty">Caricamento...</div>';
+          fetch("/api/notifications.php?mark_read=1", { credentials: "include" })
+            .then(res => res.ok ? res.json() : Promise.reject(res))
+            .then(data => {
+              renderNotifs(notifMenu, notifBadge, data.notifications || []);
+            })
+            .catch(() => {
+              notifMenu.innerHTML = '<div class="notif-empty">Errore nel caricamento</div>';
+            });
+          if (notifBadge) notifBadge.style.display = "none";
+        }
+      });
+    }
 
     document.addEventListener("click", function (e) {
       if (header.contains(e.target)) return;
