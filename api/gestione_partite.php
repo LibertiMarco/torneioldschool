@@ -200,6 +200,55 @@ function push_notifica_users(mysqli $conn, array $userIds, string $tipo, string 
   $stmt->close();
 }
 
+function inviaNotificaEsito(mysqli $conn, int $partitaId, ?array $info = null): void {
+  ensure_partite_notifica_flag($conn);
+
+  $meta = $conn->prepare("SELECT torneo, fase, squadra_casa, squadra_ospite, gol_casa, gol_ospite, giocata, notifica_esito_inviata, data_partita, ora_partita FROM partite WHERE id=?");
+  if (!$meta) return;
+  $meta->bind_param('i', $partitaId);
+  $meta->execute();
+  $row = $meta->get_result()->fetch_assoc();
+  $meta->close();
+  if (!$row) return;
+
+  $giocata = (int)($row['giocata'] ?? 0) === 1;
+  $giaNotificata = (int)($row['notifica_esito_inviata'] ?? 0) === 1;
+  if (!$giocata || $giaNotificata) return;
+
+  $torneo = $info['torneo'] ?? $row['torneo'];
+  $casa = $info['squadra_casa'] ?? $row['squadra_casa'];
+  $osp = $info['squadra_ospite'] ?? $row['squadra_ospite'];
+  $golCasa = $info['gol_casa'] ?? (int)($row['gol_casa'] ?? 0);
+  $golOsp = $info['gol_ospite'] ?? (int)($row['gol_ospite'] ?? 0);
+  $matchLabel = $casa . ' - ' . $osp;
+  $scoreLabel = $golCasa . ' - ' . $golOsp;
+  $whenLabel = trim(($row['data_partita'] ?? '') . ' ' . ($row['ora_partita'] ?? ''));
+
+  $uids = array_unique(array_merge(
+    get_utenti_per_squadre($conn, $torneo, [$casa, $osp]),
+    get_followers_torneo($conn, $torneo),
+    get_followers_squadre($conn, $torneo, [$casa, $osp])
+  ));
+
+  if (!empty($uids)) {
+    push_notifica_users(
+      $conn,
+      $uids,
+      'match_finale',
+      'Risultato finale',
+      $matchLabel . ' | ' . $scoreLabel . ($whenLabel ? ' | ' . $whenLabel : ''),
+      '/tornei.php'
+    );
+  }
+
+  $upd = $conn->prepare("UPDATE partite SET notifica_esito_inviata = 1 WHERE id = ?");
+  if ($upd) {
+    $upd->bind_param('i', $partitaId);
+    $upd->execute();
+    $upd->close();
+  }
+}
+
 // ===== OPERAZIONI CRUD =====
 function squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, $excludeId = null) {
   $sql = "
@@ -346,6 +395,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         if ($stmt->execute()) {
           $successo = 'Partita aggiornata correttamente.';
+          inviaNotificaEsito($conn, $id, [
+            'partita_id' => $id,
+            'torneo' => $torneo,
+            'fase' => $fase,
+            'squadra_casa' => $casa,
+            'squadra_ospite' => $ospite,
+            'gol_casa' => $gol_casa,
+            'gol_ospite' => $gol_ospite,
+          ]);
         } else {
           $errore = 'Aggiornamento non riuscito.';
         }

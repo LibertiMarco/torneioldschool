@@ -329,10 +329,10 @@ function get_followers_squadre(mysqli $conn, string $torneo, array $squadre): ar
 }
 
 function get_utenti_per_squadre(mysqli $conn, string $torneo, array $squadre): array {
-    if (empty($squadre)) return [];
-    $place = implode(',', array_fill(0, count($squadre), '?'));
-    $types = str_repeat('s', count($squadre) + 1); // squadre + torneo
-    $sql = "
+  if (empty($squadre)) return [];
+  $place = implode(',', array_fill(0, count($squadre), '?'));
+  $types = str_repeat('s', count($squadre) + 1); // squadre + torneo
+  $sql = "
       SELECT DISTINCT g.utente_id
       FROM squadre s
       JOIN squadre_giocatori sg ON sg.squadra_id = s.id
@@ -350,42 +350,14 @@ function get_utenti_per_squadre(mysqli $conn, string $torneo, array $squadre): a
         $ids[] = (int)$row['utente_id'];
       }
     }
-    $stmt->close();
-    return array_values(array_unique($ids));
+  $stmt->close();
+  return array_values(array_unique($ids));
 }
 
-function stats_present_for_both(mysqli $conn, int $partitaId): bool {
-    $sql = "
-      SELECT s.nome AS squadra, COUNT(*) AS cnt
-      FROM partita_giocatore pg
-      JOIN partite p ON p.id = pg.partita_id
-      JOIN squadre_giocatori sg ON sg.giocatore_id = pg.giocatore_id
-      JOIN squadre s ON s.id = sg.squadra_id
-      WHERE pg.partita_id = ?
-        AND s.torneo = p.torneo
-        AND s.nome IN (p.squadra_casa, p.squadra_ospite)
-      GROUP BY s.nome
-    ";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) return false;
-    $stmt->bind_param('i', $partitaId);
-    $teams = [];
-    if ($stmt->execute()) {
-      $res = $stmt->get_result();
-      while ($row = $res->fetch_assoc()) {
-        $teams[] = $row['squadra'];
-      }
-    }
-    $stmt->close();
-    return count(array_unique($teams)) >= 2;
-}
-
-function maybeNotificaFinale(mysqli $conn, ?array $info): void {
-    if (!$info || empty($info['partita_id'])) return;
+function inviaNotificaEsito(mysqli $conn, int $partitaId, ?array $info = null): void {
     ensure_partite_notifica_flag($conn);
-    $partitaId = (int)$info['partita_id'];
 
-    $meta = $conn->prepare("SELECT giocata, notifica_esito_inviata, data_partita, ora_partita FROM partite WHERE id=?");
+    $meta = $conn->prepare("SELECT torneo, fase, squadra_casa, squadra_ospite, gol_casa, gol_ospite, giocata, notifica_esito_inviata, data_partita, ora_partita FROM partite WHERE id=?");
     if (!$meta) return;
     $meta->bind_param('i', $partitaId);
     $meta->execute();
@@ -397,14 +369,13 @@ function maybeNotificaFinale(mysqli $conn, ?array $info): void {
     $giaNotificata = (int)($row['notifica_esito_inviata'] ?? 0) === 1;
     if (!$giocata || $giaNotificata) return;
 
-    // evita notifiche premature: attendi almeno una statistica per entrambe le squadre
-    if (!stats_present_for_both($conn, $partitaId)) return;
-
-    $torneo = $info['torneo'];
-    $casa = $info['squadra_casa'];
-    $osp = $info['squadra_ospite'];
+    $torneo = $info['torneo'] ?? $row['torneo'];
+    $casa = $info['squadra_casa'] ?? $row['squadra_casa'];
+    $osp = $info['squadra_ospite'] ?? $row['squadra_ospite'];
+    $golCasa = $info['gol_casa'] ?? (int)($row['gol_casa'] ?? 0);
+    $golOsp = $info['gol_ospite'] ?? (int)($row['gol_ospite'] ?? 0);
     $matchLabel = $casa . ' - ' . $osp;
-    $scoreLabel = ($info['gol_casa'] ?? 0) . ' - ' . ($info['gol_ospite'] ?? 0);
+    $scoreLabel = $golCasa . ' - ' . $golOsp;
     $whenLabel = trim(($row['data_partita'] ?? '') . ' ' . ($row['ora_partita'] ?? ''));
 
     $uids = array_unique(array_merge(
@@ -413,14 +384,16 @@ function maybeNotificaFinale(mysqli $conn, ?array $info): void {
         get_followers_squadre($conn, $torneo, [$casa, $osp])
     ));
 
-    push_notifica_users(
-        $conn,
-        $uids,
-        'match_finale',
-        'Risultato finale',
-        $matchLabel . ' | ' . $scoreLabel . ($whenLabel ? ' | ' . $whenLabel : ''),
-        '/tornei.php'
-    );
+    if (!empty($uids)) {
+        push_notifica_users(
+            $conn,
+            $uids,
+            'match_finale',
+            'Risultato finale',
+            $matchLabel . ' | ' . $scoreLabel . ($whenLabel ? ' | ' . $whenLabel : ''),
+            '/tornei.php'
+        );
+    }
 
     $upd = $conn->prepare("UPDATE partite SET notifica_esito_inviata = 1 WHERE id = ?");
     if ($upd) {
@@ -513,7 +486,7 @@ if ($azione === 'add') {
     $infoClassifica = aggiornaGolPartita($conn, $partita_id);
     marcaPartitaGiocata($conn, $partita_id);
     aggiornaClassificaDaInfo($infoClassifica);
-    maybeNotificaFinale($conn, $infoClassifica);
+    inviaNotificaEsito($conn, $partita_id, $infoClassifica);
 
     echo json_encode(["success" => true, "message" => "Statistica aggiunta"]);
     exit;
