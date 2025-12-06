@@ -24,6 +24,7 @@ if (!function_exists('optimize_image_file')) {
             return false;
         }
         $mime = strtolower($info['mime']);
+        $supportsAlpha = in_array($mime, ['image/png', 'image/webp'], true);
         $loaders = [
             'image/jpeg' => 'imagecreatefromjpeg',
             'image/png' => 'imagecreatefrompng',
@@ -66,6 +67,12 @@ if (!function_exists('optimize_image_file')) {
             return false;
         }
 
+        // Preserve alpha for PNG/WEBP even when we do not resize
+        if ($supportsAlpha) {
+            imagealphablending($src, false);
+            imagesavealpha($src, true);
+        }
+
         // Auto-orient JPEG
         if ($mime === 'image/jpeg' && function_exists('exif_read_data')) {
             $exif = @exif_read_data($path);
@@ -95,11 +102,16 @@ if (!function_exists('optimize_image_file')) {
         $dst = $src;
         if ($targetW !== $width || $targetH !== $height) {
             $dst = imagecreatetruecolor($targetW, $targetH);
-            if (in_array($mime, ['image/png', 'image/webp'], true)) {
+            if ($supportsAlpha) {
                 imagealphablending($dst, false);
                 imagesavealpha($dst, true);
             }
             imagecopyresampled($dst, $src, 0, 0, 0, 0, $targetW, $targetH, $width, $height);
+        }
+
+        if ($supportsAlpha) {
+            imagealphablending($dst, false);
+            imagesavealpha($dst, true);
         }
 
         $tmp = $path . '.tmpopt';
