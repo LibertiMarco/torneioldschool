@@ -125,6 +125,77 @@ function ensure_follow_table(mysqli $conn): void {
   ");
 }
 
+function reset_classifica(mysqli $conn, string $torneo): void {
+  if ($torneo === '') return;
+  $stmt = $conn->prepare("
+    UPDATE squadre
+    SET giocate = 0, vinte = 0, pareggiate = 0, perse = 0,
+        punti = 0, gol_fatti = 0, gol_subiti = 0, differenza_reti = 0
+    WHERE torneo = ?
+  ");
+  if ($stmt) {
+    $stmt->bind_param('s', $torneo);
+    $stmt->execute();
+    $stmt->close();
+  }
+}
+
+function applica_risultato_classifica(mysqli $conn, string $torneo, string $squadra, int $gf, int $gs): void {
+  $vittoria = $gf > $gs ? 1 : 0;
+  $pareggio = $gf === $gs ? 1 : 0;
+  $sconfitta = $gf < $gs ? 1 : 0;
+  $punti = $vittoria ? 3 : ($pareggio ? 1 : 0);
+  $stmt = $conn->prepare("
+    UPDATE squadre
+    SET giocate = giocate + 1,
+        vinte = vinte + ?,
+        pareggiate = pareggiate + ?,
+        perse = perse + ?,
+        punti = punti + ?,
+        gol_fatti = gol_fatti + ?,
+        gol_subiti = gol_subiti + ?,
+        differenza_reti = gol_fatti + ? - (gol_subiti + ?)
+    WHERE torneo = ? AND nome = ?
+  ");
+  if ($stmt) {
+    $stmt->bind_param(
+      'iiiiiiiss',
+      $vittoria,
+      $pareggio,
+      $sconfitta,
+      $punti,
+      $gf,
+      $gs,
+      $gf,
+      $gs,
+      $torneo,
+      $squadra
+    );
+    $stmt->execute();
+    $stmt->close();
+  }
+}
+
+function ricostruisci_classifica_da_partite(mysqli $conn, string $torneo): void {
+  if ($torneo === '') return;
+  reset_classifica($conn, $torneo);
+  $sel = $conn->prepare("
+    SELECT squadra_casa, squadra_ospite, COALESCE(gol_casa,0) AS gol_casa, COALESCE(gol_ospite,0) AS gol_ospite
+    FROM partite
+    WHERE torneo = ? AND giocata = 1 AND UPPER(COALESCE(fase, 'REGULAR')) = 'REGULAR'
+  ");
+  if (!$sel) return;
+  $sel->bind_param('s', $torneo);
+  if ($sel->execute()) {
+    $res = $sel->get_result();
+    while ($row = $res->fetch_assoc()) {
+      applica_risultato_classifica($conn, $torneo, $row['squadra_casa'], (int)$row['gol_casa'], (int)$row['gol_ospite']);
+      applica_risultato_classifica($conn, $torneo, $row['squadra_ospite'], (int)$row['gol_ospite'], (int)$row['gol_casa']);
+    }
+  }
+  $sel->close();
+}
+
 function get_utenti_per_squadre(mysqli $conn, string $torneo, array $squadre): array {
   if (empty($squadre)) return [];
   $place = implode(',', array_fill(0, count($squadre), '?'));
@@ -396,6 +467,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         if ($stmt->execute()) {
           $successo = 'Partita aggiornata correttamente.';
+          if (strtoupper($fase) === 'REGULAR') {
+            ricostruisci_classifica_da_partite($conn, $torneo);
+          }
           inviaNotificaEsito($conn, $id, [
             'partita_id' => $id,
             'torneo' => $torneo,
@@ -417,6 +491,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   if ($azione === 'elimina') {
     $id = (int)($_POST['partita_id'] ?? 0);
+    $torneoPartita = null;
+    if ($id > 0) {
+      $oldStmt = $conn->prepare("SELECT torneo FROM partite WHERE id=?");
+      if ($oldStmt) {
+        $oldStmt->bind_param('i', $id);
+        if ($oldStmt->execute()) {
+          $torneoPartita = $oldStmt->get_result()->fetch_assoc()['torneo'] ?? null;
+        }
+        $oldStmt->close();
+      }
+    }
     if ($id <= 0) {
       $errore = 'Seleziona una partita valida da eliminare.';
     } else {
@@ -425,6 +510,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param('i', $id);
         if ($stmt->execute()) {
           $successo = 'Partita eliminata.';
+          if ($torneoPartita) {
+            ricostruisci_classifica_da_partite($conn, $torneoPartita);
+          }
         } else {
           $errore = 'Eliminazione non riuscita.';
         }
