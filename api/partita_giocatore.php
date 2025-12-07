@@ -205,14 +205,6 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId): ?array {
     ];
 }
 
-function marcaPartitaGiocata(mysqli $conn, int $partitaId): void {
-    $upd = $conn->prepare("UPDATE partite SET giocata = 1 WHERE id = ?");
-    if ($upd) {
-        $upd->bind_param("i", $partitaId);
-        $upd->execute();
-    }
-}
-
 function aggiornaClassificaDaInfo(?array $info): void {
     if (!$info) return;
     $partitaModel = new Partita();
@@ -485,7 +477,6 @@ if ($azione === 'add') {
 
     ricalcolaStatistiche($conn, $partita_id, $giocatore);
     $infoClassifica = aggiornaGolPartita($conn, $partita_id);
-    marcaPartitaGiocata($conn, $partita_id);
     aggiornaClassificaDaInfo($infoClassifica);
     inviaNotificaEsito($conn, $partita_id, $infoClassifica);
 
@@ -531,7 +522,6 @@ if ($azione === 'edit') {
     if ($rPrev) {
       ricalcolaStatistiche($conn, (int)$rPrev['partita_id'], (int)$rPrev['giocatore_id']);
       $infoClassifica = aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
-      marcaPartitaGiocata($conn, (int)$rPrev['partita_id']);
       aggiornaClassificaDaInfo($infoClassifica);
       maybeNotificaFinale($conn, $infoClassifica);
     }
@@ -557,7 +547,6 @@ if ($azione === 'delete') {
     if ($rPrev) {
       ricalcolaStatistiche($conn, (int)$rPrev['partita_id'], (int)$rPrev['giocatore_id']);
       $infoClassifica = aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
-      marcaPartitaGiocata($conn, (int)$rPrev['partita_id']);
       aggiornaClassificaDaInfo($infoClassifica);
       maybeNotificaFinale($conn, $infoClassifica);
     }
