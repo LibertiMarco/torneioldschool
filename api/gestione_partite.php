@@ -168,7 +168,7 @@ function applica_risultato_classifica(mysqli $conn, string $torneo, string $squa
   ");
   if ($stmt) {
     $stmt->bind_param(
-      'iiiiiiiss',
+      'iiiiiiiiss',
       $vittoria,
       $pareggio,
       $sconfitta,
