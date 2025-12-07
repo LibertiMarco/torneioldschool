@@ -1427,7 +1427,19 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           body: fd,
           headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
         });
-        const data = await res.json();
+        const raw = await res.text();
+        let data = null;
+        try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+        if (!res.ok) {
+          const msg = (data && (data.error || data.message)) || `Errore ${res.status}`;
+          showInlineMessage('error', msg);
+          return;
+        }
+        if (!data) {
+          const msg = raw && raw.includes('login.php') ? 'Sessione scaduta, accedi di nuovo.' : 'Risposta non valida dal server.';
+          showInlineMessage('error', msg);
+          return;
+        }
         if (data && Array.isArray(data.partite)) {
           partiteData = data.partite;
           refreshSelectorsFromData();
