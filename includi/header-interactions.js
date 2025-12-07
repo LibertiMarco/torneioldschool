@@ -8,6 +8,13 @@
   const headerStates = new Map();
   let globalListenersReady = false;
 
+  function updateBadgeDisplay(badgeEl, unread) {
+    if (!badgeEl) return;
+    const count = Math.max(0, Number.isFinite(unread) ? unread : 0);
+    badgeEl.textContent = count;
+    badgeEl.style.display = count > 0 ? "inline-flex" : "none";
+  }
+
   function closeMenus(header, state) {
     if (!state) {
       return;
@@ -72,7 +79,7 @@
     const notifBtn = header.querySelector("#notifBtn");
     const notifMenu = header.querySelector("#notifMenu");
     const notifBadge = header.querySelector("#notifBadge");
-    const state = { mainNav, userMenu, notifBtn, notifMenu, notifBadge, notifLoaded: false, notifLoading: false };
+    const state = { mainNav, userMenu, notifBtn, notifMenu, notifBadge, notifLoaded: false, notifLoading: false, badgeLoading: false, badgePollId: null };
     headerStates.set(header, state);
 
     if (mobileBtn && mainNav) {
@@ -116,9 +123,13 @@
         }
       });
     }
+
+    if (state.notifBadge) {
+      startNotifBadgePolling(state);
+    }
   }
 
-  function renderNotifications(state, data) {
+  function renderNotifications(state, data, markedAsRead = false) {
     const menu = state.notifMenu;
     const badge = state.notifBadge;
     if (!menu) return;
@@ -161,9 +172,27 @@
 
     if (badge) {
       const unread = (data && typeof data.unread === "number") ? data.unread : 0;
-      badge.textContent = unread;
-      badge.style.display = unread > 0 ? "inline-flex" : "none";
+      updateBadgeDisplay(badge, markedAsRead ? 0 : unread);
     }
+  }
+
+  function fetchBadgeCount(state) {
+    if (!state || state.badgeLoading || !state.notifBadge) return;
+    state.badgeLoading = true;
+    fetch("/api/notifications.php", { credentials: "include" })
+      .then((res) => res.ok ? res.json() : Promise.reject(res))
+      .then((data) => {
+        const unread = (data && typeof data.unread === "number") ? data.unread : 0;
+        updateBadgeDisplay(state.notifBadge, unread);
+      })
+      .catch(() => {})
+      .finally(() => { state.badgeLoading = false; });
+  }
+
+  function startNotifBadgePolling(state) {
+    if (!state || state.badgePollId || !state.notifBadge) return;
+    fetchBadgeCount(state);
+    state.badgePollId = window.setInterval(() => fetchBadgeCount(state), 60000);
   }
 
   function loadNotifications(state) {
@@ -175,7 +204,7 @@
     fetch("/api/notifications.php?mark_read=1", { credentials: "include" })
       .then((res) => res.ok ? res.json() : Promise.reject(res))
       .then((data) => {
-        renderNotifications(state, data || {});
+        renderNotifications(state, data || {}, true);
       })
       .catch(() => {
         if (state.notifMenu) {

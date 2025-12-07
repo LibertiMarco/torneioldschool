@@ -223,6 +223,7 @@ function inviaNotificaEsito(mysqli $conn, int $partitaId, ?array $info = null): 
   $matchLabel = $casa . ' - ' . $osp;
   $scoreLabel = $golCasa . ' - ' . $golOsp;
   $whenLabel = trim(($row['data_partita'] ?? '') . ' ' . ($row['ora_partita'] ?? ''));
+  $matchLink = '/tornei/partita_eventi.php?id=' . $partitaId . '&torneo=' . rawurlencode($torneo);
 
   $uids = array_unique(array_merge(
     get_utenti_per_squadre($conn, $torneo, [$casa, $osp]),
@@ -237,7 +238,7 @@ function inviaNotificaEsito(mysqli $conn, int $partitaId, ?array $info = null): 
       'match_finale',
       'Risultato finale',
       $matchLabel . ' | ' . $scoreLabel . ($whenLabel ? ' | ' . $whenLabel : ''),
-      '/tornei.php'
+      $matchLink
     );
   }
 
