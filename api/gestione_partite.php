@@ -163,18 +163,16 @@ function applica_risultato_classifica(mysqli $conn, string $torneo, string $squa
         punti = punti + ?,
         gol_fatti = gol_fatti + ?,
         gol_subiti = gol_subiti + ?,
-        differenza_reti = gol_fatti + ? - (gol_subiti + ?)
+        differenza_reti = gol_fatti - gol_subiti
     WHERE torneo = ? AND nome = ?
   ");
   if ($stmt) {
     $stmt->bind_param(
-      'iiiiiiiiss',
+      'iiiiiiis',
       $vittoria,
       $pareggio,
       $sconfitta,
       $punti,
-      $gf,
-      $gs,
       $gf,
       $gs,
       $torneo,
