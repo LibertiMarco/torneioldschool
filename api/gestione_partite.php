@@ -192,10 +192,7 @@ function ricostruisci_classifica_da_partite(mysqli $conn, string $torneo): void 
     SELECT squadra_casa, squadra_ospite, COALESCE(gol_casa,0) AS gol_casa, COALESCE(gol_ospite,0) AS gol_ospite
     FROM partite
     WHERE torneo = ?
-      AND (
-        giocata = 1
-        OR (gol_casa IS NOT NULL AND gol_ospite IS NOT NULL)
-      )
+      AND giocata = 1
       AND UPPER(COALESCE(fase, 'REGULAR')) = 'REGULAR'
   ");
   if (!$sel) return;
