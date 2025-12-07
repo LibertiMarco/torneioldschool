@@ -1164,7 +1164,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
       const roundSel = document.getElementById('round_eliminazione_mod');
       if (roundSel) roundSel.value = '';
-    fillField('giornata_mod', partita.giornata);
+      fillField('giornata_mod', partita.giornata);
     }
     fillField('gol_casa_mod', partita.gol_casa);
     fillField('gol_ospite_mod', partita.gol_ospite);
