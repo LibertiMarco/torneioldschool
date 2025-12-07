@@ -82,6 +82,7 @@ function giornata_to_roundLabel(?int $giornata, array $map): ?string {
 ensure_notifiche_table($conn);
 ensure_follow_table($conn);
 ensure_partite_notifica_flag($conn);
+ensure_partite_unique_index($conn);
 
 // ==== NOTIFICHE ====
 function ensure_notifiche_table(mysqli $conn): void {
@@ -105,6 +106,14 @@ function ensure_partite_notifica_flag(mysqli $conn): void {
   $col = $conn->query("SHOW COLUMNS FROM partite LIKE 'notifica_esito_inviata'");
   if ($col && $col->num_rows === 0) {
     $conn->query("ALTER TABLE partite ADD COLUMN notifica_esito_inviata TINYINT(1) NOT NULL DEFAULT 0");
+  }
+}
+
+// Vincolo di unicità per evitare duplicati nello stesso turno
+function ensure_partite_unique_index(mysqli $conn): void {
+  $idx = $conn->query("SHOW INDEX FROM partite WHERE Key_name = 'uq_partita_turno'");
+  if ($idx && $idx->num_rows === 0) {
+    $conn->query("CREATE UNIQUE INDEX uq_partita_turno ON partite (torneo, fase, giornata, squadra_casa, squadra_ospite)");
   }
 }
 
@@ -182,7 +191,12 @@ function ricostruisci_classifica_da_partite(mysqli $conn, string $torneo): void 
   $sel = $conn->prepare("
     SELECT squadra_casa, squadra_ospite, COALESCE(gol_casa,0) AS gol_casa, COALESCE(gol_ospite,0) AS gol_ospite
     FROM partite
-    WHERE torneo = ? AND giocata = 1 AND UPPER(COALESCE(fase, 'REGULAR')) = 'REGULAR'
+    WHERE torneo = ?
+      AND (
+        giocata = 1
+        OR (gol_casa IS NOT NULL AND gol_ospite IS NOT NULL)
+      )
+      AND UPPER(COALESCE(fase, 'REGULAR')) = 'REGULAR'
   ");
   if (!$sel) return;
   $sel->bind_param('s', $torneo);
@@ -404,8 +418,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           );
           if ($stmt->execute()) {
             $successo = 'Partita creata correttamente.';
+          } else {
+            if ((int)$stmt->errno === 1062) {
+              $errore = 'Esiste già una partita per questo turno con una delle squadre selezionate.';
             } else {
-            $errore = 'Inserimento non riuscito.';
+              $errore = 'Inserimento non riuscito.';
+            }
           }
           $stmt->close();
         } else {
@@ -524,12 +542,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
+// AJAX helper: se la richiesta chiede JSON, rispondiamo senza ricaricare tutta la pagina
+$isAjax = (
+  (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') ||
+  (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
+);
+
 $partite = [];
 $res = $conn->query("SELECT id, torneo, fase, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, arbitro, link_youtube, link_instagram, created_at FROM partite ORDER BY data_partita DESC, ora_partita DESC, id DESC");
 if ($res) {
   while ($row = $res->fetch_assoc()) {
     $partite[] = $row;
   }
+}
+
+if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
+  header('Content-Type: application/json; charset=utf-8');
+  echo json_encode([
+    'success' => $errore === '' && $successo !== '',
+    'error' => $errore,
+    'message' => $successo,
+    'partite' => $partite,
+  ]);
+  exit;
 }
 ?>
 <!DOCTYPE html>
@@ -640,7 +675,7 @@ if ($res) {
     <section class="tab-section active" data-tab="crea">
       <div class="form-card">
         <h3>Crea partita</h3>
-        <form class="admin-form inline" method="POST">
+        <form class="admin-form inline" method="POST" id="formCrea">
         <input type="hidden" name="azione" value="crea">
         <div>
           <label>Torneo</label>
@@ -933,7 +968,7 @@ if ($res) {
 </div>
 
 <script>
-  const partiteData = <?php echo json_encode($partite, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+  let partiteData = <?php echo json_encode($partite, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
   const squadreMap = <?php echo json_encode($squadrePerTorneo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
   const roundLabelMap = {
     'TRENTADUESIMI': 6,
@@ -1056,6 +1091,19 @@ if ($res) {
   }
   // inizializza filtrando appena caricata la pagina
   populateSquadreFiltrate();
+
+  const showInlineMessage = (type, text) => {
+    const container = document.querySelector('.admin-container');
+    if (!container || !text) return;
+    let box = document.getElementById('inlineMessage');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'inlineMessage';
+      container.insertBefore(box, container.querySelector('.tab-buttons'));
+    }
+    box.className = type === 'error' ? 'alert-error' : 'alert-success';
+    box.textContent = text;
+  };
 
   enforceDifferentTeams('squadraCasaCrea', 'squadraOspiteCrea');
 
@@ -1357,6 +1405,58 @@ if ($res) {
       .then(html => { footer.innerHTML = html; })
       .catch(err => console.error('Errore footer:', err));
   }
+
+  const refreshSelectorsFromData = () => {
+    populateSquadreFiltrate();
+    document.getElementById('selTorneoMod')?.dispatchEvent(new Event('change'));
+    document.getElementById('selTorneoElim')?.dispatchEvent(new Event('change'));
+  };
+
+  const attachAjaxForm = (formId) => {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const oldText = submitBtn?.textContent;
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Salvataggio...'; }
+      try {
+        const res = await fetch(window.location.href, {
+          method: 'POST',
+          body: fd,
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+        });
+        const data = await res.json();
+        if (data && Array.isArray(data.partite)) {
+          partiteData = data.partite;
+          refreshSelectorsFromData();
+        }
+        if (data && data.success) {
+          showInlineMessage('success', data.message || 'Operazione completata');
+          if (formId === 'formCrea') {
+            form.reset();
+            populateSquadreFiltrate();
+          } else if (formId === 'formModifica') {
+            const idSel = form.querySelector('[name="partita_id"]')?.value;
+            if (idSel) {
+              const p = partiteData.find(p => String(p.id) === String(idSel));
+              if (p) applyPartitaModForm(p);
+            }
+          }
+        } else {
+          showInlineMessage('error', data?.error || 'Errore nel salvataggio');
+        }
+      } catch (err) {
+        showInlineMessage('error', 'Errore di rete, riprova.');
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = oldText; }
+      }
+    });
+  };
+
+  attachAjaxForm('formCrea');
+  attachAjaxForm('formModifica');
 </script>
 
 </body>
