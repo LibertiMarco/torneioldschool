@@ -2,7 +2,7 @@
 // Uso: php api/script/purge_data.php
 require_once __DIR__ . '/../../includi/db.php';
 
-$RETENTION_EVENTS_DAYS = 365;    // eventi_utente (tracking)
+$RETENTION_EVENTS_DAYS = 45;     // eventi_utente (tracking)
 $RETENTION_LOG_DAYS = 365;       // consensi_log, newsletter_log
 $RETENTION_ANON_DAYS = 365;      // consensi_anonimi (anonimi)
 
