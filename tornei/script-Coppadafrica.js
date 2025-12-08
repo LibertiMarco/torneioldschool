@@ -183,6 +183,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
     const giornataSelect = document.getElementById("giornataSelect");
     const wrapperGiornata = document.getElementById("wrapperGiornataSelect");
     let giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
+    const previousTurn = giornataSelect ? giornataSelect.value : "";
 
     // mostra la select solo in fase finale
     if (wrapperGiornata) {
@@ -205,6 +206,9 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
           opt.textContent = g === "1" ? "Finale" : g === "2" ? "Semifinali" : `Fase ${g}`;
           giornataSelect.appendChild(opt);
         });
+        if (previousTurn && giornateDisponibili.includes(previousTurn)) {
+          giornataSelect.value = previousTurn;
+        }
       }
     }
 
@@ -365,8 +369,8 @@ async function caricaPlayoff() {
         }
 
         matchList.forEach(partita => {
-          const hasScore = partita.gol_casa !== null && partita.gol_ospite !== null;
-          const giocata = (Number(partita.giocata) === 1) || hasScore;
+          const giocata = Number(partita.giocata) === 1;
+          const hasScore = giocata && partita.gol_casa !== null && partita.gol_ospite !== null;
           const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
           const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
           const dataStr = formattaData(partita.data_partita);
