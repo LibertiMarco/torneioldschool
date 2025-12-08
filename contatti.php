@@ -293,21 +293,21 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
   <div id="header-container"></div>
 
   <div class="page-wrapper">
+    <div class="contact-ads" style="text-align:center;">
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-8390787841690316"
+           data-ad-slot="3707275285"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+      <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
+
     <section class="contact-container">
       <div class="contact-form">
         <h1>Contattaci</h1>
-
-        <div class="contact-ads">
-          <ins class="adsbygoogle"
-               style="display:block"
-               data-ad-client="ca-pub-8390787841690316"
-               data-ad-slot="3707275285"
-               data-ad-format="auto"
-               data-full-width-responsive="true"></ins>
-          <script>
-            (adsbygoogle = window.adsbygoogle || []).push({});
-          </script>
-        </div>
 
         <form method="POST" action="">
           <?= csrf_field('contact_form') ?> 
@@ -335,18 +335,6 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
           <div class="error-message"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
 
-        <div class="contact-ads">
-          <ins class="adsbygoogle"
-               style="display:block"
-               data-ad-client="ca-pub-8390787841690316"
-               data-ad-slot="3707275285"
-               data-ad-format="auto"
-               data-full-width-responsive="true"></ins>
-          <script>
-            (adsbygoogle = window.adsbygoogle || []).push({});
-          </script>
-        </div>
-
         <div class="footer-socials">
           <a href="https://www.instagram.com/tornei_old_school/" target="_blank"><img src="/img/icone/instagram.png" alt="Instagram"></a>
           <a href="https://www.facebook.com/TotorABullet" target="_blank"><img src="/img/icone/facebook.png" alt="Facebook"></a>
@@ -356,6 +344,18 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
         </div>
       </div>
     </section>
+  </div>
+
+  <div class="contact-ads" style="text-align:center; margin: 10px auto 20px;">
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-8390787841690316"
+         data-ad-slot="3707275285"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+      (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
   </div>
 
   <div id="footer-container"></div>
