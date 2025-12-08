@@ -184,14 +184,14 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
     const wrapperGiornata = document.getElementById("wrapperGiornataSelect");
     const giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
 
+    // mostra la select solo in fase finale
     if (wrapperGiornata) {
-      const isRegular = (faseSelezionata || "").toUpperCase() === "REGULAR";
-      wrapperGiornata.style.display = isRegular ? "flex" : "none";
+      wrapperGiornata.style.display = isGironi ? "none" : "flex";
     }
 
     // Gestione select giornate: nascosta sui gironi, attiva solo per fase finale (semi/finale)
     if (giornataSelect) {
-      if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
+      if (isGironi) {
         giornataSelect.innerHTML = '<option value="">Tutte</option>';
       } else {
         giornataSelect.innerHTML = '<option value="">Tutte</option>';
@@ -212,14 +212,12 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       const giornataDiv = document.createElement("div");
       giornataDiv.classList.add("giornata");
 
-      const titolo = document.createElement("h3");
-      if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
-        titolo.textContent = `Giornata ${numGiornata}`;
-      } else {
+      if (!isGironi) {
+        const titolo = document.createElement("h3");
         const labelRound = roundLabelByKey[String(numGiornata)] || "Fase eliminazione";
         titolo.textContent = labelRound;
+        giornataDiv.appendChild(titolo);
       }
-      giornataDiv.appendChild(titolo);
 
       (dataFiltrata[numGiornata] || []).forEach(partita => {
         const partitaDiv = document.createElement("div");
