@@ -75,6 +75,42 @@ $notifications = [];
 $unreadCount = 0;
 $markRead = isset($_GET['mark_read']) && $_GET['mark_read'] === '1';
 
+// Elimina una singola notifica (generica o commento)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
+    $deleteId = (int)($_POST['delete_id'] ?? 0);
+    $tipoDel = strtolower(trim($_POST['type'] ?? 'generic'));
+    $deleted = 0;
+
+    if ($deleteId > 0) {
+        if ($tipoDel === 'comment') {
+            $hasCommentiTable = $conn->query("SHOW TABLES LIKE 'notifiche_commenti'");
+            if ($hasCommentiTable && $hasCommentiTable->num_rows > 0) {
+                $del = $conn->prepare("DELETE FROM notifiche_commenti WHERE id = ? AND utente_id = ?");
+                if ($del) {
+                    $del->bind_param('ii', $deleteId, $userId);
+                    $del->execute();
+                    $deleted = $del->affected_rows;
+                    $del->close();
+                }
+            }
+        } else {
+            $del = $conn->prepare("DELETE FROM notifiche WHERE id = ? AND utente_id = ?");
+            if ($del) {
+                $del->bind_param('ii', $deleteId, $userId);
+                $del->execute();
+                $deleted = $del->affected_rows;
+                $del->close();
+            }
+        }
+    }
+
+    echo json_encode([
+        'success' => $deleted > 0,
+        'deleted' => $deleted,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 // Notifiche generiche
 $tipoSelect = $hasTipoCol ? 'tipo' : "'generic' AS tipo";
 $stmt = $conn->prepare("

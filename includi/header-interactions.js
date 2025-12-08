@@ -147,6 +147,32 @@
     if (!list.length) {
       menu.appendChild(makeEmpty("Nessuna notifica"));
     } else {
+      const handleDelete = (notif, itemEl) => {
+        if (!notif || !notif.id) return;
+        fetch("/api/notifications.php", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ delete_id: notif.id, type: notif.type || "generic" })
+        })
+          .then(res => res.ok ? res.json() : Promise.reject(res))
+          .then(resp => {
+            if (resp && resp.success) {
+              if (itemEl && itemEl.parentNode) itemEl.parentNode.removeChild(itemEl);
+              const remaining = menu.querySelectorAll(".notif-item").length;
+              if (remaining === 0) {
+                menu.appendChild(makeEmpty("Nessuna notifica"));
+              }
+              if (badge) {
+                const current = parseInt(badge.textContent || "0", 10) || 0;
+                const nextVal = Math.max(0, current - (notif.read ? 0 : 1));
+                updateBadgeDisplay(badge, nextVal);
+              }
+            }
+          })
+          .catch(() => {});
+      };
+
       list.forEach((n) => {
         const item = document.createElement("div");
         item.className = "notif-item";
@@ -163,9 +189,27 @@
         const meta = document.createElement("div");
         meta.className = "notif-meta";
         meta.textContent = n.time || "";
+        const actions = document.createElement("div");
+        actions.className = "notif-actions";
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "notif-delete";
+        delBtn.textContent = "Elimina";
+        delBtn.style.marginLeft = "auto";
+        delBtn.style.background = "transparent";
+        delBtn.style.border = "none";
+        delBtn.style.color = "#15293e";
+        delBtn.style.cursor = "pointer";
+        delBtn.style.fontWeight = "700";
+        delBtn.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          handleDelete(n, item);
+        });
+        actions.appendChild(delBtn);
         item.appendChild(title);
         if (n.text) item.appendChild(text);
         if (n.time) item.appendChild(meta);
+        item.appendChild(actions);
         menu.appendChild(item);
       });
     }
