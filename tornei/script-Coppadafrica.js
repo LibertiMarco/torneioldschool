@@ -571,6 +571,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // cambio fase girone/eliminazione
   faseSelect.addEventListener("change", () => {
+    const legendaEsistente = document.querySelector(".legenda-coppe");
+    if (legendaEsistente) legendaEsistente.remove();
+
     if (faseSelect.value === "eliminazione") {
       // mostra bracket playoff
       classificaWrapper.style.display = "none";
