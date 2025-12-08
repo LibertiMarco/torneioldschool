@@ -319,7 +319,7 @@ $assetVersion = '20251208';
     <div class="regola">
       <h3>Struttura del Torneo</h3>
       <p>
-        Il torneo prevede <strong>8 squadre</strong> suddivise in <strong>2 gironi da 4</strong>, tutto in una sola serata.
+        Il torneo prevede <strong style="color:#d9a441;">8 squadre</strong> suddivise in <strong style="color:#d9a441;">2 gironi da 4</strong>, tutto in una sola serata.
       </p>
     </div>
 
@@ -329,21 +329,21 @@ $assetVersion = '20251208';
         Ogni squadra gioca <strong>3 partite</strong> (una contro ognuna delle altre del girone).
         Le gare di girone durano <strong>15 minuti</strong> a tempo unico.
       </p>
-      <p>Si qualificano le <strong>prime 2</strong> di ciascun girone.</p>
+      <p>Si qualificano le <strong style="color:#d9a441;">prime 2</strong> di ciascun girone.</p>
     </div>
 
     <div class="regola">
       <h3>Semifinali e Finale</h3>
       <p>
-        Semifinali incrociate: <strong>1ª Girone A vs 2ª Girone B</strong> e <strong>1ª Girone B vs 2ª Girone A</strong>.
-        Semifinali e finale durano <strong>20 minuti</strong> (tempo unico).
+        Semifinali incrociate: <strong>1° Girone A vs 2° Girone B</strong> e <strong>1° Girone B vs 2° Girone A</strong>.
+        Semifinali e finale durano <strong style="color:#d9a441;">20 minuti</strong> (tempo unico).
       </p>
       <p>Vince la Coppa d'Africa la squadra che si impone in finale.</p>
     </div>
 
     <div class="regola">
       <h3>Premi</h3>
-      <p>Premiazioni a fine serata per squadra vincitrice e migliori giocatori.</p>
+      <p>Premiazioni a fine serata per squadra vincitrice e <strong style="color:#d9a441;">migliori giocatori</strong>.</p>
     </div>
 
     <div class="regola">
@@ -358,9 +358,9 @@ $assetVersion = '20251208';
     <div class="regola">
       <h3>Formula</h3>
       <ul>
-        <li>6 partite di girone (3 per squadra).</li>
-        <li>2 semifinali.</li>
-        <li>1 finale.</li>
+        <li><strong style="color:#d9a441;">6 partite</strong> di girone (3 per squadra).</li>
+        <li><strong style="color:#d9a441;">2 semifinali</strong>.</li>
+        <li><strong style="color:#d9a441;">1 finale</strong>.</li>
       </ul>
     </div>
   </div>
@@ -457,5 +457,18 @@ $assetVersion = '20251208';
 
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
