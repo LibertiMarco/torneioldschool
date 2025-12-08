@@ -136,8 +136,8 @@ $assetVersion = '20251208';
     }
     .gironi-grid tr.gold-row td:first-child {
       font-weight: 800;
-      background: #f5d76e !important;
-      color: #000 !important;
+      background: #d9a441 !important;
+      color: #0f1f33 !important;
     }
     #marcatori {
       margin-bottom: 48px;
@@ -195,13 +195,12 @@ $assetVersion = '20251208';
         <label for="faseSelect">Seleziona fase:</label>
         <div class="filtro-fase-selects">
           <select id="faseSelect">
-            <option value="girone" selected>REGULAR SEASON</option>
-            <option value="eliminazione">ELIMINAZIONE DIRETTA</option>
+            <option value="girone" selected>GIRONI</option>
+            <option value="eliminazione">FASE FINALE</option>
           </select>
 
           <select id="coppaSelect" style="display: none;">
-            <option value="gold">COPPA GOLD</option>
-            <option value="silver">COPPA SILVER</option>
+            <option value="gold" selected>FASE FINALE</option>
           </select>
         </div>
       </div>
@@ -267,9 +266,8 @@ $assetVersion = '20251208';
         <div class="filtro-riga">
           <label for="faseCalendario">Fase:</label>
           <select id="faseCalendario">
-            <option value="REGULAR" selected>Regular</option>
-            <option value="GOLD">Gold</option>
-            <option value="SILVER">Silver</option>
+            <option value="REGULAR" selected>GIRONI</option>
+            <option value="FINALE">FASE FINALE</option>
           </select>
         </div>
         <div class="filtro-riga" id="wrapperGiornataSelect">

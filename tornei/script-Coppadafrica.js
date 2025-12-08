@@ -154,7 +154,9 @@ const roundLabelByKey = {
 
 async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REGULAR") {
   try {
-    const faseParam = faseSelezionata && faseSelezionata !== "REGULAR" ? `&fase=${faseSelezionata}` : "";
+    const faseKey = (faseSelezionata || "REGULAR").toUpperCase();
+    const isGironi = faseKey === "REGULAR" || faseKey === "GIRONI";
+    const faseParam = isGironi ? "" : `&fase=GOLD`;
     const res = await fetch(`/api/get_partite.php?torneo=${TORNEO}${faseParam}`);
     const data = await res.json();
 
