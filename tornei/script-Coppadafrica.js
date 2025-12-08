@@ -196,8 +196,8 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       } else {
         // mostra solo semifinali (2) e finale (1)
         giornateDisponibili = giornateDisponibili.filter(g => g === "1" || g === "2");
-        if (!giornateDisponibili.includes("2")) giornateDisponibili.unshift("2");
-        if (!giornateDisponibili.includes("1")) giornateDisponibili.push("1");
+        if (!giornateDisponibili.includes("1")) giornateDisponibili.unshift("1");
+        if (!giornateDisponibili.includes("2")) giornateDisponibili.push("2");
         giornataSelect.innerHTML = '<option value="">Tutte</option>';
         giornateDisponibili.forEach(g => {
           const opt = document.createElement("option");
@@ -276,8 +276,8 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
             </div>
                   
             <div class="team away">
-              <span class="team-name">${partita.squadra_ospite}</span>
               <img src="${logoOspite}" alt="${partita.squadra_ospite}" class="team-logo">
+              <span class="team-name">${partita.squadra_ospite}</span>
             </div>
           </div>
         `;
