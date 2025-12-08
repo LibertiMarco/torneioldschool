@@ -127,6 +127,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
   <?php render_seo_tags($torneiSeo); ?>
   <?php render_jsonld($torneiBreadcrumbs); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8390787841690316" crossorigin="anonymous"></script>
   <style>
     .content {
       margin-top: 30px;
@@ -285,6 +286,18 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       <button type="button" class="active" data-target="incorso">Tornei in corso</button>
       <button type="button" data-target="programmati">Tornei programmati</button>
       <button type="button" data-target="terminati">Tornei terminati</button>
+    </div>
+    <div class="albo-ad" style="margin: 10px 0 18px;">
+      <!-- Pub orizz -->
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-8390787841690316"
+           data-ad-slot="3707275285"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+      <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
     </div>
 
     <!-- TORNEI IN CORSO -->
