@@ -274,7 +274,7 @@ $assetVersion = '20251208';
             <option value="FINALE">FASE FINALE</option>
           </select>
         </div>
-        <div class="filtro-riga" id="wrapperGiornataSelect">
+        <div class="filtro-riga" id="wrapperGiornataSelect" style="display:none;">
           <label for="giornataSelect">Giornata:</label>
           <select id="giornataSelect">
             <option value="">Tutte</option>

@@ -189,24 +189,25 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       wrapperGiornata.style.display = isRegular ? "flex" : "none";
     }
 
+    // Gestione select giornate: nascosta sui gironi, attiva solo per fase finale (semi/finale)
     if (giornataSelect) {
-      if (giornataSelect.options.length <= 1 || giornataSelezionata === "") {
+      if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
         giornataSelect.innerHTML = '<option value="">Tutte</option>';
-        if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
-          giornateDisponibili.forEach(g => {
-            const opt = document.createElement("option");
-            opt.value = g;
-            opt.textContent = `Giornata ${g}`;
-            giornataSelect.appendChild(opt);
-          });
-        }
+      } else {
+        giornataSelect.innerHTML = '<option value="">Tutte</option>';
+        giornateDisponibili.forEach(g => {
+          const opt = document.createElement("option");
+          opt.value = g;
+          opt.textContent = g === "1" ? "Finale" : g === "2" ? "Semifinali" : `Fase ${g}`;
+          giornataSelect.appendChild(opt);
+        });
       }
     }
 
-    // Filtra le giornate mostrate
-    const giornateDaMostrare = giornataSelezionata && faseSelezionata === "REGULAR"
-      ? [giornataSelezionata]
-      : giornateDisponibili;
+    const isGironi = (faseSelezionata || "").toUpperCase() === "REGULAR";
+    const giornateDaMostrare = isGironi
+      ? giornateDisponibili
+      : (giornataSelect && giornataSelect.value ? [giornataSelect.value] : giornateDisponibili);
 
     giornateDaMostrare.forEach(numGiornata => {
       const giornataDiv = document.createElement("div");
