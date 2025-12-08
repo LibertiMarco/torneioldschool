@@ -984,58 +984,81 @@ if (isLogged && commentForm) {
     commentForm.addEventListener('submit', submitComment);
 }
 
-function showInlineDeleteConfirm(targetEl, onConfirm) {
-    if (!targetEl) return;
-    // evita duplicati
-    const existing = targetEl.querySelector('.delete-confirm');
-    if (existing) return;
-    const bar = document.createElement('div');
-    bar.className = 'delete-confirm';
-    bar.style.display = 'flex';
-    bar.style.alignItems = 'center';
-    bar.style.gap = '8px';
-    bar.style.marginTop = '8px';
-    bar.style.fontSize = '0.9rem';
+function showDeleteModal(message, onConfirm) {
+    // rimuovi eventuale precedente
+    const existing = document.getElementById('commentDeleteModal');
+    if (existing) existing.remove();
 
-    const msg = document.createElement('span');
-    msg.textContent = 'Eliminare questo commento?';
+    const overlay = document.createElement('div');
+    overlay.id = 'commentDeleteModal';
+    overlay.style.position = 'fixed';
+    overlay.style.inset = '0';
+    overlay.style.background = 'rgba(0,0,0,0.45)';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.zIndex = '9999';
+
+    const dialog = document.createElement('div');
+    dialog.style.background = '#fff';
+    dialog.style.borderRadius = '12px';
+    dialog.style.boxShadow = '0 18px 40px rgba(0,0,0,0.18)';
+    dialog.style.padding = '22px';
+    dialog.style.maxWidth = '340px';
+    dialog.style.width = '92%';
+    dialog.style.textAlign = 'center';
+
+    const msg = document.createElement('p');
+    msg.textContent = message || 'Eliminare questo commento?';
+    msg.style.margin = '0 0 14px';
     msg.style.color = '#15293e';
-    msg.style.fontWeight = '600';
-    msg.style.flex = '1';
+    msg.style.fontWeight = '700';
+
+    const actions = document.createElement('div');
+    actions.style.display = 'flex';
+    actions.style.justifyContent = 'center';
+    actions.style.gap = '12px';
 
     const cancelBtn = document.createElement('button');
     cancelBtn.type = 'button';
     cancelBtn.textContent = 'Annulla';
-    cancelBtn.style.padding = '6px 10px';
-    cancelBtn.style.borderRadius = '6px';
+    cancelBtn.style.padding = '8px 14px';
+    cancelBtn.style.borderRadius = '8px';
     cancelBtn.style.border = '1px solid #c7d1e6';
     cancelBtn.style.background = '#f4f6fb';
     cancelBtn.style.color = '#15293e';
     cancelBtn.style.cursor = 'pointer';
+    cancelBtn.style.fontWeight = '700';
     cancelBtn.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        bar.remove();
+        overlay.remove();
     });
 
     const okBtn = document.createElement('button');
     okBtn.type = 'button';
     okBtn.textContent = 'Elimina';
-    okBtn.style.padding = '6px 10px';
-    okBtn.style.borderRadius = '6px';
+    okBtn.style.padding = '8px 14px';
+    okBtn.style.borderRadius = '8px';
     okBtn.style.border = '1px solid #b00000';
     okBtn.style.background = '#d80000';
     okBtn.style.color = '#ffffff';
     okBtn.style.cursor = 'pointer';
+    okBtn.style.fontWeight = '700';
     okBtn.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        bar.remove();
+        overlay.remove();
         if (typeof onConfirm === 'function') onConfirm();
     });
 
-    bar.appendChild(msg);
-    bar.appendChild(cancelBtn);
-    bar.appendChild(okBtn);
-    targetEl.appendChild(bar);
+    actions.appendChild(cancelBtn);
+    actions.appendChild(okBtn);
+    dialog.appendChild(msg);
+    dialog.appendChild(actions);
+    overlay.appendChild(dialog);
+    overlay.addEventListener('click', (ev) => {
+        if (ev.target === overlay) overlay.remove();
+    });
+    document.body.appendChild(overlay);
 }
 
 if (canReply) {
@@ -1046,8 +1069,7 @@ if (canReply) {
             if (!commentId) {
                 return;
             }
-            const actionsBox = deleteBtn.closest('.comment-actions') || deleteBtn.parentElement;
-            showInlineDeleteConfirm(actionsBox, () => {
+            showDeleteModal('Eliminare questo commento?', () => {
                 fetchJSON('/api/blog.php?azione=commenti_elimina', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
