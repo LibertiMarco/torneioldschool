@@ -289,12 +289,12 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
 }
 
 // ====================== PLAYOFF STILE CALENDARIO ======================
-async function caricaPlayoff(tipoCoppa) {
-  const faseParam = (tipoCoppa || "gold").toUpperCase(); // GOLD / SILVER
+async function caricaPlayoff() {
+  const faseParam = "GOLD";
   const container = document.getElementById("playoffContainer");
 
   container.innerHTML = `
-    <h3 class="bracket-titolo">Playoff ${tipoCoppa === "gold" ? "COPPA GOLD" : "COPPA SILVER"}</h3>
+    <h3 class="bracket-titolo">Fase Finale</h3>
     <div id="fasiPlayoff"></div>
   `;
 
@@ -575,13 +575,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // mostra bracket playoff
       classificaWrapper.style.display = "none";
       playoffContainer.style.display = "block";
-
-      // se non è selezionata nessuna coppa ancora, default gold
-      if (!coppaSelect.value) {
-        coppaSelect.value = "gold";
-      }
-
-      caricaPlayoff(coppaSelect.value);
+      caricaPlayoff();
 
     } else {
       // torna alla classifica
@@ -591,14 +585,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // cambio coppa (gold/silver)
-  coppaSelect.addEventListener("change", () => {
-    if (faseSelect.value === "eliminazione") {
-      caricaPlayoff(coppaSelect.value);
-    }
-    // la classifica rimane quella del torneo base; le coppe usano solo le partite filtrate per fase
-    loadClassifica(TORNEO);
-  });
+  // nasconde la seconda picklist (non usata in questa versione)
+  if (coppaSelect) {
+    coppaSelect.style.display = "none";
+  }
 });
 
 // ====================== GESTIONE TAB NAVIGAZIONE ======================
