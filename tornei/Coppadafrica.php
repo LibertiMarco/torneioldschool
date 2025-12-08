@@ -136,8 +136,8 @@ $assetVersion = '20251208';
     }
     .gironi-grid tr.gold-row td:first-child {
       font-weight: 800;
-      background: #d9a441 !important;
-      color: #0f1f33 !important;
+      background: #FFD700 !important;
+      color: #15293e !important;
     }
     #marcatori {
       margin-bottom: 48px;
