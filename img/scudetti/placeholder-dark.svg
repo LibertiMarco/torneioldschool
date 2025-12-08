@@ -1,0 +1,15 @@
+<svg width="200" height="240" viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder Scudetto">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1a2535"/>
+      <stop offset="100%" stop-color="#0f1826"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.18)"/>
+      <stop offset="40%" stop-color="rgba(255,255,255,0)"/>
+    </linearGradient>
+  </defs>
+  <path d="M100 10 L170 40 L170 130 C170 160 145 190 100 210 C55 190 30 160 30 130 L30 40 Z" fill="url(#shieldGrad)" stroke="#1f2c42" stroke-width="6" />
+  <path d="M100 24 L158 48 L158 128 C158 150 139 177 100 195 C61 177 42 150 42 128 L42 48 Z" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="4"/>
+  <path d="M48 52 L92 36 C96 34 104 34 108 36 L152 52 L152 70 C126 80 105 96 100 132 C95 96 74 80 48 70 Z" fill="url(#shine)" opacity="0.5"/>
+</svg>
