@@ -615,6 +615,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
 <h1 class="admin-title">Gestione Giocatori</h1>
 
+<!--
 <form method="POST" style="margin: 12px 0 6px;">
     <?= csrf_field('admin_giocatori') ?>
     <input type="hidden" name="azzera_totali" value="1">
@@ -622,6 +623,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
         Azzera statistiche giocatori
     </button>
 </form>
+-->
 
 <?php if (isset($_GET['duplicate']) && $_GET['duplicate'] === '1'): ?>
 <div class="admin-alert error" id="duplicateAlert">Giocatore giÃ  esistente</div>
