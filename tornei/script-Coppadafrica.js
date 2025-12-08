@@ -317,11 +317,11 @@ async function caricaPlayoff() {
     const fasiContainer = document.getElementById("fasiPlayoff");
     fasiContainer.innerHTML = "";
 
-    // ordina e mostra solo giornate 1–4
-    const giornate = Object.keys(data)
+    // ordina e mostra solo giornate 1-4, garantendo semifinale (2) e finale (1) anche senza dati
+    const giornateData = Object.keys(data)
       .map(g => parseInt(g))
-      .filter(g => g >= 1 && g <= 4)
-      .sort((a, b) => a - b);
+      .filter(g => g >= 1 && g <= 4);
+    const giornate = Array.from(new Set([...giornateData, 2, 1])).sort((a, b) => a - b);
 
     giornate.forEach(g => {
       const nomeFase = fasiMap[g] || `Fase ${g}`;
@@ -332,7 +332,52 @@ async function caricaPlayoff() {
       titolo.textContent = nomeFase;
       faseDiv.appendChild(titolo);
 
-      data[g].forEach(partita => {
+      let matchList = Array.isArray(data[g]) ? data[g] : [];
+
+      if (!matchList.length) {
+        if (g === 2) {
+          matchList = [
+            {
+              squadra_casa: "Vincente Girone A",
+              squadra_ospite: "Seconda Girone B",
+              gol_casa: null,
+              gol_ospite: null,
+              giocata: 0,
+              data_partita: "",
+              ora_partita: "",
+              campo: "Da definire",
+              fase_leg: ""
+            },
+            {
+              squadra_casa: "Vincente Girone B",
+              squadra_ospite: "Seconda Girone A",
+              gol_casa: null,
+              gol_ospite: null,
+              giocata: 0,
+              data_partita: "",
+              ora_partita: "",
+              campo: "Da definire",
+              fase_leg: ""
+            }
+          ];
+        } else if (g === 1) {
+          matchList = [
+            {
+              squadra_casa: "Vincente Semifinale 1",
+              squadra_ospite: "Vincente Semifinale 2",
+              gol_casa: null,
+              gol_ospite: null,
+              giocata: 0,
+              data_partita: "",
+              ora_partita: "",
+              campo: "Da definire",
+              fase_leg: ""
+            }
+          ];
+        }
+      }
+
+      matchList.forEach(partita => {
         const partitaDiv = document.createElement("div");
         partitaDiv.classList.add("match-card");
 
