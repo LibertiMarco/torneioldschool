@@ -72,12 +72,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                   . "Nome: $nome\n"
                   . "Email: $email\n\n"
                   . "Messaggio:\n$messaggio\n";
-            $headers = "From: $email\r\nReply-To: $email\r\n";
 
-            if (mail($to, $subject, $body, $headers)) {
+            // Usa un mittente del dominio per rispettare SPF/DMARC ed evita filtri antispam
+            $fromEmail = getenv('MAIL_FROM') ?: 'no-reply@torneioldschool.it';
+            $fromName = 'Tornei Old School';
+            $headers  = "From: {$fromName} <{$fromEmail}>\r\n";
+            $headers .= "Reply-To: {$nome} <{$email}>\r\n";
+            $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+            $headers .= "MIME-Version: 1.0\r\n";
+
+            $envelopeFrom = "-f{$fromEmail}";
+
+            if (mail($to, $subject, $body, $headers, $envelopeFrom)) {
                 $success = "Messaggio inviato con successo! Ti risponderemo al piu presto.";
             } else {
                 $error = "Errore durante l'invio. Riprova piu tardi.";
+                error_log("[contatti] Invio mail fallito verso {$to} da {$fromEmail} (reply: {$email})");
             }
         }
     }
@@ -285,7 +295,7 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
         <h1>Contattaci</h1>
 
         <form method="POST" action="">
-          <?= csrf_field('contact_form') ?>
+          <?= csrf_field('contact_form') ?> 
           <div class="hp-field" aria-hidden="true">
             <label for="hp_field">Lascia vuoto</label>
             <input type="text" id="hp_field" name="hp_field" tabindex="-1" autocomplete="off">
