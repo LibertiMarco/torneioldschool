@@ -10,7 +10,9 @@ function resolveLogoPath(name, storedPath) {
   const cached = teamLogos[name];
   if (cached) return cached;
   const slug = normalizeLogoName(name || "");
-  if (!slug) return "/img/scudetti/placeholder-dark.svg";
+  const lower = (name || "").toLowerCase();
+  const isPlaceholderName = lower.includes("vincente") || lower.includes("seconda") || lower.includes("girone");
+  if (!slug || isPlaceholderName) return "/img/scudetti/placeholder-dark.svg";
   return `/img/scudetti/${slug}.png`;
 }
 
