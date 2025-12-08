@@ -311,8 +311,7 @@ async function caricaPlayoff() {
     <div class="bracket-header">
       <h3 class="bracket-titolo">Fase Finale</h3>
       <div class="bracket-filters">
-        <button type="button" class="bracket-filter-btn active" data-stage="all">Tutte</button>
-        <button type="button" class="bracket-filter-btn" data-stage="semi">Semifinali</button>
+        <button type="button" class="bracket-filter-btn active" data-stage="semi">Semifinali</button>
         <button type="button" class="bracket-filter-btn" data-stage="finale">Finale</button>
       </div>
     </div>
@@ -336,22 +335,17 @@ async function caricaPlayoff() {
       .filter(g => g >= 1 && g <= 4);
     const giornate = Array.from(new Set([...giornateData, 2, 1])).sort((a, b) => a - b);
 
-    const renderBracket = (stage = "all") => {
+    const renderBracket = (stage = "semi") => {
       fasiContainer.innerHTML = "";
       const filtered = giornate.filter(g => {
         if (stage === "semi") return g === 2;
         if (stage === "finale") return g === 1;
-        return true;
+        return false;
       });
 
       filtered.forEach(g => {
-        const nomeFase = fasiMap[g] || `Fase ${g}`;
         const col = document.createElement("div");
         col.className = "bracket-col";
-        const titolo = document.createElement("div");
-        titolo.className = "bracket-col-title";
-        titolo.textContent = nomeFase;
-        col.appendChild(titolo);
 
         let matchList = Array.isArray(data[g]) ? data[g] : [];
 
@@ -413,7 +407,7 @@ async function caricaPlayoff() {
       });
     };
 
-    renderBracket("all");
+    renderBracket("semi");
 
     const filterBtns = container.querySelectorAll(".bracket-filter-btn");
     filterBtns.forEach(btn => {
