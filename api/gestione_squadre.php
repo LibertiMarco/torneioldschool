@@ -103,10 +103,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($azione === 'crea') {
         $nome = trim($_POST['nome'] ?? '');
         $torneo = sanitizeTorneoSlugValue(trim($_POST['torneo'] ?? ''));
+        $logoEsistenteId = (int)($_POST['logo_esistente'] ?? 0);
         if ($nome === '' || $torneo === '') {
             $errore = 'Compila tutti i campi obbligatori.';
         } else {
-            $logo = salvaScudetto($nome, $torneo, 'scudetto');
+            // Se l'admin ha scelto un logo da una squadra esistente, lo usiamo come default
+            $logo = null;
+            if ($logoEsistenteId > 0) {
+                $squadraOrig = $squadra->getById($logoEsistenteId);
+                if ($squadraOrig && !empty($squadraOrig['logo'])) {
+                    $logo = $squadraOrig['logo'];
+                }
+            }
+            // Se è stato caricato un file, questo ha la precedenza
+            $uploadLogo = salvaScudetto($nome, $torneo, 'scudetto');
+            if ($uploadLogo) {
+                $logo = $uploadLogo;
+            }
             try {
                 $ok = $squadra->crea($nome, $torneo, $logo);
                 if ($ok) {
@@ -317,6 +330,20 @@ if ($resSquadre = $squadra->getAll()) {
                 <option value="<?= htmlspecialchars($slugValue) ?>"><?= htmlspecialchars($row['nome']) ?></option>
               <?php endforeach; ?>
             </select>
+          </div>
+          <div class="form-group">
+            <label>Riutilizza scudetto esistente (opzionale)</label>
+            <select name="logo_esistente">
+              <option value="">-- Nessuno, caricherò un nuovo scudetto --</option>
+              <?php foreach ($squadreList as $row): ?>
+                <?php if (!empty($row['logo'])): ?>
+                  <option value="<?= (int)$row['id'] ?>">
+                    <?= htmlspecialchars($row['nome']) ?> (<?= htmlspecialchars($row['torneo']) ?>)
+                  </option>
+                <?php endif; ?>
+              <?php endforeach; ?>
+            </select>
+            <small>Seleziona una squadra esistente per copiare il suo scudetto senza doverlo ricaricare.</small>
           </div>
           <div class="form-group">
             <label>Immagine / Scudetto</label>
