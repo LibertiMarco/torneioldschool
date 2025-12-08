@@ -430,10 +430,11 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         const partitaDiv = document.createElement("div");
         partitaDiv.classList.add("match-card");
         const hasScore = partita.gol_casa !== null && partita.gol_ospite !== null;
-        const giocata = String(partita.giocata) === "1" || hasScore;
+        const giocata = String(partita.giocata) === "1";
+        const mostraRisultato = giocata && hasScore;
       
-        // ✅ Rende cliccabile la match-card se giocata o già con punteggio
-        if (giocata) {
+        // Rende cliccabile la match-card solo se ha un risultato valido
+        if (mostraRisultato) {
           partitaDiv.style.cursor = "pointer";
           partitaDiv.onclick = () => {
             window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${TORNEO}`;
@@ -446,7 +447,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         const stadio = partita.campo || "Campo da definire";
         const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
         const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
-        const scoreMarkup = hasScore
+        const scoreMarkup = mostraRisultato
           ? `<span class="score">${partita.gol_casa}</span><span class="dash-cal">-</span><span class="score">${partita.gol_ospite}</span>`
           : `<span class="vs">VS</span>`;
 
@@ -565,14 +566,15 @@ async function caricaPlayoff(tipoCoppa) {
 
       matchList.forEach((partita, idx) => {
         const hasScore = partita.gol_casa !== null && partita.gol_ospite !== null;
-        const giocata = (Number(partita.giocata) === 1) || hasScore;
+        const giocata = (Number(partita.giocata) === 1);
+        const mostraRisultato = giocata && hasScore;
         const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
         const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
         const dataStr = formattaData(partita.data_partita);
         const legLabel = (partita.fase_leg || "").trim();
         const match = document.createElement("div");
-        match.className = "bracket-match" + (giocata ? " is-played" : "");
-        match.style.cursor = giocata ? "pointer" : "default";
+        match.className = "bracket-match" + (mostraRisultato ? " is-played" : "");
+        match.style.cursor = mostraRisultato ? "pointer" : "default";
         match.innerHTML = `
           <div class="bracket-head">
             ${legLabel ? `<span class="bracket-leg">${legLabel}</span>` : ""}
@@ -582,21 +584,21 @@ async function caricaPlayoff(tipoCoppa) {
               <img class="team-logo" src="${logoCasa}" alt="${partita.squadra_casa}">
               <span class="team-name">${partita.squadra_casa}</span>
             </div>
-            <span class="team-score">${hasScore ? partita.gol_casa : "-"}</span>
+            <span class="team-score">${mostraRisultato ? partita.gol_casa : "-"}</span>
           </div>
           <div class="bracket-team">
             <div class="team-side">
               <img class="team-logo" src="${logoOspite}" alt="${partita.squadra_ospite}">
               <span class="team-name">${partita.squadra_ospite}</span>
             </div>
-            <span class="team-score">${hasScore ? partita.gol_ospite : "-"}</span>
+            <span class="team-score">${mostraRisultato ? partita.gol_ospite : "-"}</span>
           </div>
           <div class="bracket-meta">
             <span>${dataStr}${partita.ora_partita ? ' - ' + partita.ora_partita.slice(0,5) : ''}${legLabel ? ' - ' + legLabel : ''}</span>
             <span>${partita.campo || 'Campo da definire'}</span>
           </div>
         `;
-        if (giocata) {
+        if (mostraRisultato) {
           match.addEventListener("click", () => {
             window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${encodeURIComponent(TORNEO)}`;
           });
