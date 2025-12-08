@@ -97,7 +97,7 @@ if (!$conn || $conn->connect_error) {
 
 if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $competizione = trim($_POST['competizione'] ?? '');
-        $premio = trim($_POST['premio'] ?? 'Vincente');
+        $premio = strtoupper(trim($_POST['premio'] ?? 'VINCENTE'));
         $vincitrice = trim($_POST['vincitrice'] ?? '');
         $inizio_mese = (int)($_POST['inizio_mese'] ?? 0);
         $inizio_anno = (int)($_POST['inizio_anno'] ?? 0);
@@ -355,7 +355,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
           <div>
             <label>Premio (es. Vincente, Vincente Coppa, Miglior marcatore, MVP)</label>
-            <input type="text" name="premio" placeholder="Vincente" value="Vincente">
+            <input type="text" name="premio" placeholder="VINCENTE" value="VINCENTE" style="text-transform: uppercase;">
           </div>
           <div>
             <label>Vincitrice*</label>
@@ -416,7 +416,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
           <input type="hidden" name="azione" value="update">
           <input type="hidden" name="id" id="upd_id">
           <label>Competizione<input type="text" name="competizione" id="upd_competizione" required></label>
-          <label>Premio<input type="text" name="premio" id="upd_premio"></label>
+          <label>Premio<input type="text" name="premio" id="upd_premio" style="text-transform: uppercase;"></label>
           <label>Vincitrice<input type="text" name="vincitrice" id="upd_vincitrice" required></label>
           <div class="file-input">
             <label class="file-label">
