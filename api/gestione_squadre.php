@@ -199,6 +199,13 @@ if ($resTornei = $torneoModel->getAll()) {
         $torneiList[] = $r;
     }
 }
+$torneoLabelBySlug = [];
+foreach ($torneiList as $tRow) {
+    $slugValue = sanitizeTorneoSlugValue($tRow['filetorneo'] ?? $tRow['nome'] ?? '');
+    if ($slugValue !== '') {
+        $torneoLabelBySlug[$slugValue] = $tRow['nome'] ?? $slugValue;
+    }
+}
 
 $torneiFiltro = [];
 $resFiltro = $squadra->getTornei();
@@ -337,8 +344,9 @@ if ($resSquadre = $squadra->getAll()) {
               <option value="">-- Nessuno, caricherò un nuovo scudetto --</option>
               <?php foreach ($squadreList as $row): ?>
                 <?php if (!empty($row['logo'])): ?>
+                  <?php $torneoLabel = $torneoLabelBySlug[$row['torneo']] ?? $row['torneo']; ?>
                   <option value="<?= (int)$row['id'] ?>">
-                    <?= htmlspecialchars($row['nome']) ?> (<?= htmlspecialchars($row['torneo']) ?>)
+                    <?= htmlspecialchars($row['nome']) ?> (<?= htmlspecialchars($torneoLabel) ?>)
                   </option>
                 <?php endif; ?>
               <?php endforeach; ?>
