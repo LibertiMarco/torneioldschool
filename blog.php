@@ -467,7 +467,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 }
 
 .mini-card:hover .mini-title {
-    color: var(--blog-accent);
+    color: #15293e;
 }
 
 @media (max-width: 1100px) {

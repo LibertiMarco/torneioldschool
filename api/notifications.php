@@ -108,7 +108,7 @@ if ($stmt) {
 $hasCommentiTable = $conn->query("SHOW TABLES LIKE 'notifiche_commenti'");
 if ($hasCommentiTable && $hasCommentiTable->num_rows > 0) {
     $stmtC = $conn->prepare("
-        SELECT nc.id, nc.letto, nc.creato_il, bp.titolo AS post_titolo
+        SELECT nc.id, nc.letto, nc.creato_il, nc.post_id, bp.titolo AS post_titolo
         FROM notifiche_commenti nc
         JOIN blog_post bp ON bp.id = nc.post_id
         WHERE nc.utente_id = ?
@@ -120,11 +120,13 @@ if ($hasCommentiTable && $hasCommentiTable->num_rows > 0) {
         if ($stmtC->execute()) {
             $res = $stmtC->get_result();
             while ($row = $res->fetch_assoc()) {
+                $postId = (int)($row['post_id'] ?? 0);
+                $linkArticolo = $postId > 0 ? "/articolo.php?id=" . $postId : "/blog.php";
                 $notifications[] = [
                     'id' => (int)$row['id'],
-                    'title' => 'Nuovo commento al tuo post',
-                    'text' => 'Qualcuno ti ha menzionato in un commento su "' . ($row['post_titolo'] ?? 'articolo') . '"',
-                    'link' => '/blog.php',
+                    'title' => 'Qualcuno ha risposto al tuo commento...',
+                    'text' => 'Apri l\'articolo per leggere la risposta.',
+                    'link' => $linkArticolo,
                     'read' => (int)$row['letto'] === 1,
                     'time' => $row['creato_il'],
                     'type' => 'comment',
