@@ -139,6 +139,10 @@ $assetVersion = '20251208';
       background: #FFD700 !important;
       color: #15293e !important;
     }
+    /* Nasconde la seconda picklist non usata */
+    #coppaSelect {
+      display: none !important;
+    }
     #marcatori {
       margin-bottom: 48px;
     }
