@@ -196,9 +196,9 @@
         delBtn.className = "notif-delete";
         delBtn.textContent = "Elimina";
         delBtn.style.marginLeft = "auto";
-        delBtn.style.background = "#f1f3fb";
-        delBtn.style.border = "1px solid #c7d1e6";
-        delBtn.style.color = "#d80000";
+        delBtn.style.background = "#d80000";
+        delBtn.style.border = "1px solid #b00000";
+        delBtn.style.color = "#000000";
         delBtn.style.cursor = "pointer";
         delBtn.style.fontWeight = "700";
         delBtn.style.borderRadius = "6px";
@@ -206,12 +206,12 @@
         delBtn.style.fontSize = "12px";
         delBtn.style.transition = "all 0.15s ease";
         delBtn.addEventListener("mouseover", () => {
-          delBtn.style.background = "#ffecef";
-          delBtn.style.borderColor = "#f5b5bf";
+          delBtn.style.background = "#b00000";
+          delBtn.style.borderColor = "#900000";
         });
         delBtn.addEventListener("mouseout", () => {
-          delBtn.style.background = "#f1f3fb";
-          delBtn.style.borderColor = "#c7d1e6";
+          delBtn.style.background = "#d80000";
+          delBtn.style.borderColor = "#b00000";
         });
         delBtn.addEventListener("click", (ev) => {
           ev.stopPropagation();
