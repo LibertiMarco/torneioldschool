@@ -695,20 +695,24 @@ function renderGrid(posts) {
     if (cards.length > 1) {
         const adBlock = `
         <div class="blog-card ad-card" style="grid-column: 1 / -1;">
-          <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8390787841690316" crossorigin="anonymous"></script>
           <ins class="adsbygoogle"
                style="display:block; text-align:center;"
                data-ad-layout="in-article"
                data-ad-format="fluid"
                data-ad-client="ca-pub-8390787841690316"
                data-ad-slot="5519228011"></ins>
-          <script>
-               (adsbygoogle = window.adsbygoogle || []).push({});
-          </script>
         </div>`;
         cards.splice(1, 0, adBlock);
     }
     cardGrid.innerHTML = cards.join('');
+    // Inizializza eventuali slot AdSense inseriti
+    cardGrid.querySelectorAll('.adsbygoogle').forEach(() => {
+        try {
+            (adsbygoogle = window.adsbygoogle || []).push({});
+        } catch (e) {
+            console.error('Adsbygoogle push error', e);
+        }
+    });
 }
 
 function renderMiniList(posts, excludeId = null) {
