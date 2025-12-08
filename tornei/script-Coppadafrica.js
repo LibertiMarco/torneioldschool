@@ -204,7 +204,6 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       }
     }
 
-    const isGironi = (faseSelezionata || "").toUpperCase() === "REGULAR";
     const giornateDaMostrare = isGironi
       ? giornateDisponibili
       : (giornataSelect && giornataSelect.value ? [giornataSelect.value] : giornateDisponibili);
