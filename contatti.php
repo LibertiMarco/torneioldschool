@@ -227,6 +227,9 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
       margin-top: 15px;
       font-weight: 600;
     }
+    .contact-ads {
+      margin: 16px 0;
+    }
 
     .footer-socials {
       margin-top: 30px;
@@ -294,6 +297,18 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
       <div class="contact-form">
         <h1>Contattaci</h1>
 
+        <div class="contact-ads">
+          <ins class="adsbygoogle"
+               style="display:block"
+               data-ad-client="ca-pub-8390787841690316"
+               data-ad-slot="3707275285"
+               data-ad-format="auto"
+               data-full-width-responsive="true"></ins>
+          <script>
+            (adsbygoogle = window.adsbygoogle || []).push({});
+          </script>
+        </div>
+
         <form method="POST" action="">
           <?= csrf_field('contact_form') ?> 
           <div class="hp-field" aria-hidden="true">
@@ -319,6 +334,18 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
         <?php elseif ($error): ?>
           <div class="error-message"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
+
+        <div class="contact-ads">
+          <ins class="adsbygoogle"
+               style="display:block"
+               data-ad-client="ca-pub-8390787841690316"
+               data-ad-slot="3707275285"
+               data-ad-format="auto"
+               data-full-width-responsive="true"></ins>
+          <script>
+            (adsbygoogle = window.adsbygoogle || []).push({});
+          </script>
+        </div>
 
         <div class="footer-socials">
           <a href="https://www.instagram.com/tornei_old_school/" target="_blank"><img src="/img/icone/instagram.png" alt="Instagram"></a>
