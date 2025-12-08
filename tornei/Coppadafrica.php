@@ -117,9 +117,10 @@ $assetVersion = '20251208';
       width: 10%;
     }
     .gironi-grid .team-cell .team-info {
+      display: inline-flex;
       justify-content: flex-start;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
     .gironi-grid .team-cell {
       text-align: left;
@@ -131,7 +132,7 @@ $assetVersion = '20251208';
       display: block;
     }
     .gironi-grid tr.gold-row td {
-      background: #fbe8b4;
+      background: #f5d76e;
     }
     .gironi-grid tr.gold-row td:first-child {
       font-weight: 800;
