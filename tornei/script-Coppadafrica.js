@@ -182,7 +182,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
 
     const giornataSelect = document.getElementById("giornataSelect");
     const wrapperGiornata = document.getElementById("wrapperGiornataSelect");
-    const giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
+    let giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
 
     // mostra la select solo in fase finale
     if (wrapperGiornata) {
@@ -194,6 +194,10 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       if (isGironi) {
         giornataSelect.innerHTML = '<option value="">Tutte</option>';
       } else {
+        // mostra solo semifinali (2) e finale (1)
+        giornateDisponibili = giornateDisponibili.filter(g => g === "1" || g === "2");
+        if (!giornateDisponibili.includes("2")) giornateDisponibili.unshift("2");
+        if (!giornateDisponibili.includes("1")) giornateDisponibili.push("1");
         giornataSelect.innerHTML = '<option value="">Tutte</option>';
         giornateDisponibili.forEach(g => {
           const opt = document.createElement("option");
