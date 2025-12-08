@@ -357,6 +357,37 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
 
   <script src="/includi/app.min.js?v=20251204"></script>
   <script>
+    function bindBasicHeaderToggle(root) {
+      const header = root.querySelector(".site-header");
+      if (!header) return;
+      const mobileBtn = header.querySelector("#mobileMenuBtn");
+      const mainNav = header.querySelector("#mainNav");
+      const userBtn = header.querySelector("#userBtn");
+      const userMenu = header.querySelector("#userMenu");
+      if (mobileBtn && mainNav) {
+        mobileBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const open = mainNav.classList.toggle("open");
+          if (open && userMenu) userMenu.classList.remove("open");
+        });
+      }
+      if (userBtn && userMenu) {
+        userBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const open = userMenu.classList.toggle("open");
+          if (open && mainNav) mainNav.classList.remove("open");
+        });
+      }
+      document.addEventListener("click", (e) => {
+        if (!header.contains(e.target)) {
+          mainNav?.classList.remove("open");
+          userMenu?.classList.remove("open");
+        }
+      });
+    }
+
     // FOOTER
     fetch("/includi/footer.html")
       .then(r => r.text())
@@ -367,7 +398,10 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
       .then(r => r.text())
       .then(html => {
         document.getElementById("header-container").innerHTML = html;
-        initHeaderInteractions();
+        if (typeof initHeaderInteractions === "function") {
+          initHeaderInteractions();
+        }
+        bindBasicHeaderToggle(document);
         const header = document.querySelector(".site-header");
         window.addEventListener("scroll", () => {
           if (header) {
