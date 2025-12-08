@@ -96,10 +96,8 @@ function mostraClassifica(classifica) {
       const tr = document.createElement("tr");
       if (idx + 1 <= 2) tr.classList.add("gold-row");
       const logoPath = resolveLogoPath(team.nome, team.logo);
-      const posizione = idx + 1;
-      const posClass = posizione <= 2 ? "pos-cell gold-pos" : "pos-cell";
       tr.innerHTML = `
-        <td class="${posClass}">${posizione}</td>
+        <td class="pos-cell">${idx + 1}</td>
         <td class="team-cell">
           <div class="team-info">
             <img src="${logoPath}" alt="${team.nome}" class="team-logo">

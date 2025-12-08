@@ -95,14 +95,21 @@ $assetVersion = '20251208';
     }
     .gironi-grid table {
       width: 100%;
+      table-layout: fixed;
     }
     .gironi-grid table th,
     .gironi-grid table td {
       text-align: center;
+      padding: 10px 8px;
     }
     .gironi-grid table th:nth-child(2),
     .gironi-grid table td:nth-child(2) {
       text-align: left;
+      width: 45%;
+    }
+    .gironi-grid table th:nth-child(1),
+    .gironi-grid table td:nth-child(1) {
+      width: 12%;
     }
     .gironi-grid .team-cell .team-info {
       justify-content: flex-start;
@@ -110,8 +117,10 @@ $assetVersion = '20251208';
     .gironi-grid .team-cell {
       text-align: left;
     }
-    .pos-cell.gold-pos {
-      color: #d9a441;
+    .gironi-grid tr.gold-row td {
+      background: #fff5d4;
+    }
+    .gironi-grid tr.gold-row td:first-child {
       font-weight: 800;
     }
     #marcatori {
