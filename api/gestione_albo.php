@@ -614,7 +614,10 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
       btnSaveOrder?.addEventListener('click', () => {
         if (!ordineInput || !sortSelectComp) return;
-        const order = sortData;
+        const order = {};
+        Object.keys(sortData || {}).forEach(comp => {
+          order[comp] = (sortData[comp] || []).map(item => Number(item.id) || 0).filter(id => id > 0);
+        });
         ordineInput.value = JSON.stringify(order);
         document.getElementById('formSort')?.submit();
       });
