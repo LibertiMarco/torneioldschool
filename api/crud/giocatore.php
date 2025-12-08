@@ -186,28 +186,13 @@ class Giocatore {
     }
 
     /**
-     * Azzera le statistiche totali dei giocatori e quelle per squadra.
+     * Azzera solo le statistiche totali dei giocatori (non tocca le associazioni squadra-giocatore).
      */
     public function azzeraStatisticheTotali() {
-        $this->conn->begin_transaction();
-        try {
-            $ok1 = $this->conn->query("
-                UPDATE {$this->table}
-                SET presenze = 0, reti = 0, assist = 0, gialli = 0, rossi = 0, media_voti = NULL
-            ");
-            $ok2 = $this->conn->query("
-                UPDATE squadre_giocatori
-                SET presenze = 0, reti = 0, assist = 0, gialli = 0, rossi = 0, media_voti = NULL
-            ");
-            if (!$ok1 || !$ok2) {
-                throw new Exception("Errore reset statistiche");
-            }
-            $this->conn->commit();
-            return true;
-        } catch (Throwable $e) {
-            $this->conn->rollback();
-            return false;
-        }
+        return $this->conn->query("
+            UPDATE {$this->table}
+            SET presenze = 0, reti = 0, assist = 0, gialli = 0, rossi = 0, media_voti = NULL
+        ");
     }
 }
 ?>
