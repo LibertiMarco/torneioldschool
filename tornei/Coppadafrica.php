@@ -150,25 +150,51 @@ $assetVersion = '20251208';
         </div>
       </div>
 
-      <!-- CLASSIFICA NORMALE -->
+      <!-- CLASSIFICA DOPPIO GIRONE -->
       <div class="table-wrapper" id="classificaWrapper">
-        <table id="tableClassifica">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Squadra</th>
-              <th>Pti</th>
-              <th>G</th>
-              <th>V</th>
-              <th>N</th>
-              <th>P</th>
-              <th>GF</th>
-              <th>GS</th>
-              <th>DR</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="gironi-grid">
+          <div class="girone-box">
+            <h3>Girone A</h3>
+            <table id="tableClassificaA">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Squadra</th>
+                  <th>Pti</th>
+                  <th>G</th>
+                  <th>V</th>
+                  <th>N</th>
+                  <th>P</th>
+                  <th>GF</th>
+                  <th>GS</th>
+                  <th>DR</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="girone-box">
+            <h3>Girone B</h3>
+            <table id="tableClassificaB">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Squadra</th>
+                  <th>Pti</th>
+                  <th>G</th>
+                  <th>V</th>
+                  <th>N</th>
+                  <th>P</th>
+                  <th>GF</th>
+                  <th>GS</th>
+                  <th>DR</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- PLAYOFF / BRACKET -->

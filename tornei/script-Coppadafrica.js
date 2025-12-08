@@ -54,7 +54,7 @@ async function caricaClassifica(torneoSlug = TORNEO) {
     mostraClassifica(data);
 
     // Rende cliccabili le squadre della classifica
-    document.querySelectorAll("#tableClassifica tbody .team-cell").forEach(cell => {
+    document.querySelectorAll("#tableClassificaA tbody .team-cell, #tableClassificaB tbody .team-cell").forEach(cell => {
       cell.style.cursor = "pointer";
     
       cell.addEventListener("click", () => {
@@ -80,39 +80,45 @@ async function caricaClassifica(torneoSlug = TORNEO) {
 }
 
 function mostraClassifica(classifica) {
-  const tbody = document.querySelector("#tableClassifica tbody");
-  tbody.innerHTML = "";
+  const tbodyA = document.querySelector("#tableClassificaA tbody");
+  const tbodyB = document.querySelector("#tableClassificaB tbody");
+  if (tbodyA) tbodyA.innerHTML = "";
+  if (tbodyB) tbodyB.innerHTML = "";
 
   classifica.sort((a, b) => b.punti - a.punti || b.differenza_reti - a.differenza_reti);
 
-  classifica.forEach((team, i) => {
-    const tr = document.createElement("tr");
+  const gironeA = classifica.slice(0, 4);
+  const gironeB = classifica.slice(4, 8);
 
-    if (i + 1 <= 2) {
-      tr.classList.add("gold-row");
-    }
+  const renderGroup = (rows, tbody) => {
+    if (!tbody) return;
+    rows.forEach((team, idx) => {
+      const tr = document.createElement("tr");
+      if (idx + 1 <= 2) tr.classList.add("gold-row");
+      const logoPath = resolveLogoPath(team.nome, team.logo);
+      tr.innerHTML = `
+        <td>${idx + 1}</td>
+        <td class="team-cell">
+          <div class="team-info">
+            <img src="${logoPath}" alt="${team.nome}" class="team-logo">
+            <span class="team-name">${team.nome}</span>
+          </div>
+        </td>
+        <td>${team.punti}</td>
+        <td>${team.giocate}</td>
+        <td>${team.vinte}</td>
+        <td>${team.pareggiate}</td>
+        <td>${team.perse}</td>
+        <td>${team.gol_fatti}</td>
+        <td>${team.gol_subiti}</td>
+        <td>${team.differenza_reti}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  };
 
-    const logoPath = resolveLogoPath(team.nome, team.logo);
-
-    tr.innerHTML = `
-      <td>${i + 1}</td>
-      <td class="team-cell">
-        <div class="team-info">
-          <img src="${logoPath}" alt="${team.nome}" class="team-logo">
-          <span class="team-name">${team.nome}</span>
-        </div>
-      </td>
-      <td>${team.punti}</td>
-      <td>${team.giocate}</td>
-      <td>${team.vinte}</td>
-      <td>${team.pareggiate}</td>
-      <td>${team.perse}</td>
-      <td>${team.gol_fatti}</td>
-      <td>${team.gol_subiti}</td>
-      <td>${team.differenza_reti}</td>
-    `;
-    tbody.appendChild(tr);
-  });
+  renderGroup(gironeA, tbodyA);
+  renderGroup(gironeB, tbodyB);
 
   // ======== GESTIONE LEGENDA ========
   const faseSelect = document.getElementById("faseSelect");
