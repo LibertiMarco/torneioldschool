@@ -198,7 +198,7 @@
         delBtn.style.marginLeft = "auto";
         delBtn.style.background = "#d80000";
         delBtn.style.border = "1px solid #b00000";
-        delBtn.style.color = "#000000";
+        delBtn.style.color = "#ffffff";
         delBtn.style.cursor = "pointer";
         delBtn.style.fontWeight = "700";
         delBtn.style.borderRadius = "6px";
