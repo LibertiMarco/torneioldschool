@@ -984,6 +984,60 @@ if (isLogged && commentForm) {
     commentForm.addEventListener('submit', submitComment);
 }
 
+function showInlineDeleteConfirm(targetEl, onConfirm) {
+    if (!targetEl) return;
+    // evita duplicati
+    const existing = targetEl.querySelector('.delete-confirm');
+    if (existing) return;
+    const bar = document.createElement('div');
+    bar.className = 'delete-confirm';
+    bar.style.display = 'flex';
+    bar.style.alignItems = 'center';
+    bar.style.gap = '8px';
+    bar.style.marginTop = '8px';
+    bar.style.fontSize = '0.9rem';
+
+    const msg = document.createElement('span');
+    msg.textContent = 'Eliminare questo commento?';
+    msg.style.color = '#15293e';
+    msg.style.fontWeight = '600';
+    msg.style.flex = '1';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.textContent = 'Annulla';
+    cancelBtn.style.padding = '6px 10px';
+    cancelBtn.style.borderRadius = '6px';
+    cancelBtn.style.border = '1px solid #c7d1e6';
+    cancelBtn.style.background = '#f4f6fb';
+    cancelBtn.style.color = '#15293e';
+    cancelBtn.style.cursor = 'pointer';
+    cancelBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        bar.remove();
+    });
+
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.textContent = 'Elimina';
+    okBtn.style.padding = '6px 10px';
+    okBtn.style.borderRadius = '6px';
+    okBtn.style.border = '1px solid #b00000';
+    okBtn.style.background = '#d80000';
+    okBtn.style.color = '#ffffff';
+    okBtn.style.cursor = 'pointer';
+    okBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        bar.remove();
+        if (typeof onConfirm === 'function') onConfirm();
+    });
+
+    bar.appendChild(msg);
+    bar.appendChild(cancelBtn);
+    bar.appendChild(okBtn);
+    targetEl.appendChild(bar);
+}
+
 if (canReply) {
     commentsList?.addEventListener('click', event => {
         const deleteBtn = event.target.closest('.delete-action');
@@ -992,22 +1046,22 @@ if (canReply) {
             if (!commentId) {
                 return;
             }
-            if (!window.confirm('Vuoi eliminare questo commento?')) {
-                return;
-            }
-            fetchJSON('/api/blog.php?azione=commenti_elimina', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: commentId })
-            })
-            .then(({ data, ok }) => {
-                if (!ok) {
-                    throw new Error(data?.error || 'Eliminazione non riuscita.');
-                }
-                fetchComments();
-            })
-            .catch(err => {
-                setFeedback(err.message, 'error');
+            const actionsBox = deleteBtn.closest('.comment-actions') || deleteBtn.parentElement;
+            showInlineDeleteConfirm(actionsBox, () => {
+                fetchJSON('/api/blog.php?azione=commenti_elimina', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: commentId })
+                })
+                .then(({ data, ok }) => {
+                    if (!ok) {
+                        throw new Error(data?.error || 'Eliminazione non riuscita.');
+                    }
+                    fetchComments();
+                })
+                .catch(err => {
+                    setFeedback(err.message, 'error');
+                });
             });
             return;
         }
