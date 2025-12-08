@@ -185,15 +185,25 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
     let giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
     const previousTurn = giornataSelect ? giornataSelect.value : "";
 
-    // mostra la select solo in fase finale
+    // mostra la select anche nei gironi (rinominata "Turno")
     if (wrapperGiornata) {
-      wrapperGiornata.style.display = isGironi ? "none" : "flex";
+      wrapperGiornata.style.display = "flex";
     }
 
     // Gestione select giornate: nascosta sui gironi, attiva solo per fase finale (semi/finale)
     if (giornataSelect) {
       if (isGironi) {
-        giornataSelect.innerHTML = '<option value="">Tutte</option>';
+        giornataSelect.innerHTML = '<option value="">Tutti</option>';
+        giornateDisponibili.forEach(g => {
+          const opt = document.createElement("option");
+          opt.value = g;
+          opt.textContent = `Turno ${g}`;
+          giornataSelect.appendChild(opt);
+        });
+        if (previousTurn) {
+          const hasPrev = Array.from(giornataSelect.options).some(opt => opt.value === previousTurn);
+          if (hasPrev) giornataSelect.value = previousTurn;
+        }
       } else {
         // mostra solo semifinali (2) e finale (1)
         giornateDisponibili = giornateDisponibili.filter(g => g === "1" || g === "2");
@@ -212,9 +222,9 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       }
     }
 
-    const giornateDaMostrare = isGironi
-      ? giornateDisponibili
-      : (giornataSelect && giornataSelect.value ? [giornataSelect.value] : giornateDisponibili);
+    const giornateDaMostrare = (giornataSelect && giornataSelect.value)
+      ? [giornataSelect.value]
+      : giornateDisponibili;
 
     giornateDaMostrare.forEach(numGiornata => {
       const giornataDiv = document.createElement("div");
