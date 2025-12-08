@@ -16,6 +16,7 @@ $pageSeo = [
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($pageSeo); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8390787841690316" crossorigin="anonymous"></script>
   <style>
     .albo-page { max-width: 1100px; margin: 0 auto; padding: 88px 16px 90px; display: flex; flex-direction: column; gap: 20px; }
     .albo-page h1 { margin: 0 0 8px; }
@@ -47,6 +48,8 @@ $pageSeo = [
     .albo-premio-body { display: flex; align-items: center; gap: 14px; justify-content: flex-start; }
     .albo-premio img { width: 78px; height: 78px; border-radius: 16px; object-fit: cover; background: #fff; border: 1px solid #dfe4ed; }
     .albo-premio .vic { font-weight: 800; color: #0f172a; font-size: 1.02rem; }
+    .albo-ad { padding: 0; border: none; box-shadow: none; background: transparent; }
+    .albo-ad ins { display: block !important; }
   </style>
 </head>
 <body>
@@ -58,6 +61,18 @@ $pageSeo = [
       <select id="filterCompetizione" class="albo-select">
         <option value="">Tutti i tornei</option>
       </select>
+    </div>
+    <div class="albo-ad">
+      <!-- Pub orizz -->
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-8390787841690316"
+           data-ad-slot="3707275285"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+      <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
     </div>
     <div id="alboGrid" class="albo-grid">
       <p>Caricamento...</p>
@@ -122,7 +137,27 @@ $pageSeo = [
         grid.innerHTML = '<p>Nessun dato disponibile.</p>';
         return;
       }
-      grid.innerHTML = items.map(renderCard).join('');
+      const chunks = [];
+      items.forEach((item, idx) => {
+        chunks.push(renderCard(item));
+        // Inserisci un ad tra i tornei (non dopo l'ultimo)
+        if (idx < items.length - 1) {
+          chunks.push(`
+            <div class="albo-card albo-ad">
+              <ins class="adsbygoogle"
+                   style="display:block"
+                   data-ad-client="ca-pub-8390787841690316"
+                   data-ad-slot="3707275285"
+                   data-ad-format="auto"
+                   data-full-width-responsive="true"></ins>
+              <script>
+                (adsbygoogle = window.adsbygoogle || []).push({});
+              </script>
+            </div>
+          `);
+        }
+      });
+      grid.innerHTML = chunks.join('');
     }
 
     function populateSelect(items) {

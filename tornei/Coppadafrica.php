@@ -7,10 +7,11 @@ $assetVersion = '20251208';
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Coppa d’Africa - Tornei Old School</title>
+  <title>Coppa d'Africa - Tornei Old School</title>
   <link rel="stylesheet" href="../style.css?v=<?= $assetVersion ?>" />
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8390787841690316" crossorigin="anonymous"></script>
   <style>
     main.content {
       margin-top: 30px;
@@ -189,6 +190,19 @@ $assetVersion = '20251208';
       <button class="tab-button" data-tab="rose">Rose Squadre</button>
       <button class="tab-button" data-tab="regole">Regole</button>
     </nav>
+
+    <div class="albo-ad" style="margin: 10px 0 18px;">
+      <!-- Pub orizz -->
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-8390787841690316"
+           data-ad-slot="3707275285"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+      <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
 
     <!-- CLASSIFICA -->
     <section id="classifica" class="tab-section active">
