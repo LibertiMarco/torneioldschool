@@ -83,6 +83,37 @@ $assetVersion = '20251208';
       font-size: 13px;
       letter-spacing: 0.2px;
     }
+    /* Classifiche doppi gironi */
+    .gironi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+    }
+    .girone-box h3 {
+      margin: 0 0 8px;
+      color: #15293e;
+    }
+    .gironi-grid table {
+      width: 100%;
+    }
+    .gironi-grid table th,
+    .gironi-grid table td {
+      text-align: center;
+    }
+    .gironi-grid table th:nth-child(2),
+    .gironi-grid table td:nth-child(2) {
+      text-align: left;
+    }
+    .gironi-grid .team-cell .team-info {
+      justify-content: flex-start;
+    }
+    .gironi-grid .team-cell {
+      text-align: left;
+    }
+    .pos-cell.gold-pos {
+      color: #d9a441;
+      font-weight: 800;
+    }
     #marcatori {
       margin-bottom: 48px;
     }
