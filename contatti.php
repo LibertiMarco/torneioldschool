@@ -3,6 +3,7 @@ session_start();
 require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/env_loader.php';
 require_once __DIR__ . '/includi/seo.php';
+require_once __DIR__ . '/includi/mail_helper.php';
 
 $success = "";
 $error = "";
@@ -76,14 +77,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             // Usa un mittente del dominio per rispettare SPF/DMARC ed evita filtri antispam
             $fromEmail = getenv('MAIL_FROM') ?: 'no-reply@torneioldschool.it';
             $fromName = 'Tornei Old School';
-            $headers  = "From: {$fromName} <{$fromEmail}>\r\n";
-            $headers .= "Reply-To: {$nome} <{$email}>\r\n";
-            $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-            $headers .= "MIME-Version: 1.0\r\n";
-
-            $envelopeFrom = "-f{$fromEmail}";
-
-            if (mail($to, $subject, $body, $headers, $envelopeFrom)) {
+            $ok = tos_mail_send($to, $subject, $body, 'Tornei Old School', "{$nome} <{$email}>");
+            if ($ok) {
                 $success = "Messaggio inviato con successo! Ti risponderemo al piu presto.";
             } else {
                 $error = "Errore durante l'invio. Riprova piu tardi.";

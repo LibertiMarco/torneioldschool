@@ -2,10 +2,10 @@
 
 // Invio email: usa SMTP se configurato, altrimenti mail() con envelope corretto
 if (!function_exists('tos_mail_send')) {
-    function tos_mail_send(string $to, string $subject, string $bodyText, string $fromName = 'Tornei Old School'): bool
+    function tos_mail_send(string $to, string $subject, string $bodyText, string $fromName = 'Tornei Old School', ?string $replyToOverride = null): bool
     {
         $fromEmail = getenv('MAIL_FROM') ?: 'noreply@torneioldschool.it';
-        $replyTo = getenv('MAIL_REPLY_TO') ?: 'info@torneioldschool.it';
+        $replyTo = $replyToOverride ?: (getenv('MAIL_REPLY_TO') ?: 'info@torneioldschool.it');
         $returnPath = getenv('MAIL_RETURN_PATH') ?: $fromEmail;
 
         // Prepara multipart testo+HTML
