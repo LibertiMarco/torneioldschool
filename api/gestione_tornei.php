@@ -26,10 +26,15 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug) {
         return;
     }
 
-    $htmlTemplate = $baseDir . '/SerieA.php';
-    $jsTemplate = $baseDir . '/script-SerieA.js';
+    // Preferisci il template generico; fallback a SerieA se mancante
+    $htmlTemplate = $baseDir . '/TorneoTemplate.php';
+    $jsTemplate   = $baseDir . '/script-TorneoTemplate.js';
     if (!file_exists($htmlTemplate) || !file_exists($jsTemplate)) {
-        return;
+        $htmlTemplate = $baseDir . '/SerieA.php';
+        $jsTemplate   = $baseDir . '/script-SerieA.js';
+        if (!file_exists($htmlTemplate) || !file_exists($jsTemplate)) {
+            return;
+        }
     }
 
     $htmlContent = file_get_contents($htmlTemplate);
@@ -39,13 +44,14 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug) {
     }
 
     $newScriptName = 'script-' . $slug . '.js';
+    // Rimpiazzi segnaposto del template generico oppure fallback SerieA
     $htmlContent = str_replace(
-        ['Serie A', 'script-SerieA.js'],
-        [$nomeTorneo, $newScriptName],
+        ['TEMPLATE_SLUG', 'Torneo Template', 'script-TorneoTemplate.js', 'Serie A', 'script-SerieA.js'],
+        [$slug, $nomeTorneo, $newScriptName, $nomeTorneo, $newScriptName],
         $htmlContent
     );
 
-    $jsContent = str_replace('SerieA', $slug, $jsContent);
+    $jsContent = str_replace(['TorneoTemplate', 'SerieA'], [$slug, $slug], $jsContent);
 
     @file_put_contents($baseDir . '/' . $slug . '.php', $htmlContent);
     @file_put_contents($baseDir . '/' . $newScriptName, $jsContent);

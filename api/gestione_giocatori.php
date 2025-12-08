@@ -20,6 +20,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 $currentAction = $_GET['action'] ?? 'crea';
 
+// Azzera tutte le statistiche globali e per squadra
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['azzera_totali'])) {
+    $okReset = $giocatore->azzeraStatisticheTotali();
+    $redirectParams = $okReset ? ['reset_stats' => 1] : ['reset_stats_err' => 1];
+    redirectGestione($currentAction, $redirectParams);
+}
+
 function redirectGestione($action = null, $extraParams = []) {
     $params = [];
     if ($action) {
@@ -600,8 +607,21 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 
   <main class="admin-wrapper">
     <section class="admin-container">
+    <?php if (isset($_GET['reset_stats']) && $_GET['reset_stats'] === '1'): ?>
+    <div class="admin-alert success" id="resetAlert">Statistiche di tutti i giocatori azzerate.</div>
+    <?php elseif (isset($_GET['reset_stats_err']) && $_GET['reset_stats_err'] === '1'): ?>
+    <div class="admin-alert error" id="resetErrAlert">Errore nell'azzeramento delle statistiche.</div>
+    <?php endif; ?>
 <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
 <h1 class="admin-title">Gestione Giocatori</h1>
+
+<form method="POST" style="margin: 12px 0 6px;">
+    <?= csrf_field('admin_giocatori') ?>
+    <input type="hidden" name="azzera_totali" value="1">
+    <button type="submit" class="btn-danger" onclick="return confirm('Azzero tutte le statistiche di giocatori e associazioni?');">
+        Azzera statistiche giocatori
+    </button>
+</form>
 
 <?php if (isset($_GET['duplicate']) && $_GET['duplicate'] === '1'): ?>
 <div class="admin-alert error" id="duplicateAlert">Giocatore giÃ  esistente</div>
