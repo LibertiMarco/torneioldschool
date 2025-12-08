@@ -691,7 +691,24 @@ function renderGrid(posts) {
             </div>`;
         return;
     }
-    cardGrid.innerHTML = posts.map(createCard).join('');
+    const cards = posts.map(createCard);
+    if (cards.length > 1) {
+        const adBlock = `
+        <div class="blog-card ad-card" style="grid-column: 1 / -1;">
+          <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8390787841690316" crossorigin="anonymous"></script>
+          <ins class="adsbygoogle"
+               style="display:block; text-align:center;"
+               data-ad-layout="in-article"
+               data-ad-format="fluid"
+               data-ad-client="ca-pub-8390787841690316"
+               data-ad-slot="5519228011"></ins>
+          <script>
+               (adsbygoogle = window.adsbygoogle || []).push({});
+          </script>
+        </div>`;
+        cards.splice(1, 0, adBlock);
+    }
+    cardGrid.innerHTML = cards.join('');
 }
 
 function renderMiniList(posts, excludeId = null) {
