@@ -84,6 +84,29 @@ if ($result && $result->num_rows > 0) {
   }
 }
 
+// Ordina i tornei programmati per data di inizio piu vicina e i terminati per data fine piu recente
+$parseDate = static function (?string $date, int $fallback) {
+  if (empty($date) || $date === '0000-00-00') return $fallback;
+  $ts = strtotime($date);
+  return $ts ?: $fallback;
+};
+
+if (!empty($tornei['programmato'])) {
+  usort($tornei['programmato'], static function ($a, $b) use ($parseDate) {
+    $tsA = $parseDate($a['data_inizio'] ?? '', PHP_INT_MAX);
+    $tsB = $parseDate($b['data_inizio'] ?? '', PHP_INT_MAX);
+    return $tsA <=> $tsB; // piu vicina (piu piccola) prima
+  });
+}
+
+if (!empty($tornei['terminato'])) {
+  usort($tornei['terminato'], static function ($a, $b) use ($parseDate) {
+    $tsA = $parseDate($a['data_fine'] ?? '', 0);
+    $tsB = $parseDate($b['data_fine'] ?? '', 0);
+    return $tsB <=> $tsA; // piu recente prima
+  });
+}
+
 $baseUrl = seo_base_url();
 $torneiSeo = [
   'title' => 'Tornei calcetto Napoli (5, 6, 8) - Calendari e risultati | Tornei Old School',

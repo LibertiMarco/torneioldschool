@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/includi/seo.php';
 require_once __DIR__ . '/includi/db.php';
 
@@ -122,7 +122,7 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
     .banner {
       position: relative;
       width: 100%;
-      height: 160px; /* piÃƒÂ¹ basso */
+      height: 160px; /* piu basso */
       background: #f4f6fb;
       display: flex;
       align-items: center;
@@ -290,6 +290,12 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
       gap: 12px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.08);
       border: 1px solid #e4e8f0;
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+    .staff-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 14px 30px rgba(0,0,0,0.18);
+      border-color: rgba(21,41,62,0.18);
     }
     .staff-card img {
       width: 58px;
@@ -353,13 +359,13 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
       <p class="about-text">
         Organizziamo <strong>tornei amatoriali di calcio a 5 e calcio a 8</strong> - e, qualche volta, anche di altri sport -  
         nella zona di <strong>Napoli Nord</strong>.  
-        I nostri eventi non hanno premi in denaro, ma offrono qualcosa di molto piÃ¹ importante:  
+        I nostri eventi non hanno premi in denaro, ma offrono qualcosa di molto più importante:  
         <strong>unione, amicizia e divertimento puro</strong>.
       </p>
 
       <p class="about-text">
-        Ogni torneo Ã¨ pensato per essere un'esperienza completa:  
-        arbitri qualificati, sistema <strong>VAR</strong>, <strong>highlights</strong>, completini personalizzati e anche <strong>contenuti TikTok</strong> per far rivivere i momenti piÃ¹ belli di ogni partita.
+        Ogni torneo è pensato per essere un'esperienza completa:  
+        arbitri qualificati, sistema <strong>VAR</strong>, <strong>highlights</strong>, completini personalizzati e anche <strong>contenuti TikTok</strong> per far rivivere i momenti più belli di ogni partita.
       </p>
 
       <p class="about-highlight">Tornei Old School - il calcio come una volta, con lo spirito di oggi.</p>
@@ -448,7 +454,6 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
         <?php endforeach; ?>
       </div>
 
-      <a href="contatti.php" class="cta-button">Contatti</a>
     </section>
   </div>
 
@@ -488,4 +493,10 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
   </script>
 </body>
 </html>
+
+
+
+
+
+
 
