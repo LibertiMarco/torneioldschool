@@ -67,6 +67,73 @@
     globalListenersReady = true;
   }
 
+  function showConfirmDialog(message, onConfirm) {
+    const existing = document.getElementById("notifConfirmModal");
+    if (existing) existing.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "notifConfirmModal";
+    overlay.style.position = "fixed";
+    overlay.style.inset = "0";
+    overlay.style.background = "rgba(0,0,0,0.4)";
+    overlay.style.display = "flex";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.style.zIndex = "9999";
+
+    const dialog = document.createElement("div");
+    dialog.style.background = "#fff";
+    dialog.style.borderRadius = "12px";
+    dialog.style.boxShadow = "0 12px 30px rgba(0,0,0,0.15)";
+    dialog.style.padding = "20px";
+    dialog.style.maxWidth = "320px";
+    dialog.style.width = "90%";
+    dialog.style.textAlign = "center";
+
+    const msg = document.createElement("p");
+    msg.textContent = message || "Sei sicuro di voler eliminare?";
+    msg.style.margin = "0 0 14px";
+    msg.style.color = "#15293e";
+    msg.style.fontWeight = "600";
+
+    const actions = document.createElement("div");
+    actions.style.display = "flex";
+    actions.style.justifyContent = "center";
+    actions.style.gap = "10px";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.textContent = "Annulla";
+    cancelBtn.style.padding = "8px 14px";
+    cancelBtn.style.borderRadius = "8px";
+    cancelBtn.style.border = "1px solid #c7d1e6";
+    cancelBtn.style.background = "#f4f6fb";
+    cancelBtn.style.color = "#15293e";
+    cancelBtn.style.cursor = "pointer";
+    cancelBtn.addEventListener("click", () => overlay.remove());
+
+    const confirmBtn = document.createElement("button");
+    confirmBtn.type = "button";
+    confirmBtn.textContent = "Elimina";
+    confirmBtn.style.padding = "8px 14px";
+    confirmBtn.style.borderRadius = "8px";
+    confirmBtn.style.border = "1px solid #b00000";
+    confirmBtn.style.background = "#d80000";
+    confirmBtn.style.color = "#ffffff";
+    confirmBtn.style.cursor = "pointer";
+    confirmBtn.addEventListener("click", () => {
+      overlay.remove();
+      if (typeof onConfirm === "function") onConfirm();
+    });
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(confirmBtn);
+    dialog.appendChild(msg);
+    dialog.appendChild(actions);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+  }
+
   function setupHeader(header) {
     if (!header || headerStates.has(header)) {
       return;
@@ -149,28 +216,30 @@
     } else {
       const handleDelete = (notif, itemEl) => {
         if (!notif || !notif.id) return;
-        fetch("/api/notifications.php", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ delete_id: notif.id, type: notif.type || "generic" })
-        })
-          .then(res => res.ok ? res.json() : Promise.reject(res))
-          .then(resp => {
-            if (resp && resp.success) {
-              if (itemEl && itemEl.parentNode) itemEl.parentNode.removeChild(itemEl);
-              const remaining = menu.querySelectorAll(".notif-item").length;
-              if (remaining === 0) {
-                menu.appendChild(makeEmpty("Nessuna notifica"));
-              }
-              if (badge) {
-                const current = parseInt(badge.textContent || "0", 10) || 0;
-                const nextVal = Math.max(0, current - (notif.read ? 0 : 1));
-                updateBadgeDisplay(badge, nextVal);
-              }
-            }
+        showConfirmDialog("Vuoi eliminare questa notifica?", () => {
+          fetch("/api/notifications.php", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ delete_id: notif.id, type: notif.type || "generic" })
           })
-          .catch(() => {});
+            .then(res => res.ok ? res.json() : Promise.reject(res))
+            .then(resp => {
+              if (resp && resp.success) {
+                if (itemEl && itemEl.parentNode) itemEl.parentNode.removeChild(itemEl);
+                const remaining = menu.querySelectorAll(".notif-item").length;
+                if (remaining === 0) {
+                  menu.appendChild(makeEmpty("Nessuna notifica"));
+                }
+                if (badge) {
+                  const current = parseInt(badge.textContent || "0", 10) || 0;
+                  const nextVal = Math.max(0, current - (notif.read ? 0 : 1));
+                  updateBadgeDisplay(badge, nextVal);
+                }
+              }
+            })
+            .catch(() => {});
+        });
       };
 
       list.forEach((n) => {
