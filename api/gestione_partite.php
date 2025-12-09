@@ -478,12 +478,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   $ytEmpty = '';
                   $igEmpty = '';
                   $giornataInt = (int)$giornata;
+                  $faseLegRitorno = 'RITORNO';
                   $stmtR->bind_param(
                     'ssssssiisssiisss',
                     $torneo,      // s
                     $fase,        // s
                     $faseRound,   // s
-                    'RITORNO',    // s
+                    $faseLegRitorno, // s
                     $ospite,      // s
                     $casa,        // s
                     $golZero,     // i gol_casa
