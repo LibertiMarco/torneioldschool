@@ -218,8 +218,17 @@ if (is_array($resFiltro)) {
 }
 
 $squadreList = [];
+$seenSquadre = [];
 if ($resSquadre = $squadra->getAll()) {
     while ($r = $resSquadre->fetch_assoc()) {
+        $nomeKey = strtolower(trim($r['nome'] ?? ''));
+        if ($nomeKey === '') {
+            continue;
+        }
+        if (isset($seenSquadre[$nomeKey])) {
+            continue; // evita duplicati della stessa squadra su tornei diversi
+        }
+        $seenSquadre[$nomeKey] = true;
         $squadreList[] = $r;
     }
 }
