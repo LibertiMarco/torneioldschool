@@ -744,6 +744,10 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     @media (max-width: 767px) {
       .stats-button-row { justify-content: flex-start; }
     }
+
+    .form-message { margin-top: 10px; padding: 10px 12px; border-radius: 10px; font-weight: 600; }
+    .form-message.success { background: #e6f6ec; border: 1px solid #3ba776; color: #1f6a44; }
+    .form-message.error { background: #fdecec; border: 1px solid #d72638; color: #8f1a27; }
   </style>
 </head>
 <body>
@@ -753,13 +757,6 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
   <section class="admin-container">
     <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
     <h1 class="admin-title">Gestione Partite</h1>
-
-    <?php if ($errore): ?>
-      <div class="alert-error"><?= htmlspecialchars($errore) ?></div>
-    <?php endif; ?>
-    <?php if ($successo): ?>
-      <div class="alert-success"><?= htmlspecialchars($successo) ?></div>
-    <?php endif; ?>
 
     <div class="tab-buttons">
       <button type="button" data-tab="crea" class="active">Crea</button>
@@ -862,6 +859,11 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="full">
           <button type="submit" class="btn-primary">Crea partita</button>
         </div>
+        <?php if (($successo && ($azione ?? '') === 'crea')): ?>
+          <div class="form-message success"><?= htmlspecialchars($successo) ?></div>
+        <?php elseif (($errore && ($azione ?? '') === 'crea')): ?>
+          <div class="form-message error"><?= htmlspecialchars($errore) ?></div>
+        <?php endif; ?>
         </form>
       </div>
     </section>
@@ -1006,6 +1008,11 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="full">
           <button type="submit" class="btn-primary">Salva modifiche</button>
         </div>
+        <?php if (($successo && ($azione ?? '') === 'modifica')): ?>
+          <div class="form-message success"><?= htmlspecialchars($successo) ?></div>
+        <?php elseif (($errore && ($azione ?? '') === 'modifica')): ?>
+          <div class="form-message error"><?= htmlspecialchars($errore) ?></div>
+        <?php endif; ?>
         </form>
       </div>
     </section>
@@ -1048,6 +1055,11 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </select>
         </div>
         <button type="button" id="btnApriConfermaElimina" class="btn-danger modern-danger">Elimina partita</button>
+        <?php if (($successo && ($azione ?? '') === 'elimina')): ?>
+          <div class="form-message success"><?= htmlspecialchars($successo) ?></div>
+        <?php elseif (($errore && ($azione ?? '') === 'elimina')): ?>
+          <div class="form-message error"><?= htmlspecialchars($errore) ?></div>
+        <?php endif; ?>
         </form>
       </div>
     </section>
