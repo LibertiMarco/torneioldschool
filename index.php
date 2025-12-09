@@ -56,7 +56,7 @@ $localSchema = [
           <div>
             <p class="home-news__eyebrow">Dal mondo dei nostri tornei</p>
             <h2>Ultime Notizie</h2>
-            <p>Annunci dei nuovi bracket, risultati in tempo reale e storie dai nostri eventi.</p>
+            <p>Annunci dei nuovi bracket, le ultime notizie e storie dai nostri eventi.</p>
           </div>
           <a href="blog.php" class="hero-btn hero-btn--ghost">Vai al blog</a>
         </div>
