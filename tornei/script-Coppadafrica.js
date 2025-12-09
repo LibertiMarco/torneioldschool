@@ -416,17 +416,20 @@ async function caricaPlayoff() {
 
           const head = document.createElement("div");
           head.className = "bracket-head";
-          if (group.length > 1) {
-            head.innerHTML = `
-              <div class="leg-toggle" data-selected="${defaultLeg}">
-                <button type="button" class="leg-btn ${defaultLeg === 'ANDATA' ? 'active' : ''}" data-leg="ANDATA" ${hasAndata ? "" : "disabled"}>Andata</button>
-                <button type="button" class="leg-btn ${defaultLeg === 'RITORNO' ? 'active' : ''}" data-leg="RITORNO" ${hasRitorno ? "" : "disabled"}>Ritorno</button>
-              </div>
-            `;
-          } else {
-            const legLabel = (group[0].fase_leg || "").trim();
-            head.innerHTML = legLabel ? `<span class="bracket-leg">${legLabel}</span>` : "";
-          }
+        if (group.length > 1) {
+          head.innerHTML = `
+            <div class="leg-toggle" data-selected="${defaultLeg}">
+              <button type="button" class="leg-btn ${defaultLeg === 'ANDATA' ? 'active' : ''}" data-leg="ANDATA" ${hasAndata ? "" : "disabled"}>Andata</button>
+              <button type="button" class="leg-btn ${defaultLeg === 'RITORNO' ? 'active' : ''}" data-leg="RITORNO" ${hasRitorno ? "" : "disabled"}>Ritorno</button>
+            </div>
+          `;
+        } else {
+          head.innerHTML = `
+            <div class="leg-toggle" data-selected="${defaultLeg}">
+              <button type="button" class="leg-btn active" data-leg="ANDATA" disabled>Andata</button>
+            </div>
+          `;
+        }
           match.appendChild(head);
 
           const contentWrap = document.createElement("div");
@@ -440,7 +443,6 @@ async function caricaPlayoff() {
             const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
             const dataStr = formattaData(partita.data_partita);
             const showOra = dataStr !== "Data da definire" && partita.ora_partita;
-            const legLabel = (partita.fase_leg || "").trim();
             const body = document.createElement("div");
             body.className = "leg-content" + (activeLeg ? " active" : "");
             body.dataset.leg = (partita.fase_leg || "").toUpperCase() || "UNICA";
@@ -460,7 +462,7 @@ async function caricaPlayoff() {
                 <span class="team-score">${mostraRisultato ? partita.gol_ospite : "-"}</span>
               </div>
               <div class="bracket-meta">
-                <span>${dataStr}${showOra ? " - " + partita.ora_partita.slice(0,5) : ""}${legLabel ? " - " + legLabel : ""}</span>
+                <span>${dataStr}${showOra ? " - " + partita.ora_partita.slice(0,5) : ""}</span>
                 <span>${partita.campo || "Campo da definire"}</span>
               </div>
             `;

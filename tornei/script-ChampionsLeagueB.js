@@ -652,8 +652,11 @@ async function caricaPlayoff(tipoCoppa) {
             </div>
           `;
         } else {
-          const legLabel = (group[0].fase_leg || "").trim();
-          head.innerHTML = legLabel ? `<span class="bracket-leg">${legLabel}</span>` : "";
+          head.innerHTML = `
+            <div class="leg-toggle" data-selected="${defaultLeg}">
+              <button type="button" class="leg-btn active" data-leg="ANDATA" disabled>Andata</button>
+            </div>
+          `;
         }
         match.appendChild(head);
 
@@ -667,7 +670,6 @@ async function caricaPlayoff(tipoCoppa) {
           const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
           const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
           const dataStr = formattaData(partita.data_partita);
-          const legLabel = (partita.fase_leg || "").trim();
           const showOra = dataStr !== "Data da definire" && partita.ora_partita;
           const body = document.createElement("div");
           body.className = "leg-content" + (activeLeg ? " active" : "");
@@ -688,7 +690,7 @@ async function caricaPlayoff(tipoCoppa) {
               <span class="team-score">${mostraRisultato ? partita.gol_ospite : "-"}</span>
             </div>
             <div class="bracket-meta">
-              <span>${dataStr}${showOra ? ' - ' + partita.ora_partita.slice(0,5) : ''}${legLabel ? ' - ' + legLabel : ''}</span>
+              <span>${dataStr}${showOra ? ' - ' + partita.ora_partita.slice(0,5) : ''}</span>
               <span>${partita.campo || 'Campo da definire'}</span>
             </div>
           `;
