@@ -1302,8 +1302,6 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         legSelect.value = 'UNICA';
       } else if (roundVal !== 'SEMIFINALE' && legSelect.value === 'RITORNO') {
         legSelect.value = 'UNICA';
-      } else if (roundVal === 'SEMIFINALE' && legSelect.value === 'UNICA') {
-        legSelect.value = 'ANDATA';
       }
     }
 
