@@ -474,23 +474,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   $defaultOra = '00:00:00';
                   $defaultCampo = 'Da definire';
                   $stmtR->bind_param(
-                    'ssssssiisssiissss',
-                    $torneo,
-                    $fase,
-                    $faseRound,
-                    'RITORNO',
-                    $ospite,
-                    $casa,
-                    0,
-                    0,
-                    $defaultDate,
-                    $defaultOra,
-                    $defaultCampo,
-                    $giornata,
-                    0,
-                    $arbitro,
-                    '',
-                    ''
+                    'ssssssiisssiisss',
+                    $torneo,      // s
+                    $fase,        // s
+                    $faseRound,   // s
+                    'RITORNO',    // s
+                    $ospite,      // s
+                    $casa,        // s
+                    0,            // i gol_casa
+                    0,            // i gol_ospite
+                    $defaultDate, // s data
+                    $defaultOra,  // s ora
+                    $defaultCampo,// s campo
+                    $giornata,    // i giornata
+                    0,            // i giocata
+                    $arbitro,     // s
+                    '',           // s youtube
+                    ''            // s instagram
                   );
                   if ($stmtR->execute()) {
                     $successo .= ' Creato automaticamente il ritorno (data/ora/campo da definire).';
