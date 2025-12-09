@@ -97,7 +97,7 @@ function resolveLogoPath(name, storedPath) {
 
 // ====================== UTILS ======================
 function formattaData(data) {
-  if (!data) return "";
+  if (!data || data === "2000-01-01") return "Data da definire";
   const [anno, mese, giorno] = data.split("-");
   const d = new Date(Date.UTC(Number(anno), Number(mese) - 1, Number(giorno)));
   const giorniSettimana = ["Domenica", "Lunedi", "Martedi", "Mercoledi", "Giovedi", "Venerdi", "Sabato"];

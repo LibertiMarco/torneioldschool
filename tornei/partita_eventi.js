@@ -14,7 +14,7 @@ function logoPathFrom(p, keyLogo, keyNome) {
 
 // ====================== FORMATTA DATA ======================
 function formattaData(data) {
-    if (!data || data === "0000-00-00") return "Data da definire";
+    if (!data || data === "0000-00-00" || data === "2000-01-01") return "Data da definire";
     const [y, m, d] = data.split("-");
     return `${d}/${m}/${y}`;
 }
