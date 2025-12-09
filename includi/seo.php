@@ -52,7 +52,8 @@ if (!function_exists('seo_base_url')) {
         $description = seo_trim($meta['description'] ?? 'Tornei, classifiche e partite raccontate in tempo reale da Tornei Old School.');
         $url = $meta['url'] ?? seo_current_url();
         $canonical = $meta['canonical'] ?? $url;
-        $image = $meta['image'] ?? ($base . '/img/logo_old_school.png');
+        $defaultOg = $base . '/img/logo_old_school.png';
+        $image = $meta['image'] ?? $defaultOg;
         $type = $meta['type'] ?? 'website';
         $siteName = $meta['site_name'] ?? 'Tornei Old School';
         $siteAltName = $meta['site_alternate_name'] ?? null;
@@ -61,6 +62,7 @@ if (!function_exists('seo_base_url')) {
 
         echo "<title>" . seo_clean($title) . "</title>\n";
         echo '<meta name="description" content="' . seo_clean($description) . '">' . "\n";
+        echo '<meta name="robots" content="max-image-preview:large">' . "\n";
         echo '<link rel="canonical" href="' . seo_clean($canonical) . '">' . "\n";
         echo '<link rel="icon" type="image/png" href="' . seo_clean($icon) . '">' . "\n";
         echo '<link rel="apple-touch-icon" href="' . seo_clean($appleIcon) . '">' . "\n";

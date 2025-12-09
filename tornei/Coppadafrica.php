@@ -1,17 +1,26 @@
 ﻿<?php
 require_once __DIR__ . '/../includi/require_login.php';
+require_once __DIR__ . '/../includi/seo.php';
+
 $assetVersion = '20251208';
+$baseUrl = seo_base_url();
+$torneoSeo = [
+  'title' => "Coppa d'Africa - Tornei Old School",
+  'description' => "Coppa d'Africa: gironi, semifinali e finale in una sola serata. Calendario, classifiche, marcatori e rose aggiornate.",
+  'url' => $baseUrl . '/tornei/Coppadafrica.php',
+  'canonical' => $baseUrl . '/tornei/Coppadafrica.php',
+  'type' => 'article',
+  'image' => $baseUrl . '/img/logo_old_school.png',
+];
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Coppa d'Africa - Tornei Old School</title>
+  <?php render_seo_tags($torneoSeo); ?>
   <link rel="stylesheet" href="../style.css?v=<?= $assetVersion ?>" />
-  <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8390787841690316" crossorigin="anonymous"></script>
   <style>
     main.content {
       margin-top: 30px;

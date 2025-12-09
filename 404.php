@@ -6,6 +6,7 @@ $baseUrl = seo_base_url();
 $seo = [
   'title' => 'Pagina non trovata - Tornei Old School',
   'description' => 'La pagina che cerchi non esiste più. Torna alla home o scopri i tornei attivi.',
+  'image' => $baseUrl . '/img/logo_old_school.png',
   'url' => $baseUrl . ($_SERVER['REQUEST_URI'] ?? '/404'),
 ];
 ?>

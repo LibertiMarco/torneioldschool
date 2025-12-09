@@ -6,6 +6,7 @@ $homeSeo = [
   'description' => 'Tornei amatoriali di calcio a 5, calcio a 6 e calciotto (8) a Napoli: iscrizioni, calendari, classifiche e partite con aggiornamenti in tempo reale.',
   'url' => $baseUrl . '/',
   'canonical' => $baseUrl . '/',
+  'image' => $baseUrl . '/img/logo_old_school.png',
 ];
 $localSchema = [
   '@context' => 'https://schema.org',

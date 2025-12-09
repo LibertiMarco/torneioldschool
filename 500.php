@@ -6,6 +6,7 @@ $baseUrl = seo_base_url();
 $seo = [
   'title' => 'Errore interno - Tornei Old School',
   'description' => 'Si è verificato un errore momentaneo. Riprova tra poco o torna alla home.',
+  'image' => $baseUrl . '/img/logo_old_school.png',
   'url' => $baseUrl . ($_SERVER['REQUEST_URI'] ?? '/500'),
 ];
 ?>
