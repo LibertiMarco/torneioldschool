@@ -1294,9 +1294,11 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
       if (isRegular) roundSelect.value = '';
     }
     const roundVal = (roundSelect?.value || '').toUpperCase();
-    if (legWrap) legWrap.classList.toggle('hidden', isRegular);
+    const isLegRound = !isRegular && ['OTTAVI','QUARTI','SEMIFINALE'].includes(roundVal);
+
+    if (legWrap) legWrap.classList.toggle('hidden', !isLegRound);
     if (legSelect) {
-      if (isRegular) {
+      if (!isLegRound) {
         legSelect.value = 'UNICA';
       } else if (roundVal !== 'SEMIFINALE' && legSelect.value === 'RITORNO') {
         legSelect.value = 'UNICA';
@@ -1304,7 +1306,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         legSelect.value = 'ANDATA';
       }
     }
-    const showReturn = !isRegular && roundVal === 'SEMIFINALE' && legSelect && legSelect.value === 'ANDATA';
+
+    const showReturn = isLegRound && roundVal === 'SEMIFINALE' && legSelect && legSelect.value === 'ANDATA';
     if (returnWrap) {
       returnWrap.classList.toggle('hidden', !showReturn);
       returnWrap.querySelectorAll('input, select').forEach(el => { el.disabled = !showReturn; });
