@@ -18,7 +18,7 @@ $matchSeo = [
     'url' => $matchUrl,
     'canonical' => $matchUrl,
     'type' => 'article',
-    'image' => $baseUrl . '/img/logo_old_school.png',
+    'image' => $baseUrl . '/img/logo_old_school_1200.png',
 ];
 $matchBreadcrumbs = seo_breadcrumb_schema([
     ['name' => 'Home', 'url' => $baseUrl . '/'],

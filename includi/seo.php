@@ -52,7 +52,7 @@ if (!function_exists('seo_base_url')) {
         $description = seo_trim($meta['description'] ?? 'Tornei, classifiche e partite raccontate in tempo reale da Tornei Old School.');
         $url = $meta['url'] ?? seo_current_url();
         $canonical = $meta['canonical'] ?? $url;
-        $defaultOg = $base . '/img/logo_old_school.png';
+        $defaultOg = $base . '/img/logo_old_school_1200.png';
         $image = $meta['image'] ?? $defaultOg;
         $type = $meta['type'] ?? 'website';
         $siteName = $meta['site_name'] ?? 'Tornei Old School';

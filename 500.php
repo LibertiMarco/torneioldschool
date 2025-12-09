@@ -5,8 +5,8 @@ require_once __DIR__ . '/includi/seo.php';
 $baseUrl = seo_base_url();
 $seo = [
   'title' => 'Errore interno - Tornei Old School',
-  'description' => 'Si è verificato un errore momentaneo. Riprova tra poco o torna alla home.',
-  'image' => $baseUrl . '/img/logo_old_school.png',
+  'description' => 'Si e\' verificato un errore momentaneo. Riprova tra poco o torna alla home.',
+  'image' => $baseUrl . '/img/logo_old_school_1200.png',
   'url' => $baseUrl . ($_SERVER['REQUEST_URI'] ?? '/500'),
 ];
 ?>

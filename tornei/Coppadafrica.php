@@ -10,7 +10,7 @@ $torneoSeo = [
   'url' => $baseUrl . '/tornei/Coppadafrica.php',
   'canonical' => $baseUrl . '/tornei/Coppadafrica.php',
   'type' => 'article',
-  'image' => $baseUrl . '/img/logo_old_school.png',
+  'image' => $baseUrl . '/img/logo_old_school_1200.png',
 ];
 ?>
 <!DOCTYPE html>
