@@ -470,8 +470,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               if (!squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $ospite, $casa, null, $faseRound, 'RITORNO')) {
                 $stmtR = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
                 if ($stmtR) {
-                  $defaultDate = null; // lasciamo vuoti data/ora per il ritorno
-                  $defaultOra = null;
+                  // usa segnaposto evidente per il ritorno (poi modificabile)
+                  $defaultDate = '2000-01-01';
+                  $defaultOra = '00:00:00';
                   $defaultCampo = 'Da definire';
                   $golZero = 0;
                   $giocataZero = 0;
