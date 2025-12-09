@@ -187,7 +187,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     $categoria = trim($_POST['categoria']);
     $img = salvaImmagineTorneo($nome, 'img_upload');
 
-    if ($torneo->crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $img)) {
+    $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
+    if ($torneo->crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $img, $squadre_complete)) {
         creaFileTorneoDaTemplate($nome, $slug);
     }
     header("Location: gestione_tornei.php");
@@ -210,7 +211,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     if (!$img && $record && !empty($record['img'])) {
         $img = $record['img'];
     }
-    $torneo->aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria);
+    $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
+    $torneo->aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete);
     header("Location: gestione_tornei.php");
     exit;
 }
@@ -389,6 +391,12 @@ if ($lista instanceof mysqli_result) {
                 </div>
                 <div class="form-group"><label>File Torneo</label><input type="text" name="filetorneo" required></div>
                 <div class="form-group"><label>Categoria</label><input type="text" name="categoria" required></div>
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" name="squadre_complete" value="1">
+                        Tutte le squadre già create (nascondi torneo nella creazione squadre)
+                    </label>
+                </div>
                 <button type="submit" name="crea" class="btn-primary">Crea Torneo</button>
             </form>
 
@@ -430,6 +438,12 @@ if ($lista instanceof mysqli_result) {
                 </div>
                 <div class="form-group"><label>File Torneo</label><input type="text" name="filetorneo" id="mod_file"></div>
                 <div class="form-group"><label>Categoria</label><input type="text" name="categoria" id="mod_categoria"></div>
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" name="squadre_complete" id="mod_squadre_complete" value="1">
+                        Tutte le squadre già create (nascondi torneo nella creazione squadre)
+                    </label>
+                </div>
                         
                 <button type="submit" name="aggiorna" class="btn-primary">Aggiorna Torneo</button>
             </form>

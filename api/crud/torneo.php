@@ -29,34 +29,34 @@ class torneo {
     /**
      * Crea un nuovo torneo
      */
-    public function crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $img = null) {
+    public function crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $img = null, $squadre_complete = 0) {
         if (empty($img)) {
             $img = "/img/tornei/pallone.png";
         }
 
         $stmt = $this->conn->prepare("
             INSERT INTO {$this->table}
-            (nome, stato, data_inizio, data_fine, img, filetorneo, categoria)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (nome, stato, data_inizio, data_fine, img, filetorneo, categoria, squadre_complete)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        $stmt->bind_param("sssssss", $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria);
+        $stmt->bind_param("sssssssi", $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete);
         return $stmt->execute();
     }
 
     /**
      * Aggiorna un torneo esistente
      */
-    public function aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria) {
+    public function aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete = 0) {
         if (empty($img)) {
             $img = "/img/tornei/pallone.png";
         }
 
         $stmt = $this->conn->prepare("
             UPDATE {$this->table}
-            SET nome = ?, stato = ?, data_inizio = ?, data_fine = ?, img = ?, filetorneo = ?, categoria = ?
+            SET nome = ?, stato = ?, data_inizio = ?, data_fine = ?, img = ?, filetorneo = ?, categoria = ?, squadre_complete = ?
             WHERE id = ?
         ");
-        $stmt->bind_param("sssssssi", $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $id);
+        $stmt->bind_param("sssssssii", $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete, $id);
         return $stmt->execute();
     }
 
