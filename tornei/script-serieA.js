@@ -598,11 +598,7 @@ async function caricaPlayoff(tipoCoppa) {
             </div>
           `;
         } else {
-          head.innerHTML = `
-            <div class="leg-toggle" data-selected="${defaultLeg}">
-              <button type="button" class="leg-btn active" data-leg="ANDATA" disabled>Andata</button>
-            </div>
-          `;
+          head.innerHTML = "";
         }
         match.appendChild(head);
 
