@@ -417,10 +417,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $faseLeg = $fase !== 'REGULAR'
       ? ($faseLegInput ?: ($faseRound === 'SEMIFINALE' ? 'ANDATA' : 'UNICA'))
       : null;
-    $creaRitorno = isset($_POST['crea_ritorno']) && $_POST['crea_ritorno'] === '1';
-    $dataRitorno = sanitize_text($_POST['data_ritorno'] ?? '');
-    $oraRitorno = sanitize_text($_POST['ora_ritorno'] ?? '');
-    $campoRitorno = sanitize_text($_POST['campo_ritorno'] ?? '');
     $giocata = 0; // sempre non giocata alla creazione
     $gol_casa = sanitize_int($_POST['gol_casa'] ?? '0');
     $gol_ospite = sanitize_int($_POST['gol_ospite'] ?? '0');
@@ -434,10 +430,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $errore = 'Le due squadre non possono coincidere.';
     } elseif ($fase !== 'REGULAR' && !$faseLeg) {
       $errore = 'Seleziona il tipo di gara (andata/ritorno/unica).';
-    } elseif ($creaRitorno && ($faseRound !== 'SEMIFINALE' || $faseLeg !== 'ANDATA')) {
-      $errore = 'La creazione automatica del ritorno è disponibile solo per le semifinali (andata).';
-    } elseif ($creaRitorno && ($dataRitorno === '' || $oraRitorno === '' || $campoRitorno === '')) {
-      $errore = 'Compila data, ora e campo del ritorno.';
     } else {
       if ($fase !== 'REGULAR') {
         $giornata = round_to_giornata($roundSelezionato, $roundMap) ?? 0;
@@ -473,11 +465,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           );
           if ($stmt->execute()) {
             $successo = 'Partita creata correttamente.';
-            // crea automaticamente il ritorno invertendo casa/ospite se richiesto
-            if ($creaRitorno && $faseRound === 'SEMIFINALE') {
+            // crea automaticamente il ritorno per le semifinali andata con dati da definire
+            if ($faseRound === 'SEMIFINALE' && strtoupper($faseLeg) === 'ANDATA') {
               if (!squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $ospite, $casa, null, $faseRound, 'RITORNO')) {
                 $stmtR = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
                 if ($stmtR) {
+                  $defaultDate = $data; // manteniamo la stessa data per avere un valore valido
+                  $defaultOra = '00:00:00';
+                  $defaultCampo = 'Da definire';
                   $stmtR->bind_param(
                     'ssssssiisssiisss',
                     $torneo,
@@ -488,9 +483,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $casa,
                     0,
                     0,
-                    $dataRitorno,
-                    $oraRitorno,
-                    $campoRitorno,
+                    $defaultDate,
+                    $defaultOra,
+                    $defaultCampo,
                     $giornata,
                     0,
                     $arbitro,
@@ -498,14 +493,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ''
                   );
                   if ($stmtR->execute()) {
-                    $successo .= ' Creato anche il ritorno.';
+                    $successo .= ' Creato automaticamente il ritorno (data/ora/campo da definire).';
                   } else {
                     $successo .= ' (Ritorno non creato: controlla duplicati o dati mancanti)';
                   }
                   $stmtR->close();
                 }
               } else {
-                $successo .= ' (Ritorno gi� presente, non duplicato).';
+                $successo .= ' (Ritorno già presente, non duplicato).';
               }
             }
           } else {
@@ -696,10 +691,6 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     .admin-form.inline select:focus { border-color: #15293e; box-shadow: 0 0 0 3px rgba(21,41,62,0.15); outline: none; }
     .required-label::after { content: " *"; color: #d72638; margin-left: 4px; font-weight: 700; }
     .checkbox-inline { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: #15293e; }
-    .return-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 14px; margin-top: 8px; }
-    #returnWrapper { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
-    #returnWrapper .checkbox-inline { margin-bottom: 4px; }
-    #returnWrapper .return-grid { width: 100%; }
 
     .table-scroll { overflow-x: auto; background: #fff; border: 1px solid #e5eaf0; border-radius: 14px; padding: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
     #footer-container { margin-top: auto; padding-top: 40px; }
@@ -827,33 +818,6 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="ANDATA">Andata</option>
             <option value="RITORNO">Ritorno</option>
           </select>
-        </div>
-        <div id="returnWrapper" class="hidden full">
-          <label class="checkbox-inline">
-            <input type="checkbox" name="crea_ritorno" id="creaRitorno" value="1" checked>
-            Crea automaticamente il ritorno (inverte casa/ospite)
-          </label>
-          <div class="return-grid">
-            <div>
-              <label class="required-label">Data ritorno</label>
-              <input type="date" name="data_ritorno" id="dataRitorno" required>
-            </div>
-            <div>
-              <label class="required-label">Ora ritorno</label>
-              <input type="time" name="ora_ritorno" id="oraRitorno" required>
-            </div>
-            <div>
-              <label class="required-label">Campo ritorno</label>
-              <select name="campo_ritorno" id="campoRitorno" required>
-                <option value="">-- Seleziona campo --</option>
-                <option value="Sporting Club San Francesco, Napoli">Sporting Club San Francesco, Napoli</option>
-                <option value="Centro Sportivo La Paratina, Napoli">Centro Sportivo La Paratina, Napoli</option>
-                <option value="Sporting S.Antonio, Napoli">Sporting S.Antonio, Napoli</option>
-                <option value="La Boutique del Calcio, Napoli">La Boutique del Calcio, Napoli</option>
-                <option value="Campo Centrale del Parco Corto Maltese, Napoli">Campo Centrale del Parco Corto Maltese, Napoli</option>
-              </select>
-            </div>
-          </div>
         </div>
         <div>
           <label class="required-label">Squadra casa</label>
@@ -1277,14 +1241,12 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
   enforceDifferentTeams('squadraCasaCrea', 'squadraOspiteCrea');
 
-  function toggleRoundGiornata(faseSelect, giornataWrapId, roundWrapId, legWrapId = '', legSelectId = '', returnWrapId = '', returnCheckboxId = '') {
+  function toggleRoundGiornata(faseSelect, giornataWrapId, roundWrapId, legWrapId = '', legSelectId = '') {
     const isRegular = (faseSelect.value || '').toUpperCase() === 'REGULAR';
     const giornataWrap = document.getElementById(giornataWrapId);
     const roundWrap = document.getElementById(roundWrapId);
     const legWrap = legWrapId ? document.getElementById(legWrapId) : null;
     const legSelect = legSelectId ? document.getElementById(legSelectId) : null;
-    const returnWrap = returnWrapId ? document.getElementById(returnWrapId) : null;
-    const returnCheckbox = returnCheckboxId ? document.getElementById(returnCheckboxId) : null;
     if (giornataWrap) giornataWrap.classList.toggle('hidden', !isRegular);
     if (roundWrap) roundWrap.classList.toggle('hidden', isRegular);
     const giornataField = giornataWrap ? giornataWrap.querySelector('input, select') : null;
@@ -1309,18 +1271,10 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
       }
     }
 
-    const showReturn = isLegRound && roundVal === 'SEMIFINALE' && legSelect && legSelect.value === 'ANDATA';
-    if (returnWrap) {
-      returnWrap.classList.toggle('hidden', !showReturn);
-      returnWrap.querySelectorAll('input, select').forEach(el => { el.disabled = !showReturn; });
-    }
-    if (returnCheckbox && !showReturn) {
-      returnCheckbox.checked = false;
-    }
   }
 
   function refreshCreateLayout() {
-    toggleRoundGiornata(faseCrea, 'giornataWrapper', 'roundWrapper', 'legWrapper', 'faseLegCrea', 'returnWrapper', 'creaRitorno');
+    toggleRoundGiornata(faseCrea, 'giornataWrapper', 'roundWrapper', 'legWrapper', 'faseLegCrea');
   }
 
   if (faseCrea) {
