@@ -66,6 +66,13 @@ function sanitize_fase(?string $v, array $allowed): string {
   return in_array($val, $allowed, true) ? $val : 'REGULAR';
 }
 
+function sanitize_leg(?string $v): ?string {
+  $val = strtoupper(trim((string)$v));
+  $allowed = ['ANDATA','RITORNO','UNICA'];
+  if (!$val) return null;
+  return in_array($val, $allowed, true) ? $val : null;
+}
+
 function round_to_giornata(?string $roundLabel, array $map): ?int {
   if ($roundLabel === null) return null;
   $key = strtoupper(trim($roundLabel));
@@ -331,9 +338,20 @@ function inviaNotificaEsito(mysqli $conn, int $partitaId, ?array $info = null): 
 }
 
 // ===== OPERAZIONI CRUD =====
-function squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, $excludeId = null) {
+function squadraHaGiaPartita(
+  $conn,
+  $torneo,
+  $fase,
+  $giornata,
+  $casa,
+  $ospite,
+  $excludeId = null,
+  $fase_round = null,
+  $fase_leg = null
+) {
   $sql = "
-    SELECT 1 FROM partite
+    SELECT id, squadra_casa, squadra_ospite, fase_round, fase_leg
+    FROM partite
     WHERE torneo = ? AND fase = ? AND giornata = ?
       AND (squadra_casa = ? OR squadra_ospite = ? OR squadra_casa = ? OR squadra_ospite = ?)
   ";
@@ -344,16 +362,40 @@ function squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, $
     $types .= "i";
     $params[] = $excludeId;
   }
-  $sql .= " LIMIT 1";
 
   $stmt = $conn->prepare($sql);
   if (!$stmt) return false;
   $stmt->bind_param($types, ...$params);
   $stmt->execute();
-  $stmt->store_result();
-  $dup = $stmt->num_rows > 0;
+  $res = $stmt->get_result();
+
+  $targetRound = strtoupper($fase_round ?? '');
+  $targetLeg = strtoupper($fase_leg ?? '');
+
+  while ($row = $res->fetch_assoc()) {
+    $rowRound = strtoupper($row['fase_round'] ?? '');
+    $rowLeg = strtoupper($row['fase_leg'] ?? '');
+    $samePair = (
+      strcasecmp($row['squadra_casa'], $casa) === 0 && strcasecmp($row['squadra_ospite'], $ospite) === 0
+    ) || (
+      strcasecmp($row['squadra_casa'], $ospite) === 0 && strcasecmp($row['squadra_ospite'], $casa) === 0
+    );
+
+    // consenti andata/ritorno in semifinale con coppia identica ma leg diverso
+    $isSemiTarget = $targetRound === 'SEMIFINALE';
+    $isSemiRow = $rowRound === 'SEMIFINALE';
+    if ($isSemiTarget && $isSemiRow && $samePair && $targetLeg && $rowLeg) {
+      if ($rowLeg !== $targetLeg) {
+        continue;
+      }
+    }
+
+    $stmt->close();
+    return true;
+  }
+
   $stmt->close();
-  return $dup;
+  return false;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -369,6 +411,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $campo = sanitize_text($_POST['campo'] ?? '');
     $roundSelezionato = sanitize_text($_POST['round_eliminazione'] ?? '');
     $giornata = sanitize_int($_POST['giornata'] ?? '');
+    $faseRound = $fase !== 'REGULAR' ? strtoupper($roundSelezionato) : null;
+    $faseRound = ($faseRound && in_array($faseRound, ['OTTAVI','QUARTI','SEMIFINALE','FINALE'], true)) ? $faseRound : null;
+    $faseLegInput = $fase !== 'REGULAR' ? sanitize_leg($_POST['fase_leg'] ?? '') : null;
+    $faseLeg = $fase !== 'REGULAR'
+      ? ($faseLegInput ?: ($faseRound === 'SEMIFINALE' ? 'ANDATA' : 'UNICA'))
+      : null;
+    $creaRitorno = isset($_POST['crea_ritorno']) && $_POST['crea_ritorno'] === '1';
+    $dataRitorno = sanitize_text($_POST['data_ritorno'] ?? '');
+    $oraRitorno = sanitize_text($_POST['ora_ritorno'] ?? '');
+    $campoRitorno = sanitize_text($_POST['campo_ritorno'] ?? '');
     $giocata = 0; // sempre non giocata alla creazione
     $gol_casa = sanitize_int($_POST['gol_casa'] ?? '0');
     $gol_ospite = sanitize_int($_POST['gol_ospite'] ?? '0');
@@ -380,24 +432,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $errore = 'Compila tutti i campi obbligatori.';
     } elseif ($casa === $ospite) {
       $errore = 'Le due squadre non possono coincidere.';
+    } elseif ($fase !== 'REGULAR' && !$faseLeg) {
+      $errore = 'Seleziona il tipo di gara (andata/ritorno/unica).';
+    } elseif ($creaRitorno && ($faseRound !== 'SEMIFINALE' || $faseLeg !== 'ANDATA')) {
+      $errore = 'La creazione automatica del ritorno è disponibile solo per le semifinali (andata).';
+    } elseif ($creaRitorno && ($dataRitorno === '' || $oraRitorno === '' || $campoRitorno === '')) {
+      $errore = 'Compila data, ora e campo del ritorno.';
     } else {
       if ($fase !== 'REGULAR') {
         $giornata = round_to_giornata($roundSelezionato, $roundMap) ?? 0;
       }
       // controllo: una squadra non può avere due partite nella stessa giornata della stessa fase
-      if (squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite)) {
+      if (squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, null, $faseRound, $faseLeg)) {
         $errore = 'Una delle squadre ha già una partita in questa giornata per questa fase.';
       }
 
       if (!empty($errore)) {
         // non procedere oltre
       } else {
-        $stmt = $conn->prepare("INSERT INTO partite (torneo, fase, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
+        $stmt = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
         if ($stmt) {
           $stmt->bind_param(
-            'ssssiisssiisss',
+            'ssssssiisssiisss',
             $torneo,
             $fase,
+            $faseRound,
+            $faseLeg,
             $casa,
             $ospite,
             $gol_casa,
@@ -413,6 +473,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           );
           if ($stmt->execute()) {
             $successo = 'Partita creata correttamente.';
+            // crea automaticamente il ritorno invertendo casa/ospite se richiesto
+            if ($creaRitorno && $faseRound === 'SEMIFINALE') {
+              if (!squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $ospite, $casa, null, $faseRound, 'RITORNO')) {
+                $stmtR = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
+                if ($stmtR) {
+                  $stmtR->bind_param(
+                    'ssssssiisssiisss',
+                    $torneo,
+                    $fase,
+                    $faseRound,
+                    'RITORNO',
+                    $ospite,
+                    $casa,
+                    0,
+                    0,
+                    $dataRitorno,
+                    $oraRitorno,
+                    $campoRitorno,
+                    $giornata,
+                    0,
+                    $arbitro,
+                    '',
+                    ''
+                  );
+                  if ($stmtR->execute()) {
+                    $successo .= ' Creato anche il ritorno.';
+                  } else {
+                    $successo .= ' (Ritorno non creato: controlla duplicati o dati mancanti)';
+                  }
+                  $stmtR->close();
+                }
+              } else {
+                $successo .= ' (Ritorno gi� presente, non duplicato).';
+              }
+            }
           } else {
             if ((int)$stmt->errno === 1062) {
               $errore = 'Esiste già una partita per questo turno con una delle squadre selezionate.';
@@ -439,6 +534,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $campo = sanitize_text($_POST['campo_mod'] ?? '');
     $roundSelezionato = sanitize_text($_POST['round_eliminazione_mod'] ?? '');
     $giornata = sanitize_int($_POST['giornata_mod'] ?? '');
+    $faseRound = $fase !== 'REGULAR' ? strtoupper($roundSelezionato) : null;
+    $faseLegInput = $fase !== 'REGULAR' ? sanitize_leg($_POST['fase_leg_mod'] ?? '') : null;
+    $faseLeg = $fase !== 'REGULAR'
+      ? ($faseLegInput ?: ($faseRound === 'SEMIFINALE' ? 'ANDATA' : 'UNICA'))
+      : null;
     // usa il flag inviato dal form; non forziamo piï¿½ true di default
     $giocata = isset($_POST['giocata_mod']) && $_POST['giocata_mod'] === '1' ? 1 : 0;
     $gol_casa = sanitize_int($_POST['gol_casa_mod'] ?? '0');
@@ -451,19 +551,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $errore = 'Seleziona una partita e compila i campi obbligatori.';
     } elseif ($casa === $ospite) {
       $errore = 'Le due squadre non possono coincidere.';
+    } elseif ($fase !== 'REGULAR' && !$faseLeg) {
+      $errore = 'Seleziona il tipo di gara (andata/ritorno/unica).';
     } else {
       if ($fase !== 'REGULAR') {
         $giornata = round_to_giornata($roundSelezionato, $roundMap) ?? 0;
       }
-      if (squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, $id)) {
+      if (squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, $id, $faseRound, $faseLeg)) {
         $errore = 'Una delle squadre ha già una partita in questa giornata per questa fase.';
       }
-      $stmt = $conn->prepare("UPDATE partite SET torneo=?, fase=?, squadra_casa=?, squadra_ospite=?, gol_casa=?, gol_ospite=?, data_partita=?, ora_partita=?, campo=?, giornata=?, giocata=?, arbitro=?, link_youtube=?, link_instagram=? WHERE id=?");
+      $stmt = $conn->prepare("UPDATE partite SET torneo=?, fase=?, fase_round=?, fase_leg=?, squadra_casa=?, squadra_ospite=?, gol_casa=?, gol_ospite=?, data_partita=?, ora_partita=?, campo=?, giornata=?, giocata=?, arbitro=?, link_youtube=?, link_instagram=? WHERE id=?");
       if ($stmt) {
         $stmt->bind_param(
-          'ssssiisssiisssi',
+          'ssssssiisssiisssi',
           $torneo,
           $fase,
+          $faseRound,
+          $faseLeg,
           $casa,
           $ospite,
           $gol_casa,
@@ -544,7 +648,7 @@ $isAjax = (
 );
 
 $partite = [];
-$res = $conn->query("SELECT id, torneo, fase, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, arbitro, link_youtube, link_instagram, created_at FROM partite ORDER BY data_partita DESC, ora_partita DESC, id DESC");
+$res = $conn->query("SELECT id, torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, arbitro, link_youtube, link_instagram, created_at FROM partite ORDER BY data_partita DESC, ora_partita DESC, id DESC");
 if ($res) {
   while ($row = $res->fetch_assoc()) {
     $partite[] = $row;
@@ -590,6 +694,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     .admin-form.inline select { border-radius: 10px; border: 1px solid #d5dbe4; background: #fafbff; transition: border-color .2s, box-shadow .2s; width: 100%; display: block; }
     .admin-form.inline input:focus,
     .admin-form.inline select:focus { border-color: #15293e; box-shadow: 0 0 0 3px rgba(21,41,62,0.15); outline: none; }
+    .checkbox-inline { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: #15293e; }
+    .return-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 14px; margin-top: 8px; }
 
     .table-scroll { overflow-x: auto; background: #fff; border: 1px solid #e5eaf0; border-radius: 14px; padding: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
     #footer-container { margin-top: auto; padding-top: 40px; }
@@ -709,6 +815,41 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="SEMIFINALE">Semifinale</option>
             <option value="FINALE">Finale</option>
           </select>
+        </div>
+        <div id="legWrapper" class="hidden">
+          <label>Tipo gara</label>
+          <select name="fase_leg" id="faseLegCrea">
+            <option value="UNICA">Gara secca</option>
+            <option value="ANDATA">Andata</option>
+            <option value="RITORNO">Ritorno</option>
+          </select>
+        </div>
+        <div id="returnWrapper" class="hidden full">
+          <label class="checkbox-inline">
+            <input type="checkbox" name="crea_ritorno" id="creaRitorno" value="1" checked>
+            Crea automaticamente il ritorno (inverte casa/ospite)
+          </label>
+          <div class="return-grid">
+            <div>
+              <label>Data ritorno</label>
+              <input type="date" name="data_ritorno" id="dataRitorno">
+            </div>
+            <div>
+              <label>Ora ritorno</label>
+              <input type="time" name="ora_ritorno" id="oraRitorno">
+            </div>
+            <div>
+              <label>Campo ritorno</label>
+              <select name="campo_ritorno" id="campoRitorno">
+                <option value="">-- Seleziona campo --</option>
+                <option value="Sporting Club San Francesco, Napoli">Sporting Club San Francesco, Napoli</option>
+                <option value="Centro Sportivo La Paratina, Napoli">Centro Sportivo La Paratina, Napoli</option>
+                <option value="Sporting S.Antonio, Napoli">Sporting S.Antonio, Napoli</option>
+                <option value="La Boutique del Calcio, Napoli">La Boutique del Calcio, Napoli</option>
+                <option value="Campo Centrale del Parco Corto Maltese, Napoli">Campo Centrale del Parco Corto Maltese, Napoli</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div>
           <label>Squadra casa</label>
@@ -874,6 +1015,14 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="FINALE">Finale</option>
           </select>
         </div>
+        <div id="legWrapperMod" class="hidden">
+          <label>Tipo gara</label>
+          <select name="fase_leg_mod" id="faseLegMod">
+            <option value="UNICA">Gara secca</option>
+            <option value="ANDATA">Andata</option>
+            <option value="RITORNO">Ritorno</option>
+          </select>
+        </div>
         <div>
           <label>Giocata</label>
           <input type="checkbox" name="giocata_mod" id="giocata_mod" value="1" checked>
@@ -1022,6 +1171,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
   const faseCrea = document.querySelector('select[name="fase"]');
   const giornataCrea = document.getElementById('giornataCrea');
   const roundCrea = document.getElementById('roundCrea');
+  const faseLegCrea = document.getElementById('faseLegCrea');
 
   const getGiornataTarget = () => {
     const faseVal = (faseCrea?.value || '').toUpperCase();
@@ -1037,6 +1187,9 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     const torneoVal = torneoCrea?.value || '';
     const faseVal = (faseCrea?.value || '').toUpperCase();
     const giornataVal = getGiornataTarget();
+    const legVal = (document.getElementById('faseLegCrea')?.value || '').toUpperCase();
+    const roundVal = (roundCrea?.value || '').toUpperCase();
+    const isSemiReturn = faseVal !== 'REGULAR' && roundVal === 'SEMIFINALE' && legVal === 'RITORNO';
     const casaSel = document.getElementById('squadraCasaCrea');
     const ospSel = document.getElementById('squadraOspiteCrea');
     const resetSelect = (sel, placeholder) => {
@@ -1050,16 +1203,25 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
       return;
     }
     const lista = squadreMap[torneoVal] || [];
-    const occupate = new Set(
-      partiteData
-        .filter(p =>
-          p.torneo === torneoVal &&
-          (p.fase || 'REGULAR').toUpperCase() === faseVal &&
-          String(p.giornata) === String(giornataVal)
-        )
-        .flatMap(p => [p.squadra_casa, p.squadra_ospite])
+    const occupate = new Set();
+    const semiAllowed = new Set();
+    const matches = partiteData.filter(p =>
+      p.torneo === torneoVal &&
+      (p.fase || 'REGULAR').toUpperCase() === faseVal &&
+      String(p.giornata) === String(giornataVal)
     );
-    const disponibili = lista.filter(nome => !occupate.has(nome));
+    matches.forEach(p => {
+      const leg = (p.fase_leg || '').toUpperCase();
+      const roundDb = (p.fase_round || '').toUpperCase();
+      const teams = [p.squadra_casa, p.squadra_ospite];
+      const allowReturn = isSemiReturn && roundDb === 'SEMIFINALE' && leg === 'ANDATA';
+      if (allowReturn) {
+        teams.forEach(t => semiAllowed.add(t));
+        return;
+      }
+      teams.forEach(t => occupate.add(t));
+    });
+    const disponibili = lista.filter(nome => !occupate.has(nome) || semiAllowed.has(nome));
     const fill = (sel) => {
       if (!sel) return;
       sel.disabled = false;
@@ -1082,7 +1244,16 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     giornataCrea.addEventListener('change', populateSquadreFiltrate);
   }
   if (roundCrea) {
-    roundCrea.addEventListener('change', populateSquadreFiltrate);
+    roundCrea.addEventListener('change', () => {
+      refreshCreateLayout();
+      populateSquadreFiltrate();
+    });
+  }
+  if (faseLegCrea) {
+    faseLegCrea.addEventListener('change', () => {
+      refreshCreateLayout();
+      populateSquadreFiltrate();
+    });
   }
   // inizializza filtrando appena caricata la pagina
   populateSquadreFiltrate();
@@ -1102,10 +1273,14 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
   enforceDifferentTeams('squadraCasaCrea', 'squadraOspiteCrea');
 
-  const toggleRoundGiornata = (faseSelect, giornataWrapId, roundWrapId) => {
+  function toggleRoundGiornata(faseSelect, giornataWrapId, roundWrapId, legWrapId = '', legSelectId = '', returnWrapId = '', returnCheckboxId = '') {
     const isRegular = (faseSelect.value || '').toUpperCase() === 'REGULAR';
     const giornataWrap = document.getElementById(giornataWrapId);
     const roundWrap = document.getElementById(roundWrapId);
+    const legWrap = legWrapId ? document.getElementById(legWrapId) : null;
+    const legSelect = legSelectId ? document.getElementById(legSelectId) : null;
+    const returnWrap = returnWrapId ? document.getElementById(returnWrapId) : null;
+    const returnCheckbox = returnCheckboxId ? document.getElementById(returnCheckboxId) : null;
     if (giornataWrap) giornataWrap.classList.toggle('hidden', !isRegular);
     if (roundWrap) roundWrap.classList.toggle('hidden', isRegular);
     const giornataField = giornataWrap ? giornataWrap.querySelector('input, select') : null;
@@ -1118,12 +1293,35 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
       roundSelect.required = !isRegular;
       if (isRegular) roundSelect.value = '';
     }
-  };
+    const roundVal = (roundSelect?.value || '').toUpperCase();
+    if (legWrap) legWrap.classList.toggle('hidden', isRegular);
+    if (legSelect) {
+      if (isRegular) {
+        legSelect.value = 'UNICA';
+      } else if (roundVal !== 'SEMIFINALE' && legSelect.value === 'RITORNO') {
+        legSelect.value = 'UNICA';
+      } else if (roundVal === 'SEMIFINALE' && legSelect.value === 'UNICA') {
+        legSelect.value = 'ANDATA';
+      }
+    }
+    const showReturn = !isRegular && roundVal === 'SEMIFINALE' && legSelect && legSelect.value === 'ANDATA';
+    if (returnWrap) {
+      returnWrap.classList.toggle('hidden', !showReturn);
+      returnWrap.querySelectorAll('input, select').forEach(el => { el.disabled = !showReturn; });
+    }
+    if (returnCheckbox && !showReturn) {
+      returnCheckbox.checked = false;
+    }
+  }
+
+  function refreshCreateLayout() {
+    toggleRoundGiornata(faseCrea, 'giornataWrapper', 'roundWrapper', 'legWrapper', 'faseLegCrea', 'returnWrapper', 'creaRitorno');
+  }
 
   if (faseCrea) {
-    toggleRoundGiornata(faseCrea, 'giornataWrapper', 'roundWrapper');
+    refreshCreateLayout();
     faseCrea.addEventListener('change', () => {
-      toggleRoundGiornata(faseCrea, 'giornataWrapper', 'roundWrapper');
+      refreshCreateLayout();
       populateSquadreFiltrate();
     });
   }
@@ -1149,18 +1347,27 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     fillField('fase_mod', partita.fase);
     const faseModSelect = document.getElementById('fase_mod');
-    if (faseModSelect) toggleRoundGiornata(faseModSelect, 'giornataWrapperMod', 'roundWrapperMod');
-    if (partita.fase && partita.fase.toUpperCase() !== 'REGULAR') {
+    const roundSel = document.getElementById('round_eliminazione_mod');
+    const giornataInput = document.getElementById('giornata_mod');
+    const legModSelect = document.getElementById('faseLegMod');
+    const isModRegular = (partita.fase || '').toUpperCase() === 'REGULAR';
+    if (partita.fase && !isModRegular) {
       const lbl = roundLabelFromGiornata[String(partita.giornata)] || '';
-      const roundSel = document.getElementById('round_eliminazione_mod');
       if (roundSel) roundSel.value = lbl;
-      const giornataInput = document.getElementById('giornata_mod');
       if (giornataInput) giornataInput.value = '';
     } else {
-      const roundSel = document.getElementById('round_eliminazione_mod');
       if (roundSel) roundSel.value = '';
       fillField('giornata_mod', partita.giornata);
     }
+    if (legModSelect) {
+      let legVal = (partita.fase_leg || '').toUpperCase();
+      const roundVal = (roundSel?.value || '').toUpperCase();
+      if (!legVal && !isModRegular) {
+        legVal = roundVal === 'SEMIFINALE' ? 'ANDATA' : 'UNICA';
+      }
+      legModSelect.value = legVal || 'UNICA';
+    }
+    if (faseModSelect) toggleRoundGiornata(faseModSelect, 'giornataWrapperMod', 'roundWrapperMod', 'legWrapperMod', 'faseLegMod');
     fillField('gol_casa_mod', partita.gol_casa);
     fillField('gol_ospite_mod', partita.gol_ospite);
     fillField('data_partita_mod', partita.data_partita);
@@ -1251,9 +1458,20 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
   enforceDifferentTeams('squadra_casa_mod', 'squadra_ospite_mod');
 
   const faseModSelect = document.getElementById('fase_mod');
+  const roundModSelect = document.getElementById('round_eliminazione_mod');
+  const faseLegModSelect = document.getElementById('faseLegMod');
+  const refreshModLayout = () => {
+    if (faseModSelect) toggleRoundGiornata(faseModSelect, 'giornataWrapperMod', 'roundWrapperMod', 'legWrapperMod', 'faseLegMod');
+  };
   if (faseModSelect) {
-    faseModSelect.addEventListener('change', () => toggleRoundGiornata(faseModSelect, 'giornataWrapperMod', 'roundWrapperMod'));
-    toggleRoundGiornata(faseModSelect, 'giornataWrapperMod', 'roundWrapperMod');
+    faseModSelect.addEventListener('change', refreshModLayout);
+    refreshModLayout();
+  }
+  if (roundModSelect) {
+    roundModSelect.addEventListener('change', refreshModLayout);
+  }
+  if (faseLegModSelect) {
+    faseLegModSelect.addEventListener('change', refreshModLayout);
   }
 
   setupSelector({
@@ -1443,6 +1661,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           showInlineMessage('success', data.message || 'Operazione completata');
           if (formId === 'formCrea') {
             form.reset();
+            refreshCreateLayout();
             populateSquadreFiltrate();
           } else if (formId === 'formModifica') {
             const idSel = form.querySelector('[name="partita_id"]')?.value;
