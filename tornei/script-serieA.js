@@ -444,6 +444,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         }
       
         const dataStr = formattaData(partita.data_partita);
+        const showOra = dataStr !== "Data da definire" && partita.ora_partita;
         const stadio = partita.campo || "Campo da definire";
         const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
         const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
@@ -463,7 +464,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
                   : ""
               }
             </span>
-            <span>${dataStr}${partita.ora_partita ? " - " + partita.ora_partita.slice(0,5) : ""}</span>
+            <span>${dataStr}${showOra ? " - " + partita.ora_partita.slice(0,5) : ""}</span>
           </div>
       
           <div class="match-body">
@@ -530,6 +531,12 @@ async function caricaPlayoff(tipoCoppa) {
       .bracket-next .team-name { font-weight: 700; color: #15293e; text-transform: none; white-space: normal; word-break: break-word; }
       .bracket-next .team-score { font-weight: 800; min-width: 20px; text-align: right; color: #15293e; }
       .bracket-next .next-meta { font-size: 11px; color: #4c5b71; }
+      .leg-toggle { display: inline-flex; gap: 6px; background: #f3f6fb; padding: 4px; border-radius: 999px; }
+      .leg-btn { border: 1px solid #cbd5e1; background: #fff; color: #15293e; padding: 6px 10px; border-radius: 999px; font-weight: 700; cursor: pointer; }
+      .leg-btn.active { background: #15293e; color: #fff; border-color: #15293e; }
+      .leg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .leg-content { display: none; }
+      .leg-content.active { display: block; }
     `;
     document.head.appendChild(style);
   })();
@@ -564,45 +571,103 @@ async function caricaPlayoff(tipoCoppa) {
       titolo.textContent = fasiMap[g] || `Fase ${g}`;
       col.appendChild(titolo);
 
-      matchList.forEach((partita, idx) => {
-        const hasScore = partita.gol_casa !== null && partita.gol_ospite !== null;
-        const giocata = (Number(partita.giocata) === 1);
-        const mostraRisultato = giocata && hasScore;
-        const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
-        const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
-        const dataStr = formattaData(partita.data_partita);
-        const legLabel = (partita.fase_leg || "").trim();
+      const pairMap = {};
+      matchList.forEach(p => {
+        const key = [p.squadra_casa || "", p.squadra_ospite || ""].sort((a, b) => a.localeCompare(b)).join("|||");
+        if (!pairMap[key]) pairMap[key] = [];
+        pairMap[key].push(p);
+      });
+
+      Object.values(pairMap).forEach(group => {
+        const legOrder = { ANDATA: 1, RITORNO: 2 };
+        group.sort((a, b) => (legOrder[(a.fase_leg || "").toUpperCase()] || 99) - (legOrder[(b.fase_leg || "").toUpperCase()] || 99));
+        const hasAndata = group.some(p => (p.fase_leg || "").toUpperCase() === "ANDATA");
+        const hasRitorno = group.some(p => (p.fase_leg || "").toUpperCase() === "RITORNO");
+        const defaultLeg = hasAndata ? "ANDATA" : (group[0].fase_leg || "").toUpperCase() || "ANDATA";
+
         const match = document.createElement("div");
-        match.className = "bracket-match" + (mostraRisultato ? " is-played" : "");
-        match.style.cursor = mostraRisultato ? "pointer" : "default";
-        match.innerHTML = `
-          <div class="bracket-head">
-            ${legLabel ? `<span class="bracket-leg">${legLabel}</span>` : ""}
-          </div>
-          <div class="bracket-team">
-            <div class="team-side">
-              <img class="team-logo" src="${logoCasa}" alt="${partita.squadra_casa}">
-              <span class="team-name">${partita.squadra_casa}</span>
+        match.className = "bracket-match";
+
+        const head = document.createElement("div");
+        head.className = "bracket-head";
+        if (group.length > 1) {
+          head.innerHTML = `
+            <div class="leg-toggle" data-selected="${defaultLeg}">
+              <button type="button" class="leg-btn ${defaultLeg === 'ANDATA' ? 'active' : ''}" data-leg="ANDATA" ${hasAndata ? '' : 'disabled'}>Andata</button>
+              <button type="button" class="leg-btn ${defaultLeg === 'RITORNO' ? 'active' : ''}" data-leg="RITORNO" ${hasRitorno ? '' : 'disabled'}>Ritorno</button>
             </div>
-            <span class="team-score">${mostraRisultato ? partita.gol_casa : "-"}</span>
-          </div>
-          <div class="bracket-team">
-            <div class="team-side">
-              <img class="team-logo" src="${logoOspite}" alt="${partita.squadra_ospite}">
-              <span class="team-name">${partita.squadra_ospite}</span>
+          `;
+        } else {
+          const legLabel = (group[0].fase_leg || "").trim();
+          head.innerHTML = legLabel ? `<span class="bracket-leg">${legLabel}</span>` : "";
+        }
+        match.appendChild(head);
+
+        const contentWrap = document.createElement("div");
+        contentWrap.className = "leg-contents";
+
+        const buildLeg = (partita, activeLeg) => {
+          const hasScore = partita.gol_casa !== null && partita.gol_ospite !== null;
+          const giocata = (Number(partita.giocata) === 1);
+          const mostraRisultato = giocata && hasScore;
+          const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
+          const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
+          const dataStr = formattaData(partita.data_partita);
+          const showOra = dataStr !== "Data da definire" && partita.ora_partita;
+          const legLabel = (partita.fase_leg || "").trim();
+          const body = document.createElement("div");
+          body.className = "leg-content" + (activeLeg ? " active" : "");
+          body.dataset.leg = (partita.fase_leg || "").toUpperCase() || "UNICA";
+          body.innerHTML = `
+            <div class="bracket-team">
+              <div class="team-side">
+                <img class="team-logo" src="${logoCasa}" alt="${partita.squadra_casa}">
+                <span class="team-name">${partita.squadra_casa}</span>
+              </div>
+              <span class="team-score">${mostraRisultato ? partita.gol_casa : "-"}</span>
             </div>
-            <span class="team-score">${mostraRisultato ? partita.gol_ospite : "-"}</span>
-          </div>
-          <div class="bracket-meta">
-            <span>${dataStr}${partita.ora_partita ? ' - ' + partita.ora_partita.slice(0,5) : ''}${legLabel ? ' - ' + legLabel : ''}</span>
-            <span>${partita.campo || 'Campo da definire'}</span>
-          </div>
-        `;
-        if (mostraRisultato) {
-          match.addEventListener("click", () => {
-            window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${encodeURIComponent(TORNEO)}`;
+            <div class="bracket-team">
+              <div class="team-side">
+                <img class="team-logo" src="${logoOspite}" alt="${partita.squadra_ospite}">
+                <span class="team-name">${partita.squadra_ospite}</span>
+              </div>
+              <span class="team-score">${mostraRisultato ? partita.gol_ospite : "-"}</span>
+            </div>
+            <div class="bracket-meta">
+              <span>${dataStr}${showOra ? ' - ' + partita.ora_partita.slice(0,5) : ''}${legLabel ? ' - ' + legLabel : ''}</span>
+              <span>${partita.campo || 'Campo da definire'}</span>
+            </div>
+          `;
+          if (mostraRisultato) {
+            body.addEventListener("click", () => {
+              window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${encodeURIComponent(TORNEO)}`;
+            });
+            body.style.cursor = "pointer";
+          }
+          return body;
+        };
+
+        group.forEach(p => {
+          const legKey = (p.fase_leg || "").toUpperCase() || "UNICA";
+          const isActive = legKey === defaultLeg;
+          contentWrap.appendChild(buildLeg(p, isActive));
+        });
+
+        match.appendChild(contentWrap);
+
+        if (group.length > 1) {
+          const buttons = head.querySelectorAll('.leg-btn');
+          buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+              const target = (btn.dataset.leg || '').toUpperCase();
+              contentWrap.querySelectorAll('.leg-content').forEach(el => {
+                el.classList.toggle('active', (el.dataset.leg || '') === target);
+              });
+              buttons.forEach(b => b.classList.toggle('active', b === btn));
+            });
           });
         }
+
         col.appendChild(match);
       });
 

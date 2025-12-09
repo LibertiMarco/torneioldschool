@@ -1,4 +1,4 @@
-const TORNEO = "Coppadafrica"; // Nome base del torneo nel DB (fase girone)
+﻿const TORNEO = "Coppadafrica"; // Nome base del torneo nel DB (fase girone)
 const teamLogos = {};
 
 function normalizeLogoName(name = "") {
@@ -241,7 +241,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         const partitaDiv = document.createElement("div");
         partitaDiv.classList.add("match-card");
       
-        // ✅ Rende cliccabile la match-card solo se giocata
+        // âœ… Rende cliccabile la match-card solo se giocata
         if (String(partita.giocata) === "1") {
           partitaDiv.style.cursor = "pointer";
           partitaDiv.onclick = () => {
@@ -252,6 +252,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         }
       
         const dataStr = formattaData(partita.data_partita);
+        const showOra = dataStr !== "Data da definire" && partita.ora_partita;
         const stadio = partita.campo || "Campo da definire";
         const golCasa = partita.giocata == 1 ? partita.gol_casa : null;
         const golOspite = partita.giocata == 1 ? partita.gol_ospite : null;
@@ -266,11 +267,11 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
                 stadio && stadio !== "Campo da definire"
                   ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stadio)}"
                         target="_blank"
-                        class="maps-link">📍</a>`
+                        class="maps-link">ðŸ“</a>`
                   : ""
               }
             </span>
-            <span>${dataStr}${partita.ora_partita ? " - " + partita.ora_partita.slice(0,5) : ""}</span>
+            <span>${dataStr}${showOra ? " - " + partita.ora_partita.slice(0,5) : ""}</span>
           </div>
       
           <div class="match-body">
@@ -316,6 +317,26 @@ async function caricaPlayoff() {
       .bracket-filters { display:flex; gap:8px; }
       .bracket-filter-btn { border:1px solid #d7deea; background:#f4f6fb; color:#15293e; padding:8px 12px; border-radius:10px; font-weight:700; cursor:pointer; transition:all 0.15s ease; }
       .bracket-filter-btn.active { background:#15293e; color:#fff; border-color:#15293e; box-shadow:0 8px 18px rgba(21,41,62,0.25); }
+      .bracket-wrapper { display:flex; gap:12px; overflow-x:auto; padding:6px 2px; }
+      .bracket-col { flex:1; min-width:260px; display:flex; flex-direction:column; gap:10px; }
+      .bracket-col-title { font-weight:800; color:#15293e; margin:4px 2px; }
+      .bracket-match { background:#fff; border:1px solid #dce3ef; border-radius:14px; padding:12px; box-shadow:0 8px 20px rgba(0,0,0,0.06); display:flex; flex-direction:column; gap:8px; transition:transform .15s, box-shadow .15s, border-color .15s; cursor:default; }
+      .bracket-match.is-played { border-color:#15293e; cursor:pointer; }
+      .bracket-match.is-played:hover { transform:translateY(-2px); box-shadow:0 12px 26px rgba(0,0,0,0.1); }
+      .bracket-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+      .bracket-leg { font-size:12px; font-weight:700; color:#4c5b71; }
+      .bracket-team { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+      .bracket-team .team-side { display:inline-flex; align-items:center; gap:8px; min-width:0; }
+      .bracket-team .team-name { font-weight:800; color:#15293e; text-transform:none; white-space:normal; word-break:break-word; }
+      .bracket-team .team-logo { width:34px; height:34px; object-fit:contain; }
+      .bracket-team .team-score { font-weight:800; font-size:18px; color:#15293e; min-width:24px; text-align:right; }
+      .bracket-meta { display:flex; flex-wrap:wrap; gap:8px; font-size:12px; color:#4c5b71; }
+      .leg-toggle { display:inline-flex; gap:6px; background:#f3f6fb; padding:4px; border-radius:999px; }
+      .leg-btn { border:1px solid #cbd5e1; background:#fff; color:#15293e; padding:6px 10px; border-radius:999px; font-weight:700; cursor:pointer; }
+      .leg-btn.active { background:#15293e; color:#fff; border-color:#15293e; }
+      .leg-btn:disabled { opacity:0.5; cursor:not-allowed; }
+      .leg-content { display:none; }
+      .leg-content.active { display:block; }
     `;
     document.head.appendChild(st);
   }
@@ -343,7 +364,6 @@ async function caricaPlayoff() {
       return;
     }
 
-    const fasiMap = { 1: "Finale", 2: "Semifinali" };
     const fasiContainer = document.getElementById("fasiPlayoff");
 
     const giornateData = Object.keys(data)
@@ -356,7 +376,7 @@ async function caricaPlayoff() {
       const filtered = giornate.filter(g => {
         if (stage === "semi") return g === 2;
         if (stage === "finale") return g === 1;
-        return false;
+        return g === 1 || g === 2;
       });
 
       filtered.forEach(g => {
@@ -364,58 +384,116 @@ async function caricaPlayoff() {
         col.className = "bracket-col";
 
         let matchList = Array.isArray(data[g]) ? data[g] : [];
-
         if (!matchList.length) {
           if (g === 2) {
             matchList = [
-              { squadra_casa: "Vincente Girone A", squadra_ospite: "Seconda Girone B", gol_casa: null, gol_ospite: null, giocata: 0, data_partita: "", ora_partita: "", campo: "Da definire", fase_leg: "" },
-              { squadra_casa: "Vincente Girone B", squadra_ospite: "Seconda Girone A", gol_casa: null, gol_ospite: null, giocata: 0, data_partita: "", ora_partita: "", campo: "Da definire", fase_leg: "" }
+              { squadra_casa: "Vincente Girone A", squadra_ospite: "Seconda Girone B", gol_casa: null, gol_ospite: null, giocata: 0, data_partita: "", ora_partita: "", campo: "Campo da definire", fase_leg: "" },
+              { squadra_casa: "Vincente Girone B", squadra_ospite: "Seconda Girone A", gol_casa: null, gol_ospite: null, giocata: 0, data_partita: "", ora_partita: "", campo: "Campo da definire", fase_leg: "" }
             ];
           } else if (g === 1) {
             matchList = [
-              { squadra_casa: "Vincente Semifinale 1", squadra_ospite: "Vincente Semifinale 2", gol_casa: null, gol_ospite: null, giocata: 0, data_partita: "", ora_partita: "", campo: "Da definire", fase_leg: "" }
+              { squadra_casa: "Vincente Semifinale 1", squadra_ospite: "Vincente Semifinale 2", gol_casa: null, gol_ospite: null, giocata: 0, data_partita: "", ora_partita: "", campo: "Campo da definire", fase_leg: "" }
             ];
           }
         }
 
-        matchList.forEach(partita => {
-          const giocata = Number(partita.giocata) === 1;
-          const hasScore = giocata && partita.gol_casa !== null && partita.gol_ospite !== null;
-          const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
-          const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
-          const dataStr = formattaData(partita.data_partita);
-          const legLabel = (partita.fase_leg || "").trim();
+        const pairMap = {};
+        matchList.forEach(p => {
+          const key = [p.squadra_casa || "", p.squadra_ospite || ""].sort((a, b) => a.localeCompare(b)).join("|||");
+          if (!pairMap[key]) pairMap[key] = [];
+          pairMap[key].push(p);
+        });
+
+        Object.values(pairMap).forEach(group => {
+          const legOrder = { ANDATA: 1, RITORNO: 2 };
+          group.sort((a, b) => (legOrder[(a.fase_leg || "").toUpperCase()] || 99) - (legOrder[(b.fase_leg || "").toUpperCase()] || 99));
+          const hasAndata = group.some(p => (p.fase_leg || "").toUpperCase() === "ANDATA");
+          const hasRitorno = group.some(p => (p.fase_leg || "").toUpperCase() === "RITORNO");
+          const defaultLeg = hasAndata ? "ANDATA" : (group[0].fase_leg || "").toUpperCase() || "ANDATA";
+
           const match = document.createElement("div");
-          match.className = "bracket-match" + (giocata ? " is-played" : "");
-          match.style.cursor = giocata ? "pointer" : "default";
-          match.innerHTML = `
-            <div class="bracket-head">
-              ${legLabel ? `<span class="bracket-leg">${legLabel}</span>` : ""}
-            </div>
-            <div class="bracket-team">
-              <div class="team-side">
-                <img class="team-logo" src="${logoCasa}" alt="${partita.squadra_casa}">
-                <span class="team-name">${partita.squadra_casa}</span>
+          match.className = "bracket-match";
+
+          const head = document.createElement("div");
+          head.className = "bracket-head";
+          if (group.length > 1) {
+            head.innerHTML = `
+              <div class="leg-toggle" data-selected="${defaultLeg}">
+                <button type="button" class="leg-btn ${defaultLeg === 'ANDATA' ? 'active' : ''}" data-leg="ANDATA" ${hasAndata ? "" : "disabled"}>Andata</button>
+                <button type="button" class="leg-btn ${defaultLeg === 'RITORNO' ? 'active' : ''}" data-leg="RITORNO" ${hasRitorno ? "" : "disabled"}>Ritorno</button>
               </div>
-              <span class="team-score">${hasScore ? partita.gol_casa : "-"}</span>
-            </div>
-            <div class="bracket-team">
-              <div class="team-side">
-                <img class="team-logo" src="${logoOspite}" alt="${partita.squadra_ospite}">
-                <span class="team-name">${partita.squadra_ospite}</span>
+            `;
+          } else {
+            const legLabel = (group[0].fase_leg || "").trim();
+            head.innerHTML = legLabel ? `<span class="bracket-leg">${legLabel}</span>` : "";
+          }
+          match.appendChild(head);
+
+          const contentWrap = document.createElement("div");
+          contentWrap.className = "leg-contents";
+
+          const buildLeg = (partita, activeLeg) => {
+            const hasScore = partita.gol_casa !== null && partita.gol_ospite !== null;
+            const giocata = Number(partita.giocata) === 1;
+            const mostraRisultato = giocata && hasScore;
+            const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
+            const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
+            const dataStr = formattaData(partita.data_partita);
+            const showOra = dataStr !== "Data da definire" && partita.ora_partita;
+            const legLabel = (partita.fase_leg || "").trim();
+            const body = document.createElement("div");
+            body.className = "leg-content" + (activeLeg ? " active" : "");
+            body.dataset.leg = (partita.fase_leg || "").toUpperCase() || "UNICA";
+            body.innerHTML = `
+              <div class="bracket-team">
+                <div class="team-side">
+                  <img class="team-logo" src="${logoCasa}" alt="${partita.squadra_casa}">
+                  <span class="team-name">${partita.squadra_casa}</span>
+                </div>
+                <span class="team-score">${mostraRisultato ? partita.gol_casa : "-"}</span>
               </div>
-              <span class="team-score">${hasScore ? partita.gol_ospite : "-"}</span>
-            </div>
-            <div class="bracket-meta">
-              <span>${dataStr}${partita.ora_partita ? ' - ' + partita.ora_partita.slice(0,5) : ''}${legLabel ? ' - ' + legLabel : ''}</span>
-              <span>${partita.campo || 'Campo da definire'}</span>
-            </div>
-          `;
-          if (giocata) {
-            match.addEventListener("click", () => {
-              window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${encodeURIComponent(TORNEO)}`;
+              <div class="bracket-team">
+                <div class="team-side">
+                  <img class="team-logo" src="${logoOspite}" alt="${partita.squadra_ospite}">
+                  <span class="team-name">${partita.squadra_ospite}</span>
+                </div>
+                <span class="team-score">${mostraRisultato ? partita.gol_ospite : "-"}</span>
+              </div>
+              <div class="bracket-meta">
+                <span>${dataStr}${showOra ? " - " + partita.ora_partita.slice(0,5) : ""}${legLabel ? " - " + legLabel : ""}</span>
+                <span>${partita.campo || "Campo da definire"}</span>
+              </div>
+            `;
+            if (mostraRisultato) {
+              body.addEventListener("click", () => {
+                window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${encodeURIComponent(TORNEO)}`;
+              });
+              body.style.cursor = "pointer";
+            }
+            return body;
+          };
+
+          group.forEach(p => {
+            const legKey = (p.fase_leg || "").toUpperCase() || "UNICA";
+            const isActive = legKey === defaultLeg;
+            contentWrap.appendChild(buildLeg(p, isActive));
+          });
+
+          match.appendChild(contentWrap);
+
+          if (group.length > 1) {
+            const buttons = head.querySelectorAll(".leg-btn");
+            buttons.forEach(btn => {
+              btn.addEventListener("click", () => {
+                const target = (btn.dataset.leg || "").toUpperCase();
+                contentWrap.querySelectorAll(".leg-content").forEach(el => {
+                  el.classList.toggle("active", (el.dataset.leg || "") === target);
+                });
+                buttons.forEach(b => b.classList.toggle("active", b === btn));
+              });
             });
           }
+
           col.appendChild(match);
         });
 
@@ -430,7 +508,7 @@ async function caricaPlayoff() {
       btn.addEventListener("click", () => {
         filterBtns.forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
-        const stage = btn.dataset.stage || "all";
+        const stage = btn.dataset.stage || "semi";
         renderBracket(stage);
       });
     });
@@ -439,10 +517,6 @@ async function caricaPlayoff() {
     container.innerHTML += `<p>Errore nel caricamento playoff.</p>`;
   }
 }
-
-
-
-
 // ====================== ROSE SQUADRE ======================
 async function caricaSquadrePerRosa() {
   try {
@@ -452,10 +526,10 @@ async function caricaSquadrePerRosa() {
     const select = document.getElementById("selectSquadra");
     select.innerHTML = ""; // Pulisce eventuali opzioni precedenti
 
-    // 1️⃣ Ordina le squadre in ordine alfabetico (A → Z)
+    // 1ï¸âƒ£ Ordina le squadre in ordine alfabetico (A â†’ Z)
     squadre.sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }));
 
-    // 2️⃣ Popola la select e imposta la prima come selezionata
+    // 2ï¸âƒ£ Popola la select e imposta la prima come selezionata
     squadre.forEach((sq, index) => {
       if (sq.logo) {
         teamLogos[sq.nome] = sq.logo;
@@ -467,12 +541,12 @@ async function caricaSquadrePerRosa() {
       select.appendChild(opt);
     });
 
-    // 3️⃣ Mostra subito la rosa della prima squadra
+    // 3ï¸âƒ£ Mostra subito la rosa della prima squadra
     if (squadre.length > 0) {
       caricaRosaSquadra(squadre[0].nome);
     }
 
-    // 4️⃣ Evento cambio squadra
+    // 4ï¸âƒ£ Evento cambio squadra
     select.addEventListener("change", () => {
       const squadra = select.value;
       if (squadra) caricaRosaSquadra(squadra);
@@ -646,4 +720,5 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     document.getElementById(btn.dataset.tab).classList.add("active");
   });
 });
+
 
