@@ -1,4 +1,4 @@
-const TORNEO = "ChampionsLeagueB"; // Nome base del torneo nel DB (fase girone)
+ï»¿const TORNEO = "ChampionsLeagueB"; // Nome base del torneo nel DB (fase girone)
 const GOLD_SPOTS = 16;              // prime 16 in Coppa Gold
 const TEAM_COUNT = 18;              // totale squadre in regular
 const SILVER_SPOTS = TEAM_COUNT - GOLD_SPOTS; // ultime 2 in finale Silver
@@ -205,7 +205,7 @@ function mostraClassifica(classifica) {
   const faseSelect = document.getElementById("faseSelect");
   const legendaEsistente = document.querySelector(".legenda-coppe");
 
-  // rimuove eventuale legenda già presente
+  // rimuove eventuale legenda giï¿½ presente
   if (legendaEsistente) legendaEsistente.remove();
 
   // crea legenda solo se siamo in fase girone
@@ -571,7 +571,7 @@ async function caricaPlayoff(tipoCoppa) {
     const defaultOttavi = [
       [1, 16], [2, 15], [3, 14], [4, 13],
       [5, 12], [6, 11], [7, 10], [8, 9],
-    ].map(([a, b]) => baseMatch(`${a}° in classifica`, `${b}° in classifica`, `${a} vs ${b}`));
+    ].map(([a, b]) => baseMatch(`${a}ï¿½ in classifica`, `${b}ï¿½ in classifica`, `${a} vs ${b}`));
 
     const defaultQuarti = [
       baseMatch("Vincente 1 vs 16", "Vincente 8 vs 9"),
@@ -909,7 +909,7 @@ document.addEventListener("DOMContentLoaded", () => {
       classificaWrapper.style.display = "none";
       playoffContainer.style.display = "block";
 
-      // se non è selezionata nessuna coppa ancora, default gold
+      // se non ï¿½ selezionata nessuna coppa ancora, default gold
       if (!coppaSelect.value) {
         coppaSelect.value = "gold";
       }
@@ -959,19 +959,3 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
