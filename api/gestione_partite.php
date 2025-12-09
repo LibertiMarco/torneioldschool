@@ -474,7 +474,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   $defaultOra = '00:00:00';
                   $defaultCampo = 'Da definire';
                   $stmtR->bind_param(
-                    'ssssssiisssiisss',
+                    'ssssssiisssiissss',
                     $torneo,
                     $fase,
                     $faseRound,
