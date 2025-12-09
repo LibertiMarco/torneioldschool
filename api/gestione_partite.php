@@ -694,8 +694,12 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     .admin-form.inline select { border-radius: 10px; border: 1px solid #d5dbe4; background: #fafbff; transition: border-color .2s, box-shadow .2s; width: 100%; display: block; }
     .admin-form.inline input:focus,
     .admin-form.inline select:focus { border-color: #15293e; box-shadow: 0 0 0 3px rgba(21,41,62,0.15); outline: none; }
+    .required-label::after { content: " *"; color: #d72638; margin-left: 4px; font-weight: 700; }
     .checkbox-inline { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: #15293e; }
     .return-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 14px; margin-top: 8px; }
+    #returnWrapper { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+    #returnWrapper .checkbox-inline { margin-bottom: 4px; }
+    #returnWrapper .return-grid { width: 100%; }
 
     .table-scroll { overflow-x: auto; background: #fff; border: 1px solid #e5eaf0; border-radius: 14px; padding: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
     #footer-container { margin-top: auto; padding-top: 40px; }
@@ -779,7 +783,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         <form class="admin-form inline" method="POST" id="formCrea">
         <input type="hidden" name="azione" value="crea">
         <div>
-          <label>Torneo</label>
+          <label class="required-label">Torneo</label>
           <select name="torneo" id="torneoCrea" required>
             <option value="">-- Seleziona torneo --</option>
             <?php foreach ($torneiDisponibili as $t): ?>
@@ -788,7 +792,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </select>
         </div>
         <div>
-          <label>Fase</label>
+          <label class="required-label">Fase</label>
           <select name="fase" required>
             <?php foreach ($fasiAmmesse as $f): ?>
               <option value="<?= htmlspecialchars($f) ?>"><?= htmlspecialchars($f) ?></option>
@@ -796,7 +800,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </select>
         </div>
         <div id="giornataWrapper">
-          <label>Giornata</label>
+          <label class="required-label">Giornata</label>
           <select name="giornata" id="giornataCrea" required>
             <option value="">-- Seleziona giornata (1-8) --</option>
             <?php for ($g = 1; $g <= 8; $g++): ?>
@@ -805,7 +809,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </select>
         </div>
         <div id="roundWrapper" class="hidden">
-          <label>Fase eliminazione</label>
+          <label class="required-label">Fase eliminazione</label>
           <select name="round_eliminazione" id="roundCrea">
             <option value="">-- Seleziona fase --</option>
             <option value="TRENTADUESIMI">Trentaduesimi di finale</option>
@@ -817,7 +821,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </select>
         </div>
         <div id="legWrapper" class="hidden">
-          <label>Tipo gara</label>
+          <label class="required-label">Tipo gara</label>
           <select name="fase_leg" id="faseLegCrea">
             <option value="UNICA">Gara secca</option>
             <option value="ANDATA">Andata</option>
@@ -831,16 +835,16 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </label>
           <div class="return-grid">
             <div>
-              <label>Data ritorno</label>
-              <input type="date" name="data_ritorno" id="dataRitorno">
+              <label class="required-label">Data ritorno</label>
+              <input type="date" name="data_ritorno" id="dataRitorno" required>
             </div>
             <div>
-              <label>Ora ritorno</label>
-              <input type="time" name="ora_ritorno" id="oraRitorno">
+              <label class="required-label">Ora ritorno</label>
+              <input type="time" name="ora_ritorno" id="oraRitorno" required>
             </div>
             <div>
-              <label>Campo ritorno</label>
-              <select name="campo_ritorno" id="campoRitorno">
+              <label class="required-label">Campo ritorno</label>
+              <select name="campo_ritorno" id="campoRitorno" required>
                 <option value="">-- Seleziona campo --</option>
                 <option value="Sporting Club San Francesco, Napoli">Sporting Club San Francesco, Napoli</option>
                 <option value="Centro Sportivo La Paratina, Napoli">Centro Sportivo La Paratina, Napoli</option>
@@ -852,13 +856,13 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
         </div>
         <div>
-          <label>Squadra casa</label>
+          <label class="required-label">Squadra casa</label>
           <select name="squadra_casa" id="squadraCasaCrea" required>
             <option value="">-- Seleziona torneo/giornata --</option>
           </select>
         </div>
         <div>
-          <label>Squadra ospite</label>
+          <label class="required-label">Squadra ospite</label>
           <select name="squadra_ospite" id="squadraOspiteCrea" required>
             <option value="">-- Seleziona torneo/giornata --</option>
           </select>
@@ -866,15 +870,15 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         <input type="hidden" name="gol_casa" value="0">
         <input type="hidden" name="gol_ospite" value="0">
         <div>
-          <label>Data</label>
+          <label class="required-label">Data</label>
           <input type="date" name="data_partita" required>
         </div>
         <div>
-          <label>Ora</label>
+          <label class="required-label">Ora</label>
           <input type="time" name="ora_partita" required>
         </div>
         <div>
-          <label>Campo</label>
+          <label class="required-label">Campo</label>
           <select name="campo" required>
             <option value="">-- Seleziona campo --</option>
             <option value="Sporting Club San Francesco, Napoli">Sporting Club San Francesco, Napoli</option>
@@ -906,7 +910,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         <form class="admin-form inline" method="POST" id="formModifica">
         <input type="hidden" name="azione" value="modifica">
         <div class="full">
-          <label>Seleziona torneo</label>
+          <label class="required-label">Seleziona torneo</label>
           <select id="selTorneoMod" required>
             <option value="">-- Seleziona torneo --</option>
             <?php foreach ($torneiDisponibili as $t): ?>
@@ -915,7 +919,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </select>
         </div>
         <div>
-          <label>Fase</label>
+          <label class="required-label">Fase</label>
           <select id="selFaseMod" required>
             <option value="">-- Seleziona fase --</option>
             <?php foreach ($fasiAmmesse as $f): ?>
@@ -924,13 +928,13 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </select>
         </div>
         <div>
-          <label>Giornata / Turno</label>
+          <label class="required-label">Giornata / Turno</label>
           <select id="selGiornataMod" required disabled>
             <option value="">-- Seleziona fase --</option>
           </select>
         </div>
         <div>
-          <label>Partita</label>
+          <label class="required-label">Partita</label>
           <select name="partita_id" id="selPartitaMod" required disabled>
             <option value="">-- Seleziona giornata/turno --</option>
           </select>
@@ -940,7 +944,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <hr class="section-divider">
         <div>
-          <label>Torneo</label>
+          <label class="required-label">Torneo</label>
           <select name="torneo_mod" id="torneo_mod" required>
             <option value="">-- Seleziona torneo --</option>
             <?php foreach ($torneiDisponibili as $t): ?>
@@ -949,7 +953,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </select>
         </div>
         <div>
-          <label>Fase</label>
+          <label class="required-label">Fase</label>
           <select name="fase_mod" id="fase_mod" required>
             <?php foreach ($fasiAmmesse as $f): ?>
               <option value="<?= htmlspecialchars($f) ?>"><?= htmlspecialchars($f) ?></option>
@@ -957,13 +961,13 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </select>
         </div>
         <div>
-          <label>Squadra casa</label>
+          <label class="required-label">Squadra casa</label>
           <select name="squadra_casa_mod" id="squadra_casa_mod" required>
             <option value="">-- Seleziona torneo prima --</option>
           </select>
         </div>
         <div>
-          <label>Squadra ospite</label>
+          <label class="required-label">Squadra ospite</label>
           <select name="squadra_ospite_mod" id="squadra_ospite_mod" required>
             <option value="">-- Seleziona torneo prima --</option>
           </select>
@@ -977,15 +981,15 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           <input type="number" name="gol_ospite_mod" id="gol_ospite_mod" min="0">
         </div>
         <div>
-          <label>Data</label>
+          <label class="required-label">Data</label>
           <input type="date" name="data_partita_mod" id="data_partita_mod" required>
         </div>
         <div>
-          <label>Ora</label>
+          <label class="required-label">Ora</label>
           <input type="time" name="ora_partita_mod" id="ora_partita_mod" required>
         </div>
         <div>
-          <label>Campo</label>
+          <label class="required-label">Campo</label>
           <select name="campo_mod" id="campo_mod" required>
             <option value="">-- Seleziona campo --</option>
             <option value="Sporting Club San Francesco, Napoli">Sporting Club San Francesco, Napoli</option>
@@ -1000,11 +1004,11 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           <input type="text" name="arbitro_mod" id="arbitro_mod" placeholder="Nome dell'arbitro">
         </div>
         <div id="giornataWrapperMod">
-          <label>Giornata</label>
+          <label class="required-label">Giornata</label>
           <input type="number" name="giornata_mod" id="giornata_mod" min="1" required>
         </div>
         <div id="roundWrapperMod" class="hidden">
-          <label>Fase eliminazione</label>
+          <label class="required-label">Fase eliminazione</label>
           <select name="round_eliminazione_mod" id="round_eliminazione_mod">
             <option value="">-- Seleziona fase --</option>
             <option value="TRENTADUESIMI">Trentaduesimi di finale</option>
@@ -1016,7 +1020,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </select>
         </div>
         <div id="legWrapperMod" class="hidden">
-          <label>Tipo gara</label>
+          <label class="required-label">Tipo gara</label>
           <select name="fase_leg_mod" id="faseLegMod">
             <option value="UNICA">Gara secca</option>
             <option value="ANDATA">Andata</option>
@@ -1050,7 +1054,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         <input type="hidden" name="azione" value="elimina">
         <input type="hidden" name="partita_id" id="partitaEliminaHidden">
         <div>
-          <label>Torneo</label>
+          <label class="required-label">Torneo</label>
           <select id="selTorneoElim" required>
             <option value="">-- Seleziona torneo --</option>
             <?php foreach ($torneiDisponibili as $t): ?>
@@ -1059,7 +1063,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </select>
         </div>
         <div>
-          <label>Fase</label>
+          <label class="required-label">Fase</label>
           <select id="selFaseElim" required>
             <option value="">-- Seleziona fase --</option>
             <?php foreach ($fasiAmmesse as $f): ?>
@@ -1068,13 +1072,13 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           </select>
         </div>
         <div>
-          <label>Giornata / Turno</label>
+          <label class="required-label">Giornata / Turno</label>
           <select id="selGiornataElim" required disabled>
             <option value="">-- Seleziona fase --</option>
           </select>
         </div>
         <div>
-          <label>Partita</label>
+          <label class="required-label">Partita</label>
           <select id="selPartitaElim" required disabled>
             <option value="">-- Seleziona giornata/turno --</option>
           </select>
