@@ -7,7 +7,7 @@ $assetVersion = '20251208';
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Christmasâ€™s cup - Tornei Old School</title>
+  <title>Christmas's cup - Tornei Old School</title>
   <link rel="stylesheet" href="../style.css?v=<?= $assetVersion ?>" />
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
@@ -115,10 +115,10 @@ $assetVersion = '20251208';
   <!-- CONTENUTO PRINCIPALE -->
   <main class="content">
     <div class="torneo-hero">
-      <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Christmasâ€™s cup">
+      <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Christmas's cup">
       <div class="torneo-title">
-        <h1 class="titolo">Christmasâ€™s cup</h1>
-        <button type="button" class="fav-toggle" id="favTournamentBtn">â˜† Segui torneo</button>
+        <h1 class="titolo">Christmas's cup</h1>
+        <button type="button" class="fav-toggle" id="favTournamentBtn">☆ Segui torneo</button>
       </div>
     </div>
 
