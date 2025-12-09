@@ -416,7 +416,10 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       }
       giornataDiv.appendChild(titolo);
 
-      (dataFiltrata[numGiornata] || []).forEach(partita => {
+            const partiteGiornata = dataFiltrata[numGiornata] || [];
+      const isSemifinale = String(numGiornata) === "2";
+
+      const renderPartita = (container, partita) => {
         const partitaDiv = document.createElement("div");
         partitaDiv.classList.add("match-card");
 
@@ -424,7 +427,6 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         const giocata = String(partita.giocata) === "1";
         const mostraRisultato = giocata && hasScore;
 
-        // Rende cliccabile la match-card solo se ha un risultato valido
         if (mostraRisultato) {
           partitaDiv.style.cursor = "pointer";
           partitaDiv.onclick = () => {
@@ -435,10 +437,10 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         }
 
         const dataStr = formattaData(partita.data_partita);
-        const showOra = dataStr !== "Data da definire" && partita.ora_partita;
         const stadio = partita.campo || "Campo da definire";
         const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
         const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
+        const showOra = dataStr !== "Data da definire" && partita.ora_partita;
 
         partitaDiv.innerHTML = `
           <div class="match-header">
@@ -448,7 +450,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
                 stadio && stadio !== "Campo da definire"
                   ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stadio)}"
                         target="_blank"
-                        class="maps-link"><span class="maps-icon" aria-hidden="true"></span></a>`
+                        class="maps-link">&#128205;</a>`
                   : ""
               }
             </span>
@@ -462,11 +464,15 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
             </div>
 
             <div class="match-center">
-              ${mostraRisultato
-                ? `<span class="score">${partita.gol_casa}</span><span class="dash-cal">-</span><span class="score">${partita.gol_ospite}</span>`
-                : `<span class="vs">VS</span>`}
+              ${
+                mostraRisultato
+                  ? `<span class="score">${partita.gol_casa}</span>
+                     <span class="dash-cal">-</span>
+                     <span class="score">${partita.gol_ospite}</span>`
+                  : `<span class="vs">VS</span>`
+              }
             </div>
-
+                  
             <div class="team away">
               <img src="${logoOspite}" alt="${partita.squadra_ospite}" class="team-logo">
               <span class="team-name">${partita.squadra_ospite}</span>
@@ -474,10 +480,38 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
           </div>
         `;
 
-        giornataDiv.appendChild(partitaDiv);
-      });
+        container.appendChild(partitaDiv);
+      };
 
-      calendarioSection.appendChild(giornataDiv);
+      if (isSemifinale && partiteGiornata.length) {
+        const legs = {};
+        partiteGiornata.forEach(p => {
+          const leg = (p.fase_leg || "").toUpperCase();
+          const key = leg === "RITORNO" ? "RITORNO" : (leg === "ANDATA" ? "ANDATA" : "UNICA");
+          if (!legs[key]) legs[key] = [];
+          legs[key].push(p);
+        });
+        const hasAndata = (legs.ANDATA || []).length > 0;
+        const hasRitorno = (legs.RITORNO || []).length > 0;
+        if (hasAndata && hasRitorno) {
+          const h4a = document.createElement("h4");
+          h4a.textContent = "Semifinali Andata";
+          giornataDiv.appendChild(h4a);
+          legs.ANDATA.forEach(p => renderPartita(giornataDiv, p));
+          const h4r = document.createElement("h4");
+          h4r.textContent = "Semifinali Ritorno";
+          giornataDiv.appendChild(h4r);
+          legs.RITORNO.forEach(p => renderPartita(giornataDiv, p));
+        } else {
+          const h4 = document.createElement("h4");
+          h4.textContent = "Semifinali";
+          giornataDiv.appendChild(h4);
+          partiteGiornata.forEach(p => renderPartita(giornataDiv, p));
+        }
+      } else {
+        partiteGiornata.forEach(p => renderPartita(giornataDiv, p));
+      }
+calendarioSection.appendChild(giornataDiv);
     });
   } catch (err) {
     console.error("Errore nel caricamento del calendario:", err);
@@ -915,6 +949,7 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
+
 
 
 
