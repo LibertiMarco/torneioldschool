@@ -153,8 +153,7 @@ $assetVersion = '20251208';
         <label for="faseSelect">Seleziona fase:</label>
         <div class="filtro-fase-selects">
           <select id="faseSelect">
-            <option value="girone" selected>REGULAR SEASON</option>
-            <option value="eliminazione">ELIMINAZIONE DIRETTA</option>
+            <option value="eliminazione" selected>ELIMINAZIONE DIRETTA</option>
           </select>
 
           <select id="coppaSelect" style="display: none;">
@@ -199,8 +198,7 @@ $assetVersion = '20251208';
         <div class="filtro-riga">
           <label for="faseCalendario">Fase:</label>
           <select id="faseCalendario">
-            <option value="REGULAR" selected>Regular</option>
-            <option value="GOLD">Gold</option>
+            <option value="GOLD" selected>Gold</option>
             <option value="SILVER">Silver</option>
           </select>
         </div>

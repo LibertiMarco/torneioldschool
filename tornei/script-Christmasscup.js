@@ -149,9 +149,9 @@ const roundLabelByKey = {
   "KO": "Fase eliminazione"
 };
 
-async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REGULAR") {
+async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "GOLD") {
   try {
-    const faseParam = faseSelezionata && faseSelezionata !== "REGULAR" ? `&fase=${faseSelezionata}` : "";
+    const faseParam = faseSelezionata ? `&fase=${faseSelezionata}` : "";
     const res = await fetch(`/api/get_partite.php?torneo=${TORNEO}${faseParam}`);
     const data = await res.json();
 
@@ -160,16 +160,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       return;
     }
 
-    // Filtra per mostrare solo la fase scelta (per REGULAR escludiamo GOLD/SILVER)
     let dataFiltrata = data;
-    if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
-      dataFiltrata = {};
-      Object.keys(data || {}).forEach(g => {
-        const matches = (data[g] || []).filter(p => (p.fase || "REGULAR").toUpperCase() === "REGULAR");
-        if (matches.length) dataFiltrata[g] = matches;
-      });
-    }
-
     const calendarioSection = document.getElementById("contenitoreGiornate");
     calendarioSection.innerHTML = "";
 
@@ -178,21 +169,18 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
     const giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
 
     if (wrapperGiornata) {
-      const isRegular = (faseSelezionata || "").toUpperCase() === "REGULAR";
-      wrapperGiornata.style.display = isRegular ? "flex" : "none";
+      wrapperGiornata.style.display = "flex";
     }
 
     if (giornataSelect) {
       if (giornataSelect.options.length <= 1 || giornataSelezionata === "") {
         giornataSelect.innerHTML = '<option value="">Tutte</option>';
-        if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
-          giornateDisponibili.forEach(g => {
-            const opt = document.createElement("option");
-            opt.value = g;
-            opt.textContent = `Giornata ${g}`;
-            giornataSelect.appendChild(opt);
-          });
-        }
+        giornateDisponibili.forEach(g => {
+          const opt = document.createElement("option");
+          opt.value = g;
+          opt.textContent = `Giornata ${g}`;
+          giornataSelect.appendChild(opt);
+        });
       }
     }
 
@@ -206,12 +194,8 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       giornataDiv.classList.add("giornata");
 
       const titolo = document.createElement("h3");
-      if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
-        titolo.textContent = `Giornata ${numGiornata}`;
-      } else {
-        const labelRound = roundLabelByKey[String(numGiornata)] || "Fase eliminazione";
-        titolo.textContent = labelRound;
-      }
+      const labelRound = roundLabelByKey[String(numGiornata)] || "Fase eliminazione";
+      titolo.textContent = labelRound;
       giornataDiv.appendChild(titolo);
 
             const partiteGiornata = dataFiltrata[numGiornata] || [];
@@ -656,50 +640,32 @@ document.addEventListener("DOMContentLoaded", () => {
       .catch(err => console.error("Errore recupero info torneo:", err));
   }
 
+    // imposto di default eliminazione diretta
+  if (faseSelect) faseSelect.value = "eliminazione";
+  if (coppaSelect) coppaSelect.value = "gold";
+
   // filtro calendario giornate
   if (giornataSelect) {
     giornataSelect.addEventListener("change", () => triggerCalendario());
   }
 
   if (faseCalendario) {
+    faseCalendario.value = "GOLD";
     faseCalendario.addEventListener("change", () => {
       if (giornataSelect) giornataSelect.value = "";
       triggerCalendario();
     });
   }
 
-  // cambio fase girone/eliminazione
-  faseSelect.addEventListener("change", () => {
-    if (faseSelect.value === "eliminazione") {
-      // mostra bracket playoff
-      classificaWrapper.style.display = "none";
-      playoffContainer.style.display = "block";
-
-      // se non è selezionata nessuna coppa ancora, default gold
-      if (!coppaSelect.value) {
-        coppaSelect.value = "gold";
-      }
-
-      caricaPlayoff(coppaSelect.value);
-
-    } else {
-      // torna alla classifica
-      playoffContainer.style.display = "none";
-      classificaWrapper.style.display = "block";
-      loadClassifica();
-    }
-  });
+  // forza vista playoff
+  classificaWrapper.style.display = "none";
+  playoffContainer.style.display = "block";
+  caricaPlayoff(coppaSelect.value || "gold");
 
   // cambio coppa (gold/silver)
   coppaSelect.addEventListener("change", () => {
-    if (faseSelect.value === "eliminazione") {
-      caricaPlayoff(coppaSelect.value);
-    }
-    // la classifica rimane quella del torneo base; le coppe usano solo le partite filtrate per fase
-    loadClassifica(TORNEO);
+    caricaPlayoff(coppaSelect.value);
   });
-});
-
 // ====================== GESTIONE TAB NAVIGAZIONE ======================
 document.querySelectorAll(".tab-button").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -709,5 +675,6 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     document.getElementById(btn.dataset.tab).classList.add("active");
   });
 });
+
 
 
