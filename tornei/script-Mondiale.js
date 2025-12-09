@@ -285,6 +285,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
 
 // ====================== PLAYOFF STILE CALENDARIO ======================
 async function caricaPlayoff(tipoCoppa) {
+async function caricaPlayoff(tipoCoppa) {
   const faseParam = (tipoCoppa || "gold").toUpperCase(); // GOLD / SILVER
   const container = document.getElementById("playoffContainer");
 
@@ -302,18 +303,60 @@ async function caricaPlayoff(tipoCoppa) {
       return;
     }
 
-    const fasiMap = {
-      1: "Finale",
-      2: "Semifinali",
-      3: "Quarti di finale",
-      4: "Ottavi di finale"
-    };
+    const fasiMap = { 1: "Finale", 2: "Semifinali", 3: "Quarti di finale", 4: "Ottavi di finale" };
+
+    const baseMatch = (casa, ospite, faseLeg = "") => ({
+      squadra_casa: casa,
+      squadra_ospite: ospite,
+      gol_casa: null,
+      gol_ospite: null,
+      giocata: 0,
+      data_partita: "",
+      ora_partita: "",
+      campo: "Campo da definire",
+      fase_leg: faseLeg
+    });
+
+    const defaultOttavi = [
+      [1, 16], [2, 15], [3, 14], [4, 13],
+      [5, 12], [6, 11], [7, 10], [8, 9],
+    ].map(([a, b]) => baseMatch(`${a}� in classifica`, `${b}� in classifica`, `${a} vs ${b}`));
+    const defaultQuarti = [
+      baseMatch("Vincente 1 vs 16", "Vincente 8 vs 9"),
+      baseMatch("Vincente 2 vs 15", "Vincente 7 vs 10"),
+      baseMatch("Vincente 3 vs 14", "Vincente 6 vs 11"),
+      baseMatch("Vincente 4 vs 13", "Vincente 5 vs 12"),
+    ];
+    const defaultSemiGold = [
+      baseMatch("Vincente Quarto 1", "Vincente Quarto 4"),
+      baseMatch("Vincente Quarto 2", "Vincente Quarto 3"),
+    ];
+    const defaultFinaleGold = [baseMatch("Vincente Semifinale 1", "Vincente Semifinale 2")];
+    const defaultSemiSilver = [
+      baseMatch("Silver Seed 1", "Silver Seed 4"),
+      baseMatch("Silver Seed 2", "Silver Seed 3"),
+    ];
+    const defaultFinaleSilver = [baseMatch("Vincente Semifinale 1", "Vincente Semifinale 2")];
+
+    const mergedData = { ...data };
+    [4, 3, 2, 1].forEach(g => {
+      if (!Array.isArray(mergedData[g]) || mergedData[g].length === 0) {
+        if (faseParam === "GOLD") {
+          if (g === 4) mergedData[g] = defaultOttavi;
+          else if (g === 3) mergedData[g] = defaultQuarti;
+          else if (g === 2) mergedData[g] = defaultSemiGold;
+          else if (g === 1) mergedData[g] = defaultFinaleGold;
+        } else {
+          if (g === 2) mergedData[g] = defaultSemiSilver;
+          else if (g === 1) mergedData[g] = defaultFinaleSilver;
+        }
+      }
+    });
 
     const fasiContainer = document.getElementById("fasiPlayoff");
     fasiContainer.innerHTML = "";
 
-    // ordina e mostra solo giornate 1–4
-    const giornate = Object.keys(data)
+    const giornate = Object.keys(mergedData)
       .map(g => parseInt(g))
       .filter(g => g >= 1 && g <= 4)
       .sort((a, b) => a - b);
@@ -327,7 +370,7 @@ async function caricaPlayoff(tipoCoppa) {
       titolo.textContent = nomeFase;
       faseDiv.appendChild(titolo);
 
-      data[g].forEach(partita => {
+      (mergedData[g] || []).forEach(partita => {
         const partitaDiv = document.createElement("div");
         partitaDiv.classList.add("match-card");
 
@@ -348,7 +391,7 @@ async function caricaPlayoff(tipoCoppa) {
                 stadio && stadio !== "Campo da definire"
                   ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stadio)}"
                         target="_blank"
-                        class="maps-link">📍</a>`
+                        class="maps-link">MAPS</a>`
                   : ""
               }
             </span>
@@ -400,15 +443,23 @@ async function caricaSquadrePerRosa() {
   try {
     const res = await fetch(`/api/leggiClassifica.php?torneo=${TORNEO}`);
     const squadre = await res.json();
+    const seenLogos = new Set();
+    const filteredSquadre = (squadre || []).filter(sq => {
+      const key = (sq.logo || "").trim();
+      if (!key) return true;
+      if (seenLogos.has(key)) return false;
+      seenLogos.add(key);
+      return true;
+    });
 
     const select = document.getElementById("selectSquadra");
     select.innerHTML = ""; // Pulisce eventuali opzioni precedenti
 
     // 1️⃣ Ordina le squadre in ordine alfabetico (A → Z)
-    squadre.sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }));
+    filteredSquadre.sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }));
 
     // 2️⃣ Popola la select e imposta la prima come selezionata
-    squadre.forEach((sq, index) => {
+    filteredSquadre.forEach((sq, index) => {
       if (sq.logo) {
         teamLogos[sq.nome] = sq.logo;
       }
@@ -420,8 +471,8 @@ async function caricaSquadrePerRosa() {
     });
 
     // 3️⃣ Mostra subito la rosa della prima squadra
-    if (squadre.length > 0) {
-      caricaRosaSquadra(squadre[0].nome);
+    if (filteredSquadre.length > 0) {
+      caricaRosaSquadra(filteredSquadre[0].nome);
     }
 
     // 4️⃣ Evento cambio squadra
@@ -567,6 +618,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // cambio fase girone/eliminazione
   faseSelect.addEventListener("change", () => {
     if (faseSelect.value === "eliminazione") {
+    const legendaEsistente = document.querySelector(".legenda-coppe");
+    if (legendaEsistente) legendaEsistente.remove();
       // mostra bracket playoff
       classificaWrapper.style.display = "none";
       playoffContainer.style.display = "block";
@@ -605,3 +658,4 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     document.getElementById(btn.dataset.tab).classList.add("active");
   });
 });
+

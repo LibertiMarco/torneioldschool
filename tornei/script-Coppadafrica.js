@@ -1,4 +1,4 @@
-﻿const TORNEO = "Coppadafrica"; // Nome base del torneo nel DB (fase girone)
+const TORNEO = "Coppadafrica"; // Nome base del torneo nel DB (fase girone)
 const teamLogos = {};
 
 function normalizeLogoName(name = "") {
@@ -241,7 +241,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         const partitaDiv = document.createElement("div");
         partitaDiv.classList.add("match-card");
       
-        // ✅ Rende cliccabile la match-card solo se giocata
+        // ? Rende cliccabile la match-card solo se giocata
         if (String(partita.giocata) === "1") {
           partitaDiv.style.cursor = "pointer";
           partitaDiv.onclick = () => {
@@ -266,7 +266,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
                 stadio && stadio !== "Campo da definire"
                   ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stadio)}"
                         target="_blank"
-                        class="maps-link">📍</a>`
+                        class="maps-link">??</a>`
                   : ""
               }
             </span>
@@ -448,15 +448,23 @@ async function caricaSquadrePerRosa() {
   try {
     const res = await fetch(`/api/leggiClassifica.php?torneo=${TORNEO}`);
     const squadre = await res.json();
+    const seenLogos = new Set();
+    const filteredSquadre = (squadre || []).filter(sq => {
+      const key = (sq.logo || "").trim();
+      if (!key) return true;
+      if (seenLogos.has(key)) return false;
+      seenLogos.add(key);
+      return true;
+    });
 
     const select = document.getElementById("selectSquadra");
     select.innerHTML = ""; // Pulisce eventuali opzioni precedenti
 
-    // 1️⃣ Ordina le squadre in ordine alfabetico (A → Z)
-    squadre.sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }));
+    // 1?? Ordina le squadre in ordine alfabetico (A ? Z)
+    filteredSquadre.sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }));
 
-    // 2️⃣ Popola la select e imposta la prima come selezionata
-    squadre.forEach((sq, index) => {
+    // 2?? Popola la select e imposta la prima come selezionata
+    filteredSquadre.forEach((sq, index) => {
       if (sq.logo) {
         teamLogos[sq.nome] = sq.logo;
       }
@@ -467,12 +475,12 @@ async function caricaSquadrePerRosa() {
       select.appendChild(opt);
     });
 
-    // 3️⃣ Mostra subito la rosa della prima squadra
-    if (squadre.length > 0) {
-      caricaRosaSquadra(squadre[0].nome);
+    // 3?? Mostra subito la rosa della prima squadra
+    if (filteredSquadre.length > 0) {
+      caricaRosaSquadra(filteredSquadre[0].nome);
     }
 
-    // 4️⃣ Evento cambio squadra
+    // 4?? Evento cambio squadra
     select.addEventListener("change", () => {
       const squadra = select.value;
       if (squadra) caricaRosaSquadra(squadra);
@@ -646,4 +654,5 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     document.getElementById(btn.dataset.tab).classList.add("active");
   });
 });
+
 

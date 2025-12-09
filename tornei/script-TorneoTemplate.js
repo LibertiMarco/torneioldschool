@@ -1,4 +1,4 @@
-﻿// TEMPLATE BASE: duplica e rinomina questo file per un nuovo torneo.
+// TEMPLATE BASE: duplica e rinomina questo file per un nuovo torneo.
 // Sostituisci TORNEO con lo slug usato nel DB/API e aggiorna eventuali testi.
 const TORNEO = window.__TEMPLATE_TORNEO_SLUG__ || "TEMPLATE_SLUG"; // Nome base del torneo nel DB
 const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
@@ -18,7 +18,7 @@ function updateFavTournamentButton() {
   if (!btn) return;
   const isFav = favState.tournaments.has(TORNEO);
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "â˜… Torneo seguito" : "â˜† Segui torneo";
+  btn.textContent = isFav ? "★ Torneo seguito" : "☆ Segui torneo";
 }
 
 function updateFavTeamButton(squadra, btnEl) {
@@ -26,7 +26,7 @@ function updateFavTeamButton(squadra, btnEl) {
   if (!btn || !squadra) return;
   const isFav = favState.teams.has(teamKey(squadra));
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "â˜…" : "â˜†";
+  btn.textContent = isFav ? "★" : "☆";
   btn.setAttribute("aria-label", isFav ? "Smetti di seguire la squadra" : "Segui la squadra");
 }
 
@@ -201,8 +201,8 @@ function mostraClassifica(classifica) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
-      <div class="box gold-box">â˜… COPPA GOLD</div>
-      <div class="box silver-box">â˜† COPPA SILVER</div>
+      <div class="box gold-box">★ COPPA GOLD</div>
+      <div class="box silver-box">☆ COPPA SILVER</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
@@ -527,10 +527,58 @@ async function caricaPlayoff(tipoCoppa) {
     const fasiMap = { 1: "Finale", 2: "Semifinali", 3: "Quarti di finale", 4: "Ottavi di finale" };
     const fasiContainer = document.getElementById("fasiPlayoff");
     fasiContainer.innerHTML = "";
+
+    const baseMatch = (casa, ospite, faseLeg = "") => ({
+      squadra_casa: casa,
+      squadra_ospite: ospite,
+      gol_casa: null,
+      gol_ospite: null,
+      giocata: 0,
+      data_partita: "",
+      ora_partita: "",
+      campo: "Da definire",
+      fase_leg: faseLeg
+    });
+
+    const defaultOttavi = [
+      [1, 16], [2, 15], [3, 14], [4, 13],
+      [5, 12], [6, 11], [7, 10], [8, 9],
+    ].map(([a, b]) => baseMatch(`${a}° in classifica`, `${b}° in classifica`, `${a} vs ${b}`));
+    const defaultQuarti = [
+      baseMatch("Vincente 1 vs 16", "Vincente 8 vs 9"),
+      baseMatch("Vincente 2 vs 15", "Vincente 7 vs 10"),
+      baseMatch("Vincente 3 vs 14", "Vincente 6 vs 11"),
+      baseMatch("Vincente 4 vs 13", "Vincente 5 vs 12"),
+    ];
+    const defaultSemifinaliGold = [
+      baseMatch("Vincente Quarto 1", "Vincente Quarto 4"),
+      baseMatch("Vincente Quarto 2", "Vincente Quarto 3"),
+    ];
+    const defaultFinaleGold = [baseMatch("Vincente Semifinale 1", "Vincente Semifinale 2")];
+
+    const defaultSemifinaliSilver = [
+      baseMatch("Silver Seed 1", "Silver Seed 4"),
+      baseMatch("Silver Seed 2", "Silver Seed 3"),
+    ];
+    const defaultFinaleSilver = [baseMatch("Vincente Semifinale 1", "Vincente Semifinale 2")];
+
+    const getDefaultMatches = (giornata) => {
+      if (faseParam === "GOLD") {
+        if (giornata === 4) return defaultOttavi;
+        if (giornata === 3) return defaultQuarti;
+        if (giornata === 2) return defaultSemifinaliGold;
+        if (giornata === 1) return defaultFinaleGold;
+      } else {
+        if (giornata === 2) return defaultSemifinaliSilver;
+        if (giornata === 1) return defaultFinaleSilver;
+      }
+      return [];
+    };
+
     const ordineGiornate = [4, 3, 2, 1];
 
     ordineGiornate.forEach(g => {
-      const matchList = data[g] || [];
+      const matchList = data[g] || getDefaultMatches(g);
       if (!matchList.length) return;
 
       const col = document.createElement("div");
@@ -596,13 +644,21 @@ async function caricaSquadrePerRosa() {
   try {
     const res = await fetch(`/api/leggiClassifica.php?torneo=${TORNEO}`);
     const squadre = await res.json();
+    const seenLogos = new Set();
+    const filteredSquadre = (squadre || []).filter(sq => {
+      const key = (sq.logo || "").trim();
+      if (!key) return true;
+      if (seenLogos.has(key)) return false;
+      seenLogos.add(key);
+      return true;
+    });
 
     const select = document.getElementById("selectSquadra");
     select.innerHTML = "";
 
-    squadre.sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }));
+    filteredSquadre.sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }));
 
-    squadre.forEach((sq, index) => {
+    filteredSquadre.forEach((sq, index) => {
       if (sq.logo) {
         teamLogos[sq.nome] = sq.logo;
       }
@@ -610,11 +666,13 @@ async function caricaSquadrePerRosa() {
       opt.value = sq.nome;
       opt.textContent = sq.nome;
       if (index === 0) opt.selected = true;
+    const legendaEsistente = document.querySelector(".legenda-coppe");
+    if (legendaEsistente) legendaEsistente.remove();
       select.appendChild(opt);
     });
 
-    if (squadre.length > 0) {
-      caricaRosaSquadra(squadre[0].nome);
+    if (filteredSquadre.length > 0) {
+      caricaRosaSquadra(filteredSquadre[0].nome);
     }
 
     select.addEventListener("change", () => {
@@ -644,7 +702,7 @@ async function caricaRosaSquadra(squadra) {
     header.innerHTML = `
       <img src="${squadraLogo}" alt="${squadra}" class="team-logo-large">
       <h3>${squadra}</h3>
-      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn" aria-label="Segui la squadra">â˜†</button>
+      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn" aria-label="Segui la squadra">☆</button>
     `;
     const favBtn = header.querySelector(".fav-team-btn");
     if (favBtn) {
@@ -852,6 +910,7 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
+
 
 
 
