@@ -622,9 +622,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const giornataSelect = document.getElementById("giornataSelect");
 
   const triggerCalendario = () => {
-    const faseVal = (faseCalendario?.value || "GOLD").toUpperCase();
     const gVal = (giornataSelect?.value || "");
-    caricaCalendario(gVal, faseVal);
+    caricaCalendario(gVal, "GOLD");
   };
 
   caricaCalendario("", "GOLD");
@@ -649,13 +648,7 @@ document.addEventListener("DOMContentLoaded", () => {
     giornataSelect.addEventListener("change", () => triggerCalendario());
   }
 
-  if (faseCalendario) {
-    faseCalendario.value = "GOLD";
-    faseCalendario.addEventListener("change", () => {
-      if (giornataSelect) giornataSelect.value = "";
-      triggerCalendario();
-    });
-  }
+  // fase unica, niente select faseCalendario
 
   // forza vista playoff
   classificaWrapper.style.display = "none";
