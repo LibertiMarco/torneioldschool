@@ -195,17 +195,10 @@ $assetVersion = '20251208';
     <section id="calendario" class="tab-section">
       <h2>Calendario</h2>
       <div class="filtro-giornata">
-        <div class="filtro-riga">
-          <label for="faseCalendario">Fase:</label>
-          <select id="faseCalendario">
-            <option value="GOLD" selected>Gold</option>
-            <option value="SILVER">Silver</option>
-          </select>
-        </div>
         <div class="filtro-riga" id="wrapperGiornataSelect">
-          <label for="giornataSelect">Giornata:</label>
+          <label for="giornataSelect">Turno:</label>
           <select id="giornataSelect">
-            <option value="">Tutte</option>
+            <option value="">Tutti</option>
           </select>
         </div>
       </div>
