@@ -235,7 +235,7 @@ $assetVersion = '20251208';
     <div class="regola">
       <h3>🏟️ Struttura del Campionato</h3>
       <p>
-        Il torneo è composto da <strong>20 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
+        Il torneo è composto da <strong>8 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
       </p>
     </div>
 
@@ -243,7 +243,7 @@ $assetVersion = '20251208';
       <h3>⚽ Fase 1 — Regular Season</h3>
       <p>
         Tutte le squadre partecipano a una <strong>Regular Season</strong> in stile Champions League.
-        Ogni squadra disputa <strong>8 partite</strong> totali.
+        Ogni squadra disputa <strong>7 partite</strong> totali.
       </p>
       <p>
         La squadra prima in classifica al termine del girone riceve il
@@ -254,7 +254,7 @@ $assetVersion = '20251208';
     <div class="regola">
       <h3>🏆 Fase 2 — Coppe</h3>
       <ul>
-        <li>Le <strong>prime 16</strong> classificate accedono alla <span class="gold">Coppa Gold</span>.</li>
+        <li>Le <strong>prime 4</strong> classificate accedono alla <span class="gold">Coppa Gold</span>.</li>
         <li>Le <strong>ultime 4</strong> accedono alla <span class="silver">Coppa Silver</span>.</li>
         <li>Entrambe le coppe prevedono una <strong>premiazione con trofeo</strong> per la vincitrice.</li>
       </ul>
