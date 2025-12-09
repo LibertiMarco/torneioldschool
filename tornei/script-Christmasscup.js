@@ -622,12 +622,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const giornataSelect = document.getElementById("giornataSelect");
 
   const triggerCalendario = () => {
-    const faseVal = (faseCalendario?.value || "REGULAR").toUpperCase();
+    const faseVal = (faseCalendario?.value || "GOLD").toUpperCase();
     const gVal = (giornataSelect?.value || "");
     caricaCalendario(gVal, faseVal);
   };
 
-  caricaCalendario("", "REGULAR");
+  caricaCalendario("", "GOLD");
   caricaSquadrePerRosa();
   if (heroImg) {
     fetch(`/api/get_torneo_by_slug.php?slug=${encodeURIComponent(TORNEO)}`)
@@ -660,12 +660,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // forza vista playoff
   classificaWrapper.style.display = "none";
   playoffContainer.style.display = "block";
-  caricaPlayoff(coppaSelect.value || "gold");
+  caricaPlayoff((coppaSelect && coppaSelect.value) || "gold");
 
-  // cambio coppa (gold/silver)
-  coppaSelect.addEventListener("change", () => {
-    caricaPlayoff(coppaSelect.value);
-  });
+  // cambio coppa (gold/silver) nascosto
+  if (coppaSelect) {
+    coppaSelect.style.display = "none";
+  }
+});
 // ====================== GESTIONE TAB NAVIGAZIONE ======================
 document.querySelectorAll(".tab-button").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -675,6 +676,7 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     document.getElementById(btn.dataset.tab).classList.add("active");
   });
 });
+
 
 
 
