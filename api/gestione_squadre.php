@@ -196,6 +196,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $torneiList = [];
 if ($resTornei = $torneoModel->getAll()) {
     while ($r = $resTornei->fetch_assoc()) {
+        // Se il torneo ha il flag "squadre_complete" attivo, non lo mostriamo per la creazione squadre
+        $flagComplete = $r['squadre_complete'] ?? 0;
+        if ((string)$flagComplete === '1') {
+            continue;
+        }
         $torneiList[] = $r;
     }
 }

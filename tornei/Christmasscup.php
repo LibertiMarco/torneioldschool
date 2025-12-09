@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includi/require_login.php';
 $assetVersion = '20251208';
 ?>
@@ -7,7 +7,7 @@ $assetVersion = '20251208';
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Christmas’s cup - Tornei Old School</title>
+  <title>Christmasâ€™s cup - Tornei Old School</title>
   <link rel="stylesheet" href="../style.css?v=<?= $assetVersion ?>" />
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
@@ -115,10 +115,10 @@ $assetVersion = '20251208';
   <!-- CONTENUTO PRINCIPALE -->
   <main class="content">
     <div class="torneo-hero">
-      <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Christmas’s cup">
+      <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Christmasâ€™s cup">
       <div class="torneo-title">
-        <h1 class="titolo">Christmas’s cup</h1>
-        <button type="button" class="fav-toggle" id="favTournamentBtn">☆ Segui torneo</button>
+        <h1 class="titolo">Christmasâ€™s cup</h1>
+        <button type="button" class="fav-toggle" id="favTournamentBtn">â˜† Segui torneo</button>
       </div>
     </div>
 
@@ -186,7 +186,7 @@ $assetVersion = '20251208';
 
       <!-- PLAYOFF / BRACKET -->
       <div id="playoffContainer" style="display:none;">
-        <!-- verrà popolato via JS -->
+        <!-- verrÃ  popolato via JS -->
       </div>
 
     </section>
@@ -220,69 +220,37 @@ $assetVersion = '20251208';
 
 <!-- REGOLE -->
 <section id="regole" class="tab-section">
-  <h2 class="titolo-sezione">📜 Regole del Torneo</h2>
+  <h2 class="titolo-sezione">Regole del Torneo</h2>
 
   <div class="regole-box">
     <div class="regola">
-      <h3>🏟️ Struttura del Campionato</h3>
+      <h3>Struttura</h3>
       <p>
-        Il torneo è composto da <strong>20 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
+        Christmas Cup è <strong>solo eliminazione diretta</strong> a partire dagli <strong>ottavi di finale</strong>.
+        Ogni turno è gara secca: in caso di pareggio si va direttamente ai <strong>rigori</strong>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>⚽ Fase 1 — Regular Season</h3>
-      <p>
-        Tutte le squadre partecipano a una <strong>Regular Season</strong> in stile Champions League.
-        Ogni squadra disputa <strong>8 partite</strong> totali.
-      </p>
-      <p>
-        La squadra prima in classifica al termine del girone riceve il
-        <span class="highlight">Trofeo Regular Season 🏆</span>.
-      </p>
-    </div>
-
-    <div class="regola">
-      <h3>🏆 Fase 2 — Coppe</h3>
+      <h3>Regole di Gioco</h3>
       <ul>
-        <li>Le <strong>prime 16</strong> classificate accedono alla <span class="gold">Coppa Gold</span>.</li>
-        <li>Le <strong>ultime 4</strong> accedono alla <span class="silver">Coppa Silver</span>.</li>
-        <li>Entrambe le coppe prevedono una <strong>premiazione con trofeo</strong> per la vincitrice.</li>
+        <li>Partita da <strong>2 tempi da 25 minuti</strong>.</li>
+        <li><strong>1 VAR</strong> disponibile per squadra, con <strong>arbitro video</strong>.</li>
+        <li>Previsti <strong>highlights</strong> e contenuti <strong>TikTok</strong> di ogni gara.</li>
       </ul>
     </div>
 
     <div class="regola">
-      <h3>🎖️ Premi Finali</h3>
-      <p>Dopo la finale di <span class="gold">Coppa Gold</span> verranno assegnati i seguenti riconoscimenti:</p>
+      <h3>Premi</h3>
+      <p>Premi confermati come di consueto:</p>
       <div class="premi-grid">
-        <span>🏅 Miglior Giocatore</span>
-        <span>🧤 Miglior Portiere</span>
-        <span>🛡️ Miglior Difensore</span>
-        <span>⚡ Miglior Attaccante</span>
+        <span>Miglior Giocatore</span>
+        <span>Miglior Portiere</span>
+        <span>Miglior Difensore</span>
+        <span>Miglior Attaccante</span>
       </div>
-      <p>
-        Il <strong>Miglior Giocatore</strong> vincerà un
-        <span class="highlight">buono tatuaggio da 500€</span>.
-      </p>
-    </div>
-
-    <div class="regola">
-      <h3>⏱️ Regole di Gioco</h3>
-      <ul>
-        <li>Ogni partita dura <strong>2 tempi da 25 minuti</strong>.</li>
-        <li>Ogni squadra ha <strong>1 chiamata VAR</strong> disponibile per partita.</li>
-      </ul>
-    </div>
-
-    <div class="regola">
-      <h3>📅 Calendario</h3>
-      <ul>
-        <li>Le partite si disputano principalmente <strong>il lunedì e il martedì</strong>.</li>
-        <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedì o venerdì</strong>.</li>
-      </ul>
     </div>
   </div>
-  <br><br><br><br>
 </section>
 
     <!-- MARCATORI -->
@@ -376,3 +344,4 @@ $assetVersion = '20251208';
 
 </body>
 </html>
+
