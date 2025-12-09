@@ -470,8 +470,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               if (!squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $ospite, $casa, null, $faseRound, 'RITORNO')) {
                 $stmtR = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
                 if ($stmtR) {
-                  $defaultDate = $data; // manteniamo la stessa data per avere un valore valido
-                  $defaultOra = '00:00:00';
+                  $defaultDate = null; // lasciamo vuoti data/ora per il ritorno
+                  $defaultOra = null;
                   $defaultCampo = 'Da definire';
                   $golZero = 0;
                   $giocataZero = 0;
@@ -1244,16 +1244,17 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
   // inizializza filtrando appena caricata la pagina
   populateSquadreFiltrate();
 
-  const showInlineMessage = (type, text) => {
-    const container = document.querySelector('.admin-container');
-    if (!container || !text) return;
-    let box = document.getElementById('inlineMessage');
+  const renderFormMessage = (formId, type, text) => {
+    const form = document.getElementById(formId);
+    if (!form || !text) return;
+    let box = form.querySelector('.form-inline-message');
     if (!box) {
       box = document.createElement('div');
-      box.id = 'inlineMessage';
-      container.insertBefore(box, container.querySelector('.tab-buttons'));
+      box.className = 'form-inline-message form-message';
+      form.appendChild(box);
     }
-    box.className = type === 'error' ? 'alert-error' : 'alert-success';
+    box.classList.toggle('success', type === 'success');
+    box.classList.toggle('error', type !== 'success');
     box.textContent = text;
   };
 
@@ -1622,12 +1623,12 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
         if (!res.ok) {
           const msg = (data && (data.error || data.message)) || `Errore ${res.status}`;
-          showInlineMessage('error', msg);
+          renderFormMessage(formId, 'error', msg);
           return;
         }
         if (!data) {
           const msg = raw && raw.includes('login.php') ? 'Sessione scaduta, accedi di nuovo.' : 'Risposta non valida dal server.';
-          showInlineMessage('error', msg);
+          renderFormMessage(formId, 'error', msg);
           return;
         }
         if (data && Array.isArray(data.partite)) {
@@ -1635,7 +1636,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           refreshSelectorsFromData();
         }
         if (data && data.success) {
-          showInlineMessage('success', data.message || 'Operazione completata');
+          renderFormMessage(formId, 'success', data.message || 'Operazione completata');
           if (formId === 'formCrea') {
             form.reset();
             refreshCreateLayout();
@@ -1648,10 +1649,10 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
             }
           }
         } else {
-          showInlineMessage('error', data?.error || 'Errore nel salvataggio');
+          renderFormMessage(formId, 'error', data?.error || 'Errore nel salvataggio');
         }
       } catch (err) {
-        showInlineMessage('error', 'Errore di rete, riprova.');
+        renderFormMessage(formId, 'error', 'Errore di rete, riprova.');
       } finally {
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = oldText; }
       }
