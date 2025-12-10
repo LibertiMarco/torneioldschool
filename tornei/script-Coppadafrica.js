@@ -398,7 +398,7 @@ async function caricaPlayoff() {
 
     const fasiContainer = document.getElementById("fasiPlayoff");
 
-    const giornateData = Object.keys(data)
+    const giornateData = Object.keys(data || {})
       .map(g => parseInt(g, 10))
       .filter(g => g >= 1 && g <= 4);
     const giornate = Array.from(new Set([...giornateData, 2, 1])).sort((a, b) => a - b);
@@ -414,15 +414,21 @@ async function caricaPlayoff() {
       filtered.forEach(g => {
         const col = document.createElement("div");
         col.className = "bracket-col";
+        const isSemi = g === 2;
+        const isFinale = g === 1;
+        const colTitle = document.createElement("div");
+        colTitle.className = "bracket-col-title";
+        colTitle.textContent = isSemi ? "Semifinali" : (isFinale ? "Finale" : nomeFaseDaGiornata(g));
+        col.appendChild(colTitle);
 
         let matchList = Array.isArray(data[g]) ? data[g] : [];
         if (!matchList.length) {
-          if (g === 2) {
+          if (isSemi) {
             matchList = [
               { squadra_casa: "Vincente Girone A", squadra_ospite: "Seconda Girone B", gol_casa: null, gol_ospite: null, giocata: 0, data_partita: "", ora_partita: "", campo: "Campo da definire", fase_leg: "" },
               { squadra_casa: "Vincente Girone B", squadra_ospite: "Seconda Girone A", gol_casa: null, gol_ospite: null, giocata: 0, data_partita: "", ora_partita: "", campo: "Campo da definire", fase_leg: "" }
             ];
-          } else if (g === 1) {
+          } else if (isFinale) {
             matchList = [
               { squadra_casa: "Vincente Semifinale 1", squadra_ospite: "Vincente Semifinale 2", gol_casa: null, gol_ospite: null, giocata: 0, data_partita: "", ora_partita: "", campo: "Campo da definire", fase_leg: "" }
             ];
