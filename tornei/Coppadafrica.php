@@ -107,10 +107,12 @@ $torneoSeo = [
       color: #15293e;
       position: sticky;
       top: 0;
-      z-index: 8;
-      padding: 6px 8px;
+      left: 0;
+      z-index: 9;
+      padding: 10px 10px 8px;
       background: linear-gradient(145deg, #f7f9fc, #eef2f7);
       border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(21, 41, 62, 0.08);
     }
     .gironi-grid table {
       width: 100%;
