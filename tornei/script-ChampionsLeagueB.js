@@ -205,7 +205,7 @@ function mostraClassifica(classifica) {
   const faseSelect = document.getElementById("faseSelect");
   const legendaEsistente = document.querySelector(".legenda-coppe");
 
-  // rimuove eventuale legenda gi� presente
+  // rimuove eventuale legenda gia presente
   if (legendaEsistente) legendaEsistente.remove();
 
   // crea legenda solo se siamo in fase girone
@@ -213,8 +213,8 @@ function mostraClassifica(classifica) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
-      <div class="box gold-box">?? COPPA GOLD</div>
-      <div class="box silver-box">?? COPPA SILVER</div>
+      <div class="box gold-box">COPPA GOLD</div>
+      <div class="box silver-box">COPPA SILVER</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
@@ -612,14 +612,7 @@ async function caricaPlayoff(tipoCoppa) {
     const defaultOttavi = [
       [1, 16], [2, 15], [3, 14], [4, 13],
       [5, 12], [6, 11], [7, 10], [8, 9],
-    ].map(([a, b]) => baseMatch(`${a}� in classifica`, `${b}� in classifica`, `${a} vs ${b}`));
-
-    const defaultQuarti = [
-      baseMatch("Vincente 1 vs 16", "Vincente 8 vs 9"),
-      baseMatch("Vincente 2 vs 15", "Vincente 7 vs 10"),
-      baseMatch("Vincente 3 vs 14", "Vincente 6 vs 11"),
-      baseMatch("Vincente 4 vs 13", "Vincente 5 vs 12"),
-    ];
+    ].map(([a, b]) => baseMatch(`${a}\u00B0 in classifica`, `${b}\u00B0 in classifica`, `${a} vs ${b}`));
 
     const defaultSemifinaliGold = [
       baseMatch("Vincente Quarto 1", "Vincente Quarto 4"),
@@ -782,10 +775,10 @@ async function caricaSquadrePerRosa() {
     const select = document.getElementById("selectSquadra");
     select.innerHTML = ""; // Pulisce eventuali opzioni precedenti
 
-    // 1?? Ordina le squadre in ordine alfabetico (A ? Z)
+    // 1) Ordina le squadre in ordine alfabetico (A - Z)
     filteredSquadre.sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }));
 
-    // 2?? Popola la select e imposta la prima come selezionata
+    // 2) Popola la select e imposta la prima come selezionata
     filteredSquadre.forEach((sq, index) => {
       if (sq.logo) {
         teamLogos[sq.nome] = sq.logo;
@@ -797,12 +790,12 @@ async function caricaSquadrePerRosa() {
       select.appendChild(opt);
     });
 
-    // 3?? Mostra subito la rosa della prima squadra
+    // 3) Mostra subito la rosa della prima squadra
     if (filteredSquadre.length > 0) {
       caricaRosaSquadra(filteredSquadre[0].nome);
     }
 
-    // 4?? Evento cambio squadra
+    // 4) Evento cambio squadra
     select.addEventListener("change", () => {
       const squadra = select.value;
       if (squadra) caricaRosaSquadra(squadra);
@@ -1056,4 +1049,12 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
+
+
+
+
+
+
+
+
 
