@@ -152,7 +152,7 @@ $pageSeo = [
                    data-full-width-responsive="true"></ins>
               <script>
                 (adsbygoogle = window.adsbygoogle || []).push({});
-              </script>
+              </scr` + `ipt>
             </div>
           `);
         }
