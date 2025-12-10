@@ -99,9 +99,18 @@ $torneoSeo = [
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 18px;
     }
+    .girone-box {
+      position: relative;
+    }
     .girone-box h3 {
       margin: 0 0 8px;
       color: #15293e;
+      position: sticky;
+      top: 0;
+      z-index: 8;
+      padding: 6px 8px;
+      background: linear-gradient(145deg, #f7f9fc, #eef2f7);
+      border-radius: 10px;
     }
     .gironi-grid table {
       width: 100%;
