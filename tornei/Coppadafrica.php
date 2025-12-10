@@ -106,12 +106,21 @@ $torneoSeo = [
     .gironi-grid table {
       width: 100%;
       table-layout: fixed;
+      min-width: 720px;
     }
     .gironi-grid table th,
     .gironi-grid table td {
       text-align: center;
       padding: 10px 8px;
       vertical-align: middle;
+      background: #fff;
+      white-space: nowrap;
+    }
+    /* Header sticky */
+    .gironi-grid table th {
+      position: sticky;
+      top: 0;
+      z-index: 3;
     }
     .gironi-grid table th:nth-child(2),
     .gironi-grid table td:nth-child(2) {
@@ -125,6 +134,29 @@ $torneoSeo = [
     .gironi-grid table th:nth-child(n+3),
     .gironi-grid table td:nth-child(n+3) {
       width: 10%;
+    }
+    /* Prime due colonne sticky come nelle classifiche generali */
+    #tableClassificaA th:nth-child(1),
+    #tableClassificaA td:nth-child(1),
+    #tableClassificaB th:nth-child(1),
+    #tableClassificaB td:nth-child(1) {
+      position: sticky;
+      left: 0;
+      min-width: 40px;
+      width: 40px;
+      z-index: 6;
+      background: #fff;
+    }
+    #tableClassificaA th:nth-child(2),
+    #tableClassificaA td:nth-child(2),
+    #tableClassificaB th:nth-child(2),
+    #tableClassificaB td:nth-child(2) {
+      position: sticky;
+      left: 40px;
+      min-width: 170px;
+      width: 170px;
+      z-index: 5;
+      background: #fff;
     }
     .gironi-grid .team-cell .team-info {
       display: inline-flex;
