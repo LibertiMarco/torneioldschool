@@ -385,6 +385,13 @@ async function caricaPlayoff() {
       </div>
     </div>
     <div class="bracket-wrapper" id="fasiPlayoff"></div>
+    <div id="bracketPlaceholder" class="bracket-col" style="display:none;">
+      <div class="bracket-col-title"></div>
+      <div class="bracket-match">
+        <div class="bracket-team"><span class="team-name"></span><span class="team-score">-</span></div>
+        <div class="bracket-team"><span class="team-name"></span><span class="team-score">-</span></div>
+      </div>
+    </div>
   `;
 
   try {
