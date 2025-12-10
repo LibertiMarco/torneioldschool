@@ -15,7 +15,7 @@ function updateFavTournamentButton() {
   if (!btn) return;
   const isFav = favState.tournaments.has(TORNEO);
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "? Torneo seguito" : "? Segui torneo";
+  btn.textContent = isFav ? "★ Torneo seguito" : "☆ Segui torneo";
 }
 
 function updateFavTeamButton(squadra, btnEl) {
@@ -23,7 +23,7 @@ function updateFavTeamButton(squadra, btnEl) {
   if (!btn || !squadra) return;
   const isFav = favState.teams.has(teamKey(squadra));
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "?" : "?";
+  btn.textContent = isFav ? "★" : "☆";
   btn.setAttribute("aria-label", isFav ? "Smetti di seguire la squadra" : "Segui la squadra");
 }
 
