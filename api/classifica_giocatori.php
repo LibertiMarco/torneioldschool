@@ -21,6 +21,9 @@ $perPage = (int)($_GET['per_page'] ?? 10);
 $perPage = $perPage > 0 ? min($perPage, 50) : 10;
 $offset = ($page - 1) * $perPage;
 
+$excludedTournaments = ['SerieB']; // usa lo slug del file torneo (SerieB.php)
+$excludedPlaceholder = implode(',', array_fill(0, count($excludedTournaments), '?'));
+
 $conditionsBase = [];
 $searchConditions = [];
 $paramsSearch = [];
@@ -28,9 +31,9 @@ $typesSearch = '';
 
 // Filtri base (escludi zero)
 if ($ordine === 'gol') {
-    $conditionsBase[] = 'g.reti > 0';
+    $conditionsBase[] = 'agg.gol > 0';
 } elseif ($ordine === 'presenze') {
-    $conditionsBase[] = 'g.presenze > 0';
+    $conditionsBase[] = 'agg.presenze > 0';
 }
 
 // Filtro ricerca (applicato DOPO il ranking)
@@ -46,11 +49,27 @@ $whereBase = $conditionsBase ? 'WHERE ' . implode(' AND ', $conditionsBase) : ''
 $whereSearch = $searchConditions ? 'WHERE ' . implode(' AND ', $searchConditions) : '';
 
 $orderClause = $ordine === 'presenze'
-    ? 'ORDER BY g.presenze DESC, g.reti DESC, g.cognome ASC, g.nome ASC'
-    : 'ORDER BY g.reti DESC, g.presenze DESC, g.cognome ASC, g.nome ASC';
+    ? 'ORDER BY agg.presenze DESC, agg.gol DESC, g.cognome ASC, g.nome ASC'
+    : 'ORDER BY agg.gol DESC, agg.presenze DESC, g.cognome ASC, g.nome ASC';
 
 // Colonne chiave per il ranking (competizione: 1,1,3 in caso di pari)
-$rankPrimary = $ordine === 'presenze' ? 'g.presenze' : 'g.reti';
+$rankPrimary = $ordine === 'presenze' ? 'agg.presenze' : 'agg.gol';
+
+$aggregateSubquery = "
+    SELECT 
+        pg.giocatore_id,
+        SUM(pg.goal) AS gol,
+        COUNT(*) AS presenze,
+        CASE 
+            WHEN SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) > 0
+                THEN ROUND(SUM(CASE WHEN pg.voto IS NOT NULL THEN pg.voto ELSE 0 END) / SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END), 2)
+            ELSE NULL
+        END AS media_voti
+    FROM partita_giocatore pg
+    JOIN partite p ON p.id = pg.partita_id
+    WHERE p.torneo NOT IN ($excludedPlaceholder)
+    GROUP BY pg.giocatore_id
+";
 
 // Query dati
 $sql = "
@@ -64,9 +83,9 @@ $sql = "
             '' AS squadra,
             '' AS torneo,
             g.foto,
-            g.reti AS gol,
-            g.presenze,
-            g.media_voti,
+            agg.gol,
+            agg.presenze,
+            agg.media_voti,
             @rownum := @rownum + 1 AS rownum_seq,
             @rank := CASE 
                 WHEN @prev1 = $rankPrimary THEN @rank 
@@ -74,6 +93,9 @@ $sql = "
             END AS posizione,
             @prev1 := $rankPrimary
         FROM giocatori g
+        INNER JOIN (
+            $aggregateSubquery
+        ) AS agg ON agg.giocatore_id = g.id
         CROSS JOIN (SELECT @rownum := 0, @rank := 0, @prev1 := NULL) AS r
         $whereBase
         $orderClause
@@ -83,8 +105,8 @@ $sql = "
     LIMIT ? OFFSET ?
 ";
 
-$paramsData = $paramsSearch;
-$typesData = $typesSearch . 'ii';
+$paramsData = array_merge($excludedTournaments, $paramsSearch);
+$typesData = str_repeat('s', count($excludedTournaments)) . $typesSearch . 'ii';
 $paramsData[] = $perPage;
 $paramsData[] = $offset;
 
@@ -95,11 +117,7 @@ if (!$stmt) {
     exit;
 }
 
-if ($typesSearch !== '' && $paramsData) {
-    $stmt->bind_param($typesData, ...$paramsData);
-} else {
-    $stmt->bind_param('ii', $perPage, $offset);
-}
+$stmt->bind_param($typesData, ...$paramsData);
 
 $stmt->execute();
 $res = $stmt->get_result();
@@ -115,17 +133,19 @@ $countSql = "
     FROM (
         SELECT g.id, g.nome, g.cognome
         FROM giocatori g
+        INNER JOIN (
+            $aggregateSubquery
+        ) AS agg ON agg.giocatore_id = g.id
         $whereBase
-        $orderClause
     ) AS ordered
     $whereSearch
 ";
 
 $countStmt = $conn->prepare($countSql);
 if ($countStmt) {
-    if ($typesSearch !== '' && $paramsSearch) {
-        $countStmt->bind_param($typesSearch, ...$paramsSearch);
-    }
+    $paramsCount = array_merge($excludedTournaments, $paramsSearch);
+    $typesCount = str_repeat('s', count($excludedTournaments)) . $typesSearch;
+    $countStmt->bind_param($typesCount, ...$paramsCount);
     $countStmt->execute();
     $countRes = $countStmt->get_result();
     $totale = (int)($countRes->fetch_assoc()['totale'] ?? 0);

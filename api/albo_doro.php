@@ -33,14 +33,34 @@ function fetchAlboCustom(mysqli $conn): array {
         return [];
     }
     $cols = getAlboColumns($conn);
-    $premioCol = isset($cols['premio']) ? 'premio' : (isset($cols['categoria']) ? 'categoria' : "'' AS premio");
+
+    // Costruisci le colonne in modo resiliente a schemi diversi/vecchi
+    $premioCol = isset($cols['premio']) ? 'premio' : (isset($cols['categoria']) ? 'categoria' : "''");
+    $torneoLogoCol = isset($cols['torneo_logo']) ? 'torneo_logo' : "''";
+    $tabelloneCol = isset($cols['tabellone_url']) ? 'tabellone_url' : "''";
+    $vincitriceLogoCol = isset($cols['vincitrice_logo']) ? 'vincitrice_logo' : "''";
+    $inizioMeseCol = isset($cols['inizio_mese']) ? 'inizio_mese' : 'NULL';
+    $inizioAnnoCol = isset($cols['inizio_anno']) ? 'inizio_anno' : 'NULL';
+    $fineMeseCol = isset($cols['fine_mese']) ? 'fine_mese' : 'NULL';
+    $fineAnnoCol = isset($cols['fine_anno']) ? 'fine_anno' : 'NULL';
+    $createdCol = isset($cols['created_at']) ? 'created_at' : 'NULL';
     $hasSort = isset($cols['ordinamento']);
     $sortSelect = $hasSort ? ', ordinamento' : '';
     $sortOrder = $hasSort ? 'COALESCE(ordinamento, 999999),' : '';
 
     $sql = "
-        SELECT id, competizione, {$premioCol} AS premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url,
-               inizio_mese, inizio_anno, fine_mese, fine_anno, created_at{$sortSelect}
+        SELECT id,
+               competizione,
+               {$premioCol} AS premio,
+               vincitrice,
+               {$vincitriceLogoCol} AS vincitrice_logo,
+               {$torneoLogoCol} AS torneo_logo,
+               {$tabelloneCol} AS tabellone_url,
+               {$inizioMeseCol} AS inizio_mese,
+               {$inizioAnnoCol} AS inizio_anno,
+               {$fineMeseCol} AS fine_mese,
+               {$fineAnnoCol} AS fine_anno,
+               {$createdCol} AS created_at{$sortSelect}
         FROM albo
         ORDER BY {$sortOrder} COALESCE(fine_anno, inizio_anno, YEAR(created_at)) DESC,
                  COALESCE(fine_mese, inizio_mese, MONTH(created_at)) DESC,
