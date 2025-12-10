@@ -107,12 +107,15 @@ $torneoSeo = [
       color: #15293e;
       position: sticky;
       top: 0;
-      left: 0;
       z-index: 9;
       padding: 10px 10px 8px;
       background: linear-gradient(145deg, #f7f9fc, #eef2f7);
       border-radius: 10px;
       box-shadow: 0 4px 10px rgba(21, 41, 62, 0.08);
+    }
+    .girone-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .gironi-grid table {
       width: 100%;
@@ -280,44 +283,48 @@ $torneoSeo = [
         <div class="gironi-grid">
           <div class="girone-box">
             <h3>Girone A</h3>
-            <table id="tableClassificaA">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Squadra</th>
-                  <th>Pti</th>
-                  <th>G</th>
-                  <th>V</th>
-                  <th>N</th>
-                  <th>P</th>
-                  <th>GF</th>
-                  <th>GS</th>
-                  <th>DR</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+            <div class="girone-table-wrap">
+              <table id="tableClassificaA">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Squadra</th>
+                    <th>Pti</th>
+                    <th>G</th>
+                    <th>V</th>
+                    <th>N</th>
+                    <th>P</th>
+                    <th>GF</th>
+                    <th>GS</th>
+                    <th>DR</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
           </div>
 
           <div class="girone-box">
             <h3>Girone B</h3>
-            <table id="tableClassificaB">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Squadra</th>
-                  <th>Pti</th>
-                  <th>G</th>
-                  <th>V</th>
-                  <th>N</th>
-                  <th>P</th>
-                  <th>GF</th>
-                  <th>GS</th>
-                  <th>DR</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+            <div class="girone-table-wrap">
+              <table id="tableClassificaB">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Squadra</th>
+                    <th>Pti</th>
+                    <th>G</th>
+                    <th>V</th>
+                    <th>N</th>
+                    <th>P</th>
+                    <th>GF</th>
+                    <th>GS</th>
+                    <th>DR</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
