@@ -299,15 +299,18 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       const giornataDiv = document.createElement("div");
       giornataDiv.classList.add("giornata");
 
-      if (!isGironi) {
+      const partiteGiornata = dataFiltrata[numGiornata] || [];
+      const isRegularBlock = partiteGiornata.every(
+        (p) => (p.fase || "REGULAR").toUpperCase() === "REGULAR"
+      );
+      const isSemifinale = !isGironi && !isRegularBlock && String(numGiornata) === "2";
+
+      if (!isGironi && !isRegularBlock) {
         const titolo = document.createElement("h3");
         const labelRound = roundLabelByKey[String(numGiornata)] || "Fase eliminazione";
         titolo.textContent = labelRound;
         giornataDiv.appendChild(titolo);
       }
-
-            const partiteGiornata = dataFiltrata[numGiornata] || [];
-      const isSemifinale = String(numGiornata) === "2";
 
       const renderPartita = (container, partita) => {
         const partitaDiv = document.createElement("div");
