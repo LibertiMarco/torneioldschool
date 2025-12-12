@@ -1,4 +1,5 @@
 ﻿const TORNEO = "Coppadafrica"; // Nome base del torneo nel DB (fase girone)
+const GIRONE_IDS = { A: [2, 4, 6, 8], B: [1, 3, 5, 7] }; // Ordine gironi richiesto
 const teamLogos = {};
 
 function normalizeLogoName(name = "") {
@@ -87,10 +88,31 @@ function mostraClassifica(classifica) {
   if (tbodyA) tbodyA.innerHTML = "";
   if (tbodyB) tbodyB.innerHTML = "";
 
-  classifica.sort((a, b) => b.punti - a.punti || b.differenza_reti - a.differenza_reti);
+  const sortTeams = (a, b) =>
+    b.punti - a.punti ||
+    b.differenza_reti - a.differenza_reti ||
+    b.gol_fatti - a.gol_fatti ||
+    a.gol_subiti - b.gol_subiti ||
+    a.nome.localeCompare(b.nome, "it", { sensitivity: "base" });
 
-  const gironeA = classifica.slice(0, 4);
-  const gironeB = classifica.slice(4, 8);
+  const normalizeId = (team) => Number(team.id);
+
+  const gironeA = classifica.filter((t) => GIRONE_IDS.A.includes(normalizeId(t)));
+  const gironeB = classifica.filter((t) => GIRONE_IDS.B.includes(normalizeId(t)));
+
+  const assigned = new Set([...gironeA, ...gironeB].map((t) => normalizeId(t)));
+  const leftovers = classifica.filter((t) => !assigned.has(normalizeId(t)));
+
+  const fillGroup = (group, targetSize) => {
+    while (group.length < targetSize && leftovers.length) {
+      group.push(leftovers.shift());
+    }
+    group.sort(sortTeams);
+    if (group.length > targetSize) group.length = targetSize;
+  };
+
+  fillGroup(gironeA, 4);
+  fillGroup(gironeB, 4);
 
   const renderGroup = (rows, tbody) => {
     if (!tbody) return;
@@ -763,6 +785,4 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     document.getElementById(btn.dataset.tab).classList.add("active");
   });
 });
-
-
 
