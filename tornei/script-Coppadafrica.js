@@ -1,6 +1,29 @@
 ﻿const TORNEO = "Coppadafrica"; // Nome base del torneo nel DB (fase girone)
-const GIRONE_IDS = { A: [2, 4, 6, 8], B: [1, 3, 5, 7] }; // Ordine gironi richiesto
+const GIRONE_CONFIG = {
+  A: { ids: [], names: ["ALGERIA", "COSTA D'AVORIO", "GHANA", "NIGERIA"] },
+  B: { ids: [], names: ["CAMERUN", "EGITTO", "MAROCCO", "SENEGAL"] },
+};
 const teamLogos = {};
+
+(function applyGironiOverride() {
+  const override = (typeof window !== "undefined" && window.COPPAAF_GIRONI_OVERRIDE) || null;
+  if (!override) return;
+  ["A", "B"].forEach((g) => {
+    const cfg = override[g];
+    if (!cfg) return;
+    if (Array.isArray(cfg)) {
+      GIRONE_CONFIG[g].ids = cfg.map((n) => Number(n)).filter((n) => !Number.isNaN(n));
+      GIRONE_CONFIG[g].names = [];
+    } else {
+      if (Array.isArray(cfg.ids)) {
+        GIRONE_CONFIG[g].ids = cfg.ids.map((n) => Number(n)).filter((n) => !Number.isNaN(n));
+      }
+      if (Array.isArray(cfg.names)) {
+        GIRONE_CONFIG[g].names = cfg.names.map((n) => String(n));
+      }
+    }
+  });
+})();
 
 function normalizeLogoName(name = "") {
   return name.replace(/[^A-Za-z0-9]/g, "");
@@ -96,12 +119,36 @@ function mostraClassifica(classifica) {
     a.nome.localeCompare(b.nome, "it", { sensitivity: "base" });
 
   const normalizeId = (team) => Number(team.id);
+  const normalizeName = (name = "") => name.trim().toLowerCase();
+  const extractSeedFromName = (name = "") => {
+    const m = String(name).match(/\d+/);
+    return m ? Number(m[0]) : NaN;
+  };
+  const matchTeamToGirone = (team) => {
+    const idNum = normalizeId(team);
+    const name = normalizeName(team.nome);
+    const seed = extractSeedFromName(team.nome);
+    const matchesCfg = (cfg) =>
+      (idNum && cfg.ids.includes(idNum)) ||
+      cfg.names.some((n) => normalizeName(n) === name) ||
+      (!Number.isNaN(seed) && cfg.ids.includes(seed));
+    if (matchesCfg(GIRONE_CONFIG.A)) return "A";
+    if (matchesCfg(GIRONE_CONFIG.B)) return "B";
+    return "";
+  };
 
-  const gironeA = classifica.filter((t) => GIRONE_IDS.A.includes(normalizeId(t)));
-  const gironeB = classifica.filter((t) => GIRONE_IDS.B.includes(normalizeId(t)));
+  const gironeA = [];
+  const gironeB = [];
+  const leftovers = [];
 
-  const assigned = new Set([...gironeA, ...gironeB].map((t) => normalizeId(t)));
-  const leftovers = classifica.filter((t) => !assigned.has(normalizeId(t)));
+  classifica.forEach((team) => {
+    const g = matchTeamToGirone(team);
+    if (g === "A") gironeA.push(team);
+    else if (g === "B") gironeB.push(team);
+    else leftovers.push(team);
+  });
+
+  leftovers.sort(sortTeams);
 
   const fillGroup = (group, targetSize) => {
     while (group.length < targetSize && leftovers.length) {
@@ -785,4 +832,3 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     document.getElementById(btn.dataset.tab).classList.add("active");
   });
 });
-
