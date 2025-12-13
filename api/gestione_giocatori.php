@@ -360,6 +360,14 @@ if ($listaResult) {
 }
 
 $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 per default
+$giocatoriJson = htmlspecialchars(
+    json_encode(
+        $giocatori,
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT
+    ),
+    ENT_QUOTES,
+    'UTF-8'
+);
 ?>
 
 <!DOCTYPE html>
@@ -953,7 +961,7 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 
 <section class="admin-table-section form-elimina hidden">
 <h2>Elimina Giocatore</h2>
-<input type="text" id="search" placeholder="Cerca (mostrati ultimi 10 creati)" class="search-input" data-all-players='<?= json_encode($giocatori, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>'>
+<input type="text" id="search" placeholder="Cerca (mostrati ultimi 10 creati)" class="search-input" data-all-players="<?= $giocatoriJson ?>">
 
 <table class="admin-table-squadre" id="tabellaGiocatori">
 <thead>
