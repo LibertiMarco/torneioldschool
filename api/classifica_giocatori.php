@@ -119,6 +119,24 @@ while ($row = $res->fetch_assoc()) {
 }
 $stmt->close();
 
+// Ricalcola la posizione in modo che i pari valori condividano il posto migliore
+$primaryField = $ordine === 'presenze' ? 'presenze' : 'gol';
+$lastValue = null;
+$lastPos = 0;
+$i = 0;
+foreach ($giocatori as &$g) {
+    $i++;
+    $val = (int)($g[$primaryField] ?? 0);
+    if ($lastValue !== null && $val === $lastValue) {
+        $g['posizione'] = $lastPos;
+    } else {
+        $lastPos = $i;
+        $g['posizione'] = $lastPos;
+        $lastValue = $val;
+    }
+}
+unset($g);
+
 // Conteggio totale per la paginazione
 $countSql = "
     SELECT COUNT(*) AS totale
