@@ -5,6 +5,7 @@ const GIRONE_CONFIG = {
 };
 const teamLogos = {};
 const FALLBACK_AVATAR = "/img/giocatori/unknown.jpg";
+const favState = { tournaments: new Set() };
 
 (function applyGironiOverride() {
   const override = (typeof window !== "undefined" && window.COPPAAF_GIRONI_OVERRIDE) || null;
@@ -39,6 +40,45 @@ function resolveLogoPath(name, storedPath) {
   const isPlaceholderName = lower.includes("vincente") || lower.includes("seconda") || lower.includes("girone");
   if (!slug || isPlaceholderName) return "/img/scudetti/placeholder-dark.svg";
   return `/img/scudetti/${slug}.png`;
+}
+
+function updateFavTournamentButton() {
+  const btn = document.getElementById("favTournamentBtn");
+  if (!btn) return;
+  const isFav = favState.tournaments.has(TORNEO);
+  btn.classList.toggle("is-fav", isFav);
+  btn.textContent = isFav ? "★ Torneo seguito" : "☆ Segui torneo";
+}
+
+async function toggleTournamentFollow(btn) {
+  const wantFollow = !favState.tournaments.has(TORNEO);
+  const fd = new FormData();
+  fd.append("tipo", "torneo");
+  fd.append("azione", wantFollow ? "follow" : "unfollow");
+  fd.append("torneo", TORNEO);
+  try {
+    const res = await fetch("/api/follow.php", { method: "POST", body: fd, credentials: "include" });
+    const data = await res.json();
+    if (!data.error) {
+      if (data.followed) favState.tournaments.add(TORNEO);
+      else favState.tournaments.delete(TORNEO);
+    }
+  } catch (e) {
+    console.error("Errore follow torneo", e);
+  }
+  updateFavTournamentButton(btn);
+}
+
+async function loadFavorites() {
+  try {
+    const res = await fetch("/api/follow.php", { credentials: "include" });
+    if (!res.ok) return;
+    const data = await res.json();
+    favState.tournaments = new Set(data.tournaments || []);
+    updateFavTournamentButton();
+  } catch (e) {
+    console.error("Errore caricamento preferiti", e);
+  }
 }
 
 // ====================== UTILS ======================
@@ -903,6 +943,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const loadClassifica = (slug) => caricaClassifica(slug || TORNEO);
   const prevMarcatoriBtn = document.getElementById("prevMarcatori");
   const nextMarcatoriBtn = document.getElementById("nextMarcatori");
+  const favTorneoBtn = document.getElementById("favTournamentBtn");
+  if (favTorneoBtn) {
+    favTorneoBtn.addEventListener("click", () => toggleTournamentFollow(favTorneoBtn));
+  }
+  loadFavorites();
 
   // carico subito la parte girone
   caricaClassifica();

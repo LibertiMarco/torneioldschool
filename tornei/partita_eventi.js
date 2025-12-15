@@ -78,6 +78,8 @@ async function caricaPartita() {
     const golCasa = (p.gol_casa !== null && p.gol_casa !== undefined) ? p.gol_casa : "-";
     const golOsp = (p.gol_ospite !== null && p.gol_ospite !== undefined) ? p.gol_ospite : "-";
     const arbitro = (p.arbitro || "").trim();
+    const aiRigori = Number(p.decisa_rigori || 0) === 1;
+    const hasPenalties = aiRigori && p.rigori_casa !== null && p.rigori_casa !== undefined && p.rigori_ospite !== null && p.rigori_ospite !== undefined;
 
     document.getElementById("partitaContainer").innerHTML = `
     <div class="match-card match-card-blue">
@@ -111,6 +113,7 @@ async function caricaPartita() {
           <img src="${logoOsp}" class="team-logo" alt="${p.squadra_ospite}">
         </div>
       </div>
+      ${hasPenalties ? `<div class="match-penalties">d.c.r. ${p.rigori_casa}-${p.rigori_ospite}</div>` : ""}
       <div class="match-referee">Arbitro: ${arbitro ? escapeHtml(arbitro) : 'Da definire'}</div>
     </div>
 
