@@ -45,8 +45,9 @@ if ($search !== '') {
     $typesSearch .= 'ss';
 }
 
-$allConditions = array_merge($conditionsBase, $searchConditions);
-$whereAll = $allConditions ? 'WHERE ' . implode(' AND ', $allConditions) : '';
+$whereBase = $conditionsBase ? 'WHERE ' . implode(' AND ', $conditionsBase) : '';
+$whereSearch = $searchConditions ? ($whereBase ? ' AND ' : 'WHERE ') . implode(' AND ', $searchConditions) : '';
+$whereAll = $whereBase . $whereSearch;
 
 $orderFields = $ordine === 'presenze'
     ? 'agg.presenze DESC, agg.gol DESC, g.cognome ASC, g.nome ASC'
@@ -71,8 +72,61 @@ $aggregateSubquery = "
     GROUP BY pg.giocatore_id
 ";
 
-// Query dati: otteniamo l'elenco ordinato, poi calcoliamo il rank globale lato PHP
-$sqlData = "
+// Query base senza filtro di ricerca: serve per calcolare il rank globale
+$sqlAll = "
+    SELECT 
+        g.id,
+        g.nome,
+        g.cognome,
+        g.ruolo,
+        '' AS squadra,
+        '' AS torneo,
+        g.foto,
+        agg.gol,
+        agg.presenze,
+        agg.media_voti
+    FROM giocatori g
+    INNER JOIN (
+        $aggregateSubquery
+    ) AS agg ON agg.giocatore_id = g.id
+    $whereBase
+    ORDER BY $orderFields
+";
+
+$paramsBase = $excludedTournaments;
+$typesBase = str_repeat('s', count($excludedTournaments));
+
+$stmt = $conn->prepare($sqlAll);
+if (!$stmt) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Errore interno durante la preparazione della query']);
+    exit;
+}
+$stmt->bind_param($typesBase, ...$paramsBase);
+$stmt->execute();
+$res = $stmt->get_result();
+$allRows = [];
+while ($row = $res->fetch_assoc()) {
+    $allRows[] = $row;
+}
+$stmt->close();
+
+// Calcolo rank (dense) globale, poi applico paginazione
+$primaryField = $ordine === 'presenze' ? 'presenze' : 'gol';
+$lastVal = null;
+$rank = 0;
+$posMap = [];
+foreach ($allRows as $idx => $row) {
+    $val = (int)($row[$primaryField] ?? 0);
+    if ($lastVal === null || $val !== $lastVal) {
+        $rank = $idx + 1;
+        $lastVal = $val;
+    }
+    $posMap[$row['id']] = $rank;
+}
+
+// Query filtrata (con ricerca) e applico il rank calcolato sul set completo
+$sqlFiltered = "
     SELECT 
         g.id,
         g.nome,
@@ -92,66 +146,27 @@ $sqlData = "
     ORDER BY $orderFields
 ";
 
-$paramsData = array_merge($excludedTournaments, $paramsSearch);
-$typesData = str_repeat('s', count($excludedTournaments)) . $typesSearch;
+$paramsFiltered = array_merge($excludedTournaments, $paramsSearch);
+$typesFiltered = str_repeat('s', count($excludedTournaments)) . $typesSearch;
 
-$stmt = $conn->prepare($sqlData);
+$stmt = $conn->prepare($sqlFiltered);
 if (!$stmt) {
     http_response_code(500);
     echo json_encode(['error' => 'Errore interno durante la preparazione della query']);
     exit;
 }
-$stmt->bind_param($typesData, ...$paramsData);
+$stmt->bind_param($typesFiltered, ...$paramsFiltered);
 $stmt->execute();
 $res = $stmt->get_result();
-$allRows = [];
+$filteredRows = [];
 while ($row = $res->fetch_assoc()) {
-    $allRows[] = $row;
+    $row['posizione'] = $posMap[$row['id']] ?? null;
+    $filteredRows[] = $row;
 }
 $stmt->close();
 
-// Calcolo rank (dense) globale, poi applico paginazione
-$primaryField = $ordine === 'presenze' ? 'presenze' : 'gol';
-$ranked = [];
-$lastVal = null;
-$rank = 0;
-foreach ($allRows as $idx => $row) {
-    $val = (int)($row[$primaryField] ?? 0);
-    if ($lastVal === null || $val !== $lastVal) {
-        $rank = $idx + 1;
-        $lastVal = $val;
-    }
-    $row['posizione'] = $rank;
-    $ranked[] = $row;
-}
-
-$giocatori = array_slice($ranked, $offset, $perPage);
-
-// Conteggio totale per la paginazione
-$countSql = "
-    SELECT COUNT(*) AS totale
-    FROM (
-        SELECT g.id
-        FROM giocatori g
-        INNER JOIN (
-            $aggregateSubquery
-        ) AS agg ON agg.giocatore_id = g.id
-        $whereAll
-    ) AS ordered
-";
-
-$countStmt = $conn->prepare($countSql);
-if ($countStmt) {
-    $paramsCount = array_merge($excludedTournaments, $paramsSearch);
-    $typesCount = str_repeat('s', count($excludedTournaments)) . $typesSearch;
-    $countStmt->bind_param($typesCount, ...$paramsCount);
-    $countStmt->execute();
-    $countRes = $countStmt->get_result();
-    $totale = (int)($countRes->fetch_assoc()['totale'] ?? 0);
-    $countStmt->close();
-} else {
-    $totale = count($giocatori);
-}
+$totale = count($filteredRows);
+$giocatori = array_slice($filteredRows, $offset, $perPage);
 
 $pagination = [
     'page' => $page,
