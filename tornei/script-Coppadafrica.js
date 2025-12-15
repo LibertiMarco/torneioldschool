@@ -397,9 +397,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
           giornataDiv.appendChild(h4r);
           legs.RITORNO.forEach(p => renderPartita(giornataDiv, p));
         } else {
-          const h4 = document.createElement("h4");
-          h4.textContent = "Semifinali";
-          giornataDiv.appendChild(h4);
+          // Semifinali a gara secca: non duplicare il titolo
           partiteGiornata.forEach(p => renderPartita(giornataDiv, p));
         }
       } else {
