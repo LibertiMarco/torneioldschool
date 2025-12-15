@@ -205,7 +205,7 @@ function mostraClassifica(classifica) {
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
       <div class="box gold-box">Prime 2: Semifinali Gold</div>
-      <div class="box gold-box gold-quarti-legend">3-6: Quarti Gold</div>
+      <div class="box gold-box gold-quarti">3-6: Quarti Gold</div>
       <div class="box silver-box">7-10: Coppa Silver</div>
     `;
 
@@ -950,5 +950,4 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
-
 

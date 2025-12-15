@@ -746,45 +746,54 @@ async function caricaRosaSquadra(squadra) {
       const card = document.createElement("div");
       card.classList.add("player-card");
 
-card.innerHTML = `
-  <div class="player-name-row">
-    <h4 class="player-name">${giocatore.nome} ${giocatore.cognome}</h4>
-  </div>
+      const ruolo = (giocatore.ruolo || "").trim();
+      const isGK = /^portiere/i.test(ruolo) || /^GK$/i.test(ruolo);
+      const isCaptain = Number(giocatore.is_captain || 0) === 1;
+      const badges = [];
+      if (isGK) badges.push('<span class="role-badge gk-badge">GK</span>');
+      if (isCaptain) badges.push('<span class="role-badge captain-badge">C</span>');
 
-  <div class="player-bottom">
-    <div class="player-photo">
-      <img src="${giocatore.foto}" 
-           alt="${giocatore.nome} ${giocatore.cognome}">
-    </div>
+      card.innerHTML = `
+        <div class="player-name-row">
+          <h4 class="player-name">${giocatore.nome} ${giocatore.cognome}</h4>
+          ${badges.length ? `<div class="player-tags">${badges.join("")}</div>` : ""}
+        </div>
 
-    <div class="player-stats">
-      <div class="row">
-        <div class="stat">
-          <span class="label">Presenze</span>
-          <span class="value">${giocatore.presenze ?? '0'}</span>
-        </div>
-        <div class="stat">
-          <span class="label">Cart. Gialli / Rossi</span>
-          <span class="value">
-            <span class="yellow">${giocatore.gialli ?? '0'}</span>/
-            <span class="red"> ${giocatore.rossi ?? '0'}</span>
-          </span>
-        </div>
-      </div>
+        <div class="player-bottom">
+          <div class="player-photo">
+            <img src="${giocatore.foto || FALLBACK_AVATAR}" 
+                 alt="${giocatore.nome} ${giocatore.cognome}"
+                 onerror="this.onerror=null; this.src='${FALLBACK_AVATAR}';">
+          </div>
 
-      <div class="row">
-        <div class="stat">
-          <span class="label">Reti</span>
-          <span class="value">${giocatore.reti ?? '0'}</span>
+          <div class="player-stats">
+            <div class="row">
+              <div class="stat">
+                <span class="label">Presenze</span>
+                <span class="value">${giocatore.presenze ?? '0'}</span>
+              </div>
+              <div class="stat">
+                <span class="label">Cart. Gialli / Rossi</span>
+                <span class="value">
+                  <span class="yellow">${giocatore.gialli ?? '0'}</span>/
+                  <span class="red"> ${giocatore.rossi ?? '0'}</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="stat">
+                <span class="label">Reti</span>
+                <span class="value">${giocatore.reti ?? '0'}</span>
+              </div>
+              <div class="stat rating">
+                <span class="label">Media Voti</span>
+                <span class="value">${giocatore.media_voti ?? '0'}</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="stat rating">
-          <span class="label">Media Voti</span>
-          <span class="value">${giocatore.media_voti ?? '0'}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-`;
+      `;
 
 
 
