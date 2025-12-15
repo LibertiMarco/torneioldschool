@@ -578,7 +578,7 @@ async function caricaPlayoff() {
                 </div>
                 <span class="team-score">${mostraRisultato ? partita.gol_ospite : "-"}</span>
               </div>
-              ${hasPenalties ? `<div class="bracket-penalties">Rigori ${partita.rigori_casa}-${partita.rigori_ospite}</div>` : ""}
+              ${hasPenalties ? `<div class="bracket-penalties">d.c.r. ${partita.rigori_casa}-${partita.rigori_ospite}</div>` : ""}
               <div class="bracket-meta">
                 <span>${dataStr}${showOra ? " - " + partita.ora_partita.slice(0,5) : ""}</span>
                 <span>${partita.campo || "Campo da definire"}</span>

@@ -2851,19 +2851,21 @@ body {
 /* ====== FILTRO FASE CLASSIFICA ====== */
 .filtro-fase {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .filtro-fase label {
   font-weight: 600;
   color: #15293e;
+  margin-right: 6px;
 }
 
 .filtro-fase-selects {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 10px;
 }
@@ -2880,9 +2882,7 @@ body {
 /* 📱 MOBILE: le select vanno una sotto l'altra */
 @media (max-width: 600px) {
   .filtro-fase-selects {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
+    flex-wrap: wrap;
   }
 
   .filtro-fase-selects select {
@@ -5283,7 +5283,7 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 .match-penalties {
   font-size: 12px;
   color: #000;
-  text-align: right;
+  text-align: center;
   margin-top: 6px;
   letter-spacing: 0.2px;
   font-weight: 700;
