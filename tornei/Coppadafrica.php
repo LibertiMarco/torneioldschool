@@ -265,17 +265,14 @@ $torneoSeo = [
 
       <!-- FILTRI FASE -->
       <div class="filtro-fase">
-        <label for="faseSelect">Seleziona fase:</label>
-        <div class="filtro-fase-selects">
-          <select id="faseSelect">
-            <option value="girone" selected>GIRONI</option>
-            <option value="eliminazione">FASE FINALE</option>
-          </select>
-
-          <select id="coppaSelect" style="display: none;">
-            <option value="gold" selected>FASE FINALE</option>
-          </select>
+        <label>Seleziona fase:</label>
+        <div class="filtro-fase-selects" id="faseToggle">
+          <button type="button" class="pill-btn pill-btn--toggle active" data-fase-btn data-fase="girone">GIRONI</button>
+          <button type="button" class="pill-btn pill-btn--toggle" data-fase-btn data-fase="eliminazione">FASE FINALE</button>
         </div>
+        <select id="coppaSelect" style="display: none;">
+          <option value="gold" selected>FASE FINALE</option>
+        </select>
       </div>
 
       <!-- CLASSIFICA DOPPIO GIRONE -->
@@ -516,7 +513,6 @@ $torneoSeo = [
 
 </body>
 </html>
-
 
 
 

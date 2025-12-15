@@ -899,6 +899,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const playoffContainer = document.getElementById("playoffContainer");
   const heroImg = document.getElementById("torneoHeroImg");
   const torneoTitle = document.querySelector(".torneo-title .titolo");
+  const faseToggleBtns = document.querySelectorAll("[data-fase-btn]");
   const loadClassifica = (slug) => caricaClassifica(slug || TORNEO);
   const prevMarcatoriBtn = document.getElementById("prevMarcatori");
   const nextMarcatoriBtn = document.getElementById("nextMarcatori");
@@ -943,26 +944,32 @@ document.addEventListener("DOMContentLoaded", () => {
     buildPillToggle(faseCalendario);
   }
 
-  // cambio fase girone/eliminazione
-  faseSelect.addEventListener("change", () => {
+  // cambio fase girone/eliminazione (toggle bottoni)
+  const applyFase = (faseVal) => {
     const legendaEsistente = document.querySelector(".legenda-coppe");
     if (legendaEsistente) legendaEsistente.remove();
 
-    if (faseSelect.value === "eliminazione") {
-      // mostra bracket playoff
+    if (faseVal === "eliminazione") {
       classificaWrapper.style.display = "none";
       playoffContainer.style.display = "block";
       caricaPlayoff();
-
     } else {
-      // torna alla classifica
       playoffContainer.style.display = "none";
       classificaWrapper.style.display = "block";
       loadClassifica();
     }
-  });
+    faseToggleBtns.forEach(btn => btn.classList.toggle("active", (btn.dataset.fase || "") === faseVal));
+  };
 
-  // nasconde la seconda picklist (non usata in questa versione)
+  if (faseToggleBtns.length) {
+    faseToggleBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        applyFase(btn.dataset.fase || "girone");
+      });
+    });
+    applyFase("girone");
+  }
+
   if (coppaSelect) {
     coppaSelect.style.display = "none";
   }
