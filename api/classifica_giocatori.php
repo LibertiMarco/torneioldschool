@@ -74,12 +74,14 @@ $aggregateSubquery = "
     GROUP BY pg.giocatore_id
 ";
 
-// Inizializza variabili per il ranking (comportamento tipo RANK: 1,2,2,4)
-$conn->query("SET @rownum := 0, @rank := 0, @prev1 := NULL");
+$primaryAlias = $ordine === 'presenze' ? 'presenze' : 'gol';
 
-// Query dati con rank calcolato via variabili
+// Query dati con rank calcolato via variabili dopo l'ordinamento (comportamento tipo RANK: 1,2,2,4)
 $sql = "
-    SELECT *
+    SELECT ob.*,
+           @rownum := @rownum + 1 AS rownum_seq,
+           @rank := IF(@prev1 = ob.$primaryAlias, @rank, @rownum) AS posizione,
+           @prev1 := ob.$primaryAlias
     FROM (
         SELECT 
             g.id,
@@ -91,20 +93,15 @@ $sql = "
             g.foto,
             agg.gol,
             agg.presenze,
-            agg.media_voti,
-            @rownum := @rownum + 1 AS rownum_seq,
-            @rank := CASE 
-                WHEN @prev1 = $rankPrimary THEN @rank 
-                ELSE @rownum 
-            END AS posizione,
-            @prev1 := $rankPrimary
+            agg.media_voti
         FROM giocatori g
         INNER JOIN (
             $aggregateSubquery
         ) AS agg ON agg.giocatore_id = g.id
         $whereAll
         ORDER BY $orderFieldsInner
-    ) AS ordered
+    ) AS ob
+    CROSS JOIN (SELECT @rownum := 0, @rank := 0, @prev1 := NULL) AS vars
     ORDER BY posizione ASC, $orderFieldsOuter
     LIMIT ? OFFSET ?
 ";
