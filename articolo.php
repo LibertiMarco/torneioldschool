@@ -165,7 +165,7 @@ if ($id > 0) {
 
 .article-panel h2 {
     font-size: 2.4rem;
-    margin: 12px 0 6px;
+    margin: 12px 0 18px;
     color: #0f172a;
     letter-spacing: -0.02em;
 }
@@ -173,7 +173,7 @@ if ($id > 0) {
 .article-subtitle {
     color: #54607a;
     font-weight: 600;
-    margin: 0 0 8px;
+    margin: 0 0 14px;
 }
 
 .article-media {
@@ -272,6 +272,7 @@ if ($id > 0) {
     color: #1e2433;
     font-size: 1.1rem;
     line-height: 1.82;
+    white-space: pre-wrap;
 }
 
 .article-content p {
@@ -823,7 +824,7 @@ function formatContent(text = '') {
     const applyInline = (str) =>
         str
           .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-          .replace(/==(.+?)==/g, '<mark>$1</mark>');
+          .replace(/==(.+?)==/g, '<strong>$1</strong>');
 
     return text
         .split(/\n{2,}/)
