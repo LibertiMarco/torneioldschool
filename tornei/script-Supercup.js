@@ -169,7 +169,7 @@ function mostraClassifica(classifica) {
     if (posizione <= GOLD_SEMI_SPOTS) {
       tr.classList.add("gold-row"); // Semifinali Gold
     } else if (posizione <= GOLD_SEMI_SPOTS + GOLD_QUARTI_SPOTS) {
-      tr.classList.add("gold-row", "gold-quarti"); // Quarti Gold
+      tr.classList.add("gold-quarti"); // Quarti Gold (oro chiaro)
     } else if (posizione > TEAM_COUNT - SILVER_SPOTS) {
       tr.classList.add("silver-row"); // Silver
     }
@@ -950,6 +950,5 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
-
 
 

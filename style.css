@@ -2767,6 +2767,13 @@ body {
   border-radius: 4px 0 0 4px;
 }
 
+#tableClassifica tr.gold-quarti td:first-child {
+  background-color: #ffe680; /* oro chiaro per quarti */
+  color: #000;
+  font-weight: 700;
+  border-radius: 4px 0 0 4px;
+}
+
 #tableClassifica tr.silver-row td:first-child {
   background-color: #C0C0C0; /* argento */
   color: #000;
