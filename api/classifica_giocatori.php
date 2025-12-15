@@ -48,9 +48,12 @@ if ($search !== '') {
 $allConditions = array_merge($conditionsBase, $searchConditions);
 $whereAll = $allConditions ? 'WHERE ' . implode(' AND ', $allConditions) : '';
 
-$orderFields = $ordine === 'presenze'
+$orderFieldsInner = $ordine === 'presenze'
     ? 'agg.presenze DESC, agg.gol DESC, g.cognome ASC, g.nome ASC'
     : 'agg.gol DESC, agg.presenze DESC, g.cognome ASC, g.nome ASC';
+$orderFieldsOuter = $ordine === 'presenze'
+    ? 'presenze DESC, gol DESC, cognome ASC, nome ASC'
+    : 'gol DESC, presenze DESC, cognome ASC, nome ASC';
 
 // Colonne chiave per il ranking (competizione: 1,1,3 in caso di pari)
 $rankPrimary = $ordine === 'presenze' ? 'agg.presenze' : 'agg.gol';
@@ -98,9 +101,9 @@ $sql = "
         ) AS agg ON agg.giocatore_id = g.id
         CROSS JOIN (SELECT @rownum := 0, @rank := 0, @prev1 := NULL) AS r
         $whereAll
-        ORDER BY $orderFields
+        ORDER BY $orderFieldsInner
     ) AS ordered
-    ORDER BY posizione ASC, $orderFields
+    ORDER BY posizione ASC, $orderFieldsOuter
     LIMIT ? OFFSET ?
 ";
 
