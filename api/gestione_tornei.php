@@ -11,6 +11,7 @@ $torneo = new Torneo();
 require_once __DIR__ . '/crud/Squadra.php';
 $squadraModel = new Squadra();
 require_once __DIR__ . '/../includi/image_optimizer.php';
+require_once __DIR__ . '/../includi/db.php';
 
 function sanitizeTorneoSlug($value) {
     $slug = preg_replace('/[^A-Za-z0-9_-]/', '', $value);
@@ -81,6 +82,36 @@ function eliminaFileTorneo($fileName) {
     if (file_exists($jsPath)) {
         @unlink($jsPath);
     }
+}
+
+function purgeTorneoData(mysqli $conn, string $torneoSlug): void {
+    if ($torneoSlug === '') {
+        return;
+    }
+
+    // Elimina statistiche collegate alle partite del torneo (fk cascade su partite, ma facciamo una pulizia esplicita)
+    if ($stmt = $conn->prepare("DELETE pg FROM partita_giocatore pg JOIN partite p ON pg.partita_id = p.id WHERE p.torneo = ?")) {
+        $stmt->bind_param('s', $torneoSlug);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    // Elimina partite del torneo (cascata già gestisce partita_giocatore se non eseguita sopra)
+    if ($stmt = $conn->prepare("DELETE FROM partite WHERE torneo = ?")) {
+        $stmt->bind_param('s', $torneoSlug);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    // Elimina legami giocatori-squadre del torneo
+    if ($stmt = $conn->prepare("DELETE sg FROM squadre_giocatori sg JOIN squadre s ON sg.squadra_id = s.id WHERE s.torneo = ?")) {
+        $stmt->bind_param('s', $torneoSlug);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    // Elimina follow/seguiti relativi al torneo o alle sue squadre (se la tabella esiste)
+    $conn->query("DELETE FROM seguiti WHERE torneo_slug = '" . $conn->real_escape_string($torneoSlug) . "' OR (tipo = 'squadra' AND torneo_slug = '" . $conn->real_escape_string($torneoSlug) . "')");
 }
 
 function salvaImmagineTorneo($nomeTorneo, $fileField) {
@@ -222,7 +253,7 @@ if (isset($_GET['elimina'])) {
     $id = (int)$_GET['elimina'];
     $record = $torneo->getById($id);
 
-        if ($record) {
+    if ($record) {
         eliminaFileTorneo($record['filetorneo'] ?? null);
         eliminaImmagineTorneo($record['img'] ?? null);
 
@@ -230,6 +261,7 @@ if (isset($_GET['elimina'])) {
         if (!empty($record['filetorneo'])) {
             $torneoSlug = sanitizeTorneoSlug(preg_replace('/\.(html?|php)$/i', '', $record['filetorneo']));
         }
+        purgeTorneoData($conn, $torneoSlug);
         $squadraModel->eliminaByTorneo($torneoSlug);
     }
 
@@ -640,4 +672,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
-
