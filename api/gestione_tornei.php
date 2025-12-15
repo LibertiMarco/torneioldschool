@@ -120,6 +120,65 @@ function purgeTorneoData(string $torneoSlug): void {
     // Elimina follow/seguiti relativi al torneo o alle sue squadre (se la tabella esiste)
     $safeSlug = $conn->real_escape_string($torneoSlug);
     $conn->query("DELETE FROM seguiti WHERE torneo_slug = '" . $safeSlug . "' OR (tipo = 'squadra' AND torneo_slug = '" . $safeSlug . "')");
+
+    rebuildAggregates($conn);
+}
+
+function rebuildAggregates(mysqli $conn): void {
+    // Giocatori globali
+    $conn->query("
+        UPDATE giocatori g
+        LEFT JOIN (
+            SELECT 
+                pg.giocatore_id,
+                SUM(pg.goal) AS goal,
+                SUM(pg.assist) AS assist,
+                SUM(pg.cartellino_giallo) AS gialli,
+                SUM(pg.cartellino_rosso) AS rossi,
+                SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END) AS presenze,
+                SUM(CASE WHEN pg.voto IS NOT NULL THEN pg.voto ELSE 0 END) AS somma_voti,
+                SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
+            FROM partita_giocatore pg
+            JOIN partite p ON p.id = pg.partita_id
+            WHERE p.giocata = 1
+            GROUP BY pg.giocatore_id
+        ) agg ON agg.giocatore_id = g.id
+        SET 
+            g.presenze = COALESCE(agg.presenze, 0),
+            g.reti = COALESCE(agg.goal, 0),
+            g.assist = COALESCE(agg.assist, 0),
+            g.gialli = COALESCE(agg.gialli, 0),
+            g.rossi = COALESCE(agg.rossi, 0),
+            g.media_voti = CASE WHEN COALESCE(agg.num_voti,0) > 0 THEN ROUND(agg.somma_voti / agg.num_voti, 2) ELSE NULL END
+    ");
+
+    // Giocatori per squadra
+    $conn->query("
+        UPDATE squadre_giocatori sg
+        LEFT JOIN (
+            SELECT 
+                sg2.id AS sg_id,
+                SUM(pg.goal) AS goal,
+                SUM(pg.assist) AS assist,
+                SUM(pg.cartellino_giallo) AS gialli,
+                SUM(pg.cartellino_rosso) AS rossi,
+                SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END) AS presenze,
+                SUM(CASE WHEN pg.voto IS NOT NULL THEN pg.voto ELSE 0 END) AS somma_voti,
+                SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
+            FROM squadre_giocatori sg2
+            JOIN partite p ON p.torneo = (SELECT torneo FROM squadre s WHERE s.id = sg2.squadra_id LIMIT 1)
+            JOIN partita_giocatore pg ON pg.giocatore_id = sg2.giocatore_id AND pg.partita_id = p.id
+            WHERE p.giocata = 1
+            GROUP BY sg2.id
+        ) agg ON agg.sg_id = sg.id
+        SET 
+            sg.presenze = COALESCE(agg.presenze, 0),
+            sg.reti = COALESCE(agg.goal, 0),
+            sg.assist = COALESCE(agg.assist, 0),
+            sg.gialli = COALESCE(agg.gialli, 0),
+            sg.rossi = COALESCE(agg.rossi, 0),
+            sg.media_voti = CASE WHEN COALESCE(agg.num_voti,0) > 0 THEN ROUND(agg.somma_voti / agg.num_voti, 2) ELSE NULL END
+    ");
 }
 
 function salvaImmagineTorneo($nomeTorneo, $fileField) {

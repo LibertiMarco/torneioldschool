@@ -1913,10 +1913,10 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
             refreshCreateLayout();
             populateSquadreFiltrate();
           } else if (formId === 'formModifica') {
-            const idSel = form.querySelector('[name="partita_id"]')?.value;
-            if (idSel) {
-              const p = partiteData.find(p => String(p.id) === String(idSel));
-              if (p) applyPartitaModForm(p);
+            const partSel = document.getElementById('selPartitaMod');
+            if (partSel) {
+              partSel.value = '';
+              partSel.dispatchEvent(new Event('change'));
             }
           }
         } else {

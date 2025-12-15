@@ -1,7 +1,7 @@
 ﻿const TORNEO = "Coppadafrica"; // Nome base del torneo nel DB (fase girone)
 const GIRONE_CONFIG = {
-  A: { ids: [], names: ["ALGERIA", "COSTA D'AVORIO", "GHANA", "NIGERIA"] },
-  B: { ids: [], names: ["CAMERUN", "EGITTO", "MAROCCO", "SENEGAL"] },
+  B: { ids: [], names: ["ALGERIA", "COSTA D'AVORIO", "GHANA", "NIGERIA"] },
+  A: { ids: [], names: ["CAMERUN", "EGITTO", "MAROCCO", "SENEGAL"] },
 };
 const teamLogos = {};
 const FALLBACK_AVATAR = "/img/giocatori/unknown.jpg";
