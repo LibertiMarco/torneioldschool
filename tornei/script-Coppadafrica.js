@@ -4,6 +4,7 @@ const GIRONE_CONFIG = {
   B: { ids: [], names: ["CAMERUN", "EGITTO", "MAROCCO", "SENEGAL"] },
 };
 const teamLogos = {};
+const FALLBACK_AVATAR = "/img/giocatori/unknown.jpg";
 
 (function applyGironiOverride() {
   const override = (typeof window !== "undefined" && window.COPPAAF_GIRONI_OVERRIDE) || null;
@@ -755,23 +756,43 @@ card.innerHTML = `
   }
 }
 
-// ====================== MARCATORI ======================
-const MARCATORI_PER_PAGE = 6;
+// ====================== MARCATORI (stile Serie B) ======================
+const MARCATORI_PER_PAGE = 15;
 let marcatoriData = [];
 let marcatoriPage = 1;
 let marcatoriRanks = [];
 
+function buildMarcatoriRanks() {
+  marcatoriRanks = [];
+  if (!Array.isArray(marcatoriData) || !marcatoriData.length) return;
+
+  let lastKey = null;
+  let lastRank = 0;
+  marcatoriData.forEach((p, idx) => {
+    const gol = Number(p.gol ?? 0);
+    const key = `${gol}`;
+    if (key === lastKey) {
+      marcatoriRanks[idx] = lastRank;
+    } else {
+      lastRank = idx + 1;
+      marcatoriRanks[idx] = lastRank;
+      lastKey = key;
+    }
+  });
+}
+
 function renderMarcatoriPagina(page = 1) {
   const list = document.getElementById("marcatoriList");
-  const prevBtn = document.getElementById("prevMarcatori");
-  const nextBtn = document.getElementById("nextMarcatori");
-  const info = document.getElementById("marcatoriPageInfo");
+  if (!list) return;
 
   if (!Array.isArray(marcatoriData) || marcatoriData.length === 0) {
-    if (list) list.innerHTML = `<div class="marcatori-empty">Nessun dato marcatori</div>`;
+    list.innerHTML = `<div class="marcatori-empty">Nessun dato marcatori</div>`;
+    const info = document.getElementById("marcatoriPageInfo");
     if (info) info.textContent = "";
-    if (prevBtn) prevBtn.disabled = true;
-    if (nextBtn) nextBtn.disabled = true;
+    const prev = document.getElementById("prevMarcatori");
+    const next = document.getElementById("nextMarcatori");
+    if (prev) prev.disabled = true;
+    if (next) next.disabled = true;
     return;
   }
 
@@ -780,36 +801,39 @@ function renderMarcatoriPagina(page = 1) {
   const start = (marcatoriPage - 1) * MARCATORI_PER_PAGE;
   const slice = marcatoriData.slice(start, start + MARCATORI_PER_PAGE);
 
-  if (list) {
-    list.innerHTML = slice.map((p, idx) => {
-      const globalIdx = start + idx;
-      const rank = marcatoriRanks[globalIdx] ?? globalIdx + 1;
-      const foto = p.foto || "/img/giocatori/unknown.jpg";
-      const logo = p.logo || "/img/tornei/pallone.png";
-      const nome = `${p.nome || ""} ${p.cognome || ""}`.trim() || "Giocatore";
-      const squadra = p.squadra || "";
-      return `
-        <div class="marcatore-card">
-          <div class="marcatore-rank">#${rank}</div>
-          <div class="marcatore-main">
-            <img class="marcatore-foto" src="${foto}" alt="${nome}" onerror="this.src='/img/giocatori/unknown.jpg';">
-            <div class="marcatore-info">
-              <div class="marcatore-nome">${nome}</div>
-              <div class="marcatore-squadra">
-                <img class="marcatore-logo" src="${logo}" alt="${squadra}" onerror="this.src='/img/tornei/pallone.png';">
-                <span>${squadra}</span>
-              </div>
-            </div>
-          </div>
-          <div class="marcatore-meta">
-            <span class="pill">Gol: <strong>${p.gol ?? 0}</strong></span>
-            <span class="pill pill--ghost">Presenze: ${p.presenze ?? 0}</span>
-          </div>
-        </div>
-      `;
-    }).join("");
-  }
+  list.innerHTML = "";
+  slice.forEach((p, idx) => {
+    const globalIdx = start + idx;
+    const rank = marcatoriRanks[globalIdx] ?? globalIdx + 1;
+    const logo = resolveLogoPath(p.squadra, p.logo);
+    const foto = p.foto || FALLBACK_AVATAR;
+    const nomeCompleto = `${p.nome ?? ''} ${p.cognome ?? ''}`.trim();
 
+    const card = document.createElement("div");
+    card.className = "scorer-card";
+    card.innerHTML = `
+      <div class="scorer-rank">${rank}</div>
+      <div class="scorer-avatar">
+        <img src="${foto}" alt="${nomeCompleto}" onerror="this.onerror=null; this.src='${FALLBACK_AVATAR}';">
+      </div>
+      <div class="scorer-info">
+        <div class="scorer-name">${nomeCompleto || 'Giocatore'}</div>
+        <div class="scorer-teamline">
+          <img src="${logo}" alt="${p.squadra || ''}" class="scorer-team-logo">
+          <span class="scorer-team-name">${p.squadra || ''}</span>
+        </div>
+      </div>
+      <div class="scorer-goals">
+        <span class="goals-number">${p.gol ?? 0}</span>
+        <span class="goals-label">Gol</span>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  const prevBtn = document.getElementById("prevMarcatori");
+  const nextBtn = document.getElementById("nextMarcatori");
+  const info = document.getElementById("marcatoriPageInfo");
   if (info) info.textContent = `Pagina ${marcatoriPage} di ${totalPages}`;
   if (prevBtn) prevBtn.disabled = marcatoriPage <= 1;
   if (nextBtn) nextBtn.disabled = marcatoriPage >= totalPages;
@@ -817,27 +841,25 @@ function renderMarcatoriPagina(page = 1) {
 
 async function caricaMarcatori(torneoSlug = TORNEO) {
   const list = document.getElementById("marcatoriList");
-  if (list) list.innerHTML = `<div class="marcatori-empty">Caricamento...</div>`;
+  if (!list) return;
+  list.innerHTML = `<div class="marcatori-empty">Caricamento...</div>`;
   try {
     const res = await fetch(`/api/classifica_marcatori.php?torneo=${encodeURIComponent(torneoSlug)}`);
     const data = await res.json();
-    marcatoriData = Array.isArray(data) ? data : [];
-    marcatoriRanks = [];
-    let lastGol = null;
-    let lastRank = 0;
-    marcatoriData.forEach((p, idx) => {
-      if (lastGol === null || p.gol !== lastGol) {
-        lastRank = idx + 1;
-        lastGol = p.gol;
-      }
-      marcatoriRanks[idx] = lastRank;
-    });
+    if (!Array.isArray(data) || !data.length) {
+      marcatoriData = [];
+      marcatoriRanks = [];
+      renderMarcatoriPagina(1);
+      return;
+    }
+    marcatoriData = data;
+    buildMarcatoriRanks();
     renderMarcatoriPagina(1);
   } catch (err) {
     console.error("Errore nel caricamento marcatori:", err);
     marcatoriData = [];
     marcatoriRanks = [];
-    if (list) list.innerHTML = `<div class="marcatori-empty">Errore nel recupero marcatori</div>`;
+    list.innerHTML = `<div class="marcatori-empty">Errore caricamento marcatori</div>`;
   }
 }
 

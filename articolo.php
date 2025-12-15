@@ -287,16 +287,16 @@ if ($id > 0) {
 }
 
 .article-content strong,
-.article-content b {
-    font-weight: 800;
-}
+.article-content b { font-weight: 800; }
 
-.article-content,
+.article-content *,
 .article-content p,
 .article-content span,
-.article-content li {
-    font-weight: 400;
-}
+.article-content li { font-weight: 400; }
+.article-content strong,
+.article-content b,
+.article-content h2,
+.article-content h3 { font-weight: 800; }
 
 .sr-only {
     position: absolute;

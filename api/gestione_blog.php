@@ -588,7 +588,7 @@ function sectionsToContent(scope) {
     const body = block.querySelector('.section-body')?.value.trim() || '';
     if (!subtitle && !body) return;
     let chunk = '';
-    if (subtitle) chunk += `## ${subtitle}\n\n`;
+    if (subtitle) chunk += `==${subtitle}==\n\n`;
     chunk += body;
     blocks.push(chunk.trim());
   });
