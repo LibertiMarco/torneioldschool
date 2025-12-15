@@ -2998,6 +2998,13 @@ body {
   flex-direction: column;
   gap: 2px;
 }
+
+.bracket-penalties {
+  font-size: 0.72rem;
+  color: #7a8699;
+  margin-top: 4px;
+  font-weight: 700;
+}
 .bracket-pair {
   display: flex;
   flex-direction: column;
@@ -5272,6 +5279,14 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
   font-weight: 700;
 }
 
+.match-penalties {
+  font-size: 12px;
+  color: #cfd7e7;
+  text-align: center;
+  margin-top: 6px;
+  letter-spacing: 0.2px;
+}
+
 .match-center .vs {
   font-size: 30px;
   opacity: 0.8;
@@ -7100,4 +7115,3 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
     border-radius: 11px;
   }
 }
-

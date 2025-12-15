@@ -37,6 +37,9 @@ echo json_encode([
     "campo"          => $dati['campo'] ?? '',
     "giornata"       => array_key_exists('giornata', $dati) && $dati['giornata'] !== null ? (int)$dati['giornata'] : null,
     "giocata"        => isset($dati['giocata']) ? (int)$dati['giocata'] : 0,
+    "decisa_rigori"  => isset($dati['decisa_rigori']) ? (int)$dati['decisa_rigori'] : 0,
+    "rigori_casa"    => array_key_exists('rigori_casa', $dati) && $dati['rigori_casa'] !== null ? (int)$dati['rigori_casa'] : null,
+    "rigori_ospite"  => array_key_exists('rigori_ospite', $dati) && $dati['rigori_ospite'] !== null ? (int)$dati['rigori_ospite'] : null,
     "link_youtube"   => $dati['link_youtube'] ?? null,
     "link_instagram" => $dati['link_instagram'] ?? null,
     "arbitro"        => $dati['arbitro'] ?? ''

@@ -46,19 +46,23 @@ class Partita {
         $fase_leg = null,
         $link_youtube = null,
         $link_instagram = null,
-        $arbitro = null
+        $arbitro = null,
+        $decisa_rigori = 0,
+        $rigori_casa = null,
+        $rigori_ospite = null
     ) {
         $stmt = $this->conn->prepare("
             INSERT INTO {$this->table}
             (squadra_casa, squadra_ospite, gol_casa, gol_ospite,
-             data_partita, ora_partita, campo, giornata, torneo, fase,
+             data_partita, ora_partita, campo, decisa_rigori, rigori_casa, rigori_ospite,
+             giornata, torneo, fase,
              fase_round, fase_leg,
              link_youtube, link_instagram, arbitro)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
         $stmt->bind_param(
-            "ssiisssisssssss",
+            "ssiisssiiiisssssss",
             $squadra_casa,
             $squadra_ospite,
             $gol_casa,
@@ -66,6 +70,9 @@ class Partita {
             $data,
             $ora,
             $campo,
+            $decisa_rigori,
+            $rigori_casa,
+            $rigori_ospite,
             $giornata,
             $torneo,
             strtoupper($fase),
@@ -96,12 +103,15 @@ class Partita {
         $fase_leg = null,
         $link_youtube = null,
         $link_instagram = null,
-        $arbitro = null
+        $arbitro = null,
+        $decisa_rigori = 0,
+        $rigori_casa = null,
+        $rigori_ospite = null
     ) {
         $stmt = $this->conn->prepare("
             UPDATE {$this->table}
             SET squadra_casa = ?, squadra_ospite = ?, gol_casa = ?, gol_ospite = ?,
-                data_partita = ?, ora_partita = ?, campo = ?, giornata = ?, torneo = ?, fase = ?,
+                data_partita = ?, ora_partita = ?, campo = ?, decisa_rigori = ?, rigori_casa = ?, rigori_ospite = ?, giornata = ?, torneo = ?, fase = ?,
                 fase_round = ?, fase_leg = ?,
                 link_youtube = ?, link_instagram = ?,
                 arbitro = ?
@@ -109,7 +119,7 @@ class Partita {
         ");
 
         $stmt->bind_param(
-            "ssiisssisssssssi",
+            "ssiisssiiiisssssssi",
             $squadra_casa,
             $squadra_ospite,
             $gol_casa,
@@ -117,6 +127,9 @@ class Partita {
             $data,
             $ora,
             $campo,
+            $decisa_rigori,
+            $rigori_casa,
+            $rigori_ospite,
             $giornata,
             $torneo,
             strtoupper($fase),

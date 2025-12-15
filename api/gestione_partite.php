@@ -90,6 +90,7 @@ ensure_notifiche_table($conn);
 ensure_follow_table($conn);
 ensure_partite_notifica_flag($conn);
 ensure_partite_unique_index($conn);
+ensure_rigori_columns($conn);
 
 // ==== NOTIFICHE ====
 function ensure_notifiche_table(mysqli $conn): void {
@@ -121,6 +122,21 @@ function ensure_partite_unique_index(mysqli $conn): void {
   $idx = $conn->query("SHOW INDEX FROM partite WHERE Key_name = 'uq_partita_turno'");
   if ($idx && $idx->num_rows === 0) {
     $conn->query("CREATE UNIQUE INDEX uq_partita_turno ON partite (torneo, fase, giornata, squadra_casa, squadra_ospite)");
+  }
+}
+
+function ensure_rigori_columns(mysqli $conn): void {
+  $colDecisa = $conn->query("SHOW COLUMNS FROM partite LIKE 'decisa_rigori'");
+  if ($colDecisa && $colDecisa->num_rows === 0) {
+    $conn->query("ALTER TABLE partite ADD COLUMN decisa_rigori TINYINT(1) NOT NULL DEFAULT 0 AFTER campo");
+  }
+  $colRigCasa = $conn->query("SHOW COLUMNS FROM partite LIKE 'rigori_casa'");
+  if ($colRigCasa && $colRigCasa->num_rows === 0) {
+    $conn->query("ALTER TABLE partite ADD COLUMN rigori_casa INT DEFAULT NULL AFTER decisa_rigori");
+  }
+  $colRigOsp = $conn->query("SHOW COLUMNS FROM partite LIKE 'rigori_ospite'");
+  if ($colRigOsp && $colRigOsp->num_rows === 0) {
+    $conn->query("ALTER TABLE partite ADD COLUMN rigori_ospite INT DEFAULT NULL AFTER rigori_casa");
   }
 }
 
@@ -554,6 +570,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $link_youtube = sanitize_text($_POST['link_youtube'] ?? '');
     $link_instagram = sanitize_text($_POST['link_instagram'] ?? '');
     $arbitro = sanitize_text($_POST['arbitro'] ?? '');
+    $decisa_rigori = isset($_POST['decisa_rigori']) ? 1 : 0;
+    $rigori_casa = $decisa_rigori ? sanitize_int($_POST['rigori_casa'] ?? '') : null;
+    $rigori_ospite = $decisa_rigori ? sanitize_int($_POST['rigori_ospite'] ?? '') : null;
 
     if ($torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($fase !== 'REGULAR' && $roundSelezionato === '')) {
       $errore = 'Compila tutti i campi obbligatori.';
@@ -573,10 +592,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       if (!empty($errore)) {
         // non procedere oltre
       } else {
-        $stmt = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
+        $stmt = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, decisa_rigori, rigori_casa, rigori_ospite, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
         if ($stmt) {
           $stmt->bind_param(
-            'ssssssiisssiisss',
+            'ssssssiisssiiiiisss',
             $torneo,
             $fase,
             $faseRound,
@@ -588,6 +607,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data,
             $ora,
             $campo,
+            $decisa_rigori,
+            $rigori_casa,
+            $rigori_ospite,
             $giornata,
             $giocata,
             $arbitro,
@@ -599,7 +621,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // crea automaticamente il ritorno per le semifinali andata con dati da definire
             if ($faseRound === 'SEMIFINALE' && strtoupper($faseLeg) === 'ANDATA') {
               if (!squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $ospite, $casa, null, $faseRound, 'RITORNO')) {
-                $stmtR = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
+                $stmtR = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, decisa_rigori, rigori_casa, rigori_ospite, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
                 if ($stmtR) {
                   // usa segnaposto evidente per il ritorno (poi modificabile)
                   $defaultDate = '2000-01-01';
@@ -607,12 +629,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   $defaultCampo = 'Da definire';
                   $golZero = 0;
                   $giocataZero = 0;
+                  $decisaRigoriZero = 0;
+                  $rigoriNull = null;
                   $ytEmpty = '';
                   $igEmpty = '';
                   $giornataInt = (int)$giornata;
                   $faseLegRitorno = 'RITORNO';
                   $stmtR->bind_param(
-                    'ssssssiisssiisss',
+                    'ssssssiisssiiiiisss',
                     $torneo,      // s
                     $fase,        // s
                     $faseRound,   // s
@@ -624,6 +648,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $defaultDate, // s data
                     $defaultOra,  // s ora
                     $defaultCampo,// s campo
+                    $decisaRigoriZero, // i
+                    $rigoriNull,  // i
+                    $rigoriNull,  // i
                     $giornataInt, // i giornata
                     $giocataZero, // i giocata
                     $arbitro,     // s
@@ -679,6 +706,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $link_youtube = sanitize_text($_POST['link_youtube_mod'] ?? '');
     $link_instagram = sanitize_text($_POST['link_instagram_mod'] ?? '');
     $arbitro = sanitize_text($_POST['arbitro_mod'] ?? '');
+    $decisa_rigori = isset($_POST['decisa_rigori_mod']) ? 1 : 0;
+    $rigori_casa = $decisa_rigori ? sanitize_int($_POST['rigori_casa_mod'] ?? '') : null;
+    $rigori_ospite = $decisa_rigori ? sanitize_int($_POST['rigori_ospite_mod'] ?? '') : null;
 
     if ($id <= 0 || $torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($fase !== 'REGULAR' && $roundSelezionato === '')) {
       $errore = 'Seleziona una partita e compila i campi obbligatori.';
@@ -693,10 +723,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       if (squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, $id, $faseRound, $faseLeg)) {
         $errore = 'Una delle squadre ha già una partita in questa giornata per questa fase.';
       }
-      $stmt = $conn->prepare("UPDATE partite SET torneo=?, fase=?, fase_round=?, fase_leg=?, squadra_casa=?, squadra_ospite=?, gol_casa=?, gol_ospite=?, data_partita=?, ora_partita=?, campo=?, giornata=?, giocata=?, arbitro=?, link_youtube=?, link_instagram=? WHERE id=?");
+      $stmt = $conn->prepare("UPDATE partite SET torneo=?, fase=?, fase_round=?, fase_leg=?, squadra_casa=?, squadra_ospite=?, gol_casa=?, gol_ospite=?, data_partita=?, ora_partita=?, campo=?, decisa_rigori=?, rigori_casa=?, rigori_ospite=?, giornata=?, giocata=?, arbitro=?, link_youtube=?, link_instagram=? WHERE id=?");
       if ($stmt) {
         $stmt->bind_param(
-          'ssssssiisssiisssi',
+          'ssssssiisssiiiiisssi',
           $torneo,
           $fase,
           $faseRound,
@@ -708,6 +738,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           $data,
           $ora,
           $campo,
+          $decisa_rigori,
+          $rigori_casa,
+          $rigori_ospite,
           $giornata,
           $giocata,
           $arbitro,
@@ -818,7 +851,7 @@ $isAjax = (
 );
 
 $partite = [];
-$res = $conn->query("SELECT id, torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, giornata, giocata, arbitro, link_youtube, link_instagram, created_at FROM partite ORDER BY data_partita DESC, ora_partita DESC, id DESC");
+$res = $conn->query("SELECT id, torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, decisa_rigori, rigori_casa, rigori_ospite, giornata, giocata, arbitro, link_youtube, link_instagram, created_at FROM partite ORDER BY data_partita DESC, ora_partita DESC, id DESC");
 if ($res) {
   while ($row = $res->fetch_assoc()) {
     $partite[] = $row;
@@ -866,6 +899,10 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     .admin-form.inline select:focus { border-color: #15293e; box-shadow: 0 0 0 3px rgba(21,41,62,0.15); outline: none; }
     .required-label::after { content: " *"; color: #d72638; margin-left: 4px; font-weight: 700; }
     .checkbox-inline { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: #15293e; }
+
+    .rigori-group { display: flex; flex-direction: column; gap: 8px; }
+    .rigori-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+    .rigori-fields.hidden { display: none; }
 
     .table-scroll { overflow-x: auto; background: #fff; border: 1px solid #e5eaf0; border-radius: 14px; padding: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
     #footer-container { margin-top: auto; padding-top: 40px; }
@@ -1120,6 +1157,22 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         <div>
           <label>Gol ospite</label>
           <input type="number" name="gol_ospite_mod" id="gol_ospite_mod" min="0">
+        </div>
+        <div class="full rigori-group">
+          <label class="checkbox-inline">
+            <input type="checkbox" name="decisa_rigori_mod" id="decisa_rigori_mod" value="1">
+            Terminata ai rigori (d.c.r.)
+          </label>
+          <div class="rigori-fields hidden" id="rigoriFieldsMod">
+            <div>
+              <label>Rigori casa</label>
+              <input type="number" name="rigori_casa_mod" id="rigori_casa_mod" min="0">
+            </div>
+            <div>
+              <label>Rigori ospite</label>
+              <input type="number" name="rigori_ospite_mod" id="rigori_ospite_mod" min="0">
+            </div>
+          </div>
         </div>
         <div>
           <label class="required-label">Data</label>
@@ -1465,6 +1518,18 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     toggleRoundGiornata(faseCrea, 'giornataWrapper', 'roundWrapper', 'legWrapper', 'faseLegCrea');
   }
 
+  const toggleRigoriGroup = (checkboxId, fieldsId) => {
+    const chk = document.getElementById(checkboxId);
+    const wrap = document.getElementById(fieldsId);
+    const active = !!chk?.checked;
+    if (wrap) {
+      wrap.classList.toggle('hidden', !active);
+      if (!active) {
+        wrap.querySelectorAll('input[type="number"]').forEach(inp => { inp.value = ''; });
+      }
+    }
+  };
+
   if (faseCrea) {
     refreshCreateLayout();
     faseCrea.addEventListener('change', () => {
@@ -1473,7 +1538,32 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     });
   }
 
+  const chkRigoriModEl = document.getElementById('decisa_rigori_mod');
+  chkRigoriModEl?.addEventListener('change', () => {
+    toggleRigoriGroup('decisa_rigori_mod', 'rigoriFieldsMod');
+  });
+
   const fillField = (id, val) => { const el = document.getElementById(id); if (el) { if (el.type === 'checkbox') { el.checked = !!val; } else { el.value = val ?? ''; } } };
+
+  const clearModificaFields = () => {
+    const ids = [
+      'torneo_mod','fase_mod','squadra_casa_mod','squadra_ospite_mod',
+      'gol_casa_mod','gol_ospite_mod','data_partita_mod','ora_partita_mod',
+      'campo_mod','giornata_mod','round_eliminazione_mod','faseLegMod',
+      'link_youtube_mod','link_instagram_mod','arbitro_mod','decisa_rigori_mod','rigori_casa_mod','rigori_ospite_mod'
+    ];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.type === 'checkbox') {
+        el.checked = false;
+      } else {
+        el.value = '';
+      }
+    });
+    toggleRoundGiornata(document.getElementById('fase_mod'), 'giornataWrapperMod', 'roundWrapperMod', 'legWrapperMod', 'faseLegMod');
+    toggleRigoriGroup('decisa_rigori_mod', 'rigoriFieldsMod');
+  };
 
   const applyPartitaModForm = (partita) => {
     if (!partita) return;
@@ -1517,6 +1607,12 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (faseModSelect) toggleRoundGiornata(faseModSelect, 'giornataWrapperMod', 'roundWrapperMod', 'legWrapperMod', 'faseLegMod');
     fillField('gol_casa_mod', partita.gol_casa);
     fillField('gol_ospite_mod', partita.gol_ospite);
+    fillField('rigori_casa_mod', partita.rigori_casa);
+    fillField('rigori_ospite_mod', partita.rigori_ospite);
+    const aiRigori = Number(partita.decisa_rigori || 0) === 1;
+    const chkRigoriMod = document.getElementById('decisa_rigori_mod');
+    if (chkRigoriMod) chkRigoriMod.checked = aiRigori;
+    toggleRigoriGroup('decisa_rigori_mod', 'rigoriFieldsMod');
     fillField('data_partita_mod', partita.data_partita);
     fillField('ora_partita_mod', partita.ora_partita);
     fillField('campo_mod', partita.campo);
@@ -1600,7 +1696,13 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     faseId: 'selFaseMod',
     giornataId: 'selGiornataMod',
     partitaId: 'selPartitaMod',
-    onPartita: (partita) => applyPartitaModForm(partita)
+    onPartita: (partita) => {
+      if (partita) {
+        applyPartitaModForm(partita);
+      } else {
+        clearModificaFields();
+      }
+    }
   });
   enforceDifferentTeams('squadra_casa_mod', 'squadra_ospite_mod');
 
