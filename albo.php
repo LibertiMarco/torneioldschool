@@ -97,8 +97,16 @@ $pageSeo = [
       return '';
     }
 
+    function labelPeriodo(item) {
+      const nome = (item.competizione || '').toLowerCase();
+      if (nome.includes("coppa d'africa") && nome.includes('all in one night')) {
+        return '12 dic 2025';
+      }
+      return formatPeriodo(item.data_inizio, item.data_fine, item.anno);
+    }
+
     function renderCard(item) {
-      const periodo = formatPeriodo(item.data_inizio, item.data_fine, item.anno);
+      const periodo = labelPeriodo(item);
       const logoTorneo = item.torneo_logo || '/img/logo_old_school.png';
       const nomeTorneo = item.competizione || 'Torneo';
       const premi = (item.premi || []).map(p => `
