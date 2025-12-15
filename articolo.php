@@ -821,7 +821,9 @@ function formatContent(text = '') {
     }
 
     const applyInline = (str) =>
-        str.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        str
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/==(.+?)==/g, '<mark>$1</mark>');
 
     return text
         .split(/\n{2,}/)

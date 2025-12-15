@@ -371,7 +371,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <div class="sections-builder">
           <div class="sections-header">
             <label>Struttura contenuto (sottotitolo + paragrafo)</label>
-            <p class="helper-text">Aggiungi blocchi di testo: ogni sezione verrà unita automaticamente nel contenuto dell’articolo.</p>
+            <p class="helper-text">Aggiungi blocchi di testo: ogni sezione verrà unita automaticamente nel contenuto dell’articolo. Usa <code>==testo==</code> per evidenziare parole.</p>
           </div>
           <div class="sections-list" id="sectionsCreate" data-sections="create"></div>
           <button type="button" class="btn-secondary-modern" data-add-section="create">Aggiungi sezione</button>
@@ -426,7 +426,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <div class="sections-builder">
           <div class="sections-header">
             <label>Struttura contenuto (sottotitolo + paragrafo)</label>
-            <p class="helper-text">Modifica i blocchi e li uniremo nel contenuto finale.</p>
+            <p class="helper-text">Modifica i blocchi e li uniremo nel contenuto finale. Evidenzia con <code>==così==</code>.</p>
           </div>
           <div class="sections-list" id="sectionsMod" data-sections="mod"></div>
           <button type="button" class="btn-secondary-modern" data-add-section="mod">Aggiungi sezione</button>
