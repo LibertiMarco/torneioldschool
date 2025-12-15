@@ -74,7 +74,10 @@ $aggregateSubquery = "
     GROUP BY pg.giocatore_id
 ";
 
-// Query dati con rank calcolato via variabili (comportamento tipo RANK: 1,2,2,4)
+// Inizializza variabili per il ranking (comportamento tipo RANK: 1,2,2,4)
+$conn->query("SET @rownum := 0, @rank := 0, @prev1 := NULL");
+
+// Query dati con rank calcolato via variabili
 $sql = "
     SELECT *
     FROM (
@@ -99,7 +102,6 @@ $sql = "
         INNER JOIN (
             $aggregateSubquery
         ) AS agg ON agg.giocatore_id = g.id
-        CROSS JOIN (SELECT @rownum := 0, @rank := 0, @prev1 := NULL) AS r
         $whereAll
         ORDER BY $orderFieldsInner
     ) AS ordered
