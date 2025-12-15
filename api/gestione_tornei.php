@@ -84,8 +84,15 @@ function eliminaFileTorneo($fileName) {
     }
 }
 
-function purgeTorneoData(mysqli $conn, string $torneoSlug): void {
+function purgeTorneoData(string $torneoSlug): void {
+    global $conn;
     if ($torneoSlug === '') {
+        return;
+    }
+    if (!($conn instanceof mysqli)) {
+        require __DIR__ . '/../includi/db.php';
+    }
+    if (!($conn instanceof mysqli)) {
         return;
     }
 
@@ -111,7 +118,8 @@ function purgeTorneoData(mysqli $conn, string $torneoSlug): void {
     }
 
     // Elimina follow/seguiti relativi al torneo o alle sue squadre (se la tabella esiste)
-    $conn->query("DELETE FROM seguiti WHERE torneo_slug = '" . $conn->real_escape_string($torneoSlug) . "' OR (tipo = 'squadra' AND torneo_slug = '" . $conn->real_escape_string($torneoSlug) . "')");
+    $safeSlug = $conn->real_escape_string($torneoSlug);
+    $conn->query("DELETE FROM seguiti WHERE torneo_slug = '" . $safeSlug . "' OR (tipo = 'squadra' AND torneo_slug = '" . $safeSlug . "')");
 }
 
 function salvaImmagineTorneo($nomeTorneo, $fileField) {
@@ -261,7 +269,7 @@ if (isset($_GET['elimina'])) {
         if (!empty($record['filetorneo'])) {
             $torneoSlug = sanitizeTorneoSlug(preg_replace('/\.(html?|php)$/i', '', $record['filetorneo']));
         }
-        purgeTorneoData($conn, $torneoSlug);
+        purgeTorneoData($torneoSlug);
         $squadraModel->eliminaByTorneo($torneoSlug);
     }
 
