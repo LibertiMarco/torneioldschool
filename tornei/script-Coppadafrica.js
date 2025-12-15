@@ -939,7 +939,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const playoffContainer = document.getElementById("playoffContainer");
   const heroImg = document.getElementById("torneoHeroImg");
   const torneoTitle = document.querySelector(".torneo-title .titolo");
-  const faseToggleBtns = document.querySelectorAll("[data-fase-btn]");
   const loadClassifica = (slug) => caricaClassifica(slug || TORNEO);
   const prevMarcatoriBtn = document.getElementById("prevMarcatori");
   const nextMarcatoriBtn = document.getElementById("nextMarcatori");
@@ -1003,16 +1002,12 @@ document.addEventListener("DOMContentLoaded", () => {
       classificaWrapper.style.display = "block";
       loadClassifica();
     }
-    faseToggleBtns.forEach(btn => btn.classList.toggle("active", (btn.dataset.fase || "") === faseVal));
   };
 
-  if (faseToggleBtns.length) {
-    faseToggleBtns.forEach(btn => {
-      btn.addEventListener("click", () => {
-        applyFase(btn.dataset.fase || "girone");
-      });
-    });
-    applyFase("girone");
+  if (faseSelect) {
+    buildPillToggle(faseSelect);
+    faseSelect.addEventListener("change", () => applyFase(faseSelect.value || "girone"));
+    applyFase(faseSelect.value || "girone");
   }
 
   if (coppaSelect) {
