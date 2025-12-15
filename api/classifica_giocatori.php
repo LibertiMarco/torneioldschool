@@ -71,7 +71,7 @@ $aggregateSubquery = "
     GROUP BY pg.giocatore_id
 ";
 
-// Query dati (ordine e rank calcolati con DENSE_RANK per rispettare la classifica)
+// Query dati con rank calcolato via variabili (comportamento tipo RANK: 1,2,2,4)
 $sql = "
     SELECT *
     FROM (
@@ -86,12 +86,19 @@ $sql = "
             agg.gol,
             agg.presenze,
             agg.media_voti,
-            RANK() OVER (ORDER BY $orderFields) AS posizione
+            @rownum := @rownum + 1 AS rownum_seq,
+            @rank := CASE 
+                WHEN @prev1 = $rankPrimary THEN @rank 
+                ELSE @rownum 
+            END AS posizione,
+            @prev1 := $rankPrimary
         FROM giocatori g
         INNER JOIN (
             $aggregateSubquery
         ) AS agg ON agg.giocatore_id = g.id
+        CROSS JOIN (SELECT @rownum := 0, @rank := 0, @prev1 := NULL) AS r
         $whereAll
+        ORDER BY $orderFields
     ) AS ordered
     ORDER BY posizione ASC, $orderFields
     LIMIT ? OFFSET ?
