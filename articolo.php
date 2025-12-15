@@ -273,10 +273,12 @@ if ($id > 0) {
     font-size: 1.1rem;
     line-height: 1.82;
     white-space: pre-wrap;
+    font-weight: 400;
 }
 
 .article-content p {
     margin-bottom: 18px;
+    font-weight: 400;
 }
 
 .article-content h2,
