@@ -286,6 +286,18 @@ if ($id > 0) {
     font-weight: 800;
 }
 
+.article-content strong,
+.article-content b {
+    font-weight: 800;
+}
+
+.article-content,
+.article-content p,
+.article-content span,
+.article-content li {
+    font-weight: 400;
+}
+
 .sr-only {
     position: absolute;
     width: 1px;
