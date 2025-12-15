@@ -76,32 +76,35 @@ $aggregateSubquery = "
 
 $primaryAlias = $ordine === 'presenze' ? 'presenze' : 'gol';
 
-// Query dati con rank calcolato via variabili dopo l'ordinamento (comportamento tipo RANK: 1,2,2,4)
+// Query dati con rank calcolato via variabili (stile DENSE_RANK: 1,1,2,2,3)
 $sql = "
-    SELECT ob.*,
-           @rownum := @rownum + 1 AS rownum_seq,
-           @rank := IF(@prev1 = ob.$primaryAlias, @rank, @rownum) AS posizione,
-           @prev1 := ob.$primaryAlias
+    SELECT id, nome, cognome, ruolo, squadra, torneo, foto, gol, presenze, media_voti, posizione
     FROM (
         SELECT 
-            g.id,
-            g.nome,
-            g.cognome,
-            g.ruolo,
-            '' AS squadra,
-            '' AS torneo,
-            g.foto,
-            agg.gol,
-            agg.presenze,
-            agg.media_voti
-        FROM giocatori g
-        INNER JOIN (
-            $aggregateSubquery
-        ) AS agg ON agg.giocatore_id = g.id
-        $whereAll
-        ORDER BY $orderFieldsInner
-    ) AS ob
-    CROSS JOIN (SELECT @rownum := 0, @rank := 0, @prev1 := NULL) AS vars
+            ob.*,
+            @rank := IF(@prev1 = ob.$primaryAlias, @rank, @rank + 1) AS posizione,
+            @prev1 := ob.$primaryAlias AS _prev
+        FROM (
+            SELECT 
+                g.id,
+                g.nome,
+                g.cognome,
+                g.ruolo,
+                '' AS squadra,
+                '' AS torneo,
+                g.foto,
+                agg.gol,
+                agg.presenze,
+                agg.media_voti
+            FROM giocatori g
+            INNER JOIN (
+                $aggregateSubquery
+            ) AS agg ON agg.giocatore_id = g.id
+            $whereAll
+            ORDER BY $orderFieldsInner
+        ) AS ob
+        CROSS JOIN (SELECT @rank := 0, @prev1 := NULL) AS vars
+    ) AS ranked
     ORDER BY posizione ASC, $orderFieldsOuter
     LIMIT ? OFFSET ?
 ";
