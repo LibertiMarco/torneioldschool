@@ -2866,7 +2866,7 @@ body {
 .filtro-fase-selects {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
 }
 
@@ -2883,6 +2883,7 @@ body {
 @media (max-width: 600px) {
   .filtro-fase-selects {
     flex-wrap: wrap;
+    width: 100%;
   }
 
   .filtro-fase-selects select {
