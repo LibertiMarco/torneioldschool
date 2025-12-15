@@ -863,6 +863,30 @@ async function caricaMarcatori(torneoSlug = TORNEO) {
   }
 }
 
+// Trasforma una select in un toggle di pillole (come Serie B)
+function buildPillToggle(selectEl) {
+  if (!selectEl) return null;
+  const wrap = document.createElement("div");
+  wrap.className = "pill-toggle-group";
+  Array.from(selectEl.options || []).forEach(opt => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = opt.textContent;
+    btn.dataset.value = opt.value;
+    btn.className = "pill-btn pill-btn--toggle";
+    if (opt.selected) btn.classList.add("active");
+    btn.addEventListener("click", () => {
+      selectEl.value = opt.value;
+      selectEl.dispatchEvent(new Event("change"));
+      wrap.querySelectorAll("button").forEach(b => b.classList.toggle("active", b === btn));
+    });
+    wrap.appendChild(btn);
+  });
+  selectEl.classList.add("visually-hidden");
+  selectEl.after(wrap);
+  return wrap;
+}
+
 // ====================== GESTIONE UI DINAMICA ======================
 document.addEventListener("DOMContentLoaded", () => {
   const faseSelect = document.getElementById("faseSelect");
@@ -879,6 +903,9 @@ document.addEventListener("DOMContentLoaded", () => {
   caricaClassifica();
   const faseCalendario = document.getElementById("faseCalendario");
   const giornataSelect = document.getElementById("giornataSelect");
+  if (faseCalendario) {
+    faseCalendario.value = "REGULAR";
+  }
 
   const triggerCalendario = () => {
     const faseVal = (faseCalendario?.value || "REGULAR").toUpperCase();
@@ -909,6 +936,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (giornataSelect) giornataSelect.value = "";
       triggerCalendario();
     });
+    buildPillToggle(faseCalendario);
   }
 
   // cambio fase girone/eliminazione

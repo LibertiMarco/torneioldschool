@@ -343,8 +343,8 @@ $torneoSeo = [
         <div class="filtro-riga">
           <label for="faseCalendario">Fase:</label>
           <select id="faseCalendario">
-            <option value="REGULAR" selected>GIRONI</option>
-            <option value="FINALE">FASE FINALE</option>
+            <option value="REGULAR" selected>Regular</option>
+            <option value="GOLD">Gold</option>
           </select>
         </div>
         <div class="filtro-riga" id="wrapperGiornataSelect" style="display:none;">
@@ -516,7 +516,6 @@ $torneoSeo = [
 
 </body>
 </html>
-
 
 
 
