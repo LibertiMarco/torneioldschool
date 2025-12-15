@@ -496,16 +496,16 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         const hasRitorno = (legs.RITORNO || []).length > 0;
         if (hasAndata && hasRitorno) {
           const h4a = document.createElement("h4");
-          h4a.textContent = "Semifinali Andata";
+          h4a.textContent = "Semifinali Andata (1ª-2ª)";
           giornataDiv.appendChild(h4a);
           legs.ANDATA.forEach(p => renderPartita(giornataDiv, p));
           const h4r = document.createElement("h4");
-          h4r.textContent = "Semifinali Ritorno";
+          h4r.textContent = "Semifinali Ritorno (1ª-2ª)";
           giornataDiv.appendChild(h4r);
           legs.RITORNO.forEach(p => renderPartita(giornataDiv, p));
         } else {
           const h4 = document.createElement("h4");
-          h4.textContent = "Semifinali";
+          h4.textContent = "Semifinali (1ª-2ª)";
           giornataDiv.appendChild(h4);
           partiteGiornata.forEach(p => renderPartita(giornataDiv, p));
         }
@@ -958,4 +958,3 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
-
