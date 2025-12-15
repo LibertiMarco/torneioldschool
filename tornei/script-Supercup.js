@@ -205,8 +205,8 @@ function mostraClassifica(classifica) {
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
       <div class="box gold-box">Prime 2: Semifinali Gold</div>
-      <div class="box gold-box gold-quarti">3-6: Quarti Gold</div>
-      <div class="box silver-box">7-10: Coppa Silver</div>
+      <div class="box gold-box gold-quarti">3ª-6ª: Quarti Gold</div>
+      <div class="box silver-box">7ª-10ª: Coppa Silver</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
@@ -758,9 +758,17 @@ async function caricaRosaSquadra(squadra) {
       const card = document.createElement("div");
       card.classList.add("player-card");
 
+      const ruolo = (giocatore.ruolo || "").trim();
+      const isGK = /^portiere/i.test(ruolo) || /^GK$/i.test(ruolo);
+      const isCaptain = Number(giocatore.is_captain || 0) === 1;
+      const badges = [];
+      if (isGK) badges.push('<span class="role-badge gk-badge">GK</span>');
+      if (isCaptain) badges.push('<span class="role-badge captain-badge">C</span>');
+
       card.innerHTML = `
         <div class="player-name-row">
           <h4 class="player-name">${giocatore.nome} ${giocatore.cognome}</h4>
+          ${badges.length ? `<div class="player-tags">${badges.join("")}</div>` : ""}
         </div>
 
         <div class="player-team-row">

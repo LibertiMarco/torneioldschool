@@ -2810,6 +2810,10 @@ body {
   background-color: #FFD700;
 }
 
+.gold-quarti {
+  background-color: #ffe680; /* oro chiaro per posti 3-6 */
+}
+
 .silver-box {
   background-color: #C0C0C0;
 }
