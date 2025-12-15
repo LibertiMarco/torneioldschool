@@ -279,6 +279,11 @@ if ($id > 0) {
     margin-bottom: 18px;
 }
 
+.article-content h2,
+.article-content h3 {
+    font-weight: 800;
+}
+
 .sr-only {
     position: absolute;
     width: 1px;
