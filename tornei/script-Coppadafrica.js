@@ -755,6 +755,92 @@ card.innerHTML = `
   }
 }
 
+// ====================== MARCATORI ======================
+const MARCATORI_PER_PAGE = 6;
+let marcatoriData = [];
+let marcatoriPage = 1;
+let marcatoriRanks = [];
+
+function renderMarcatoriPagina(page = 1) {
+  const list = document.getElementById("marcatoriList");
+  const prevBtn = document.getElementById("prevMarcatori");
+  const nextBtn = document.getElementById("nextMarcatori");
+  const info = document.getElementById("marcatoriPageInfo");
+
+  if (!Array.isArray(marcatoriData) || marcatoriData.length === 0) {
+    if (list) list.innerHTML = `<div class="marcatori-empty">Nessun dato marcatori</div>`;
+    if (info) info.textContent = "";
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+    return;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(marcatoriData.length / MARCATORI_PER_PAGE));
+  marcatoriPage = Math.min(Math.max(1, page), totalPages);
+  const start = (marcatoriPage - 1) * MARCATORI_PER_PAGE;
+  const slice = marcatoriData.slice(start, start + MARCATORI_PER_PAGE);
+
+  if (list) {
+    list.innerHTML = slice.map((p, idx) => {
+      const globalIdx = start + idx;
+      const rank = marcatoriRanks[globalIdx] ?? globalIdx + 1;
+      const foto = p.foto || "/img/giocatori/unknown.jpg";
+      const logo = p.logo || "/img/tornei/pallone.png";
+      const nome = `${p.nome || ""} ${p.cognome || ""}`.trim() || "Giocatore";
+      const squadra = p.squadra || "";
+      return `
+        <div class="marcatore-card">
+          <div class="marcatore-rank">#${rank}</div>
+          <div class="marcatore-main">
+            <img class="marcatore-foto" src="${foto}" alt="${nome}" onerror="this.src='/img/giocatori/unknown.jpg';">
+            <div class="marcatore-info">
+              <div class="marcatore-nome">${nome}</div>
+              <div class="marcatore-squadra">
+                <img class="marcatore-logo" src="${logo}" alt="${squadra}" onerror="this.src='/img/tornei/pallone.png';">
+                <span>${squadra}</span>
+              </div>
+            </div>
+          </div>
+          <div class="marcatore-meta">
+            <span class="pill">Gol: <strong>${p.gol ?? 0}</strong></span>
+            <span class="pill pill--ghost">Presenze: ${p.presenze ?? 0}</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  if (info) info.textContent = `Pagina ${marcatoriPage} di ${totalPages}`;
+  if (prevBtn) prevBtn.disabled = marcatoriPage <= 1;
+  if (nextBtn) nextBtn.disabled = marcatoriPage >= totalPages;
+}
+
+async function caricaMarcatori(torneoSlug = TORNEO) {
+  const list = document.getElementById("marcatoriList");
+  if (list) list.innerHTML = `<div class="marcatori-empty">Caricamento...</div>`;
+  try {
+    const res = await fetch(`/api/classifica_marcatori.php?torneo=${encodeURIComponent(torneoSlug)}`);
+    const data = await res.json();
+    marcatoriData = Array.isArray(data) ? data : [];
+    marcatoriRanks = [];
+    let lastGol = null;
+    let lastRank = 0;
+    marcatoriData.forEach((p, idx) => {
+      if (lastGol === null || p.gol !== lastGol) {
+        lastRank = idx + 1;
+        lastGol = p.gol;
+      }
+      marcatoriRanks[idx] = lastRank;
+    });
+    renderMarcatoriPagina(1);
+  } catch (err) {
+    console.error("Errore nel caricamento marcatori:", err);
+    marcatoriData = [];
+    marcatoriRanks = [];
+    if (list) list.innerHTML = `<div class="marcatori-empty">Errore nel recupero marcatori</div>`;
+  }
+}
+
 // ====================== GESTIONE UI DINAMICA ======================
 document.addEventListener("DOMContentLoaded", () => {
   const faseSelect = document.getElementById("faseSelect");
@@ -764,6 +850,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const heroImg = document.getElementById("torneoHeroImg");
   const torneoTitle = document.querySelector(".torneo-title .titolo");
   const loadClassifica = (slug) => caricaClassifica(slug || TORNEO);
+  const prevMarcatoriBtn = document.getElementById("prevMarcatori");
+  const nextMarcatoriBtn = document.getElementById("nextMarcatori");
 
   // carico subito la parte girone
   caricaClassifica();
@@ -824,6 +912,18 @@ document.addEventListener("DOMContentLoaded", () => {
   if (coppaSelect) {
     coppaSelect.style.display = "none";
   }
+
+  caricaMarcatori();
+  prevMarcatoriBtn?.addEventListener("click", () => renderMarcatoriPagina(marcatoriPage - 1));
+  nextMarcatoriBtn?.addEventListener("click", () => renderMarcatoriPagina(marcatoriPage + 1));
+
+  document.querySelectorAll(".tab-button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.tab === "marcatori") {
+        renderMarcatoriPagina(marcatoriPage);
+      }
+    });
+  });
 });
 
 // ====================== GESTIONE TAB NAVIGAZIONE ======================
