@@ -48,12 +48,9 @@ if ($search !== '') {
 $allConditions = array_merge($conditionsBase, $searchConditions);
 $whereAll = $allConditions ? 'WHERE ' . implode(' AND ', $allConditions) : '';
 
-$orderFieldsInner = $ordine === 'presenze'
+$orderFields = $ordine === 'presenze'
     ? 'agg.presenze DESC, agg.gol DESC, g.cognome ASC, g.nome ASC'
     : 'agg.gol DESC, agg.presenze DESC, g.cognome ASC, g.nome ASC';
-$orderFieldsOuter = $ordine === 'presenze'
-    ? 'presenze DESC, gol DESC, cognome ASC, nome ASC'
-    : 'gol DESC, presenze DESC, cognome ASC, nome ASC';
 
 // Colonne chiave per il ranking (competizione: 1,1,3 in caso di pari)
 $rankPrimary = $ordine === 'presenze' ? 'agg.presenze' : 'agg.gol';
@@ -74,38 +71,29 @@ $aggregateSubquery = "
     GROUP BY pg.giocatore_id
 ";
 
-$primaryAlias = $ordine === 'presenze' ? 'presenze' : 'gol';
-
-// Query dati con rank calcolato via variabili (stile DENSE_RANK: 1,1,2,2,3)
+// Query dati (ordine e rank calcolati con DENSE_RANK per rispettare la classifica)
 $sql = "
-    SELECT id, nome, cognome, ruolo, squadra, torneo, foto, gol, presenze, media_voti, posizione
+    SELECT *
     FROM (
         SELECT 
-            ob.*,
-            @rank := IF(@prev1 = ob.$primaryAlias, @rank, @rank + 1) AS posizione,
-            @prev1 := ob.$primaryAlias AS _prev
-        FROM (
-            SELECT 
-                g.id,
-                g.nome,
-                g.cognome,
-                g.ruolo,
-                '' AS squadra,
-                '' AS torneo,
-                g.foto,
-                agg.gol,
-                agg.presenze,
-                agg.media_voti
-            FROM giocatori g
-            INNER JOIN (
-                $aggregateSubquery
-            ) AS agg ON agg.giocatore_id = g.id
-            $whereAll
-            ORDER BY $orderFieldsInner
-        ) AS ob
-        CROSS JOIN (SELECT @rank := 0, @prev1 := NULL) AS vars
-    ) AS ranked
-    ORDER BY posizione ASC, $orderFieldsOuter
+            g.id,
+            g.nome,
+            g.cognome,
+            g.ruolo,
+            '' AS squadra,
+            '' AS torneo,
+            g.foto,
+            agg.gol,
+            agg.presenze,
+            agg.media_voti,
+            DENSE_RANK() OVER (ORDER BY $orderFields) AS posizione
+        FROM giocatori g
+        INNER JOIN (
+            $aggregateSubquery
+        ) AS agg ON agg.giocatore_id = g.id
+        $whereAll
+    ) AS ordered
+    ORDER BY posizione ASC
     LIMIT ? OFFSET ?
 ";
 
