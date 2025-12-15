@@ -36,7 +36,7 @@ if ($ordine === 'gol') {
     $conditionsBase[] = 'agg.presenze > 0';
 }
 
-// Filtro ricerca (applicato DOPO il ranking)
+// Filtro ricerca (applicato PRIMA del ranking)
 if ($search !== '') {
     $searchConditions[] = '(CONCAT_WS(" ", nome, cognome) LIKE ? OR CONCAT_WS(" ", cognome, nome) LIKE ?)';
     $like = '%' . $search . '%';
@@ -45,8 +45,8 @@ if ($search !== '') {
     $typesSearch .= 'ss';
 }
 
-$whereBase = $conditionsBase ? 'WHERE ' . implode(' AND ', $conditionsBase) : '';
-$whereSearch = $searchConditions ? 'WHERE ' . implode(' AND ', $searchConditions) : '';
+$allConditions = array_merge($conditionsBase, $searchConditions);
+$whereAll = $allConditions ? 'WHERE ' . implode(' AND ', $allConditions) : '';
 
 $orderClause = $ordine === 'presenze'
     ? 'ORDER BY agg.presenze DESC, agg.gol DESC, g.cognome ASC, g.nome ASC'
@@ -59,7 +59,7 @@ $aggregateSubquery = "
     SELECT 
         pg.giocatore_id,
         SUM(pg.goal) AS gol,
-        COUNT(*) AS presenze,
+        SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END) AS presenze,
         CASE 
             WHEN SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) > 0
                 THEN ROUND(SUM(CASE WHEN pg.voto IS NOT NULL THEN pg.voto ELSE 0 END) / SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END), 2)
@@ -67,7 +67,7 @@ $aggregateSubquery = "
         END AS media_voti
     FROM partita_giocatore pg
     JOIN partite p ON p.id = pg.partita_id
-    WHERE p.torneo NOT IN ($excludedPlaceholder)
+    WHERE p.giocata = 1 AND p.torneo NOT IN ($excludedPlaceholder)
     GROUP BY pg.giocatore_id
 ";
 
@@ -92,15 +92,14 @@ $sql = "
                 ELSE @rownum 
             END AS posizione,
             @prev1 := $rankPrimary
-        FROM giocatori g
-        INNER JOIN (
-            $aggregateSubquery
-        ) AS agg ON agg.giocatore_id = g.id
-        CROSS JOIN (SELECT @rownum := 0, @rank := 0, @prev1 := NULL) AS r
-        $whereBase
+    FROM giocatori g
+    INNER JOIN (
+        $aggregateSubquery
+    ) AS agg ON agg.giocatore_id = g.id
+    CROSS JOIN (SELECT @rownum := 0, @rank := 0, @prev1 := NULL) AS r
+        $whereAll
         $orderClause
     ) AS ordered
-    $whereSearch
     ORDER BY posizione ASC
     LIMIT ? OFFSET ?
 ";
@@ -136,9 +135,8 @@ $countSql = "
         INNER JOIN (
             $aggregateSubquery
         ) AS agg ON agg.giocatore_id = g.id
-        $whereBase
+        $whereAll
     ) AS ordered
-    $whereSearch
 ";
 
 $countStmt = $conn->prepare($countSql);
