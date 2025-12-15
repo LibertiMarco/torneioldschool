@@ -34,6 +34,7 @@ $sql = "
     JOIN squadre s ON s.id = sg.squadra_id AND s.torneo = ?
     JOIN giocatori g ON g.id = sg.giocatore_id
     WHERE p.torneo = ?
+      AND (p.squadra_casa = s.nome OR p.squadra_ospite = s.nome)
       $phaseClause
     GROUP BY g.id, s.id, s.torneo
     HAVING SUM(pg.goal) > 0
