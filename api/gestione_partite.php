@@ -340,7 +340,10 @@ function aggiornaStatsGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squa
   $teamInfo->close();
   if (!$team) return;
 
-  $q = $conn->prepare("
+  $isCoppaAfrica = strtoupper($team['torneo'] ?? '') === 'COPPADAFRICA';
+  $phaseFilter = $isCoppaAfrica ? "" : "AND UPPER(COALESCE(p.fase, 'REGULAR')) = 'REGULAR'";
+
+  $sql = "
     SELECT 
       COUNT(*) AS presenze,
       COALESCE(SUM(pg.goal), 0) AS goal,
@@ -354,8 +357,9 @@ function aggiornaStatsGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squa
     WHERE pg.giocatore_id = ?
       AND p.torneo = ?
       AND (p.squadra_casa = ? OR p.squadra_ospite = ?)
-      AND UPPER(COALESCE(p.fase, 'REGULAR')) = 'REGULAR'
-  ");
+      $phaseFilter
+  ";
+  $q = $conn->prepare($sql);
   if (!$q) return;
   $q->bind_param('isss', $giocatoreId, $team['torneo'], $team['nome'], $team['nome']);
   $q->execute();
