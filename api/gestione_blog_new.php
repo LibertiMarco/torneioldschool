@@ -330,13 +330,21 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     <?php endif; ?>
 
     <div class="panel-card form-section" data-section="crea">
-      <form method="POST" class="admin-form blog-form" enctype="multipart/form-data">
+      <form method="POST" class="admin-form blog-form" enctype="multipart/form-data" id="formCreaBlog">
         <input type="hidden" name="azione" value="crea">
         <label for="titolo">Titolo</label>
         <input type="text" id="titolo" name="titolo" value="<?= htmlspecialchars($titolo) ?>" required>
 
-        <label for="contenuto">Contenuto</label>
-        <textarea id="contenuto" name="contenuto" required><?= htmlspecialchars($contenuto) ?></textarea>
+        <div class="sections-builder">
+          <div class="sections-header">
+            <label>Struttura contenuto (sottotitolo + paragrafo)</label>
+            <p class="helper-text">Aggiungi quante sezioni vuoi: ogni blocco verrà unito automaticamente nel contenuto dell’articolo.</p>
+          </div>
+          <div class="sections-list" id="sectionsCreate" data-sections="create"></div>
+          <button type="button" class="btn-secondary-modern" data-add-section="create">Aggiungi sezione</button>
+        </div>
+
+        <textarea id="contenuto" name="contenuto" required style="display:none;" aria-hidden="true"><?= htmlspecialchars($contenuto) ?></textarea>
 
         <div class="file-upload-group" id="uploadGroupCreate" data-upload-name="media[]">
           <label>Media (immagini o video per il carosello)</label>
@@ -364,7 +372,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     </div>
 
     <div class="panel-card form-section hidden" data-section="modifica">
-      <form method="POST" class="admin-form blog-form" enctype="multipart/form-data">
+      <form method="POST" class="admin-form blog-form" enctype="multipart/form-data" id="formModBlog">
         <input type="hidden" name="azione" value="modifica">
         <input type="hidden" name="articolo_id" id="articolo_id_mod">
 
@@ -382,8 +390,16 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <label for="titolo_mod">Titolo</label>
         <input type="text" id="titolo_mod" name="titolo_mod" required>
 
-        <label for="contenuto_mod">Contenuto</label>
-        <textarea id="contenuto_mod" name="contenuto_mod" required></textarea>
+        <div class="sections-builder">
+          <div class="sections-header">
+            <label>Struttura contenuto (sottotitolo + paragrafo)</label>
+            <p class="helper-text">Modifica o aggiungi blocchi di testo; verranno uniti nel contenuto dell’articolo.</p>
+          </div>
+          <div class="sections-list" id="sectionsMod" data-sections="mod"></div>
+          <button type="button" class="btn-secondary-modern" data-add-section="mod">Aggiungi sezione</button>
+        </div>
+
+        <textarea id="contenuto_mod" name="contenuto_mod" required style="display:none;" aria-hidden="true"></textarea>
 
         <div class="file-upload-group" id="uploadGroupMod" data-upload-name="media_mod[]">
           <label>Aggiungi nuovi media</label>
@@ -443,6 +459,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 const sezioni = document.querySelectorAll('[data-section]');
 const selettoreAzioni = document.getElementById('azioneBlog');
 const postsData = <?= $articoliJson ?: '[]' ?>;
+const sectionsRegistry = {};
 
 function mostraSezione(nome) { sezioni.forEach(section => { section.classList.toggle('hidden', section.dataset.section !== nome); }); }
 selettoreAzioni?.addEventListener('change', e => mostraSezione(e.target.value));
@@ -453,6 +470,112 @@ const idField = document.getElementById('articolo_id_mod');
 const titoloField = document.getElementById('titolo_mod');
 const contenutoField = document.getElementById('contenuto_mod');
 const mediaList = document.getElementById('mediaList');
+const contenutoCreateField = document.getElementById('contenuto');
+
+function ensureSectionContainer(scope) {
+  if (sectionsRegistry[scope]) return sectionsRegistry[scope];
+  const container = document.querySelector(`[data-sections="${scope}"]`);
+  sectionsRegistry[scope] = container;
+  return container;
+}
+
+function createSectionElement(scope, data = {}) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'section-block';
+  wrapper.setAttribute('data-section-block', scope);
+  wrapper.innerHTML = `
+    <div class="section-row">
+      <input type="text" class="section-subtitle" placeholder="Sottotitolo (opzionale)" value="">
+      <button type="button" class="upload-remove" data-remove-section aria-label="Rimuovi sezione">&times;</button>
+    </div>
+    <textarea class="section-body" placeholder="Paragrafo"></textarea>
+  `;
+  const subtitleInput = wrapper.querySelector('.section-subtitle');
+  const bodyArea = wrapper.querySelector('.section-body');
+  if (subtitleInput) subtitleInput.value = data.subtitle || '';
+  if (bodyArea) bodyArea.value = data.body || '';
+  const removeBtn = wrapper.querySelector('[data-remove-section]');
+  removeBtn.addEventListener('click', () => {
+    const container = wrapper.parentElement;
+    if (!container) return;
+    const blocks = container.querySelectorAll('[data-section-block]');
+    if (blocks.length <= 1) {
+      wrapper.querySelector('.section-subtitle').value = '';
+      wrapper.querySelector('.section-body').value = '';
+      return;
+    }
+    wrapper.remove();
+  });
+  return wrapper;
+}
+
+function addSection(scope, data = {}) {
+  const container = ensureSectionContainer(scope);
+  if (!container) return;
+  container.appendChild(createSectionElement(scope, data));
+}
+
+function parseContentToSections(text = '') {
+  const lines = (text || '').split(/\r?\n/);
+  const sections = [];
+  let current = { subtitle: '', body: [] };
+  const pushCurrent = () => {
+    const body = current.body.join('\n').trim();
+    const subtitle = current.subtitle.trim();
+    if (subtitle || body) sections.push({ subtitle, body });
+    current = { subtitle: '', body: [] };
+  };
+
+  lines.forEach(line => {
+    const heading = line.trim().match(/^#{1,2}\s+(.*)$/);
+    if (heading) {
+      pushCurrent();
+      current.subtitle = heading[1] || '';
+    } else {
+      current.body.push(line);
+    }
+  });
+  pushCurrent();
+
+  if (!sections.length && text.trim()) {
+    return [{ subtitle: '', body: text.trim() }];
+  }
+  return sections.length ? sections : [{ subtitle: '', body: '' }];
+}
+
+function hydrateSections(scope, text = '') {
+  const container = ensureSectionContainer(scope);
+  if (!container) return;
+  container.innerHTML = '';
+  const sections = parseContentToSections(text);
+  sections.forEach(sec => addSection(scope, sec));
+}
+
+function sectionsToContent(scope) {
+  const container = ensureSectionContainer(scope);
+  if (!container) return '';
+  const blocks = [];
+  container.querySelectorAll('[data-section-block]').forEach(block => {
+    const subtitle = block.querySelector('.section-subtitle')?.value.trim() || '';
+    const body = block.querySelector('.section-body')?.value.trim() || '';
+    if (!subtitle && !body) return;
+    let chunk = '';
+    if (subtitle) chunk += `## ${subtitle}\n\n`;
+    chunk += body;
+    blocks.push(chunk.trim());
+  });
+  return blocks.join('\n\n');
+}
+
+function bindAddSectionButtons() {
+  document.querySelectorAll('[data-add-section]').forEach(btn => {
+    const scope = btn.getAttribute('data-add-section');
+    btn.addEventListener('click', () => addSection(scope));
+  });
+}
+
+bindAddSectionButtons();
+hydrateSections('create', contenutoCreateField?.value || '');
 
 function renderMediaList(items = []) {
   if (!mediaList) return;
@@ -479,14 +602,23 @@ moduloSelect?.addEventListener('change', e => {
     idField.value = '';
     titoloField.value = '';
     contenutoField.value = '';
+    hydrateSections('mod', '');
     renderMediaList([]);
     return;
   }
   idField.value = articolo.id;
   titoloField.value = articolo.titolo || '';
   contenutoField.value = articolo.contenuto || '';
+  hydrateSections('mod', articolo.contenuto || '');
   renderMediaList(Array.isArray(articolo.media) ? articolo.media : []);
 });
+
+function syncContentBeforeSubmit(scope, targetId) {
+  const txt = sectionsToContent(scope).trim();
+  const target = document.getElementById(targetId);
+  if (target) target.value = txt;
+  return !!txt;
+}
 
 function createUploadRow(name) {
   const row = document.createElement('div');
@@ -555,6 +687,20 @@ function setupUploadGroup(groupId) {
 
 setupUploadGroup('uploadGroupCreate');
 setupUploadGroup('uploadGroupMod');
+
+const formCreazione = document.getElementById('formCreaBlog');
+const formModifica = document.getElementById('formModBlog');
+
+formCreazione?.addEventListener('submit', (e) => {
+  if (!syncContentBeforeSubmit('create', 'contenuto')) {
+    e.preventDefault();
+    alert('Aggiungi almeno un paragrafo o una sezione di contenuto.');
+  }
+});
+
+formModifica?.addEventListener('submit', () => {
+  syncContentBeforeSubmit('mod', 'contenuto_mod');
+});
 
 Array.from(document.querySelectorAll('.file-upload-label span')).forEach(el => el.textContent = 'Carica media');
 
