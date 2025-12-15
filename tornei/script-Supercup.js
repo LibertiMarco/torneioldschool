@@ -169,7 +169,7 @@ function mostraClassifica(classifica) {
     if (posizione <= GOLD_SEMI_SPOTS) {
       tr.classList.add("gold-row"); // Semifinali Gold
     } else if (posizione <= GOLD_SEMI_SPOTS + GOLD_QUARTI_SPOTS) {
-      tr.classList.add("gold-row"); // Quarti Gold
+      tr.classList.add("gold-row", "gold-quarti"); // Quarti Gold
     } else if (posizione > TEAM_COUNT - SILVER_SPOTS) {
       tr.classList.add("silver-row"); // Silver
     }
@@ -205,8 +205,8 @@ function mostraClassifica(classifica) {
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
       <div class="box gold-box">Prime 2: Semifinali Gold</div>
-      <div class="box gold-box">3ª-6ª: Quarti Gold</div>
-      <div class="box silver-box">7ª-10ª: Coppa Silver</div>
+      <div class="box gold-box gold-quarti-legend">3-6: Quarti Gold</div>
+      <div class="box silver-box">7-10: Coppa Silver</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
@@ -950,3 +950,6 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
+
+
+
