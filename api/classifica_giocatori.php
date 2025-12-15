@@ -48,9 +48,9 @@ if ($search !== '') {
 $allConditions = array_merge($conditionsBase, $searchConditions);
 $whereAll = $allConditions ? 'WHERE ' . implode(' AND ', $allConditions) : '';
 
-$orderClause = $ordine === 'presenze'
-    ? 'ORDER BY agg.presenze DESC, agg.gol DESC, g.cognome ASC, g.nome ASC'
-    : 'ORDER BY agg.gol DESC, agg.presenze DESC, g.cognome ASC, g.nome ASC';
+$orderFields = $ordine === 'presenze'
+    ? 'agg.presenze DESC, agg.gol DESC, g.cognome ASC, g.nome ASC'
+    : 'agg.gol DESC, agg.presenze DESC, g.cognome ASC, g.nome ASC';
 
 // Colonne chiave per il ranking (competizione: 1,1,3 in caso di pari)
 $rankPrimary = $ordine === 'presenze' ? 'agg.presenze' : 'agg.gol';
@@ -71,7 +71,7 @@ $aggregateSubquery = "
     GROUP BY pg.giocatore_id
 ";
 
-// Query dati
+// Query dati (ordine e rank calcolati con DENSE_RANK per rispettare la classifica)
 $sql = "
     SELECT *
     FROM (
@@ -86,19 +86,12 @@ $sql = "
             agg.gol,
             agg.presenze,
             agg.media_voti,
-            @rownum := @rownum + 1 AS rownum_seq,
-            @rank := CASE 
-                WHEN @prev1 = $rankPrimary THEN @rank 
-                ELSE @rownum 
-            END AS posizione,
-            @prev1 := $rankPrimary
-    FROM giocatori g
-    INNER JOIN (
-        $aggregateSubquery
-    ) AS agg ON agg.giocatore_id = g.id
-    CROSS JOIN (SELECT @rownum := 0, @rank := 0, @prev1 := NULL) AS r
+            DENSE_RANK() OVER (ORDER BY $orderFields) AS posizione
+        FROM giocatori g
+        INNER JOIN (
+            $aggregateSubquery
+        ) AS agg ON agg.giocatore_id = g.id
         $whereAll
-        $orderClause
     ) AS ordered
     ORDER BY posizione ASC
     LIMIT ? OFFSET ?
@@ -130,7 +123,7 @@ $stmt->close();
 $countSql = "
     SELECT COUNT(*) AS totale
     FROM (
-        SELECT g.id, g.nome, g.cognome
+        SELECT g.id
         FROM giocatori g
         INNER JOIN (
             $aggregateSubquery
