@@ -86,14 +86,14 @@ $sql = "
             agg.gol,
             agg.presenze,
             agg.media_voti,
-            DENSE_RANK() OVER (ORDER BY $orderFields) AS posizione
+            RANK() OVER (ORDER BY $orderFields) AS posizione
         FROM giocatori g
         INNER JOIN (
             $aggregateSubquery
         ) AS agg ON agg.giocatore_id = g.id
         $whereAll
     ) AS ordered
-    ORDER BY posizione ASC
+    ORDER BY posizione ASC, $orderFields
     LIMIT ? OFFSET ?
 ";
 
