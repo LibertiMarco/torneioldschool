@@ -274,6 +274,137 @@ function get_followers_squadre(mysqli $conn, string $torneo, array $squadre): ar
   return $ids;
 }
 
+function aggiornaStatsGiocatoreGlobale(mysqli $conn, int $giocatoreId): void {
+  $q = $conn->prepare("
+    SELECT 
+      COUNT(*) AS presenze,
+      COALESCE(SUM(goal), 0) AS goal,
+      COALESCE(SUM(assist), 0) AS assist,
+      COALESCE(SUM(cartellino_giallo), 0) AS gialli,
+      COALESCE(SUM(cartellino_rosso), 0) AS rossi,
+      SUM(CASE WHEN voto IS NOT NULL THEN voto ELSE 0 END) AS somma_voti,
+      SUM(CASE WHEN voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
+    FROM partita_giocatore
+    WHERE giocatore_id = ?
+  ");
+  if (!$q) return;
+  $q->bind_param('i', $giocatoreId);
+  $q->execute();
+  $r = $q->get_result()->fetch_assoc() ?: [];
+  $q->close();
+
+  $media = ($r['num_voti'] ?? 0) > 0 ? round(($r['somma_voti'] ?? 0) / $r['num_voti'], 2) : null;
+  $upd = $conn->prepare("
+    UPDATE giocatori
+    SET presenze = ?, reti = ?, assist = ?, gialli = ?, rossi = ?, media_voti = ?
+    WHERE id = ?
+  ");
+  if ($upd) {
+    $upd->bind_param(
+      'iiiiidi',
+      $r['presenze'],
+      $r['goal'],
+      $r['assist'],
+      $r['gialli'],
+      $r['rossi'],
+      $media,
+      $giocatoreId
+    );
+    $upd->execute();
+    $upd->close();
+  }
+}
+
+function aggiornaStatsGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squadraId): void {
+  $teamInfo = $conn->prepare("SELECT nome, torneo FROM squadre WHERE id = ?");
+  if (!$teamInfo) return;
+  $teamInfo->bind_param('i', $squadraId);
+  $teamInfo->execute();
+  $team = $teamInfo->get_result()->fetch_assoc();
+  $teamInfo->close();
+  if (!$team) return;
+
+  $q = $conn->prepare("
+    SELECT 
+      COUNT(*) AS presenze,
+      COALESCE(SUM(pg.goal), 0) AS goal,
+      COALESCE(SUM(pg.assist), 0) AS assist,
+      COALESCE(SUM(pg.cartellino_giallo), 0) AS gialli,
+      COALESCE(SUM(pg.cartellino_rosso), 0) AS rossi,
+      SUM(CASE WHEN pg.voto IS NOT NULL THEN pg.voto ELSE 0 END) AS somma_voti,
+      SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
+    FROM partita_giocatore pg
+    JOIN partite p ON p.id = pg.partita_id
+    WHERE pg.giocatore_id = ?
+      AND p.torneo = ?
+      AND (p.squadra_casa = ? OR p.squadra_ospite = ?)
+      AND UPPER(COALESCE(p.fase, 'REGULAR')) = 'REGULAR'
+  ");
+  if (!$q) return;
+  $q->bind_param('isss', $giocatoreId, $team['torneo'], $team['nome'], $team['nome']);
+  $q->execute();
+  $r = $q->get_result()->fetch_assoc() ?: [];
+  $q->close();
+
+  $media = ($r['num_voti'] ?? 0) > 0 ? round(($r['somma_voti'] ?? 0) / $r['num_voti'], 2) : null;
+  $upd = $conn->prepare("
+    UPDATE squadre_giocatori
+    SET presenze = ?, reti = ?, assist = ?, gialli = ?, rossi = ?, media_voti = ?
+    WHERE giocatore_id = ? AND squadra_id = ?
+  ");
+  if ($upd) {
+    $upd->bind_param(
+      'iiiiidii',
+      $r['presenze'],
+      $r['goal'],
+      $r['assist'],
+      $r['gialli'],
+      $r['rossi'],
+      $media,
+      $giocatoreId,
+      $squadraId
+    );
+    $upd->execute();
+    $upd->close();
+  }
+}
+
+function ricalcolaGiocatoriPartita(mysqli $conn, array $giocatoriIds, array $partitaInfo): void {
+  if (empty($giocatoriIds) || empty($partitaInfo['torneo'] ?? '')) return;
+  $teams = array_values(array_filter([
+    $partitaInfo['squadra_casa'] ?? '',
+    $partitaInfo['squadra_ospite'] ?? '',
+  ]));
+
+  foreach ($giocatoriIds as $gid) {
+    $gid = (int)$gid;
+    if ($gid <= 0) continue;
+    aggiornaStatsGiocatoreGlobale($conn, $gid);
+    if (empty($teams)) continue;
+    $placeholders = implode(',', array_fill(0, count($teams), '?'));
+    $types = 'is' . str_repeat('s', count($teams));
+    $sql = "
+      SELECT sg.squadra_id
+      FROM squadre_giocatori sg
+      JOIN squadre s ON s.id = sg.squadra_id
+      WHERE sg.giocatore_id = ?
+        AND s.torneo = ?
+        AND s.nome IN ($placeholders)
+    ";
+    $params = array_merge([$gid, $partitaInfo['torneo']], $teams);
+    $teamStmt = $conn->prepare($sql);
+    if (!$teamStmt) continue;
+    $teamStmt->bind_param($types, ...$params);
+    if ($teamStmt->execute()) {
+      $res = $teamStmt->get_result();
+      while ($row = $res->fetch_assoc()) {
+        aggiornaStatsGiocatoreSquadra($conn, $gid, (int)$row['squadra_id']);
+      }
+    }
+    $teamStmt->close();
+  }
+}
+
 function push_notifica_users(mysqli $conn, array $userIds, string $tipo, string $titolo, string $testo, string $link = ''): void {
   if (empty($userIds)) return;
   ensure_notifiche_table($conn);
@@ -610,34 +741,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   if ($azione === 'elimina') {
     $id = (int)($_POST['partita_id'] ?? 0);
-    $torneoPartita = null;
+    $partitaInfo = null;
+    $giocatoriCoinvolti = [];
     if ($id > 0) {
-      $oldStmt = $conn->prepare("SELECT torneo FROM partite WHERE id=?");
+      $oldStmt = $conn->prepare("SELECT torneo, squadra_casa, squadra_ospite FROM partite WHERE id=?");
       if ($oldStmt) {
         $oldStmt->bind_param('i', $id);
         if ($oldStmt->execute()) {
-          $torneoPartita = $oldStmt->get_result()->fetch_assoc()['torneo'] ?? null;
+          $partitaInfo = $oldStmt->get_result()->fetch_assoc();
         }
         $oldStmt->close();
+      }
+      $statsStmt = $conn->prepare("SELECT DISTINCT giocatore_id FROM partita_giocatore WHERE partita_id=?");
+      if ($statsStmt) {
+        $statsStmt->bind_param('i', $id);
+        if ($statsStmt->execute()) {
+          $res = $statsStmt->get_result();
+          while ($row = $res->fetch_assoc()) {
+            $giocatoriCoinvolti[] = (int)($row['giocatore_id'] ?? 0);
+          }
+        }
+        $statsStmt->close();
       }
     }
     if ($id <= 0) {
       $errore = 'Seleziona una partita valida da eliminare.';
     } else {
-      $stmt = $conn->prepare("DELETE FROM partite WHERE id=?");
-      if ($stmt) {
-        $stmt->bind_param('i', $id);
-        if ($stmt->execute()) {
-          $successo = 'Partita eliminata.';
-          if ($torneoPartita) {
-            ricostruisci_classifica_da_partite($conn, $torneoPartita);
-          }
+      $txStarted = $conn->begin_transaction();
+      $operazioneOk = true;
+
+      $delStats = $conn->prepare("DELETE FROM partita_giocatore WHERE partita_id=?");
+      if ($delStats) {
+        $delStats->bind_param('i', $id);
+        $operazioneOk = $delStats->execute();
+        $delStats->close();
+      } else {
+        $operazioneOk = false;
+        $errore = 'Errore interno durante l\'eliminazione.';
+      }
+
+      if ($operazioneOk) {
+        $stmt = $conn->prepare("DELETE FROM partite WHERE id=?");
+        if ($stmt) {
+          $stmt->bind_param('i', $id);
+          $operazioneOk = $stmt->execute();
+          $stmt->close();
         } else {
+          $operazioneOk = false;
+          $errore = 'Errore interno durante l\'eliminazione.';
+        }
+      }
+
+      if ($operazioneOk) {
+        if ($txStarted !== false) { $conn->commit(); }
+        $successo = 'Partita eliminata.';
+        if ($partitaInfo && !empty($partitaInfo['torneo'])) {
+          ricostruisci_classifica_da_partite($conn, $partitaInfo['torneo']);
+        }
+        if (!empty($giocatoriCoinvolti) && $partitaInfo) {
+          ricalcolaGiocatoriPartita($conn, $giocatoriCoinvolti, $partitaInfo);
+        }
+      } else {
+        if ($txStarted !== false) { $conn->rollback(); }
+        if (empty($errore)) {
           $errore = 'Eliminazione non riuscita.';
         }
-        $stmt->close();
-      } else {
-        $errore = 'Errore interno durante l\'eliminazione.';
       }
     }
   }
@@ -1666,5 +1834,3 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
 </body>
 </html>
-
-
