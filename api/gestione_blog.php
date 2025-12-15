@@ -377,7 +377,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
           <button type="button" class="btn-secondary-modern" data-add-section="create">Aggiungi sezione</button>
         </div>
 
-        <textarea id="contenuto" name="contenuto" required style="display:none;" aria-hidden="true"><?= htmlspecialchars($contenuto) ?></textarea>
+        <textarea id="contenuto" name="contenuto" style="display:none;" aria-hidden="true"><?= htmlspecialchars($contenuto) ?></textarea>
 
         <div class="file-upload-group" id="uploadGroupCreate" data-upload-name="media[]">
           <label>Media (immagini o video per il carosello)</label>
@@ -432,7 +432,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
           <button type="button" class="btn-secondary-modern" data-add-section="mod">Aggiungi sezione</button>
         </div>
 
-        <textarea id="contenuto_mod" name="contenuto_mod" required style="display:none;" aria-hidden="true"></textarea>
+        <textarea id="contenuto_mod" name="contenuto_mod" style="display:none;" aria-hidden="true"></textarea>
 
         <button type="submit" class="btn-primary" <?= empty($articoli) ? 'disabled' : '' ?> style="width:max-content;">Salva modifiche</button>
 
