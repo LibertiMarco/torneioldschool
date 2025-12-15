@@ -3336,6 +3336,9 @@ body {
   color: #15293e;
   font-weight: 600;
   margin-right: 6px;
+  margin-bottom: 0;
+  display: inline-flex;
+  align-items: center;
 }
 
 .categoria {
