@@ -71,53 +71,61 @@ $aggregateSubquery = "
     GROUP BY pg.giocatore_id
 ";
 
-// Query dati (ordine e rank calcolati con DENSE_RANK per rispettare la classifica)
-$sql = "
-    SELECT *
-    FROM (
-        SELECT 
-            g.id,
-            g.nome,
-            g.cognome,
-            g.ruolo,
-            '' AS squadra,
-            '' AS torneo,
-            g.foto,
-            agg.gol,
-            agg.presenze,
-            agg.media_voti,
-            DENSE_RANK() OVER (ORDER BY $orderFields) AS posizione
-        FROM giocatori g
-        INNER JOIN (
-            $aggregateSubquery
-        ) AS agg ON agg.giocatore_id = g.id
-        $whereAll
-    ) AS ordered
-    ORDER BY posizione ASC
-    LIMIT ? OFFSET ?
+// Query dati: otteniamo l'elenco ordinato, poi calcoliamo il rank globale lato PHP
+$sqlData = "
+    SELECT 
+        g.id,
+        g.nome,
+        g.cognome,
+        g.ruolo,
+        '' AS squadra,
+        '' AS torneo,
+        g.foto,
+        agg.gol,
+        agg.presenze,
+        agg.media_voti
+    FROM giocatori g
+    INNER JOIN (
+        $aggregateSubquery
+    ) AS agg ON agg.giocatore_id = g.id
+    $whereAll
+    ORDER BY $orderFields
 ";
 
 $paramsData = array_merge($excludedTournaments, $paramsSearch);
-$typesData = str_repeat('s', count($excludedTournaments)) . $typesSearch . 'ii';
-$paramsData[] = $perPage;
-$paramsData[] = $offset;
+$typesData = str_repeat('s', count($excludedTournaments)) . $typesSearch;
 
-$stmt = $conn->prepare($sql);
+$stmt = $conn->prepare($sqlData);
 if (!$stmt) {
     http_response_code(500);
     echo json_encode(['error' => 'Errore interno durante la preparazione della query']);
     exit;
 }
-
 $stmt->bind_param($typesData, ...$paramsData);
-
 $stmt->execute();
 $res = $stmt->get_result();
-$giocatori = [];
+$allRows = [];
 while ($row = $res->fetch_assoc()) {
-    $giocatori[] = $row;
+    $allRows[] = $row;
 }
 $stmt->close();
+
+// Calcolo rank (dense) globale, poi applico paginazione
+$primaryField = $ordine === 'presenze' ? 'presenze' : 'gol';
+$ranked = [];
+$lastVal = null;
+$rank = 0;
+foreach ($allRows as $idx => $row) {
+    $val = (int)($row[$primaryField] ?? 0);
+    if ($lastVal === null || $val !== $lastVal) {
+        $rank = $idx + 1;
+        $lastVal = $val;
+    }
+    $row['posizione'] = $rank;
+    $ranked[] = $row;
+}
+
+$giocatori = array_slice($ranked, $offset, $perPage);
 
 // Conteggio totale per la paginazione
 $countSql = "
