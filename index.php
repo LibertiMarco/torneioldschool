@@ -258,6 +258,14 @@ function formatPeriodo(inizio, fine, anno) {
     return 'Torneo concluso';
 }
 
+function labelPeriodo(item) {
+    const nome = (item.competizione || '').toLowerCase();
+    if (nome.includes("coppa d'africa") && nome.includes('all in one night')) {
+        return '12 dic 2025';
+    }
+    return formatPeriodo(item.data_inizio, item.data_fine, item.anno);
+}
+
 function normalizePath(path) {
     if (!path || path === '0' || path === 0) return '';
     if (/^https?:\/\//i.test(path)) return path;
@@ -268,7 +276,7 @@ function normalizePath(path) {
 function renderHallCard(item) {
     const torneoLogo = item.torneo_logo || item.torneo_img || '/img/logo_old_school.png';
     const fileLink = normalizePath(item.filetorneo);
-    const periodo = formatPeriodo(item.data_inizio, item.data_fine, item.anno);
+    const periodo = labelPeriodo(item);
     const premi = Array.isArray(item.premi) ? item.premi : [];
     // Nessun badge testuale richiesto in alto
     const badge = '';
