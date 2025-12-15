@@ -3001,9 +3001,10 @@ body {
 
 .bracket-penalties {
   font-size: 0.72rem;
-  color: #7a8699;
+  color: #000;
   margin-top: 4px;
   font-weight: 700;
+  text-align: right;
 }
 .bracket-pair {
   display: flex;
@@ -5281,10 +5282,11 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
 .match-penalties {
   font-size: 12px;
-  color: #cfd7e7;
-  text-align: center;
+  color: #000;
+  text-align: right;
   margin-top: 6px;
   letter-spacing: 0.2px;
+  font-weight: 700;
 }
 
 .match-center .vs {

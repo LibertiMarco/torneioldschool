@@ -374,7 +374,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
               <span class="team-name">${partita.squadra_ospite}</span>
             </div>
           </div>
-          ${hasPenalties ? `<div class="match-penalties">Rigori ${partita.rigori_casa}-${partita.rigori_ospite}</div>` : ""}
+          ${hasPenalties ? `<div class="match-penalties">d.c.r. ${partita.rigori_casa}-${partita.rigori_ospite}</div>` : ""}
         `;
 
         container.appendChild(partitaDiv);
