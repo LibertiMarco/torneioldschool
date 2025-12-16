@@ -277,7 +277,7 @@ if ($id > 0) {
 }
 
 .article-content p {
-    margin: 10px 0;
+    margin: 0 0 14px;
     font-weight: 400;
 }
 
