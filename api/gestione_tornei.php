@@ -443,6 +443,36 @@ if ($lista instanceof mysqli_result) {
             color: #fff;
             box-shadow: 0 6px 14px rgba(21,41,62,0.25);
         }
+        .pill-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .pill-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border: 1px solid #d5dce8;
+            border-radius: 12px;
+            background: #f3f6fb;
+            font-weight: 600;
+            color: #1f2d3d;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+        }
+        .pill-toggle:hover {
+            background: #e9eef5;
+            border-color: #c6cfde;
+            transform: translateY(-1px);
+        }
+        .form-subgroup {
+            border: 1px solid #e3e8f0;
+            background: #f8faff;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 14px;
+        }
     </style>
 </head>
 <body>
@@ -467,6 +497,61 @@ if ($lista instanceof mysqli_result) {
             <!-- FORM CREAZIONE -->
             <form method="POST" class="admin-form form-crea" enctype="multipart/form-data">
                 <h2>Aggiungi Torneo</h2>
+                <div class="form-group">
+                    <label>Formula torneo</label>
+                    <div class="pill-group" id="tipoTorneoGroup">
+                        <label class="pill-toggle">
+                            <input type="radio" name="formula_torneo" value="campionato" required>
+                            Campionato
+                        </label>
+                        <label class="pill-toggle">
+                            <input type="radio" name="formula_torneo" value="girone">
+                            Girone
+                        </label>
+                        <label class="pill-toggle">
+                            <input type="radio" name="formula_torneo" value="eliminazione">
+                            Eliminazione diretta
+                        </label>
+                    </div>
+                    <small>Scegli la formula prima di inserire gli altri dettagli.</small>
+                </div>
+
+                <div class="form-subgroup hidden" id="campionatoSettings">
+                    <div class="form-group">
+                        <label>Numero squadre</label>
+                        <input type="number" name="campionato_squadre" min="2" step="1" inputmode="numeric" placeholder="Es. 10">
+                    </div>
+                </div>
+
+                <div class="form-subgroup hidden" id="gironeSettings">
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label>Numero gironi</label>
+                            <input type="number" name="numero_gironi" min="1" step="1" inputmode="numeric" placeholder="Es. 2">
+                        </div>
+                        <div class="form-group half">
+                            <label>Squadre per girone</label>
+                            <input type="number" name="squadre_per_girone" min="2" step="1" inputmode="numeric" placeholder="Es. 4">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-subgroup hidden" id="faseFinaleSettings">
+                    <div class="form-group">
+                        <label>Fase finale prevista</label>
+                        <div class="pill-group">
+                            <label class="pill-toggle">
+                                <input type="radio" name="fase_finale" value="coppe">
+                                Coppa Gold e Silver
+                            </label>
+                            <label class="pill-toggle">
+                                <input type="radio" name="fase_finale" value="eliminazione_diretta">
+                                Eliminazione diretta
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-group"><label>Nome</label><input type="text" name="nome" required></div>
                 <div class="form-group"><label>Stato</label>
                     <select name="stato">
@@ -642,6 +727,57 @@ if ($lista instanceof mysqli_result) {
                     label.textContent = file ? file.name : 'Nessun file selezionato';
                 });
             });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tipoRadios = Array.from(document.querySelectorAll('input[name="formula_torneo"]'));
+            const campionatoBox = document.getElementById('campionatoSettings');
+            const gironeBox = document.getElementById('gironeSettings');
+            const finaleBox = document.getElementById('faseFinaleSettings');
+            const campionatoInput = document.querySelector('input[name="campionato_squadre"]');
+            const numeroGironiInput = document.querySelector('input[name="numero_gironi"]');
+            const squadrePerGironeInput = document.querySelector('input[name="squadre_per_girone"]');
+            const finaleRadios = Array.from(document.querySelectorAll('input[name="fase_finale"]'));
+
+            function setRequired(inputs, value) {
+                inputs.forEach(el => {
+                    if (el) el.required = value;
+                });
+            }
+
+            function toggleFinale(show) {
+                if (!finaleBox) return;
+                if (show) {
+                    finaleBox.classList.remove('hidden');
+                    finaleRadios.forEach(r => r.required = true);
+                } else {
+                    finaleBox.classList.add('hidden');
+                    finaleRadios.forEach(r => {
+                        r.required = false;
+                        r.checked = false;
+                    });
+                }
+            }
+
+            function handleTipoChange(value) {
+                if (campionatoBox) campionatoBox.classList.toggle('hidden', value !== 'campionato');
+                if (gironeBox) gironeBox.classList.toggle('hidden', value !== 'girone');
+
+                setRequired([campionatoInput], value === 'campionato');
+                setRequired([numeroGironiInput, squadrePerGironeInput], value === 'girone');
+
+                toggleFinale(value !== 'eliminazione');
+            }
+
+            tipoRadios.forEach(radio => {
+                radio.addEventListener('change', () => handleTipoChange(radio.value));
+            });
+
+            const preselected = tipoRadios.find(r => r.checked);
+            if (preselected) {
+                handleTipoChange(preselected.value);
+            }
         });
     </script>
     <script>
