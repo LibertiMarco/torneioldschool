@@ -21,21 +21,64 @@ function sanitizeTorneoSlug($value) {
     return $slug;
 }
 
-function creaFileTorneoDaTemplate($nomeTorneo, $slug) {
+function scegliTemplatePerFormula(string $formula, string $faseFinale, string $baseDir): array {
+    $default = [
+        'html' => $baseDir . '/TorneoTemplate.php',
+        'js'   => $baseDir . '/script-TorneoTemplate.js',
+    ];
+
+    if (!is_dir($baseDir)) {
+        return $default;
+    }
+
+    $serieB = [
+        'html' => $baseDir . '/SerieB.php',
+        'js'   => $baseDir . '/script-SerieB.js',
+    ];
+    $coppaAfrica = [
+        'html' => $baseDir . '/Coppadafrica.php',
+        'js'   => $baseDir . '/script-Coppadafrica.js',
+    ];
+
+    switch ($formula) {
+        case 'campionato':
+            // Campionato con Coppa Gold/Silver -> usa impianto Serie B se disponibile
+            if ($faseFinale === 'coppe' && file_exists($serieB['html']) && file_exists($serieB['js'])) {
+                return $serieB;
+            }
+            break;
+        case 'girone':
+            if ($faseFinale === 'eliminazione_diretta' && file_exists($coppaAfrica['html']) && file_exists($coppaAfrica['js'])) {
+                return $coppaAfrica; // Gironi + eliminazione diretta stile Coppa d'Africa
+            }
+            if ($faseFinale === 'coppe' && file_exists($default['html']) && file_exists($default['js'])) {
+                return $default; // Gironi + Gold/Silver: usa template generico con entrambe le coppe
+            }
+            break;
+        case 'eliminazione':
+            if (file_exists($coppaAfrica['html']) && file_exists($coppaAfrica['js'])) {
+                return $coppaAfrica; // Eliminazione diretta: bracket stile Coppa d'Africa (Gold)
+            }
+            break;
+        default:
+            break;
+    }
+
+    return $default;
+}
+
+function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $faseFinale = '') {
     $baseDir = realpath(__DIR__ . '/../tornei');
     if (!$baseDir) {
         return;
     }
 
-    // Preferisci il template generico; fallback a SerieA se mancante
-    $htmlTemplate = $baseDir . '/TorneoTemplate.php';
-    $jsTemplate   = $baseDir . '/script-TorneoTemplate.js';
-    if (!file_exists($htmlTemplate) || !file_exists($jsTemplate)) {
-        $htmlTemplate = $baseDir . '/SerieA.php';
-        $jsTemplate   = $baseDir . '/script-SerieA.js';
-        if (!file_exists($htmlTemplate) || !file_exists($jsTemplate)) {
-            return;
-        }
+    // Sceglie il template più adatto in base alle scelte
+    $templates = scegliTemplatePerFormula($formulaTorneo, $faseFinale, $baseDir);
+    $htmlTemplate = $templates['html'] ?? null;
+    $jsTemplate   = $templates['js'] ?? null;
+    if (!$htmlTemplate || !$jsTemplate || !file_exists($htmlTemplate) || !file_exists($jsTemplate)) {
+        return;
     }
 
     $htmlContent = file_get_contents($htmlTemplate);
@@ -45,14 +88,47 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug) {
     }
 
     $newScriptName = 'script-' . $slug . '.js';
-    // Rimpiazzi segnaposto del template generico oppure fallback SerieA
+    $templateSlug = basename($htmlTemplate, '.php');
+    // Rimpiazzi segnaposto del template scelto
     $htmlContent = str_replace(
-        ['TEMPLATE_SLUG', 'Torneo Template', 'script-TorneoTemplate.js', 'Serie A', 'script-SerieA.js'],
-        [$slug, $nomeTorneo, $newScriptName, $nomeTorneo, $newScriptName],
+        [
+            'TEMPLATE_SLUG',
+            'Torneo Template',
+            'script-TorneoTemplate.js',
+            'Serie A',
+            'script-SerieA.js',
+            'SerieB',
+            'Serie B',
+            'script-SerieB.js',
+            'Coppadafrica',
+            "Coppa d'Africa",
+            'script-Coppadafrica.js',
+            $templateSlug,
+            'script-' . $templateSlug . '.js'
+        ],
+        [
+            $slug,
+            $nomeTorneo,
+            $newScriptName,
+            $nomeTorneo,
+            $newScriptName,
+            $slug,
+            $nomeTorneo,
+            $newScriptName,
+            $slug,
+            $nomeTorneo,
+            $newScriptName,
+            $slug,
+            $newScriptName
+        ],
         $htmlContent
     );
 
-    $jsContent = str_replace(['TorneoTemplate', 'SerieA'], [$slug, $slug], $jsContent);
+    $jsContent = str_replace(
+        ['TorneoTemplate', 'SerieA', 'SerieB', 'Coppadafrica', $templateSlug],
+        [$slug, $slug, $slug, $slug, $slug],
+        $jsContent
+    );
 
     @file_put_contents($baseDir . '/' . $slug . '.php', $htmlContent);
     @file_put_contents($baseDir . '/' . $newScriptName, $jsContent);
@@ -284,10 +360,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     $filetorneo = $slug . '.php';
     $categoria = trim($_POST['categoria']);
     $img = salvaImmagineTorneo($nome, 'img_upload');
+    $formulaTorneo = $_POST['formula_torneo'] ?? '';
+    $faseFinale = $_POST['fase_finale'] ?? '';
 
     $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
     if ($torneo->crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $img, $squadre_complete)) {
-        creaFileTorneoDaTemplate($nome, $slug);
+        creaFileTorneoDaTemplate($nome, $slug, $formulaTorneo, $faseFinale);
     }
     header("Location: gestione_tornei.php");
     exit;
