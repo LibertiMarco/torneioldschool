@@ -2,9 +2,12 @@
 
 // Invio email: usa SMTP se configurato, altrimenti mail() con envelope corretto
 if (!function_exists('tos_mail_send')) {
-    function tos_mail_send(string $to, string $subject, string $bodyText, string $fromName = 'Tornei Old School', ?string $replyToOverride = null): bool
+    /**
+     * Invia una mail testuale+HTML. $fromEmailOverride permette di forzare l'email mittente (es. newsletter).
+     */
+    function tos_mail_send(string $to, string $subject, string $bodyText, string $fromName = 'Tornei Old School', ?string $replyToOverride = null, ?string $fromEmailOverride = null): bool
     {
-        $fromEmail = getenv('MAIL_FROM') ?: 'noreply@torneioldschool.it';
+        $fromEmail = $fromEmailOverride ?: (getenv('MAIL_FROM') ?: 'noreply@torneioldschool.it');
         $replyTo = $replyToOverride ?: (getenv('MAIL_REPLY_TO') ?: 'info@torneioldschool.it');
         $returnPath = getenv('MAIL_RETURN_PATH') ?: $fromEmail;
 
@@ -207,7 +210,7 @@ if (!function_exists('invia_notifica_articolo')) {
             $body .= "Ricevi questa email perche' hai dato il consenso alla newsletter su Tornei Old School.\n";
             $body .= "Puoi revocare il consenso dalla pagina account o dal link \"Gestisci preferenze\" nel sito.\n";
 
-            $ok = tos_mail_send($dest['email'], $subject, $body, 'Tornei Old School');
+            $ok = tos_mail_send($dest['email'], $subject, $body, 'Tornei Old School', null, 'newsletter@torneioldschool.it');
             if ($ok) {
                 $sent++;
                 log_newsletter_send($conn, $postId, $dest['email'], 'sent', null);

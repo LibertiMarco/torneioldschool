@@ -271,19 +271,20 @@ if ($id > 0) {
 .article-content {
     color: #1e2433;
     font-size: 1.1rem;
-    line-height: 1.82;
+    line-height: 1.72;
     white-space: pre-wrap;
     font-weight: 400;
 }
 
 .article-content p {
-    margin-bottom: 18px;
+    margin: 10px 0;
     font-weight: 400;
 }
 
 .article-content h2,
 .article-content h3 {
     font-weight: 800;
+    margin: 18px 0 8px;
 }
 
 .article-content strong,
