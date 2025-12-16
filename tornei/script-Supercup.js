@@ -205,8 +205,8 @@ function mostraClassifica(classifica) {
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
       <div class="box gold-box">Prime 2: Semifinali Gold</div>
-      <div class="box gold-box gold-quarti">3ª-6ª: Quarti Gold</div>
-      <div class="box silver-box">7ª-10ª: Coppa Silver</div>
+      <div class="box gold-box gold-quarti">3-6: Quarti Gold</div>
+      <div class="box silver-box">7-10: Coppa Silver</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
@@ -496,16 +496,16 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         const hasRitorno = (legs.RITORNO || []).length > 0;
         if (hasAndata && hasRitorno) {
           const h4a = document.createElement("h4");
-          h4a.textContent = "Semifinali Andata (1ª-2ª)";
+          h4a.textContent = "Semifinali Andata (1-2)";
           giornataDiv.appendChild(h4a);
           legs.ANDATA.forEach(p => renderPartita(giornataDiv, p));
           const h4r = document.createElement("h4");
-          h4r.textContent = "Semifinali Ritorno (1ª-2ª)";
+          h4r.textContent = "Semifinali Ritorno (1-2)";
           giornataDiv.appendChild(h4r);
           legs.RITORNO.forEach(p => renderPartita(giornataDiv, p));
         } else {
           const h4 = document.createElement("h4");
-          h4.textContent = "Semifinali (1ª-2ª)";
+          h4.textContent = "Semifinali (1-2)";
           giornataDiv.appendChild(h4);
           partiteGiornata.forEach(p => renderPartita(giornataDiv, p));
         }
@@ -908,9 +908,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   faseSelect.addEventListener("change", () => {
+    const legenda = document.querySelector(".legenda-coppe");
     if (faseSelect.value === "eliminazione") {
       classificaWrapper.style.display = "none";
       playoffContainer.style.display = "block";
+
+      if (legenda) legenda.remove();
 
       if (!coppaSelect.value) {
         coppaSelect.value = "gold";

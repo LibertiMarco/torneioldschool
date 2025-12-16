@@ -238,13 +238,23 @@ $assetVersion = '20251208';
 
   <!-- REGOLE -->
   <section id="regole" class="tab-section">
-    <h2 class="titolo-sezione">📜 Regole del Torneo</h2>
+    <h2 class="titolo-sezione">Regole del Torneo</h2>
     <div class="regole-box">
       <div class="regola">
-        <h3>Struttura del Campionato</h3>
-        <p>
-          Personalizza questo blocco con le regole del torneo.
-        </p>
+        <h3>Regular season</h3>
+        <ul>
+          <li>Girone unico da 10 squadre</li>
+          <li>2 giornate totali: ogni squadra gioca 2 partite di girone</li>
+        </ul>
+      </div>
+      <div class="regola">
+        <h3>Accesso alle coppe</h3>
+        <ul>
+          <li>1-2: semifinale Gold</li>
+          <li>3-6: quarti di finale Gold</li>
+          <li>7-10: semifinale Silver</li>
+        </ul>
+        <p>Per il resto le regole restano invariate.</p>
       </div>
     </div>
     <br><br><br><br>
