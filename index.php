@@ -138,7 +138,12 @@ $localSchema = [
 
       <!-- AdSense tra contatti e footer -->
       <div class="home-adsense" style="max-width: 960px; margin: 30px auto 10px; padding: 0 12px;">
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8390787841690316" crossorigin="anonymous"></script>
+        <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js"></script>
+  <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js"></script><script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
+  <script>
+    window.ezstandalone = window.ezstandalone || {};
+    ezstandalone.cmd = ezstandalone.cmd || [];
+  </script>
         <!-- Pub orizz -->
         <ins class="adsbygoogle"
              style="display:block"

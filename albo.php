@@ -16,7 +16,12 @@ $pageSeo = [
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($pageSeo); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8390787841690316" crossorigin="anonymous"></script>
+  <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js"></script>
+  <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js"></script><script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
+  <script>
+    window.ezstandalone = window.ezstandalone || {};
+    ezstandalone.cmd = ezstandalone.cmd || [];
+  </script>
   <style>
     .albo-page { max-width: 1100px; margin: 0 auto; padding: 88px 16px 90px; display: flex; flex-direction: column; gap: 20px; }
     .albo-page h1 { margin: 0 0 8px; }

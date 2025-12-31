@@ -79,7 +79,12 @@ if (!function_exists('seo_base_url')) {
         echo '<meta name="twitter:title" content="' . seo_clean($title) . '">' . "\n";
         echo '<meta name="twitter:description" content="' . seo_clean($description) . '">' . "\n";
         echo '<meta name="twitter:image" content="' . seo_clean($image) . '">' . "\n";
-        echo '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8390787841690316" crossorigin="anonymous"></script>' . "\n";
+        echo '<script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js"></script>
+  <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js"></script><script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
+  <script>
+    window.ezstandalone = window.ezstandalone || {};
+    ezstandalone.cmd = ezstandalone.cmd || [];
+  </script>' . "\n";
 
         render_analytics_bootstrap();
 
