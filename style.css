@@ -2038,6 +2038,45 @@ body {
   opacity: 1;
 }
 
+.footer-socials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.footer-social {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.social-badge {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  background: #d80000;
+  color: #fff;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+.social-badge[data-status="loading"] {
+  background: #4b5563;
+}
+
+.social-badge[data-status="error"] {
+  background: #6b7280;
+}
+
 .footer-bottom {
   border-top: 1px solid rgba(255, 255, 255, 0.2);
   margin-top: 10px;

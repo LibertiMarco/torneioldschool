@@ -368,13 +368,90 @@
     document.head.appendChild(script);
   }
 
+  const socialState = { observer: null, requested: false };
+
+  function formatFollowerCount(value) {
+    if (!Number.isFinite(value)) return '--';
+    if (value >= 1_000_000) return (value / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (value >= 1_000) return (value / 1_000).toFixed(1).replace(/\.0$/, '') + 'k';
+    return value.toLocaleString('it-IT');
+  }
+
+  function renderSocialCounts(data) {
+    const container = document.getElementById("footer-container");
+    if (!container) return;
+    const counts = data || {};
+    const badges = container.querySelectorAll("[data-social-count]");
+
+    badges.forEach((badge) => {
+      const key = badge.getAttribute("data-social-count");
+      const entry = counts[key] || {};
+      const value = entry && Number.isFinite(entry.count) ? entry.count : null;
+      badge.textContent = value !== null ? formatFollowerCount(value) : '--';
+      badge.dataset.status = value !== null ? "ok" : "error";
+      if (entry && entry.error) {
+        badge.title = entry.error;
+      }
+    });
+  }
+
+  function fetchSocialCounts() {
+    socialState.requested = true;
+    fetch("/api/social_followers.php", { credentials: "same-origin" })
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((payload) => {
+        renderSocialCounts((payload && payload.counts) || {});
+      })
+      .catch(() => {
+        renderSocialCounts({});
+      });
+  }
+
+  function tryInitSocialCounters(slot) {
+    const badges = slot.querySelectorAll("[data-social-count]");
+    if (!badges.length) {
+      return false;
+    }
+    badges.forEach((badge) => {
+      badge.dataset.status = "loading";
+      badge.textContent = "--";
+    });
+    if (!socialState.requested) {
+      fetchSocialCounts();
+    }
+    return true;
+  }
+
+  function initSocialCounters() {
+    const slot = document.getElementById("footer-container");
+    if (!slot || socialState.observer || socialState.requested) {
+      return;
+    }
+
+    if (tryInitSocialCounters(slot)) {
+      return;
+    }
+
+    socialState.observer = new MutationObserver(() => {
+      if (tryInitSocialCounters(slot) && socialState.observer) {
+        socialState.observer.disconnect();
+        socialState.observer = null;
+      }
+    });
+    socialState.observer.observe(slot, { childList: true, subtree: true });
+  }
+
   window.initHeaderInteractions = initHeaderInteractions;
 
   loadPrivacyScript();
 
   if (document.readyState !== "loading") {
     initHeaderInteractions(document);
+    initSocialCounters();
   } else {
-    document.addEventListener("DOMContentLoaded", () => initHeaderInteractions(document));
+    document.addEventListener("DOMContentLoaded", () => {
+      initHeaderInteractions(document);
+      initSocialCounters();
+    });
   }
 })();

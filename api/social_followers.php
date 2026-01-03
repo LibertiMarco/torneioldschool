@@ -1,0 +1,214 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/../includi/env_loader.php';
+
+header('Content-Type: application/json; charset=utf-8');
+
+function json_response(array $data, int $status = 200): void
+{
+    http_response_code($status);
+    echo json_encode($data);
+    exit;
+}
+
+function social_result(?int $count, ?string $error = null): array
+{
+    return ['count' => $count, 'error' => $error];
+}
+
+function fetch_json(string $url, array $options = []): array
+{
+    $timeout = isset($options['timeout']) ? (int)$options['timeout'] : 10;
+    $headers = $options['headers'] ?? [];
+    $method = strtoupper($options['method'] ?? 'GET');
+    $body = $options['body'] ?? null;
+
+    $ch = curl_init($url);
+    $curlOpts = [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_TIMEOUT => $timeout,
+        CURLOPT_CONNECTTIMEOUT => $timeout,
+    ];
+
+    if ($method === 'POST') {
+        $curlOpts[CURLOPT_POST] = true;
+        if ($body !== null) {
+            if (is_array($body)) {
+                $headers[] = 'Content-Type: application/json';
+                $curlOpts[CURLOPT_POSTFIELDS] = json_encode($body);
+            } else {
+                $curlOpts[CURLOPT_POSTFIELDS] = $body;
+            }
+        }
+    }
+
+    if (!empty($headers)) {
+        $curlOpts[CURLOPT_HTTPHEADER] = $headers;
+    }
+
+    curl_setopt_array($ch, $curlOpts);
+    $raw = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE) ?: 0;
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($raw === false) {
+        return ['ok' => false, 'status' => $status, 'error' => $curlError ?: 'Richiesta HTTP fallita'];
+    }
+
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        return ['ok' => false, 'status' => $status, 'error' => 'Risposta non valida'];
+    }
+
+    $apiError = $decoded['error']['message'] ?? $decoded['error_msg'] ?? $decoded['message'] ?? null;
+    return [
+        'ok' => $status >= 200 && $status < 300 && $apiError === null,
+        'status' => $status,
+        'data' => $decoded,
+        'error' => $apiError,
+    ];
+}
+
+function fetch_instagram(array $cfg): array
+{
+    $token = $cfg['META_PAGE_TOKEN'] ?? '';
+    $igUserId = $cfg['META_IG_USER_ID'] ?? '';
+    if ($token === '' || $igUserId === '') {
+        return social_result(null, 'Config Instagram mancante');
+    }
+
+    $url = 'https://graph.facebook.com/v20.0/' . rawurlencode($igUserId) . '?' . http_build_query([
+        'fields' => 'followers_count',
+        'access_token' => $token,
+    ]);
+
+    $res = fetch_json($url);
+    if (!$res['ok']) {
+        return social_result(null, $res['error'] ?? 'Errore Instagram');
+    }
+
+    $count = $res['data']['followers_count'] ?? null;
+    return social_result($count !== null ? (int)$count : null, $count === null ? 'followers_count non disponibile' : null);
+}
+
+function fetch_facebook(array $cfg): array
+{
+    $token = $cfg['META_PAGE_TOKEN'] ?? '';
+    $pageId = $cfg['META_PAGE_ID'] ?? '';
+    if ($token === '' || $pageId === '') {
+        return social_result(null, 'Config Facebook mancante');
+    }
+
+    $url = 'https://graph.facebook.com/v20.0/' . rawurlencode($pageId) . '?' . http_build_query([
+        'fields' => 'fan_count',
+        'access_token' => $token,
+    ]);
+
+    $res = fetch_json($url);
+    if (!$res['ok']) {
+        return social_result(null, $res['error'] ?? 'Errore Facebook');
+    }
+
+    $count = $res['data']['fan_count'] ?? null;
+    return social_result($count !== null ? (int)$count : null, $count === null ? 'fan_count non disponibile' : null);
+}
+
+function fetch_youtube(array $cfg): array
+{
+    $apiKey = $cfg['YOUTUBE_API_KEY'] ?? '';
+    $channelId = $cfg['YOUTUBE_CHANNEL_ID'] ?? '';
+    if ($apiKey === '' || $channelId === '') {
+        return social_result(null, 'Config YouTube mancante');
+    }
+
+    $url = 'https://www.googleapis.com/youtube/v3/channels?' . http_build_query([
+        'part' => 'statistics',
+        'id' => $channelId,
+        'key' => $apiKey,
+    ]);
+
+    $res = fetch_json($url);
+    if (!$res['ok']) {
+        return social_result(null, $res['error'] ?? 'Errore YouTube');
+    }
+
+    $items = $res['data']['items'] ?? [];
+    $count = $items[0]['statistics']['subscriberCount'] ?? null;
+    return social_result($count !== null ? (int)$count : null, $count === null ? 'subscriberCount non disponibile' : null);
+}
+
+function fetch_tiktok(array $cfg): array
+{
+    $accessToken = $cfg['TIKTOK_ACCESS_TOKEN'] ?? '';
+    $userId = $cfg['TIKTOK_USER_ID'] ?? '';
+    if ($accessToken === '') {
+        return social_result(null, 'Config TikTok mancante');
+    }
+
+    $query = ['fields' => 'follower_count'];
+    if ($userId !== '') {
+        $query['user_id'] = $userId;
+    }
+
+    $url = 'https://open.tiktokapis.com/v2/user/info/?' . http_build_query($query);
+    $res = fetch_json($url, [
+        'headers' => ['Authorization: Bearer ' . $accessToken],
+    ]);
+
+    if (!$res['ok']) {
+        return social_result(null, $res['error'] ?? 'Errore TikTok');
+    }
+
+    $count = $res['data']['user']['follower_count'] ?? $res['data']['follower_count'] ?? null;
+    return social_result($count !== null ? (int)$count : null, $count === null ? 'follower_count non disponibile' : null);
+}
+
+$config = [
+    'META_PAGE_TOKEN' => getenv('META_PAGE_TOKEN') ?: '',
+    'META_PAGE_ID' => getenv('META_PAGE_ID') ?: '',
+    'META_IG_USER_ID' => getenv('META_IG_USER_ID') ?: '',
+    'YOUTUBE_API_KEY' => getenv('YOUTUBE_API_KEY') ?: '',
+    'YOUTUBE_CHANNEL_ID' => getenv('YOUTUBE_CHANNEL_ID') ?: '',
+    'TIKTOK_ACCESS_TOKEN' => getenv('TIKTOK_ACCESS_TOKEN') ?: '',
+    'TIKTOK_USER_ID' => getenv('TIKTOK_USER_ID') ?: '',
+];
+
+$cacheFile = __DIR__ . '/../cache/social_followers.json';
+$cacheTtl = 15 * 60; // 15 minuti
+$force = isset($_GET['force']) && $_GET['force'] === '1';
+
+if (!$force && file_exists($cacheFile)) {
+    $age = time() - filemtime($cacheFile);
+    if ($age < $cacheTtl) {
+        $cached = json_decode((string)file_get_contents($cacheFile), true);
+        if (is_array($cached)) {
+            json_response([
+                'cached' => true,
+                'updated_at' => $cached['updated_at'] ?? filemtime($cacheFile),
+                'counts' => $cached['counts'] ?? [],
+            ]);
+        }
+    }
+}
+
+$payload = [
+    'cached' => false,
+    'updated_at' => time(),
+    'counts' => [
+        'instagram' => fetch_instagram($config),
+        'facebook' => fetch_facebook($config),
+        'youtube' => fetch_youtube($config),
+        'tiktok' => fetch_tiktok($config),
+    ],
+];
+
+$cacheDir = dirname($cacheFile);
+if (!is_dir($cacheDir)) {
+    @mkdir($cacheDir, 0775, true);
+}
+@file_put_contents($cacheFile, json_encode($payload, JSON_UNESCAPED_SLASHES));
+
+json_response($payload);
