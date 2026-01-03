@@ -557,4 +557,4 @@ if (!empty($sessionAvatar)) {
 })();
 </script>
 <script src="/includi/consent-sync.js?v=20251206" defer></script>
-<script src="/includi/header-interactions.js?v=20251208" defer></script>
+<script src="/includi/header-interactions.js?v=20251217" defer></script>
