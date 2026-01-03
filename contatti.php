@@ -396,7 +396,7 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
 
   <div id="footer-container"></div>
 
-  <script src="/includi/app.min.js?v=20251216"></script>
+  <script src="/includi/app.min.js?v=20251217"></script>
   <script>
     function bindBasicHeaderToggle(root) {
       const header = root.querySelector(".site-header");

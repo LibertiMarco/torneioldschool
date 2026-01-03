@@ -163,11 +163,17 @@ function fetch_youtube(array $cfg): array
         return social_result(null, 'Config YouTube mancante');
     }
 
-    $url = 'https://www.googleapis.com/youtube/v3/channels?' . http_build_query([
-        'part' => 'statistics',
-        'id' => $channelId,
-        'key' => $apiKey,
-    ]);
+    $normalized = normalize_youtube_channel($channelId);
+    $params = ['part' => 'statistics', 'key' => $apiKey];
+    if ($normalized['mode'] === 'handle') {
+        $params['forHandle'] = $normalized['value'];
+    } elseif ($normalized['mode'] === 'username') {
+        $params['forUsername'] = $normalized['value'];
+    } else {
+        $params['id'] = $normalized['value'];
+    }
+
+    $url = 'https://www.googleapis.com/youtube/v3/channels?' . http_build_query($params);
 
     $res = fetch_json($url);
     if (!$res['ok']) {
@@ -177,6 +183,34 @@ function fetch_youtube(array $cfg): array
     $items = $res['data']['items'] ?? [];
     $count = $items[0]['statistics']['subscriberCount'] ?? null;
     return social_result($count !== null ? (int)$count : null, $count === null ? 'subscriberCount non disponibile' : null);
+}
+
+function normalize_youtube_channel(string $raw): array
+{
+    $value = trim($raw);
+    if ($value === '') {
+        return ['mode' => 'id', 'value' => ''];
+    }
+
+    // Handle formati URL o handle
+    if ($value[0] === '@') {
+        return ['mode' => 'handle', 'value' => $value];
+    }
+
+    if (preg_match('#youtube\\.com/(?:@)([^/?&]+)#i', $value, $m)) {
+        return ['mode' => 'handle', 'value' => '@' . $m[1]];
+    }
+
+    if (preg_match('#youtube\\.com/channel/([^/?&]+)#i', $value, $m)) {
+        return ['mode' => 'id', 'value' => $m[1]];
+    }
+
+    if (preg_match('#youtube\\.com/(?:user|c)/([^/?&]+)#i', $value, $m)) {
+        return ['mode' => 'username', 'value' => $m[1]];
+    }
+
+    // default: assume channelId
+    return ['mode' => 'id', 'value' => $value];
 }
 
 function fetch_tiktok(array $cfg): array

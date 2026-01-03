@@ -407,8 +407,12 @@
       });
   }
 
-  function tryInitSocialCounters(slot) {
-    const badges = slot.querySelectorAll("[data-social-count]");
+  function tryInitSocialCounters(root) {
+    const scope = root || document;
+    if (!scope || typeof scope.querySelectorAll !== "function") {
+      return false;
+    }
+    const badges = scope.querySelectorAll("[data-social-count]");
     if (!badges.length) {
       return false;
     }
@@ -423,22 +427,33 @@
   }
 
   function initSocialCounters() {
-    const slot = document.getElementById("footer-container");
-    if (!slot || socialState.observer || socialState.requested) {
+    if (socialState.observer || socialState.requested) {
       return;
     }
 
-    if (tryInitSocialCounters(slot)) {
+    const footerSlot = document.getElementById("footer-container");
+    const scope = footerSlot || document;
+
+    if (tryInitSocialCounters(scope)) {
+      if (footerSlot) {
+        socialState.observer = new MutationObserver(() => {
+          if (tryInitSocialCounters(footerSlot)) {
+            socialState.observer.disconnect();
+            socialState.observer = null;
+          }
+        });
+        socialState.observer.observe(footerSlot, { childList: true, subtree: true });
+      }
       return;
     }
 
     socialState.observer = new MutationObserver(() => {
-      if (tryInitSocialCounters(slot) && socialState.observer) {
+      if (tryInitSocialCounters(document) && socialState.observer) {
         socialState.observer.disconnect();
         socialState.observer = null;
       }
     });
-    socialState.observer.observe(slot, { childList: true, subtree: true });
+    socialState.observer.observe(document.body || document.documentElement || document, { childList: true, subtree: true });
   }
 
   window.initHeaderInteractions = initHeaderInteractions;
