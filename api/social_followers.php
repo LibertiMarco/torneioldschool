@@ -17,13 +17,41 @@ function social_result(?int $count, ?string $error = null): array
     return ['count' => $count, 'error' => $error];
 }
 
+function normalize_fallback(?string $value): ?int
+{
+    if ($value === null) {
+        return null;
+    }
+    $raw = trim(strtolower($value));
+    if ($raw === '') {
+        return null;
+    }
+    // accetta formati tipo "2500", "2.5k", "2,5k", "1m"
+    $normalized = str_replace(',', '.', $raw);
+    if (preg_match('/^([0-9]+(?:\.[0-9]+)?)\s*([km])?$/', $normalized, $m)) {
+        $num = (float)$m[1];
+        $suffix = $m[2] ?? '';
+        if ($suffix === 'k') {
+            $num *= 1000;
+        } elseif ($suffix === 'm') {
+            $num *= 1000000;
+        }
+        return (int)round($num);
+    }
+    if (is_numeric($raw)) {
+        return (int)$raw;
+    }
+    return null;
+}
+
 function apply_fallback(array $result, ?string $fallback): array
 {
     if ($result['count'] !== null) {
         return $result;
     }
-    if ($fallback !== null && $fallback !== '' && is_numeric($fallback)) {
-        return ['count' => (int)$fallback, 'error' => $result['error'] ?? null];
+    $parsed = normalize_fallback($fallback);
+    if ($parsed !== null) {
+        return ['count' => $parsed, 'error' => $result['error'] ?? null];
     }
     return $result;
 }
