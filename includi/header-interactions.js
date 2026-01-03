@@ -457,6 +457,7 @@
   }
 
   window.initHeaderInteractions = initHeaderInteractions;
+  window.initSocialCounters = initSocialCounters;
 
   loadPrivacyScript();
 

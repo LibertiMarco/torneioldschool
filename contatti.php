@@ -432,7 +432,12 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
     // FOOTER
     fetch("/includi/footer.html")
       .then(r => r.text())
-      .then(html => document.getElementById("footer-container").innerHTML = html);
+      .then(html => {
+        document.getElementById("footer-container").innerHTML = html;
+        if (typeof initSocialCounters === "function") {
+          initSocialCounters();
+        }
+      });
 
     // HEADER
     fetch("/includi/header.php")
@@ -441,6 +446,9 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
         document.getElementById("header-container").innerHTML = html;
         if (typeof initHeaderInteractions === "function") {
           initHeaderInteractions();
+        }
+        if (typeof initSocialCounters === "function") {
+          initSocialCounters();
         }
         bindBasicHeaderToggle(document);
         const header = document.querySelector(".site-header");
