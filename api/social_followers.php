@@ -17,6 +17,17 @@ function social_result(?int $count, ?string $error = null): array
     return ['count' => $count, 'error' => $error];
 }
 
+function apply_fallback(array $result, ?string $fallback): array
+{
+    if ($result['count'] !== null) {
+        return $result;
+    }
+    if ($fallback !== null && $fallback !== '' && is_numeric($fallback)) {
+        return ['count' => (int)$fallback, 'error' => $result['error'] ?? null];
+    }
+    return $result;
+}
+
 function fetch_json(string $url, array $options = []): array
 {
     $timeout = isset($options['timeout']) ? (int)$options['timeout'] : 10;
@@ -174,6 +185,9 @@ $config = [
     'YOUTUBE_CHANNEL_ID' => getenv('YOUTUBE_CHANNEL_ID') ?: '',
     'TIKTOK_ACCESS_TOKEN' => getenv('TIKTOK_ACCESS_TOKEN') ?: '',
     'TIKTOK_USER_ID' => getenv('TIKTOK_USER_ID') ?: '',
+    'FALLBACK_FACEBOOK' => getenv('FALLBACK_FACEBOOK') ?: '',
+    'FALLBACK_INSTAGRAM' => getenv('FALLBACK_INSTAGRAM') ?: '',
+    'FALLBACK_TIKTOK' => getenv('FALLBACK_TIKTOK') ?: '',
 ];
 
 $cacheFile = __DIR__ . '/../cache/social_followers.json';
@@ -198,10 +212,19 @@ $payload = [
     'cached' => false,
     'updated_at' => time(),
     'counts' => [
-        'instagram' => fetch_instagram($config),
-        'facebook' => fetch_facebook($config),
+        'instagram' => apply_fallback(
+            fetch_instagram($config),
+            $config['FALLBACK_INSTAGRAM']
+        ),
+        'facebook' => apply_fallback(
+            fetch_facebook($config),
+            $config['FALLBACK_FACEBOOK']
+        ),
         'youtube' => fetch_youtube($config),
-        'tiktok' => fetch_tiktok($config),
+        'tiktok' => apply_fallback(
+            fetch_tiktok($config),
+            $config['FALLBACK_TIKTOK']
+        ),
     ],
 ];
 
