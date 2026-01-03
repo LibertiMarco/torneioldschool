@@ -199,6 +199,20 @@ if (!$force && file_exists($cacheFile)) {
     if ($age < $cacheTtl) {
         $cached = json_decode((string)file_get_contents($cacheFile), true);
         if (is_array($cached)) {
+            if (isset($cached['counts']) && is_array($cached['counts'])) {
+                $cached['counts']['instagram'] = apply_fallback(
+                    $cached['counts']['instagram'] ?? social_result(null, 'Cache mancante'),
+                    $config['FALLBACK_INSTAGRAM']
+                );
+                $cached['counts']['facebook'] = apply_fallback(
+                    $cached['counts']['facebook'] ?? social_result(null, 'Cache mancante'),
+                    $config['FALLBACK_FACEBOOK']
+                );
+                $cached['counts']['tiktok'] = apply_fallback(
+                    $cached['counts']['tiktok'] ?? social_result(null, 'Cache mancante'),
+                    $config['FALLBACK_TIKTOK']
+                );
+            }
             json_response([
                 'cached' => true,
                 'updated_at' => $cached['updated_at'] ?? filemtime($cacheFile),

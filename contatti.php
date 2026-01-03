@@ -228,17 +228,44 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
 
     .footer-socials {
       margin-top: 30px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
-    .footer-socials a img {
+    .footer-social {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .footer-social img {
       width: 40px;
       height: 40px;
-      margin: 0 8px;
       transition: transform 0.3s ease;
     }
 
-    .footer-socials a img:hover {
+    .footer-social img:hover {
       transform: scale(1.15);
+    }
+
+    .social-badge {
+      position: absolute;
+      top: -8px;
+      right: -10px;
+      background: #d80000;
+      color: #fff;
+      border-radius: 999px;
+      padding: 1px 8px;
+      font-size: 11px;
+      line-height: 1.4;
+      min-width: 28px;
+      text-align: center;
+      font-weight: 700;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
     }
 
     .hp-field {
@@ -331,11 +358,25 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
         <?php endif; ?>
 
         <div class="footer-socials">
-          <a href="https://www.instagram.com/tornei_old_school/" target="_blank"><img src="/img/icone/instagram.png" alt="Instagram"></a>
-          <a href="https://www.facebook.com/TotorABullet" target="_blank"><img src="/img/icone/facebook.png" alt="Facebook"></a>
-          <a href="https://www.youtube.com/@TORNEIOLDSCHOOL-e8f" target="_blank"><img src="/img/icone/youtube.png" alt="YouTube"></a>
-          <a href="https://www.tiktok.com/@tornei_oldschool" target="_blank"><img src="/img/icone/tiktok.png" alt="TikTok"></a>
-          <a href="https://wa.me/393383213272" target="_blank"><img src="/img/icone/whatsapp.png" alt="Whatsapp"></a>
+          <a class="footer-social" href="https://www.instagram.com/tornei_old_school/" target="_blank" data-social="instagram" aria-label="Instagram">
+            <img src="/img/icone/instagram.png" alt="Instagram">
+            <span class="social-badge" data-social-count="instagram" aria-live="polite">--</span>
+          </a>
+          <a class="footer-social" href="https://www.facebook.com/TotorABullet" target="_blank" data-social="facebook" aria-label="Facebook">
+            <img src="/img/icone/facebook.png" alt="Facebook">
+            <span class="social-badge" data-social-count="facebook" aria-live="polite">--</span>
+          </a>
+          <a class="footer-social" href="https://www.youtube.com/@TORNEIOLDSCHOOL-e8f" target="_blank" data-social="youtube" aria-label="YouTube">
+            <img src="/img/icone/youtube.png" alt="YouTube">
+            <span class="social-badge" data-social-count="youtube" aria-live="polite">--</span>
+          </a>
+          <a class="footer-social" href="https://www.tiktok.com/@tornei_oldschool" target="_blank" data-social="tiktok" aria-label="TikTok">
+            <img src="/img/icone/tiktok.png" alt="TikTok">
+            <span class="social-badge" data-social-count="tiktok" aria-live="polite">--</span>
+          </a>
+          <a class="footer-social" href="https://wa.me/393383213272" target="_blank" aria-label="Whatsapp">
+            <img src="/img/icone/whatsapp.png" alt="Whatsapp">
+          </a>
         </div>
       </div>
     </section>
@@ -355,7 +396,7 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
 
   <div id="footer-container"></div>
 
-  <script src="/includi/app.min.js?v=20251204"></script>
+  <script src="/includi/app.min.js?v=20251216"></script>
   <script>
     function bindBasicHeaderToggle(root) {
       const header = root.querySelector(".site-header");
