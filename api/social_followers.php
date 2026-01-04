@@ -164,26 +164,27 @@ function fetch_youtube(array $cfg): array
     }
 
     $normalized = normalize_youtube_channel($channelId);
-    $params = ['part' => 'statistics', 'key' => $apiKey];
+    $attempts = youtube_param_attempts($normalized);
+    $lastError = null;
 
-    if ($normalized['mode'] === 'handle') {
-        $params['forHandle'] = $normalized['value'];
-    } elseif ($normalized['mode'] === 'username') {
-        $params['forUsername'] = $normalized['value'];
-    } else {
-        $params['id'] = $normalized['value'];
+    foreach ($attempts as $params) {
+        $query = array_merge(['part' => 'statistics', 'key' => $apiKey], $params);
+        $url = 'https://www.googleapis.com/youtube/v3/channels?' . http_build_query($query);
+        $res = fetch_json($url);
+        if (!$res['ok']) {
+            $lastError = $res['error'] ?? 'Errore YouTube';
+            continue;
+        }
+
+        $items = $res['data']['items'] ?? [];
+        $count = $items[0]['statistics']['subscriberCount'] ?? null;
+        if ($count !== null) {
+            return social_result((int)$count, null);
+        }
+        $lastError = $lastError ?? 'subscriberCount non disponibile';
     }
 
-    $url = 'https://www.googleapis.com/youtube/v3/channels?' . http_build_query($params);
-
-    $res = fetch_json($url);
-    if (!$res['ok']) {
-        return social_result(null, $res['error'] ?? 'Errore YouTube');
-    }
-
-    $items = $res['data']['items'] ?? [];
-    $count = $items[0]['statistics']['subscriberCount'] ?? null;
-    return social_result($count !== null ? (int)$count : null, $count === null ? 'subscriberCount non disponibile' : null);
+    return social_result(null, $lastError ?? 'Impossibile recuperare subscriberCount');
 }
 
 function normalize_youtube_channel(string $raw): array
@@ -215,6 +216,35 @@ function normalize_youtube_channel(string $raw): array
 
     // default: assume ID
     return ['mode' => 'id', 'value' => $value];
+}
+
+function youtube_param_attempts(array $normalized): array
+{
+    $attempts = [];
+    $mode = $normalized['mode'];
+    $value = $normalized['value'];
+
+    $looksId = preg_match('/^UC[A-Za-z0-9_-]{20,}$/', $value) === 1;
+
+    if ($mode === 'handle') {
+        $attempts[] = ['forHandle' => $value];
+        if ($looksId) {
+            $attempts[] = ['id' => $value];
+        }
+        $attempts[] = ['forUsername' => ltrim($value, '@')];
+    } elseif ($mode === 'username') {
+        $attempts[] = ['forUsername' => $value];
+        if ($looksId) {
+            $attempts[] = ['id' => $value];
+        }
+    } else {
+        $attempts[] = ['id' => $value];
+        if ($value && !$looksId) {
+            $attempts[] = ['forUsername' => $value];
+        }
+    }
+
+    return $attempts;
 }
 
 function fetch_tiktok(array $cfg): array

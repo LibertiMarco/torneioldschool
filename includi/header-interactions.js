@@ -378,10 +378,9 @@
   }
 
   function renderSocialCounts(data) {
-    const container = document.getElementById("footer-container");
-    if (!container) return;
+    const badges = document.querySelectorAll("[data-social-count]");
+    if (!badges.length) return;
     const counts = data || {};
-    const badges = container.querySelectorAll("[data-social-count]");
 
     badges.forEach((badge) => {
       const key = badge.getAttribute("data-social-count");
