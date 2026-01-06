@@ -38,34 +38,55 @@ $postData = http_build_query([
     'redirect_uri' => $redirectUri,
 ]);
 
-$ch = curl_init('https://open.tiktokapis.com/v2/oauth/token');
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_POST => true,
-    CURLOPT_POSTFIELDS => $postData,
-    CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
-    CURLOPT_TIMEOUT => 15,
-    CURLOPT_CONNECTTIMEOUT => 10,
-]);
+$tokenEndpoints = [
+    'https://open.tiktokapis.com/v2/oauth/token',
+    'https://open.tiktokapis.com/v2/oauth/token/', // fallback se il primo risponde 404 Unsupported path
+];
 
-$raw = curl_exec($ch);
-$status = curl_getinfo($ch, CURLINFO_HTTP_CODE) ?: 0;
-$curlError = curl_error($ch);
-curl_close($ch);
+$last = null;
+foreach ($tokenEndpoints as $endpoint) {
+    $ch = curl_init($endpoint);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $postData,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_CONNECTTIMEOUT => 10,
+    ]);
 
-if ($raw === false) {
-    tiktoauth_json(['ok' => false, 'error' => $curlError ?: 'Richiesta fallita'], 502);
+    $raw = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE) ?: 0;
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($raw === false) {
+        $last = ['ok' => false, 'error' => $curlError ?: 'Richiesta fallita', 'status' => $status];
+        continue;
+    }
+
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        $last = ['ok' => false, 'error' => 'Risposta non valida', 'status' => $status, 'raw' => $raw];
+        // se 404 unsupported path, prova il prossimo endpoint
+        if ($status === 404) {
+            continue;
+        }
+        break;
+    }
+
+    tiktoauth_json([
+        'ok' => $status >= 200 && $status < 300 && !isset($decoded['error']),
+        'status' => $status,
+        'state' => $state,
+        'data' => $decoded,
+        'endpoint' => $endpoint,
+        'note' => 'Copia access_token in includi/env.local.php come TIKTOK_ACCESS_TOKEN e non committarlo.',
+    ]);
 }
 
-$decoded = json_decode($raw, true);
-if (!is_array($decoded)) {
-    tiktoauth_json(['ok' => false, 'error' => 'Risposta non valida', 'status' => $status, 'raw' => $raw], 502);
+// Se siamo qui, nessun endpoint ha dato una risposta JSON valida
+if ($last === null) {
+    $last = ['ok' => false, 'error' => 'Nessuna risposta dal token endpoint', 'status' => 0];
 }
-
-tiktoauth_json([
-    'ok' => $status >= 200 && $status < 300 && !isset($decoded['error']),
-    'status' => $status,
-    'state' => $state,
-    'data' => $decoded,
-    'note' => 'Copia access_token in includi/env.local.php come TIKTOK_ACCESS_TOKEN e non committarlo.',
-]);
+tiktoauth_json($last, 502);
