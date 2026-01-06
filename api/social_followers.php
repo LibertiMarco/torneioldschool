@@ -265,12 +265,37 @@ function fetch_tiktok(array $cfg): array
         'headers' => ['Authorization: Bearer ' . $accessToken],
     ]);
 
+    // L'API TikTok restituisce error.code=0/message="success" anche quando ok,
+    // quindi se code=0 consideriamo la risposta valida.
     if (!$res['ok']) {
-        return social_result(null, $res['error'] ?? 'Errore TikTok');
+        $apiErr = $res['data']['error'] ?? null;
+        if (is_array($apiErr)) {
+            $code = (int)($apiErr['code'] ?? 0);
+            if ($code !== 0) {
+                return social_result(null, $apiErr['message'] ?? $res['error'] ?? 'Errore TikTok');
+            }
+            // code 0 => successo, proseguiamo
+        } else {
+            return social_result(null, $res['error'] ?? 'Errore TikTok');
+        }
     }
 
-    $count = $res['data']['user']['follower_count'] ?? $res['data']['follower_count'] ?? null;
-    return social_result($count !== null ? (int)$count : null, $count === null ? 'follower_count non disponibile' : null);
+    $data = $res['data'];
+    $candidates = [
+        $data['data']['user']['follower_count'] ?? null,
+        $data['user']['follower_count'] ?? null,
+        $data['data']['follower_count'] ?? null,
+        $data['follower_count'] ?? null,
+    ];
+    $count = null;
+    foreach ($candidates as $candidate) {
+        if ($candidate !== null) {
+            $count = (int)$candidate;
+            break;
+        }
+    }
+
+    return social_result($count !== null ? $count : null, $count === null ? 'follower_count non disponibile' : null);
 }
 
 $config = [
