@@ -247,12 +247,127 @@ function youtube_param_attempts(array $normalized): array
     return $attempts;
 }
 
+function tiktok_token_cache_file(): string
+{
+    return __DIR__ . '/../cache/tiktok_token.json';
+}
+
+function tiktok_write_cache(array $data): void
+{
+    $cacheFile = tiktok_token_cache_file();
+    $cacheDir = dirname($cacheFile);
+    if (!is_dir($cacheDir)) {
+        @mkdir($cacheDir, 0775, true);
+    }
+    @file_put_contents($cacheFile, json_encode($data, JSON_UNESCAPED_SLASHES));
+}
+
+function tiktok_resolve_token(array $cfg): array
+{
+    $accessToken = trim($cfg['TIKTOK_ACCESS_TOKEN'] ?? '');
+    $refreshToken = trim($cfg['TIKTOK_REFRESH_TOKEN'] ?? '');
+    $clientKey = trim($cfg['TIKTOK_CLIENT_KEY'] ?? '');
+    $clientSecret = trim($cfg['TIKTOK_CLIENT_SECRET'] ?? '');
+
+    $cacheFile = tiktok_token_cache_file();
+    $now = time();
+    $cached = null;
+    if (file_exists($cacheFile)) {
+        $cached = json_decode((string)file_get_contents($cacheFile), true);
+    }
+
+    if (is_array($cached)) {
+        $expiresAt = (int)($cached['expires_at'] ?? 0);
+        if ($cached['access_token'] ?? '') {
+            // se non scaduto, usa il cached
+            if ($expiresAt > ($now + 60)) { // 1 minuto di margine
+                return ['token' => (string)$cached['access_token'], 'error' => null];
+            }
+        }
+    }
+
+    // se abbiamo già un accessToken da env e nessun refresh disponibile, usiamo quello
+    if ($accessToken !== '' && ($refreshToken === '' || $clientKey === '' || $clientSecret === '')) {
+        return ['token' => $accessToken, 'error' => null];
+    }
+
+    // se possiamo fare refresh e/o il token è vuoto o scaduto
+    if ($refreshToken !== '' && $clientKey !== '' && $clientSecret !== '') {
+        $postData = http_build_query([
+            'client_key' => $clientKey,
+            'client_secret' => $clientSecret,
+            'grant_type' => 'refresh_token',
+            'refresh_token' => $refreshToken,
+        ]);
+
+        $endpoints = [
+            'https://open.tiktokapis.com/v2/oauth/token',
+            'https://open.tiktokapis.com/v2/oauth/token/',
+        ];
+
+        foreach ($endpoints as $endpoint) {
+            $ch = curl_init($endpoint);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $postData,
+                CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
+                CURLOPT_TIMEOUT => 15,
+                CURLOPT_CONNECTTIMEOUT => 10,
+            ]);
+            $raw = curl_exec($ch);
+            $status = curl_getinfo($ch, CURLINFO_HTTP_CODE) ?: 0;
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($raw === false) {
+                $lastError = $curlError ?: 'Richiesta refresh fallita';
+                continue;
+            }
+            $decoded = json_decode($raw, true);
+            if (!is_array($decoded)) {
+                if ($status === 404) {
+                    continue;
+                }
+                $lastError = 'Risposta refresh non valida';
+                break;
+            }
+
+            $code = (int)($decoded['error']['code'] ?? 0);
+            if ($status >= 200 && $status < 300 && ($code === 0 || !isset($decoded['error']))) {
+                $newToken = $decoded['access_token'] ?? null;
+                $expiresIn = (int)($decoded['expires_in'] ?? 0);
+                $newRefresh = $decoded['refresh_token'] ?? $refreshToken;
+                if ($newToken) {
+                    $payload = [
+                        'access_token' => $newToken,
+                        'refresh_token' => $newRefresh,
+                        'expires_at' => $now + max(0, $expiresIn - 60), // margine 60s
+                        'updated_at' => $now,
+                        'endpoint' => $endpoint,
+                    ];
+                    tiktok_write_cache($payload);
+                    return ['token' => $newToken, 'error' => null];
+                }
+            }
+
+            $apiError = $decoded['error']['message'] ?? $decoded['error'] ?? $decoded['message'] ?? null;
+            $lastError = $apiError ?: 'Refresh token fallito';
+        }
+
+        return ['token' => $accessToken !== '' ? $accessToken : null, 'error' => $lastError ?? 'Refresh token fallito'];
+    }
+
+    return ['token' => $accessToken !== '' ? $accessToken : null, 'error' => $accessToken === '' ? 'Config TikTok mancante' : null];
+}
+
 function fetch_tiktok(array $cfg): array
 {
-    $accessToken = $cfg['TIKTOK_ACCESS_TOKEN'] ?? '';
+    $tokenInfo = tiktok_resolve_token($cfg);
+    $accessToken = $tokenInfo['token'] ?? '';
     $userId = $cfg['TIKTOK_USER_ID'] ?? '';
     if ($accessToken === '') {
-        return social_result(null, 'Config TikTok mancante');
+        return social_result(null, $tokenInfo['error'] ?? 'Config TikTok mancante');
     }
 
     $query = ['fields' => 'follower_count'];
