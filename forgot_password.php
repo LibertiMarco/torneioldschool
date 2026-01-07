@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = trim($_POST['email'] ?? '');
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             // Non rivelare se l'account esiste: messaggio generico
-            $success = "Se l'email è registrata, riceverai un link per reimpostare la password.";
+            $success = "Se l'email Ã¨ registrata, riceverai un link per reimpostare la password.";
         } else {
             $stmt = $conn->prepare("SELECT id, nome FROM utenti WHERE email = ? LIMIT 1");
             $stmt->bind_param("s", $email);
@@ -101,12 +101,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $res ? $res->fetch_assoc() : null;
             $stmt->close();
 
-            $success = "Se l'email è registrata, riceverai un link per reimpostare la password.";
+            $success = "Se l'email Ã¨ registrata, riceverai un link per reimpostare la password.";
             if ($user) {
                 try {
                     $token = bin2hex(random_bytes(32));
                 } catch (Exception $e) {
-                    $error = "Errore tecnico. Riprova più tardi.";
+                    $error = "Errore tecnico. Riprova piÃ¹ tardi.";
                 }
                 if (!$error) {
                     $expires = new DateTime('+1 hour');
@@ -127,6 +127,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($seo); ?>

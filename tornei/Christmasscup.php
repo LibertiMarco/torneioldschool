@@ -1,10 +1,19 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../includi/require_login.php';
 $assetVersion = '20251208';
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Christmas's cup - Tornei Old School</title>

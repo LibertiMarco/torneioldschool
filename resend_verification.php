@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
@@ -82,6 +82,15 @@ $captchaQuestion = captcha_generate('resend_form');?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($resendSeo); ?>

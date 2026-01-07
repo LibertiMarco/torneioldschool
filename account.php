@@ -171,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $hashAttuale = $resPwd['password'] ?? '';
             if (!password_verify($currentPassword, $hashAttuale)) {
-                $errorMessage = "La password attuale non Ã¨ corretta.";
+                $errorMessage = "La password attuale non ÃƒÂ¨ corretta.";
             }
         }
     }
@@ -227,6 +227,15 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($accountSeo); ?>

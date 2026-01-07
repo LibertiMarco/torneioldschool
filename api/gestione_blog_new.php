@@ -254,6 +254,15 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
@@ -279,7 +288,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     .file-upload-group { display: flex; flex-direction: column; gap: 12px; }
     .upload-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .file-upload-label { background: linear-gradient(135deg, #0f2740, #1f3f63); color: #fff; padding: 12px 18px; border-radius: 14px; cursor: pointer; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 14px 28px rgba(15,39,64,0.25); transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease; letter-spacing: 0.3px; border: 1px solid rgba(255,255,255,0.12); }
-    .file-upload-label::before { content: "⬆"; display: inline-block; font-weight: 900; }
+    .file-upload-label::before { content: "â¬†"; display: inline-block; font-weight: 900; }
     .file-upload-label:hover { transform: translateY(-2px); box-shadow: 0 18px 36px rgba(15,39,64,0.32); filter: brightness(1.05); }
     .file-upload-label span { color: #fff; font-weight: 700; }
     .file-upload-filename { color: #475467; font-size: 0.95rem; }
@@ -338,7 +347,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <div class="sections-builder">
           <div class="sections-header">
             <label>Struttura contenuto (sottotitolo + paragrafo)</label>
-            <p class="helper-text">Aggiungi quante sezioni vuoi: ogni blocco verrà unito automaticamente nel contenuto dell’articolo. Puoi evidenziare parole racchiudendole tra <code>==così==</code>.</p>
+            <p class="helper-text">Aggiungi quante sezioni vuoi: ogni blocco verrÃ  unito automaticamente nel contenuto dellâ€™articolo. Puoi evidenziare parole racchiudendole tra <code>==cosÃ¬==</code>.</p>
           </div>
           <div class="sections-list" id="sectionsCreate" data-sections="create"></div>
           <button type="button" class="btn-secondary-modern" data-add-section="create">Aggiungi sezione</button>
@@ -393,7 +402,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <div class="sections-builder">
           <div class="sections-header">
             <label>Struttura contenuto (sottotitolo + paragrafo)</label>
-            <p class="helper-text">Modifica o aggiungi blocchi di testo; verranno uniti nel contenuto dell’articolo. Evidenzia con <code>==testo==</code>.</p>
+            <p class="helper-text">Modifica o aggiungi blocchi di testo; verranno uniti nel contenuto dellâ€™articolo. Evidenzia con <code>==testo==</code>.</p>
           </div>
           <div class="sections-list" id="sectionsMod" data-sections="mod"></div>
           <button type="button" class="btn-secondary-modern" data-add-section="mod">Aggiungi sezione</button>

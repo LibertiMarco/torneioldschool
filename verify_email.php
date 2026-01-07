@@ -31,7 +31,7 @@ if ($email && $token) {
         $message = "Utente non trovato.";
     } elseif ((int)$user['email_verificata'] === 1) {
         $status = 'info';
-        $message = "Email già confermata. Puoi accedere con le tue credenziali.";
+        $message = "Email giÃ  confermata. Puoi accedere con le tue credenziali.";
     } elseif (empty($user['token_verifica']) || !hash_equals($user['token_verifica'], $token)) {
         $message = "Token di verifica non valido. Richiedi una nuova email di conferma.";
     } else {
@@ -39,16 +39,16 @@ if ($email && $token) {
         $now = new DateTime();
 
         if ($scadenza && $scadenza < $now) {
-            $message = "Il link di verifica è scaduto. Richiedi una nuova email di conferma.";
+            $message = "Il link di verifica Ã¨ scaduto. Richiedi una nuova email di conferma.";
         } else {
             $update = $conn->prepare("UPDATE utenti SET email_verificata = 1, token_verifica = NULL, token_verifica_scadenza = NULL WHERE id = ?");
             $update->bind_param("i", $user['id']);
 
             if ($update->execute()) {
                 $status = 'success';
-                $message = "Perfetto! Il tuo indirizzo email è stato confermato. Ora puoi accedere.";
+                $message = "Perfetto! Il tuo indirizzo email Ã¨ stato confermato. Ora puoi accedere.";
             } else {
-                $message = "Si è verificato un errore durante la conferma dell'email. Riprova più tardi.";
+                $message = "Si Ã¨ verificato un errore durante la conferma dell'email. Riprova piÃ¹ tardi.";
             }
         }
     }
@@ -59,6 +59,15 @@ if ($email && $token) {
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($verifySeo); ?>

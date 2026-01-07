@@ -19,6 +19,15 @@ $leadersBreadcrumbs = seo_breadcrumb_schema([
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?php render_seo_tags($leadersSeo); ?>
@@ -145,7 +154,7 @@ function renderCards(players) {
         const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim();
         const ruolo = p.ruolo ? `<span class="leader-role">${escapeHTML(p.ruolo)}</span>` : '';
         const team = p.squadra ? escapeHTML(p.squadra) : 'Squadra non assegnata';
-        const media = p.media_voti ? `<span>⭐ ${p.media_voti}</span>` : '';
+        const media = p.media_voti ? `<span>â­ ${p.media_voti}</span>` : '';
 
         return `
             <div class="leader-card">
@@ -159,8 +168,8 @@ function renderCards(players) {
                         <div class="leader-team">${team}</div>
                     </div>
                     <div class="leader-meta">
-                        <span>⚽ ${p.gol ?? 0} gol</span>
-                        <span>⏱️ ${p.presenze ?? 0} presenze</span>
+                        <span>âš½ ${p.gol ?? 0} gol</span>
+                        <span>â±ï¸ ${p.presenze ?? 0} presenze</span>
                         ${media}
                     </div>
                 </div>

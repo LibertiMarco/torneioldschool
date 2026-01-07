@@ -73,7 +73,7 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $fase
         return;
     }
 
-    // Sceglie il template più adatto in base alle scelte
+    // Sceglie il template piÃ¹ adatto in base alle scelte
     $templates = scegliTemplatePerFormula($formulaTorneo, $faseFinale, $baseDir);
     $htmlTemplate = $templates['html'] ?? null;
     $jsTemplate   = $templates['js'] ?? null;
@@ -179,7 +179,7 @@ function purgeTorneoData(string $torneoSlug): void {
         $stmt->close();
     }
 
-    // Elimina partite del torneo (cascata già gestisce partita_giocatore se non eseguita sopra)
+    // Elimina partite del torneo (cascata giÃ  gestisce partita_giocatore se non eseguita sopra)
     if ($stmt = $conn->prepare("DELETE FROM partite WHERE torneo = ?")) {
         $stmt->bind_param('s', $torneoSlug);
         $stmt->execute();
@@ -430,6 +430,15 @@ if ($lista instanceof mysqli_result) {
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="robots" content="noindex, nofollow">
@@ -649,14 +658,14 @@ if ($lista instanceof mysqli_result) {
                         <button type="button" class="file-btn" data-target="img_upload">Scegli immagine</button>
                         <span class="file-name" id="img_upload_name">Nessun file selezionato</span>
                     </div>
-                    <small>Se non carichi un file verrÃ  usata l'immagine predefinita.</small>
+                    <small>Se non carichi un file verrÃƒÂ  usata l'immagine predefinita.</small>
                 </div>
                 <div class="form-group"><label>File Torneo</label><input type="text" name="filetorneo" required></div>
                 <div class="form-group"><label>Categoria</label><input type="text" name="categoria" required></div>
                 <div class="form-group checkbox-group">
                     <label>
                         <input type="checkbox" name="squadre_complete" value="1">
-                        Tutte le squadre già create (nascondi torneo nella creazione squadre)
+                        Tutte le squadre giÃ  create (nascondi torneo nella creazione squadre)
                     </label>
                 </div>
                 <button type="submit" name="crea" class="btn-primary">Crea Torneo</button>
@@ -696,14 +705,14 @@ if ($lista instanceof mysqli_result) {
                         <button type="button" class="file-btn" data-target="img_upload_mod">Scegli immagine</button>
                         <span class="file-name" id="img_upload_mod_name">Nessun file selezionato</span>
                     </div>
-                    <small>Se non carichi nulla resterÃ  l'immagine attuale.</small>
+                    <small>Se non carichi nulla resterÃƒÂ  l'immagine attuale.</small>
                 </div>
                 <div class="form-group"><label>File Torneo</label><input type="text" name="filetorneo" id="mod_file"></div>
                 <div class="form-group"><label>Categoria</label><input type="text" name="categoria" id="mod_categoria"></div>
                 <div class="form-group checkbox-group">
                     <label>
                         <input type="checkbox" name="squadre_complete" id="mod_squadre_complete" value="1">
-                        Tutte le squadre già create (nascondi torneo nella creazione squadre)
+                        Tutte le squadre giÃ  create (nascondi torneo nella creazione squadre)
                     </label>
                 </div>
                         
@@ -931,7 +940,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tbody.innerHTML = "";
       rows.forEach(r => tbody.appendChild(r));
 
-      // Aggiorna indicatori â†‘â†“
+      // Aggiorna indicatori Ã¢â€ â€˜Ã¢â€ â€œ
       headers.forEach(h => h.classList.remove("sort-asc", "sort-desc"));
       header.classList.add(sortDirection[col] === "asc" ? "sort-asc" : "sort-desc");
     });

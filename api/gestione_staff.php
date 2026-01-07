@@ -157,7 +157,7 @@ if (!$conn || $conn->connect_error) {
             }
         } elseif ($azione === 'update' && $id > 0) {
             if ($nome === '') {
-                $errors[] = "Il nome non può essere vuoto.";
+                $errors[] = "Il nome non puÃ² essere vuoto.";
             } else {
                 $currentFoto = '/img/giocatori/unknown.jpg';
                 $current = $conn->prepare("SELECT foto FROM staff WHERE id = ?");
@@ -237,6 +237,15 @@ if (!$conn || $conn->connect_error) {
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">

@@ -25,6 +25,15 @@ $localSchema = [
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <?php render_seo_tags($homeSeo); ?>
@@ -112,7 +121,7 @@ $localSchema = [
         <div class="hero-overlay">
           <h1>Chi Siamo</h1>
           <p>Lo facciamo per passione, per condividere divertimento e amicizia con chiunque voglia partecipare.</p>
-          <a href="chisiamo.php" class="hero-btn">Scopri di più</a>
+          <a href="chisiamo.php" class="hero-btn">Scopri di piÃ¹</a>
         </div>
       </section>
 
@@ -199,8 +208,8 @@ function renderHomeLeaderCard(player, position, torneoLabel, ordine) {
     const nome = `${player.nome ?? ''} ${player.cognome ?? ''}`.trim() || 'Profilo';
     const squadra = player.squadra ? `${player.squadra}${torneoLabel ? ' - ' + torneoLabel : ''}` : '';
 
-    const metaPresenze = `<span>⏱️ ${player.presenze ?? 0} presenze</span>`;
-    const metaGol = `<span>⚽ ${player.gol ?? 0} gol</span>`;
+    const metaPresenze = `<span>â±ï¸ ${player.presenze ?? 0} presenze</span>`;
+    const metaGol = `<span>âš½ ${player.gol ?? 0} gol</span>`;
     const metaOrder = ordine === 'presenze' ? [metaPresenze, metaGol] : [metaGol, metaPresenze];
 
     return `
@@ -392,7 +401,7 @@ loadHallOfFame();
         })
         .catch(error => console.error("Errore nel caricamento dell'header:", error));
     } else {
-      // Header già incluso via PHP
+      // Header giÃ  incluso via PHP
       initHeaderInteractions(document);
       attachHeaderExtras();
     }

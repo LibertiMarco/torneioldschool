@@ -373,6 +373,15 @@ $giocatoriJson = htmlspecialchars(
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
@@ -634,9 +643,9 @@ $giocatoriJson = htmlspecialchars(
 -->
 
 <?php if (isset($_GET['duplicate']) && $_GET['duplicate'] === '1'): ?>
-<div class="admin-alert error" id="duplicateAlert">Giocatore giÃ  esistente</div>
+<div class="admin-alert error" id="duplicateAlert">Giocatore giÃƒÂ  esistente</div>
 <?php elseif (isset($_GET['assoc_exists']) && $_GET['assoc_exists'] === '1'): ?>
-<div class="admin-alert error" id="assocAlert">Il giocatore fa giÃ  parte di questa squadra</div>
+<div class="admin-alert error" id="assocAlert">Il giocatore fa giÃƒÂ  parte di questa squadra</div>
 <?php endif; ?>
 
 <!-- PICKLIST -->
@@ -651,7 +660,7 @@ $giocatoriJson = htmlspecialchars(
       </div>
 <input type="hidden" id="currentAction" value="<?= htmlspecialchars($currentAction) ?>">
 
-<!-- âœ… FORM CREA -->
+<!-- Ã¢Å“â€¦ FORM CREA -->
 <form method="POST" class="admin-form form-crea" enctype="multipart/form-data">
 <?= csrf_field('admin_giocatori') ?>
 <h2>Aggiungi Giocatore</h2>
@@ -673,14 +682,14 @@ $giocatoriJson = htmlspecialchars(
         <button type="button" class="file-btn" data-target="foto_upload">Scegli immagine</button>
         <span class="file-name" id="foto_upload_name">Nessun file selezionato</span>
     </div>
-    <small>Se non carichi un'immagine verrÃ  usata <code>unknown.jpg</code>.</small>
+    <small>Se non carichi un'immagine verrÃƒÂ  usata <code>unknown.jpg</code>.</small>
 </div>
 
 <button type="submit" name="crea" class="btn-primary">Crea Giocatore</button>
 </form>
 
 
-<!-- âœ… FORM MODIFICA -->
+<!-- Ã¢Å“â€¦ FORM MODIFICA -->
 <form method="POST" class="admin-form form-modifica hidden" id="formModifica" enctype="multipart/form-data">
 <?= csrf_field('admin_giocatori') ?>
 <h2>Modifica Giocatore</h2>
@@ -733,7 +742,7 @@ $giocatoriJson = htmlspecialchars(
 <button type="submit" name="aggiorna" class="btn-primary">Aggiorna Giocatore</button>
 </form>
 
-<!-- âœ… SEZIONE ELIMINA -->
+<!-- Ã¢Å“â€¦ SEZIONE ELIMINA -->
 <!-- GESTIONE ASSOCIAZIONI -->
 <section class="admin-associazioni form-associazioni hidden">
   <h2>Associazione Calciatore-Squadra</h2>
@@ -799,7 +808,7 @@ $giocatoriJson = htmlspecialchars(
 
       <div class="form-group">
           <label><input type="checkbox" name="capitano_associa" value="1"> Capitano della squadra</label>
-          <small>Un solo capitano per squadra; un giocatore puÃ² essere capitano di squadre diverse.</small>
+          <small>Un solo capitano per squadra; un giocatore puÃƒÂ² essere capitano di squadre diverse.</small>
       </div>
 
       <div class="form-group">
@@ -809,7 +818,7 @@ $giocatoriJson = htmlspecialchars(
               <button type="button" class="file-btn" data-target="foto_associazione_upload">Scegli immagine</button>
               <span class="file-name" id="foto_associazione_upload_name">Nessun file selezionato</span>
           </div>
-          <small>Se non carichi nulla verrÃ  usata la foto del giocatore.</small>
+          <small>Se non carichi nulla verrÃƒÂ  usata la foto del giocatore.</small>
       </div>
 
       <button type="submit" name="associa_squadra" class="btn-primary">Aggiungi associazione</button>
@@ -860,7 +869,7 @@ $giocatoriJson = htmlspecialchars(
 
       <div class="form-group">
           <label><input type="checkbox" name="mod_assoc_capitano" id="mod_assoc_capitano" value="1"> Capitano della squadra</label>
-          <small>Un solo capitano per squadra; un giocatore puÃ² essere capitano di squadre diverse.</small>
+          <small>Un solo capitano per squadra; un giocatore puÃƒÂ² essere capitano di squadre diverse.</small>
       </div>
 
       <div class="form-row">
@@ -1025,7 +1034,7 @@ $giocatoriJson = htmlspecialchars(
 <div id="footer-container"></div>
 
 
-<!-- âœ… SCRIPTS -->
+<!-- Ã¢Å“â€¦ SCRIPTS -->
 <script>
 const selectAzione = document.getElementById('azione');
 const currentActionInput = document.getElementById('currentAction');
@@ -1359,7 +1368,7 @@ function filterTabella(term) {
     const tbody = tabellaGiocatori.querySelector("tbody");
     if (!tbody) return;
 
-    // Se non c'Ã¨ testo, mostra gli ultimi 10 (giÃ  popolati dal PHP)
+    // Se non c'ÃƒÂ¨ testo, mostra gli ultimi 10 (giÃƒÂ  popolati dal PHP)
     if (normalized === "") {
         // ripristina ultimi 10
         tbody.querySelectorAll("tr").forEach(row => row.style.display = "");
@@ -1596,7 +1605,7 @@ selectGiocatore?.addEventListener("change", async e => {
 });
 </script>
 <script>
-// âœ… ORDINAMENTO TABELLA ELIMINA GIOCATORI
+// Ã¢Å“â€¦ ORDINAMENTO TABELLA ELIMINA GIOCATORI
 document.addEventListener("DOMContentLoaded", () => {
     const table = document.getElementById("tabellaGiocatori");
     const headers = table.querySelectorAll("th[data-col]");

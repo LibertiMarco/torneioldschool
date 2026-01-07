@@ -18,6 +18,15 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <?php render_seo_tags($blogSeo); ?>
@@ -513,10 +522,10 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 
 <section class="blog-hero">
   <div class="blog-hero-content">
-    <p class="eyebrow">Novità dal club</p>
+    <p class="eyebrow">NovitÃ  dal club</p>
     <h1>Blog &amp; approfondimenti</h1>
     <p class="lead">
-      Raccontiamo tornei, backstage e consigli per la community. Filtra gli articoli per trovare subito ciò che ti interessa.
+      Raccontiamo tornei, backstage e consigli per la community. Filtra gli articoli per trovare subito ciÃ² che ti interessa.
     </p>
     <label class="blog-search" for="blogSearch">
       <span class="sr-only">Cerca nel blog</span>
@@ -571,7 +580,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 
   <aside class="blog-sidebar">
     <h3>Consigli di lettura</h3>
-    <p class="sidebar-desc">Gli aggiornamenti più freschi da non perdere.</p>
+    <p class="sidebar-desc">Gli aggiornamenti piÃ¹ freschi da non perdere.</p>
     <div id="miniList">Stiamo preparando la lista...</div>
   </aside>
 </main>
@@ -651,7 +660,7 @@ function updateFeatured(post) {
         <div class="featured-copy">
             <span>${escapeHTML(post.data)}</span>
             <h3>${escapeHTML(post.titolo)}</h3>
-            <p>${escapeHTML(preview || 'Scopri cosa è successo dietro le quinte del torneo!')}</p>
+            <p>${escapeHTML(preview || 'Scopri cosa Ã¨ successo dietro le quinte del torneo!')}</p>
             <div class="featured-actions">
                 <a class="primary" href="/articolo.php?id=${post.id}">Leggi ora</a>
                 <a class="secondary" href="/tornei.php">Vedi i tornei</a>
@@ -685,7 +694,7 @@ function renderGrid(posts) {
         cardGrid.innerHTML = `
             <div class="blog-card">
                 <div class="card-body">
-                    <h3>Hai già letto il pezzo principale!</h3>
+                    <h3>Hai giÃ  letto il pezzo principale!</h3>
                     <p>Quando pubblicheremo nuovi contenuti compariranno qui.</p>
                 </div>
             </div>`;
@@ -793,7 +802,7 @@ async function loadBlog() {
         featuredBox.innerHTML = `
             <div class="featured-copy">
                 <span>Errore</span>
-                <h3>Ops, qualcosa è andato storto</h3>
+                <h3>Ops, qualcosa Ã¨ andato storto</h3>
                 <p>${escapeHTML(error.message)}</p>
             </div>`;
         cardGrid.innerHTML = '';

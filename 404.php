@@ -5,7 +5,7 @@ require_once __DIR__ . '/includi/seo.php';
 $baseUrl = seo_base_url();
 $seo = [
   'title' => 'Pagina non trovata - Tornei Old School',
-  'description' => 'La pagina che cerchi non esiste più. Torna alla home o scopri i tornei attivi.',
+  'description' => 'La pagina che cerchi non esiste piÃ¹. Torna alla home o scopri i tornei attivi.',
   'image' => $baseUrl . '/img/logo_old_school_1200.png',
   'url' => $baseUrl . ($_SERVER['REQUEST_URI'] ?? '/404'),
 ];
@@ -13,6 +13,15 @@ $seo = [
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($seo); ?>
@@ -32,7 +41,7 @@ $seo = [
   <section class="error-hero">
     <div class="error-card">
       <h1>Oops, pagina non trovata</h1>
-      <p>Il link potrebbe essere cambiato o la pagina è stata rimossa. Prova dalla home oppure vai ai tornei.</p>
+      <p>Il link potrebbe essere cambiato o la pagina Ã¨ stata rimossa. Prova dalla home oppure vai ai tornei.</p>
       <div class="error-actions">
         <a class="primary" href="/">Torna alla home</a>
         <a class="ghost" href="/tornei.php">Vedi i tornei</a>

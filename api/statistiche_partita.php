@@ -15,6 +15,15 @@ if (!$partita_id) {
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Statistiche Partita</title>
@@ -229,7 +238,7 @@ if (!$partita_id) {
 
 <!-- HEADER FINALE -->
 <div class="page-header">
-    <button class="btn-back" id="btnBackStats">← Torna indietro</button>
+    <button class="btn-back" id="btnBackStats">â† Torna indietro</button>
     <h1>Statistiche Partita</h1>
 </div>
 
@@ -288,7 +297,7 @@ if (!$partita_id) {
     <input type="number" name="voto" min="0" max="10" step="0.5" value="6">
   </div>
 
-  <button class="btn-primary" type="submit">➕ Aggiungi</button>
+  <button class="btn-primary" type="submit">âž• Aggiungi</button>
 </form>
 
 <!-- ===================== MODIFICA ====================== -->
@@ -333,7 +342,7 @@ if (!$partita_id) {
       <input id="edit_voto" type="number" name="voto" min="0" max="10" step="0.5">
     </div>
 
-    <button class="btn-primary">💾 Salva Modifiche</button>
+    <button class="btn-primary">ðŸ’¾ Salva Modifiche</button>
   </form>
 </section>
 
@@ -414,7 +423,7 @@ async function loadPartita(){
   document.getElementById("partitaInfo").innerHTML = `
     <b>${p.squadra_casa} - ${p.squadra_ospite}</b><br>
     ${p.data_partita} | ${p.ora_partita.substring(0,5)}<br>
-    <span style="font-size:14px;color:#444;">${torneoNome} · ${p.fase || 'REGULAR'}</span>
+    <span style="font-size:14px;color:#444;">${torneoNome} Â· ${p.fase || 'REGULAR'}</span>
   `;
 
 }
@@ -492,7 +501,7 @@ document.getElementById("formAdd").addEventListener("submit", async e => {
   const out = await r.json();
 
   if(out.error === "exists"){
-      showMsg("⚠️ Giocatore già aggiunto", "error");
+      showMsg("âš ï¸ Giocatore giÃ  aggiunto", "error");
       return;
   }
 

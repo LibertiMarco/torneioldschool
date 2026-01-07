@@ -120,6 +120,15 @@ if ($matchId > 0) {
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <?php render_seo_tags($matchSeo); ?>
@@ -139,17 +148,17 @@ if ($matchId > 0) {
   <!-- CONTENUTO -->
   <main class="content" style="margin-top:24px; padding-top:18px;">
     <div class="titolo-row">
-      <button id="btnBack" onclick="history.back()">⟵</button>
+      <button id="btnBack" onclick="history.back()">âŸµ</button>
       <h1 class="titolo">Statistiche Partita</h1>
     </div>
 
-    <!-- ✅ Qui iniettiamo la STESSA match-card del calendario -->
+    <!-- âœ… Qui iniettiamo la STESSA match-card del calendario -->
     <div id="partitaContainer" style="margin-bottom:20px;"></div>
 
-    <!-- ✅ Riepilogo eventi -->
+    <!-- âœ… Riepilogo eventi -->
     <div id="riepilogoEventi" style="margin-bottom:20px;"></div>
 
-    <!-- ✅ Cards giocatori -->
+    <!-- âœ… Cards giocatori -->
     <div id="eventiGiocatori" class="eventi-giocatori-grid"></div>
   </main>
 

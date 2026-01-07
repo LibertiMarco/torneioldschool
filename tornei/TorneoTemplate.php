@@ -14,6 +14,15 @@ $assetVersion = '20251208';
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><?= htmlspecialchars($torneoName) ?> - Tornei Old School</title>
@@ -132,7 +141,7 @@ $assetVersion = '20251208';
       <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo <?= htmlspecialchars($torneoName) ?>">
       <div class="torneo-title">
         <h1 class="titolo"><?= htmlspecialchars($torneoName) ?></h1>
-        <button type="button" class="fav-toggle" id="favTournamentBtn">☆ Segui torneo</button>
+        <button type="button" class="fav-toggle" id="favTournamentBtn">â˜† Segui torneo</button>
       </div>
     </div>
 
@@ -243,7 +252,7 @@ $assetVersion = '20251208';
 
   <!-- REGOLE -->
   <section id="regole" class="tab-section">
-    <h2 class="titolo-sezione">📜 Regole del Torneo</h2>
+    <h2 class="titolo-sezione">ðŸ“œ Regole del Torneo</h2>
     <div class="regole-box">
       <div class="regola">
         <h3>Struttura del Campionato</h3>

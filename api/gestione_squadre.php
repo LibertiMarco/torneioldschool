@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $logo = $squadraOrig['logo'];
                 }
             }
-            // Se è stato caricato un file, questo ha la precedenza
+            // Se Ã¨ stato caricato un file, questo ha la precedenza
             $uploadLogo = salvaScudetto($nome, $torneo, 'scudetto');
             if ($uploadLogo) {
                 $logo = $uploadLogo;
@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (Throwable $e) {
                 // 1062 = duplicate entry
                 if (method_exists($e, 'getCode') && (int)$e->getCode() === 1062) {
-                    $errore = 'Squadra già iscritta al torneo.';
+                    $errore = 'Squadra giÃ  iscritta al torneo.';
                 } else {
                     $errore = 'Errore nella creazione: ' . $e->getMessage();
                 }
@@ -170,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } catch (Throwable $e) {
                 if (method_exists($e, 'getCode') && (int)$e->getCode() === 1062) {
-                    $errore = 'Squadra già iscritta al torneo.';
+                    $errore = 'Squadra giÃ  iscritta al torneo.';
                 } else {
                     $errore = 'Errore nell\'aggiornamento: ' . $e->getMessage();
                 }
@@ -241,6 +241,15 @@ if ($resSquadre = $squadra->getAll()) {
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
@@ -355,7 +364,7 @@ if ($resSquadre = $squadra->getAll()) {
           <div class="form-group">
             <label>Riutilizza scudetto esistente (opzionale)</label>
             <select name="logo_esistente">
-              <option value="">-- Nessuno, caricherò un nuovo scudetto --</option>
+              <option value="">-- Nessuno, caricherÃ² un nuovo scudetto --</option>
               <?php foreach ($squadreList as $row): ?>
                 <?php if (!empty($row['logo'])): ?>
                   <?php $torneoLabel = $torneoLabelBySlug[$row['torneo']] ?? $row['torneo']; ?>

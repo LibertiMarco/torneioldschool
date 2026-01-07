@@ -78,7 +78,7 @@ if (!$conn || $conn->connect_error) {
                     if (!$player) {
                         $errors[] = "Giocatore selezionato non trovato.";
                     } elseif (!empty($player['utente_id'])) {
-                        $errors[] = "Questo giocatore ha già un account associato.";
+                        $errors[] = "Questo giocatore ha giÃ  un account associato.";
                     } else {
                         $stmtAlready = $conn->prepare("
                             SELECT id, nome, cognome
@@ -92,7 +92,7 @@ if (!$conn || $conn->connect_error) {
                         $stmtAlready->close();
 
                         if ($already) {
-                            $errors[] = "L'account è già associato a {$already['nome']} {$already['cognome']}.";
+                            $errors[] = "L'account Ã¨ giÃ  associato a {$already['nome']} {$already['cognome']}.";
                         } else {
                             $stmtUpdate = $conn->prepare("UPDATE giocatori SET utente_id = ? WHERE id = ?");
                             $stmtUpdate->bind_param("ii", $utenteId, $giocatoreId);
@@ -178,6 +178,15 @@ if (!$conn || $conn->connect_error) {
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
@@ -236,7 +245,7 @@ if (!$conn || $conn->connect_error) {
               <?php endforeach; ?>
             </select>
             <?php if (empty($utentiDisponibili)): ?>
-              <span class="small-note">Nessun account libero: tutti gli account risultano già associati a un giocatore.</span>
+              <span class="small-note">Nessun account libero: tutti gli account risultano giÃ  associati a un giocatore.</span>
             <?php endif; ?>
           </label>
           <label>Giocatore
@@ -252,7 +261,7 @@ if (!$conn || $conn->connect_error) {
           </label>
           <div class="actions" style="grid-column: 1 / -1;">
             <button class="btn-primary" type="submit" <?= (empty($utentiDisponibili) || empty($giocatoriDisponibili)) ? 'disabled' : '' ?>>Associa</button>
-            <p class="small-note">Un account può essere collegato a un solo giocatore e viceversa.</p>
+            <p class="small-note">Un account puÃ² essere collegato a un solo giocatore e viceversa.</p>
           </div>
         </form>
       </div>

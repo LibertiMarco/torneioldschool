@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Richiesta non valida.';
     } elseif (!rate_limit_allow('delete_account', 2, 3600)) {
         $wait = rate_limit_retry_after('delete_account', 3600);
-        $error = "Hai già inviato una richiesta recentemente. Riprova tra {$wait} secondi.";
+        $error = "Hai giÃ  inviato una richiesta recentemente. Riprova tra {$wait} secondi.";
     } else {
         $password = $_POST['password'] ?? '';
         $confirm = !empty($_POST['confirm_delete']);
@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $success = 'Account eliminato correttamente. Verrai reindirizzato alla home.';
                     header("Refresh: 2; URL=/");
                 } else {
-                    $error = 'Errore durante la cancellazione. Riprova più tardi.';
+                    $error = 'Errore durante la cancellazione. Riprova piÃ¹ tardi.';
                 }
             }
         }
@@ -87,6 +87,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($seo); ?>

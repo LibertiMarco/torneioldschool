@@ -258,6 +258,15 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
@@ -287,7 +296,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     .file-upload-group { display: flex; flex-direction: column; gap: 12px; }
     .upload-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .file-upload-label { background: linear-gradient(135deg, #10385a, #1d5078); color: #fff; padding: 12px 18px; border-radius: 14px; cursor: pointer; font-weight: 800; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 14px 28px rgba(16,56,90,0.25); transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease; letter-spacing: 0.2px; border: 1px solid rgba(255,255,255,0.12); }
-    .file-upload-label::before { content: "⇧"; display: inline-block; font-weight: 900; }
+    .file-upload-label::before { content: "â‡§"; display: inline-block; font-weight: 900; }
     .file-upload-label:hover { transform: translateY(-2px); box-shadow: 0 18px 36px rgba(16,56,90,0.32); filter: brightness(1.05); }
     .file-upload-label span { color: #fff; font-weight: 800; }
     .file-upload-filename { color: #475467; font-size: 0.95rem; }
@@ -313,11 +322,11 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     .upload-remove:hover { border-color: #1f3f63; color: #1f3f63; }
     .btn-secondary-modern { background: linear-gradient(135deg, #e8ecf3, #d5dde8); color: #1f3f63; border: 1px solid #c4cfdd; padding: 10px 14px; border-radius: 10px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 18px rgba(0,0,0,0.08); transition: transform .15s, box-shadow .15s; }
     .btn-secondary-modern:hover { transform: translateY(-1px); box-shadow: 0 12px 22px rgba(0,0,0,0.12); }
-    .file-upload-label::before { content: "⇧"; }
+    .file-upload-label::before { content: "â‡§"; }
     /* Nasconde il vecchio pulsante torna al blog in gestione articoli */
     button[onclick*="/blog.php"] { display: none !important; }
     .sortable { cursor: pointer; user-select: none; }
-    .sortable::after { content: "↕"; margin-left: 6px; font-size: 0.8rem; color: #7b8498; }
+    .sortable::after { content: "â†•"; margin-left: 6px; font-size: 0.8rem; color: #7b8498; }
     /* Pulsanti modale coerenti */
     .btn-ghost { border: 1px solid #d5dbe4; background: #f8f9fc; color: #1c2a3a; border-radius: 12px; padding: 12px 16px; font-weight: 800; letter-spacing: 0.2px; cursor: pointer; transition: transform .15s, box-shadow .15s; }
     .btn-ghost:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(0,0,0,0.08); }
@@ -357,7 +366,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 
     <div class="panel-card" style="margin-bottom: 12px; display:flex; justify-content:flex-start;">
       <button type="button" class="btn-secondary-modern" style="display:inline-flex; align-items:center; gap:8px;" onclick="window.location.href='/blog.php'">
-        <span style="font-size:16px;">←</span>
+        <span style="font-size:16px;">â†</span>
         <span>Torna al blog</span>
       </button>
     </div>
@@ -371,7 +380,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <div class="sections-builder">
           <div class="sections-header">
             <label>Struttura contenuto (sottotitolo + paragrafo)</label>
-            <p class="helper-text">Aggiungi blocchi di testo: ogni sezione verrà unita automaticamente nel contenuto dell’articolo. Usa <code>==testo==</code> per evidenziare parole.</p>
+            <p class="helper-text">Aggiungi blocchi di testo: ogni sezione verrÃ  unita automaticamente nel contenuto dellâ€™articolo. Usa <code>==testo==</code> per evidenziare parole.</p>
           </div>
           <div class="sections-list" id="sectionsCreate" data-sections="create"></div>
           <button type="button" class="btn-secondary-modern" data-add-section="create">Aggiungi sezione</button>
@@ -426,7 +435,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <div class="sections-builder">
           <div class="sections-header">
             <label>Struttura contenuto (sottotitolo + paragrafo)</label>
-            <p class="helper-text">Modifica i blocchi e li uniremo nel contenuto finale. Evidenzia con <code>==così==</code>.</p>
+            <p class="helper-text">Modifica i blocchi e li uniremo nel contenuto finale. Evidenzia con <code>==cosÃ¬==</code>.</p>
           </div>
           <div class="sections-list" id="sectionsMod" data-sections="mod"></div>
           <button type="button" class="btn-secondary-modern" data-add-section="mod">Aggiungi sezione</button>

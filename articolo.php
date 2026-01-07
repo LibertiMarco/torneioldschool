@@ -102,6 +102,15 @@ if ($id > 0) {
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <?php render_seo_tags($articleMeta); ?>
@@ -633,22 +642,22 @@ if ($id > 0) {
   <article class="article-panel" id="articlePanel">
     <div class="article-meta">
       <a class="article-badge" href="/blog.php" aria-label="Torna al blog">
-        <span aria-hidden="true">⟵</span> Blog
+        <span aria-hidden="true">âŸµ</span> Blog
       </a>
       <span id="articleDate" class="sr-only">--/--/----</span>
     </div>
     <div class="article-backlink-inline">
-      <a href="/blog.php" class="btn-back-blog" aria-label="Torna al blog">↩ Torna al blog</a>
+      <a href="/blog.php" class="btn-back-blog" aria-label="Torna al blog">â†© Torna al blog</a>
     </div>
     <h2 id="articleTitle">Caricamento...</h2>
     <p class="article-subtitle" id="articleSubtitle">Recuperiamo i dettagli e li inquadriamo al meglio.</p>
 <div class="article-media hidden" id="articleMedia">
-    <button class="carousel-nav prev" id="mediaPrev" aria-label="Media precedente">‹</button>
+    <button class="carousel-nav prev" id="mediaPrev" aria-label="Media precedente">â€¹</button>
     <div class="media-stage" id="mediaStage"></div>
-    <button class="carousel-nav next" id="mediaNext" aria-label="Media successivo">›</button>
+    <button class="carousel-nav next" id="mediaNext" aria-label="Media successivo">â€º</button>
     <div class="media-dots" id="mediaDots"></div>
 </div>
-    <div class="article-content" id="articleContent">Un attimo di pazienza…</div>
+    <div class="article-content" id="articleContent">Un attimo di pazienzaâ€¦</div>
   </article>
 
   <aside class="article-sidebar">

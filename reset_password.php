@@ -57,7 +57,7 @@ if ($token === '' || $email === '') {
         $now = new DateTime();
         $exp = new DateTime($row['expires_at']);
         if (!empty($row['used_at'])) {
-            $error = "Link già utilizzato. Richiedi un nuovo reset.";
+            $error = "Link giÃ  utilizzato. Richiedi un nuovo reset.";
         } elseif ($exp < $now) {
             $error = "Link scaduto. Richiedi un nuovo reset.";
         }
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$error) {
             if (!$row) {
                 $error = "Link non valido.";
             } elseif (!empty($row['used_at'])) {
-                $error = "Link già utilizzato. Richiedi un nuovo reset.";
+                $error = "Link giÃ  utilizzato. Richiedi un nuovo reset.";
             } else {
                 $now = new DateTime();
                 $exp = new DateTime($row['expires_at']);
@@ -117,6 +117,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$error) {
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-VZ982XSRRN');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($seo); ?>
