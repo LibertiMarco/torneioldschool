@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includi/require_login.php';
 
 // Template base per creare un nuovo torneo:
@@ -10,6 +10,35 @@ require_once __DIR__ . '/../includi/require_login.php';
 $torneoSlug = 'TEMPLATE_SLUG';
 $torneoName = 'Torneo Template';
 $assetVersion = '20251208';
+
+require_once __DIR__ . '/../includi/db.php';
+$torneoConfig = [];
+$regoleHtmlSafe = '';
+try {
+    if (isset($conn) && $conn instanceof mysqli) {
+        $filetorneo = $torneoSlug . '.php';
+        if ($stmt = $conn->prepare("SELECT config FROM tornei WHERE filetorneo = ? LIMIT 1")) {
+            $stmt->bind_param('s', $filetorneo);
+            if ($stmt->execute()) {
+                $res = $stmt->get_result();
+                $row = $res->fetch_assoc();
+                if ($row && !empty($row['config'])) {
+                    $decoded = json_decode($row['config'], true);
+                    if (is_array($decoded)) {
+                        $torneoConfig = $decoded;
+                    }
+                }
+            }
+            $stmt->close();
+        }
+    }
+} catch (Throwable $e) {
+    // ignora eventuali errori di lettura config
+}
+
+if (!empty($torneoConfig['regole_html'])) {
+    $regoleHtmlSafe = nl2br(htmlspecialchars((string)$torneoConfig['regole_html'], ENT_QUOTES, 'UTF-8'));
+}
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -141,7 +170,7 @@ $assetVersion = '20251208';
       <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo <?= htmlspecialchars($torneoName) ?>">
       <div class="torneo-title">
         <h1 class="titolo"><?= htmlspecialchars($torneoName) ?></h1>
-        <button type="button" class="fav-toggle" id="favTournamentBtn">â˜† Segui torneo</button>
+        <button type="button" class="fav-toggle" id="favTournamentBtn">Ã¢Ëœâ€  Segui torneo</button>
       </div>
     </div>
 
@@ -250,21 +279,24 @@ $assetVersion = '20251208';
     </section>
   </main>
 
-  <!-- REGOLE -->
+    <!-- REGOLE -->
   <section id="regole" class="tab-section">
-    <h2 class="titolo-sezione">ðŸ“œ Regole del Torneo</h2>
-    <div class="regole-box">
-      <div class="regola">
-        <h3>Struttura del Campionato</h3>
-        <p>
-          Personalizza questo blocco con le regole del torneo.
-        </p>
-      </div>
+    <h2 class="titolo-sezione">Regole del Torneo</h2>
+    <div class="regole-box" id="regoleBox">
+      <?php if ($regoleHtmlSafe !== ''): ?>
+        <div class="regola">
+          <p><?= $regoleHtmlSafe ?></p>
+        </div>
+      <?php else: ?>
+        <div class="regola">
+          <p>Le regole saranno pubblicate a breve.</p>
+        </div>
+      <?php endif; ?>
     </div>
     <br><br><br><br>
   </section>
 
-  <!-- MARCATORI -->
+  <!-- MARCATORI --><!-- MARCATORI -->
   <section id="marcatori" class="tab-section">
     <h2>Classifica Marcatori</h2>
     <div class="marcatori-list" id="marcatoriList"></div>
@@ -392,8 +424,10 @@ $assetVersion = '20251208';
   <script>
     // espone lo slug al JS template
     window.__TEMPLATE_TORNEO_SLUG__ = <?= json_encode($torneoSlug) ?>;
+    window.__TORNEO_CONFIG__ = <?= json_encode($torneoConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
   </script>
   <script src="script-TorneoTemplate.js?v=<?= $assetVersion ?>"></script>
 
 </body>
 </html>
+

@@ -79,6 +79,8 @@ CREATE TABLE IF NOT EXISTS tornei (
     img VARCHAR(255) DEFAULT '/img/tornei/pallone.png',
     filetorneo VARCHAR(255) NOT NULL,
     categoria VARCHAR(100) NOT NULL,
+    squadre_complete TINYINT(1) NOT NULL DEFAULT 0,
+    config LONGTEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_tornei_nome (nome)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,10 +1,33 @@
 ﻿// TEMPLATE BASE: duplica e rinomina questo file per un nuovo torneo.
 // Sostituisci TORNEO con lo slug usato nel DB/API e aggiorna eventuali testi.
 const TORNEO = window.__TEMPLATE_TORNEO_SLUG__ || "TEMPLATE_SLUG"; // Nome base del torneo nel DB
+const CONFIG = window.__TORNEO_CONFIG__ || {};
 const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
-const GOLD_SPOTS = 16;              // prime 16 in Coppa Gold
-const TEAM_COUNT = 18;              // totale squadre in regular
-const SILVER_SPOTS = TEAM_COUNT - GOLD_SPOTS; // ultime 2 in finale Silver
+const DEFAULT_TEAM_COUNT = 18;
+const DEFAULT_GOLD = 16;
+
+function toNumber(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+const configTeamCount = (() => {
+  const tot = toNumber(CONFIG.totale_squadre, 0);
+  const camp = toNumber(CONFIG.campionato_squadre, 0);
+  const gironi = toNumber(CONFIG.numero_gironi, 0);
+  const perGirone = toNumber(CONFIG.squadre_per_girone, 0);
+  if (tot > 0) return tot;
+  if (camp > 0) return camp;
+  if (gironi > 0 && perGirone > 0) return gironi * perGirone;
+  return 0;
+})();
+
+const TEAM_COUNT = configTeamCount > 0 ? configTeamCount : DEFAULT_TEAM_COUNT;
+const rawGold = Object.prototype.hasOwnProperty.call(CONFIG, "qualificati_gold") ? toNumber(CONFIG.qualificati_gold, 0) : NaN;
+const GOLD_SPOTS = Number.isFinite(rawGold) ? Math.max(0, rawGold) : DEFAULT_GOLD;
+const rawSilver = Object.prototype.hasOwnProperty.call(CONFIG, "qualificati_silver") ? toNumber(CONFIG.qualificati_silver, 0) : NaN;
+const SILVER_SPOTS = Number.isFinite(rawSilver) ? Math.max(0, rawSilver) : Math.max(TEAM_COUNT - GOLD_SPOTS, 0);
+const USE_COPPE = GOLD_SPOTS > 0 || SILVER_SPOTS > 0;
 const teamLogos = {};
 const favState = { tournaments: new Set(), teams: new Set() };
 let currentRosaTeam = "";
@@ -160,14 +183,17 @@ function mostraClassifica(classifica) {
   tbody.innerHTML = "";
 
   classifica.sort((a, b) => b.punti - a.punti || b.differenza_reti - a.differenza_reti);
+  const useGold = GOLD_SPOTS > 0;
+  const useSilver = SILVER_SPOTS > 0;
+  const silverThreshold = TEAM_COUNT > 0 ? TEAM_COUNT - SILVER_SPOTS : null;
 
   classifica.forEach((team, i) => {
     const tr = document.createElement("tr");
     const posizione = i + 1;
 
-    if (posizione <= GOLD_SPOTS) {
+    if (useGold && posizione <= GOLD_SPOTS) {
       tr.classList.add("gold-row");
-    } else if (posizione > TEAM_COUNT - SILVER_SPOTS) {
+    } else if (useSilver && silverThreshold !== null && posizione > silverThreshold) {
       tr.classList.add("silver-row");
     }
 
@@ -197,13 +223,12 @@ function mostraClassifica(classifica) {
   const legendaEsistente = document.querySelector(".legenda-coppe");
   if (legendaEsistente) legendaEsistente.remove();
 
-  if (!faseSelect || faseSelect.value === "girone") {
+  if (USE_COPPE && (!faseSelect || faseSelect.value === "girone")) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
-    legenda.innerHTML = `
-      <div class="box gold-box">★ COPPA GOLD</div>
-      <div class="box silver-box">☆ COPPA SILVER</div>
-    `;
+    const goldBox = useGold ? `<div class="box gold-box">? COPPA GOLD</div>` : "";
+    const silverBox = useSilver ? `<div class="box silver-box">? COPPA SILVER</div>` : "";
+    legenda.innerHTML = `${goldBox}${silverBox}` || `<div class="box">Coppe non configurate</div>`;
 
     const wrapper = document.getElementById("classificaWrapper");
     wrapper.after(legenda);
@@ -949,6 +974,7 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
+
 
 
 
