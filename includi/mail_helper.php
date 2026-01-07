@@ -151,6 +151,8 @@ if (!function_exists('build_absolute_url')) {
 if (!function_exists('estrai_estratto_testo')) {
     function estrai_estratto_testo(string $htmlOrText, int $maxLen = 240): string {
         $plain = strip_tags($htmlOrText);
+        // rimuove marcatori tipo ==testo== lasciando solo il contenuto
+        $plain = preg_replace('/==(.+?)==/u', '$1', $plain);
         $plain = preg_replace('/\s+/', ' ', $plain);
         $plain = trim($plain);
         if (mb_strlen($plain) > $maxLen) {
