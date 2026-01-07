@@ -148,13 +148,17 @@ function renderCards(players) {
     }
 
     const startIndex = ((lastMeta.page || 1) - 1) * (lastMeta.per_page || perPage);
+
     leaderList.innerHTML = players.map((p, idx) => {
-        const posizione = startIndex + idx + 1;
+        const posizione = p.posizione ?? (startIndex + idx + 1);
         const foto = p.foto || FALLBACK_AVATAR;
         const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim();
         const ruolo = p.ruolo ? `<span class="leader-role">${escapeHTML(p.ruolo)}</span>` : '';
         const team = p.squadra ? escapeHTML(p.squadra) : 'Squadra non assegnata';
-        const media = p.media_voti ? `<span>â­ ${p.media_voti}</span>` : '';
+        const media = p.media_voti ? `<span>⭐ Media voto: ${p.media_voti}</span>` : '';
+        const metaPresenze = `<span>🧍‍♂️ Presenze: ${p.presenze ?? 0}</span>`;
+        const metaGol = `<span>⚽ Gol: ${p.gol ?? 0}</span>`;
+        const metaOrder = currentOrder === 'presenze' ? [metaPresenze, metaGol] : [metaGol, metaPresenze];
 
         return `
             <div class="leader-card">
@@ -168,47 +172,8 @@ function renderCards(players) {
                         <div class="leader-team">${team}</div>
                     </div>
                     <div class="leader-meta">
-                        <span>âš½ ${p.gol ?? 0} gol</span>
-                        <span>â±ï¸ ${p.presenze ?? 0} presenze</span>
+                        ${metaOrder.join(' ')}
                         ${media}
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-// Override renderCards to ensure correct meta order and clean icons
-function renderCards(players) {
-    if (!players.length) {
-        leaderList.innerHTML = '<p class="empty-state">Nessun giocatore trovato per i filtri selezionati.</p>';
-        return;
-    }
-
-    const startIndex = ((lastMeta.page || 1) - 1) * (lastMeta.per_page || perPage);
-
-    leaderList.innerHTML = players.map((p, idx) => {
-        const posizione = p.posizione ?? (startIndex + idx + 1);
-        const foto = p.foto || FALLBACK_AVATAR;
-        const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim();
-        const ruolo = p.ruolo ? `<span class="leader-role">${escapeHTML(p.ruolo)}</span>` : '';
-        const metaPresenze = `<span>Presenze: ${p.presenze ?? 0}</span>`;
-        const metaGol = `<span>Gol: ${p.gol ?? 0}</span>`;
-        const metaOrder = currentOrder === 'presenze' ? [metaPresenze, metaGol] : [metaGol, metaPresenze];
-
-        return `
-            <div class="leader-card">
-                <div class="leader-rank">${posizione}</div>
-                <div class="leader-avatar">
-                    <img src="${foto}" alt="${nomeCompleto}" onerror="this.onerror=null; this.src='${FALLBACK_AVATAR}';">
-                </div>
-                <div class="leader-main">
-                    <div>
-                        <div class="leader-name">${nomeCompleto} ${ruolo}</div>
-                        <div class="leader-team"></div>
-                    </div>
-                    <div class="leader-meta">
-                        ${metaOrder.join('')}
                     </div>
                 </div>
             </div>
@@ -286,3 +251,5 @@ loadLeaders(true);
 
 </body>
 </html>
+
+
