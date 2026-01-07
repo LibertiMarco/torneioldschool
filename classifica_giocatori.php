@@ -155,9 +155,10 @@ function renderCards(players) {
         const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim();
         const ruolo = p.ruolo ? `<span class="leader-role">${escapeHTML(p.ruolo)}</span>` : '';
         const team = p.squadra ? escapeHTML(p.squadra) : 'Squadra non assegnata';
-        const media = p.media_voti ? `<span>⭐ Media voto: ${p.media_voti}</span>` : '';
-        const metaPresenze = `<span>🧍‍♂️ Presenze: ${p.presenze ?? 0}</span>`;
-        const metaGol = `<span>⚽ Gol: ${p.gol ?? 0}</span>`;
+        // Usa entità HTML per evitare problemi di encoding
+        const media = p.media_voti ? `<span>&#x2B50; Media voto: ${p.media_voti}</span>` : '';
+        const metaPresenze = `<span>Presenze: ${p.presenze ?? 0}</span>`;
+        const metaGol = `<span>&#x26BD; Gol: ${p.gol ?? 0}</span>`;
         const metaOrder = currentOrder === 'presenze' ? [metaPresenze, metaGol] : [metaGol, metaPresenze];
 
         return `

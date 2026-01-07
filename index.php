@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/includi/seo.php';
 $baseUrl = seo_base_url();
 $homeSeo = [
@@ -121,7 +121,7 @@ $localSchema = [
         <div class="hero-overlay">
           <h1>Chi Siamo</h1>
           <p>Lo facciamo per passione, per condividere divertimento e amicizia con chiunque voglia partecipare.</p>
-          <a href="chisiamo.php" class="hero-btn">Scopri di piÃ¹</a>
+          <a href="chisiamo.php" class="hero-btn">Scopri di piÃƒÂ¹</a>
         </div>
       </section>
 
@@ -208,8 +208,8 @@ function renderHomeLeaderCard(player, position, torneoLabel, ordine) {
     const nome = `${player.nome ?? ''} ${player.cognome ?? ''}`.trim() || 'Profilo';
     const squadra = player.squadra ? `${player.squadra}${torneoLabel ? ' - ' + torneoLabel : ''}` : '';
 
-    const metaPresenze = `<span>â±ï¸ ${player.presenze ?? 0} presenze</span>`;
-    const metaGol = `<span>âš½ ${player.gol ?? 0} gol</span>`;
+    const metaPresenze = `<span>Presenze: ${player.presenze ?? 0}</span>`;
+    const metaGol = `<span>&#x26BD; ${player.gol ?? 0} gol</span>`;
     const metaOrder = ordine === 'presenze' ? [metaPresenze, metaGol] : [metaGol, metaPresenze];
 
     return `
@@ -224,7 +224,7 @@ function renderHomeLeaderCard(player, position, torneoLabel, ordine) {
             <div class="leader-team">${squadra}</div>
           </div>
           <div class="leader-meta">
-            ${metaOrder.join('')}
+            ${metaOrder.join(' ')}
           </div>
         </div>
       </div>
@@ -401,7 +401,7 @@ loadHallOfFame();
         })
         .catch(error => console.error("Errore nel caricamento dell'header:", error));
     } else {
-      // Header giÃ  incluso via PHP
+      // Header giÃƒÂ  incluso via PHP
       initHeaderInteractions(document);
       attachHeaderExtras();
     }
@@ -439,3 +439,4 @@ loadHallOfFame();
 
 </body>
 </html>
+
