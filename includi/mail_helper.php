@@ -5,7 +5,7 @@ if (!function_exists('tos_mail_send')) {
     /**
      * Invia una mail testuale+HTML. $fromEmailOverride permette di forzare l'email mittente (es. newsletter).
      */
-    function tos_mail_send(string $to, string $subject, string $bodyText, string $fromName = 'Tornei Old School', ?string $replyToOverride = null, ?string $fromEmailOverride = null): bool
+    function tos_mail_send(string $to, string $subject, string $bodyText, string $fromName = 'Tornei Old School', ?string $replyToOverride = null, ?string $fromEmailOverride = null, ?string $bodyHtmlOverride = null): bool
     {
         $fromEmail = $fromEmailOverride ?: (getenv('MAIL_FROM') ?: 'noreply@torneioldschool.it');
         $replyTo = $replyToOverride ?: (getenv('MAIL_REPLY_TO') ?: 'info@torneioldschool.it');
@@ -19,7 +19,9 @@ if (!function_exists('tos_mail_send')) {
         $headers .= "List-Unsubscribe: <mailto:{$replyTo}?subject=Unsubscribe>\r\n";
         $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
 
-        $bodyHtml = nl2br(htmlspecialchars($bodyText, ENT_QUOTES, 'UTF-8'));
+        $bodyHtml = $bodyHtmlOverride !== null
+            ? $bodyHtmlOverride
+            : nl2br(htmlspecialchars($bodyText, ENT_QUOTES, 'UTF-8'));
         $payload  = "--{$boundary}\r\n";
         $payload .= "Content-Type: text/plain; charset=UTF-8\r\n";
         $payload .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
@@ -162,6 +164,16 @@ if (!function_exists('estrai_estratto_testo')) {
     }
 }
 
+if (!function_exists('mail_excerpt_parts')) {
+    function mail_excerpt_parts(string $content, int $maxLen = 240): array {
+        $plain = estrai_estratto_testo($content, $maxLen);
+        $normalized = preg_replace('/\s+/', ' ', trim(strip_tags($content)));
+        $escaped = htmlspecialchars($normalized, ENT_QUOTES, 'UTF-8');
+        $html = preg_replace('/==(.+?)==/u', '<strong>$1</strong>', $escaped);
+        return ['plain' => $plain, 'html' => $html];
+    }
+}
+
 if (!function_exists('destinatari_newsletter')) {
     function destinatari_newsletter(mysqli $conn): array {
         $lista = [];
@@ -199,12 +211,15 @@ if (!function_exists('invia_notifica_articolo')) {
         $linkTitle = trim($titolo);
         $linkPath = $linkTitle !== '' ? '/articolo.php?titolo=' . rawurlencode($linkTitle) : '/articolo.php?id=' . $postId;
         $link = build_absolute_url($linkPath);
-        $excerpt = estrai_estratto_testo($contenuto);
+        $excerptParts = mail_excerpt_parts($contenuto);
+        $excerpt = $excerptParts['plain'];
+        $excerptHtml = $excerptParts['html'];
 
         $subject = "Nuovo articolo: {$titolo}";
         $sent = 0;
         foreach ($destinatari as $dest) {
-            $body = "Ciao " . ($dest['nome'] ?: 'giocatore') . ",\n\n";
+            $nomeDest = $dest['nome'] ?: 'giocatore';
+            $body = "Ciao " . $nomeDest . ",\n\n";
             $body .= "Abbiamo pubblicato un nuovo articolo:\n";
             $body .= $titolo . "\n\n";
             if ($excerpt !== '') {
@@ -214,7 +229,17 @@ if (!function_exists('invia_notifica_articolo')) {
             $body .= "Ricevi questa email perche' hai dato il consenso alla newsletter su Tornei Old School.\n";
             $body .= "Puoi revocare il consenso dalla pagina account o dal link \"Gestisci preferenze\" nel sito.\n";
 
-            $ok = tos_mail_send($dest['email'], $subject, $body, 'Tornei Old School', null, 'newsletter@torneioldschool.it');
+            $h = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+            $bodyHtml = "<p>Ciao {$h($nomeDest)},</p>";
+            $bodyHtml .= "<p>Abbiamo pubblicato un nuovo articolo:</p>";
+            $bodyHtml .= "<h3 style=\"margin:8px 0;\">{$h($titolo)}</h3>";
+            if ($excerptHtml !== '') {
+                $bodyHtml .= "<p>{$excerptHtml}</p>";
+            }
+            $bodyHtml .= "<p>Leggi qui: <a href=\"{$h($link)}\">{$h($link)}</a></p>";
+            $bodyHtml .= "<p>Ricevi questa email perche' hai dato il consenso alla newsletter su Tornei Old School.<br>Puoi revocare il consenso dalla pagina account o dal link \"Gestisci preferenze\" nel sito.</p>";
+
+            $ok = tos_mail_send($dest['email'], $subject, $body, 'Tornei Old School', null, 'newsletter@torneioldschool.it', "<html><body style=\"font-family:Arial,sans-serif;\">{$bodyHtml}</body></html>");
             if ($ok) {
                 $sent++;
                 log_newsletter_send($conn, $postId, $dest['email'], 'sent', null);

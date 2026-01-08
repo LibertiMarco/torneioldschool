@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -617,6 +617,13 @@ function formatPreview(text = '') {
     return clean.slice(0, 157) + '...';
 }
 
+function renderPreviewHtml(text = '', fallback = '') {
+    const preview = formatPreview(text || fallback);
+    const escaped = escapeHTML(preview);
+    // sostituisce ==testo== con <strong>testo</strong> mantenendo il resto escaped
+    return escaped.replace(/==(.+?)==/g, '<strong>$1</strong>');
+}
+
 function setFeaturedMeta(text) {
     if (featuredUpdated) {
         featuredUpdated.textContent = text;
@@ -648,7 +655,10 @@ function updateFeatured(post) {
     }
 
     setFeaturedMeta(`Aggiornato ${post.data}`);
-    const preview = formatPreview(post.anteprima || '');
+    const previewHtml = renderPreviewHtml(
+        post.anteprima || '',
+        'Scopri cosa e successo dietro le quinte del torneo!'
+    );
     const safeTitle = escapeHTML(post.titolo || 'Articolo in evidenza');
     const cover = post.cover || post.immagine || '';
     const imageMarkup = cover
@@ -660,7 +670,7 @@ function updateFeatured(post) {
         <div class="featured-copy">
             <span>${escapeHTML(post.data)}</span>
             <h3>${escapeHTML(post.titolo)}</h3>
-            <p>${escapeHTML(preview || 'Scopri cosa Ã¨ successo dietro le quinte del torneo!')}</p>
+            <p>${previewHtml}</p>
             <div class="featured-actions">
                 <a class="primary" href="/articolo.php?titolo=${encodeURIComponent(post.titolo)}">Leggi ora</a>
                 <a class="secondary" href="/tornei.php">Vedi i tornei</a>
@@ -669,7 +679,10 @@ function updateFeatured(post) {
 }
 
 function createCard(post) {
-    const preview = formatPreview(post.anteprima || '');
+    const previewHtml = renderPreviewHtml(
+        post.anteprima || '',
+        'Scopri cosa e successo dietro le quinte del torneo!'
+    );
     const safeTitle = escapeHTML(post.titolo || 'Articolo');
     const cover = post.cover || post.immagine || '';
     const imageMarkup = cover
@@ -683,7 +696,7 @@ function createCard(post) {
                 <div class="card-body">
                     <div class="card-date">${escapeHTML(post.data)}</div>
                     <h3>${escapeHTML(post.titolo)}</h3>
-                    <p>${escapeHTML(preview)}</p>
+                    <p>${previewHtml}</p>
                 </div>
             </a>
         </article>`;
