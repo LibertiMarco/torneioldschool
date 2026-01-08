@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
   header("Location: /index.php");
@@ -19,6 +19,33 @@ $mediaDir = __DIR__ . '/../img/blog_media/';
 $allowedImages = ['jpg', 'jpeg', 'png', 'webp'];
 $allowedVideos = ['mp4', 'webm', 'ogg'];
 $maxUploadBytes = 20 * 1024 * 1024; // 20MB massimo accettato per file multimediali
+
+function ini_bytes(string $value): int {
+  $value = trim($value);
+  if ($value === '') return 0;
+  $last = strtolower(substr($value, -1));
+  $num = (float)$value;
+  switch ($last) {
+    case 'g': $num *= 1024;
+    case 'm': $num *= 1024;
+    case 'k': $num *= 1024;
+  }
+  return (int)$num;
+}
+
+function upload_limit_error(): ?string {
+  if ($_SERVER['REQUEST_METHOD'] !== 'POST') return null;
+  $contentLen = isset($_SERVER['CONTENT_LENGTH']) ? (int)$_SERVER['CONTENT_LENGTH'] : 0;
+  if ($contentLen <= 0) return null;
+  if (!empty($_POST) || !empty($_FILES)) return null;
+  $limits = array_filter([ini_bytes(ini_get('post_max_size')), ini_bytes(ini_get('upload_max_filesize'))]);
+  $limitBytes = $limits ? min($limits) : 0;
+  if ($limitBytes > 0 && $contentLen > $limitBytes) {
+    $limitMb = round($limitBytes / 1048576, 1);
+    return "Caricamento troppo pesante: riduci i file o aumenta upload_max_filesize/post_max_size (limite attuale ~{$limitMb} MB).";
+  }
+  return "Caricamento rifiutato: dimensione oltre i limiti PHP di upload.";
+}
 
 function sanitizeText(?string $value): string {
   return trim((string)$value);
@@ -101,126 +128,131 @@ function removeMediaFile(string $dir, ?string $file): void {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $azioneForm = $_POST['azione'] ?? 'crea';
+  $limitError = upload_limit_error();
+  if ($limitError) {
+    $errore = $limitError;
+  } else {
+    $azioneForm = $_POST['azione'] ?? 'crea';
 
-  if ($azioneForm === 'crea') {
-    $titolo = sanitizeText($_POST['titolo'] ?? '');
-    $contenuto = sanitizeText($_POST['contenuto'] ?? '');
-    $inviaNotifica = !empty($_POST['invia_notifica_newsletter']);
-    if ($titolo === '' || $contenuto === '') {
-      $errore = 'Compila titolo e contenuto per pubblicare un articolo.';
-    } else {
-      $stmt = $conn->prepare("INSERT INTO blog_post (titolo, contenuto, immagine, data_pubblicazione) VALUES (?, ?, NULL, NOW())");
-      if ($stmt) {
-        $stmt->bind_param('ss', $titolo, $contenuto);
-        if ($stmt->execute()) {
-          $postId = $stmt->insert_id;
-          $titoloUsato = $titolo;
-          $contenutoUsato = $contenuto;
-          $titolo = '';
-          $contenuto = '';
-          if (addMediaToPost($conn, $postId, $_FILES['media'] ?? [], $mediaDir, $allowedImages, $allowedVideos, $errore)) {
-            $successo = 'Articolo pubblicato correttamente!';
-            if ($inviaNotifica) {
-              $resultMail = invia_notifica_articolo($conn, (int)$postId, $titoloUsato, $contenutoUsato);
-              if ($resultMail['totali'] > 0) {
-                $successo .= ' Notifica inviata a ' . (int)$resultMail['inviate'] . ' su ' . (int)$resultMail['totali'] . ' iscritti newsletter.';
-              } else {
-                $successo .= ' Nessun iscritto alla newsletter al momento.';
+    if ($azioneForm === 'crea') {
+      $titolo = sanitizeText($_POST['titolo'] ?? '');
+      $contenuto = sanitizeText($_POST['contenuto'] ?? '');
+      $inviaNotifica = !empty($_POST['invia_notifica_newsletter']);
+      if ($titolo === '' || $contenuto === '') {
+        $errore = 'Compila titolo e contenuto per pubblicare un articolo.';
+      } else {
+        $stmt = $conn->prepare("INSERT INTO blog_post (titolo, contenuto, immagine, data_pubblicazione) VALUES (?, ?, NULL, NOW())");
+        if ($stmt) {
+          $stmt->bind_param('ss', $titolo, $contenuto);
+          if ($stmt->execute()) {
+            $postId = $stmt->insert_id;
+            $titoloUsato = $titolo;
+            $contenutoUsato = $contenuto;
+            $titolo = '';
+            $contenuto = '';
+            if (addMediaToPost($conn, $postId, $_FILES['media'] ?? [], $mediaDir, $allowedImages, $allowedVideos, $errore)) {
+              $successo = 'Articolo pubblicato correttamente!';
+              if ($inviaNotifica) {
+                $resultMail = invia_notifica_articolo($conn, (int)$postId, $titoloUsato, $contenutoUsato);
+                if ($resultMail['totali'] > 0) {
+                  $successo .= ' Notifica inviata a ' . (int)$resultMail['inviate'] . ' su ' . (int)$resultMail['totali'] . ' iscritti newsletter.';
+                } else {
+                  $successo .= ' Nessun iscritto alla newsletter al momento.';
+                }
               }
             }
-          }
-        } else {
-          $errore = 'Impossibile salvare l\'articolo. Riprova.';
-        }
-        $stmt->close();
-      } else {
-        $errore = 'Errore interno: operazione non disponibile.';
-      }
-    }
-  }
-
-  if ($azioneForm === 'modifica') {
-    $id = (int)($_POST['articolo_id'] ?? 0);
-    $nuovoTitolo = sanitizeText($_POST['titolo_mod'] ?? '');
-    $nuovoContenuto = sanitizeText($_POST['contenuto_mod'] ?? '');
-    if ($id <= 0 || $nuovoTitolo === '' || $nuovoContenuto === '') {
-      $errore = 'Seleziona un articolo valido e compila tutti i campi.';
-    } else {
-      $stmt = $conn->prepare("UPDATE blog_post SET titolo = ?, contenuto = ? WHERE id = ?");
-      if ($stmt) {
-        $stmt->bind_param('ssi', $nuovoTitolo, $nuovoContenuto, $id);
-        if ($stmt->execute()) {
-          if (addMediaToPost($conn, $id, $_FILES['media_mod'] ?? [], $mediaDir, $allowedImages, $allowedVideos, $errore)) {
-            $successo = 'Articolo aggiornato con successo.';
-          }
-        } else {
-          $errore = 'Aggiornamento non riuscito.';
-        }
-        $stmt->close();
-      } else {
-        $errore = 'Errore interno durante l\'aggiornamento.';
-      }
-    }
-  }
-
-  if ($azioneForm === 'elimina') {
-    $id = (int)($_POST['articolo_id'] ?? 0);
-    if ($id <= 0) {
-      $errore = 'Articolo non valido.';
-    } else {
-      $mediaStmt = $conn->prepare("SELECT file_path FROM blog_media WHERE post_id = ?");
-      if ($mediaStmt) {
-        $mediaStmt->bind_param('i', $id);
-        $mediaStmt->execute();
-        $mediaRes = $mediaStmt->get_result();
-        while ($row = $mediaRes->fetch_assoc()) {
-          removeMediaFile($mediaDir, $row['file_path']);
-        }
-        $mediaStmt->close();
-      }
-      $del = $conn->prepare("DELETE FROM blog_post WHERE id = ?");
-      if ($del) {
-        $del->bind_param('i', $id);
-        if ($del->execute()) { $successo = 'Articolo eliminato correttamente.'; }
-        else { $errore = 'Impossibile eliminare l\'articolo.'; }
-        $del->close();
-      } else {
-        $errore = 'Errore interno durante l\'eliminazione.';
-      }
-    }
-  }
-
-  if ($azioneForm === 'elimina_media') {
-    $mediaId = (int)($_POST['media_id'] ?? 0);
-    if ($mediaId <= 0) {
-      $errore = 'Media non valido.';
-    } else {
-      $stmt = $conn->prepare("SELECT file_path FROM blog_media WHERE id = ?");
-      if ($stmt) {
-        $stmt->bind_param('i', $mediaId);
-        $stmt->execute();
-        $res = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        if ($res) {
-          $del = $conn->prepare("DELETE FROM blog_media WHERE id = ?");
-          if ($del) {
-            $del->bind_param('i', $mediaId);
-            if ($del->execute()) {
-              removeMediaFile($mediaDir, $res['file_path'] ?? null);
-              $successo = 'Elemento multimediale rimosso.';
-            } else {
-              $errore = 'Impossibile rimuovere il file selezionato.';
-            }
-            $del->close();
           } else {
-            $errore = 'Errore interno durante la rimozione.';
+            $errore = 'Impossibile salvare l\'articolo. Riprova.';
+          }
+          $stmt->close();
+        } else {
+          $errore = 'Errore interno: operazione non disponibile.';
+        }
+      }
+    }
+
+    if ($azioneForm === 'modifica') {
+      $id = (int)($_POST['articolo_id'] ?? 0);
+      $nuovoTitolo = sanitizeText($_POST['titolo_mod'] ?? '');
+      $nuovoContenuto = sanitizeText($_POST['contenuto_mod'] ?? '');
+      if ($id <= 0 || $nuovoTitolo === '' || $nuovoContenuto === '') {
+        $errore = 'Seleziona un articolo valido e compila tutti i campi.';
+      } else {
+        $stmt = $conn->prepare("UPDATE blog_post SET titolo = ?, contenuto = ? WHERE id = ?");
+        if ($stmt) {
+          $stmt->bind_param('ssi', $nuovoTitolo, $nuovoContenuto, $id);
+          if ($stmt->execute()) {
+            if (addMediaToPost($conn, $id, $_FILES['media_mod'] ?? [], $mediaDir, $allowedImages, $allowedVideos, $errore)) {
+              $successo = 'Articolo aggiornato con successo.';
+            }
+          } else {
+            $errore = 'Aggiornamento non riuscito.';
+          }
+          $stmt->close();
+        } else {
+          $errore = 'Errore interno durante l\'aggiornamento.';
+        }
+      }
+    }
+
+    if ($azioneForm === 'elimina') {
+      $id = (int)($_POST['articolo_id'] ?? 0);
+      if ($id <= 0) {
+        $errore = 'Articolo non valido.';
+      } else {
+        $mediaStmt = $conn->prepare("SELECT file_path FROM blog_media WHERE post_id = ?");
+        if ($mediaStmt) {
+          $mediaStmt->bind_param('i', $id);
+          $mediaStmt->execute();
+          $mediaRes = $mediaStmt->get_result();
+          while ($row = $mediaRes->fetch_assoc()) {
+            removeMediaFile($mediaDir, $row['file_path']);
+          }
+          $mediaStmt->close();
+        }
+        $del = $conn->prepare("DELETE FROM blog_post WHERE id = ?");
+        if ($del) {
+          $del->bind_param('i', $id);
+          if ($del->execute()) { $successo = 'Articolo eliminato correttamente.'; }
+          else { $errore = 'Impossibile eliminare l\'articolo.'; }
+          $del->close();
+        } else {
+          $errore = 'Errore interno durante l\'eliminazione.';
+        }
+      }
+    }
+
+    if ($azioneForm === 'elimina_media') {
+      $mediaId = (int)($_POST['media_id'] ?? 0);
+      if ($mediaId <= 0) {
+        $errore = 'Media non valido.';
+      } else {
+        $stmt = $conn->prepare("SELECT file_path FROM blog_media WHERE id = ?");
+        if ($stmt) {
+          $stmt->bind_param('i', $mediaId);
+          $stmt->execute();
+          $res = $stmt->get_result()->fetch_assoc();
+          $stmt->close();
+          if ($res) {
+            $del = $conn->prepare("DELETE FROM blog_media WHERE id = ?");
+            if ($del) {
+              $del->bind_param('i', $mediaId);
+              if ($del->execute()) {
+                removeMediaFile($mediaDir, $res['file_path'] ?? null);
+                $successo = 'Elemento multimediale rimosso.';
+              } else {
+                $errore = 'Impossibile rimuovere il file selezionato.';
+              }
+              $del->close();
+            } else {
+              $errore = 'Errore interno durante la rimozione.';
+            }
+          } else {
+            $errore = 'Elemento non trovato.';
           }
         } else {
-          $errore = 'Elemento non trovato.';
+          $errore = 'Errore interno durante la ricerca del file.';
         }
-      } else {
-        $errore = 'Errore interno durante la ricerca del file.';
       }
     }
   }
@@ -288,7 +320,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     .file-upload-group { display: flex; flex-direction: column; gap: 12px; }
     .upload-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .file-upload-label { background: linear-gradient(135deg, #0f2740, #1f3f63); color: #fff; padding: 12px 18px; border-radius: 14px; cursor: pointer; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 14px 28px rgba(15,39,64,0.25); transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease; letter-spacing: 0.3px; border: 1px solid rgba(255,255,255,0.12); }
-    .file-upload-label::before { content: "â¬†"; display: inline-block; font-weight: 900; }
+    .file-upload-label::before { content: "+"; display: inline-block; font-weight: 900; }
     .file-upload-label:hover { transform: translateY(-2px); box-shadow: 0 18px 36px rgba(15,39,64,0.32); filter: brightness(1.05); }
     .file-upload-label span { color: #fff; font-weight: 700; }
     .file-upload-filename { color: #475467; font-size: 0.95rem; }
@@ -347,7 +379,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <div class="sections-builder">
           <div class="sections-header">
             <label>Struttura contenuto (sottotitolo + paragrafo)</label>
-            <p class="helper-text">Aggiungi quante sezioni vuoi: ogni blocco verrÃ  unito automaticamente nel contenuto dellâ€™articolo. Puoi evidenziare parole racchiudendole tra <code>==cosÃ¬==</code>.</p>
+            <p class="helper-text">Aggiungi quante sezioni vuoi: ogni blocco verra' unito automaticamente nel contenuto dell'articolo. Puoi evidenziare parole racchiudendole tra <code>==cosi==</code>.</p>
           </div>
           <div class="sections-list" id="sectionsCreate" data-sections="create"></div>
           <button type="button" class="btn-secondary-modern" data-add-section="create">Aggiungi sezione</button>
@@ -402,7 +434,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <div class="sections-builder">
           <div class="sections-header">
             <label>Struttura contenuto (sottotitolo + paragrafo)</label>
-            <p class="helper-text">Modifica o aggiungi blocchi di testo; verranno uniti nel contenuto dellâ€™articolo. Evidenzia con <code>==testo==</code>.</p>
+            <p class="helper-text">Modifica o aggiungi blocchi di testo; verranno uniti nel contenuto dell'articolo. Evidenzia con <code>==testo==</code>.</p>
           </div>
           <div class="sections-list" id="sectionsMod" data-sections="mod"></div>
           <button type="button" class="btn-secondary-modern" data-add-section="mod">Aggiungi sezione</button>
@@ -720,3 +752,4 @@ fetch('/includi/footer.html')
 </script>
 </body>
 </html>
+
