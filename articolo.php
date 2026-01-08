@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -640,26 +640,24 @@ if ($id > 0) {
 
 <main class="article-layout">
   <article class="article-panel" id="articlePanel">
-    <div class="article-meta">
+        <div class="article-meta">
       <a class="article-badge" href="/blog.php" aria-label="Torna al blog">
-        <span aria-hidden="true">âŸµ</span> Blog
+        <span aria-hidden="true">&#8592;</span> Blog
       </a>
       <span id="articleDate" class="sr-only">--/--/----</span>
     </div>
     <div class="article-backlink-inline">
-      <a href="/blog.php" class="btn-back-blog" aria-label="Torna al blog">â†© Torna al blog</a>
+      <a href="/blog.php" class="btn-back-blog" aria-label="Torna al blog">&#8592; Torna al blog</a>
     </div>
     <h2 id="articleTitle">Caricamento...</h2>
     <p class="article-subtitle" id="articleSubtitle">Recuperiamo i dettagli e li inquadriamo al meglio.</p>
 <div class="article-media hidden" id="articleMedia">
-    <button class="carousel-nav prev" id="mediaPrev" aria-label="Media precedente">â€¹</button>
+    <button class="carousel-nav prev" id="mediaPrev" aria-label="Media precedente">&#8592;</button>
     <div class="media-stage" id="mediaStage"></div>
-    <button class="carousel-nav next" id="mediaNext" aria-label="Media successivo">â€º</button>
+    <button class="carousel-nav next" id="mediaNext" aria-label="Media successivo">&#8594;</button>
     <div class="media-dots" id="mediaDots"></div>
 </div>
-    <div class="article-content" id="articleContent">Un attimo di pazienzaâ€¦</div>
-  </article>
-
+    <div class="article-content" id="articleContent">Un attimo di pazienza...</div>
   <aside class="article-sidebar">
     <h3>Da leggere dopo</h3>
     <p class="comments-hint">Altri articoli dal nostro staff.</p>
@@ -858,11 +856,13 @@ function formatContent(text = '') {
     return text
         .split(/\n{2,}/)
         .map(block => {
-            const safe = escapeHTML(block.trim());
-            if (safe.startsWith('## ')) {
-                return `<h3>${applyInline(safe.slice(3))}</h3>`;
+            const raw = block.trim();
+            const safe = escapeHTML(raw);
+            const headingMatch = raw.match(/^##\s+(.+)$/) || raw.match(/^==(.+)==$/);
+            if (headingMatch) {
+                return `<h3>${applyInline(escapeHTML(headingMatch[1].trim()))}</h3>`;
             }
-            if (safe.startsWith('# ')) {
+            if (raw.startsWith('# ')) {
                 return `<h2>${applyInline(safe.slice(2))}</h2>`;
             }
             return `<p>${applyInline(safe).replace(/\n/g, '<br>')}</p>`;
@@ -1154,3 +1154,4 @@ mediaDots?.addEventListener('click', event => {
 
 </body>
 </html>
+
