@@ -138,34 +138,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $titolo = sanitizeText($_POST['titolo'] ?? '');
       $contenuto = sanitizeText($_POST['contenuto'] ?? '');
       $inviaNotifica = !empty($_POST['invia_notifica_newsletter']);
-      if ($titolo === '' || $contenuto === '') {
-        $errore = 'Compila titolo e contenuto per pubblicare un articolo.';
-      } else {
-        $stmt = $conn->prepare("INSERT INTO blog_post (titolo, contenuto, immagine, data_pubblicazione) VALUES (?, ?, NULL, NOW())");
-        if ($stmt) {
-          $stmt->bind_param('ss', $titolo, $contenuto);
-          if ($stmt->execute()) {
-            $postId = $stmt->insert_id;
-            $titoloUsato = $titolo;
-            $contenutoUsato = $contenuto;
-            $titolo = '';
-            $contenuto = '';
-            if (addMediaToPost($conn, $postId, $_FILES['media'] ?? [], $mediaDir, $allowedImages, $allowedVideos, $errore)) {
-              $successo = 'Articolo pubblicato correttamente!';
-              if ($inviaNotifica) {
-                $resultMail = invia_notifica_articolo($conn, (int)$postId, $titoloUsato, $contenutoUsato);
-                if ($resultMail['totali'] > 0) {
-                  $successo .= ' Notifica inviata a ' . (int)$resultMail['inviate'] . ' su ' . (int)$resultMail['totali'] . ' iscritti newsletter.';
-                } else {
-                  $successo .= ' Nessun iscritto alla newsletter al momento.';
-                }
+    if ($titolo === '' || $contenuto === '') {
+      $errore = 'Compila titolo e contenuto per pubblicare un articolo.';
+    } else {
+      $stmt = $conn->prepare("INSERT INTO blog_post (titolo, contenuto, immagine, data_pubblicazione) VALUES (?, ?, NULL, NOW())");
+      if ($stmt) {
+        $stmt->bind_param('ss', $titolo, $contenuto);
+        if ($stmt->execute()) {
+          $postId = $stmt->insert_id;
+          $titoloUsato = $titolo;
+          $contenutoUsato = $contenuto;
+          if (addMediaToPost($conn, $postId, $_FILES['media'] ?? [], $mediaDir, $allowedImages, $allowedVideos, $errore)) {
+            $successo = 'Articolo pubblicato correttamente!';
+            if ($inviaNotifica) {
+              $resultMail = invia_notifica_articolo($conn, (int)$postId, $titoloUsato, $contenutoUsato);
+              if ($resultMail['totali'] > 0) {
+                $successo .= ' Notifica inviata a ' . (int)$resultMail['inviate'] . ' su ' . (int)$resultMail['totali'] . ' iscritti newsletter.';
+              } else {
+                $successo .= ' Nessun iscritto alla newsletter al momento.';
               }
             }
-          } else {
-            $errore = 'Impossibile salvare l\'articolo. Riprova.';
+            // Svuota i campi solo dopo successo completo (inserimento + media + eventuale mail)
+            $titolo = '';
+            $contenuto = '';
           }
-          $stmt->close();
         } else {
+          $errore = 'Impossibile salvare l\'articolo. Riprova.';
+        }
+        $stmt->close();
+      } else {
           $errore = 'Errore interno: operazione non disponibile.';
         }
       }
