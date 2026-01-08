@@ -28,6 +28,14 @@ $breadcrumbSchema = seo_breadcrumb_schema([
     ['name' => 'Articolo', 'url' => $articleUrl],
 ]);
 
+$normalizeTitleKey = static function (string $value): string {
+    $key = strtolower(trim($value));
+    // rimuove accenti e caratteri non alfanumerici
+    $key = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $key);
+    $key = preg_replace('/[^a-z0-9]+/', '', $key);
+    return $key ?: '';
+};
+
 $stmt = null;
 $sql = "SELECT id,
                titolo,
@@ -120,6 +128,81 @@ if ($stmt) {
         }
     }
     $stmt->close();
+}
+
+$fallbackId = 0;
+if ($articleId === 0 && $requestedTitle !== '') {
+    $normRequested = $normalizeTitleKey($requestedTitle);
+    if ($normRequested !== '') {
+        $scan = $conn->query("SELECT id, titolo FROM blog_post");
+        if ($scan) {
+            while ($r = $scan->fetch_assoc()) {
+                if ($normalizeTitleKey($r['titolo'] ?? '') === $normRequested) {
+                    $fallbackId = (int)($r['id'] ?? 0);
+                    break;
+                }
+            }
+            $scan->close();
+        }
+    }
+}
+
+if ($articleId === 0 && $fallbackId > 0) {
+    // rilancia recupero completo per l'id trovato
+    $requestedId = $fallbackId;
+    $stmt = $conn->prepare(sprintf($sql, 'id = ?'));
+    if ($stmt) {
+        $stmt->bind_param('i', $requestedId);
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+            if ($row = $result->fetch_assoc()) {
+                $articleId = (int)($row['id'] ?? 0);
+                $articleTitleForUrl = $row['titolo'] ?? '';
+                $targetPath = $articleTitleForUrl !== '' ? '/articolo.php?titolo=' . rawurlencode($articleTitleForUrl) : '/articolo.php?id=' . $articleId;
+                $articleUrl = $baseUrl . $targetPath;
+                $cover = $row['cover'] ?? '';
+                $coverUrl = $cover ? $baseUrl . '/' . ltrim($cover, '/') : $articleMeta['image'];
+                $excerpt = seo_trim($row['contenuto'] ?? '', 180);
+                $articleMeta = [
+                    'title' => ($row['titolo'] ?? 'Articolo') . ' - Tornei Old School',
+                    'description' => $excerpt ?: $articleMeta['description'],
+                    'url' => $articleUrl,
+                    'canonical' => $articleUrl,
+                    'type' => 'article',
+                    'image' => $coverUrl,
+                ];
+                $breadcrumbSchema = seo_breadcrumb_schema([
+                    ['name' => 'Home', 'url' => $baseUrl . '/'],
+                    ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
+                    ['name' => $row['titolo'] ?? 'Articolo', 'url' => $articleUrl],
+                ]);
+                $articleSchema = [
+                    '@context' => 'https://schema.org',
+                    '@type' => 'Article',
+                    'headline' => $row['titolo'] ?? '',
+                    'description' => $excerpt,
+                    'image' => [$coverUrl],
+                    'mainEntityOfPage' => $articleUrl,
+                    'author' => [
+                        '@type' => 'Organization',
+                        'name' => 'Tornei Old School',
+                    ],
+                    'publisher' => [
+                        '@type' => 'Organization',
+                        'name' => 'Tornei Old School',
+                        'logo' => [
+                            '@type' => 'ImageObject',
+                            'url' => $baseUrl . '/img/logo_old_school.png',
+                        ],
+                    ],
+                ];
+                if (!empty($row['data_pubblicazione'])) {
+                    $articleSchema['datePublished'] = date('c', strtotime($row['data_pubblicazione']));
+                }
+            }
+        }
+        $stmt->close();
+    }
 }
 
 if ($articleId === 0) {
