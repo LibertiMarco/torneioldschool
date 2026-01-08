@@ -3,13 +3,16 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$id = (int)($_GET['id'] ?? 0);
+$requestedId = (int)($_GET['id'] ?? 0);
+$requestedTitle = trim($_GET['titolo'] ?? '');
 $isLogged = isset($_SESSION['user_id']);
 require_once __DIR__ . '/includi/seo.php';
 require_once __DIR__ . '/includi/db.php';
 
 $baseUrl = seo_base_url();
-$articleUrl = $baseUrl . '/articolo.php?id=' . $id;
+$articleId = 0;
+$articleTitleForUrl = $requestedTitle !== '' ? $requestedTitle : '';
+$articleUrl = $baseUrl . '/articolo.php' . ($articleTitleForUrl !== '' ? ('?titolo=' . rawurlencode($articleTitleForUrl)) : ($requestedId > 0 ? ('?id=' . $requestedId) : ''));
 $articleMeta = [
     'title' => 'Articolo - Tornei Old School',
     'description' => 'Leggi le ultime notizie dei tornei Old School.',
@@ -25,78 +28,102 @@ $breadcrumbSchema = seo_breadcrumb_schema([
     ['name' => 'Articolo', 'url' => $articleUrl],
 ]);
 
-if ($id > 0) {
-    $stmt = $conn->prepare(
-        "SELECT titolo,
-                contenuto,
-                data_pubblicazione,
-                COALESCE(
-                    (SELECT CONCAT('/img/blog_media/', file_path)
-                     FROM blog_media
-                     WHERE post_id = blog_post.id AND tipo = 'image'
-                     ORDER BY ordine ASC, id ASC
-                     LIMIT 1),
-                    CASE
-                        WHEN immagine IS NULL OR immagine = '' THEN ''
-                        ELSE CONCAT('/img/blog/', immagine)
-                    END
-                ) AS cover
-         FROM blog_post
-         WHERE id = ?
-         LIMIT 1"
-    );
+$stmt = null;
+$sql = "SELECT id,
+               titolo,
+               contenuto,
+               data_pubblicazione,
+               COALESCE(
+                   (SELECT CONCAT('/img/blog_media/', file_path)
+                    FROM blog_media
+                    WHERE post_id = blog_post.id AND tipo = 'image'
+                    ORDER BY ordine ASC, id ASC
+                    LIMIT 1),
+                   CASE
+                       WHEN immagine IS NULL OR immagine = '' THEN ''
+                       ELSE CONCAT('/img/blog/', immagine)
+                   END
+               ) AS cover
+        FROM blog_post
+        WHERE %s
+        LIMIT 1";
 
+if ($requestedTitle !== '') {
+    $stmt = $conn->prepare(sprintf($sql, 'titolo = ?'));
     if ($stmt) {
-        $stmt->bind_param('i', $id);
-        if ($stmt->execute()) {
-            $result = $stmt->get_result();
-            if ($row = $result->fetch_assoc()) {
-                $cover = $row['cover'] ?? '';
-                $coverUrl = $cover ? $baseUrl . '/' . ltrim($cover, '/') : $articleMeta['image'];
-                $excerpt = seo_trim($row['contenuto'] ?? '', 180);
-                $articleMeta = [
-                    'title' => ($row['titolo'] ?? 'Articolo') . ' - Tornei Old School',
-                    'description' => $excerpt ?: $articleMeta['description'],
-                    'url' => $articleUrl,
-                    'canonical' => $articleUrl,
-                    'type' => 'article',
-                    'image' => $coverUrl,
-                ];
+        $stmt->bind_param('s', $requestedTitle);
+    }
+} elseif ($requestedId > 0) {
+    $stmt = $conn->prepare(sprintf($sql, 'id = ?'));
+    if ($stmt) {
+        $stmt->bind_param('i', $requestedId);
+    }
+}
 
-                $breadcrumbSchema = seo_breadcrumb_schema([
-                    ['name' => 'Home', 'url' => $baseUrl . '/'],
-                    ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
-                    ['name' => $row['titolo'] ?? 'Articolo', 'url' => $articleUrl],
-                ]);
+if ($stmt) {
+    if ($stmt->execute()) {
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
+            $articleId = (int)($row['id'] ?? 0);
+            $articleTitleForUrl = $row['titolo'] ?? '';
+            $targetPath = $articleTitleForUrl !== '' ? '/articolo.php?titolo=' . rawurlencode($articleTitleForUrl) : '/articolo.php?id=' . $articleId;
 
-                $articleSchema = [
-                    '@context' => 'https://schema.org',
-                    '@type' => 'Article',
-                    'headline' => $row['titolo'] ?? '',
-                    'description' => $excerpt,
-                    'image' => [$coverUrl],
-                    'mainEntityOfPage' => $articleUrl,
-                    'author' => [
-                        '@type' => 'Organization',
-                        'name' => 'Tornei Old School',
+            // Se arriva con id e abbiamo il titolo, forza redirect 301 al permalink nuovo
+            if ($requestedId > 0 && $articleTitleForUrl !== '' && ($requestedTitle === '' || $requestedTitle !== $articleTitleForUrl)) {
+                header('Location: ' . $baseUrl . $targetPath, true, 301);
+                exit;
+            }
+
+            $articleUrl = $baseUrl . $targetPath;
+            $cover = $row['cover'] ?? '';
+            $coverUrl = $cover ? $baseUrl . '/' . ltrim($cover, '/') : $articleMeta['image'];
+            $excerpt = seo_trim($row['contenuto'] ?? '', 180);
+            $articleMeta = [
+                'title' => ($row['titolo'] ?? 'Articolo') . ' - Tornei Old School',
+                'description' => $excerpt ?: $articleMeta['description'],
+                'url' => $articleUrl,
+                'canonical' => $articleUrl,
+                'type' => 'article',
+                'image' => $coverUrl,
+            ];
+
+            $breadcrumbSchema = seo_breadcrumb_schema([
+                ['name' => 'Home', 'url' => $baseUrl . '/'],
+                ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
+                ['name' => $row['titolo'] ?? 'Articolo', 'url' => $articleUrl],
+            ]);
+
+            $articleSchema = [
+                '@context' => 'https://schema.org',
+                '@type' => 'Article',
+                'headline' => $row['titolo'] ?? '',
+                'description' => $excerpt,
+                'image' => [$coverUrl],
+                'mainEntityOfPage' => $articleUrl,
+                'author' => [
+                    '@type' => 'Organization',
+                    'name' => 'Tornei Old School',
+                ],
+                'publisher' => [
+                    '@type' => 'Organization',
+                    'name' => 'Tornei Old School',
+                    'logo' => [
+                        '@type' => 'ImageObject',
+                        'url' => $baseUrl . '/img/logo_old_school.png',
                     ],
-                    'publisher' => [
-                        '@type' => 'Organization',
-                        'name' => 'Tornei Old School',
-                        'logo' => [
-                            '@type' => 'ImageObject',
-                            'url' => $baseUrl . '/img/logo_old_school.png',
-                        ],
-                    ],
-                ];
+                ],
+            ];
 
-                if (!empty($row['data_pubblicazione'])) {
-                    $articleSchema['datePublished'] = date('c', strtotime($row['data_pubblicazione']));
-                }
+            if (!empty($row['data_pubblicazione'])) {
+                $articleSchema['datePublished'] = date('c', strtotime($row['data_pubblicazione']));
             }
         }
-        $stmt->close();
     }
+    $stmt->close();
+}
+
+if ($articleId === 0) {
+    http_response_code(404);
 }
 ?>
 <!DOCTYPE html>
@@ -692,7 +719,7 @@ if ($id > 0) {
 <?php include __DIR__ . '/includi/footer.html'; ?>
 
 <script>
-const articleId = <?= $id ?>;
+const articleId = <?= $articleId ?>;
 const isLogged = <?= $isLogged ? 'true' : 'false' ?>;
 
 const articleTitle = document.getElementById('articleTitle');
@@ -914,7 +941,7 @@ async function loadRelated() {
             .filter(post => Number(post.id) !== articleId)
             .slice(0, 4)
             .map(post => `
-                <a class="related-post" href="/articolo.php?id=${post.id}">
+                <a class="related-post" href="/articolo.php?titolo=${encodeURIComponent(post.titolo)}">
                     <span>${escapeHTML(post.data || '')}</span>
                     <strong>${escapeHTML(post.titolo)}</strong>
                 </a>

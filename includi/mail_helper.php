@@ -196,7 +196,9 @@ if (!function_exists('invia_notifica_articolo')) {
             return ['inviate' => 0, 'totali' => 0];
         }
 
-        $link = build_absolute_url('/articolo.php?id=' . $postId);
+        $linkTitle = trim($titolo);
+        $linkPath = $linkTitle !== '' ? '/articolo.php?titolo=' . rawurlencode($linkTitle) : '/articolo.php?id=' . $postId;
+        $link = build_absolute_url($linkPath);
         $excerpt = estrai_estratto_testo($contenuto);
 
         $subject = "Nuovo articolo: {$titolo}";

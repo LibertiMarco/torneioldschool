@@ -195,7 +195,7 @@ async function loadNews() {
     posts.forEach(p => {
         const imageSrc = p.immagine ? p.immagine : '/img/blog/placeholder.jpg';
         box.innerHTML += `
-        <article onclick="location.href='/articolo.php?id=${p.id}'" style="cursor:pointer">
+        <article onclick="location.href='/articolo.php?titolo=${encodeURIComponent(p.titolo)}'" style="cursor:pointer">
             <img src="${imageSrc}" alt="">
             <h3>${p.titolo}</h3>
             <p>${p.data}</p>
@@ -439,4 +439,5 @@ loadHallOfFame();
 
 </body>
 </html>
+
 

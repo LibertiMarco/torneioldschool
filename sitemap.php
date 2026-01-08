@@ -46,10 +46,11 @@ foreach ($torneoPages as $file) {
 }
 
 if (isset($conn) && !$conn->connect_error) {
-    $blogQuery = $conn->query("SELECT id, data_pubblicazione FROM blog_post ORDER BY data_pubblicazione DESC");
+    $blogQuery = $conn->query("SELECT id, titolo, data_pubblicazione FROM blog_post ORDER BY data_pubblicazione DESC");
     if ($blogQuery) {
         while ($row = $blogQuery->fetch_assoc()) {
             $id = (int)($row['id'] ?? 0);
+            $titolo = trim($row['titolo'] ?? '');
             $lastmod = null;
             if (!empty($row['data_pubblicazione'])) {
                 $timestamp = strtotime($row['data_pubblicazione']);
@@ -57,9 +58,10 @@ if (isset($conn) && !$conn->connect_error) {
                     $lastmod = date('c', $timestamp);
                 }
             }
+            $path = $titolo !== '' ? '/articolo.php?titolo=' . rawurlencode($titolo) : '/articolo.php?id=' . $id;
             sitemap_add(
                 $urls,
-                $baseUrl . '/articolo.php?id=' . $id,
+                $baseUrl . $path,
                 $lastmod,
                 'weekly',
                 '0.7'

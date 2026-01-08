@@ -157,7 +157,8 @@ if ($hasCommentiTable && $hasCommentiTable->num_rows > 0) {
             $res = $stmtC->get_result();
             while ($row = $res->fetch_assoc()) {
                 $postId = (int)($row['post_id'] ?? 0);
-                $linkArticolo = $postId > 0 ? "/articolo.php?id=" . $postId : "/blog.php";
+                $postTitle = $row['post_titolo'] ?? '';
+                $linkArticolo = $postTitle !== '' ? "/articolo.php?titolo=" . rawurlencode($postTitle) : ($postId > 0 ? "/articolo.php?id=" . $postId : "/blog.php");
                 $notifications[] = [
                     'id' => (int)$row['id'],
                     'title' => 'Qualcuno ha risposto al tuo commento...',

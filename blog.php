@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -662,7 +662,7 @@ function updateFeatured(post) {
             <h3>${escapeHTML(post.titolo)}</h3>
             <p>${escapeHTML(preview || 'Scopri cosa Ã¨ successo dietro le quinte del torneo!')}</p>
             <div class="featured-actions">
-                <a class="primary" href="/articolo.php?id=${post.id}">Leggi ora</a>
+                <a class="primary" href="/articolo.php?titolo=${encodeURIComponent(post.titolo)}">Leggi ora</a>
                 <a class="secondary" href="/tornei.php">Vedi i tornei</a>
             </div>
         </div>`;
@@ -678,7 +678,7 @@ function createCard(post) {
 
     return `
         <article class="blog-card">
-            <a href="/articolo.php?id=${post.id}">
+            <a href="/articolo.php?titolo=${encodeURIComponent(post.titolo)}">
                 <div class="card-image">${imageMarkup}</div>
                 <div class="card-body">
                     <div class="card-date">${escapeHTML(post.data)}</div>
@@ -737,7 +737,7 @@ function renderMiniList(posts, excludeId = null) {
     miniList.innerHTML = suggestions.slice(0, 5).map(post => {
         const cover = post.cover || post.immagine || '';
         return `
-        <a class="mini-card" href="/articolo.php?id=${post.id}">
+        <a class="mini-card" href="/articolo.php?titolo=${encodeURIComponent(post.titolo)}">
             <div class="mini-thumb">
                 ${cover ? `<img src="${encodeURI(cover)}" alt="${escapeHTML(post.titolo)}">` : ''}
             </div>
@@ -820,3 +820,4 @@ loadBlog();
 
 </body>
 </html>
+
