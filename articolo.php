@@ -851,7 +851,7 @@ function formatContent(text = '') {
     const applyInline = (str) =>
         str
           .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-          .replace(/==(.+?)==/g, '$1'); // rimuove i marcatori "==" mantenendo il testo
+          .replace(/==(.+?)==/g, '<strong>$1</strong>');
 
     return text
         .split(/\n{2,}/)
