@@ -427,6 +427,7 @@ $config = [
     'FALLBACK_FACEBOOK' => getenv('FALLBACK_FACEBOOK') ?: '',
     'FALLBACK_INSTAGRAM' => getenv('FALLBACK_INSTAGRAM') ?: '',
     'FALLBACK_TIKTOK' => getenv('FALLBACK_TIKTOK') ?: '',
+    'FALLBACK_YOUTUBE' => getenv('FALLBACK_YOUTUBE') ?: '',
 ];
 
 $cacheFile = __DIR__ . '/../cache/social_followers.json';
@@ -451,6 +452,10 @@ if (!$force && file_exists($cacheFile)) {
                     $cached['counts']['tiktok'] ?? social_result(null, 'Cache mancante'),
                     $config['FALLBACK_TIKTOK']
                 );
+                $cached['counts']['youtube'] = apply_fallback(
+                    $cached['counts']['youtube'] ?? social_result(null, 'Cache mancante'),
+                    $config['FALLBACK_YOUTUBE']
+                );
             }
             json_response([
                 'cached' => true,
@@ -473,7 +478,10 @@ $payload = [
             fetch_facebook($config),
             $config['FALLBACK_FACEBOOK']
         ),
-        'youtube' => fetch_youtube($config),
+        'youtube' => apply_fallback(
+            fetch_youtube($config),
+            $config['FALLBACK_YOUTUBE']
+        ),
         'tiktok' => apply_fallback(
             fetch_tiktok($config),
             $config['FALLBACK_TIKTOK']
