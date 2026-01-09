@@ -838,59 +838,68 @@ async function caricaRosaSquadra(squadra) {
     const grid = document.createElement("div");
     grid.classList.add("rosa-grid");
 
+    // ordina per cognome
+    data.sort((a, b) => (a.cognome || "").localeCompare(b.cognome || "", "it", { sensitivity: "base" }));
+
     data.forEach(giocatore => {
       const card = document.createElement("div");
       card.classList.add("player-card");
 
-card.innerHTML = `
-  <div class="player-name-row">
-    <h4 class="player-name">${giocatore.nome} ${giocatore.cognome}</h4>
-  </div>
+      const nome = giocatore.nome || "";
+      const cognome = giocatore.cognome || "";
+      const nomeCompleto = `${nome} ${cognome}`.trim() || "Giocatore";
+      const ruolo = (giocatore.ruolo_squadra || giocatore.ruolo || "").toLowerCase().trim();
+      const isPortiere = ruolo === "portiere";
+      const isCaptain = String(giocatore.is_captain || giocatore.captain) === "1";
+      const ruoloBadge = isPortiere ? ' <span class="role-badge gk-badge">GK</span>' : "";
+      const captainBadge = isCaptain ? ' <span class="role-badge captain-badge">C</span>' : "";
+      const foto = giocatore.foto || FALLBACK_AVATAR;
 
-  <div class="player-team-row">
-    <img src="${squadraLogo}" alt="${squadra}" class="player-team-logo">
-    <span class="player-team-name">${squadra}</span>
-  </div>
-
-  <div class="player-bottom">
-    <div class="player-photo">
-      <img src="${giocatore.foto}" 
-           alt="${giocatore.nome} ${giocatore.cognome}">
-    </div>
-
-    <div class="player-stats">
-      <div class="row">
-        <div class="stat">
-          <span class="label">Presenze</span>
-          <span class="value">${giocatore.presenze ?? '0'}</span>
+      card.innerHTML = `
+        <div class="player-name-row">
+          <h4 class="player-name">${nomeCompleto}${ruoloBadge}${captainBadge}</h4>
         </div>
-        <div class="stat">
-          <span class="label">Cart. Gialli / Rossi</span>
-          <span class="value">
-            <span class="yellow">${giocatore.gialli ?? '0'}</span>/
-            <span class="red"> ${giocatore.rossi ?? '0'}</span>
-          </span>
+
+        <div class="player-team-row">
+          <img src="${squadraLogo}" alt="${squadra}" class="player-team-logo">
+          <span class="player-team-name">${squadra}</span>
         </div>
-      </div>
 
-      <div class="row">
-        <div class="stat">
-          <span class="label">Reti</span>
-          <span class="value">${giocatore.reti ?? '0'}</span>
+        <div class="player-bottom">
+          <div class="player-photo">
+            <img src="${foto}" 
+                 alt="${nomeCompleto}"
+                 onerror="this.onerror=null; this.src='${FALLBACK_AVATAR}';">
+          </div>
+
+          <div class="player-stats">
+            <div class="row">
+              <div class="stat">
+                <span class="label">Presenze</span>
+                <span class="value">${giocatore.presenze ?? '0'}</span>
+              </div>
+              <div class="stat">
+                <span class="label">Cart. Gialli / Rossi</span>
+                <span class="value">
+                  <span class="yellow">${giocatore.gialli ?? '0'}</span>/
+                  <span class="red"> ${giocatore.rossi ?? '0'}</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="stat">
+                <span class="label">Reti</span>
+                <span class="value">${giocatore.reti ?? '0'}</span>
+              </div>
+              <div class="stat rating">
+                <span class="label">Media Voti</span>
+                <span class="value">${giocatore.media_voti ?? '0'}</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="stat rating">
-          <span class="label">Media Voti</span>
-          <span class="value">${giocatore.media_voti ?? '0'}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-`;
-
-
-
-
-
+      `;
 
       grid.appendChild(card);
     });
