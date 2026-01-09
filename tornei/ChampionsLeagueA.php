@@ -243,30 +243,30 @@ $assetVersion = '20251208';
 
 <!-- REGOLE -->
 <section id="regole" class="tab-section">
-  <h2 class="titolo-sezione">ðŸ“œ Regole del Torneo</h2>
+  <h2 class="titolo-sezione">📜 Regole del Torneo</h2>
 
   <div class="regole-box">
     <div class="regola">
-      <h3>ðŸŸï¸ Struttura del Campionato</h3>
+      <h3>🏟️ Struttura del Campionato</h3>
       <p>
-        Il torneo Ã¨ composto da <strong>18 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
+        Il torneo è composto da <strong>18 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>âš½ Fase 1 â€” Regular Season</h3>
+      <h3>⚽ Fase 1 — Regular Season</h3>
       <p>
         Tutte le squadre partecipano a una <strong>Regular Season</strong> in stile Champions League.
         Ogni squadra disputa <strong>8 partite</strong> totali.
       </p>
       <p>
         La squadra prima in classifica al termine del girone riceve il
-        <span class="highlight">Trofeo Regular Season ðŸ†</span>.
+        <span class="highlight">Trofeo Regular Season 🏆</span>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>ðŸ† Fase 2 â€” Coppe</h3>
+      <h3>🏆 Fase 2 — Coppe</h3>
       <ul>
         <li>Le <strong>prime 16</strong> classificate accedono alla <span class="gold">Coppa Gold</span>.</li>
         <li>Le <strong>ultime 2</strong> si sfidano nella <span class="silver">finale di Coppa Silver</span>.</li>
@@ -275,22 +275,22 @@ $assetVersion = '20251208';
     </div>
 
     <div class="regola">
-      <h3>ðŸŽ–ï¸ Premi Finali</h3>
+      <h3>🎖️ Premi Finali</h3>
       <p>Dopo la finale di <span class="gold">Coppa Gold</span> verranno assegnati i seguenti riconoscimenti:</p>
       <div class="premi-grid">
-        <span>ðŸ… Miglior Giocatore</span>
-        <span>ðŸ§¤ Miglior Portiere</span>
-        <span>ðŸ›¡ï¸ Miglior Difensore</span>
-        <span>âš¡ Miglior Attaccante</span>
+        <span>🏅 Miglior Giocatore</span>
+        <span>🧤 Miglior Portiere</span>
+        <span>🛡️ Miglior Difensore</span>
+        <span>⚡ Miglior Attaccante</span>
       </div>
       <p>
-        Il <strong>Miglior Giocatore</strong> vincerÃ  un
-        <span class="highlight">buono tatuaggio da 500â‚¬</span>.
+        Il <strong>Miglior Giocatore</strong> vincerà un
+        <span class="highlight">buono tatuaggio da 500€</span>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>â±ï¸ Regole di Gioco</h3>
+      <h3>⏱️ Regole di Gioco</h3>
       <ul>
         <li>Ogni partita dura <strong>2 tempi da 25 minuti</strong>.</li>
         <li>Ogni squadra ha <strong>1 chiamata VAR</strong> disponibile per partita.</li>
@@ -298,10 +298,10 @@ $assetVersion = '20251208';
     </div>
 
     <div class="regola">
-      <h3>ðŸ“… Calendario</h3>
+      <h3>📅 Calendario</h3>
       <ul>
-        <li>Le partite si disputano principalmente <strong>il lunedÃ¬ e il martedÃ¬</strong>.</li>
-        <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedÃ¬ o venerdÃ¬</strong>.</li>
+        <li>Le partite si disputano principalmente <strong>il lunedì e il martedì</strong>.</li>
+        <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedì o venerdì</strong>.</li>
       </ul>
     </div>
   </div>

@@ -364,7 +364,7 @@ if ($resSquadre = $squadra->getAll()) {
           <div class="form-group">
             <label>Riutilizza scudetto esistente (opzionale)</label>
             <select name="logo_esistente">
-              <option value="">-- Nessuno, caricherÃ² un nuovo scudetto --</option>
+              <option value="">-- Nessuno, caricherà un nuovo scudetto --</option>
               <?php foreach ($squadreList as $row): ?>
                 <?php if (!empty($row['logo'])): ?>
                   <?php $torneoLabel = $torneoLabelBySlug[$row['torneo']] ?? $row['torneo']; ?>
