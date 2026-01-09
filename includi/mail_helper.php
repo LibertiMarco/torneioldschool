@@ -112,9 +112,10 @@ if (!function_exists('tos_smtp_send')) {
 if (!function_exists('inviaEmailVerifica')) {
     function inviaEmailVerifica($email, $nome, $token) {
         $link = build_absolute_url('/verify_email.php?token=' . urlencode($token) . '&email=' . urlencode($email));
+        $safeName = trim($nome) !== '' ? $nome : 'giocatore';
 
         $subject = "Conferma la tua registrazione - Tornei Old School";
-        $message = "Ciao {$nome},\n\n"
+        $message = "Ciao {$safeName},\n\n"
             . "Grazie per esserti registrato su Tornei Old School.\n"
             . "Per completare la registrazione, conferma il tuo indirizzo email cliccando sul link seguente:\n\n"
             . "{$link}\n\n"
@@ -122,7 +123,16 @@ if (!function_exists('inviaEmailVerifica')) {
             . "Se non hai richiesto questa registrazione, ignora questa email.\n\n"
             . "A presto,\nIl team Tornei Old School";
 
-        return tos_mail_send($email, $subject, $message);
+        $safeLink = htmlspecialchars($link, ENT_QUOTES, 'UTF-8');
+        $safeNameHtml = htmlspecialchars($safeName, ENT_QUOTES, 'UTF-8');
+        $bodyHtml = "<p>Ciao {$safeNameHtml},</p>";
+        $bodyHtml .= "<p>Grazie per esserti registrato su Tornei Old School.</p>";
+        $bodyHtml .= "<p style=\"margin:18px 0;\"><a href=\"{$safeLink}\" style=\"display:inline-block;padding:12px 18px;background:#15293e;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:700;\">Conferma il tuo indirizzo email</a></p>";
+        $bodyHtml .= "<p>Se il pulsante non funziona, copia e incolla questo link nel browser:<br><a href=\"{$safeLink}\">{$safeLink}</a></p>";
+        $bodyHtml .= "<p style=\"color:#334155;font-size:14px;\">Il link scadra' tra 24 ore.</p>";
+        $bodyHtml .= "<p>A presto,<br>Il team Tornei Old School</p>";
+
+        return tos_mail_send($email, $subject, $message, 'Tornei Old School', null, null, $bodyHtml);
     }
 }
 
@@ -143,8 +153,12 @@ if (!function_exists('inviaEmailResetPassword')) {
 
 if (!function_exists('build_absolute_url')) {
     function build_absolute_url(string $path): string {
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $protoHeader = $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '';
+        $protocol = $protoHeader !== ''
+            ? (stripos($protoHeader, 'https') !== false ? 'https' : 'http')
+            : ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http");
+
+        $host = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? ($_SERVER['HTTP_HOST'] ?? 'localhost');
         $normalizedPath = '/' . ltrim($path, '/');
         return "{$protocol}://{$host}{$normalizedPath}";
     }
