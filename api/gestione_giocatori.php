@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includi/security.php';
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
     header("Location: /index.php");
@@ -278,27 +278,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
 
 // --- ASSOCIA GIOCATORE A SQUADRA ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['associa_squadra'])) {
-    $giocatoreAssoc = (int)($_POST['giocatore_associa'] ?? 0);
     $squadraAssoc = (int)($_POST['squadra_associa'] ?? 0);
-        if ($giocatoreAssoc && $squadraAssoc) {
+    $giocatoriAssocRaw = $_POST['giocatore_associa'] ?? [];
+    $giocatoriAssoc = array_filter(array_map('intval', (array)$giocatoriAssocRaw));
+
+    if ($squadraAssoc && !empty($giocatoriAssoc)) {
+        $ruolo = trim($_POST['ruolo_associa'] ?? '');
+        $isCaptainRequested = isset($_POST['capitano_associa']) && $_POST['capitano_associa'] === '1';
+        $captainAssigned = false;
+        $assocExists = false;
+        $fotoAssoc = null;
+
+        foreach ($giocatoriAssoc as $index => $giocatoreAssoc) {
             if ($pivot->esisteAssociazione($giocatoreAssoc, $squadraAssoc)) {
-                redirectGestione('associazioni', ['assoc_exists' => 1]);
+                $assocExists = true;
+                continue;
             }
+
             $giocatoreRecord = $giocatore->getById($giocatoreAssoc);
-            $associazioneAttuale = $pivot->getAssociazione($giocatoreAssoc, $squadraAssoc);
-            $fotoAttuale = $associazioneAttuale['foto'] ?? null;
-            $fotoUpload = $giocatoreRecord
-                ? salvaFotoAssociazione($giocatoreRecord['nome'] ?? '', $giocatoreRecord['cognome'] ?? '', 'foto_associazione_upload', $fotoAttuale)
-                : null;
-            $fotoAssoc = $fotoUpload ?? $fotoAttuale;
-            $isCaptain = isset($_POST['capitano_associa']) && $_POST['capitano_associa'] === '1';
-            $pivot->assegna($giocatoreAssoc, $squadraAssoc, $fotoAssoc, [
-                'ruolo' => trim($_POST['ruolo_associa'] ?? '')
-            ], false, $isCaptain);
+            if ($fotoAssoc === null && $giocatoreRecord) {
+                $associazioneAttuale = $pivot->getAssociazione($giocatoreAssoc, $squadraAssoc);
+                $fotoAttuale = $associazioneAttuale['foto'] ?? null;
+                $fotoUpload = salvaFotoAssociazione(
+                    $giocatoreRecord['nome'] ?? '',
+                    $giocatoreRecord['cognome'] ?? '',
+                    'foto_associazione_upload',
+                    $fotoAttuale
+                );
+                $fotoAssoc = $fotoUpload ?? $fotoAttuale;
+            }
+
+            $pivot->assegna(
+                $giocatoreAssoc,
+                $squadraAssoc,
+                $fotoAssoc,
+                ['ruolo' => $ruolo],
+                false,
+                $isCaptainRequested && !$captainAssigned
+            );
+
+            if ($isCaptainRequested && !$captainAssigned) {
+                $captainAssigned = true;
+            }
         }
 
-        redirectGestione('associazioni');
+        $redirectParams = $assocExists ? ['assoc_exists' => 1] : [];
+        redirectGestione('associazioni', $redirectParams);
     }
+
+    redirectGestione('associazioni');
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['modifica_associazione'])) {
     $giocatoreAssoc = (int)($_POST['mod_assoc_giocatore'] ?? 0);
@@ -643,9 +672,9 @@ $giocatoriJson = htmlspecialchars(
 -->
 
 <?php if (isset($_GET['duplicate']) && $_GET['duplicate'] === '1'): ?>
-<div class="admin-alert error" id="duplicateAlert">Giocatore giÃƒÂ  esistente</div>
+<div class="admin-alert error" id="duplicateAlert">Giocatore giÃƒÆ’Ã‚Â  esistente</div>
 <?php elseif (isset($_GET['assoc_exists']) && $_GET['assoc_exists'] === '1'): ?>
-<div class="admin-alert error" id="assocAlert">Il giocatore fa giÃƒÂ  parte di questa squadra</div>
+<div class="admin-alert error" id="assocAlert">Il giocatore fa giÃƒÆ’Ã‚Â  parte di questa squadra</div>
 <?php endif; ?>
 
 <!-- PICKLIST -->
@@ -660,7 +689,7 @@ $giocatoriJson = htmlspecialchars(
       </div>
 <input type="hidden" id="currentAction" value="<?= htmlspecialchars($currentAction) ?>">
 
-<!-- Ã¢Å“â€¦ FORM CREA -->
+<!-- ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FORM CREA -->
 <form method="POST" class="admin-form form-crea" enctype="multipart/form-data">
 <?= csrf_field('admin_giocatori') ?>
 <h2>Aggiungi Giocatore</h2>
@@ -682,14 +711,14 @@ $giocatoriJson = htmlspecialchars(
         <button type="button" class="file-btn" data-target="foto_upload">Scegli immagine</button>
         <span class="file-name" id="foto_upload_name">Nessun file selezionato</span>
     </div>
-    <small>Se non carichi un'immagine verrÃƒÂ  usata <code>unknown.jpg</code>.</small>
+    <small>Se non carichi un'immagine verrÃƒÆ’Ã‚Â  usata <code>unknown.jpg</code>.</small>
 </div>
 
 <button type="submit" name="crea" class="btn-primary">Crea Giocatore</button>
 </form>
 
 
-<!-- Ã¢Å“â€¦ FORM MODIFICA -->
+<!-- ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FORM MODIFICA -->
 <form method="POST" class="admin-form form-modifica hidden" id="formModifica" enctype="multipart/form-data">
 <?= csrf_field('admin_giocatori') ?>
 <h2>Modifica Giocatore</h2>
@@ -742,7 +771,7 @@ $giocatoriJson = htmlspecialchars(
 <button type="submit" name="aggiorna" class="btn-primary">Aggiorna Giocatore</button>
 </form>
 
-<!-- Ã¢Å“â€¦ SEZIONE ELIMINA -->
+<!-- ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ SEZIONE ELIMINA -->
 <!-- GESTIONE ASSOCIAZIONI -->
 <section class="admin-associazioni form-associazioni hidden">
   <h2>Associazione Calciatore-Squadra</h2>
@@ -782,9 +811,9 @@ $giocatoriJson = htmlspecialchars(
       </div>
 
       <div class="form-group">
-          <label>Giocatore</label>
-          <select name="giocatore_associa" id="assocGiocatore" required>
-              <option value="">-- Seleziona un giocatore --</option>
+          <label>Giocatori</label>
+          <select name="giocatore_associa[]" id="assocGiocatore" required multiple size="8">
+              <option value="" disabled>-- Seleziona uno o piu giocatori --</option>
               <?php foreach ($giocatori as $g): ?>
               <?php
                   $isPortiere = isset($g['ruolo']) && preg_match('/portiere|\\bgk\\b|^p$/i', $g['ruolo']);
@@ -794,6 +823,7 @@ $giocatoriJson = htmlspecialchars(
               <option value="<?= $g['id'] ?>"><?= htmlspecialchars($label) ?></option>
               <?php endforeach; ?>
           </select>
+          <small>Puoi selezionare piu giocatori (Ctrl/Cmd + click); verranno aggiunti tutti alla squadra.</small>
       </div>
       <div class="form-group">
           <label>Ruolo in squadra</label>
@@ -807,8 +837,8 @@ $giocatoriJson = htmlspecialchars(
       </div>
 
       <div class="form-group">
-          <label><input type="checkbox" name="capitano_associa" value="1"> Capitano della squadra</label>
-          <small>Un solo capitano per squadra; un giocatore puÃƒÂ² essere capitano di squadre diverse.</small>
+          <label><input type="checkbox" name="capitano_associa" id="capitano_associa" value="1"> Capitano della squadra</label>
+          <small id="capitano_associa_hint">Un solo capitano per squadra; un giocatore pu&ograve; essere capitano di squadre diverse. Se selezioni pi&ugrave; giocatori il flag verr&agrave; disabilitato.</small>
       </div>
 
       <div class="form-group">
@@ -818,7 +848,7 @@ $giocatoriJson = htmlspecialchars(
               <button type="button" class="file-btn" data-target="foto_associazione_upload">Scegli immagine</button>
               <span class="file-name" id="foto_associazione_upload_name">Nessun file selezionato</span>
           </div>
-          <small>Se non carichi nulla verrÃƒÂ  usata la foto del giocatore.</small>
+          <small>Se non carichi nulla verrÃƒÆ’Ã‚Â  usata la foto del giocatore.</small>
       </div>
 
       <button type="submit" name="associa_squadra" class="btn-primary">Aggiungi associazione</button>
@@ -869,7 +899,7 @@ $giocatoriJson = htmlspecialchars(
 
       <div class="form-group">
           <label><input type="checkbox" name="mod_assoc_capitano" id="mod_assoc_capitano" value="1"> Capitano della squadra</label>
-          <small>Un solo capitano per squadra; un giocatore puÃƒÂ² essere capitano di squadre diverse.</small>
+          <small>Un solo capitano per squadra; un giocatore puÃƒÆ’Ã‚Â² essere capitano di squadre diverse.</small>
       </div>
 
       <div class="form-row">
@@ -1034,7 +1064,7 @@ $giocatoriJson = htmlspecialchars(
 <div id="footer-container"></div>
 
 
-<!-- Ã¢Å“â€¦ SCRIPTS -->
+<!-- ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ SCRIPTS -->
 <script>
 const selectAzione = document.getElementById('azione');
 const currentActionInput = document.getElementById('currentAction');
@@ -1141,6 +1171,7 @@ let pendingDeleteName = "";
 const assocTorneo = document.getElementById("assocTorneo");
 const assocSquadra = document.getElementById("assocSquadra");
 const assocGiocatore = document.getElementById("assocGiocatore");
+const assocCapitano = document.getElementById("capitano_associa");
 const remTorneo = document.getElementById("remTorneo");
 const remSquadra = document.getElementById("remSquadra");
 const remGiocatore = document.getElementById("remGiocatore");
@@ -1192,8 +1223,13 @@ function buildPlayerLabel(player = {}, order = "nome") {
 
 function resetSelect(select, placeholder, disable = true) {
     if (!select) return;
-    select.innerHTML = placeholder ? `<option value="">${placeholder}</option>` : "";
+    const isMultiple = !!select.multiple;
+    const placeholderAttr = isMultiple ? ' value="" disabled' : ' value=""';
+    select.innerHTML = placeholder ? `<option${placeholderAttr}>${placeholder}</option>` : "";
     select.disabled = disable;
+    if (isMultiple) {
+        select.selectedIndex = -1;
+    }
 }
 
 function clearModAssocStatsFields() {
@@ -1308,24 +1344,36 @@ async function fetchGiocatoriAssociatiIds(squadraId) {
     }
 }
 
+function updateCaptainAvailability() {
+    if (!assocGiocatore || !assocCapitano) return;
+    const selectedCount = assocGiocatore.selectedOptions ? assocGiocatore.selectedOptions.length : 0;
+    const shouldDisable = selectedCount > 1;
+    assocCapitano.disabled = shouldDisable;
+    if (shouldDisable) {
+        assocCapitano.checked = false;
+    }
+}
+
 async function aggiornaGiocatoriDisponibiliPerAssociazione() {
     if (!assocGiocatore) return;
     const squadraId = assocSquadra?.value;
+    const placeholder = "-- Seleziona uno o piu giocatori --";
     // Nessuna squadra: mostra tutti
     if (!squadraId) {
-        resetSelect(assocGiocatore, "-- Seleziona un giocatore --", false);
+        resetSelect(assocGiocatore, placeholder, false);
         allPlayers.forEach(p => {
             const opt = document.createElement("option");
             opt.value = p.id;
             opt.textContent = buildPlayerLabel(p, "cognome");
             assocGiocatore.appendChild(opt);
         });
+        updateCaptainAvailability();
         return;
     }
 
     const associati = await fetchGiocatoriAssociatiIds(squadraId);
     const setAssociati = new Set(associati);
-    resetSelect(assocGiocatore, "-- Seleziona un giocatore --", false);
+    resetSelect(assocGiocatore, placeholder, false);
     allPlayers
         .filter(p => !setAssociati.has(String(p.id)))
         .forEach(p => {
@@ -1334,6 +1382,7 @@ async function aggiornaGiocatoriDisponibiliPerAssociazione() {
             opt.textContent = buildPlayerLabel(p, "cognome");
             assocGiocatore.appendChild(opt);
         });
+    updateCaptainAvailability();
 }
 
 function filterGiocatori(term) {
@@ -1368,7 +1417,7 @@ function filterTabella(term) {
     const tbody = tabellaGiocatori.querySelector("tbody");
     if (!tbody) return;
 
-    // Se non c'ÃƒÂ¨ testo, mostra gli ultimi 10 (giÃƒÂ  popolati dal PHP)
+    // Se non c'ÃƒÆ’Ã‚Â¨ testo, mostra gli ultimi 10 (giÃƒÆ’Ã‚Â  popolati dal PHP)
     if (normalized === "") {
         // ripristina ultimi 10
         tbody.querySelectorAll("tr").forEach(row => row.style.display = "");
@@ -1575,6 +1624,8 @@ modAssocGiocatore?.addEventListener("change", () => {
 });
 
 assocSquadra?.addEventListener("change", () => aggiornaGiocatoriDisponibiliPerAssociazione());
+assocGiocatore?.addEventListener("change", () => updateCaptainAvailability());
+updateCaptainAvailability();
 
 function mostraFormAssoc(val) {
     [assocFormAdd, assocFormEdit, assocFormRemove].forEach(f => f && f.classList.add('hidden'));
@@ -1605,7 +1656,7 @@ selectGiocatore?.addEventListener("change", async e => {
 });
 </script>
 <script>
-// Ã¢Å“â€¦ ORDINAMENTO TABELLA ELIMINA GIOCATORI
+// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ORDINAMENTO TABELLA ELIMINA GIOCATORI
 document.addEventListener("DOMContentLoaded", () => {
     const table = document.getElementById("tabellaGiocatori");
     const headers = table.querySelectorAll("th[data-col]");
@@ -1679,3 +1730,10 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
