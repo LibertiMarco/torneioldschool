@@ -2,6 +2,7 @@
 const GOLD_SPOTS = 16;              // prime 16 in Coppa Gold
 const TEAM_COUNT = 18;              // totale squadre in regular
 const SILVER_SPOTS = TEAM_COUNT - GOLD_SPOTS; // ultime 2 in finale Silver
+const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
 const teamLogos = {};
 const favState = { tournaments: new Set(), teams: new Set() };
 let currentRosaTeam = "";
