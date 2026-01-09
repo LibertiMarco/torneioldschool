@@ -1,10 +1,24 @@
 <?php
 // Session hardening: set secure cookie flags and strict mode before starting
+if (!defined('REMEMBER_COOKIE_NAME')) {
+    define('REMEMBER_COOKIE_NAME', 'tos_keep_login');
+}
+if (!defined('REMEMBER_COOKIE_LIFETIME')) {
+    define('REMEMBER_COOKIE_LIFETIME', 60 * 60 * 24 * 30); // 30 giorni
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
+    $rememberRequested = !empty($_COOKIE[REMEMBER_COOKIE_NAME]);
+    $cookieLifetime = $rememberRequested ? REMEMBER_COOKIE_LIFETIME : 0;
+
+    if ($rememberRequested) {
+        ini_set('session.gc_maxlifetime', (string)REMEMBER_COOKIE_LIFETIME);
+    }
+
     if (function_exists('session_set_cookie_params')) {
         session_set_cookie_params([
-            'lifetime' => 0,
+            'lifetime' => $cookieLifetime,
             'path' => '/',
             'secure' => $isHttps,
             'httponly' => true,

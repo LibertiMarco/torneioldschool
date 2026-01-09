@@ -81,6 +81,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (!$error) {
         $email = trim($_POST['email']);
         $password = trim($_POST['password']);
+        $rememberMe = !empty($_POST['remember_me']);
 
         // query di selezione
         $sql = "SELECT id, email, nome, cognome, ruolo, password, avatar, email_verificata FROM utenti WHERE email = ?";
@@ -106,6 +107,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['cognome'] = $row['cognome'];
             $_SESSION['ruolo'] = $row['ruolo']; // "admin" oppure "user"
             $_SESSION['avatar'] = $row['avatar'] ?? null;
+
+            $cookieParams = session_get_cookie_params();
+            if ($rememberMe) {
+                $cookieLifetime = REMEMBER_COOKIE_LIFETIME;
+                setcookie(session_name(), session_id(), [
+                    'expires' => time() + $cookieLifetime,
+                    'path' => $cookieParams['path'] ?? '/',
+                    'domain' => $cookieParams['domain'] ?? '',
+                    'secure' => (bool)($cookieParams['secure'] ?? false),
+                    'httponly' => (bool)($cookieParams['httponly'] ?? true),
+                    'samesite' => $cookieParams['samesite'] ?? 'Lax',
+                ]);
+                setcookie(REMEMBER_COOKIE_NAME, '1', [
+                    'expires' => time() + $cookieLifetime,
+                    'path' => $cookieParams['path'] ?? '/',
+                    'domain' => $cookieParams['domain'] ?? '',
+                    'secure' => (bool)($cookieParams['secure'] ?? false),
+                    'httponly' => true,
+                    'samesite' => $cookieParams['samesite'] ?? 'Lax',
+                ]);
+            } else {
+                setcookie(REMEMBER_COOKIE_NAME, '', time() - 3600, [
+                    'path' => $cookieParams['path'] ?? '/',
+                    'domain' => $cookieParams['domain'] ?? '',
+                    'secure' => (bool)($cookieParams['secure'] ?? false),
+                    'httponly' => true,
+                    'samesite' => $cookieParams['samesite'] ?? 'Lax',
+                ]);
+            }
 
             // salva la sessione e poi reindirizza
             session_write_close();
@@ -180,7 +210,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       font-weight: 600;
       color: #15293e;
     }
-    .login-form input {
+    .login-form input[type="email"],
+    .login-form input[type="password"],
+    .login-form input[type="text"] {
       width: 100%;
       padding: 10px 14px;
       border: 1px solid #ccc;
@@ -188,9 +220,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       font-size: 1rem;
       transition: border-color 0.2s;
     }
-    .login-form input:focus {
+    .login-form input[type="email"]:focus,
+    .login-form input[type="password"]:focus,
+    .login-form input[type="text"]:focus {
       border-color: #15293e;
       outline: none;
+    }
+    .remember-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .remember-me {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      color: #15293e;
+      font-size: 0.95rem;
+    }
+    .remember-me input {
+      width: auto;
+      padding: 0;
+      margin: 0;
+      accent-color: #15293e;
     }
     .login-btn {
       background-color: #15293e;
@@ -324,6 +379,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
               <path fill="currentColor" d="M2.3 3.7l2 2A12.7 12.7 0 002 12c1 2.5 5 7 10 7 1.7 0 3.3-.5 4.8-1.4l2.2 2.2 1.4-1.4-17-17-1.3 1.3zm7.1 7.1l1.9 1.9a1 1 0 01-1.9-1.9zm3.5 3.5l1.9 1.9a3 3 0 01-3.8-3.8l1.9 1.9zm8.8-.3c.5-.8.8-1.5.8-2.1-1-2.5-5-7-10-7-1.2 0-2.5.3-3.6.8l1.6 1.6a6 6 0 017.4 7.4l1.5 1.5a13.5 13.5 0 002.3-2.2z"/>
             </svg>
           </button>
+        </div>
+
+        <div class="remember-row">
+          <label class="remember-me">
+            <input type="checkbox" name="remember_me" value="1">
+            <span>Resta connesso</span>
+          </label>
         </div>
         <div class="recaptcha-box">
           <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($recaptchaSiteKey) ?>"></div>
