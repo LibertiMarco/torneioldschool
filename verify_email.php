@@ -46,7 +46,7 @@ if ($email && $token) {
 
             if ($update->execute()) {
                 $status = 'success';
-                $message = "Perfetto! Il tuo indirizzo email Ã¨ stato confermato. Ora puoi accedere.";
+                $message = "Perfetto! Il tuo indirizzo email è stato confermato. Ora puoi accedere.";
             } else {
                 $message = "Si Ã¨ verificato un errore durante la conferma dell'email. Riprova piÃ¹ tardi.";
             }
