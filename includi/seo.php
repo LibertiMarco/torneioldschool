@@ -5,9 +5,7 @@ if (!function_exists('seo_base_url')) {
     }
     if (!defined('GA_MEASUREMENT_ID')) {
         $envGaId = getenv('GA_MEASUREMENT_ID') ?: '';
-        // Fallback to the production property so GA works even if the env var is missing.
-        $defaultGaId = 'G-VZ982XSRRN';
-        define('GA_MEASUREMENT_ID', $envGaId !== '' ? $envGaId : $defaultGaId);
+        define('GA_MEASUREMENT_ID', $envGaId);
     }
 
     function asset_url(string $path, ?string $version = null): string
@@ -237,38 +235,5 @@ if (!function_exists('seo_base_url')) {
         }
 
         echo '<script>window.__GA_MEASUREMENT_ID=' . json_encode($safeId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';</script>' . "\n";
-
-        // Load GA4 with consent defaults (cookieless until consent is granted). If a manual gtag
-        // snippet already ran, this script skips re-configuring to avoid duplicate pageviews.
-        echo '<script>
-(function() {
-  var gaId = ' . json_encode($safeId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';
-  if (!gaId) return;
-  var dl = window.dataLayer = window.dataLayer || [];
-  var alreadyConfigured = Array.isArray(dl) && dl.some(function (entry) {
-    return entry && entry[0] === "config" && entry[1] === gaId;
-  });
-  window.gtag = window.gtag || function gtag(){ dl.push(arguments); };
-  window.gtag("consent", "default", {
-    analytics_storage: "denied",
-    ad_storage: "denied",
-    ad_user_data: "denied",
-    ad_personalization: "denied",
-    functionality_storage: "granted",
-    security_storage: "granted"
-  });
-  if (alreadyConfigured) return;
-  var s = document.createElement("script");
-  s.async = true;
-  s.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(gaId);
-  document.head.appendChild(s);
-  window.gtag("js", new Date());
-  window.gtag("config", gaId, {
-    anonymize_ip: true,
-    allow_ad_personalization_signals: false,
-    transport_type: "beacon"
-  });
-})();
-</script>' . "\n";
     }
 }
