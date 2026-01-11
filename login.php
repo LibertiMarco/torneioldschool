@@ -100,6 +100,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $needsVerificationResend = $email;
             } else {
             // imposta le variabili di sessione
+            if ($rememberMe) {
+                ini_set('session.gc_maxlifetime', (string)REMEMBER_COOKIE_LIFETIME);
+            }
             session_regenerate_id(true);
             $_SESSION['user_id'] = $row['id'];
             $_SESSION['email'] = $row['email'];
@@ -107,6 +110,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['cognome'] = $row['cognome'];
             $_SESSION['ruolo'] = $row['ruolo']; // "admin" oppure "user"
             $_SESSION['avatar'] = $row['avatar'] ?? null;
+            $_SESSION['remember_me'] = $rememberMe;
 
             $cookieParams = session_get_cookie_params();
             if ($rememberMe) {
@@ -128,6 +132,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     'samesite' => $cookieParams['samesite'] ?? 'Lax',
                 ]);
             } else {
+                $_SESSION['remember_me'] = false;
                 setcookie(REMEMBER_COOKIE_NAME, '', time() - 3600, [
                     'path' => $cookieParams['path'] ?? '/',
                     'domain' => $cookieParams['domain'] ?? '',

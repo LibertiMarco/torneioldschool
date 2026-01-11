@@ -36,6 +36,32 @@ if (session_status() === PHP_SESSION_NONE) {
         $created = time();
     }
     $_SESSION['__created_at'] = $created;
+
+    // Mantieni viva la sessione se l'utente ha richiesto "ricorda accesso"
+    if (!empty($_SESSION['remember_me'])) {
+        $params = session_get_cookie_params();
+        $expires = time() + REMEMBER_COOKIE_LIFETIME;
+
+        setcookie(session_name(), session_id(), [
+            'expires' => $expires,
+            'path' => $params['path'] ?? '/',
+            'domain' => $params['domain'] ?? '',
+            'secure' => $isHttps,
+            'httponly' => true,
+            'samesite' => $params['samesite'] ?? 'Lax',
+        ]);
+
+        if (empty($_COOKIE[REMEMBER_COOKIE_NAME]) || $_COOKIE[REMEMBER_COOKIE_NAME] !== '1') {
+            setcookie(REMEMBER_COOKIE_NAME, '1', [
+                'expires' => $expires,
+                'path' => $params['path'] ?? '/',
+                'domain' => $params['domain'] ?? '',
+                'secure' => $isHttps,
+                'httponly' => true,
+                'samesite' => $params['samesite'] ?? 'Lax',
+            ]);
+        }
+    }
 }
 
 // Basic CSRF utilities

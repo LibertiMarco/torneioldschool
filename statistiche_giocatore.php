@@ -10,6 +10,7 @@ require_once __DIR__ . '/includi/seo.php';
 $userId = (int)$_SESSION['user_id'];
 $baseUrl = seo_base_url();
 $defaultTeamLogo = '/img/logo_old_school.png';
+header('Content-Type: text/html; charset=utf-8');
 
 function h(string $value): string {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -267,6 +268,11 @@ $seo = [
             text-align: right;
             font-size: 0.98rem;
             letter-spacing: 0.01em;
+            min-width: 0;
+            max-width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .calendar-list .team.away .team-name { text-align: left; }
         .calendar-list .match-center {
@@ -292,9 +298,14 @@ $seo = [
             .match-location { padding: 2px 4px 10px; font-size: 0.9rem; }
             .calendar-list .match-body { gap: 8px; grid-template-columns: 1fr auto 1fr; }
             .calendar-list .team img { width: 30px; height: 30px; }
-            .calendar-list .team-name { font-size: 0.9rem; }
+            .calendar-list .team-name { font-size: 0.9rem; white-space: normal; word-break: break-word; line-height: 1.2; }
             .calendar-list .vs { font-size: 0.98rem; }
             .calendar-list .score { font-size: 1.1rem; }
+        }
+        .match-card.is-disabled { cursor: default; }
+        .match-card.is-disabled:hover {
+            transform: none;
+            box-shadow: 0 6px 14px rgba(15,31,51,0.08);
         }
         @media (max-width: 640px) {
             .player-hero { grid-template-columns: 1fr; text-align: center; }
@@ -372,7 +383,7 @@ $seo = [
                           $logoCasa = !empty($p['logo_casa']) ? $p['logo_casa'] : $defaultTeamLogo;
                           $logoOspite = !empty($p['logo_ospite']) ? $p['logo_ospite'] : $defaultTeamLogo;
                         ?>
-                        <a class="match-card upcoming" href="<?= h($link) ?>">
+                        <div class="match-card upcoming is-disabled" aria-disabled="true">
                             <div class="match-top">
                                 <div class="match-top-left">
                                     <?php if ($stage): ?><span class="match-badge"><?= h($stage) ?></span><?php endif; ?>
@@ -399,7 +410,7 @@ $seo = [
                                     <img src="<?= h($logoOspite) ?>" alt="Logo <?= h($p['squadra_ospite']) ?>" onerror="this.src='<?= h($defaultTeamLogo) ?>';">
                                 </div>
                             </div>
-                        </a>
+                        </div>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
