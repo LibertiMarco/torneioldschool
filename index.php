@@ -1,4 +1,5 @@
-﻿<?php
+<?php
+require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/seo.php';
 $baseUrl = seo_base_url();
 $homeSeo = [
@@ -439,5 +440,6 @@ loadHallOfFame();
 
 </body>
 </html>
+
 
 
