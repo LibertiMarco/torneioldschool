@@ -164,7 +164,7 @@
         window.dataLayer.push(arguments);
       };
       window.gtag('consent', 'default', {
-        analytics_storage: 'denied',
+        analytics_storage: 'granted',
         ad_storage: 'denied',
         functionality_storage: 'granted',
         security_storage: 'granted',
@@ -501,7 +501,7 @@
   }
 
   function applyConsent(consent) {
-    const trackingAllowed = !!(consent && consent.tracking);
+    const trackingAllowed = consent ? !!consent.tracking : true;
     if (trackingAllowed) {
       Tracking.enable();
       GoogleAnalytics.enable();
