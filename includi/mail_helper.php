@@ -1,6 +1,61 @@
 <?php
 
 // Invio email: usa SMTP se configurato, altrimenti mail() con envelope corretto
+if (!function_exists('tos_email_is_deliverable')) {
+    /**
+     * Valida un indirizzo email e verifica che il dominio risolva (MX o A/AAAA) per evitare bounce immediati.
+     *
+     * @return array{0: bool, 1: string} [$ok, $errorMessage]
+     */
+    function tos_email_is_deliverable(string $email): array
+    {
+        $cleanEmail = trim($email);
+        if ($cleanEmail === '' || !filter_var($cleanEmail, FILTER_VALIDATE_EMAIL)) {
+            return [false, "Inserisci un'email valida."];
+        }
+
+        $atPos = strrpos($cleanEmail, '@');
+        $domain = $atPos !== false ? substr($cleanEmail, $atPos + 1) : '';
+        if ($domain === '') {
+            return [false, "Dominio email non valido."];
+        }
+
+        $domainAscii = $domain;
+        if (function_exists('idn_to_ascii')) {
+            // Compatibile con diverse versioni di PHP/intl
+            $converted = defined('INTL_IDNA_VARIANT_UTS46')
+                ? @idn_to_ascii($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46)
+                : @idn_to_ascii($domain);
+            if ($converted) {
+                $domainAscii = $converted;
+            }
+        }
+
+        if (!function_exists('checkdnsrr')) {
+            // Ambiente senza supporto DNS: non bloccare l'invio.
+            return [true, ''];
+        }
+
+        $hasMx = @checkdnsrr($domainAscii, 'MX');
+        $hasA = (@checkdnsrr($domainAscii, 'A') || @checkdnsrr($domainAscii, 'AAAA'));
+        if (!$hasMx && !$hasA) {
+            return [false, "Dominio email non raggiungibile: controlla eventuali errori di battitura."];
+        }
+
+        return [true, ''];
+    }
+}
+
+if (!function_exists('tos_sanitize_header_value')) {
+    /**
+     * Rimuove newline/carriage-return per prevenire header injection nelle intestazioni email.
+     */
+    function tos_sanitize_header_value(string $value): string
+    {
+        return trim(preg_replace('/[\r\n]+/', ' ', $value));
+    }
+}
+
 if (!function_exists('tos_mail_send')) {
     /**
      * Invia una mail testuale+HTML. $fromEmailOverride permette di forzare l'email mittente (es. newsletter).
@@ -11,12 +66,20 @@ if (!function_exists('tos_mail_send')) {
         $replyTo = $replyToOverride ?: (getenv('MAIL_REPLY_TO') ?: 'info@torneioldschool.it');
         $returnPath = getenv('MAIL_RETURN_PATH') ?: $fromEmail;
 
+        $fromEmail = tos_sanitize_header_value($fromEmail);
+        $replyTo = tos_sanitize_header_value($replyTo);
+        $returnPath = tos_sanitize_header_value($returnPath);
+        $fromNameSafe = tos_sanitize_header_value($fromName);
+
         // Prepara multipart testo+HTML
         $boundary = 'TOS-' . bin2hex(random_bytes(8));
         $headers = "MIME-Version: 1.0\r\n";
-        $headers .= "From: {$fromName} <{$fromEmail}>\r\n";
+        $headers .= "From: {$fromNameSafe} <{$fromEmail}>\r\n";
         $headers .= "Reply-To: {$replyTo}\r\n";
         $headers .= "List-Unsubscribe: <mailto:{$replyTo}?subject=Unsubscribe>\r\n";
+        if ($returnPath !== '') {
+            $headers .= "Return-Path: <{$returnPath}>\r\n";
+        }
         $headers .= "Content-Type: multipart/alternative; boundary=\"{$boundary}\"\r\n";
 
         $bodyHtml = $bodyHtmlOverride !== null
@@ -232,6 +295,11 @@ if (!function_exists('invia_notifica_articolo')) {
         $subject = "Nuovo articolo: {$titolo}";
         $sent = 0;
         foreach ($destinatari as $dest) {
+            [$deliverable, $emailError] = tos_email_is_deliverable($dest['email']);
+            if (!$deliverable) {
+                log_newsletter_send($conn, $postId, $dest['email'], 'failed', $emailError ?: 'email non consegnabile');
+                continue;
+            }
             $nomeDest = $dest['nome'] ?: 'giocatore';
             $body = "Ciao " . $nomeDest . ",\n\n";
             $body .= "Abbiamo pubblicato un nuovo articolo:\n";

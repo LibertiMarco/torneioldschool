@@ -67,22 +67,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error = "Inserisci un'email valida.";
         } else {
-            $to = "info@torneioldschool.it";
-            $subject = "Nuovo messaggio da Tornei Old School";
-            $body = "Hai ricevuto un nuovo messaggio:\n\n"
-                  . "Nome: $nome\n"
-                  . "Email: $email\n\n"
-                  . "Messaggio:\n$messaggio\n";
-
-            // Usa un mittente del dominio per rispettare SPF/DMARC ed evita filtri antispam
-            $fromEmail = getenv('MAIL_FROM') ?: 'no-reply@torneioldschool.it';
-            $fromName = 'Tornei Old School';
-            $ok = tos_mail_send($to, $subject, $body, 'Tornei Old School', "{$nome} <{$email}>");
-            if ($ok) {
-                $success = "Messaggio inviato con successo! Ti risponderemo al piu presto.";
+            [$deliverable, $emailError] = tos_email_is_deliverable($email);
+            if (!$deliverable) {
+                $error = $emailError;
             } else {
-                $error = "Errore durante l'invio. Riprova piu tardi.";
-                error_log("[contatti] Invio mail fallito verso {$to} da {$fromEmail} (reply: {$email})");
+                $to = "info@torneioldschool.it";
+                $subject = "Nuovo messaggio da Tornei Old School";
+                $body = "Hai ricevuto un nuovo messaggio:\n\n"
+                      . "Nome: $nome\n"
+                      . "Email: $email\n\n"
+                      . "Messaggio:\n$messaggio\n";
+
+                // Usa un mittente del dominio per rispettare SPF/DMARC ed evita filtri antispam
+                $fromEmail = getenv('MAIL_FROM') ?: 'no-reply@torneioldschool.it';
+                $fromName = 'Tornei Old School';
+                $replyHeader = tos_sanitize_header_value("{$nome} <{$email}>");
+                $ok = tos_mail_send($to, $subject, $body, $fromName, $replyHeader);
+                if ($ok) {
+                    $success = "Messaggio inviato con successo! Ti risponderemo al piu presto.";
+                } else {
+                    $error = "Errore durante l'invio. Riprova piu tardi.";
+                    error_log("[contatti] Invio mail fallito verso {$to} da {$fromEmail} (reply: {$email})");
+                }
             }
         }
     }

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // session handled in includi/security.php
 require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
@@ -113,107 +113,116 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $error = "Compila tutti i campi.";
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error = "Inserisci un'email valida.";
-        } elseif ($password !== $confirm_password) {
-            $error = "Le password non coincidono.";
-        } elseif (!$accettaPrivacy || !$accettaTermini) {
-            $error = "Devi accettare l'informativa privacy e i termini di servizio.";
         } else {
+            [$deliverable, $emailError] = tos_email_is_deliverable($email);
+            if (!$deliverable) {
+                $error = $emailError;
+            } elseif ($password !== $confirm_password) {
+                $error = "Le password non coincidono.";
+            } elseif (!$accettaPrivacy || !$accettaTermini) {
+                $error = "Devi accettare l'informativa privacy e i termini di servizio.";
+            }
+        }
+
+        if (!$error) {
             // Controllo forza password lato server
             $pattern = '/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};\'":\\|,.<>\/?]).{8,}$/';
             if (!preg_match($pattern, $password)) {
                 $error = "La password deve avere almeno 8 caratteri, una maiuscola, un numero e un simbolo speciale.";
-            } else {
-                // Verifica se l'email esiste già
-                $check = $conn->prepare("SELECT id FROM utenti WHERE email = ?");
-                $check->bind_param("s", $email);
-                $check->execute();
-                $result = $check->get_result();
+            }
+        }
 
-                if ($result->num_rows > 0) {
-                    $error = "Esiste già un account con questa email.";
+        if (!$error) {
+            // Verifica se l'email esiste gia
+            $check = $conn->prepare("SELECT id FROM utenti WHERE email = ?");
+            $check->bind_param("s", $email);
+            $check->execute();
+            $result = $check->get_result();
+
+            if ($result->num_rows > 0) {
+                $error = "Esiste gia un account con questa email.";
+            }
+        }
+
+        // Gestione avatar (opzionale)
+        if (!$error && isset($_FILES['avatar']) && $_FILES['avatar']['error'] !== UPLOAD_ERR_NO_FILE) {
+            if ($_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+                $maxSize = 2 * 1024 * 1024; // 2MB
+                if ($_FILES['avatar']['size'] > $maxSize) {
+                    $error = "La foto deve essere inferiore a 2MB.";
                 } else {
-                    // Gestione avatar (opzionale)
-                    if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] !== UPLOAD_ERR_NO_FILE) {
-                        if ($_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
-                            $maxSize = 2 * 1024 * 1024; // 2MB
-                            if ($_FILES['avatar']['size'] > $maxSize) {
-                                $error = "La foto deve essere inferiore a 2MB.";
-                            } else {
-                                $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                                $mime = $finfo ? finfo_file($finfo, $_FILES['avatar']['tmp_name']) : false;
-                                if ($finfo instanceof finfo) {
-                                    unset($finfo);
-                                }
-                                if (!$mime) {
-                                    $error = "Impossibile determinare il tipo di immagine caricato.";
-                                }
-                                $allowed = [
-                                    'image/jpeg' => 'jpg',
-                                    'image/png'  => 'png',
-                                    'image/gif'  => 'gif',
-                                    'image/webp' => 'webp'
-                                ];
-
-                                if (!$error && !isset($allowed[$mime])) {
-                                    $error = "Formato immagine non valido. Usa JPG, PNG, GIF o WEBP.";
-                                } else {
-                                    $uploadDir = __DIR__ . '/img/utenti';
-                                    if (!is_dir($uploadDir)) {
-                                        mkdir($uploadDir, 0775, true);
-                                    }
-                                    $estensione = $allowed[$mime];
-                                    $filename = generaNomeAvatar($nome, $cognome, $estensione, $uploadDir);
-                                    $destination = $uploadDir . '/' . $filename;
-
-                                    if (move_uploaded_file($_FILES['avatar']['tmp_name'], $destination)) {
-                                        $avatarPath = 'img/utenti/' . $filename;
-                                    } else {
-                                        $error = "Impossibile salvare la foto. Riprova.";
-                                    }
-                                }
-                            }
-                        } else {
-                            $error = "Errore nel caricamento dell'immagine.";
-                        }
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $mime = $finfo ? finfo_file($finfo, $_FILES['avatar']['tmp_name']) : false;
+                    if ($finfo instanceof finfo) {
+                        unset($finfo);
                     }
-
-                    if (!$error) {
-                        try {
-                            $tokenVerifica = bin2hex(random_bytes(32));
-                        } catch (Exception $e) {
-                            $error = "Errore tecnico nella generazione del token. Riprova più tardi.";
-                        }
+                    if (!$mime) {
+                        $error = "Impossibile determinare il tipo di immagine caricato.";
                     }
+                    $allowed = [
+                        'image/jpeg' => 'jpg',
+                        'image/png'  => 'png',
+                        'image/gif'  => 'gif',
+                        'image/webp' => 'webp'
+                    ];
 
-                    if (!$error) {
-                        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                        $ruolo = 'user';
-                        $tokenScadenza = (new DateTime('+1 day'))->format('Y-m-d H:i:s');
+                    if (!$error && !isset($allowed[$mime])) {
+                        $error = "Formato immagine non valido. Usa JPG, PNG, GIF o WEBP.";
+                    } else {
+                        $uploadDir = __DIR__ . '/img/utenti';
+                        if (!is_dir($uploadDir)) {
+                            mkdir($uploadDir, 0775, true);
+                        }
+                        $estensione = $allowed[$mime];
+                        $filename = generaNomeAvatar($nome, $cognome, $estensione, $uploadDir);
+                        $destination = $uploadDir . '/' . $filename;
 
-                        $sql = "INSERT INTO utenti (nome, cognome, email, password, ruolo, avatar, token_verifica, token_verifica_scadenza)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                        $stmt = $conn->prepare($sql);
-                        $stmt->bind_param("ssssssss", $nome, $cognome, $email, $hashed_password, $ruolo, $avatarPath, $tokenVerifica, $tokenScadenza);
-
-                        if ($stmt->execute()) {
-                            $newUserId = $stmt->insert_id ?: $conn->insert_id;
-                            consent_save($conn, (int)$newUserId, $email, [
-                                'marketing' => $consensoMarketing,
-                                'newsletter' => $consensoNewsletter,
-                                'terms' => 1,
-                                'tracking' => 0,
-                            ], 'register');
-                            if (inviaEmailVerifica($email, $nome, $tokenVerifica)) {
-                                $successMessage = "Registrazione completata! Ti abbiamo inviato una email di conferma a {$email}.";
-                            } else {
-                                $successMessage = "Registrazione riuscita, ma non è stato possibile inviare l'email di conferma. Contattaci per ricevere assistenza.";
-                            }
-                            $_POST = [];
+                        if (move_uploaded_file($_FILES['avatar']['tmp_name'], $destination)) {
+                            $avatarPath = 'img/utenti/' . $filename;
                         } else {
-                            $error = "Errore durante la registrazione. Riprova.";
+                            $error = "Impossibile salvare la foto. Riprova.";
                         }
                     }
                 }
+            } else {
+                $error = "Errore nel caricamento dell'immagine.";
+            }
+        }
+
+        if (!$error) {
+            try {
+                $tokenVerifica = bin2hex(random_bytes(32));
+            } catch (Exception $e) {
+                $error = "Errore tecnico nella generazione del token. Riprova piu tardi.";
+            }
+        }
+
+        if (!$error) {
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            $ruolo = 'user';
+            $tokenScadenza = (new DateTime('+1 day'))->format('Y-m-d H:i:s');
+
+            $sql = "INSERT INTO utenti (nome, cognome, email, password, ruolo, avatar, token_verifica, token_verifica_scadenza)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("ssssssss", $nome, $cognome, $email, $hashed_password, $ruolo, $avatarPath, $tokenVerifica, $tokenScadenza);
+
+            if ($stmt->execute()) {
+                $newUserId = $stmt->insert_id ?: $conn->insert_id;
+                consent_save($conn, (int)$newUserId, $email, [
+                    'marketing' => $consensoMarketing,
+                    'newsletter' => $consensoNewsletter,
+                    'terms' => 1,
+                    'tracking' => 0,
+                ], 'register');
+                if (inviaEmailVerifica($email, $nome, $tokenVerifica)) {
+                    $successMessage = "Registrazione completata! Ti abbiamo inviato una email di conferma a {$email}.";
+                } else {
+                    $successMessage = "Registrazione riuscita, ma non e stato possibile inviare l'email di conferma. Contattaci per ricevere assistenza.";
+                }
+                $_POST = [];
+            } else {
+                $error = "Errore durante la registrazione. Riprova.";
             }
         }
     }
@@ -575,7 +584,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="file-upload">
           <input type="file" id="avatar" name="avatar" accept="image/*">
           <label for="avatar" class="file-btn">
-            <span class="file-icon" aria-hidden="true">📷</span> Scegli foto
+            <span class="file-icon" aria-hidden="true">ðŸ“·</span> Scegli foto
           </label>
           <span class="file-name" id="avatarName">Nessun file selezionato</span>
         </div>
@@ -588,19 +597,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           <div class="consent-list">
             <label class="consent-item">
               <input type="checkbox" name="accetta_privacy" required>
-              <span><strong>Privacy (obbligatorio)</strong> — Ho letto la <a href="/privacy.php" target="_blank">Privacy Policy</a> e acconsento al trattamento dei dati.</span>
+              <span><strong>Privacy (obbligatorio)</strong> â€” Ho letto la <a href="/privacy.php" target="_blank">Privacy Policy</a> e acconsento al trattamento dei dati.</span>
             </label>
             <label class="consent-item">
               <input type="checkbox" name="accetta_termini" required>
-              <span><strong>Termini del servizio (obbligatorio)</strong> — Accetto il regolamento dei tornei.</span>
+              <span><strong>Termini del servizio (obbligatorio)</strong> â€” Accetto il regolamento dei tornei.</span>
             </label>
             <label class="consent-item">
               <input type="checkbox" name="consenso_newsletter">
-              <span><strong>Newsletter (facoltativo)</strong> — Aggiornamenti su novità e calendari.</span>
+              <span><strong>Newsletter (facoltativo)</strong> â€” Aggiornamenti su novitÃ  e calendari.</span>
             </label>
             <label class="consent-item">
               <input type="checkbox" name="consenso_marketing">
-              <span><strong>Comunicazioni promozionali (facoltativo)</strong> — Info dedicate sui tornei.</span>
+              <span><strong>Comunicazioni promozionali (facoltativo)</strong> â€” Info dedicate sui tornei.</span>
             </label>
           </div>
         </div>
@@ -618,7 +627,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       </form>
 
         <div class="register-footer">
-          <p>Hai già un account? <a href="login.php">Accedi</a></p>
+          <p>Hai giÃ  un account? <a href="login.php">Accedi</a></p>
         </div>
       </div>
     </div>
@@ -687,11 +696,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
           if (regex.test(password)) {
             passwordMessage.style.color = 'green';
-            passwordCheck.textContent = '✔';
+            passwordCheck.textContent = 'âœ”';
             passwordCheck.style.color = 'green';
           } else {
             passwordMessage.style.color = 'red';
-            passwordCheck.textContent = '✕';
+            passwordCheck.textContent = 'âœ•';
             passwordCheck.style.color = 'red';
           }
         });
@@ -709,12 +718,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (confirmInput.value === passwordInput.value) {
           confirmMessage.style.color = 'green';
           confirmMessage.textContent = 'Le password coincidono.';
-          confirmCheck.textContent = '✔';
+          confirmCheck.textContent = 'âœ”';
           confirmCheck.style.color = 'green';
         } else {
           confirmMessage.style.color = 'red';
           confirmMessage.textContent = 'Le password non coincidono.';
-          confirmCheck.textContent = '✕';
+          confirmCheck.textContent = 'âœ•';
           confirmCheck.style.color = 'red';
         }
       }

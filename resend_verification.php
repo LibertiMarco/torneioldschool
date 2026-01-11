@@ -40,37 +40,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error = "Inserisci un indirizzo email valido.";
         } else {
-            $stmt = $conn->prepare("SELECT id, nome, cognome, email_verificata FROM utenti WHERE email = ?");
-            $stmt->bind_param("s", $email);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $user = $result->fetch_assoc();
-
-            if (!$user) {
-                $success = "Se esiste un account con questa email, riceverai a breve un nuovo link di conferma.";
-            } elseif ((int)$user['email_verificata'] === 1) {
-                $success = "Questa email risulta gia verificata. Puoi accedere con le tue credenziali.";
+            [$deliverable, $emailError] = tos_email_is_deliverable($email);
+            if (!$deliverable) {
+                $error = $emailError;
             } else {
-                try {
-                    $token = bin2hex(random_bytes(32));
-                } catch (Exception $e) {
-                    $error = "Errore nella generazione del token. Riprova fra qualche minuto.";
-                }
+                $stmt = $conn->prepare("SELECT id, nome, cognome, email_verificata FROM utenti WHERE email = ?");
+                $stmt->bind_param("s", $email);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $user = $result->fetch_assoc();
 
-                if (!$error) {
-                    $scadenza = (new DateTime('+1 day'))->format('Y-m-d H:i:s');
-                    $update = $conn->prepare("UPDATE utenti SET token_verifica = ?, token_verifica_scadenza = ? WHERE id = ?");
-                    $update->bind_param("ssi", $token, $scadenza, $user['id']);
+                if (!$user) {
+                    $success = "Se esiste un account con questa email, riceverai a breve un nuovo link di conferma.";
+                } elseif ((int)$user['email_verificata'] === 1) {
+                    $success = "Questa email risulta gia verificata. Puoi accedere con le tue credenziali.";
+                } else {
+                    try {
+                        $token = bin2hex(random_bytes(32));
+                    } catch (Exception $e) {
+                        $error = "Errore nella generazione del token. Riprova fra qualche minuto.";
+                    }
 
-                    if ($update->execute()) {
-                        if (inviaEmailVerifica($email, $user['nome'], $token)) {
-                            $success = "Email inviata! Controlla la tua casella per completare la verifica.";
-                            $_POST = [];
+                    if (!$error) {
+                        $scadenza = (new DateTime('+1 day'))->format('Y-m-d H:i:s');
+                        $update = $conn->prepare("UPDATE utenti SET token_verifica = ?, token_verifica_scadenza = ? WHERE id = ?");
+                        $update->bind_param("ssi", $token, $scadenza, $user['id']);
+
+                        if ($update->execute()) {
+                            if (inviaEmailVerifica($email, $user['nome'], $token)) {
+                                $success = "Email inviata! Controlla la tua casella per completare la verifica.";
+                                $_POST = [];
+                            } else {
+                                $error = "Non e stato possibile inviare l'email. Riprova piu tardi.";
+                            }
                         } else {
-                            $error = "Non e stato possibile inviare l'email. Riprova piu tardi.";
+                            $error = "Errore durante l'aggiornamento del token. Riprova.";
                         }
-                    } else {
-                        $error = "Errore durante l'aggiornamento del token. Riprova.";
                     }
                 }
             }

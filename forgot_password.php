@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
@@ -92,30 +92,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = trim($_POST['email'] ?? '');
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             // Non rivelare se l'account esiste: messaggio generico
-            $success = "Se l'email Ã¨ registrata, riceverai un link per reimpostare la password.";
+            $success = "Se l'email e' registrata, riceverai un link per reimpostare la password.";
         } else {
-            $stmt = $conn->prepare("SELECT id, nome FROM utenti WHERE email = ? LIMIT 1");
-            $stmt->bind_param("s", $email);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            $user = $res ? $res->fetch_assoc() : null;
-            $stmt->close();
+            [$deliverable] = tos_email_is_deliverable($email);
+            if (!$deliverable) {
+                $success = "Se l'email e' registrata, riceverai un link per reimpostare la password.";
+            } else {
+                $stmt = $conn->prepare("SELECT id, nome FROM utenti WHERE email = ? LIMIT 1");
+                $stmt->bind_param("s", $email);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                $user = $res ? $res->fetch_assoc() : null;
+                $stmt->close();
 
-            $success = "Se l'email Ã¨ registrata, riceverai un link per reimpostare la password.";
-            if ($user) {
-                try {
-                    $token = bin2hex(random_bytes(32));
-                } catch (Exception $e) {
-                    $error = "Errore tecnico. Riprova piÃ¹ tardi.";
-                }
-                if (!$error) {
-                    $expires = new DateTime('+1 hour');
-                    if (create_reset_token($conn, (int)$user['id'], $token, $expires)) {
-                        $mailOk = inviaEmailResetPassword($email, $user['nome'] ?? '', $token);
-                        if (!$mailOk) {
-                            error_log('forgot_password: invio email fallito per ' . $email);
-                            $error = "Invio email non riuscito. Riprova tra poco o contattaci.";
-                            $success = "";
+                $success = "Se l'email e' registrata, riceverai un link per reimpostare la password.";
+                if ($user) {
+                    try {
+                        $token = bin2hex(random_bytes(32));
+                    } catch (Exception $e) {
+                        $error = "Errore tecnico. Riprova piu tardi.";
+                    }
+                    if (!$error) {
+                        $expires = new DateTime('+1 hour');
+                        if (create_reset_token($conn, (int)$user['id'], $token, $expires)) {
+                            $mailOk = inviaEmailResetPassword($email, $user['nome'] ?? '', $token);
+                            if (!$mailOk) {
+                                error_log('forgot_password: invio email fallito per ' . $email);
+                                $error = "Invio email non riuscito. Riprova tra poco o contattaci.";
+                                $success = "";
+                            }
                         }
                     }
                 }
@@ -264,3 +269,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </script>
 </body>
 </html>
+
