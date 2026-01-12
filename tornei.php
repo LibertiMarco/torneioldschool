@@ -1,10 +1,6 @@
 <?php
 // === AVVIO SESSIONE ===
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit;
-}
 
 // === CONNESSIONE AL DATABASE ===
 require_once __DIR__ . '/includi/db.php'; // contiene $conn
@@ -230,36 +226,60 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       display: block;
     }
 
-    /* Popup accesso */
-    .popup-accesso {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
+    /* CTA accesso non bloccante */
+    .cta-accesso {
+      margin: 32px auto 60px;
+      max-width: 860px;
+      padding: 0 12px;
+    }
+    .cta-accesso .box {
+      background: #f5f8fc;
+      border: 1px solid #dce4f2;
+      border-radius: 16px;
+      padding: 22px 24px;
       display: flex;
-      justify-content: center;
+      flex-wrap: wrap;
       align-items: center;
-      z-index: 3000;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 10px 28px rgba(21,41,62,0.08);
     }
-    .popup-accesso .box {
-      background: #fff;
-      color: #222;
+    .cta-accesso h2 {
+      margin: 0;
+      color: #15293e;
+      font-size: 1.35rem;
+    }
+    .cta-accesso p {
+      margin: 6px 0 0;
+      color: #41526a;
+      font-weight: 600;
+    }
+    .cta-accesso .cta-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .cta-accesso .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
       border-radius: 12px;
-      padding: 30px;
-      max-width: 300px;
-      text-align: center;
-      box-shadow: 0 0 15px rgba(0,0,0,0.3);
-    }
-    .popup-accesso button {
-      background: #15293e;
+      font-weight: 700;
+      text-decoration: none;
+      border: 1px solid #15293e;
       color: #fff;
-      border: none;
-      border-radius: 5px;
-      padding: 8px 15px;
-      margin-top: 10px;
-      cursor: pointer;
+      background: linear-gradient(135deg, #15293e, #1f3f63);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
-    .popup-accesso button:hover { background: #0e1d2e; }
+    .cta-accesso .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 20px rgba(21,41,62,0.16);
+    }
+    .cta-accesso .btn.ghost {
+      background: transparent;
+      color: #15293e;
+    }
 
     /* Mobile */
     @media (max-width: 768px) {
@@ -415,14 +435,18 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
 
   </div>
 
-  <!-- POPUP BLOCCO ACCESSO -->
+  <!-- CTA ACCESSO NON BLOCCANTE -->
   <?php if (!$utente_loggato): ?>
-    <div class="popup-accesso">
+    <div class="cta-accesso">
       <div class="box">
-        <h2>Accesso richiesto</h2>
-        <p>Per visualizzare i tornei devi iscriverti o accedere al sito.</p>
-        <button onclick="window.location.href='/login.php'">Accedi</button>
-        <button onclick="window.location.href='/register.php'">Iscriviti</button>
+        <div>
+          <h2>Vuoi seguire i tornei?</h2>
+          <p>Crea un account o accedi per consultare calendari, risultati e notifiche.</p>
+        </div>
+        <div class="cta-actions">
+          <a class="btn" href="/register.php">Iscriviti</a>
+          <a class="btn ghost" href="/login.php">Accedi</a>
+        </div>
       </div>
     </div>
   <?php endif; ?>
