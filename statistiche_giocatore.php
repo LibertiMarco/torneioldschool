@@ -39,9 +39,11 @@ $squadre = [];
 if ($giocatore) {
     $stmt = $conn->prepare("
         SELECT s.id, s.nome, s.torneo, s.logo,
-               sg.presenze, sg.reti, sg.assist, sg.gialli, sg.rossi, sg.media_voti, sg.is_captain
+               sg.presenze, sg.reti, sg.assist, sg.gialli, sg.rossi, sg.media_voti, sg.is_captain,
+               t.nome AS torneo_nome
         FROM squadre_giocatori sg
         JOIN squadre s ON s.id = sg.squadra_id
+        LEFT JOIN tornei t ON (t.filetorneo = s.torneo OR t.filetorneo = CONCAT(s.torneo, '.php') OR t.nome = s.torneo)
         WHERE sg.giocatore_id = ?
         ORDER BY sg.created_at DESC
     ");
@@ -440,7 +442,8 @@ $seo = [
                                 <?php endif; ?>
                                 <div>
                                     <strong><?= h($s['nome']) ?></strong><br>
-                                    <small><?= h($s['torneo']) ?><?= $s['is_captain'] ? ' - Capitano' : '' ?></small>
+                                    <?php $torneoNome = trim($s['torneo_nome'] ?? '') !== '' ? $s['torneo_nome'] : $s['torneo']; ?>
+                                    <small><?= h($torneoNome) ?><?= $s['is_captain'] ? ' - Capitano' : '' ?></small>
                                 </div>
                             </div>
                             <div class="team-stats">
@@ -500,8 +503,8 @@ $seo = [
                                     <span class="vs">VS</span>
                                 </div>
                                 <div class="team away">
-                                    <div class="team-name<?= $awayNameClass ? ' ' . h($awayNameClass) : '' ?>"><?= format_team_name_multiline($p['squadra_ospite']) ?></div>
                                     <img src="<?= h($logoOspite) ?>" alt="Logo <?= h($p['squadra_ospite']) ?>" onerror="this.src='<?= h($defaultTeamLogo) ?>';">
+                                    <div class="team-name<?= $awayNameClass ? ' ' . h($awayNameClass) : '' ?>"><?= format_team_name_multiline($p['squadra_ospite']) ?></div>
                                 </div>
                             </div>
                         </div>
@@ -551,8 +554,8 @@ $seo = [
                                     <span class="score"><?= $scoreHome ?> - <?= $scoreAway ?></span>
                                 </div>
                                 <div class="team away">
-                                    <div class="team-name<?= $awayNameClass ? ' ' . h($awayNameClass) : '' ?>"><?= format_team_name_multiline($p['squadra_ospite']) ?></div>
                                     <img src="<?= h($logoOspite) ?>" alt="Logo <?= h($p['squadra_ospite']) ?>" onerror="this.src='<?= h($defaultTeamLogo) ?>';">
+                                    <div class="team-name<?= $awayNameClass ? ' ' . h($awayNameClass) : '' ?>"><?= format_team_name_multiline($p['squadra_ospite']) ?></div>
                                 </div>
                             </div>
                         </a>
