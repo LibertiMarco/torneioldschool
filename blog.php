@@ -318,11 +318,13 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 .featured-copy h3 {
     font-size: 2.2rem;
     margin: 16px 0;
+    word-break: break-word;
 }
 
 .featured-copy p {
     color: rgba(255,255,255,0.75);
     line-height: 1.6;
+    overflow-wrap: anywhere;
 }
 
 .featured-actions {
@@ -441,12 +443,14 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     margin: 0;
     font-size: 1.1rem;
     color: #0f172a;
+    word-break: break-word;
 }
 
 .card-body p {
     margin: 0;
     color: #465167;
     line-height: 1.4;
+    overflow-wrap: anywhere;
 }
 
 .card-date {
@@ -517,6 +521,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 .mini-title {
     font-weight: 600;
     color: #0f172a;
+    word-break: break-word;
 }
 
 .mini-thumb {
