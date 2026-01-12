@@ -31,6 +31,9 @@ if (!empty($sessionAvatar)) {
 }
 ?>
 
+<!-- Loader AdSense globale -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8390787841690316" crossorigin="anonymous"></script>
+
 <header class="site-header" data-auth="<?= $isLoggedIn ? '1' : '0' ?>">
 
     <!-- HAMBURGER (solo mobile) -->

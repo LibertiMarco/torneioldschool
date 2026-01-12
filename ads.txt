@@ -1,1 +1,3 @@
-Redirect 301 /ads.txt https://srv.adstxtmanager.com/19390/torneioldschool.it
+# ads.txt per torneioldschool.it
+# Allinea queste righe con il gestore (adstxtmanager) se differiscono.
+google.com, pub-8390787841690316, DIRECT, f08c47fec0942fa0
