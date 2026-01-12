@@ -179,6 +179,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     max-width: 1100px;
     margin: -30px auto 30px;
     padding: 0 20px;
+    overflow: hidden;
 }
 
 .blog-ad.inside {
@@ -189,6 +190,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 .blog-ad ins {
     display: block;
     margin: 0 auto;
+    width: 100% !important;
 }
 
 .sidebar-ad {
@@ -198,6 +200,11 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     border: 1px solid #e3e8f4;
     border-radius: 12px;
     box-shadow: 0 10px 24px rgba(15,23,42,0.08);
+    overflow: hidden;
+}
+.sidebar-ad ins {
+    display: block;
+    width: 100% !important;
 }
 
 .section-meta {
@@ -536,6 +543,16 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 
     .featured-copy h3 {
         font-size: 1.8rem;
+    }
+
+    .blog-ad {
+        margin: 0 0 24px;
+        padding: 0 12px;
+    }
+
+    .sidebar-ad {
+        margin: 10px 0 18px;
+        padding: 10px;
     }
 }
 </style>

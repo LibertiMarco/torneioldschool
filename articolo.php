@@ -314,10 +314,12 @@ if ($articleId === 0) {
     border: 1px solid #e3e8f4;
     border-radius: 14px;
     padding: 12px;
+    overflow: hidden;
 }
 
 .article-ad ins {
     display: block;
+    width: 100% !important;
 }
 
 .media-stage {
@@ -751,6 +753,11 @@ if ($articleId === 0) {
 @media (max-width: 640px) {
     .article-panel {
         padding: 26px;
+    }
+
+    .article-ad {
+        margin-left: 0;
+        margin-right: 0;
     }
 }
 </style>
