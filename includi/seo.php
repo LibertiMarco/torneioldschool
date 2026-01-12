@@ -1,13 +1,18 @@
 <?php
 if (!function_exists('seo_base_url')) {
     if (!defined('ASSET_VERSION')) {
-        define('ASSET_VERSION', '20251219');
+        define('ASSET_VERSION', '20251220');
     }
     if (!defined('GA_MEASUREMENT_ID')) {
         $envGaId = getenv('GA_MEASUREMENT_ID') ?: '';
         // Fallback to the production property so GA works even if the env var is missing.
         $defaultGaId = 'G-VZ982XSRRN';
         define('GA_MEASUREMENT_ID', $envGaId !== '' ? $envGaId : $defaultGaId);
+    }
+    if (!defined('GA_DEBUG_MODE')) {
+        // Abilita log di debug con ?ga_debug=1 o variabile d'ambiente GA_DEBUG=1
+        $debugFlag = (isset($_GET['ga_debug']) && $_GET['ga_debug'] !== '0') || getenv('GA_DEBUG') === '1';
+        define('GA_DEBUG_MODE', $debugFlag);
     }
 
     function asset_url(string $path, ?string $version = null): string
@@ -236,14 +241,17 @@ if (!function_exists('seo_base_url')) {
             return;
         }
 
-        echo '<script>window.__GA_MEASUREMENT_ID=' . json_encode($safeId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';</script>' . "\n";
+        $debug = GA_DEBUG_MODE ? 'true' : 'false';
+        echo '<script>window.__GA_MEASUREMENT_ID=' . json_encode($safeId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';window.__GA_DEBUG__=window.__GA_DEBUG__||' . $debug . ';</script>' . "\n";
 
         // Load GA4 with consent defaults (cookieless until consent is granted). If a manual gtag
         // snippet already ran, this script skips re-configuring to avoid duplicate pageviews.
         echo '<script>
 (function() {
   var gaId = ' . json_encode($safeId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';
-  if (!gaId) return;
+  var gaDebug = !!window.__GA_DEBUG__;
+  if (gaDebug) console.info("[GA] bootstrap start", { id: gaId });
+  if (!gaId) { if (gaDebug) console.warn("[GA] missing measurement id"); return; }
   var dl = window.dataLayer = window.dataLayer || [];
   var alreadyConfigured = Array.isArray(dl) && dl.some(function (entry) {
     return entry && entry[0] === "config" && entry[1] === gaId;
@@ -257,10 +265,12 @@ if (!function_exists('seo_base_url')) {
     functionality_storage: "granted",
     security_storage: "granted"
   });
-  if (alreadyConfigured) return;
+  if (alreadyConfigured) { if (gaDebug) console.warn("[GA] config already present in dataLayer, skipping duplicate config"); return; }
   var s = document.createElement("script");
   s.async = true;
   s.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(gaId);
+  s.onload = function(){ if (gaDebug) console.info("[GA] gtag.js loaded"); };
+  s.onerror = function(){ if (gaDebug) console.error("[GA] gtag.js failed to load", s.src); };
   document.head.appendChild(s);
   window.gtag("js", new Date());
   window.gtag("config", gaId, {
@@ -268,6 +278,7 @@ if (!function_exists('seo_base_url')) {
     allow_ad_personalization_signals: false,
     transport_type: "beacon"
   });
+  if (gaDebug) window.gtag("event", "ga_diagnostic", { status: "config_sent", id: gaId, ts: Date.now() });
 })();
 </script>' . "\n";
     }

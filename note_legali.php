@@ -96,8 +96,8 @@ $lastUpdate = date('d/m/Y', @filemtime(__FILE__) ?: time());
 
   <div id="footer-container"></div>
 
-  <script src="/includi/header-interactions.js?v=20251219"></script>
-  <script src="/includi/app.min.js?v=20251219"></script>
+  <script src="/includi/header-interactions.js?v=20251220"></script>
+  <script src="/includi/app.min.js?v=20251220"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       fetch('/includi/header.php')
@@ -124,4 +124,5 @@ $lastUpdate = date('d/m/Y', @filemtime(__FILE__) ?: time());
   </script>
 </body>
 </html>
+
 

@@ -431,7 +431,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
   <div id="footer-container"></div>
 
   <!-- SCRIPTS FOOTER + HEADER -->
-  <script src="/includi/app.min.js?v=20251219"></script>
+  <script src="/includi/app.min.js?v=20251220"></script>
   <script>
     fetch("/includi/footer.html")
       .then(r => r.text())
@@ -556,4 +556,5 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
   </script>
 </body>
 </html>
+
 

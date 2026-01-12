@@ -665,7 +665,7 @@ $captchaQuestion = captcha_generate('register_form');?>
 
   <div id="footer-container"></div>
 
-  <script src="/includi/app.min.js?v=20251219"></script>
+  <script src="/includi/app.min.js?v=20251220"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       fetch("/includi/footer.html")
@@ -760,6 +760,7 @@ $captchaQuestion = captcha_generate('register_form');?>
   </script>
 </body>
 </html>
+
 
 
 

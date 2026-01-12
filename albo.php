@@ -94,7 +94,7 @@ $pageSeo = [
   </main>
   <div id="footer-container"></div>
 
-  <script src="/includi/app.min.js?v=20251219"></script>
+  <script src="/includi/app.min.js?v=20251220"></script>
   <script>
     function formatPeriodo(inizio, fine, anno) {
       const f = (d) => {
@@ -224,4 +224,5 @@ $pageSeo = [
   </script>
 </body>
 </html>
+
 

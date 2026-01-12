@@ -6,6 +6,11 @@
 
   const STORAGE_KEY = 'tosConsent';
   const BANNER_ID = 'tos-consent-banner';
+  const DEBUG = !!window.__GA_DEBUG__;
+  const logDebug = (...args) => {
+    if (!DEBUG) return;
+    try { console.info('[CONSENT]', ...args); } catch (_) {}
+  };
 
   function isUserAuthenticated() {
     if (typeof window.__TOS_IS_AUTH === 'boolean') {
@@ -135,10 +140,12 @@
       enable() {
         if (allowed) return;
         allowed = true;
+        logDebug('Tracking enabled (custom events)');
         trackPageView();
       },
       disable() {
         allowed = false;
+        logDebug('Tracking disabled (custom events)');
       },
       track,
     };
@@ -172,8 +179,11 @@
       const script = document.createElement('script');
       script.async = true;
       script.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(gaId);
+      script.onload = () => logDebug('gtag.js loaded', { id: gaId });
+      script.onerror = (err) => logDebug('gtag.js load failed', { id: gaId, error: err });
       document.head.appendChild(script);
       initialized = true;
+      logDebug('GA bootstrap complete', { id: gaId });
     }
 
     function enable() {
@@ -190,6 +200,7 @@
           allow_ad_personalization_signals: false,
           transport_type: 'beacon',
         });
+        logDebug('GA enabled + config sent', { id: gaId });
       }
     }
 
@@ -199,6 +210,7 @@
           analytics_storage: 'denied',
           ad_storage: 'denied',
         });
+        logDebug('GA consent set to denied', { id: gaId });
       }
     }
 

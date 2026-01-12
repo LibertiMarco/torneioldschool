@@ -388,7 +388,7 @@ if (!$conn || $conn->connect_error) {
   </main>
 
   <div id="footer-container"></div>
-  <script src="/includi/app.min.js?v=20251219"></script>
+  <script src="/includi/app.min.js?v=20251220"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       fetch("/includi/footer.html")
@@ -406,4 +406,5 @@ if (!$conn || $conn->connect_error) {
   </script>
 </body>
 </html>
+
 
