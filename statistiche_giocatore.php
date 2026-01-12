@@ -312,7 +312,7 @@ $seo = [
         .calendar-list .team {
             display: flex;
             justify-content: flex-start;
-            align-items: center;
+            align-items: flex-start;
             gap: 8px;
             min-width: 0;
         }
@@ -337,7 +337,7 @@ $seo = [
             word-break: keep-all;
             overflow-wrap: break-word;
             line-height: 1.15;
-            display: inline-flex;
+            display: flex;
             flex-direction: column;
             align-items: flex-end;
         }
