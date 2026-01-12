@@ -243,7 +243,6 @@ if ($articleId === 0) {
     grid-template-columns: minmax(0, 1fr) 320px;
     column-gap: 30px;
     row-gap: 30px;
-    overflow-x: hidden;
 }
 
 .article-panel {
@@ -321,7 +320,6 @@ if ($articleId === 0) {
 .article-ad ins {
     display: block;
     width: 100% !important;
-    max-width: 100% !important;
 }
 
 .media-stage {

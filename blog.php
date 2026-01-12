@@ -3,7 +3,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/includi/seo.php';
-require_once __DIR__ . '/includi/db.php';
 $baseUrl = seo_base_url();
 $blogSeo = [
     'title' => 'Blog e novita - Tornei Old School',
@@ -15,60 +14,6 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     ['name' => 'Home', 'url' => $baseUrl . '/'],
     ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
 ]);
-$preloadedPosts = [];
-$featuredPhp = null;
-$restPhp = [];
-$preloadedTotal = 0;
-
-$coverQuery = "COALESCE(
-    (SELECT CONCAT('/img/blog_media/', file_path)
-     FROM blog_media
-     WHERE post_id = blog_post.id AND tipo = 'image'
-     ORDER BY ordine ASC, id ASC
-     LIMIT 1),
-    CASE
-        WHEN immagine IS NULL OR immagine = '' THEN ''
-        ELSE CONCAT('/img/blog/', immagine)
-    END
-) AS cover";
-
-if (isset($conn) && $conn instanceof mysqli) {
-    $sql = "SELECT id,
-                   titolo,
-                   {$coverQuery},
-                   SUBSTRING(contenuto, 1, 220) AS anteprima,
-                   DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data
-            FROM blog_post
-            ORDER BY data_pubblicazione DESC
-            LIMIT 12";
-
-    if ($result = $conn->query($sql)) {
-        while ($row = $result->fetch_assoc()) {
-            $row['immagine'] = $row['cover'] ?? '';
-            $preloadedPosts[] = $row;
-        }
-        $result->close();
-    }
-}
-
-if (!function_exists('blog_escape')) {
-    function blog_escape($value): string {
-        return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
-    }
-}
-
-if (!function_exists('blog_preview')) {
-    function blog_preview(?string $text): string {
-        $clean = trim(preg_replace('/\s+/', ' ', $text ?? ''));
-        return strlen($clean) > 160 ? substr($clean, 0, 157) . '...' : $clean;
-    }
-}
-
-$preloadedTotal = count($preloadedPosts);
-$featuredPhp = $preloadedPosts[0] ?? null;
-$restPhp = array_slice($preloadedPosts, 1);
-$initialArchiveLabel = $preloadedTotal === 1 ? '1 articolo' : "{$preloadedTotal} articoli";
-$initialVisibleLabel = $initialArchiveLabel;
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -188,14 +133,12 @@ $initialVisibleLabel = $initialArchiveLabel;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 300px;
     gap: 32px;
-    overflow-x: hidden;
 }
 
 .blog-main {
     display: flex;
     flex-direction: column;
     gap: 32px;
-    min-width: 0;
 }
 
 .section-heading {
@@ -248,7 +191,6 @@ $initialVisibleLabel = $initialArchiveLabel;
     display: block;
     margin: 0 auto;
     width: 100% !important;
-    max-width: 100% !important;
 }
 
 .sidebar-ad {
@@ -262,12 +204,6 @@ $initialVisibleLabel = $initialArchiveLabel;
 }
 .sidebar-ad ins {
     display: block;
-    width: 100% !important;
-    max-width: 100% !important;
-}
-
-.adsbygoogle {
-    max-width: 100% !important;
     width: 100% !important;
 }
 
@@ -373,13 +309,11 @@ $initialVisibleLabel = $initialArchiveLabel;
 .featured-copy h3 {
     font-size: 2.2rem;
     margin: 16px 0;
-    word-break: break-word;
 }
 
 .featured-copy p {
     color: rgba(255,255,255,0.75);
     line-height: 1.6;
-    overflow-wrap: anywhere;
 }
 
 .featured-actions {
@@ -455,29 +389,12 @@ $initialVisibleLabel = $initialArchiveLabel;
 }
 
 @media (max-width: 900px) {
-    .blog-layout {
-        padding: 24px 16px 12px;
-        gap: 24px;
-        margin-bottom: 44px;
-    }
-
     .featured-card {
         flex-direction: column;
-        padding: 26px;
     }
 
     .featured-image {
-        min-height: 240px;
-    }
-
-    .section-heading.with-meta {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-    }
-
-    .section-meta {
-        width: 100%;
+        min-height: 260px;
     }
 }
 
@@ -498,14 +415,12 @@ $initialVisibleLabel = $initialArchiveLabel;
     margin: 0;
     font-size: 1.1rem;
     color: #0f172a;
-    word-break: break-word;
 }
 
 .card-body p {
     margin: 0;
     color: #465167;
     line-height: 1.4;
-    overflow-wrap: anywhere;
 }
 
 .card-date {
@@ -540,7 +455,6 @@ $initialVisibleLabel = $initialArchiveLabel;
     position: sticky;
     top: 140px;
     margin-top: 10px;
-    min-width: 0;
 }
 
 .blog-sidebar h3 {
@@ -576,7 +490,6 @@ $initialVisibleLabel = $initialArchiveLabel;
 .mini-title {
     font-weight: 600;
     color: #0f172a;
-    word-break: break-word;
 }
 
 .mini-thumb {
@@ -613,70 +526,23 @@ $initialVisibleLabel = $initialArchiveLabel;
 }
 
 @media (max-width: 640px) {
-    .blog-layout {
-        padding: 16px 12px 6px;
-        gap: 18px;
-        margin: 0 auto 32px;
-    }
-
-    .blog-main {
-        gap: 22px;
-    }
-
     .blog-hero {
-        padding: 96px 14px 56px;
+        padding: 120px 16px 70px;
         text-align: left;
         border-bottom-left-radius: 0;
         border-bottom-right-radius: 0;
     }
 
-    .blog-hero p.lead {
-        margin-bottom: 22px;
-    }
-
     .blog-search {
         width: 100%;
-        padding: 10px 14px;
     }
 
     .featured-card {
-        padding: 20px;
-        gap: 16px;
-    }
-
-    .featured-image {
-        min-height: 200px;
+        padding: 22px;
     }
 
     .featured-copy h3 {
-        font-size: 1.6rem;
-    }
-
-    .featured-actions {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .featured-actions a {
-        width: 100%;
-        text-align: center;
-    }
-
-    .section-heading.with-meta {
-        align-items: flex-start;
-    }
-
-    .blog-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .card-image {
-        height: 170px;
-    }
-
-    .card-body {
-        padding: 16px;
-        gap: 8px;
+        font-size: 1.8rem;
     }
 
     .blog-ad {
@@ -688,10 +554,6 @@ $initialVisibleLabel = $initialArchiveLabel;
         margin: 10px 0 18px;
         padding: 10px;
     }
-
-    .blog-sidebar {
-        padding: 20px;
-    }
 }
 </style>
 </head>
@@ -702,10 +564,10 @@ $initialVisibleLabel = $initialArchiveLabel;
 
 <section class="blog-hero">
   <div class="blog-hero-content">
-    <p class="eyebrow">Novità dal club</p>
+    <p class="eyebrow">NovitÃ  dal club</p>
     <h1>Blog &amp; approfondimenti</h1>
     <p class="lead">
-      Raccontiamo tornei, backstage e consigli per la community. Filtra gli articoli per trovare subito ciò che ti interessa.
+      Raccontiamo tornei, backstage e consigli per la community. Filtra gli articoli per trovare subito ciÃ² che ti interessa.
     </p>
     <label class="blog-search" for="blogSearch">
       <span class="sr-only">Cerca nel blog</span>
@@ -735,38 +597,17 @@ $initialVisibleLabel = $initialArchiveLabel;
           <h2>L'articolo del momento</h2>
         </div>
         <div class="section-meta">
-          <span class="meta-pill" id="featuredUpdated"><?= $featuredPhp ? 'Aggiornato ' . blog_escape($featuredPhp['data'] ?? '') : 'Aggiornato ora' ?></span>
+          <span class="meta-pill" id="featuredUpdated">Aggiornato ora</span>
           <a class="meta-pill alt" href="/tornei.php">Vai ai tornei</a>
         </div>
       </div>
       <div class="featured-card" id="featuredPost">
-        <?php if ($featuredPhp): ?>
-          <?php
-            $ftTitle = blog_escape($featuredPhp['titolo'] ?? 'Articolo in evidenza');
-            $ftDate = blog_escape($featuredPhp['data'] ?? '');
-            $ftPreview = blog_preview($featuredPhp['anteprima'] ?? '');
-            $ftCover = $featuredPhp['cover'] ?? $featuredPhp['immagine'] ?? '';
-          ?>
-          <div class="featured-image">
-            <?= $ftCover ? '<img src="' . blog_escape($ftCover) . '" alt="' . $ftTitle . '">' : '' ?>
-          </div>
-          <div class="featured-copy">
-            <span><?= $ftDate ?></span>
-            <h3><?= $ftTitle ?></h3>
-            <p><?= blog_escape($ftPreview) ?></p>
-            <div class="featured-actions">
-                <a class="primary" href="/articolo.php?titolo=<?= rawurlencode($featuredPhp['titolo'] ?? '') ?>">Leggi ora</a>
-                <a class="secondary" href="/tornei.php">Vedi i tornei</a>
-            </div>
-          </div>
-        <?php else: ?>
-          <div class="featured-image"></div>
-          <div class="featured-copy">
-            <span>Nessun articolo</span>
-            <h3>Ancora nessun post disponibile</h3>
-            <p>Stiamo preparando nuovi contenuti per te. Torna a trovarci presto.</p>
-          </div>
-        <?php endif; ?>
+        <div class="featured-image"></div>
+        <div class="featured-copy">
+          <span>Caricamento</span>
+          <h3>Scarichiamo gli ultimi articoli...</h3>
+          <p>Restiamo un secondo in attesa: il nostro feed sta arrivando dal server.</p>
+        </div>
       </div>
     </section>
 
@@ -777,41 +618,11 @@ $initialVisibleLabel = $initialArchiveLabel;
           <h2>Tutti gli articoli</h2>
         </div>
         <div class="section-meta">
-          <span class="meta-pill" id="archiveCount"><?= blog_escape($initialArchiveLabel) ?></span>
-          <span class="meta-pill alt" id="visibleCount"><?= blog_escape($initialVisibleLabel) ?></span>
+          <span class="meta-pill" id="archiveCount">0 articoli</span>
+          <span class="meta-pill alt" id="visibleCount">0 visibili</span>
         </div>
       </div>
-      <div class="blog-grid" id="articlesGrid">
-        <?php if ($restPhp): ?>
-          <?php foreach ($restPhp as $post): ?>
-            <?php
-              $title = blog_escape($post['titolo'] ?? 'Articolo');
-              $preview = blog_preview($post['anteprima'] ?? '');
-              $cover = $post['cover'] ?? $post['immagine'] ?? '';
-              $img = $cover ? '<img src="' . blog_escape($cover) . '" alt="' . $title . '" loading="lazy">' : '';
-              $date = blog_escape($post['data'] ?? '');
-              $href = '/articolo.php?titolo=' . rawurlencode($post['titolo'] ?? '');
-            ?>
-            <article class="blog-card">
-              <a href="<?= $href ?>">
-                  <div class="card-image"><?= $img ?></div>
-                  <div class="card-body">
-                      <div class="card-date"><?= $date ?></div>
-                      <h3><?= $title ?></h3>
-                      <p><?= blog_escape($preview) ?></p>
-                  </div>
-              </a>
-            </article>
-          <?php endforeach; ?>
-        <?php else: ?>
-          <article class="blog-card">
-            <div class="card-body">
-              <h3>Stiamo pubblicando i prossimi articoli</h3>
-              <p>Resta connesso: a breve qui compariranno le novità.</p>
-            </div>
-          </article>
-        <?php endif; ?>
-      </div>
+      <div class="blog-grid" id="articlesGrid"></div>
       <div class="single-card-hint" id="blogEmptyState" hidden>
         Nessun articolo corrisponde alla ricerca. Prova a cambiare parola chiave.
       </div>
@@ -820,7 +631,7 @@ $initialVisibleLabel = $initialArchiveLabel;
 
   <aside class="blog-sidebar">
     <h3>Consigli di lettura</h3>
-    <p class="sidebar-desc">Gli aggiornamenti più freschi da non perdere.</p>
+    <p class="sidebar-desc">Gli aggiornamenti piÃ¹ freschi da non perdere.</p>
     <div class="sidebar-ad">
       <ins class="adsbygoogle ads-static"
            style="display:block"
@@ -829,34 +640,9 @@ $initialVisibleLabel = $initialArchiveLabel;
            data-ad-format="auto"
            data-full-width-responsive="true"></ins>
     </div>
-    <div id="miniList">
-      <?php if ($restPhp): ?>
-        <?php foreach (array_slice($preloadedPosts, 0, 5) as $post): ?>
-          <?php
-            $title = blog_escape($post['titolo'] ?? 'Articolo');
-            $cover = $post['cover'] ?? $post['immagine'] ?? '';
-            $img = $cover ? '<img src="' . blog_escape($cover) . '" alt="' . $title . '">' : '';
-            $date = blog_escape($post['data'] ?? '');
-            $href = '/articolo.php?titolo=' . rawurlencode($post['titolo'] ?? '');
-          ?>
-          <a class="mini-card" href="<?= $href ?>">
-              <div class="mini-thumb"><?= $img ?></div>
-              <div>
-                  <div class="mini-date"><?= $date ?></div>
-                  <div class="mini-title"><?= $title ?></div>
-              </div>
-          </a>
-        <?php endforeach; ?>
-      <?php else: ?>
-        <p>Ancora nessun consiglio disponibile.</p>
-      <?php endif; ?>
-    </div>
+    <div id="miniList">Stiamo preparando la lista...</div>
   </aside>
 </main>
-
-<script>
-window.__BLOG_PRELOAD__ = <?= json_encode($preloadedPosts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-</script>
 
 <?php include __DIR__ . '/includi/footer.html'; ?>
 
@@ -993,7 +779,7 @@ function renderGrid(posts) {
         cardGrid.innerHTML = `
             <div class="blog-card">
                 <div class="card-body">
-                    <h3>Hai già letto il pezzo principale!</h3>
+                    <h3>Hai giÃ  letto il pezzo principale!</h3>
                     <p>Quando pubblicheremo nuovi contenuti compariranno qui.</p>
                 </div>
             </div>`;
@@ -1049,19 +835,12 @@ function renderMiniList(posts, excludeId = null) {
     }).join('');
 }
 
-function renderAll(posts) {
-    cachedPosts = Array.isArray(posts) ? posts : [];
-    updateFeatured(cachedPosts[0]);
-    renderGrid(cachedPosts.slice(1));
-    const featuredId = cachedPosts[0]?.id ?? null;
-    renderMiniList(cachedPosts, featuredId);
-    updateArchiveCounters(cachedPosts.length, cachedPosts.length);
-    emptyState.hidden = cachedPosts.length > 0;
-}
-
 function filterPosts(term) {
     if (!term) {
-        renderAll(cachedPosts);
+        updateFeatured(cachedPosts[0]);
+        renderGrid(cachedPosts.slice(1));
+        emptyState.hidden = cachedPosts.length > 0;
+        updateArchiveCounters(cachedPosts.length, cachedPosts.length);
         return;
     }
 
@@ -1094,36 +873,32 @@ async function loadBlog() {
         }
 
         const posts = await response.json();
-        if (Array.isArray(posts) && posts.length) {
-            renderAll(posts);
-        } else if (!cachedPosts.length) {
-            renderAll([]);
-        }
+        cachedPosts = Array.isArray(posts) ? posts : [];
+
+        updateFeatured(cachedPosts[0]);
+        renderGrid(cachedPosts.slice(1));
+        const featuredId = cachedPosts[0]?.id ?? null;
+        renderMiniList(cachedPosts, featuredId);
+        updateArchiveCounters(cachedPosts.length, cachedPosts.length);
+        emptyState.hidden = cachedPosts.length > 0;
     } catch (error) {
         setFeaturedMeta('Errore di caricamento');
-        if (!cachedPosts.length) {
-            updateArchiveCounters(0, 0);
-            featuredBox.innerHTML = `
-                <div class="featured-copy">
-                    <span>Errore</span>
-                    <h3>Ops, qualcosa è andato storto</h3>
-                    <p>${escapeHTML(error.message)}</p>
-                </div>`;
-            renderGrid([]);
-            miniList.innerHTML = '<p>Ricarica la pagina per riprovare.</p>';
-            emptyState.hidden = false;
-        }
+        updateArchiveCounters(0, 0);
+        featuredBox.innerHTML = `
+            <div class="featured-copy">
+                <span>Errore</span>
+                <h3>Ops, qualcosa Ã¨ andato storto</h3>
+                <p>${escapeHTML(error.message)}</p>
+            </div>`;
+        cardGrid.innerHTML = '';
+        miniList.innerHTML = '<p>Ricarica la pagina per riprovare.</p>';
+        emptyState.hidden = false;
     }
 }
 
 searchInput?.addEventListener('input', event => {
     filterPosts(event.target.value.trim());
 });
-
-const preload = window.__BLOG_PRELOAD__;
-if (Array.isArray(preload) && preload.length) {
-    renderAll(preload);
-}
 
 initStaticAds();
 loadBlog();
