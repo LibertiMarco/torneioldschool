@@ -128,11 +128,17 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 
 .blog-layout {
     max-width: 1200px;
+    width: 100%;
     margin: 0 auto 60px;
     padding: 30px 20px 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 300px;
     gap: 32px;
+    overflow-x: hidden;
+}
+
+.blog-layout > * {
+    min-width: 0;
 }
 
 .blog-main {
@@ -191,6 +197,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     display: block;
     margin: 0 auto;
     width: 100% !important;
+    max-width: 100%;
 }
 
 .sidebar-ad {
@@ -205,6 +212,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 .sidebar-ad ins {
     display: block;
     width: 100% !important;
+    max-width: 100%;
 }
 
 .section-meta {
@@ -349,6 +357,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     gap: 20px;
+    overflow: hidden;
 }
 
 .blog-card {
@@ -507,6 +516,16 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     object-fit: cover;
 }
 
+.blog-card.ad-card {
+    overflow: hidden;
+}
+
+.blog-card.ad-card ins {
+    display: block;
+    width: 100% !important;
+    max-width: 100%;
+}
+
 .mini-card:hover .mini-title {
     color: #15293e;
 }
@@ -543,6 +562,11 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 
     .featured-copy h3 {
         font-size: 1.8rem;
+    }
+
+    .blog-layout {
+        padding: 30px 16px 0;
+        overflow-x: hidden;
     }
 
     .blog-ad {
