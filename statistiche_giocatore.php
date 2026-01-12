@@ -311,12 +311,13 @@ $seo = [
         }
         .calendar-list .team {
             display: flex;
-            justify-content: flex-start;
+            flex-direction: column;
+            justify-content: center;
             align-items: center;
             gap: 8px;
             min-width: 0;
         }
-        .calendar-list .team.away { justify-content: flex-end; }
+        .calendar-list .team.away { justify-content: center; }
         .calendar-list .team img {
             width: 38px;
             height: 38px;
@@ -337,12 +338,16 @@ $seo = [
             word-break: keep-all;
             overflow-wrap: break-word;
             line-height: 1.15;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
         }
         .calendar-list .team-name.is-long {
             font-size: 0.84rem;
             line-height: 1.12;
         }
-        .calendar-list .team.away .team-name { text-align: left; }
+        .calendar-list .team.away .team-name { text-align: center; }
         .calendar-list .match-center {
             display: grid;
             gap: 4px;
@@ -373,11 +378,14 @@ $seo = [
                 overflow-wrap: break-word;
                 line-height: 1.18;
                 max-width: 120px;
+                align-items: center;
+                text-align: center;
             }
             .calendar-list .team-name.is-long {
                 font-size: 0.82rem;
                 line-height: 1.12;
             }
+            .calendar-list .team.away .team-name { text-align: center; }
             .calendar-list .vs { font-size: 0.98rem; }
             .calendar-list .score { font-size: 1.1rem; }
         }
