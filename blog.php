@@ -133,6 +133,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     display: grid;
     grid-template-columns: minmax(0, 1fr) 300px;
     gap: 32px;
+    overflow-x: hidden;
 }
 
 .blog-main {
@@ -191,6 +192,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     display: block;
     margin: 0 auto;
     width: 100% !important;
+    max-width: 100% !important;
 }
 
 .sidebar-ad {
@@ -204,6 +206,12 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 }
 .sidebar-ad ins {
     display: block;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.adsbygoogle {
+    max-width: 100% !important;
     width: 100% !important;
 }
 
