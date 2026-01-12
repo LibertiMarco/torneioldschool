@@ -17,9 +17,26 @@ $loginBreadcrumbs = seo_breadcrumb_schema([
     ['name' => 'Login', 'url' => $baseUrl . '/login.php'],
 ]);
 
+$defaultRedirect = '/index.php';
+if (isset($_GET['redirect'])) {
+    $candidateRedirect = login_sanitize_redirect($_GET['redirect']);
+    if ($candidateRedirect) {
+        login_remember_redirect($candidateRedirect, $defaultRedirect);
+    }
+}
+
+if (empty($_SESSION['login_redirect']) && !empty($_SERVER['HTTP_REFERER'])) {
+    $refererRedirect = login_sanitize_redirect($_SERVER['HTTP_REFERER']);
+    if ($refererRedirect) {
+        login_remember_redirect($refererRedirect, $defaultRedirect);
+    }
+}
+
+$redirectTarget = login_get_redirect($defaultRedirect);
 $alreadyLogged = isset($_SESSION['user_id']);
 if ($alreadyLogged) {
-    header("Location: /index.php");
+    unset($_SESSION['login_redirect']);
+    header("Location: {$redirectTarget}");
     exit;
 }
 
@@ -65,6 +82,11 @@ function verify_recaptcha(string $secret, string $token, string $ip = '', string
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $postRedirect = login_sanitize_redirect($_POST['redirect'] ?? null);
+    if ($postRedirect) {
+        $redirectTarget = login_remember_redirect($postRedirect, $defaultRedirect);
+    }
+
     if (!csrf_is_valid($_POST['_csrf'] ?? '', 'login_form')) {
         $error = "Sessione scaduta. Ricarica la pagina e riprova.";
     } elseif (honeypot_triggered()) {
@@ -144,7 +166,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             // salva la sessione e poi reindirizza
             session_write_close();
-            header("Location: tornei.php");
+            $target = login_get_redirect($defaultRedirect);
+            unset($_SESSION['login_redirect']);
+            header("Location: {$target}");
             exit;
             }
         } else {
@@ -366,6 +390,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       <h2>Accedi</h2>
       <form class="login-form" method="POST" action="">
         <?= csrf_field('login_form') ?>
+        <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirectTarget) ?>">
         <div class="hp-field" aria-hidden="true">
           <label for="hp_field">Lascia vuoto</label>
           <input type="text" id="hp_field" name="hp_field" tabindex="-1" autocomplete="off">

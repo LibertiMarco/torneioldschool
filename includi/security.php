@@ -184,3 +184,80 @@ if (!function_exists('honeypot_triggered')) {
         return !empty($_POST[$fieldName]);
     }
 }
+
+// Gestione della pagina di ritorno dopo il login con sanitizzazione di base
+if (!function_exists('login_sanitize_redirect')) {
+    function login_sanitize_redirect(?string $target): ?string
+    {
+        if (!$target) {
+            return null;
+        }
+
+        $trimmed = trim($target);
+        if ($trimmed === '' || stripos($trimmed, 'javascript:') === 0) {
+            return null;
+        }
+
+        $parts = parse_url($trimmed);
+        if ($parts === false) {
+            return null;
+        }
+
+        if (isset($parts['scheme'])) {
+            $scheme = strtolower((string)$parts['scheme']);
+            if (!in_array($scheme, ['http', 'https'], true)) {
+                return null;
+            }
+
+            $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+            if (!empty($parts['host']) && $currentHost !== '' && strcasecmp($parts['host'], $currentHost) !== 0) {
+                return null; // blocca redirect verso host esterni
+            }
+
+            $trimmed = $parts['path'] ?? '/';
+            if (isset($parts['query'])) {
+                $trimmed .= '?' . $parts['query'];
+            }
+            if (isset($parts['fragment'])) {
+                $trimmed .= '#' . $parts['fragment'];
+            }
+        } elseif (substr($trimmed, 0, 2) === '//') {
+            return null; // blocca schemi impliciti tipo //evil.com
+        }
+
+        if (strpos($trimmed, "\n") !== false || strpos($trimmed, "\r") !== false) {
+            return null;
+        }
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if ($trimmed[0] !== '/') {
+            $trimmed = '/' . ltrim($trimmed, '/');
+        }
+
+        $path = parse_url($trimmed, PHP_URL_PATH) ?: '';
+        if (preg_match('#^/login\.php$#i', $path)) {
+            return null; // evita loop su login.php
+        }
+
+        return $trimmed;
+    }
+}
+
+if (!function_exists('login_remember_redirect')) {
+    function login_remember_redirect(?string $target = null, string $fallback = '/index.php'): string
+    {
+        $safe = login_sanitize_redirect($target) ?: $fallback;
+        $_SESSION['login_redirect'] = $safe;
+        return $safe;
+    }
+}
+
+if (!function_exists('login_get_redirect')) {
+    function login_get_redirect(string $fallback = '/index.php'): string
+    {
+        return login_sanitize_redirect($_SESSION['login_redirect'] ?? null) ?: $fallback;
+    }
+}
