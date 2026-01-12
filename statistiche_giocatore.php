@@ -101,7 +101,7 @@ function format_team_name_multiline(string $name): string {
     if (empty($parts)) {
         return '';
     }
-    return implode('', array_map(static fn($part) => '<span class="team-word">' . h($part) . '</span>', $parts));
+    return implode('<br>', array_map('h', $parts));
 }
 
 function team_name_class(string $name): string {
@@ -312,7 +312,7 @@ $seo = [
         .calendar-list .team {
             display: flex;
             justify-content: flex-start;
-            align-items: flex-start;
+            align-items: center;
             gap: 8px;
             min-width: 0;
         }
@@ -337,16 +337,12 @@ $seo = [
             word-break: keep-all;
             overflow-wrap: break-word;
             line-height: 1.15;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
         }
         .calendar-list .team-name.is-long {
             font-size: 0.84rem;
             line-height: 1.12;
         }
-        .calendar-list .team.away .team-name { text-align: left; align-items: flex-start; }
-        .calendar-list .team-name .team-word { display: block; }
+        .calendar-list .team.away .team-name { text-align: left; }
         .calendar-list .match-center {
             display: grid;
             gap: 4px;
@@ -377,13 +373,11 @@ $seo = [
                 overflow-wrap: break-word;
                 line-height: 1.18;
                 max-width: 120px;
-                align-items: flex-end;
             }
             .calendar-list .team-name.is-long {
                 font-size: 0.82rem;
                 line-height: 1.12;
             }
-            .calendar-list .team.away .team-name { align-items: flex-start; }
             .calendar-list .vs { font-size: 0.98rem; }
             .calendar-list .score { font-size: 1.1rem; }
         }
