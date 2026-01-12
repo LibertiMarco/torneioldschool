@@ -140,6 +140,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     display: flex;
     flex-direction: column;
     gap: 32px;
+    min-width: 0;
 }
 
 .section-heading {
@@ -397,12 +398,29 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 }
 
 @media (max-width: 900px) {
+    .blog-layout {
+        padding: 24px 16px 12px;
+        gap: 24px;
+        margin-bottom: 44px;
+    }
+
     .featured-card {
         flex-direction: column;
+        padding: 26px;
     }
 
     .featured-image {
-        min-height: 260px;
+        min-height: 240px;
+    }
+
+    .section-heading.with-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .section-meta {
+        width: 100%;
     }
 }
 
@@ -463,6 +481,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     position: sticky;
     top: 140px;
     margin-top: 10px;
+    min-width: 0;
 }
 
 .blog-sidebar h3 {
@@ -534,23 +553,70 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 }
 
 @media (max-width: 640px) {
+    .blog-layout {
+        padding: 16px 12px 6px;
+        gap: 18px;
+        margin: 0 auto 32px;
+    }
+
+    .blog-main {
+        gap: 22px;
+    }
+
     .blog-hero {
-        padding: 120px 16px 70px;
+        padding: 96px 14px 56px;
         text-align: left;
         border-bottom-left-radius: 0;
         border-bottom-right-radius: 0;
     }
 
+    .blog-hero p.lead {
+        margin-bottom: 22px;
+    }
+
     .blog-search {
         width: 100%;
+        padding: 10px 14px;
     }
 
     .featured-card {
-        padding: 22px;
+        padding: 20px;
+        gap: 16px;
+    }
+
+    .featured-image {
+        min-height: 200px;
     }
 
     .featured-copy h3 {
-        font-size: 1.8rem;
+        font-size: 1.6rem;
+    }
+
+    .featured-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .featured-actions a {
+        width: 100%;
+        text-align: center;
+    }
+
+    .section-heading.with-meta {
+        align-items: flex-start;
+    }
+
+    .blog-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card-image {
+        height: 170px;
+    }
+
+    .card-body {
+        padding: 16px;
+        gap: 8px;
     }
 
     .blog-ad {
@@ -562,6 +628,10 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
         margin: 10px 0 18px;
         padding: 10px;
     }
+
+    .blog-sidebar {
+        padding: 20px;
+    }
 }
 </style>
 </head>
@@ -572,10 +642,10 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 
 <section class="blog-hero">
   <div class="blog-hero-content">
-    <p class="eyebrow">NovitÃ  dal club</p>
+    <p class="eyebrow">Novità dal club</p>
     <h1>Blog &amp; approfondimenti</h1>
     <p class="lead">
-      Raccontiamo tornei, backstage e consigli per la community. Filtra gli articoli per trovare subito ciÃ² che ti interessa.
+      Raccontiamo tornei, backstage e consigli per la community. Filtra gli articoli per trovare subito ciò che ti interessa.
     </p>
     <label class="blog-search" for="blogSearch">
       <span class="sr-only">Cerca nel blog</span>
@@ -639,7 +709,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 
   <aside class="blog-sidebar">
     <h3>Consigli di lettura</h3>
-    <p class="sidebar-desc">Gli aggiornamenti piÃ¹ freschi da non perdere.</p>
+    <p class="sidebar-desc">Gli aggiornamenti più freschi da non perdere.</p>
     <div class="sidebar-ad">
       <ins class="adsbygoogle ads-static"
            style="display:block"
@@ -787,7 +857,7 @@ function renderGrid(posts) {
         cardGrid.innerHTML = `
             <div class="blog-card">
                 <div class="card-body">
-                    <h3>Hai giÃ  letto il pezzo principale!</h3>
+                    <h3>Hai già letto il pezzo principale!</h3>
                     <p>Quando pubblicheremo nuovi contenuti compariranno qui.</p>
                 </div>
             </div>`;
@@ -895,7 +965,7 @@ async function loadBlog() {
         featuredBox.innerHTML = `
             <div class="featured-copy">
                 <span>Errore</span>
-                <h3>Ops, qualcosa Ã¨ andato storto</h3>
+                <h3>Ops, qualcosa è andato storto</h3>
                 <p>${escapeHTML(error.message)}</p>
             </div>`;
         cardGrid.innerHTML = '';
