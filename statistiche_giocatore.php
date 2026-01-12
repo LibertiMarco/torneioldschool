@@ -88,6 +88,22 @@ function match_link(array $p): string {
     return '/tornei/partita_eventi.php?' . $query;
 }
 
+function maps_search_url(string $place): string {
+    $query = trim($place);
+    if ($query === '') {
+        return '';
+    }
+    return 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($query);
+}
+
+function format_team_name_multiline(string $name): string {
+    $parts = array_filter(preg_split('/\s+/', trim($name)) ?: [], static fn($part) => $part !== '');
+    if (empty($parts)) {
+        return '';
+    }
+    return implode('<br>', array_map('h', $parts));
+}
+
 function fetchMatches(mysqli $conn, array $teamNames, bool $future = true): array {
     if (empty($teamNames)) {
         return [];
@@ -227,7 +243,7 @@ $seo = [
         .match-location {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             padding: 0 4px 10px;
             color: #4c5b71;
             font-weight: 600;
@@ -241,6 +257,30 @@ $seo = [
             box-shadow: 0 0 0 4px rgba(216,0,0,0.12);
             flex-shrink: 0;
         }
+        .match-location .maps-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #eef2f8;
+            color: #d80000;
+            text-decoration: none;
+            border: 1px solid #dfe4ed;
+            flex-shrink: 0;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+        .match-location .maps-link:hover {
+            background: #e2e7f0;
+            transform: translateY(-1px);
+        }
+        .match-location .maps-icon {
+            display: inline-flex;
+            font-size: 16px;
+            line-height: 1;
+        }
+        .match-location .maps-icon::before { content: "\1F4CD"; }
         .calendar-list .match-body {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
@@ -268,13 +308,14 @@ $seo = [
             font-weight: 800;
             color: #15293e;
             text-align: right;
-            font-size: 0.98rem;
+            font-size: 0.92rem;
             letter-spacing: 0.01em;
             min-width: 0;
-            max-width: 100%;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            max-width: 140px;
+            white-space: normal;
+            word-break: keep-all;
+            overflow-wrap: break-word;
+            line-height: 1.15;
         }
         .calendar-list .team.away .team-name { text-align: left; }
         .calendar-list .match-center {
@@ -300,7 +341,14 @@ $seo = [
             .match-location { padding: 2px 4px 10px; font-size: 0.9rem; }
             .calendar-list .match-body { gap: 8px; grid-template-columns: 1fr auto 1fr; }
             .calendar-list .team img { width: 30px; height: 30px; }
-            .calendar-list .team-name { font-size: 0.9rem; white-space: normal; word-break: break-word; line-height: 1.2; }
+            .calendar-list .team-name {
+                font-size: 0.88rem;
+                white-space: normal;
+                word-break: keep-all;
+                overflow-wrap: break-word;
+                line-height: 1.18;
+                max-width: 120px;
+            }
             .calendar-list .vs { font-size: 0.98rem; }
             .calendar-list .score { font-size: 1.1rem; }
         }
@@ -384,6 +432,8 @@ $seo = [
                           $link = match_link($p);
                           $logoCasa = !empty($p['logo_casa']) ? $p['logo_casa'] : $defaultTeamLogo;
                           $logoOspite = !empty($p['logo_ospite']) ? $p['logo_ospite'] : $defaultTeamLogo;
+                          $campoLabel = trim($p['campo'] ?? '');
+                          $mapsUrl = maps_search_url($campoLabel);
                         ?>
                         <div class="match-card upcoming is-disabled" aria-disabled="true">
                             <div class="match-top">
@@ -393,22 +443,24 @@ $seo = [
                                 </div>
                                 <span class="match-time"><?= h(format_match_datetime($p['data_partita'], $p['ora_partita'])) ?></span>
                             </div>
-                            <?php if (!empty($p['campo'])): ?>
+                            <?php if ($campoLabel !== '' && $mapsUrl !== ''): ?>
                                 <div class="match-location">
-                                    <span class="match-location-dot"></span>
-                                    <span><?= h($p['campo']) ?></span>
+                                    <a class="maps-link" href="<?= h($mapsUrl) ?>" target="_blank" rel="noopener" aria-label="Apri <?= h($campoLabel) ?> su Google Maps">
+                                        <span class="maps-icon" aria-hidden="true"></span>
+                                    </a>
+                                    <span><?= h($campoLabel) ?></span>
                                 </div>
                             <?php endif; ?>
                             <div class="match-body">
                                 <div class="team home">
                                     <img src="<?= h($logoCasa) ?>" alt="Logo <?= h($p['squadra_casa']) ?>" onerror="this.src='<?= h($defaultTeamLogo) ?>';">
-                                    <div class="team-name"><?= h($p['squadra_casa']) ?></div>
+                                    <div class="team-name"><?= format_team_name_multiline($p['squadra_casa']) ?></div>
                                 </div>
                                 <div class="match-center">
                                     <span class="vs">VS</span>
                                 </div>
                                 <div class="team away">
-                                    <div class="team-name"><?= h($p['squadra_ospite']) ?></div>
+                                    <div class="team-name"><?= format_team_name_multiline($p['squadra_ospite']) ?></div>
                                     <img src="<?= h($logoOspite) ?>" alt="Logo <?= h($p['squadra_ospite']) ?>" onerror="this.src='<?= h($defaultTeamLogo) ?>';">
                                 </div>
                             </div>
@@ -450,13 +502,13 @@ $seo = [
                             <div class="match-body">
                                 <div class="team home">
                                     <img src="<?= h($logoCasa) ?>" alt="Logo <?= h($p['squadra_casa']) ?>" onerror="this.src='<?= h($defaultTeamLogo) ?>';">
-                                    <div class="team-name"><?= h($p['squadra_casa']) ?></div>
+                                    <div class="team-name"><?= format_team_name_multiline($p['squadra_casa']) ?></div>
                                 </div>
                                 <div class="match-center">
                                     <span class="score"><?= $scoreHome ?> - <?= $scoreAway ?></span>
                                 </div>
                                 <div class="team away">
-                                    <div class="team-name"><?= h($p['squadra_ospite']) ?></div>
+                                    <div class="team-name"><?= format_team_name_multiline($p['squadra_ospite']) ?></div>
                                     <img src="<?= h($logoOspite) ?>" alt="Logo <?= h($p['squadra_ospite']) ?>" onerror="this.src='<?= h($defaultTeamLogo) ?>';">
                                 </div>
                             </div>
