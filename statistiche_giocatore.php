@@ -133,10 +133,12 @@ function fetchMatches(mysqli $conn, array $teamNames, bool $future = true): arra
     $sql = "
         SELECT p.id, p.torneo, p.squadra_casa, p.squadra_ospite, p.data_partita, p.ora_partita, p.campo, p.giocata, p.gol_casa, p.gol_ospite,
                p.giornata, p.fase, p.fase_round, p.fase_leg,
-               sc.logo AS logo_casa, so.logo AS logo_ospite
+               sc.logo AS logo_casa, so.logo AS logo_ospite,
+               t.nome AS torneo_nome
         FROM partite p
         LEFT JOIN squadre sc ON sc.nome = p.squadra_casa AND sc.torneo = p.torneo
         LEFT JOIN squadre so ON so.nome = p.squadra_ospite AND so.torneo = p.torneo
+        LEFT JOIN tornei t ON (t.filetorneo = p.torneo OR t.filetorneo = CONCAT(p.torneo, '.php') OR t.nome = p.torneo)
         WHERE (squadra_casa IN ($placeholders) OR squadra_ospite IN ($placeholders))
         $condition
         $order
@@ -463,12 +465,13 @@ $seo = [
                           $mapsUrl = maps_search_url($campoLabel);
                           $homeNameClass = team_name_class($p['squadra_casa']);
                           $awayNameClass = team_name_class($p['squadra_ospite']);
+                          $torneoNome = trim($p['torneo_nome'] ?? '') !== '' ? $p['torneo_nome'] : $p['torneo'];
                         ?>
                         <div class="match-card upcoming is-disabled" aria-disabled="true">
                             <div class="match-top">
                                 <div class="match-top-left">
                                     <?php if ($stage): ?><span class="match-badge"><?= h($stage) ?></span><?php endif; ?>
-                                    <span class="match-tournament"><?= h($p['torneo']) ?></span>
+                                    <span class="match-tournament"><?= h($torneoNome) ?></span>
                                 </div>
                                 <span class="match-time"><?= h(format_match_datetime($p['data_partita'], $p['ora_partita'])) ?></span>
                             </div>
@@ -515,12 +518,13 @@ $seo = [
                           $scoreAway = $p['gol_ospite'] !== null ? (int)$p['gol_ospite'] : '-';
                           $homeNameClass = team_name_class($p['squadra_casa']);
                           $awayNameClass = team_name_class($p['squadra_ospite']);
+                          $torneoNome = trim($p['torneo_nome'] ?? '') !== '' ? $p['torneo_nome'] : $p['torneo'];
                         ?>
                         <a class="match-card played" href="<?= h($link) ?>">
                             <div class="match-top">
                                 <div class="match-top-left">
                                     <?php if ($stage): ?><span class="match-badge"><?= h($stage) ?></span><?php endif; ?>
-                                    <span class="match-tournament"><?= h($p['torneo']) ?></span>
+                                    <span class="match-tournament"><?= h($torneoNome) ?></span>
                                 </div>
                                 <span class="match-time"><?= h(format_match_datetime($p['data_partita'], $p['ora_partita'])) ?></span>
                             </div>
