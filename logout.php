@@ -23,6 +23,9 @@ if (ini_get('session.use_cookies')) {
     ]);
 }
 
-header("Location: /index.php");
+$currentDir = dirname($_SERVER['SCRIPT_NAME'] ?? '/');
+$basePath = rtrim(str_replace('\\', '/', $currentDir), '/');
+$redirect = ($basePath === '' || $basePath === '.') ? '/index.php' : $basePath . '/index.php';
+header("Location: {$redirect}");
 exit;
 ?>
