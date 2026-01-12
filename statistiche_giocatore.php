@@ -104,6 +104,19 @@ function format_team_name_multiline(string $name): string {
     return implode('<br>', array_map('h', $parts));
 }
 
+function team_name_class(string $name): string {
+    $clean = trim($name);
+    if ($clean === '') {
+        return '';
+    }
+    $length = strlen($clean);
+    $words = array_filter(preg_split('/\s+/', $clean) ?: []);
+    if ($length > 14 || count($words) >= 3) {
+        return 'is-long';
+    }
+    return '';
+}
+
 function fetchMatches(mysqli $conn, array $teamNames, bool $future = true): array {
     if (empty($teamNames)) {
         return [];
@@ -228,6 +241,12 @@ $seo = [
             gap: 8px;
             flex-wrap: wrap;
         }
+        .match-top-left .match-tournament {
+            font-weight: 700;
+            color: #3c4c63;
+            font-size: 0.93rem;
+            letter-spacing: 0.01em;
+        }
         .match-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .match-time { color: #4c5b71; font-weight: 700; }
         .match-badge {
@@ -317,6 +336,10 @@ $seo = [
             overflow-wrap: break-word;
             line-height: 1.15;
         }
+        .calendar-list .team-name.is-long {
+            font-size: 0.84rem;
+            line-height: 1.12;
+        }
         .calendar-list .team.away .team-name { text-align: left; }
         .calendar-list .match-center {
             display: grid;
@@ -348,6 +371,10 @@ $seo = [
                 overflow-wrap: break-word;
                 line-height: 1.18;
                 max-width: 120px;
+            }
+            .calendar-list .team-name.is-long {
+                font-size: 0.82rem;
+                line-height: 1.12;
             }
             .calendar-list .vs { font-size: 0.98rem; }
             .calendar-list .score { font-size: 1.1rem; }
@@ -434,12 +461,14 @@ $seo = [
                           $logoOspite = !empty($p['logo_ospite']) ? $p['logo_ospite'] : $defaultTeamLogo;
                           $campoLabel = trim($p['campo'] ?? '');
                           $mapsUrl = maps_search_url($campoLabel);
+                          $homeNameClass = team_name_class($p['squadra_casa']);
+                          $awayNameClass = team_name_class($p['squadra_ospite']);
                         ?>
                         <div class="match-card upcoming is-disabled" aria-disabled="true">
                             <div class="match-top">
                                 <div class="match-top-left">
                                     <?php if ($stage): ?><span class="match-badge"><?= h($stage) ?></span><?php endif; ?>
-                                    <span class="muted"><?= h($p['torneo']) ?></span>
+                                    <span class="match-tournament"><?= h($p['torneo']) ?></span>
                                 </div>
                                 <span class="match-time"><?= h(format_match_datetime($p['data_partita'], $p['ora_partita'])) ?></span>
                             </div>
@@ -454,13 +483,13 @@ $seo = [
                             <div class="match-body">
                                 <div class="team home">
                                     <img src="<?= h($logoCasa) ?>" alt="Logo <?= h($p['squadra_casa']) ?>" onerror="this.src='<?= h($defaultTeamLogo) ?>';">
-                                    <div class="team-name"><?= format_team_name_multiline($p['squadra_casa']) ?></div>
+                                    <div class="team-name<?= $homeNameClass ? ' ' . h($homeNameClass) : '' ?>"><?= format_team_name_multiline($p['squadra_casa']) ?></div>
                                 </div>
                                 <div class="match-center">
                                     <span class="vs">VS</span>
                                 </div>
                                 <div class="team away">
-                                    <div class="team-name"><?= format_team_name_multiline($p['squadra_ospite']) ?></div>
+                                    <div class="team-name<?= $awayNameClass ? ' ' . h($awayNameClass) : '' ?>"><?= format_team_name_multiline($p['squadra_ospite']) ?></div>
                                     <img src="<?= h($logoOspite) ?>" alt="Logo <?= h($p['squadra_ospite']) ?>" onerror="this.src='<?= h($defaultTeamLogo) ?>';">
                                 </div>
                             </div>
@@ -484,12 +513,14 @@ $seo = [
                           $logoOspite = !empty($p['logo_ospite']) ? $p['logo_ospite'] : $defaultTeamLogo;
                           $scoreHome = $p['gol_casa'] !== null ? (int)$p['gol_casa'] : '-';
                           $scoreAway = $p['gol_ospite'] !== null ? (int)$p['gol_ospite'] : '-';
+                          $homeNameClass = team_name_class($p['squadra_casa']);
+                          $awayNameClass = team_name_class($p['squadra_ospite']);
                         ?>
                         <a class="match-card played" href="<?= h($link) ?>">
                             <div class="match-top">
                                 <div class="match-top-left">
                                     <?php if ($stage): ?><span class="match-badge"><?= h($stage) ?></span><?php endif; ?>
-                                    <span class="muted"><?= h($p['torneo']) ?></span>
+                                    <span class="match-tournament"><?= h($p['torneo']) ?></span>
                                 </div>
                                 <span class="match-time"><?= h(format_match_datetime($p['data_partita'], $p['ora_partita'])) ?></span>
                             </div>
@@ -502,13 +533,13 @@ $seo = [
                             <div class="match-body">
                                 <div class="team home">
                                     <img src="<?= h($logoCasa) ?>" alt="Logo <?= h($p['squadra_casa']) ?>" onerror="this.src='<?= h($defaultTeamLogo) ?>';">
-                                    <div class="team-name"><?= format_team_name_multiline($p['squadra_casa']) ?></div>
+                                    <div class="team-name<?= $homeNameClass ? ' ' . h($homeNameClass) : '' ?>"><?= format_team_name_multiline($p['squadra_casa']) ?></div>
                                 </div>
                                 <div class="match-center">
                                     <span class="score"><?= $scoreHome ?> - <?= $scoreAway ?></span>
                                 </div>
                                 <div class="team away">
-                                    <div class="team-name"><?= format_team_name_multiline($p['squadra_ospite']) ?></div>
+                                    <div class="team-name<?= $awayNameClass ? ' ' . h($awayNameClass) : '' ?>"><?= format_team_name_multiline($p['squadra_ospite']) ?></div>
                                     <img src="<?= h($logoOspite) ?>" alt="Logo <?= h($p['squadra_ospite']) ?>" onerror="this.src='<?= h($defaultTeamLogo) ?>';">
                                 </div>
                             </div>
