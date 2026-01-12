@@ -435,11 +435,13 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
       .then(r => r.text())
       .then(html => {
         document.getElementById("header-container").innerHTML = html;
-        if (typeof initHeaderInteractions === "function") {
-          initHeaderInteractions();
-        }
-        bindBasicHeaderToggle(document);
         const header = document.querySelector(".site-header");
+        const hasAdvancedHeader = typeof initHeaderInteractions === "function";
+        if (hasAdvancedHeader) {
+          initHeaderInteractions();
+        } else {
+          bindBasicHeaderToggle(document);
+        }
         window.addEventListener("scroll", () => {
           if (header) {
             header.classList.toggle("scrolled", window.scrollY > 50);
