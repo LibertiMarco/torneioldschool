@@ -525,7 +525,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     <p class="eyebrow">NovitÃ  dal club</p>
     <h1>Blog &amp; approfondimenti</h1>
     <p class="lead">
-      Raccontiamo tornei, backstage e consigli per la community. Filtra gli articoli per trovare subito ciÃ² che ti interessa.
+      Raccontiamo tornei, backstage e consigli per la community. Filtra gli articoli per trovare subito ciò che ti interessa.
     </p>
     <label class="blog-search" for="blogSearch">
       <span class="sr-only">Cerca nel blog</span>
