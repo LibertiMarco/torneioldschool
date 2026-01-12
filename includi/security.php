@@ -12,9 +12,8 @@ if (session_status() === PHP_SESSION_NONE) {
     $rememberRequested = !empty($_COOKIE[REMEMBER_COOKIE_NAME]);
     $cookieLifetime = $rememberRequested ? REMEMBER_COOKIE_LIFETIME : 0;
 
-    if ($rememberRequested) {
-        ini_set('session.gc_maxlifetime', (string)REMEMBER_COOKIE_LIFETIME);
-    }
+    // Mantieni i file di sessione per almeno 30 giorni (allineato al cookie remember)
+    ini_set('session.gc_maxlifetime', (string)REMEMBER_COOKIE_LIFETIME);
 
     if (function_exists('session_set_cookie_params')) {
         session_set_cookie_params([
