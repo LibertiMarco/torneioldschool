@@ -468,7 +468,7 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
 
   <div id="footer-container"></div>
 
-  <script src="/includi/app.min.js?v=20251204"></script>
+  <script src="/includi/app.min.js?v=20251219"></script>
   <script>
     function bindBasicHeaderToggle(root) {
       const header = root.querySelector(".site-header");
@@ -536,6 +536,7 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
   </script>
 </body>
 </html>
+
 
 
 

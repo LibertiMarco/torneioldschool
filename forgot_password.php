@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
@@ -235,7 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <div id="footer-container"></div>
 
-  <script src="/includi/app.min.js?v=20251204"></script>
+  <script src="/includi/app.min.js?v=20251219"></script>
   <script>
     fetch("/includi/footer.html")
       .then(r => r.text())
@@ -269,4 +269,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </script>
 </body>
 </html>
+
 

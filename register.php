@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // session handled in includi/security.php
 require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
@@ -584,7 +584,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="file-upload">
           <input type="file" id="avatar" name="avatar" accept="image/*">
           <label for="avatar" class="file-btn">
-            <span class="file-icon" aria-hidden="true">ðŸ“·</span> Scegli foto
+            <span class="file-icon" aria-hidden="true">📷</span> Scegli foto
           </label>
           <span class="file-name" id="avatarName">Nessun file selezionato</span>
         </div>
@@ -597,19 +597,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           <div class="consent-list">
             <label class="consent-item">
               <input type="checkbox" name="accetta_privacy" required>
-              <span><strong>Privacy (obbligatorio)</strong> â€” Ho letto la <a href="/privacy.php" target="_blank">Privacy Policy</a> e acconsento al trattamento dei dati.</span>
+              <span><strong>Privacy (obbligatorio)</strong> — Ho letto la <a href="/privacy.php" target="_blank">Privacy Policy</a> e acconsento al trattamento dei dati.</span>
             </label>
             <label class="consent-item">
               <input type="checkbox" name="accetta_termini" required>
-              <span><strong>Termini del servizio (obbligatorio)</strong> â€” Accetto il regolamento dei tornei.</span>
+              <span><strong>Termini del servizio (obbligatorio)</strong> — Accetto il regolamento dei tornei.</span>
             </label>
             <label class="consent-item">
               <input type="checkbox" name="consenso_newsletter">
-              <span><strong>Newsletter (facoltativo)</strong> â€” Aggiornamenti su novitÃ  e calendari.</span>
+              <span><strong>Newsletter (facoltativo)</strong> — Aggiornamenti su novità e calendari.</span>
             </label>
             <label class="consent-item">
               <input type="checkbox" name="consenso_marketing">
-              <span><strong>Comunicazioni promozionali (facoltativo)</strong> â€” Info dedicate sui tornei.</span>
+              <span><strong>Comunicazioni promozionali (facoltativo)</strong> — Info dedicate sui tornei.</span>
             </label>
           </div>
         </div>
@@ -627,7 +627,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       </form>
 
         <div class="register-footer">
-          <p>Hai giÃ  un account? <a href="login.php">Accedi</a></p>
+          <p>Hai già un account? <a href="login.php">Accedi</a></p>
         </div>
       </div>
     </div>
@@ -635,7 +635,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
   <div id="footer-container"></div>
 
-  <script src="/includi/app.min.js?v=20251204"></script>
+  <script src="/includi/app.min.js?v=20251219"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       fetch("/includi/footer.html")
@@ -696,11 +696,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
           if (regex.test(password)) {
             passwordMessage.style.color = 'green';
-            passwordCheck.textContent = 'âœ”';
+            passwordCheck.textContent = '✔';
             passwordCheck.style.color = 'green';
           } else {
             passwordMessage.style.color = 'red';
-            passwordCheck.textContent = 'âœ•';
+            passwordCheck.textContent = '✕';
             passwordCheck.style.color = 'red';
           }
         });
@@ -718,12 +718,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (confirmInput.value === passwordInput.value) {
           confirmMessage.style.color = 'green';
           confirmMessage.textContent = 'Le password coincidono.';
-          confirmCheck.textContent = 'âœ”';
+          confirmCheck.textContent = '✔';
           confirmCheck.style.color = 'green';
         } else {
           confirmMessage.style.color = 'red';
           confirmMessage.textContent = 'Le password non coincidono.';
-          confirmCheck.textContent = 'âœ•';
+          confirmCheck.textContent = '✕';
           confirmCheck.style.color = 'red';
         }
       }
@@ -759,6 +759,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   </script>
 </body>
 </html>
+
 
 
 

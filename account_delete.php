@@ -190,8 +190,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </main>
 
   <div id="footer-container"></div>
-  <script src="/includi/app.min.js?v=20251204"></script>
-  <script src="/includi/consent-sync.js?v=20251206" defer></script>
+  <script src="/includi/app.min.js?v=20251219"></script>
+  <script src="/includi/consent-sync.js?v=20251219" defer></script>
   <script>
     fetch("/includi/footer.html")
       .then(r => r.text())
@@ -207,3 +207,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </script>
 </body>
 </html>
+

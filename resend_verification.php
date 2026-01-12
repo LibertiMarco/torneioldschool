@@ -231,7 +231,7 @@ $captchaQuestion = captcha_generate('resend_form');?>
   </main>
 
   <div id="footer-container"></div>
-  <script src="/includi/app.min.js?v=20251204"></script>
+  <script src="/includi/app.min.js?v=20251219"></script>
   <script>
     fetch("/includi/footer.html")
       .then(r => r.text())
@@ -247,6 +247,7 @@ $captchaQuestion = captcha_generate('resend_form');?>
   </script>
 </body>
 </html>
+
 
 
 

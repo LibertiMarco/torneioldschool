@@ -551,10 +551,11 @@ if (!empty($sessionAvatar)) {
     window.__HEADER_INTERACTIONS_SCRIPT__ = true;
 
     const script = document.createElement("script");
-    script.src = "/includi/app.min.js?v=20251204";
+    script.src = "/includi/app.min.js?v=20251219";
     script.defer = true;
     document.head.appendChild(script);
 })();
 </script>
-<script src="/includi/consent-sync.js?v=20251206" defer></script>
-<script src="/includi/header-interactions.js?v=20251217" defer></script>
+<script src="/includi/consent-sync.js?v=20251219" defer></script>
+<script src="/includi/header-interactions.js?v=20251219" defer></script>
+

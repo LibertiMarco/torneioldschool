@@ -162,7 +162,7 @@ if ($email && $token) {
   </main>
 
   <div id="footer-container"></div>
-  <script src="/includi/app.min.js?v=20251204"></script>
+  <script src="/includi/app.min.js?v=20251219"></script>
   <script>
     fetch("/includi/footer.html")
       .then(r => r.text())
@@ -178,3 +178,4 @@ if ($email && $token) {
   </script>
 </body>
 </html>
+

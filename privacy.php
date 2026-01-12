@@ -113,8 +113,8 @@
 
   <div id="footer-container"></div>
 
-  <script src="/includi/header-interactions.js?v=20251208"></script>
-  <script src="/includi/app.min.js?v=20251204"></script>
+  <script src="/includi/header-interactions.js?v=20251219"></script>
+  <script src="/includi/app.min.js?v=20251219"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       fetch('/includi/header.php')
@@ -141,3 +141,4 @@
   </script>
 </body>
 </html>
+

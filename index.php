@@ -388,7 +388,7 @@ loadHallOfFame();
 </script>
 
   <!-- SCRIPT HEADER -->
-  <script src="/includi/app.min.js?v=20251204"></script>
+  <script src="/includi/app.min.js?v=20251219"></script>
   <script>
   document.addEventListener("DOMContentLoaded", () => {
     const headerSlot = document.getElementById("header-container");
@@ -440,6 +440,7 @@ loadHallOfFame();
 
 </body>
 </html>
+
 
 
 
