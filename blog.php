@@ -3,6 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/includi/seo.php';
+require_once __DIR__ . '/includi/db.php';
 $baseUrl = seo_base_url();
 $blogSeo = [
     'title' => 'Blog e novita - Tornei Old School',
@@ -14,6 +15,38 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     ['name' => 'Home', 'url' => $baseUrl . '/'],
     ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
 ]);
+$preloadedPosts = [];
+
+$coverQuery = "COALESCE(
+    (SELECT CONCAT('/img/blog_media/', file_path)
+     FROM blog_media
+     WHERE post_id = blog_post.id AND tipo = 'image'
+     ORDER BY ordine ASC, id ASC
+     LIMIT 1),
+    CASE
+        WHEN immagine IS NULL OR immagine = '' THEN ''
+        ELSE CONCAT('/img/blog/', immagine)
+    END
+) AS cover";
+
+if (isset($conn) && $conn instanceof mysqli) {
+    $sql = "SELECT id,
+                   titolo,
+                   {$coverQuery},
+                   SUBSTRING(contenuto, 1, 220) AS anteprima,
+                   DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data
+            FROM blog_post
+            ORDER BY data_pubblicazione DESC
+            LIMIT 12";
+
+    if ($result = $conn->query($sql)) {
+        while ($row = $result->fetch_assoc()) {
+            $row['immagine'] = $row['cover'] ?? '';
+            $preloadedPosts[] = $row;
+        }
+        $result->close();
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -727,6 +760,10 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
   </aside>
 </main>
 
+<script>
+window.__BLOG_PRELOAD__ = <?= json_encode($preloadedPosts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+</script>
+
 <?php include __DIR__ . '/includi/footer.html'; ?>
 
 <script>
@@ -918,12 +955,19 @@ function renderMiniList(posts, excludeId = null) {
     }).join('');
 }
 
+function renderAll(posts) {
+    cachedPosts = Array.isArray(posts) ? posts : [];
+    updateFeatured(cachedPosts[0]);
+    renderGrid(cachedPosts.slice(1));
+    const featuredId = cachedPosts[0]?.id ?? null;
+    renderMiniList(cachedPosts, featuredId);
+    updateArchiveCounters(cachedPosts.length, cachedPosts.length);
+    emptyState.hidden = cachedPosts.length > 0;
+}
+
 function filterPosts(term) {
     if (!term) {
-        updateFeatured(cachedPosts[0]);
-        renderGrid(cachedPosts.slice(1));
-        emptyState.hidden = cachedPosts.length > 0;
-        updateArchiveCounters(cachedPosts.length, cachedPosts.length);
+        renderAll(cachedPosts);
         return;
     }
 
@@ -956,32 +1000,36 @@ async function loadBlog() {
         }
 
         const posts = await response.json();
-        cachedPosts = Array.isArray(posts) ? posts : [];
-
-        updateFeatured(cachedPosts[0]);
-        renderGrid(cachedPosts.slice(1));
-        const featuredId = cachedPosts[0]?.id ?? null;
-        renderMiniList(cachedPosts, featuredId);
-        updateArchiveCounters(cachedPosts.length, cachedPosts.length);
-        emptyState.hidden = cachedPosts.length > 0;
+        if (Array.isArray(posts) && posts.length) {
+            renderAll(posts);
+        } else if (!cachedPosts.length) {
+            renderAll([]);
+        }
     } catch (error) {
         setFeaturedMeta('Errore di caricamento');
-        updateArchiveCounters(0, 0);
-        featuredBox.innerHTML = `
-            <div class="featured-copy">
-                <span>Errore</span>
-                <h3>Ops, qualcosa è andato storto</h3>
-                <p>${escapeHTML(error.message)}</p>
-            </div>`;
-        cardGrid.innerHTML = '';
-        miniList.innerHTML = '<p>Ricarica la pagina per riprovare.</p>';
-        emptyState.hidden = false;
+        if (!cachedPosts.length) {
+            updateArchiveCounters(0, 0);
+            featuredBox.innerHTML = `
+                <div class="featured-copy">
+                    <span>Errore</span>
+                    <h3>Ops, qualcosa è andato storto</h3>
+                    <p>${escapeHTML(error.message)}</p>
+                </div>`;
+            renderGrid([]);
+            miniList.innerHTML = '<p>Ricarica la pagina per riprovare.</p>';
+            emptyState.hidden = false;
+        }
     }
 }
 
 searchInput?.addEventListener('input', event => {
     filterPosts(event.target.value.trim());
 });
+
+const preload = window.__BLOG_PRELOAD__;
+if (Array.isArray(preload) && preload.length) {
+    renderAll(preload);
+}
 
 initStaticAds();
 loadBlog();
