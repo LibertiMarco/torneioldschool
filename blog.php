@@ -175,6 +175,31 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     align-items: baseline;
 }
 
+.blog-ad {
+    max-width: 1100px;
+    margin: -30px auto 30px;
+    padding: 0 20px;
+}
+
+.blog-ad.inside {
+    margin: 10px 0 30px;
+    padding: 0;
+}
+
+.blog-ad ins {
+    display: block;
+    margin: 0 auto;
+}
+
+.sidebar-ad {
+    margin: 14px 0 22px;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #e3e8f4;
+    border-radius: 12px;
+    box-shadow: 0 10px 24px rgba(15,23,42,0.08);
+}
+
 .section-meta {
     display: flex;
     gap: 10px;
@@ -537,6 +562,15 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
   </div>
 </section>
 
+<div class="blog-ad">
+  <ins class="adsbygoogle ads-static"
+       style="display:block"
+       data-ad-client="ca-pub-8390787841690316"
+       data-ad-slot="3707275285"
+       data-ad-format="auto"
+       data-full-width-responsive="true"></ins>
+</div>
+
 <main class="blog-layout">
   <div class="blog-main">
     <section class="featured-section">
@@ -581,6 +615,14 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
   <aside class="blog-sidebar">
     <h3>Consigli di lettura</h3>
     <p class="sidebar-desc">Gli aggiornamenti piÃ¹ freschi da non perdere.</p>
+    <div class="sidebar-ad">
+      <ins class="adsbygoogle ads-static"
+           style="display:block"
+           data-ad-client="ca-pub-8390787841690316"
+           data-ad-slot="3707275285"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+    </div>
     <div id="miniList">Stiamo preparando la lista...</div>
   </aside>
 </main>
@@ -598,6 +640,19 @@ const archiveCount = document.getElementById('archiveCount');
 const visibleCount = document.getElementById('visibleCount');
 
 let cachedPosts = [];
+
+function initStaticAds() {
+    const staticAds = document.querySelectorAll('.ads-static');
+    staticAds.forEach((slot) => {
+        if (slot.dataset.loaded) return;
+        try {
+            (adsbygoogle = window.adsbygoogle || []).push({});
+            slot.dataset.loaded = '1';
+        } catch (e) {
+            console.error('Adsbygoogle init error', e);
+        }
+    });
+}
 
 function escapeHTML(str = '') {
     return str.replace(/[&<>"']/g, (char) => ({
@@ -828,6 +883,7 @@ searchInput?.addEventListener('input', event => {
     filterPosts(event.target.value.trim());
 });
 
+initStaticAds();
 loadBlog();
 </script>
 
