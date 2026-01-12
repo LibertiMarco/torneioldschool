@@ -16,6 +16,9 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
 ]);
 $preloadedPosts = [];
+$featuredPhp = null;
+$restPhp = [];
+$preloadedTotal = 0;
 
 $coverQuery = "COALESCE(
     (SELECT CONCAT('/img/blog_media/', file_path)
@@ -47,6 +50,25 @@ if (isset($conn) && $conn instanceof mysqli) {
         $result->close();
     }
 }
+
+if (!function_exists('blog_escape')) {
+    function blog_escape($value): string {
+        return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+    }
+}
+
+if (!function_exists('blog_preview')) {
+    function blog_preview(?string $text): string {
+        $clean = trim(preg_replace('/\s+/', ' ', $text ?? ''));
+        return strlen($clean) > 160 ? substr($clean, 0, 157) . '...' : $clean;
+    }
+}
+
+$preloadedTotal = count($preloadedPosts);
+$featuredPhp = $preloadedPosts[0] ?? null;
+$restPhp = array_slice($preloadedPosts, 1);
+$initialArchiveLabel = $preloadedTotal === 1 ? '1 articolo' : "{$preloadedTotal} articoli";
+$initialVisibleLabel = $initialArchiveLabel;
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -713,17 +735,38 @@ if (isset($conn) && $conn instanceof mysqli) {
           <h2>L'articolo del momento</h2>
         </div>
         <div class="section-meta">
-          <span class="meta-pill" id="featuredUpdated">Aggiornato ora</span>
+          <span class="meta-pill" id="featuredUpdated"><?= $featuredPhp ? 'Aggiornato ' . blog_escape($featuredPhp['data'] ?? '') : 'Aggiornato ora' ?></span>
           <a class="meta-pill alt" href="/tornei.php">Vai ai tornei</a>
         </div>
       </div>
       <div class="featured-card" id="featuredPost">
-        <div class="featured-image"></div>
-        <div class="featured-copy">
-          <span>Caricamento</span>
-          <h3>Scarichiamo gli ultimi articoli...</h3>
-          <p>Restiamo un secondo in attesa: il nostro feed sta arrivando dal server.</p>
-        </div>
+        <?php if ($featuredPhp): ?>
+          <?php
+            $ftTitle = blog_escape($featuredPhp['titolo'] ?? 'Articolo in evidenza');
+            $ftDate = blog_escape($featuredPhp['data'] ?? '');
+            $ftPreview = blog_preview($featuredPhp['anteprima'] ?? '');
+            $ftCover = $featuredPhp['cover'] ?? $featuredPhp['immagine'] ?? '';
+          ?>
+          <div class="featured-image">
+            <?= $ftCover ? '<img src="' . blog_escape($ftCover) . '" alt="' . $ftTitle . '">' : '' ?>
+          </div>
+          <div class="featured-copy">
+            <span><?= $ftDate ?></span>
+            <h3><?= $ftTitle ?></h3>
+            <p><?= blog_escape($ftPreview) ?></p>
+            <div class="featured-actions">
+                <a class="primary" href="/articolo.php?titolo=<?= rawurlencode($featuredPhp['titolo'] ?? '') ?>">Leggi ora</a>
+                <a class="secondary" href="/tornei.php">Vedi i tornei</a>
+            </div>
+          </div>
+        <?php else: ?>
+          <div class="featured-image"></div>
+          <div class="featured-copy">
+            <span>Nessun articolo</span>
+            <h3>Ancora nessun post disponibile</h3>
+            <p>Stiamo preparando nuovi contenuti per te. Torna a trovarci presto.</p>
+          </div>
+        <?php endif; ?>
       </div>
     </section>
 
@@ -734,11 +777,41 @@ if (isset($conn) && $conn instanceof mysqli) {
           <h2>Tutti gli articoli</h2>
         </div>
         <div class="section-meta">
-          <span class="meta-pill" id="archiveCount">0 articoli</span>
-          <span class="meta-pill alt" id="visibleCount">0 visibili</span>
+          <span class="meta-pill" id="archiveCount"><?= blog_escape($initialArchiveLabel) ?></span>
+          <span class="meta-pill alt" id="visibleCount"><?= blog_escape($initialVisibleLabel) ?></span>
         </div>
       </div>
-      <div class="blog-grid" id="articlesGrid"></div>
+      <div class="blog-grid" id="articlesGrid">
+        <?php if ($restPhp): ?>
+          <?php foreach ($restPhp as $post): ?>
+            <?php
+              $title = blog_escape($post['titolo'] ?? 'Articolo');
+              $preview = blog_preview($post['anteprima'] ?? '');
+              $cover = $post['cover'] ?? $post['immagine'] ?? '';
+              $img = $cover ? '<img src="' . blog_escape($cover) . '" alt="' . $title . '" loading="lazy">' : '';
+              $date = blog_escape($post['data'] ?? '');
+              $href = '/articolo.php?titolo=' . rawurlencode($post['titolo'] ?? '');
+            ?>
+            <article class="blog-card">
+              <a href="<?= $href ?>">
+                  <div class="card-image"><?= $img ?></div>
+                  <div class="card-body">
+                      <div class="card-date"><?= $date ?></div>
+                      <h3><?= $title ?></h3>
+                      <p><?= blog_escape($preview) ?></p>
+                  </div>
+              </a>
+            </article>
+          <?php endforeach; ?>
+        <?php else: ?>
+          <article class="blog-card">
+            <div class="card-body">
+              <h3>Stiamo pubblicando i prossimi articoli</h3>
+              <p>Resta connesso: a breve qui compariranno le novità.</p>
+            </div>
+          </article>
+        <?php endif; ?>
+      </div>
       <div class="single-card-hint" id="blogEmptyState" hidden>
         Nessun articolo corrisponde alla ricerca. Prova a cambiare parola chiave.
       </div>
@@ -756,7 +829,28 @@ if (isset($conn) && $conn instanceof mysqli) {
            data-ad-format="auto"
            data-full-width-responsive="true"></ins>
     </div>
-    <div id="miniList">Stiamo preparando la lista...</div>
+    <div id="miniList">
+      <?php if ($restPhp): ?>
+        <?php foreach (array_slice($preloadedPosts, 0, 5) as $post): ?>
+          <?php
+            $title = blog_escape($post['titolo'] ?? 'Articolo');
+            $cover = $post['cover'] ?? $post['immagine'] ?? '';
+            $img = $cover ? '<img src="' . blog_escape($cover) . '" alt="' . $title . '">' : '';
+            $date = blog_escape($post['data'] ?? '');
+            $href = '/articolo.php?titolo=' . rawurlencode($post['titolo'] ?? '');
+          ?>
+          <a class="mini-card" href="<?= $href ?>">
+              <div class="mini-thumb"><?= $img ?></div>
+              <div>
+                  <div class="mini-date"><?= $date ?></div>
+                  <div class="mini-title"><?= $title ?></div>
+              </div>
+          </a>
+        <?php endforeach; ?>
+      <?php else: ?>
+        <p>Ancora nessun consiglio disponibile.</p>
+      <?php endif; ?>
+    </div>
   </aside>
 </main>
 
