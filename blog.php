@@ -128,17 +128,11 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 
 .blog-layout {
     max-width: 1200px;
-    width: 100%;
     margin: 0 auto 60px;
     padding: 30px 20px 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 300px;
     gap: 32px;
-    overflow-x: hidden;
-}
-
-.blog-layout > * {
-    min-width: 0;
 }
 
 .blog-main {
@@ -179,40 +173,6 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     gap: 20px;
     flex-wrap: wrap;
     align-items: baseline;
-}
-
-.blog-ad {
-    max-width: 1100px;
-    margin: -30px auto 30px;
-    padding: 0 20px;
-    overflow: hidden;
-}
-
-.blog-ad.inside {
-    margin: 10px 0 30px;
-    padding: 0;
-}
-
-.blog-ad ins {
-    display: block;
-    margin: 0 auto;
-    width: 100% !important;
-    max-width: 100%;
-}
-
-.sidebar-ad {
-    margin: 14px 0 22px;
-    padding: 12px;
-    background: #fff;
-    border: 1px solid #e3e8f4;
-    border-radius: 12px;
-    box-shadow: 0 10px 24px rgba(15,23,42,0.08);
-    overflow: hidden;
-}
-.sidebar-ad ins {
-    display: block;
-    width: 100% !important;
-    max-width: 100%;
 }
 
 .section-meta {
@@ -357,7 +317,6 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     gap: 20px;
-    overflow: hidden;
 }
 
 .blog-card {
@@ -516,16 +475,6 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     object-fit: cover;
 }
 
-.blog-card.ad-card {
-    overflow: hidden;
-}
-
-.blog-card.ad-card ins {
-    display: block;
-    width: 100% !important;
-    max-width: 100%;
-}
-
 .mini-card:hover .mini-title {
     color: #15293e;
 }
@@ -563,21 +512,6 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     .featured-copy h3 {
         font-size: 1.8rem;
     }
-
-    .blog-layout {
-        padding: 30px 16px 0;
-        overflow-x: hidden;
-    }
-
-    .blog-ad {
-        margin: 0 0 24px;
-        padding: 0 12px;
-    }
-
-    .sidebar-ad {
-        margin: 10px 0 18px;
-        padding: 10px;
-    }
 }
 </style>
 </head>
@@ -602,15 +536,6 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     </label>
   </div>
 </section>
-
-<div class="blog-ad">
-  <ins class="adsbygoogle ads-static"
-       style="display:block"
-       data-ad-client="ca-pub-8390787841690316"
-       data-ad-slot="3707275285"
-       data-ad-format="auto"
-       data-full-width-responsive="true"></ins>
-</div>
 
 <main class="blog-layout">
   <div class="blog-main">
@@ -656,14 +581,6 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
   <aside class="blog-sidebar">
     <h3>Consigli di lettura</h3>
     <p class="sidebar-desc">Gli aggiornamenti piÃ¹ freschi da non perdere.</p>
-    <div class="sidebar-ad">
-      <ins class="adsbygoogle ads-static"
-           style="display:block"
-           data-ad-client="ca-pub-8390787841690316"
-           data-ad-slot="3707275285"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-    </div>
     <div id="miniList">Stiamo preparando la lista...</div>
   </aside>
 </main>
@@ -681,19 +598,6 @@ const archiveCount = document.getElementById('archiveCount');
 const visibleCount = document.getElementById('visibleCount');
 
 let cachedPosts = [];
-
-function initStaticAds() {
-    const staticAds = document.querySelectorAll('.ads-static');
-    staticAds.forEach((slot) => {
-        if (slot.dataset.loaded) return;
-        try {
-            (adsbygoogle = window.adsbygoogle || []).push({});
-            slot.dataset.loaded = '1';
-        } catch (e) {
-            console.error('Adsbygoogle init error', e);
-        }
-    });
-}
 
 function escapeHTML(str = '') {
     return str.replace(/[&<>"']/g, (char) => ({
@@ -924,7 +828,6 @@ searchInput?.addEventListener('input', event => {
     filterPosts(event.target.value.trim());
 });
 
-initStaticAds();
 loadBlog();
 </script>
 

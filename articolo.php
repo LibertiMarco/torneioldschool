@@ -233,29 +233,16 @@ if ($articleId === 0) {
     background: radial-gradient(circle at 10% 20%, rgba(31,63,99,0.08) 0%, transparent 25%), radial-gradient(circle at 90% 10%, rgba(231,145,77,0.08) 0%, transparent 22%), linear-gradient(180deg, #f3f6fb 0%, #e8eef7 100%);
     min-height: 100vh;
     padding-bottom: 40px;
-    overflow-x: hidden;
 }
 
 .article-layout {
     max-width: 1200px;
-    width: 100%;
     margin: 80px auto 60px;
     padding: 0 20px;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 320px;
     column-gap: 30px;
     row-gap: 30px;
-    overflow-x: hidden;
-}
-
-.article-layout > * {
-    min-width: 0;
-}
-
-.article-panel,
-.article-sidebar,
-.comments-wrapper {
-    min-width: 0;
 }
 
 .article-panel {
@@ -319,21 +306,6 @@ if ($articleId === 0) {
 
 .article-media.hidden {
     display: none;
-}
-
-.article-ad {
-    margin: 18px 0;
-    background: #f7f9fe;
-    border: 1px solid #e3e8f4;
-    border-radius: 14px;
-    padding: 12px;
-    overflow: hidden;
-}
-
-.article-ad ins {
-    display: block;
-    width: 100% !important;
-    max-width: 100%;
 }
 
 .media-stage {
@@ -421,8 +393,6 @@ if ($articleId === 0) {
     line-height: 1.72;
     white-space: pre-wrap;
     font-weight: 400;
-    overflow-wrap: anywhere;
-    word-break: break-word;
 }
 
 .article-content p {
@@ -767,17 +737,8 @@ if ($articleId === 0) {
 }
 
 @media (max-width: 640px) {
-    .article-layout {
-        padding: 0 16px;
-    }
-
     .article-panel {
         padding: 26px;
-    }
-
-    .article-ad {
-        margin-left: 0;
-        margin-right: 0;
     }
 }
 </style>
@@ -800,14 +761,6 @@ if ($articleId === 0) {
     </div>
     <h2 id="articleTitle">Caricamento...</h2>
     <p class="article-subtitle" id="articleSubtitle">Recuperiamo i dettagli e li inquadriamo al meglio.</p>
-    <div class="article-ad">
-      <ins class="adsbygoogle ads-static"
-           style="display:block"
-           data-ad-client="ca-pub-8390787841690316"
-           data-ad-slot="3707275285"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-    </div>
 <div class="article-media hidden" id="articleMedia">
     <button class="carousel-nav prev" id="mediaPrev" aria-label="Media precedente">&#8592;</button>
     <div class="media-stage" id="mediaStage"></div>
@@ -815,14 +768,6 @@ if ($articleId === 0) {
     <div class="media-dots" id="mediaDots"></div>
 </div>
     <div class="article-content" id="articleContent">Un attimo di pazienza...</div>
-    <div class="article-ad">
-      <ins class="adsbygoogle ads-static"
-           style="display:block"
-           data-ad-client="ca-pub-8390787841690316"
-           data-ad-slot="5519228011"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-    </div>
   <aside class="article-sidebar">
     <h3>Da leggere dopo</h3>
     <p class="comments-hint">Altri articoli dal nostro staff.</p>
@@ -881,19 +826,6 @@ const defaultAvatar = '/img/icone/user.png';
 const canReply = <?= $isLogged ? 'true' : 'false' ?>;
 let replyTarget = null;
 let replyMention = '';
-
-function initStaticAds() {
-    const staticAds = document.querySelectorAll('.ads-static');
-    staticAds.forEach((slot) => {
-        if (slot.dataset.loaded) return;
-        try {
-            (adsbygoogle = window.adsbygoogle || []).push({});
-            slot.dataset.loaded = '1';
-        } catch (e) {
-            console.error('Adsbygoogle init error', e);
-        }
-    });
-}
 
 function setFeedback(message, type = '') {
     if (!commentFeedback) {
@@ -1314,7 +1246,6 @@ if (canReply) {
     });
 }
 
-initStaticAds();
 loadArticle();
 loadRelated();
 fetchComments();
