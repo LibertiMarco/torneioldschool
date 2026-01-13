@@ -77,11 +77,23 @@ if (!$partita_id) {
     font-weight: 700;
     box-shadow: 0 8px 20px rgba(31,63,99,0.25);
     transition: transform .15s, box-shadow .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .page-header .btn-back:hover {
     transform: translateY(-1px);
     box-shadow: 0 12px 26px rgba(31,63,99,0.32);
+}
+.page-header .btn-back .icon-back {
+    width: 12px;
+    height: 12px;
+    display: inline-block;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z'/%3E%3C/svg%3E");
 }
 
 /* === BOX PARTITA === */
@@ -238,7 +250,10 @@ if (!$partita_id) {
 
 <!-- HEADER FINALE -->
 <div class="page-header">
-    <button class="btn-back" id="btnBackStats">&larr; Torna indietro</button>
+    <button class="btn-back" id="btnBackStats">
+      <span class="icon-back" aria-hidden="true"></span>
+      Torna indietro
+    </button>
     <h1>Statistiche Partita</h1>
 </div>
 

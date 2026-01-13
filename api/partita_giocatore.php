@@ -191,6 +191,15 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId): ?array {
     $upd = $conn->prepare("UPDATE partite SET gol_casa = ?, gol_ospite = ? WHERE id = ?");
     $upd->bind_param("iii", $golCasa, $golOsp, $partitaId);
     $upd->execute();
+    $upd->close();
+
+    // Se esiste un risultato salvato la partita deve essere considerata giocata
+    $setPlayed = $conn->prepare("UPDATE partite SET giocata = 1 WHERE id = ?");
+    if ($setPlayed) {
+        $setPlayed->bind_param("i", $partitaId);
+        $setPlayed->execute();
+        $setPlayed->close();
+    }
 
     return [
         'partita_id' => $partitaId,

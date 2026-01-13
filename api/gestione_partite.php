@@ -206,8 +206,33 @@ function applica_risultato_classifica(mysqli $conn, string $torneo, string $squa
   }
 }
 
+/**
+ * Imposta come "giocata" ogni partita che ha giÇÿ un risultato salvato o statistiche,
+ * cosÇÿ da non perdere i match nella ricostruzione della classifica.
+ */
+function marca_partite_giocate_da_score(mysqli $conn, string $torneo): void {
+  if ($torneo === '') return;
+  $sql = "
+    UPDATE partite p
+    SET giocata = 1
+    WHERE p.torneo = ?
+      AND p.giocata = 0
+      AND (
+        p.gol_casa IS NOT NULL OR p.gol_ospite IS NOT NULL
+        OR EXISTS (SELECT 1 FROM partita_giocatore pg WHERE pg.partita_id = p.id)
+      )
+  ";
+  $stmt = $conn->prepare($sql);
+  if ($stmt) {
+    $stmt->bind_param('s', $torneo);
+    $stmt->execute();
+    $stmt->close();
+  }
+}
+
 function ricostruisci_classifica_da_partite(mysqli $conn, string $torneo): void {
   if ($torneo === '') return;
+  marca_partite_giocate_da_score($conn, $torneo);
   reset_classifica($conn, $torneo);
   $sel = $conn->prepare("
     SELECT squadra_casa, squadra_ospite, COALESCE(gol_casa,0) AS gol_casa, COALESCE(gol_ospite,0) AS gol_ospite
