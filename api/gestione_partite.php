@@ -814,6 +814,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
   }
 
+  if ($azione === 'riapri_giocata') {
+    $id = (int)($_POST['partita_id'] ?? 0);
+    $partitaInfo = null;
+    if ($id > 0) {
+      $sel = $conn->prepare("SELECT torneo, fase, giocata FROM partite WHERE id=?");
+      if ($sel) {
+        $sel->bind_param('i', $id);
+        if ($sel->execute()) {
+          $partitaInfo = $sel->get_result()->fetch_assoc();
+        }
+        $sel->close();
+      }
+    }
+
+    if ($id <= 0) {
+      $errore = 'Seleziona una partita valida.';
+    } elseif (!$partitaInfo) {
+      $errore = 'Partita non trovata.';
+    } elseif ((int)($partitaInfo['giocata'] ?? 0) !== 1) {
+      $errore = 'Questa partita non risulta giocata.';
+    } else {
+      $upd = $conn->prepare("UPDATE partite SET giocata = 0, notifica_esito_inviata = 0 WHERE id=?");
+      if ($upd) {
+        $upd->bind_param('i', $id);
+        if ($upd->execute()) {
+          $successo = 'Partita segnata come non giocata.';
+          if (strtoupper($partitaInfo['fase'] ?? '') === 'REGULAR') {
+            ricostruisci_classifica_da_partite($conn, (string)$partitaInfo['torneo']);
+          }
+        } else {
+          $errore = 'Aggiornamento non riuscito.';
+        }
+        $upd->close();
+      } else {
+        $errore = 'Errore interno durante l\'aggiornamento.';
+      }
+    }
+  }
+
   if ($azione === 'elimina') {
     $id = (int)($_POST['partita_id'] ?? 0);
     $partitaInfo = null;
@@ -893,10 +932,17 @@ $isAjax = (
 );
 
 $partite = [];
+$partiteNonGiocate = [];
+$partiteGiocate = [];
 $res = $conn->query("SELECT id, torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, decisa_rigori, rigori_casa, rigori_ospite, giornata, giocata, arbitro, link_youtube, link_instagram, created_at FROM partite ORDER BY data_partita DESC, ora_partita DESC, id DESC");
 if ($res) {
   while ($row = $res->fetch_assoc()) {
     $partite[] = $row;
+    if ((int)($row['giocata'] ?? 0) === 1) {
+      $partiteGiocate[] = $row;
+    } else {
+      $partiteNonGiocate[] = $row;
+    }
   }
 }
 
@@ -907,6 +953,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     'error' => $errore,
     'message' => $successo,
     'partite' => $partite,
+    'partite_non_giocate' => $partiteNonGiocate,
+    'partite_giocate' => $partiteGiocate,
   ]);
   exit;
 }
@@ -1294,6 +1342,50 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
         </form>
       </div>
+      <div class="form-card">
+        <h3>Modifica partita giocata</h3>
+        <form class="admin-form inline" method="POST" id="formRipristinaGiocata">
+        <input type="hidden" name="azione" value="riapri_giocata">
+        <div class="full">
+          <label class="required-label">Seleziona torneo</label>
+          <select id="selTorneoGioc" required>
+            <option value="">-- Seleziona torneo --</option>
+            <?php foreach ($torneiDisponibili as $t): ?>
+              <option value="<?= htmlspecialchars($t['slug']) ?>"><?= htmlspecialchars($t['nome']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label class="required-label">Fase</label>
+          <select id="selFaseGioc" required>
+            <option value="">-- Seleziona fase --</option>
+            <?php foreach ($fasiAmmesse as $f): ?>
+              <option value="<?= htmlspecialchars($f) ?>"><?= htmlspecialchars($f) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label class="required-label">Giornata / Turno</label>
+          <select id="selGiornataGioc" required disabled>
+            <option value="">-- Seleziona fase --</option>
+          </select>
+        </div>
+        <div>
+          <label class="required-label">Partita giocata</label>
+          <select name="partita_id" id="selPartitaGioc" required disabled>
+            <option value="">-- Seleziona giornata/turno --</option>
+          </select>
+        </div>
+        <div class="full">
+          <button type="submit" class="btn-primary">Segna come non giocata</button>
+        </div>
+        <?php if (($successo && ($azione ?? '') === 'riapri_giocata')): ?>
+          <div class="form-message success"><?= htmlspecialchars($successo) ?></div>
+        <?php elseif (($errore && ($azione ?? '') === 'riapri_giocata')): ?>
+          <div class="form-message error"><?= htmlspecialchars($errore) ?></div>
+        <?php endif; ?>
+        </form>
+      </div>
     </section>
 
     <!-- ELIMINA -->
@@ -1372,6 +1464,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script>
   let partiteData = <?php echo json_encode($partite, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+  let partiteModData = <?php echo json_encode($partiteNonGiocate, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+  let partiteGiocateData = <?php echo json_encode($partiteGiocate, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
   const squadreMap = <?php echo json_encode($squadrePerTorneo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
   const roundLabelMap = {
     'TRENTADUESIMI': 6,
@@ -1674,11 +1768,12 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     fillField('link_instagram_mod', partita.link_instagram);
   };
 
-  const setupSelector = ({ torneoId, faseId, giornataId, partitaId, onPartita }) => {
+  const setupSelector = ({ torneoId, faseId, giornataId, partitaId, onPartita, getData }) => {
     const torneoSel = document.getElementById(torneoId);
     const faseSel = document.getElementById(faseId);
     const giorSel = document.getElementById(giornataId);
     const partSel = document.getElementById(partitaId);
+    const dataSource = typeof getData === 'function' ? getData : () => partiteData;
 
     const resetSelect = (sel, placeholder) => {
       if (!sel) return;
@@ -1693,7 +1788,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
       const torneoVal = torneoSel.value;
       const faseVal = (faseSel.value || '').toUpperCase();
       if (!torneoVal || !faseVal) return;
-      const filtrate = partiteData.filter(p =>
+      const filtrate = dataSource().filter(p =>
         p.torneo === torneoVal && (p.fase || '').toUpperCase() === faseVal
       );
       const uniche = Array.from(new Set(filtrate.map(p => p.giornata === null ? '' : String(p.giornata))));
@@ -1719,7 +1814,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
       const faseVal = (faseSel.value || '').toUpperCase();
       const gVal = giorSel.value;
       if (!torneoVal || !faseVal || gVal === '') return;
-      const filtrate = partiteData.filter(p =>
+      const filtrate = dataSource().filter(p =>
         p.torneo === torneoVal &&
         (p.fase || '').toUpperCase() === faseVal &&
         String(p.giornata ?? '') === gVal
@@ -1737,7 +1832,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     giorSel?.addEventListener('change', populatePartite);
     partSel?.addEventListener('change', () => {
       const id = parseInt(partSel.value, 10);
-      const partita = partiteData.find(p => parseInt(p.id, 10) === id);
+      const partita = dataSource().find(p => parseInt(p.id, 10) === id);
       onPartita?.(partita || null);
     });
   };
@@ -1747,6 +1842,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     faseId: 'selFaseMod',
     giornataId: 'selGiornataMod',
     partitaId: 'selPartitaMod',
+    getData: () => partiteModData,
     onPartita: (partita) => {
       if (partita) {
         applyPartitaModForm(partita);
@@ -1756,6 +1852,15 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
   });
   enforceDifferentTeams('squadra_casa_mod', 'squadra_ospite_mod');
+
+  setupSelector({
+    torneoId: 'selTorneoGioc',
+    faseId: 'selFaseGioc',
+    giornataId: 'selGiornataGioc',
+    partitaId: 'selPartitaGioc',
+    getData: () => partiteGiocateData,
+    onPartita: () => {}
+  });
 
   const faseModSelect = document.getElementById('fase_mod');
   const roundModSelect = document.getElementById('round_eliminazione_mod');
@@ -1831,11 +1936,23 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
   function updatePartitaCache(partita) {
     if (!partita || !partita.id) return;
-    const idx = partiteData.findIndex(p => String(p.id) === String(partita.id));
+    const idStr = String(partita.id);
+    const idx = partiteData.findIndex(p => String(p.id) === idStr);
     if (idx >= 0) {
       partiteData[idx] = partita;
     } else {
       partiteData.push(partita);
+    }
+    const removeById = (arr) => {
+      const i = arr.findIndex(p => String(p.id) === idStr);
+      if (i >= 0) arr.splice(i, 1);
+    };
+    removeById(partiteModData);
+    removeById(partiteGiocateData);
+    if (Number(partita.giocata || 0) === 1) {
+      partiteGiocateData.push(partita);
+    } else {
+      partiteModData.push(partita);
     }
   }
 
@@ -1923,6 +2040,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     populateSquadreFiltrate();
     document.getElementById('selTorneoMod')?.dispatchEvent(new Event('change'));
     document.getElementById('selTorneoElim')?.dispatchEvent(new Event('change'));
+    document.getElementById('selTorneoGioc')?.dispatchEvent(new Event('change'));
   };
 
   const attachAjaxForm = (formId) => {
@@ -1953,9 +2071,19 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           renderFormMessage(formId, 'error', msg);
           return;
         }
-        if (data && Array.isArray(data.partite)) {
-          partiteData = data.partite;
-          refreshSelectorsFromData();
+        if (data) {
+          if (Array.isArray(data.partite)) {
+            partiteData = data.partite;
+          }
+          if (Array.isArray(data.partite_non_giocate)) {
+            partiteModData = data.partite_non_giocate;
+          }
+          if (Array.isArray(data.partite_giocate)) {
+            partiteGiocateData = data.partite_giocate;
+          }
+          if (Array.isArray(data.partite) || Array.isArray(data.partite_non_giocate) || Array.isArray(data.partite_giocate)) {
+            refreshSelectorsFromData();
+          }
         }
         if (data && data.success) {
           renderFormMessage(formId, 'success', data.message || 'Operazione completata');
@@ -1969,6 +2097,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
               partSel.value = '';
               partSel.dispatchEvent(new Event('change'));
             }
+          } else if (formId === 'formRipristinaGiocata') {
+            form.reset();
           }
         } else {
           renderFormMessage(formId, 'error', data?.error || 'Errore nel salvataggio');
@@ -1983,6 +2113,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
   attachAjaxForm('formCrea');
   attachAjaxForm('formModifica');
+  attachAjaxForm('formRipristinaGiocata');
 </script>
 
 </body>
