@@ -7,8 +7,9 @@ if (!defined('REMEMBER_COOKIE_LIFETIME')) {
     define('REMEMBER_COOKIE_LIFETIME', 60 * 60 * 24 * 30); // 30 giorni
 }
 
+$isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
+
 if (session_status() === PHP_SESSION_NONE) {
-    $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
     $rememberRequested = !empty($_COOKIE[REMEMBER_COOKIE_NAME]);
     $cookieLifetime = $rememberRequested ? REMEMBER_COOKIE_LIFETIME : 0;
 
@@ -50,15 +51,101 @@ if (session_status() === PHP_SESSION_NONE) {
             'samesite' => $params['samesite'] ?? 'Lax',
         ]);
 
-        if (empty($_COOKIE[REMEMBER_COOKIE_NAME]) || $_COOKIE[REMEMBER_COOKIE_NAME] !== '1') {
-            setcookie(REMEMBER_COOKIE_NAME, '1', [
-                'expires' => $expires,
-                'path' => $params['path'] ?? '/',
-                'domain' => $params['domain'] ?? '',
-                'secure' => $isHttps,
-                'httponly' => true,
-                'samesite' => $params['samesite'] ?? 'Lax',
-            ]);
+        $rememberValue = $_COOKIE[REMEMBER_COOKIE_NAME] ?? '1';
+        setcookie(REMEMBER_COOKIE_NAME, $rememberValue, [
+            'expires' => $expires,
+            'path' => $params['path'] ?? '/',
+            'domain' => $params['domain'] ?? '',
+            'secure' => $isHttps,
+            'httponly' => true,
+            'samesite' => $params['samesite'] ?? 'Lax',
+        ]);
+    }
+}
+
+// Auto-login da cookie "ricorda" se la sessione e' scaduta ma esiste un token valido
+if (!isset($_SESSION['user_id']) && !empty($_COOKIE[REMEMBER_COOKIE_NAME])) {
+    $rawRemember = (string)$_COOKIE[REMEMBER_COOKIE_NAME];
+    if (strpos($rawRemember, ':') !== false) {
+        [$selector, $validator] = explode(':', $rawRemember, 2);
+        if ($selector !== '' && $validator !== '' && ctype_xdigit($selector) && ctype_xdigit($validator)) {
+            if (!isset($conn)) {
+                $dbPath = __DIR__ . '/db.php';
+                if (file_exists($dbPath)) {
+                    require_once $dbPath;
+                }
+            }
+
+            if (isset($conn) && $conn instanceof mysqli) {
+                $stmt = $conn->prepare("SELECT id, email, nome, cognome, ruolo, avatar, remember_token_hash, remember_expires_at FROM utenti WHERE remember_selector = ? LIMIT 1");
+                if ($stmt) {
+                    $stmt->bind_param('s', $selector);
+                    $stmt->execute();
+                    $res = $stmt->get_result();
+                    $user = $res && $res->num_rows === 1 ? $res->fetch_assoc() : null;
+                    $stmt->close();
+
+                    $expiresAt = $user && !empty($user['remember_expires_at']) ? strtotime((string)$user['remember_expires_at']) : 0;
+                    $tokenMatches = $user && !empty($user['remember_token_hash']) ? hash_equals($user['remember_token_hash'], hash('sha256', $validator)) : false;
+
+                    if ($user && $expiresAt > time() && $tokenMatches) {
+                        session_regenerate_id(true);
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['email'] = $user['email'];
+                        $_SESSION['nome'] = $user['nome'];
+                        $_SESSION['cognome'] = $user['cognome'];
+                        $_SESSION['ruolo'] = $user['ruolo'];
+                        $_SESSION['avatar'] = $user['avatar'] ?? null;
+                        $_SESSION['remember_me'] = true;
+
+                        $cookieParams = session_get_cookie_params();
+                        $cookieLifetime = REMEMBER_COOKIE_LIFETIME;
+                        $newSelector = bin2hex(random_bytes(9));
+                        $newValidator = bin2hex(random_bytes(32));
+                        $newHash = hash('sha256', $newValidator);
+                        $newExpires = date('Y-m-d H:i:s', time() + $cookieLifetime);
+
+                        $saveNewToken = $conn->prepare("UPDATE utenti SET remember_selector = ?, remember_token_hash = ?, remember_expires_at = ? WHERE id = ?");
+                        if ($saveNewToken) {
+                            $saveNewToken->bind_param('sssi', $newSelector, $newHash, $newExpires, $user['id']);
+                            $saveNewToken->execute();
+                            $saveNewToken->close();
+                        }
+
+                        setcookie(session_name(), session_id(), [
+                            'expires' => time() + $cookieLifetime,
+                            'path' => $cookieParams['path'] ?? '/',
+                            'domain' => $cookieParams['domain'] ?? '',
+                            'secure' => $isHttps,
+                            'httponly' => true,
+                            'samesite' => $cookieParams['samesite'] ?? 'Lax',
+                        ]);
+                        setcookie(REMEMBER_COOKIE_NAME, $newSelector . ':' . $newValidator, [
+                            'expires' => time() + $cookieLifetime,
+                            'path' => $cookieParams['path'] ?? '/',
+                            'domain' => $cookieParams['domain'] ?? '',
+                            'secure' => $isHttps,
+                            'httponly' => true,
+                            'samesite' => $cookieParams['samesite'] ?? 'Lax',
+                        ]);
+                    } else {
+                        $forget = $conn->prepare("UPDATE utenti SET remember_selector = NULL, remember_token_hash = NULL, remember_expires_at = NULL WHERE remember_selector = ?");
+                        if ($forget) {
+                            $forget->bind_param('s', $selector);
+                            $forget->execute();
+                            $forget->close();
+                        }
+                        $params = session_get_cookie_params();
+                        setcookie(REMEMBER_COOKIE_NAME, '', time() - 3600, [
+                            'path' => $params['path'] ?? '/',
+                            'domain' => $params['domain'] ?? '',
+                            'secure' => $isHttps,
+                            'httponly' => true,
+                            'samesite' => $params['samesite'] ?? 'Lax',
+                        ]);
+                    }
+                }
+            }
         }
     }
 }

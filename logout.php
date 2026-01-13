@@ -1,5 +1,22 @@
 <?php
 session_start();
+$userId = $_SESSION['user_id'] ?? null;
+
+if ($userId) {
+    $dbPath = __DIR__ . '/includi/db.php';
+    if (file_exists($dbPath)) {
+        require_once $dbPath;
+        if (isset($conn) && $conn instanceof mysqli) {
+            $stmt = $conn->prepare("UPDATE utenti SET remember_selector = NULL, remember_token_hash = NULL, remember_expires_at = NULL WHERE id = ?");
+            if ($stmt) {
+                $stmt->bind_param("i", $userId);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+    }
+}
+
 session_unset();
 session_destroy();
 

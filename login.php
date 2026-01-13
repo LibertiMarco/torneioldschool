@@ -137,24 +137,49 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $cookieParams = session_get_cookie_params();
             if ($rememberMe) {
                 $cookieLifetime = REMEMBER_COOKIE_LIFETIME;
-                setcookie(session_name(), session_id(), [
-                    'expires' => time() + $cookieLifetime,
-                    'path' => $cookieParams['path'] ?? '/',
-                    'domain' => $cookieParams['domain'] ?? '',
-                    'secure' => (bool)($cookieParams['secure'] ?? false),
-                    'httponly' => (bool)($cookieParams['httponly'] ?? true),
-                    'samesite' => $cookieParams['samesite'] ?? 'Lax',
-                ]);
-                setcookie(REMEMBER_COOKIE_NAME, '1', [
-                    'expires' => time() + $cookieLifetime,
-                    'path' => $cookieParams['path'] ?? '/',
-                    'domain' => $cookieParams['domain'] ?? '',
-                    'secure' => (bool)($cookieParams['secure'] ?? false),
-                    'httponly' => true,
-                    'samesite' => $cookieParams['samesite'] ?? 'Lax',
-                ]);
+                $rememberSelector = bin2hex(random_bytes(9));
+                $rememberValidator = bin2hex(random_bytes(32));
+                $rememberHash = hash('sha256', $rememberValidator);
+                $rememberExpires = date('Y-m-d H:i:s', time() + $cookieLifetime);
+
+                $rememberSaved = false;
+                $rememberStmt = $conn->prepare("UPDATE utenti SET remember_selector = ?, remember_token_hash = ?, remember_expires_at = ? WHERE id = ?");
+                if ($rememberStmt) {
+                    $rememberStmt->bind_param("sssi", $rememberSelector, $rememberHash, $rememberExpires, $row['id']);
+                    $rememberStmt->execute();
+                    $rememberSaved = ($rememberStmt->affected_rows >= 0);
+                    $rememberStmt->close();
+                }
+
+                if ($rememberSaved) {
+                    $rememberCookieValue = $rememberSelector . ':' . $rememberValidator;
+                    setcookie(session_name(), session_id(), [
+                        'expires' => time() + $cookieLifetime,
+                        'path' => $cookieParams['path'] ?? '/',
+                        'domain' => $cookieParams['domain'] ?? '',
+                        'secure' => (bool)($cookieParams['secure'] ?? false),
+                        'httponly' => (bool)($cookieParams['httponly'] ?? true),
+                        'samesite' => $cookieParams['samesite'] ?? 'Lax',
+                    ]);
+                    setcookie(REMEMBER_COOKIE_NAME, $rememberCookieValue, [
+                        'expires' => time() + $cookieLifetime,
+                        'path' => $cookieParams['path'] ?? '/',
+                        'domain' => $cookieParams['domain'] ?? '',
+                        'secure' => (bool)($cookieParams['secure'] ?? false),
+                        'httponly' => true,
+                        'samesite' => $cookieParams['samesite'] ?? 'Lax',
+                    ]);
+                } else {
+                    $_SESSION['remember_me'] = false;
+                }
             } else {
                 $_SESSION['remember_me'] = false;
+                $rememberStmt = $conn->prepare("UPDATE utenti SET remember_selector = NULL, remember_token_hash = NULL, remember_expires_at = NULL WHERE id = ?");
+                if ($rememberStmt) {
+                    $rememberStmt->bind_param("i", $row['id']);
+                    $rememberStmt->execute();
+                    $rememberStmt->close();
+                }
                 setcookie(REMEMBER_COOKIE_NAME, '', time() - 3600, [
                     'path' => $cookieParams['path'] ?? '/',
                     'domain' => $cookieParams['domain'] ?? '',

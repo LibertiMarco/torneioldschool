@@ -34,10 +34,15 @@ CREATE TABLE IF NOT EXISTS utenti (
     email_verificata TINYINT(1) NOT NULL DEFAULT 0,
     token_verifica VARCHAR(64) DEFAULT NULL,
     token_verifica_scadenza DATETIME DEFAULT NULL,
+    remember_selector VARCHAR(24) DEFAULT NULL,
+    remember_token_hash CHAR(64) DEFAULT NULL,
+    remember_expires_at DATETIME DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_utenti_email (email),
     UNIQUE KEY uq_utenti_username (username),
-    KEY idx_utenti_token_verifica (token_verifica)
+    UNIQUE KEY uq_remember_selector (remember_selector),
+    KEY idx_utenti_token_verifica (token_verifica),
+    KEY idx_remember_expires_at (remember_expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Albo d'oro (api/albo_doro.php, api/gestione_albo.php)
