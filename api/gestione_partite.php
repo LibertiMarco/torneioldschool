@@ -214,7 +214,7 @@ function ricostruisci_classifica_da_partite(mysqli $conn, string $torneo): void 
     FROM partite
     WHERE torneo = ?
       AND giocata = 1
-      AND UPPER(COALESCE(fase, 'REGULAR')) = 'REGULAR'
+      AND UPPER(COALESCE(NULLIF(TRIM(fase), ''), 'REGULAR')) = 'REGULAR'
   ");
   if (!$sel) return;
   $sel->bind_param('s', $torneo);
@@ -341,7 +341,7 @@ function aggiornaStatsGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squa
   if (!$team) return;
 
   $isCoppaAfrica = strtoupper($team['torneo'] ?? '') === 'COPPADAFRICA';
-  $phaseFilter = $isCoppaAfrica ? "" : "AND UPPER(COALESCE(p.fase, 'REGULAR')) = 'REGULAR'";
+  $phaseFilter = $isCoppaAfrica ? "" : "AND UPPER(COALESCE(NULLIF(TRIM(p.fase), ''), 'REGULAR')) = 'REGULAR'";
 
   $sql = "
     SELECT 

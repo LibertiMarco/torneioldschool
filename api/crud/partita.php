@@ -8,6 +8,11 @@ class Partita {
         $this->conn = $conn;
     }
 
+    private function normalizeFase($fase): string {
+        $val = strtoupper(trim((string)($fase ?? '')));
+        return $val === '' ? 'REGULAR' : $val;
+    }
+
     public function getAll() {
         $ordineFase = "
             CASE 
@@ -75,7 +80,7 @@ class Partita {
             $rigori_ospite,
             $giornata,
             $torneo,
-            strtoupper($fase),
+            $this->normalizeFase($fase),
             $fase_round,
             $fase_leg,
             $link_youtube,
@@ -132,7 +137,7 @@ class Partita {
             $rigori_ospite,
             $giornata,
             $torneo,
-            strtoupper($fase),
+            $this->normalizeFase($fase),
             $fase_round,
             $fase_leg,
             $link_youtube,
@@ -168,9 +173,9 @@ class Partita {
 
     // 🔥 LOGICA CLASSIFICA (non modificata)
     public function aggiornaClassifica($torneo, $squadraCasa, $squadraOspite, $golCasa, $golOspite, $vecchiDati = null, $fase = 'REGULAR') {
-        $faseCorrente = strtoupper($fase ?? 'REGULAR');
+        $faseCorrente = $this->normalizeFase($fase);
 
-        $vecchiaFase = strtoupper($vecchiDati['fase'] ?? 'REGULAR');
+        $vecchiaFase = $this->normalizeFase($vecchiDati['fase'] ?? null);
         if ($vecchiDati && $vecchiaFase === 'REGULAR') {
             $this->annullaVecchioRisultato(
                 $vecchiDati['torneo'],

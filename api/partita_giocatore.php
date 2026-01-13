@@ -98,7 +98,7 @@ function aggiornaGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squadraId
         WHERE pg.giocatore_id = ?
           AND p.torneo = ?
           AND (p.squadra_casa = ? OR p.squadra_ospite = ?)
-          AND UPPER(COALESCE(p.fase, 'REGULAR')) = 'REGULAR'");
+          AND UPPER(COALESCE(NULLIF(TRIM(p.fase), ''), 'REGULAR')) = 'REGULAR'");
     $q->bind_param("isss", $giocatoreId, $torneo, $nome, $nome);
     $q->execute();
     $r = $q->get_result()->fetch_assoc() ?: [];
@@ -134,7 +134,7 @@ function squadraPerPartitaGiocatore(mysqli $conn, int $partitaId, int $giocatore
 }
 
 function fasePartita(mysqli $conn, int $partitaId): string {
-    $q = $conn->prepare("SELECT UPPER(COALESCE(fase, 'REGULAR')) AS fase FROM partite WHERE id=?");
+    $q = $conn->prepare("SELECT UPPER(COALESCE(NULLIF(TRIM(fase), ''), 'REGULAR')) AS fase FROM partite WHERE id=?");
     $q->bind_param("i", $partitaId);
     $q->execute();
     $r = $q->get_result()->fetch_assoc();
