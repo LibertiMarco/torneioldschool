@@ -148,7 +148,7 @@ if ($matchId > 0) {
   <!-- CONTENUTO -->
   <main class="content" style="margin-top:24px; padding-top:18px;">
     <div class="titolo-row">
-      <button id="btnBack" onclick="history.back()">Indietro</button>
+      <button id="btnBack" onclick="history.back()">&larr;</button>
       <h1 class="titolo">Statistiche Partita</h1>
     </div>
 
