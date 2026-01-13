@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
   header("Location: /index.php");
@@ -238,7 +238,7 @@ if (!$partita_id) {
 
 <!-- HEADER FINALE -->
 <div class="page-header">
-    <button class="btn-back" id="btnBackStats">â† Torna indietro</button>
+    <button class="btn-back" id="btnBackStats">&larr; Torna indietro</button>
     <h1>Statistiche Partita</h1>
 </div>
 
@@ -297,7 +297,7 @@ if (!$partita_id) {
     <input type="number" name="voto" min="0" max="10" step="0.5" value="6">
   </div>
 
-  <button class="btn-primary" type="submit">âž• Aggiungi</button>
+  <button class="btn-primary" type="submit">+ Aggiungi</button>
 </form>
 
 <!-- ===================== MODIFICA ====================== -->
@@ -342,7 +342,7 @@ if (!$partita_id) {
       <input id="edit_voto" type="number" name="voto" min="0" max="10" step="0.5">
     </div>
 
-    <button class="btn-primary">ðŸ’¾ Salva Modifiche</button>
+    <button class="btn-primary">Salva Modifiche</button>
   </form>
 </section>
 
@@ -423,7 +423,7 @@ async function loadPartita(){
   document.getElementById("partitaInfo").innerHTML = `
     <b>${p.squadra_casa} - ${p.squadra_ospite}</b><br>
     ${p.data_partita} | ${p.ora_partita.substring(0,5)}<br>
-    <span style="font-size:14px;color:#444;">${torneoNome} Â· ${p.fase || 'REGULAR'}</span>
+    <span style="font-size:14px;color:#444;">${torneoNome} - ${p.fase || 'REGULAR'}</span>
   `;
 
 }
@@ -501,7 +501,7 @@ document.getElementById("formAdd").addEventListener("submit", async e => {
   const out = await r.json();
 
   if(out.error === "exists"){
-      showMsg("âš ï¸ Giocatore giÃ  aggiunto", "error");
+      showMsg("Attenzione: giocatore già aggiunto", "error");
       return;
   }
 
@@ -605,3 +605,4 @@ document.getElementById("btnBackStats")?.addEventListener("click", (e) => {
 
 </body>
 </html>
+
