@@ -10,7 +10,10 @@ class Partita {
 
     private function normalizeFase($fase): string {
         $val = strtoupper(trim((string)($fase ?? '')));
-        return $val === '' ? 'REGULAR' : $val;
+        if ($val === '' || $val === 'GIRONE') {
+            return 'REGULAR';
+        }
+        return $val;
     }
 
     public function getAll() {

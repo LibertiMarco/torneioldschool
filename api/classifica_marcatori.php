@@ -14,8 +14,8 @@ if ($torneo === '') {
 
 $limit = $limit > 0 ? min($limit, 100) : 20;
 
-// Per Coppa d'Africa contiamo anche la fase finale, per gli altri solo fase REGULAR (anche se fase vuota)
-$phaseClause = ($torneo === 'Coppadafrica') ? '' : "AND UPPER(COALESCE(NULLIF(TRIM(p.fase), ''), 'REGULAR')) = 'REGULAR'";
+// Per Coppa d'Africa contiamo anche la fase finale, per gli altri solo fase REGULAR (anche se fase vuota o \"GIRONE\")
+$phaseClause = ($torneo === 'Coppadafrica') ? '' : "AND UPPER(CASE WHEN TRIM(p.fase) IN ('', 'GIRONE') THEN 'REGULAR' ELSE TRIM(p.fase) END) = 'REGULAR'";
 
 $sql = "
     SELECT 
