@@ -713,6 +713,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $decisa_rigori = isset($_POST['decisa_rigori_mod']) ? 1 : 0;
     $rigori_casa = $decisa_rigori ? sanitize_int($_POST['rigori_casa_mod'] ?? '') : null;
     $rigori_ospite = $decisa_rigori ? sanitize_int($_POST['rigori_ospite_mod'] ?? '') : null;
+    $giocataPrecedente = 0;
+    if ($id > 0) {
+      $oldGiocataStmt = $conn->prepare("SELECT giocata FROM partite WHERE id=?");
+      if ($oldGiocataStmt) {
+        $oldGiocataStmt->bind_param('i', $id);
+        if ($oldGiocataStmt->execute()) {
+          $oldRow = $oldGiocataStmt->get_result()->fetch_assoc();
+          $giocataPrecedente = isset($oldRow['giocata']) ? (int)$oldRow['giocata'] : 0;
+        }
+        $oldGiocataStmt->close();
+      }
+    }
 
     if ($id <= 0 || $torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($fase !== 'REGULAR' && $roundSelezionato === '')) {
       $errore = 'Seleziona una partita e compila i campi obbligatori.';
@@ -754,7 +766,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         if ($stmt->execute()) {
           $successo = 'Partita aggiornata correttamente.';
-          if (strtoupper($fase) === 'REGULAR') {
+          $haAttivatoGiocata = ($giocata === 1 && (int)$giocataPrecedente !== 1);
+          if ($haAttivatoGiocata && strtoupper($fase) === 'REGULAR') {
             ricostruisci_classifica_da_partite($conn, $torneo);
           }
           inviaNotificaEsito($conn, $id, [
