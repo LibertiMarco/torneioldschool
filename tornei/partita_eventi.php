@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includi/require_login.php';
 require_once __DIR__ . '/../includi/seo.php';
 require_once __DIR__ . '/../includi/db.php';
@@ -148,17 +148,17 @@ if ($matchId > 0) {
   <!-- CONTENUTO -->
   <main class="content" style="margin-top:24px; padding-top:18px;">
     <div class="titolo-row">
-      <button id="btnBack" onclick="history.back()">âŸµ</button>
+      <button id="btnBack" onclick="history.back()">Indietro</button>
       <h1 class="titolo">Statistiche Partita</h1>
     </div>
 
-    <!-- âœ… Qui iniettiamo la STESSA match-card del calendario -->
+    <!-- Qui iniettiamo la STESSA match-card del calendario -->
     <div id="partitaContainer" style="margin-bottom:20px;"></div>
 
-    <!-- âœ… Riepilogo eventi -->
+    <!-- Riepilogo eventi -->
     <div id="riepilogoEventi" style="margin-bottom:20px;"></div>
 
-    <!-- âœ… Cards giocatori -->
+    <!-- Cards giocatori -->
     <div id="eventiGiocatori" class="eventi-giocatori-grid"></div>
   </main>
 
@@ -191,3 +191,4 @@ if ($matchId > 0) {
   <script src="partita_eventi.js"></script>
 </body>
 </html>
+
