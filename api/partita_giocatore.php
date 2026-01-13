@@ -232,7 +232,8 @@ function aggiornaClassificaDaInfo(?array $info): void {
         $info['gol_casa'],
         $info['gol_ospite'],
         $vecchi,
-        $info['fase'] ?? 'REGULAR'
+        $info['fase'] ?? 'REGULAR',
+        $info['partita_id'] ?? null
     );
 }
 

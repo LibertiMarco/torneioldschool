@@ -232,7 +232,6 @@ function marca_partite_giocate_da_score(mysqli $conn, string $torneo): void {
 
 function ricostruisci_classifica_da_partite(mysqli $conn, string $torneo): void {
   if ($torneo === '') return;
-  marca_partite_giocate_da_score($conn, $torneo);
   reset_classifica($conn, $torneo);
   $sel = $conn->prepare("
     SELECT squadra_casa, squadra_ospite, COALESCE(gol_casa,0) AS gol_casa, COALESCE(gol_ospite,0) AS gol_ospite
@@ -792,7 +791,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->execute()) {
           $successo = 'Partita aggiornata correttamente.';
           $haAttivatoGiocata = ($giocata === 1 && (int)$giocataPrecedente !== 1);
-          if ($haAttivatoGiocata && strtoupper($fase) === 'REGULAR') {
+          $haDisattivatoGiocata = ($giocata === 0 && (int)$giocataPrecedente === 1);
+          if (($haAttivatoGiocata || $haDisattivatoGiocata) && strtoupper($fase) === 'REGULAR') {
             ricostruisci_classifica_da_partite($conn, $torneo);
           }
           inviaNotificaEsito($conn, $id, [

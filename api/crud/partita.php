@@ -175,8 +175,33 @@ class Partita {
 
 
     // 🔥 LOGICA CLASSIFICA (non modificata)
-    public function aggiornaClassifica($torneo, $squadraCasa, $squadraOspite, $golCasa, $golOspite, $vecchiDati = null, $fase = 'REGULAR') {
+    private function isPartitaGiocata(?int $partitaId): bool {
+        if (!$partitaId) return true;
+        $stmt = $this->conn->prepare("SELECT giocata FROM {$this->table} WHERE id = ?");
+        if (!$stmt) return true;
+        $stmt->bind_param("i", $partitaId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return isset($row['giocata']) ? (int)$row['giocata'] === 1 : true;
+    }
+
+    public function aggiornaClassifica(
+        $torneo,
+        $squadraCasa,
+        $squadraOspite,
+        $golCasa,
+        $golOspite,
+        $vecchiDati = null,
+        $fase = 'REGULAR',
+        $partitaId = null
+    ) {
         $faseCorrente = $this->normalizeFase($fase);
+
+        if ($partitaId !== null && !$this->isPartitaGiocata((int)$partitaId)) {
+            // Se la partita non è segnata come giocata, non aggiornare la classifica
+            return;
+        }
 
         $vecchiaFase = $this->normalizeFase($vecchiDati['fase'] ?? null);
         if ($vecchiDati && $vecchiaFase === 'REGULAR') {
