@@ -853,6 +853,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
   }
 
+  if ($azione === 'aggiorna_link') {
+    $id = (int)($_POST['partita_id'] ?? 0);
+    $arbitro = sanitize_text($_POST['arbitro_link'] ?? '');
+    $link_youtube = sanitize_text($_POST['link_youtube_link'] ?? '');
+    $link_instagram = sanitize_text($_POST['link_instagram_link'] ?? '');
+
+    if ($id <= 0) {
+      $errore = 'Seleziona una partita valida.';
+    } else {
+      $info = null;
+      $sel = $conn->prepare("SELECT giocata FROM partite WHERE id=?");
+      if ($sel) {
+        $sel->bind_param('i', $id);
+        if ($sel->execute()) {
+          $info = $sel->get_result()->fetch_assoc();
+        }
+        $sel->close();
+      }
+      if (!$info) {
+        $errore = 'Partita non trovata.';
+      } elseif ((int)($info['giocata'] ?? 0) !== 1) {
+        $errore = 'Questa partita non risulta giocata.';
+      }
+    }
+
+    if ($errore === '' && $id > 0) {
+      $stmt = $conn->prepare("UPDATE partite SET arbitro=?, link_youtube=?, link_instagram=? WHERE id=?");
+      if ($stmt) {
+        $stmt->bind_param('sssi', $arbitro, $link_youtube, $link_instagram, $id);
+        if ($stmt->execute()) {
+          $successo = 'Dati aggiornati correttamente.';
+        } else {
+          $errore = 'Aggiornamento non riuscito.';
+        }
+        $stmt->close();
+      } else {
+        $errore = 'Errore interno durante l\'aggiornamento.';
+      }
+    }
+  }
+
   if ($azione === 'elimina') {
     $id = (int)($_POST['partita_id'] ?? 0);
     $partitaInfo = null;
@@ -1386,6 +1427,62 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
         </form>
       </div>
+      <div class="form-card">
+        <h3>Modifica arbitro e link</h3>
+        <form class="admin-form inline" method="POST" id="formLinkArbitro">
+        <input type="hidden" name="azione" value="aggiorna_link">
+        <div class="full">
+          <label class="required-label">Seleziona torneo</label>
+          <select id="selTorneoLink" required>
+            <option value="">-- Seleziona torneo --</option>
+            <?php foreach ($torneiDisponibili as $t): ?>
+              <option value="<?= htmlspecialchars($t['slug']) ?>"><?= htmlspecialchars($t['nome']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label class="required-label">Fase</label>
+          <select id="selFaseLink" required>
+            <option value="">-- Seleziona fase --</option>
+            <?php foreach ($fasiAmmesse as $f): ?>
+              <option value="<?= htmlspecialchars($f) ?>"><?= htmlspecialchars($f) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label class="required-label">Giornata / Turno</label>
+          <select id="selGiornataLink" required disabled>
+            <option value="">-- Seleziona fase --</option>
+          </select>
+        </div>
+        <div>
+          <label class="required-label">Partita</label>
+          <select name="partita_id" id="selPartitaLink" required disabled>
+            <option value="">-- Seleziona giornata/turno --</option>
+          </select>
+        </div>
+        <div>
+          <label>Arbitro</label>
+          <input type="text" name="arbitro_link" id="arbitro_link" placeholder="Nome dell'arbitro">
+        </div>
+        <div>
+          <label>Link YouTube</label>
+          <input type="url" name="link_youtube_link" id="link_youtube_link" placeholder="https://youtube.com/...">
+        </div>
+        <div>
+          <label>Link Instagram</label>
+          <input type="url" name="link_instagram_link" id="link_instagram_link" placeholder="https://instagram.com/...">
+        </div>
+        <div class="full">
+          <button type="submit" class="btn-primary">Salva dati arbitro/link</button>
+        </div>
+        <?php if (($successo && ($azione ?? '') === 'aggiorna_link')): ?>
+          <div class="form-message success"><?= htmlspecialchars($successo) ?></div>
+        <?php elseif (($errore && ($azione ?? '') === 'aggiorna_link')): ?>
+          <div class="form-message error"><?= htmlspecialchars($errore) ?></div>
+        <?php endif; ?>
+        </form>
+      </div>
     </section>
 
     <!-- ELIMINA -->
@@ -1862,6 +1959,29 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     onPartita: () => {}
   });
 
+  setupSelector({
+    torneoId: 'selTorneoLink',
+    faseId: 'selFaseLink',
+    giornataId: 'selGiornataLink',
+    partitaId: 'selPartitaLink',
+    getData: () => partiteGiocateData,
+    onPartita: (partita) => {
+      const fill = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val ?? '';
+      };
+      if (!partita) {
+        fill('arbitro_link', '');
+        fill('link_youtube_link', '');
+        fill('link_instagram_link', '');
+        return;
+      }
+      fill('arbitro_link', partita.arbitro || '');
+      fill('link_youtube_link', partita.link_youtube || '');
+      fill('link_instagram_link', partita.link_instagram || '');
+    }
+  });
+
   const faseModSelect = document.getElementById('fase_mod');
   const roundModSelect = document.getElementById('round_eliminazione_mod');
   const faseLegModSelect = document.getElementById('faseLegMod');
@@ -2041,6 +2161,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     document.getElementById('selTorneoMod')?.dispatchEvent(new Event('change'));
     document.getElementById('selTorneoElim')?.dispatchEvent(new Event('change'));
     document.getElementById('selTorneoGioc')?.dispatchEvent(new Event('change'));
+    document.getElementById('selTorneoLink')?.dispatchEvent(new Event('change'));
   };
 
   const attachAjaxForm = (formId) => {
@@ -2114,6 +2235,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
   attachAjaxForm('formCrea');
   attachAjaxForm('formModifica');
   attachAjaxForm('formRipristinaGiocata');
+  attachAjaxForm('formLinkArbitro');
 </script>
 
 </body>
