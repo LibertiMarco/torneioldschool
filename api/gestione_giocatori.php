@@ -1195,6 +1195,12 @@ const assocFormAdd = document.querySelector(".assoc-form-add");
 const assocFormEdit = document.querySelector(".assoc-form-edit");
 const assocFormRemove = document.querySelector(".assoc-form-remove");
 const removeAssocButtons = document.querySelectorAll(".btn-remove-assoc");
+const ASSOC_OP_KEY = "tos_assoc_op";
+const MOD_ASSOC_STATE_KEYS = {
+    torneo: "tos_mod_assoc_torneo",
+    squadra: "tos_mod_assoc_squadra",
+    giocatore: "tos_mod_assoc_giocatore",
+};
 const allPlayersDataEl = document.getElementById("search");
 let allPlayers = [];
 try {
@@ -1411,6 +1417,78 @@ function filterGiocatori(term) {
 
 searchGiocatoreInput?.addEventListener("input", e => filterGiocatori(e.target.value));
 
+function saveAssocOperation(val) {
+    try {
+        localStorage.setItem(ASSOC_OP_KEY, val || "");
+    } catch (err) {
+        console.warn("Impossibile salvare operazione associazione:", err);
+    }
+}
+
+function restoreAssocOperation() {
+    let stored = "";
+    try {
+        stored = localStorage.getItem(ASSOC_OP_KEY) || "";
+    } catch (err) {
+        stored = "";
+    }
+    if (stored && assocOperationSelect) {
+        assocOperationSelect.value = stored;
+        mostraFormAssoc(stored);
+    }
+}
+
+function saveModAssocState(torneoVal, squadraVal, giocatoreVal) {
+    try {
+        if (torneoVal !== undefined) localStorage.setItem(MOD_ASSOC_STATE_KEYS.torneo, torneoVal || "");
+        if (squadraVal !== undefined) localStorage.setItem(MOD_ASSOC_STATE_KEYS.squadra, squadraVal || "");
+        if (giocatoreVal !== undefined) localStorage.setItem(MOD_ASSOC_STATE_KEYS.giocatore, giocatoreVal || "");
+    } catch (err) {
+        console.warn("Impossibile salvare stato modifica associazione:", err);
+    }
+}
+
+async function restoreModAssocState() {
+    if (!modAssocTorneo || !modAssocSquadra || !modAssocGiocatore) return;
+    let savedTorneo = "";
+    let savedSquadra = "";
+    let savedGiocatore = "";
+    try {
+        savedTorneo = localStorage.getItem(MOD_ASSOC_STATE_KEYS.torneo) || "";
+        savedSquadra = localStorage.getItem(MOD_ASSOC_STATE_KEYS.squadra) || "";
+        savedGiocatore = localStorage.getItem(MOD_ASSOC_STATE_KEYS.giocatore) || "";
+    } catch (err) {
+        return;
+    }
+
+    if (!savedTorneo) return;
+
+    // Se il torneo salvato non esiste piu', puliamo lo stato
+    const torneoExists = Array.from(modAssocTorneo.options || []).some(o => o.value === savedTorneo);
+    if (!torneoExists) {
+        saveModAssocState("", "", "");
+        return;
+    }
+
+    // Mostra direttamente il form di modifica
+    if (assocOperationSelect) {
+        assocOperationSelect.value = "modifica";
+        mostraFormAssoc("modifica");
+    }
+
+    modAssocTorneo.value = savedTorneo;
+    const squadre = await loadSquadre(modAssocSquadra, savedTorneo);
+    if (savedSquadra && Array.isArray(squadre) && squadre.some(s => String(s.id) === String(savedSquadra))) {
+        modAssocSquadra.value = savedSquadra;
+        const giocatori = await loadGiocatori(modAssocGiocatore, savedSquadra, savedTorneo);
+        if (savedGiocatore && Array.isArray(giocatori) && giocatori.some(g => String(g.id) === String(savedGiocatore))) {
+            modAssocGiocatore.value = savedGiocatore;
+            const opt = modAssocGiocatore.selectedOptions && modAssocGiocatore.selectedOptions[0];
+            populateModAssocStatsFromOption(opt);
+        }
+    }
+}
+
 function filterTabella(term) {
     if (!tabellaGiocatori) return;
     const normalized = term.trim().toLowerCase();
@@ -1608,6 +1686,7 @@ modAssocTorneo?.addEventListener("change", async () => {
     await loadSquadre(modAssocSquadra, modAssocTorneo.value);
     resetSelect(modAssocGiocatore, "-- Seleziona un giocatore --");
     clearModAssocStatsFields();
+    saveModAssocState(modAssocTorneo.value, "", "");
 });
 if (modAssocTorneo?.value) {
     loadSquadre(modAssocSquadra, modAssocTorneo.value);
@@ -1616,11 +1695,13 @@ if (modAssocTorneo?.value) {
 modAssocSquadra?.addEventListener("change", async () => {
     await loadGiocatori(modAssocGiocatore, modAssocSquadra.value, modAssocTorneo.value);
     clearModAssocStatsFields();
+    saveModAssocState(modAssocTorneo.value, modAssocSquadra.value, "");
 });
 
 modAssocGiocatore?.addEventListener("change", () => {
     const opt = modAssocGiocatore.selectedOptions && modAssocGiocatore.selectedOptions[0];
     populateModAssocStatsFromOption(opt);
+    saveModAssocState(modAssocTorneo.value, modAssocSquadra.value, modAssocGiocatore.value);
 });
 
 assocSquadra?.addEventListener("change", () => aggiornaGiocatoriDisponibiliPerAssociazione());
@@ -1634,8 +1715,13 @@ function mostraFormAssoc(val) {
     if (val === 'rimuovi' && assocFormRemove) assocFormRemove.classList.remove('hidden');
 }
 
+restoreAssocOperation();
 mostraFormAssoc(assocOperationSelect?.value || 'aggiungi');
-assocOperationSelect?.addEventListener('change', e => mostraFormAssoc(e.target.value));
+assocOperationSelect?.addEventListener('change', e => {
+    mostraFormAssoc(e.target.value);
+    saveAssocOperation(e.target.value);
+});
+restoreModAssocState();
 
 selectGiocatore?.addEventListener("change", async e => {
     const id = e.target.value;
