@@ -63,90 +63,149 @@ if (session_status() === PHP_SESSION_NONE) {
     }
 }
 
+// Helpers per remember-me: evitiamo 500 se il DB non e' disponibile
+function tos_clear_remember_cookie(bool $isHttps): void
+{
+    $params = session_get_cookie_params();
+    setcookie(REMEMBER_COOKIE_NAME, '', time() - 3600, [
+        'path' => $params['path'] ?? '/',
+        'domain' => $params['domain'] ?? '',
+        'secure' => $isHttps,
+        'httponly' => true,
+        'samesite' => $params['samesite'] ?? 'Lax',
+    ]);
+}
+
+function tos_remember_db_connect()
+{
+    global $conn;
+    if (isset($conn) && $conn instanceof mysqli) {
+        return $conn;
+    }
+
+    $envLoader = __DIR__ . '/env_loader.php';
+    if (file_exists($envLoader)) {
+        require_once $envLoader;
+    }
+    if (!function_exists('env_or_default')) {
+        function env_or_default(string $key, string $default = ''): string
+        {
+            $value = getenv($key);
+            return ($value !== false && $value !== '') ? $value : $default;
+        }
+    }
+
+    $host = env_or_default('DB_HOST', 'localhost');
+    $user = env_or_default('DB_USER', '');
+    $pass = env_or_default('DB_PASSWORD', '');
+    $dbname = env_or_default('DB_NAME', '');
+
+    if ($user === '' || $dbname === '') {
+        error_log('remember auto-login: configurazione DB mancante, salto auto-login.');
+        return null;
+    }
+
+    mysqli_report(MYSQLI_REPORT_OFF);
+    try {
+        $tmp = @new mysqli($host, $user, $pass, $dbname);
+    } catch (Throwable $e) {
+        error_log('remember auto-login: connessione DB fallita - ' . $e->getMessage());
+        return null;
+    }
+
+    if ($tmp->connect_error) {
+        error_log('remember auto-login: connessione DB fallita - ' . $tmp->connect_error);
+        return null;
+    }
+
+    $tmp->set_charset('utf8mb4');
+    $conn = $tmp;
+    return $conn;
+}
+
 // Auto-login da cookie "ricorda" se la sessione e' scaduta ma esiste un token valido
 if (!isset($_SESSION['user_id']) && !empty($_COOKIE[REMEMBER_COOKIE_NAME])) {
     $rawRemember = (string)$_COOKIE[REMEMBER_COOKIE_NAME];
     if (strpos($rawRemember, ':') !== false) {
         [$selector, $validator] = explode(':', $rawRemember, 2);
         if ($selector !== '' && $validator !== '' && ctype_xdigit($selector) && ctype_xdigit($validator)) {
-            if (!isset($conn)) {
-                $dbPath = __DIR__ . '/db.php';
-                if (file_exists($dbPath)) {
-                    require_once $dbPath;
-                }
-            }
+            $conn = tos_remember_db_connect();
 
-            if (isset($conn) && $conn instanceof mysqli) {
-                $stmt = $conn->prepare("SELECT id, email, nome, cognome, ruolo, avatar, remember_token_hash, remember_expires_at FROM utenti WHERE remember_selector = ? LIMIT 1");
-                if ($stmt) {
-                    $stmt->bind_param('s', $selector);
-                    $stmt->execute();
-                    $res = $stmt->get_result();
-                    $user = $res && $res->num_rows === 1 ? $res->fetch_assoc() : null;
-                    $stmt->close();
+            if ($conn instanceof mysqli) {
+                try {
+                    $stmt = $conn->prepare("SELECT id, email, nome, cognome, ruolo, avatar, remember_token_hash, remember_expires_at FROM utenti WHERE remember_selector = ? LIMIT 1");
+                    if ($stmt) {
+                        $stmt->bind_param('s', $selector);
+                        $stmt->execute();
+                        $res = $stmt->get_result();
+                        $user = $res && $res->num_rows === 1 ? $res->fetch_assoc() : null;
+                        $stmt->close();
 
-                    $expiresAt = $user && !empty($user['remember_expires_at']) ? strtotime((string)$user['remember_expires_at']) : 0;
-                    $tokenMatches = $user && !empty($user['remember_token_hash']) ? hash_equals($user['remember_token_hash'], hash('sha256', $validator)) : false;
+                        $expiresAt = $user && !empty($user['remember_expires_at']) ? strtotime((string)$user['remember_expires_at']) : 0;
+                        $tokenMatches = $user && !empty($user['remember_token_hash']) ? hash_equals($user['remember_token_hash'], hash('sha256', $validator)) : false;
 
-                    if ($user && $expiresAt > time() && $tokenMatches) {
-                        session_regenerate_id(true);
-                        $_SESSION['user_id'] = $user['id'];
-                        $_SESSION['email'] = $user['email'];
-                        $_SESSION['nome'] = $user['nome'];
-                        $_SESSION['cognome'] = $user['cognome'];
-                        $_SESSION['ruolo'] = $user['ruolo'];
-                        $_SESSION['avatar'] = $user['avatar'] ?? null;
-                        $_SESSION['remember_me'] = true;
+                        if ($user && $expiresAt > time() && $tokenMatches) {
+                            session_regenerate_id(true);
+                            $_SESSION['user_id'] = $user['id'];
+                            $_SESSION['email'] = $user['email'];
+                            $_SESSION['nome'] = $user['nome'];
+                            $_SESSION['cognome'] = $user['cognome'];
+                            $_SESSION['ruolo'] = $user['ruolo'];
+                            $_SESSION['avatar'] = $user['avatar'] ?? null;
+                            $_SESSION['remember_me'] = true;
 
-                        $cookieParams = session_get_cookie_params();
-                        $cookieLifetime = REMEMBER_COOKIE_LIFETIME;
-                        $newSelector = bin2hex(random_bytes(9));
-                        $newValidator = bin2hex(random_bytes(32));
-                        $newHash = hash('sha256', $newValidator);
-                        $newExpires = date('Y-m-d H:i:s', time() + $cookieLifetime);
+                            $cookieParams = session_get_cookie_params();
+                            $cookieLifetime = REMEMBER_COOKIE_LIFETIME;
+                            $newSelector = bin2hex(random_bytes(9));
+                            $newValidator = bin2hex(random_bytes(32));
+                            $newHash = hash('sha256', $newValidator);
+                            $newExpires = date('Y-m-d H:i:s', time() + $cookieLifetime);
 
-                        $saveNewToken = $conn->prepare("UPDATE utenti SET remember_selector = ?, remember_token_hash = ?, remember_expires_at = ? WHERE id = ?");
-                        if ($saveNewToken) {
-                            $saveNewToken->bind_param('sssi', $newSelector, $newHash, $newExpires, $user['id']);
-                            $saveNewToken->execute();
-                            $saveNewToken->close();
+                            $saveNewToken = $conn->prepare("UPDATE utenti SET remember_selector = ?, remember_token_hash = ?, remember_expires_at = ? WHERE id = ?");
+                            if ($saveNewToken) {
+                                $saveNewToken->bind_param('sssi', $newSelector, $newHash, $newExpires, $user['id']);
+                                $saveNewToken->execute();
+                                $saveNewToken->close();
+                            }
+
+                            setcookie(session_name(), session_id(), [
+                                'expires' => time() + $cookieLifetime,
+                                'path' => $cookieParams['path'] ?? '/',
+                                'domain' => $cookieParams['domain'] ?? '',
+                                'secure' => $isHttps,
+                                'httponly' => true,
+                                'samesite' => $cookieParams['samesite'] ?? 'Lax',
+                            ]);
+                            setcookie(REMEMBER_COOKIE_NAME, $newSelector . ':' . $newValidator, [
+                                'expires' => time() + $cookieLifetime,
+                                'path' => $cookieParams['path'] ?? '/',
+                                'domain' => $cookieParams['domain'] ?? '',
+                                'secure' => $isHttps,
+                                'httponly' => true,
+                                'samesite' => $cookieParams['samesite'] ?? 'Lax',
+                            ]);
+                        } else {
+                            $forget = $conn->prepare("UPDATE utenti SET remember_selector = NULL, remember_token_hash = NULL, remember_expires_at = NULL WHERE remember_selector = ?");
+                            if ($forget) {
+                                $forget->bind_param('s', $selector);
+                                $forget->execute();
+                                $forget->close();
+                            }
+                            tos_clear_remember_cookie($isHttps);
                         }
-
-                        setcookie(session_name(), session_id(), [
-                            'expires' => time() + $cookieLifetime,
-                            'path' => $cookieParams['path'] ?? '/',
-                            'domain' => $cookieParams['domain'] ?? '',
-                            'secure' => $isHttps,
-                            'httponly' => true,
-                            'samesite' => $cookieParams['samesite'] ?? 'Lax',
-                        ]);
-                        setcookie(REMEMBER_COOKIE_NAME, $newSelector . ':' . $newValidator, [
-                            'expires' => time() + $cookieLifetime,
-                            'path' => $cookieParams['path'] ?? '/',
-                            'domain' => $cookieParams['domain'] ?? '',
-                            'secure' => $isHttps,
-                            'httponly' => true,
-                            'samesite' => $cookieParams['samesite'] ?? 'Lax',
-                        ]);
-                    } else {
-                        $forget = $conn->prepare("UPDATE utenti SET remember_selector = NULL, remember_token_hash = NULL, remember_expires_at = NULL WHERE remember_selector = ?");
-                        if ($forget) {
-                            $forget->bind_param('s', $selector);
-                            $forget->execute();
-                            $forget->close();
-                        }
-                        $params = session_get_cookie_params();
-                        setcookie(REMEMBER_COOKIE_NAME, '', time() - 3600, [
-                            'path' => $params['path'] ?? '/',
-                            'domain' => $params['domain'] ?? '',
-                            'secure' => $isHttps,
-                            'httponly' => true,
-                            'samesite' => $params['samesite'] ?? 'Lax',
-                        ]);
                     }
+                } catch (Throwable $e) {
+                    error_log('remember auto-login: ' . $e->getMessage());
+                    tos_clear_remember_cookie($isHttps);
                 }
+            } else {
+                tos_clear_remember_cookie($isHttps);
             }
+        } else {
+            tos_clear_remember_cookie($isHttps);
         }
+    } else {
+        tos_clear_remember_cookie($isHttps);
     }
 }
 
