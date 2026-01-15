@@ -192,15 +192,17 @@ if (!$partita_id) {
 .admin-table th:nth-child(5),
 .admin-table th:nth-child(6),
 .admin-table th:nth-child(7),
+.admin-table th:nth-child(8),
 .admin-table td:nth-child(3),
 .admin-table td:nth-child(4),
 .admin-table td:nth-child(5),
 .admin-table td:nth-child(6),
-.admin-table td:nth-child(7) {
+.admin-table td:nth-child(7),
+.admin-table td:nth-child(8) {
     min-width: 70px;
 }
 
-.admin-table th:nth-child(8), .admin-table td:nth-child(8) {
+.admin-table th:nth-child(9), .admin-table td:nth-child(9) {
     min-width: 120px;
 }
 
@@ -307,9 +309,15 @@ if (!$partita_id) {
     </div>
   </div>
 
-  <div class="form-group">
-    <label>Voto</label>
-    <input type="number" name="voto" min="0" max="10" step="0.5" value="6">
+  <div class="form-row">
+    <div class="form-group half">
+      <label>Autogol</label>
+      <input type="number" name="autogol" min="0" value="0" required>
+    </div>
+    <div class="form-group half">
+      <label>Voto</label>
+      <input type="number" name="voto" min="0" max="10" step="0.5" value="6">
+    </div>
   </div>
 
   <button class="btn-primary" type="submit">+ Aggiungi</button>
@@ -352,9 +360,15 @@ if (!$partita_id) {
     </div>
   </div>
 
-    <div class="form-group">
-      <label>Voto</label>
-      <input id="edit_voto" type="number" name="voto" min="0" max="10" step="0.5">
+    <div class="form-row">
+      <div class="form-group half">
+        <label>Autogol</label>
+        <input id="edit_autogol" type="number" name="autogol" min="0" value="0" required>
+      </div>
+      <div class="form-group half">
+        <label>Voto</label>
+        <input id="edit_voto" type="number" name="voto" min="0" max="10" step="0.5">
+      </div>
     </div>
 
     <button class="btn-primary">Salva Modifiche</button>
@@ -373,6 +387,7 @@ if (!$partita_id) {
           <th>Squadra</th>
           <th>Gol</th>
           <th>Assist</th>
+          <th>Autogol</th>
           <th>Gialli</th>
           <th>Rossi</th>
           <th>Voto</th>
@@ -495,6 +510,7 @@ async function loadStats(){
           <td>${s.squadra}</td>
           <td>${s.goal}</td>
           <td>${s.assist}</td>
+          <td>${s.autogol ?? 0}</td>
           <td>${s.cartellino_giallo}</td>
           <td>${s.cartellino_rosso}</td>
           <td>${s.voto ?? '-'}</td>
@@ -511,6 +527,7 @@ document.getElementById("formAdd").addEventListener("submit", async e => {
   fd.append("azione","add");
   fd.set("cartellino_giallo", e.target.cartellino_giallo?.checked ? 1 : 0);
   fd.set("cartellino_rosso", e.target.cartellino_rosso?.checked ? 1 : 0);
+  fd.set("autogol", e.target.autogol?.value || 0);
 
   const r = await fetch(API, { method:"POST", body:fd });
   const out = await r.json();
@@ -537,6 +554,7 @@ function populateEditFromSelect() {
   document.getElementById("edit_id").value = stat.id;
   document.getElementById("edit_goal").value = stat.goal ?? 0;
   document.getElementById("edit_assist").value = stat.assist ?? 0;
+  document.getElementById("edit_autogol").value = stat.autogol ?? 0;
   document.getElementById("edit_giallo").checked = (stat.cartellino_giallo ?? 0) > 0;
   document.getElementById("edit_rosso").checked = (stat.cartellino_rosso ?? 0) > 0;
   document.getElementById("edit_voto").value = stat.voto ?? "";
@@ -551,6 +569,7 @@ document.getElementById("formEdit").addEventListener("submit", async e => {
   fd.append("azione","edit");
   fd.set("cartellino_giallo", e.target.cartellino_giallo?.checked ? 1 : 0);
   fd.set("cartellino_rosso", e.target.cartellino_rosso?.checked ? 1 : 0);
+  fd.set("autogol", e.target.autogol?.value || 0);
 
   const r = await fetch(API, { method:"POST", body:fd });
   const out = await r.json();

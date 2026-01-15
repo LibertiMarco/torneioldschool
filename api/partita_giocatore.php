@@ -6,6 +6,17 @@ header('Content-Type: application/json; charset=utf-8');
 $azione = $_GET['azione'] ?? $_POST['azione'] ?? '';
 
 /* ==========================================================
+   ASSICURA COLONNA AUTOGOL
+========================================================== */
+function ensure_autogol_column(mysqli $conn): void {
+    $col = $conn->query("SHOW COLUMNS FROM partita_giocatore LIKE 'autogol'");
+    if ($col && $col->num_rows === 0) {
+        $conn->query("ALTER TABLE partita_giocatore ADD COLUMN autogol INT UNSIGNED NOT NULL DEFAULT 0 AFTER goal");
+    }
+}
+ensure_autogol_column($conn);
+
+/* ==========================================================
    LISTA STATISTICHE DELLA PARTITA
 ========================================================== */
 if ($azione === 'list') {
@@ -22,6 +33,7 @@ if ($azione === 'list') {
                 g.cognome,
                 s.nome AS squadra,
                 pg.goal,
+                pg.autogol,
                 pg.assist,
                 pg.cartellino_giallo,
                 pg.cartellino_rosso,
@@ -163,13 +175,16 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId): ?array {
     if (!$p) return null;
 
     // Somma i gol per squadra aggregando per nome squadra (evita duplicazioni per giocatori trasferiti)
+    // e aggiunge gli autogol alla squadra avversaria
     $sumSql = $conn->prepare("
         SELECT 
           SUM(CASE WHEN agg.squadra = p.squadra_casa THEN agg.gol ELSE 0 END) AS gol_casa,
-          SUM(CASE WHEN agg.squadra = p.squadra_ospite THEN agg.gol ELSE 0 END) AS gol_osp
+          SUM(CASE WHEN agg.squadra = p.squadra_ospite THEN agg.gol ELSE 0 END) AS gol_osp,
+          SUM(CASE WHEN agg.squadra = p.squadra_casa THEN agg.autogol ELSE 0 END) AS autogol_casa,
+          SUM(CASE WHEN agg.squadra = p.squadra_ospite THEN agg.autogol ELSE 0 END) AS autogol_osp
         FROM partite p
         LEFT JOIN (
-          SELECT pg.partita_id, s.nome AS squadra, SUM(pg.goal) AS gol
+          SELECT pg.partita_id, s.nome AS squadra, SUM(pg.goal) AS gol, SUM(pg.autogol) AS autogol
           FROM partita_giocatore pg
           JOIN partite pp ON pp.id = pg.partita_id
           JOIN squadre_giocatori sg ON sg.giocatore_id = pg.giocatore_id
@@ -185,8 +200,8 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId): ?array {
     $sumSql->execute();
     $res = $sumSql->get_result()->fetch_assoc() ?: [];
 
-    $golCasa = (int)($res['gol_casa'] ?? 0);
-    $golOsp = (int)($res['gol_osp'] ?? 0);
+    $golCasa = (int)($res['gol_casa'] ?? 0) + (int)($res['autogol_osp'] ?? 0);
+    $golOsp = (int)($res['gol_osp'] ?? 0) + (int)($res['autogol_casa'] ?? 0);
 
     $upd = $conn->prepare("UPDATE partite SET gol_casa = ?, gol_ospite = ? WHERE id = ?");
     $upd->bind_param("iii", $golCasa, $golOsp, $partitaId);
@@ -461,6 +476,7 @@ if ($azione === 'add') {
     $giocatore  = (int)$_POST['giocatore_id'];
     $goal       = (int)$_POST['goal'];
     $assist     = (int)$_POST['assist'];
+    $autogol    = (int)($_POST['autogol'] ?? 0);
     $giallo     = (int)$_POST['cartellino_giallo'];
     $rosso      = (int)$_POST['cartellino_rosso'];
     $voto       = $_POST['voto'] === "" ? null : (float)$_POST['voto'];
@@ -478,11 +494,11 @@ if ($azione === 'add') {
 
     /* âž• INSERIMENTO */
     $sql = "INSERT INTO partita_giocatore
-            (partita_id, giocatore_id, presenza, goal, assist, cartellino_giallo, cartellino_rosso, voto)
-            VALUES (?, ?, 1, ?, ?, ?, ?, ?)";
+            (partita_id, giocatore_id, presenza, goal, autogol, assist, cartellino_giallo, cartellino_rosso, voto)
+            VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iiiiiid", $partita_id, $giocatore, $goal, $assist, $giallo, $rosso, $voto);
+    $stmt->bind_param("iiiiiiid", $partita_id, $giocatore, $goal, $autogol, $assist, $giallo, $rosso, $voto);
     $stmt->execute();
 
     ricalcolaStatistiche($conn, $partita_id, $giocatore);
@@ -502,22 +518,23 @@ if ($azione === 'edit') {
     $id     = (int)$_POST['id'];
     $goal   = (int)$_POST['goal'];
     $assist = (int)$_POST['assist'];
+    $autogol = (int)($_POST['autogol'] ?? 0);
     $giallo = (int)$_POST['cartellino_giallo'];
     $rosso  = (int)$_POST['cartellino_rosso'];
     $voto   = $_POST['voto'] === "" ? null : (float)$_POST['voto'];
 
     if ($voto === null) {
         $sql = "UPDATE partita_giocatore 
-                SET goal=?, assist=?, cartellino_giallo=?, cartellino_rosso=?, voto=NULL
+                SET goal=?, autogol=?, assist=?, cartellino_giallo=?, cartellino_rosso=?, voto=NULL
                 WHERE id=?";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("iiiii", $goal, $assist, $giallo, $rosso, $id);
+        $stmt->bind_param("iiiiii", $goal, $autogol, $assist, $giallo, $rosso, $id);
     } else {
         $sql = "UPDATE partita_giocatore 
-                SET goal=?, assist=?, cartellino_giallo=?, cartellino_rosso=?, voto=?
+                SET goal=?, autogol=?, assist=?, cartellino_giallo=?, cartellino_rosso=?, voto=?
                 WHERE id=?";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("iiiidi", $goal, $assist, $giallo, $rosso, $voto, $id);
+        $stmt->bind_param("iiiiidi", $goal, $autogol, $assist, $giallo, $rosso, $voto, $id);
     }
 
     $stmt->execute();
