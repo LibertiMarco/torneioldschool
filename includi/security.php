@@ -83,7 +83,9 @@ function tos_cookie_params(bool $isHttps): array
 function tos_clear_remember_cookie(bool $isHttps): void
 {
     $params = tos_cookie_params($isHttps);
-    setcookie(REMEMBER_COOKIE_NAME, '', time() - 3600, $params);
+    setcookie(REMEMBER_COOKIE_NAME, '', array_merge($params, [
+        'expires' => time() - 3600,
+    ]));
 }
 
 function tos_remember_db_connect()
