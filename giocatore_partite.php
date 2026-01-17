@@ -46,7 +46,7 @@ $seo = [
         .player-avatar { width: 110px; height: 110px; border-radius: 14px; object-fit: cover; border: 2px solid rgba(255,255,255,0.2); background: #0c1a2a; }
         .player-name { margin: 0; font-size: 1.6rem; }
         .player-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-        .pill { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,0.12); font-weight: 700; font-size: 0.95rem; }
+        .pill { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,0.12); font-weight: 700; font-size: 0.95rem; color: #fff; }
         .section-card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 14px 28px rgba(12,24,38,0.12); margin-top: 16px; border: 1px solid #e3e8f0; }
         .section-card h2 { margin: 0 0 10px; color: #15293e; }
         .toggle-group { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -62,6 +62,7 @@ $seo = [
         .match-body { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; margin-top: 8px; }
         .team { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
         .team-name { font-weight: 800; color: #15293e; }
+        .team-logo { width: 38px; height: 38px; object-fit: cover; border-radius: 50%; background: #f4f6fb; border: 1px solid #e2e8f0; }
         .score { font-size: 1.3rem; font-weight: 800; color: #0f1f33; }
         .stat-line { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; color: #1f2f44; font-weight: 700; }
         .stat-chip { background: #15293e; color: #fff; border-radius: 8px; padding: 6px 8px; font-size: 0.9rem; }
@@ -106,6 +107,7 @@ $seo = [
 const playerId = <?= json_encode($giocatoreId) ?>;
 let currentTipo = <?= json_encode($tipoParam) ?>;
 const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
+const TEAM_FALLBACK = '/img/logo_old_school.png';
 
 const heroEl = document.getElementById('playerHero');
 const matchListEl = document.getElementById('matchList');
@@ -161,7 +163,7 @@ function renderPlayer(player) {
     heroEl.innerHTML = `
         <img class="player-avatar" src="${foto}" alt="${nome}" onerror="this.onerror=null; this.src='${FALLBACK_AVATAR}';">
         <div>
-            <p class="muted" style="margin:0 0 6px;">Scheda giocatore</p>
+            <p class="player-label" style="margin:0 0 6px; color:#d72638; font-weight:800;">Scheda giocatore</p>
             <h1 class="player-name">${nome}</h1>
             <div class="player-meta">
                 ${ruolo}
@@ -205,10 +207,12 @@ function renderMatches(matches) {
                 </div>
                 <div class="match-body">
                     <div class="team">
+                        <img class="team-logo" src="${escapeHTML(match.logo_casa || TEAM_FALLBACK)}" alt="${escapeHTML(match.squadra_casa || '')}" onerror="this.src='${TEAM_FALLBACK}';">
                         <div class="team-name">${escapeHTML(match.squadra_casa || '')}</div>
                     </div>
                     <div class="score">${scoreHome} - ${scoreAway}</div>
                     <div class="team">
+                        <img class="team-logo" src="${escapeHTML(match.logo_ospite || TEAM_FALLBACK)}" alt="${escapeHTML(match.squadra_ospite || '')}" onerror="this.src='${TEAM_FALLBACK}';">
                         <div class="team-name">${escapeHTML(match.squadra_ospite || '')}</div>
                     </div>
                 </div>

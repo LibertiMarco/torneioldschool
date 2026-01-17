@@ -130,10 +130,14 @@ $sqlMatches = "
         p.fase_round,
         p.fase_leg,
         p.campo,
-        t.nome AS torneo_nome
+        t.nome AS torneo_nome,
+        sc.logo AS logo_casa,
+        so.logo AS logo_ospite
     FROM partita_giocatore pg
     JOIN partite p ON p.id = pg.partita_id
     LEFT JOIN tornei t ON (t.filetorneo = p.torneo OR t.filetorneo = CONCAT(p.torneo, '.php') OR t.nome = p.torneo)
+    LEFT JOIN squadre sc ON sc.nome = p.squadra_casa AND sc.torneo = p.torneo
+    LEFT JOIN squadre so ON so.nome = p.squadra_ospite AND so.torneo = p.torneo
     WHERE pg.giocatore_id = ? AND p.giocata = 1{$whereExcluded} AND {$whereStat}
     ORDER BY p.data_partita DESC, p.ora_partita DESC, pg.partita_id DESC
     LIMIT ?
@@ -178,6 +182,8 @@ if ($resMatches) {
             'fase_round' => $row['fase_round'],
             'fase_leg' => $row['fase_leg'],
             'campo' => $row['campo'],
+            'logo_casa' => $row['logo_casa'],
+            'logo_ospite' => $row['logo_ospite'],
         ];
     }
 }
