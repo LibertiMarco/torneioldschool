@@ -374,7 +374,7 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
         }
         const mailto = "mailto:info@torneioldschool.it"
           + "?subject=" + encodeURIComponent("Messaggio dal sito Tornei Old School")
-          + "&body=" + encodeURIComponent(messaggio + "\\n\\n" + nome);
+          + "&body=" + encodeURIComponent(messaggio + "\n\n" + nome);
         window.location.href = mailto;
       });
     })();
