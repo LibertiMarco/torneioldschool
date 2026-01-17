@@ -11,6 +11,23 @@ if (!$conn || $conn->connect_error) {
 
 $conn->set_charset('utf8mb4');
 
+$defaultFoto = '/img/giocatori/unknown.jpg';
+$latestSquadPhotoSubquery = "
+    SELECT sg2.foto
+    FROM squadre_giocatori sg2
+    WHERE sg2.giocatore_id = g.id
+      AND sg2.foto IS NOT NULL AND sg2.foto <> ''
+    ORDER BY sg2.created_at DESC, sg2.id DESC
+    LIMIT 1
+";
+$fotoSelect = "
+    CASE
+        WHEN g.foto IS NULL OR g.foto = '' OR g.foto = '{$defaultFoto}'
+            THEN COALESCE(($latestSquadPhotoSubquery), '{$defaultFoto}')
+        ELSE g.foto
+    END AS foto
+";
+
 // Parametri e sanitizzazione
 $torneo = null; // classifica all-time, senza filtro torneo
 $search = trim($_GET['search'] ?? '');
@@ -81,7 +98,7 @@ $sqlAll = "
         g.ruolo,
         '' AS squadra,
         '' AS torneo,
-        g.foto,
+        {$fotoSelect},
         agg.gol,
         agg.presenze,
         agg.media_voti
@@ -134,7 +151,7 @@ $sqlFiltered = "
         g.ruolo,
         '' AS squadra,
         '' AS torneo,
-        g.foto,
+        {$fotoSelect},
         agg.gol,
         agg.presenze,
         agg.media_voti
