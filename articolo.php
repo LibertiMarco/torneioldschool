@@ -958,15 +958,21 @@ function formatContent(text = '') {
         return '<p>Non abbiamo trovato il contenuto di questo articolo.</p>';
     }
 
+    // Normalizza new line ed elimina i blocchi vuoti per evitare spazi enormi
+    const normalized = text
+        .replace(/\r\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n');
+
     const applyInline = (str) =>
         str
           .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
           .replace(/==(.+?)==/g, '<strong>$1</strong>');
 
-    return text
+    return normalized
         .split(/\n{2,}/)
-        .map(block => {
-            const raw = block.trim();
+        .map(block => block.trim())
+        .filter(block => block !== '')
+        .map(raw => {
             const safe = escapeHTML(raw);
             const headingMatch = raw.match(/^##\s+(.+)$/) || raw.match(/^==(.+)==$/);
             if (headingMatch) {
