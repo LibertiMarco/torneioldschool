@@ -161,9 +161,10 @@ function renderCards(players) {
         const metaPresenze = `<span>Presenze: ${p.presenze ?? 0}</span>`;
         const metaGol = `<span>&#x26BD; Gol: ${p.gol ?? 0}</span>`;
         const metaOrder = currentOrder === 'presenze' ? [metaPresenze, metaGol] : [metaGol, metaPresenze];
+        const detailUrl = `/giocatore_partite.php?id=${encodeURIComponent(p.id)}&tipo=${encodeURIComponent(currentOrder)}`;
 
         return `
-            <div class="leader-card">
+            <div class="leader-card" data-link="${detailUrl}" tabindex="0">
                 <div class="leader-rank">${posizione}</div>
                 <div class="leader-avatar">
                     <img src="${foto}" alt="${nomeCompleto}" onerror="this.onerror=null; this.src='${FALLBACK_AVATAR}';">
@@ -181,6 +182,26 @@ function renderCards(players) {
             </div>
         `;
     }).join('');
+
+    bindLeaderCardLinks();
+}
+
+function bindLeaderCardLinks() {
+    const cards = document.querySelectorAll('.leader-card[data-link]');
+    cards.forEach(card => {
+        const link = card.dataset.link;
+        if (!link) return;
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', () => {
+            window.location.href = link;
+        });
+        card.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                card.click();
+            }
+        });
+    });
 }
 
 function updatePagination(meta) {
