@@ -154,7 +154,8 @@ function renderCards(players) {
         const foto = p.foto || FALLBACK_AVATAR;
         const nomeCompleto = `${escapeHTML(p.nome)} ${escapeHTML(p.cognome)}`.trim();
         const ruolo = p.ruolo ? `<span class="leader-role">${escapeHTML(p.ruolo)}</span>` : '';
-        const team = p.squadra ? escapeHTML(p.squadra) : 'Squadra non assegnata';
+        const team = p.squadra ? escapeHTML(p.squadra) : '';
+        const teamLine = team ? `<div class="leader-team">${team}</div>` : '';
         // Usa entità HTML per evitare problemi di encoding
         const media = p.media_voti ? `<span>&#x2B50; Media voto: ${p.media_voti}</span>` : '';
         const metaPresenze = `<span>Presenze: ${p.presenze ?? 0}</span>`;
@@ -170,7 +171,7 @@ function renderCards(players) {
                 <div class="leader-main">
                     <div>
                         <div class="leader-name">${nomeCompleto} ${ruolo}</div>
-                        <div class="leader-team">${team}</div>
+                        ${teamLine}
                     </div>
                     <div class="leader-meta">
                         ${metaOrder.join(' ')}
