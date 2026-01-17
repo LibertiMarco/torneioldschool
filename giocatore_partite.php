@@ -135,7 +135,10 @@ function formatDate(dateStr, timeStr) {
 }
 
 function formatStage(match) {
-    if (match.giornata) {
+    const fase = (match.fase || '').toString().toUpperCase().trim();
+    const isPlayoff = fase === 'GOLD' || fase === 'SILVER';
+
+    if (match.giornata && !isPlayoff) {
         return `Giornata ${match.giornata}`;
     }
     const parts = [];
