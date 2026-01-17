@@ -2,6 +2,12 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+if (!isset($_SESSION['user_id'])) {
+    $back = $_SERVER['REQUEST_URI'] ?? '/classifica_giocatori.php';
+    $_SESSION['redirect_after_login'] = $back;
+    header("Location: /login.php");
+    exit;
+}
 
 require_once __DIR__ . '/includi/seo.php';
 

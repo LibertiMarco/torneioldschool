@@ -1,6 +1,15 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+if (!isset($_SESSION['user_id'])) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Autenticazione richiesta']);
+    exit;
+}
+
 require_once __DIR__ . '/../includi/db.php';
 
 if (!$conn || $conn->connect_error) {
