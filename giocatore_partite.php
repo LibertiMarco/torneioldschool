@@ -137,6 +137,7 @@ function formatDate(dateStr, timeStr) {
 function formatStage(match) {
     const fase = (match.fase || '').toString().toUpperCase().trim();
     const isPlayoff = fase === 'GOLD' || fase === 'SILVER';
+    const faseLeg = (match.fase_leg || '').toString().toUpperCase().trim();
 
     if (match.giornata && !isPlayoff) {
         return `Giornata ${match.giornata}`;
@@ -144,7 +145,12 @@ function formatStage(match) {
     const parts = [];
     if (match.fase) parts.push(match.fase);
     if (match.fase_round) parts.push(match.fase_round);
-    if (match.fase_leg) parts.push(match.fase_leg);
+    if (match.fase_leg) {
+        const isSingleLeg = faseLeg === 'UNICA';
+        if (!(isPlayoff && isSingleLeg)) {
+            parts.push(match.fase_leg);
+        }
+    }
     return parts.length ? parts.join(' - ') : '';
 }
 
