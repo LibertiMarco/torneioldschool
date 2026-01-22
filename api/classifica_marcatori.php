@@ -30,11 +30,12 @@ $sql = "
     FROM squadre_giocatori sg
     JOIN squadre s ON s.id = sg.squadra_id AND s.torneo = ?
     JOIN giocatori g ON g.id = sg.giocatore_id
-    LEFT JOIN partita_giocatore pg ON pg.giocatore_id = g.id
-    LEFT JOIN partite p 
+    JOIN partita_giocatore pg ON pg.giocatore_id = g.id
+    JOIN partite p 
       ON p.id = pg.partita_id
      AND p.torneo = s.torneo
      AND (p.squadra_casa = s.nome OR p.squadra_ospite = s.nome)
+    WHERE 1=1
       $phaseClause
     GROUP BY sg.id
     HAVING SUM(pg.goal) > 0
