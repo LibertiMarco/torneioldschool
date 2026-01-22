@@ -24,23 +24,19 @@ $sql = "
         s.nome AS squadra,
         s.logo AS logo,
         COALESCE(g.foto, sg.foto, s.logo) AS foto,
-        p.torneo AS torneo,
+        s.torneo AS torneo,
         SUM(pg.goal) AS gol,
         SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END) AS presenze
-    FROM partita_giocatore pg
-    JOIN partite p ON p.id = pg.partita_id
-    /* squadra della partita nel torneo corrente (casa o ospite) */
-    JOIN squadre s 
-      ON s.torneo = p.torneo
-     AND s.nome IN (p.squadra_casa, p.squadra_ospite)
-    /* associazione giocatore-squadra (se esiste) per foto dedicata */
-    LEFT JOIN squadre_giocatori sg 
-      ON sg.squadra_id = s.id
-     AND sg.giocatore_id = pg.giocatore_id
-    JOIN giocatori g ON g.id = pg.giocatore_id
-    WHERE p.torneo = ?
+    FROM squadre_giocatori sg
+    JOIN squadre s ON s.id = sg.squadra_id AND s.torneo = ?
+    JOIN giocatori g ON g.id = sg.giocatore_id
+    LEFT JOIN partita_giocatore pg ON pg.giocatore_id = g.id
+    LEFT JOIN partite p 
+      ON p.id = pg.partita_id
+     AND p.torneo = s.torneo
+     AND (p.squadra_casa = s.nome OR p.squadra_ospite = s.nome)
       $phaseClause
-    GROUP BY g.id, s.id
+    GROUP BY sg.id
     HAVING SUM(pg.goal) > 0
     ORDER BY gol DESC, presenze DESC, g.cognome ASC, g.nome ASC
 ";
