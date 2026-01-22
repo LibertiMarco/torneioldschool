@@ -15,7 +15,10 @@ if ($torneo === '') {
 $limit = $limit > 0 ? min($limit, 100) : 20;
 
 // Per Coppa d'Africa contiamo anche la fase finale, per gli altri solo fase REGULAR (anche se fase vuota o \"GIRONE\")
-$phaseClause = ($torneo === 'Coppadafrica') ? '' : "AND UPPER(CASE WHEN TRIM(p.fase) IN ('', 'GIRONE') THEN 'REGULAR' ELSE TRIM(p.fase) END) = 'REGULAR'";
+// Uso COALESCE per includere anche valori NULL di fase come regular, evitando di escludere partite registrate senza fase.
+$phaseClause = ($torneo === 'Coppadafrica')
+    ? ''
+    : "AND UPPER(CASE WHEN TRIM(COALESCE(p.fase, '')) IN ('', 'GIRONE') THEN 'REGULAR' ELSE TRIM(COALESCE(p.fase, '')) END) = 'REGULAR'";
 
 $sql = "
     SELECT 
