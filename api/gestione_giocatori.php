@@ -19,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require('admin_giocatori');
 }
 $currentAction = $_GET['action'] ?? 'crea';
+$currentAssocOp = isset($_GET['assoc_op']) ? trim($_GET['assoc_op']) : '';
 
 // Azzera tutte le statistiche globali e per squadra
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['azzera_totali'])) {
@@ -323,10 +324,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['associa_squadra'])) {
         }
 
         $redirectParams = $assocExists ? ['assoc_exists' => 1] : [];
+        $redirectParams['assoc_op'] = 'aggiungi';
         redirectGestione('associazioni', $redirectParams);
     }
 
-    redirectGestione('associazioni');
+    redirectGestione('associazioni', ['assoc_op' => 'aggiungi']);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['modifica_associazione'])) {
@@ -355,7 +357,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['modifica_associazione
             $pivot->assegna($giocatoreAssoc, $squadraAssoc, $fotoAssoc, $stats, $removeFoto, $isCaptain);
         }
 
-        redirectGestione('associazioni');
+        redirectGestione('associazioni', ['assoc_op' => 'modifica']);
     }
 
 // --- DISSOCIA ---
@@ -367,7 +369,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dissocia_squadra'])) 
         $pivot->dissocia($giocatoreId, $squadraId);
     }
 
-    redirectGestione('associazioni');
+    redirectGestione('associazioni', ['assoc_op' => 'rimuovi']);
 }
 
 // --- ELIMINA ---
@@ -688,6 +690,7 @@ $giocatoriJson = htmlspecialchars(
         </select>
       </div>
 <input type="hidden" id="currentAction" value="<?= htmlspecialchars($currentAction) ?>">
+<input type="hidden" id="assocOpParam" value="<?= htmlspecialchars($currentAssocOp) ?>">
 
 <!-- ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FORM CREA -->
 <form method="POST" class="admin-form form-crea" enctype="multipart/form-data">
@@ -1191,6 +1194,7 @@ const modAssocCapitano = document.getElementById("mod_assoc_capitano");
 const modAssocRuolo = document.getElementById("mod_assoc_ruolo");
 const ruoloAssocia = document.getElementById("ruolo_associa");
 const assocOperationSelect = document.getElementById("assocOperation");
+const assocOpParam = (document.getElementById("assocOpParam")?.value || "").trim();
 const assocFormAdd = document.querySelector(".assoc-form-add");
 const assocFormEdit = document.querySelector(".assoc-form-edit");
 const assocFormRemove = document.querySelector(".assoc-form-remove");
@@ -1425,17 +1429,18 @@ function saveAssocOperation(val) {
     }
 }
 
-function restoreAssocOperation() {
+function restoreAssocOperation(forced) {
     let stored = "";
     try {
         stored = localStorage.getItem(ASSOC_OP_KEY) || "";
     } catch (err) {
         stored = "";
     }
-    if (stored && assocOperationSelect) {
-        assocOperationSelect.value = stored;
-        mostraFormAssoc(stored);
+    const op = (forced || stored || "aggiungi");
+    if (assocOperationSelect) {
+        assocOperationSelect.value = op;
     }
+    return op;
 }
 
 function saveModAssocState(torneoVal, squadraVal, giocatoreVal) {
@@ -1448,7 +1453,7 @@ function saveModAssocState(torneoVal, squadraVal, giocatoreVal) {
     }
 }
 
-async function restoreModAssocState() {
+async function restoreModAssocState(forcedOp = "") {
     if (!modAssocTorneo || !modAssocSquadra || !modAssocGiocatore) return;
     let savedTorneo = "";
     let savedSquadra = "";
@@ -1462,6 +1467,11 @@ async function restoreModAssocState() {
     }
 
     if (!savedTorneo) return;
+
+    const forced = (forcedOp || "").trim();
+    if (forced && forced !== "modifica") {
+        return; // richiesto esplicitamente di rimanere su altra operazione
+    }
 
     // Se il torneo salvato non esiste piu', puliamo lo stato
     const torneoExists = Array.from(modAssocTorneo.options || []).some(o => o.value === savedTorneo);
@@ -1715,13 +1725,16 @@ function mostraFormAssoc(val) {
     if (val === 'rimuovi' && assocFormRemove) assocFormRemove.classList.remove('hidden');
 }
 
-restoreAssocOperation();
-mostraFormAssoc(assocOperationSelect?.value || 'aggiungi');
+const initialAssocOp = restoreAssocOperation(assocOpParam);
+mostraFormAssoc(initialAssocOp || 'aggiungi');
+if (initialAssocOp) {
+    saveAssocOperation(initialAssocOp);
+}
 assocOperationSelect?.addEventListener('change', e => {
     mostraFormAssoc(e.target.value);
     saveAssocOperation(e.target.value);
 });
-restoreModAssocState();
+restoreModAssocState(assocOpParam);
 
 selectGiocatore?.addEventListener("change", async e => {
     const id = e.target.value;

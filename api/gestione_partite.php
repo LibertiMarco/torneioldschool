@@ -238,7 +238,12 @@ function ricostruisci_classifica_da_partite(mysqli $conn, string $torneo): void 
     FROM partite
     WHERE torneo = ?
       AND giocata = 1
-      AND UPPER(CASE WHEN TRIM(fase) IN ('', 'GIRONE') THEN 'REGULAR' ELSE TRIM(fase) END) = 'REGULAR'
+      AND UPPER(
+            CASE
+              WHEN TRIM(COALESCE(fase, '')) IN ('', 'GIRONE') THEN 'REGULAR'
+              ELSE TRIM(COALESCE(fase, ''))
+            END
+          ) = 'REGULAR'
   ");
   if (!$sel) return;
   $sel->bind_param('s', $torneo);
