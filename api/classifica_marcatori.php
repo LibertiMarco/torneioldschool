@@ -4,15 +4,11 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includi/db.php';
 
 $torneo = trim($_GET['torneo'] ?? '');
-$limit = (int)($_GET['limit'] ?? 20);
-
 if ($torneo === '') {
     http_response_code(400);
     echo json_encode(['error' => 'Parametro torneo mancante']);
     exit;
 }
-
-$limit = $limit > 0 ? min($limit, 100) : 20;
 
 // Per Coppa d'Africa contiamo anche la fase finale, per gli altri solo fase REGULAR (anche se fase vuota o \"GIRONE\")
 // Uso COALESCE per includere anche valori NULL di fase come regular, evitando di escludere partite registrate senza fase.
@@ -25,24 +21,34 @@ $sql = "
         g.id,
         g.nome,
         g.cognome,
-        s.nome AS squadra,
-        s.logo AS logo,
+        COALESCE(s.nome, s_match.nome) AS squadra,
+        COALESCE(s.logo, s_match.logo) AS logo,
         COALESCE(sg.foto, g.foto) AS foto,
-        s.torneo,
+        COALESCE(s.torneo, s_match.torneo) AS torneo,
         SUM(pg.goal) AS gol,
         SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END) AS presenze
     FROM partita_giocatore pg
     JOIN partite p ON p.id = pg.partita_id
-    JOIN squadre_giocatori sg ON sg.giocatore_id = pg.giocatore_id
-    JOIN squadre s ON s.id = sg.squadra_id AND s.torneo = ?
-    JOIN giocatori g ON g.id = sg.giocatore_id
+    /* relazione giocatore-squadra preferita: solo roster del torneo corrente */
+    LEFT JOIN (
+        SELECT sg_inner.*
+        FROM squadre_giocatori sg_inner
+        JOIN squadre s_inner ON s_inner.id = sg_inner.squadra_id
+        WHERE s_inner.torneo = ?
+    ) AS sg ON sg.giocatore_id = pg.giocatore_id
+    LEFT JOIN squadre s 
+        ON s.id = sg.squadra_id
+    /* se non troviamo l'associazione nel torneo corrente, proviamo a mappare via nome squadra della partita */
+    LEFT JOIN squadre s_match 
+        ON s_match.torneo = ?
+       AND s_match.nome IN (p.squadra_casa, p.squadra_ospite)
+    JOIN giocatori g ON g.id = pg.giocatore_id
     WHERE p.torneo = ?
-      AND (p.squadra_casa = s.nome OR p.squadra_ospite = s.nome)
+      AND COALESCE(s.id, s_match.id) IS NOT NULL
       $phaseClause
-    GROUP BY g.id, s.id, s.torneo
+    GROUP BY g.id, COALESCE(s.id, s_match.id)
     HAVING SUM(pg.goal) > 0
     ORDER BY gol DESC, presenze DESC, g.cognome ASC, g.nome ASC
-    LIMIT ?
 ";
 
 $stmt = $conn->prepare($sql);
@@ -52,7 +58,7 @@ if (!$stmt) {
     exit;
 }
 
-$stmt->bind_param('ssi', $torneo, $torneo, $limit);
+$stmt->bind_param('sss', $torneo, $torneo, $torneo);
 $stmt->execute();
 $res = $stmt->get_result();
 
