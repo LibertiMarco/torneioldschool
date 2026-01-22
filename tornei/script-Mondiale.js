@@ -260,7 +260,8 @@ const roundLabelByKey = {
 
 async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REGULAR") {
   try {
-    const faseParam = faseSelezionata && faseSelezionata !== "REGULAR" ? `&fase=${faseSelezionata}` : "";
+    const fase = (faseSelezionata || "REGULAR").toUpperCase();
+    const faseParam = fase !== "REGULAR" ? `&fase=${fase}` : "";
     const res = await fetch(`/api/get_partite.php?torneo=${TORNEO}${faseParam}`);
     const data = await res.json();
 
@@ -271,7 +272,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
 
     // Filtra per mostrare solo la fase scelta (per REGULAR escludiamo GOLD/SILVER)
     let dataFiltrata = data;
-    if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
+    if (fase === "REGULAR") {
       dataFiltrata = {};
       Object.keys(data || {}).forEach(g => {
         const matches = (data[g] || []).filter(p => (p.fase || "REGULAR").toUpperCase() === "REGULAR");
@@ -287,14 +288,14 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
     const giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
 
     if (wrapperGiornata) {
-      const isRegular = (faseSelezionata || "").toUpperCase() === "REGULAR";
+      const isRegular = fase === "REGULAR";
       wrapperGiornata.style.display = isRegular ? "flex" : "none";
     }
 
     if (giornataSelect) {
       if (giornataSelect.options.length <= 1 || giornataSelezionata === "") {
         giornataSelect.innerHTML = '<option value="">Tutte</option>';
-        if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
+        if (fase === "REGULAR") {
           giornateDisponibili.forEach(g => {
             const opt = document.createElement("option");
             opt.value = g;
@@ -306,7 +307,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
     }
 
     // Filtra le giornate mostrate
-    const giornateDaMostrare = giornataSelezionata && faseSelezionata === "REGULAR"
+    const giornateDaMostrare = giornataSelezionata && fase === "REGULAR"
       ? [giornataSelezionata]
       : giornateDisponibili;
 
@@ -315,7 +316,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       giornataDiv.classList.add("giornata");
 
       const titolo = document.createElement("h3");
-      if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
+      if (fase === "REGULAR") {
         titolo.textContent = `Giornata ${numGiornata}`;
       } else {
         const labelRound = roundLabelByKey[String(numGiornata)] || "Fase eliminazione";

@@ -357,14 +357,16 @@ function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], selecte
     giornateDisponibili.forEach(g => {
       select.add(new Option(`Giornata ${g}`, g));
     });
-    const first = giornateDisponibili[0] || "";
-    select.value = String(selected || first);
+    const latest = giornateDisponibili.reduce((max, g) => (max === null || Number(g) > Number(max) ? g : max), null);
+    const fallback = latest !== null ? latest : "";
+    select.value = String(selected || fallback);
     return;
   }
 
   const disponibili = new Set(giornateDisponibili.map(String));
   const orderedRounds = ["1", "2", "3", "4"]; // Finale -> Ottavi
   let firstVal = "";
+  const latestAvailable = giornateDisponibili.reduce((max, g) => (max === null || Number(g) > Number(max) ? g : max), null);
 
   orderedRounds.forEach(g => {
     if (disponibili.has(g)) {
@@ -381,13 +383,14 @@ function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], selecte
     });
   }
 
-  const target = selected ? String(selected) : firstVal;
+  const target = selected ? String(selected) : (latestAvailable !== null ? String(latestAvailable) : firstVal);
   if (target) select.value = target;
 }
 
 async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REGULAR") {
   try {
-    const faseParam = faseSelezionata && faseSelezionata !== "REGULAR" ? `&fase=${faseSelezionata}` : "";
+    const fase = (faseSelezionata || "REGULAR").toUpperCase();
+    const faseParam = fase !== "REGULAR" ? `&fase=${fase}` : "";
     const res = await fetch(`/api/get_partite.php?torneo=${TORNEO}${faseParam}`);
     const data = await res.json();
 
@@ -398,7 +401,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
 
     // Filtra per mostrare solo la fase scelta (per REGULAR escludiamo GOLD/SILVER)
     let dataFiltrata = data;
-    if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
+    if (fase === "REGULAR") {
       dataFiltrata = {};
       Object.keys(data || {}).forEach(g => {
         const matches = (data[g] || []).filter(p => (p.fase || "REGULAR").toUpperCase() === "REGULAR");
@@ -413,7 +416,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
     const wrapperGiornata = document.getElementById("wrapperGiornataSelect");
     const giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
 
-    updateGiornataFilter(faseSelezionata, giornateDisponibili, giornataSelezionata);
+    updateGiornataFilter(fase, giornateDisponibili, giornataSelezionata);
 
     const selectedRound = giornataSelect ? String(giornataSelect.value || "") : "";
     const giornateDaMostrare = selectedRound ? [selectedRound] : giornateDisponibili;
