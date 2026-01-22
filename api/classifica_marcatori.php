@@ -21,32 +21,26 @@ $sql = "
         g.id,
         g.nome,
         g.cognome,
-        COALESCE(s.nome, s_match.nome) AS squadra,
-        COALESCE(s.logo, s_match.logo) AS logo,
-        COALESCE(sg.foto, g.foto) AS foto,
-        COALESCE(s.torneo, s_match.torneo) AS torneo,
+        s.nome AS squadra,
+        s.logo AS logo,
+        COALESCE(g.foto, sg.foto, s.logo) AS foto,
+        p.torneo AS torneo,
         SUM(pg.goal) AS gol,
         SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END) AS presenze
     FROM partita_giocatore pg
     JOIN partite p ON p.id = pg.partita_id
-    /* relazione giocatore-squadra preferita: solo roster del torneo corrente */
-    LEFT JOIN (
-        SELECT sg_inner.*
-        FROM squadre_giocatori sg_inner
-        JOIN squadre s_inner ON s_inner.id = sg_inner.squadra_id
-        WHERE s_inner.torneo = ?
-    ) AS sg ON sg.giocatore_id = pg.giocatore_id
-    LEFT JOIN squadre s 
-        ON s.id = sg.squadra_id
-    /* se non troviamo l'associazione nel torneo corrente, proviamo a mappare via nome squadra della partita */
-    LEFT JOIN squadre s_match 
-        ON s_match.torneo = ?
-       AND s_match.nome IN (p.squadra_casa, p.squadra_ospite)
+    /* squadra della partita nel torneo corrente (casa o ospite) */
+    JOIN squadre s 
+      ON s.torneo = p.torneo
+     AND s.nome IN (p.squadra_casa, p.squadra_ospite)
+    /* associazione giocatore-squadra (se esiste) per foto dedicata */
+    LEFT JOIN squadre_giocatori sg 
+      ON sg.squadra_id = s.id
+     AND sg.giocatore_id = pg.giocatore_id
     JOIN giocatori g ON g.id = pg.giocatore_id
     WHERE p.torneo = ?
-      AND COALESCE(s.id, s_match.id) IS NOT NULL
       $phaseClause
-    GROUP BY g.id, COALESCE(s.id, s_match.id)
+    GROUP BY g.id, s.id
     HAVING SUM(pg.goal) > 0
     ORDER BY gol DESC, presenze DESC, g.cognome ASC, g.nome ASC
 ";
@@ -58,7 +52,7 @@ if (!$stmt) {
     exit;
 }
 
-$stmt->bind_param('sss', $torneo, $torneo, $torneo);
+$stmt->bind_param('s', $torneo);
 $stmt->execute();
 $res = $stmt->get_result();
 
