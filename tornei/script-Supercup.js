@@ -421,7 +421,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       giornataDiv.appendChild(titolo);
 
             const partiteGiornata = dataFiltrata[numGiornata] || [];
-      const isSemifinale = String(numGiornata) === "2";
+      const isSemifinale = fase !== "REGULAR" && String(numGiornata) === "2";
 
       const renderPartita = (container, partita) => {
         const partitaDiv = document.createElement("div");
