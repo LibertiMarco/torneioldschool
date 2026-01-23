@@ -797,7 +797,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           $successo = 'Partita aggiornata correttamente.';
           $haAttivatoGiocata = ($giocata === 1 && (int)$giocataPrecedente !== 1);
           $haDisattivatoGiocata = ($giocata === 0 && (int)$giocataPrecedente === 1);
-          if (($haAttivatoGiocata || $haDisattivatoGiocata) && strtoupper($fase) === 'REGULAR') {
+          // Ricalcolo sempre la classifica se la partita e' (o era) segnata come giocata
+          // per riflettere eventuali modifiche a gol/squadre senza dover premere "ricalcola".
+          if ($giocata === 1 || (int)$giocataPrecedente === 1) {
             ricostruisci_classifica_da_partite($conn, $torneo);
           }
           inviaNotificaEsito($conn, $id, [

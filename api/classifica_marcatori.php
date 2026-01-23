@@ -23,7 +23,7 @@ $sql = "
         g.cognome,
         s.nome AS squadra,
         s.logo AS logo,
-        COALESCE(g.foto, sg.foto, s.logo) AS foto,
+        COALESCE(sg.foto, g.foto, s.logo) AS foto,
         s.torneo AS torneo,
         SUM(pg.goal) AS gol,
         SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END) AS presenze
