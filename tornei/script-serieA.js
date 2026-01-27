@@ -3,6 +3,7 @@ const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000
 const teamLogos = {};
 const favState = { tournaments: new Set(), teams: new Set() };
 let currentRosaTeam = "";
+let partiteCache = null;
 
 function teamKey(name = "") {
   return `${TORNEO}|||${name}`;
@@ -103,6 +104,130 @@ function formattaData(data) {
   return `${giornoSettimana} ${giorno}/${mese}`;
 }
 
+function formattaDataOra(data, ora) {
+  const base = formattaData(data);
+  if (ora && ora !== "00:00:00") return `${base} - ${ora.slice(0, 5)}`;
+  return base;
+}
+
+function faseKey(fase = "") {
+  const f = (fase || "").trim().toUpperCase();
+  return f === "" || f === "GIRONE" ? "REGULAR" : f;
+}
+
+async function loadPartiteTorneo() {
+  if (partiteCache) return partiteCache;
+  try {
+    const res = await fetch(`/api/get_partite.php?torneo=${TORNEO}&fase=REGULAR`);
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : Object.values(data || {}).flat();
+    partiteCache = list;
+    return list;
+  } catch (e) {
+    console.error("Errore nel caricamento partite torneo", e);
+    partiteCache = [];
+    return [];
+  }
+}
+
+function ensureTeamMatchesStyle() {
+  if (document.getElementById("team-matches-style")) return;
+  const style = document.createElement("style");
+  style.id = "team-matches-style";
+  style.textContent = `
+    #teamMatchesModal {position:fixed; inset:0; background:rgba(12,24,38,0.65); display:flex; align-items:flex-start; justify-content:center; padding:32px 16px; z-index:9999;}
+    #teamMatchesCard {width:100%; max-width:560px; background:#fff; border-radius:14px; padding:16px 18px 10px; box-shadow:0 14px 36px rgba(0,0,0,0.18); border:1px solid #d7e0ec;}
+    #teamMatchesHeader {display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px;}
+    #teamMatchesHeader h3 {margin:0; font-size:18px; color:#102033;}
+    #teamMatchesClose {border:none; background:#f0f4fa; width:34px; height:34px; border-radius:10px; cursor:pointer; font-size:18px; line-height:1;}
+    #teamMatchesList {list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; max-height:60vh; overflow:auto;}
+    #teamMatchesList li {padding:10px 12px; border:1px solid #e5edf7; border-radius:10px; display:flex; justify-content:space-between; gap:12px; align-items:center; background:#f9fbff;}
+    #teamMatchesList .match-meta {display:block; color:#6b7892; font-size:12px;}
+    #teamMatchesList .match-vs {font-weight:700; color:#0f2742;}
+    #teamMatchesList .score {font-weight:800; font-size:15px; padding:6px 10px; border-radius:10px; min-width:64px; text-align:center;}
+    #teamMatchesList .score.win {background:#e7f7ed; color:#1f7a4d;}
+    #teamMatchesList .score.draw {background:#f4f4f4; color:#555;}
+    #teamMatchesList .score.lose {background:#ffecef; color:#c12d3c;}
+    #teamMatchesEmpty {padding:8px 10px; color:#6b7892;}
+  `;
+  document.head.appendChild(style);
+}
+
+function ensureTeamMatchesModal() {
+  ensureTeamMatchesStyle();
+  let modal = document.getElementById("teamMatchesModal");
+  if (modal) return modal;
+  modal = document.createElement("div");
+  modal.id = "teamMatchesModal";
+  modal.style.display = "none";
+  modal.innerHTML = `
+    <div id="teamMatchesCard" role="dialog" aria-modal="true">
+      <div id="teamMatchesHeader">
+        <h3>Partite squadra</h3>
+        <button id="teamMatchesClose" aria-label="Chiudi">×</button>
+      </div>
+      <ul id="teamMatchesList"></ul>
+      <div id="teamMatchesEmpty" style="display:none;"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", (e) => {
+    if (e.target.id === "teamMatchesModal") modal.style.display = "none";
+  });
+  document.getElementById("teamMatchesClose").addEventListener("click", () => {
+    modal.style.display = "none";
+  });
+  return modal;
+}
+
+function esitoLabel(p, squadra) {
+  const gf = squadra === p.squadra_casa ? p.gol_casa : p.gol_ospite;
+  const gs = squadra === p.squadra_casa ? p.gol_ospite : p.gol_casa;
+  if (gf === null || gf === undefined || gs === null || gs === undefined) return { label: "ND", cls: "draw" };
+  if (gf > gs) return { label: "V", cls: "win" };
+  if (gf === gs) return { label: "N", cls: "draw" };
+  return { label: "P", cls: "lose" };
+}
+
+async function mostraPartiteSquadra(squadra) {
+  const modal = ensureTeamMatchesModal();
+  const listEl = document.getElementById("teamMatchesList");
+  const emptyEl = document.getElementById("teamMatchesEmpty");
+  if (!listEl || !emptyEl) return;
+
+  listEl.innerHTML = "";
+  emptyEl.style.display = "none";
+  document.querySelector("#teamMatchesHeader h3").textContent = `Partite ${squadra}`;
+
+  const partite = (await loadPartiteTorneo()).filter(p => faseKey(p.fase) === "REGULAR" && (p.squadra_casa === squadra || p.squadra_ospite === squadra));
+  partite.sort((a, b) => (a.data_partita || "").localeCompare(b.data_partita || "") || (a.ora_partita || "").localeCompare(b.ora_partita || ""));
+
+  if (!partite.length) {
+    emptyEl.textContent = "Nessuna partita giocata in Regular Season per questa squadra.";
+    emptyEl.style.display = "block";
+  } else {
+    partite.forEach(p => {
+      const casa = p.squadra_casa === squadra;
+      const avversario = casa ? p.squadra_ospite : p.squadra_casa;
+      const score = (p.gol_casa === null || p.gol_casa === undefined || p.gol_ospite === null || p.gol_ospite === undefined)
+        ? "—"
+        : `${p.gol_casa} - ${p.gol_ospite}`;
+      const esito = esitoLabel(p, squadra);
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <div>
+          <span class="match-vs">${casa ? "Casa" : "Trasferta"} vs ${avversario}</span>
+          <span class="match-meta">${formattaDataOra(p.data_partita, p.ora_partita)} · ${p.campo || "Campo da definire"}</span>
+        </div>
+        <div class="score ${esito.cls}" title="Esito">${score} ${esito.label !== "ND" ? "(" + esito.label + ")" : ""}</div>
+      `;
+      listEl.appendChild(li);
+    });
+  }
+
+  modal.style.display = "flex";
+}
+
 // Mappa numero giornata -> nome fase playoff
 function nomeFaseDaGiornata(g) {
   const n = parseInt(g, 10);
@@ -135,25 +260,12 @@ async function caricaClassifica(torneoSlug = TORNEO) {
 
     mostraClassifica(data);
 
-    // Rende cliccabili le squadre della classifica
+    // Clic su una squadra: mostra elenco partite giocate in Regular Season
     document.querySelectorAll("#tableClassifica tbody .team-cell").forEach(cell => {
       cell.style.cursor = "pointer";
-    
       cell.addEventListener("click", () => {
         const squadra = cell.querySelector(".team-name").textContent.trim();
-      
-        // Cambia TAB
-        document.querySelector('[data-tab="rose"]').click();
-      
-        // Seleziona la squadra nel dropdown
-        const select = document.getElementById("selectSquadra");
-        select.value = squadra;
-      
-        // Carica la rosa della squadra
-        caricaRosaSquadra(squadra);
-      
-        // Scroll alla sezione rose
-        document.getElementById("rose").scrollIntoView({ behavior: "smooth" });
+        mostraPartiteSquadra(squadra);
       });
     });
   } catch (error) {
