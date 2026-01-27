@@ -168,7 +168,7 @@ function ricalcolaStatistiche(mysqli $conn, int $partitaId, int $giocatoreId): v
  * Somma i goal per squadra (casa/ospite) e li scrive su partite.gol_casa / partite.gol_ospite.
  */
 function aggiornaGolPartita(mysqli $conn, int $partitaId): ?array {
-    $partInfo = $conn->prepare("SELECT torneo, fase, squadra_casa, squadra_ospite, gol_casa AS old_gol_casa, gol_ospite AS old_gol_ospite FROM partite WHERE id=?");
+    $partInfo = $conn->prepare("SELECT torneo, fase, squadra_casa, squadra_ospite, giocata AS old_giocata, gol_casa AS old_gol_casa, gol_ospite AS old_gol_ospite FROM partite WHERE id=?");
     $partInfo->bind_param("i", $partitaId);
     $partInfo->execute();
     $p = $partInfo->get_result()->fetch_assoc();
@@ -224,6 +224,7 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId): ?array {
         'squadra_ospite' => $p['squadra_ospite'],
         'gol_casa' => $golCasa,
         'gol_ospite' => $golOsp,
+        'old_giocata' => (int)($p['old_giocata'] ?? 0),
         'old_gol_casa' => (int)($p['old_gol_casa'] ?? 0),
         'old_gol_ospite' => (int)($p['old_gol_ospite'] ?? 0)
     ];
@@ -238,7 +239,8 @@ function aggiornaClassificaDaInfo(?array $info): void {
         'squadra_ospite' => $info['squadra_ospite'],
         'gol_casa' => $info['old_gol_casa'] ?? 0,
         'gol_ospite' => $info['old_gol_ospite'] ?? 0,
-        'fase' => $info['fase'] ?? 'REGULAR'
+        'fase' => $info['fase'] ?? 'REGULAR',
+        'era_giocata' => (int)($info['old_giocata'] ?? 0) === 1
     ];
     $partitaModel->aggiornaClassifica(
         $info['torneo'],

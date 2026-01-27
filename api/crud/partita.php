@@ -197,6 +197,8 @@ class Partita {
         $partitaId = null
     ) {
         $faseCorrente = $this->normalizeFase($fase);
+        // True se la partita era già segnata come giocata prima di questo aggiornamento
+        $eraGiocataPrima = isset($vecchiDati['era_giocata']) ? (bool)$vecchiDati['era_giocata'] : true;
 
         if ($partitaId !== null && !$this->isPartitaGiocata((int)$partitaId)) {
             // Se la partita non è segnata come giocata, non aggiornare la classifica
@@ -204,7 +206,8 @@ class Partita {
         }
 
         $vecchiaFase = $this->normalizeFase($vecchiDati['fase'] ?? null);
-        if ($vecchiDati && $vecchiaFase === 'REGULAR') {
+        // Annulla il vecchio risultato solo se era stato effettivamente conteggiato (giocata=1)
+        if ($vecchiDati && $eraGiocataPrima && $vecchiaFase === 'REGULAR') {
             $this->annullaVecchioRisultato(
                 $vecchiDati['torneo'],
                 $vecchiDati['squadra_casa'],
