@@ -1,4 +1,4 @@
-// ====================== PARAMETRI URL ======================
+﻿// ====================== PARAMETRI URL ======================
 const params     = new URLSearchParams(window.location.search);
 const ID_PARTITA = params.get("id");
 const TORNEO     = params.get("torneo");
@@ -34,6 +34,13 @@ function escapeHtml(str = "") {
       .replace(/'/g, "&#039;");
 }
 
+const ICONS = {
+    goal: "\u26BD",
+    autogol: "\uD83D\uDD34",
+    giallo: "\uD83D\uDFE8",
+    rosso: "\uD83D\uDFE5",
+};
+
 // ====================== START ======================
 document.addEventListener("DOMContentLoaded", async () => {
     if (!ID_PARTITA || !TORNEO) {
@@ -47,7 +54,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // =============================================================
-// ƒo. CARICA CARD PARTITA
+// Æ’o. CARICA CARD PARTITA
 // =============================================================
 async function caricaPartita() {
     let p = null;
@@ -138,7 +145,7 @@ async function caricaPartita() {
 }
 
 // =============================================================
-// ƒo. EVENTI GIOCATORI ƒ?" CARD DIVISA A SINISTRA / DESTRA
+// Æ’o. EVENTI GIOCATORI Æ’?" CARD DIVISA A SINISTRA / DESTRA
 // =============================================================
 async function caricaEventiGiocatori() {
 
@@ -159,6 +166,8 @@ async function caricaEventiGiocatori() {
                 nome: e.nome,
                 cognome: e.cognome,
                 goal: (+e.goal || 0),
+                autogol: (+e.autogol || 0),
+                assist: (+e.assist || 0),
                 gialli: (+e.cartellino_giallo || 0),
                 rossi: (+e.cartellino_rosso || 0),
                 voto: e.voto,
@@ -171,14 +180,17 @@ async function caricaEventiGiocatori() {
 
         const sortFn = (a, b) =>
             (b.goal - a.goal) ||
+            (b.autogol - a.autogol) ||
             (b.gialli - a.gialli) ||
             (b.rossi - a.rossi);
 
         byTeam[home].sort(sortFn);
         byTeam[away].sort(sortFn);
 
-        const homeGoals = byTeam[home].reduce((sum, g) => sum + (g.goal || 0), 0);
-        const awayGoals = byTeam[away].reduce((sum, g) => sum + (g.goal || 0), 0);
+        const autogolHome = byTeam[home].reduce((sum, g) => sum + (g.autogol || 0), 0);
+        const autogolAway = byTeam[away].reduce((sum, g) => sum + (g.autogol || 0), 0);
+        const homeGoals = byTeam[home].reduce((sum, g) => sum + (g.goal || 0), 0) + autogolAway;
+        const awayGoals = byTeam[away].reduce((sum, g) => sum + (g.goal || 0), 0) + autogolHome;
         const scoreHomeEl = document.getElementById("scoreHome");
         const scoreAwayEl = document.getElementById("scoreAway");
         if (scoreHomeEl) scoreHomeEl.textContent = homeGoals;
@@ -192,16 +204,23 @@ async function caricaEventiGiocatori() {
             const list = Array.isArray(arr) ? arr : [];
             const filtered = showAllEventi
               ? list
-              : list.filter(g => (g.goal || 0) > 0 || (g.assist || 0) > 0 || (g.gialli || 0) > 0 || (g.rossi || 0) > 0);
+              : list.filter(g =>
+                  (g.goal || 0) > 0 ||
+                  (g.autogol || 0) > 0 ||
+                  (g.assist || 0) > 0 ||
+                  (g.gialli || 0) > 0 ||
+                  (g.rossi || 0) > 0
+                );
 
             if (!filtered.length) return `<div class="evento-mini-row muted">Nessun dato</div>`;
 
             return filtered.map(g => {
                 const abbrev = `${g.cognome} ${g.nome.charAt(0).toUpperCase()}.`;
                 const icons = [
-                  ...(new Array(g.goal || 0)).fill("⚽️"),
-                  ...(new Array(g.gialli || 0)).fill("🟨"),
-                  ...(new Array(g.rossi || 0)).fill("🟥"),
+                  ...(new Array(g.goal || 0)).fill(ICONS.goal),
+                  ...(new Array(g.autogol || 0)).fill(ICONS.autogol),
+                  ...(new Array(g.gialli || 0)).fill(ICONS.giallo),
+                  ...(new Array(g.rossi || 0)).fill(ICONS.rosso),
                 ].join("");
                 const hasVoto = g.voto !== null && g.voto !== undefined;
                 const voto = hasVoto ? `<span class="voto voto-pill">${formatVoto(g.voto)}</span>` : "";
@@ -266,3 +285,4 @@ async function caricaEventiGiocatori() {
         console.error("Errore eventi partita:", err);
     }
 }
+

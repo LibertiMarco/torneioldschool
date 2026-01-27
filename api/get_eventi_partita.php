@@ -16,6 +16,8 @@ if (!$match) {
 $stmt2 = $conn->prepare("
     SELECT 
         pg.goal,
+        pg.autogol,
+        pg.assist,
         pg.cartellino_giallo,
         pg.cartellino_rosso,
         pg.voto,
