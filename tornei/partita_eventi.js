@@ -36,10 +36,34 @@ function escapeHtml(str = "") {
 
 const ICONS = {
     goal: "\u26BD",
-    autogol: "\uD83D\uDD34",
+    autogol: '<span class="icon-autogol" title="Autogol">\u26BD</span>',
     giallo: "\uD83D\uDFE8",
     rosso: "\uD83D\uDFE5",
 };
+
+function ensureAutogolStyle() {
+    if (document.getElementById("autogol-icon-style")) return;
+    const style = document.createElement("style");
+    style.id = "autogol-icon-style";
+    style.textContent = `
+      .icon-autogol {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        margin-left: 2px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 32% 32%, #ffecec 0 38%, #d41414 40% 100%);
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1;
+        box-shadow: 0 0 0 1px #be0f0f, 0 0 0 3px rgba(189, 15, 15, 0.2);
+      }
+    `;
+    document.head.appendChild(style);
+}
 
 // ====================== START ======================
 document.addEventListener("DOMContentLoaded", async () => {
@@ -49,6 +73,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
+    ensureAutogolStyle();
     await caricaPartita();
     await caricaEventiGiocatori();
 });
