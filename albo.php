@@ -76,18 +76,6 @@ $pageSeo = [
         <option value="">Tutti i tornei</option>
       </select>
     </div>
-    <div class="albo-ad">
-      <!-- Pub orizz -->
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-8390787841690316"
-           data-ad-slot="3707275285"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-      <script>
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
-    </div>
     <div id="alboGrid" class="albo-grid">
       <p>Caricamento...</p>
     </div>
