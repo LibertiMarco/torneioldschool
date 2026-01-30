@@ -201,7 +201,7 @@ $captchaQuestion = captcha_generate('resend_form');?>
   <main class="resend-wrapper">
     <div class="resend-card">
       <h1>Reinvia email di conferma</h1>
-      <p>Inserisci la tua email. Se l'account non ├¿ ancora stato verificato, ti invieremo un nuovo link.</p>
+      <p>Inserisci la tua email. Se l'account non è ancora stato verificato, ti invieremo un nuovo link.</p>
 
       <?php if ($error): ?>
         <div class="error-message"><?= htmlspecialchars($error) ?></div>
