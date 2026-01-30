@@ -22,6 +22,7 @@ $emailField = trim($_POST['email'] ?? '');
 $captchaQuestion = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $fromPending = ($_POST['from_pending'] ?? '') === '1';
     if (!csrf_is_valid($_POST['_csrf'] ?? '', 'resend_form')) {
         $error = "Sessione scaduta. Ricarica e riprova.";
     } elseif (honeypot_triggered()) {
@@ -29,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!rate_limit_allow('resend_form', 3, 900)) {
         $wait = rate_limit_retry_after('resend_form', 900);
         $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
-    } elseif (!captcha_is_valid('resend_form', $_POST['captcha_answer'] ?? null)) {
+    } elseif (!$fromPending && !captcha_is_valid('resend_form', $_POST['captcha_answer'] ?? null)) {
         $error = "Verifica anti-spam non valida.";
     }
 

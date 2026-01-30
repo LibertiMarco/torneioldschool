@@ -95,7 +95,8 @@ $resendCsrf = csrf_get_token('resend_verification');
 
       <form method="POST" action="/resend_verification.php">
         <?= csrf_field('resend_form') ?>
-        <input type="email" name="email" required placeholder="Inserisci la tua email" value="<?= htmlspecialchars($emailPrefill) ?>">
+        <input type="hidden" name="from_pending" value="1">
+        <input type="email" name="email" required readonly value="<?= htmlspecialchars($emailPrefill) ?>" style="background:#f3f4f6; cursor:not-allowed;">
         <button type="submit">Reinvia email di conferma</button>
       </form>
 
