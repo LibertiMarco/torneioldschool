@@ -116,26 +116,38 @@ if (!function_exists('tos_mail_send')) {
 if (!function_exists('tos_smtp_send')) {
     function tos_smtp_send(string $host, int $port, string $secure, string $user, string $pass, string $fromEmail, string $to, string $subject, string $headers, string $body, string $returnPath): bool
     {
+        $smtpDebugFlag = getenv('SMTP_DEBUG') ?: '';
+        $debug = $smtpDebugFlag !== '' && strtolower($smtpDebugFlag) !== '0' && strtolower($smtpDebugFlag) !== 'false';
+        $logDebug = static function (string $msg) use ($debug): void {
+            if ($debug) {
+                error_log('[SMTP_DEBUG] ' . $msg);
+            }
+        };
+
         $protocolHost = ($secure === 'ssl') ? 'ssl://' . $host : $host;
         $fp = @stream_socket_client($protocolHost . ':' . $port, $errno, $errstr, 10);
         if (!$fp) {
             error_log("SMTP connect failed: {$errstr}");
             return false;
         }
+        $logDebug("Connected to {$protocolHost}:{$port}");
 
-        $read = function () use ($fp) {
+        $read = function () use ($fp, $logDebug) {
             $data = '';
             while ($line = fgets($fp, 515)) {
                 $data .= $line;
+                $logDebug('S: ' . rtrim($line));
                 if (isset($line[3]) && $line[3] === ' ') {
                     break;
                 }
             }
             return $data;
         };
-        $cmd = function (string $command, string $expectCode) use ($fp, $read) {
+        $cmd = function (string $command, string $expectCode) use ($fp, $read, $logDebug) {
+            $logDebug('C: ' . $command);
             fwrite($fp, $command . "\r\n");
             $resp = $read();
+            $logDebug('R: ' . rtrim($resp));
             return substr($resp, 0, 3) === $expectCode;
         };
 
