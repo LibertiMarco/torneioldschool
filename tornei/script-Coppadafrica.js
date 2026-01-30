@@ -247,10 +247,25 @@ async function caricaClassifica(torneoSlug = TORNEO) {
 
     // Clic su una squadra: mostra elenco partite giocate in Regular Season
     document.querySelectorAll("#tableClassificaA tbody .team-cell, #tableClassificaB tbody .team-cell").forEach(cell => {
-      cell.style.cursor = "pointer";
-      cell.addEventListener("click", () => {
-        const squadra = cell.querySelector(".team-name").textContent.trim();
+      const squadra = cell.querySelector(".team-name")?.textContent.trim();
+      if (!squadra) return;
+
+      const apriPartite = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
         mostraPartiteSquadra(squadra);
+      };
+
+      cell.style.cursor = "pointer";
+      cell.setAttribute("role", "button");
+      cell.setAttribute("tabindex", "0");
+
+      cell.addEventListener("click", apriPartite);
+      cell.addEventListener("touchend", apriPartite, { passive: false });
+      cell.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") apriPartite(e);
       });
     });
   } catch (error) {
