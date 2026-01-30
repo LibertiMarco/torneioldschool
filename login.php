@@ -41,10 +41,8 @@ if ($alreadyLogged) {
 }
 
 $error = "";
-$needsVerificationResend = null;
 $invalidCredentialsMessage = "Email o password errati.";
 $loginCsrf = csrf_get_token('login_form');
-$resendCsrf = csrf_get_token('resend_verification');
 
 function verify_recaptcha(string $secret, string $token, string $ip = '', string $expectedAction = '', float $minScore = 0.0): bool
 {
@@ -118,8 +116,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // verifica password (usa password_hash() in fase di registrazione)
         if (password_verify($password, $row['password'])) {
             if (isset($row['email_verificata']) && (int)$row['email_verificata'] !== 1) {
-                $error = "Per accedere devi prima confermare l'indirizzo email. Controlla la tua casella di posta.";
-                $needsVerificationResend = $email;
+                // Utente corretto ma non verificato: reindirizza a pagina dedicata
+                $pendingEmail = urlencode($email);
+                unset($_SESSION['login_redirect']);
+                header("Location: /verify_pending.php?email={$pendingEmail}");
+                exit;
             } else {
             // imposta le variabili di sessione
             if ($rememberMe) {
@@ -451,13 +452,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <?php if ($error): ?>
           <div class="error-message">
             <?= htmlspecialchars($error) ?>
-            <?php if ($needsVerificationResend): ?>
-              <form method="POST" action="resend_verification.php" class="inline-resend">
-                <?= csrf_field('resend_verification') ?>
-                <input type="hidden" name="email" value="<?= htmlspecialchars($needsVerificationResend) ?>">
-                <button type="submit" class="resend-link">Reinvia email di conferma</button>
-              </form>
-            <?php endif; ?>
           </div>
         <?php endif; ?>
       </form>
