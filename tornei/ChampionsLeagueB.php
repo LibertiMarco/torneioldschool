@@ -268,8 +268,9 @@ $assetVersion = '20260122';
     <div class="regola">
       <h3>🏆 Fase 2 — Coppe</h3>
       <ul>
-        <li>Le <strong>prime 16</strong> classificate accedono alla <span class="gold">Coppa Gold</span>.</li>
-        <li>Le <strong>ultime 2</strong> si sfidano nella <span class="silver">finale di Coppa Silver</span>.</li>
+        <li>Le <strong>prime 2</strong> classificate vanno direttamente ai <span class="gold">quarti di Coppa Gold</span>.</li>
+        <li>Le squadre dalle <strong>posizioni 3-14</strong> accedono agli <span class="gold">ottavi di Coppa Gold</span>.</li>
+        <li>Le squadre dalle <strong>posizioni 15-18</strong> si sfidano nella <span class="silver">Coppa Silver</span>.</li>
         <li>Entrambe le coppe prevedono una <strong>premiazione con trofeo</strong> per la vincitrice.</li>
       </ul>
     </div>

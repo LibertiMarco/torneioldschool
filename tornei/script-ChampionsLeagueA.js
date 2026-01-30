@@ -1,7 +1,8 @@
 ﻿const TORNEO = "ChampionsLeagueA"; // Nome base del torneo nel DB (fase girone)
-const GOLD_SPOTS = 16;              // prime 16 in Coppa Gold
+const GOLD_QUARTI_SPOTS = 2;        // prime 2 ai quarti di Coppa Gold
+const GOLD_OTTAVI_SPOTS = 12;       // posizioni 3-14 agli ottavi di Coppa Gold
 const TEAM_COUNT = 18;              // totale squadre in regular
-const SILVER_SPOTS = TEAM_COUNT - GOLD_SPOTS; // ultime 2 in finale Silver
+const SILVER_SPOTS = TEAM_COUNT - (GOLD_QUARTI_SPOTS + GOLD_OTTAVI_SPOTS); // ultime 4 in Coppa Silver
 const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
 const teamLogos = {};
 const favState = { tournaments: new Set(), teams: new Set() };
@@ -301,10 +302,12 @@ function mostraClassifica(classifica) {
     const tr = document.createElement("tr");
     const posizione = i + 1;
 
-    if (posizione <= GOLD_SPOTS) {
-      tr.classList.add("gold-row");
+    if (posizione <= GOLD_QUARTI_SPOTS) {
+      tr.classList.add("gold-row"); // Coppa Gold - quarti
+    } else if (posizione <= GOLD_QUARTI_SPOTS + GOLD_OTTAVI_SPOTS) {
+      tr.classList.add("gold-ottavi"); // Coppa Gold - ottavi
     } else if (posizione > TEAM_COUNT - SILVER_SPOTS) {
-      tr.classList.add("silver-row");
+      tr.classList.add("silver-row"); // Coppa Silver
     }
 
     const logoPath = resolveLogoPath(team.nome, team.logo);
@@ -341,8 +344,9 @@ function mostraClassifica(classifica) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
-      <div class="box gold-box">🏆 COPPA GOLD</div>
-      <div class="box silver-box">🥈 COPPA SILVER</div>
+      <div class="box gold-box">🏆 1-2: COPPA GOLD (QUARTI)</div>
+      <div class="box gold-box gold-ottavi">🥇 3-14: COPPA GOLD (OTTAVI)</div>
+      <div class="box silver-box">🥈 15-18: COPPA SILVER</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");

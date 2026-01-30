@@ -2806,8 +2806,9 @@ body {
   border-radius: 4px 0 0 4px;
 }
 
-#tableClassifica tr.gold-quarti td:first-child {
-  background-color: #ffe680; /* oro chiaro per quarti */
+#tableClassifica tr.gold-quarti td:first-child,
+#tableClassifica tr.gold-ottavi td:first-child {
+  background-color: #ffe680; /* oro chiaro per fasi precedenti */
   color: #000;
   font-weight: 700;
   border-radius: 4px 0 0 4px;
@@ -2849,8 +2850,9 @@ body {
   background-color: #FFD700;
 }
 
-.gold-quarti {
-  background-color: #ffe680; /* oro chiaro per posti 3-6 */
+.gold-quarti,
+.gold-ottavi {
+  background-color: #ffe680; /* oro chiaro per fasi precedenti */
 }
 
 .silver-box {
