@@ -344,9 +344,9 @@ function mostraClassifica(classifica) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
-      <div class="box gold-box">🏆 1-2: COPPA GOLD (QUARTI)</div>
-      <div class="box gold-box gold-ottavi">🥇 3-14: COPPA GOLD (OTTAVI)</div>
-      <div class="box silver-box">🥈 15-18: COPPA SILVER</div>
+      <div class="box gold-box">🏆 1-2: Coppa Gold (quarti)</div>
+      <div class="box gold-box gold-ottavi">🥇 Coppa Gold (ottavi): 3 vs 14, 4 vs 13, 5 vs 12, 6 vs 11, 7 vs 10, 8 vs 9</div>
+      <div class="box silver-box">🥈 Coppa Silver: 15 vs 18, 16 vs 17</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
