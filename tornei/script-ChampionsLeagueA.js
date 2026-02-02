@@ -736,7 +736,9 @@ async function caricaPlayoff(tipoCoppa) {
       data_partita: "",
       ora_partita: "",
       campo: "Da definire",
-      fase_leg: faseLeg
+      fase_leg: faseLeg,
+      logo_casa: "/img/scudetti/default.png",
+      logo_ospite: "/img/scudetti/default.png",
     });
 
     const defaultOttavi = [
