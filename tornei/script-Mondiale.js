@@ -385,6 +385,51 @@ const roundLabelByKey = {
   "KO": "Fase eliminazione"
 };
 
+function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], selected = "") {
+  const wrapper = document.getElementById("wrapperGiornataSelect");
+  const select = document.getElementById("giornataSelect");
+  const label = wrapper ? wrapper.querySelector("label[for='giornataSelect']") : null;
+  if (!select) return;
+  const isRegular = (faseSelezionata || "").toUpperCase() === "REGULAR";
+
+  if (wrapper) wrapper.style.display = "flex";
+  if (label) label.textContent = isRegular ? "Giornata:" : "Turno:";
+
+  select.innerHTML = "";
+  if (isRegular) {
+    giornateDisponibili.forEach(g => {
+      select.add(new Option(`Giornata ${g}`, g));
+    });
+    const latest = giornateDisponibili.reduce((max, g) => (max === null || Number(g) > Number(max) ? g : max), null);
+    const fallback = latest !== null ? latest : "";
+    select.value = String(selected || fallback);
+    return;
+  }
+
+  const disponibili = new Set(giornateDisponibili.map(String));
+  const orderedRounds = ["1", "2", "3", "4"]; // Finale -> Ottavi
+  let firstVal = "";
+  const latestAvailable = giornateDisponibili.reduce((max, g) => (max === null || Number(g) > Number(max) ? g : max), null);
+
+  orderedRounds.forEach(g => {
+    if (disponibili.has(g)) {
+      select.add(new Option(roundLabelByKey[g] || `Fase ${g}`, g));
+      if (!firstVal) firstVal = g;
+    }
+  });
+
+  if (!select.options.length) {
+    giornateDisponibili.forEach(g => {
+      const key = String(g);
+      select.add(new Option(roundLabelByKey[key] || `Fase ${key}`, key));
+      if (!firstVal) firstVal = key;
+    });
+  }
+
+  const target = selected ? String(selected) : (latestAvailable !== null ? String(latestAvailable) : firstVal);
+  if (target) select.value = target;
+}
+
 async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REGULAR") {
   try {
     const fase = (faseSelezionata || "REGULAR").toUpperCase();
@@ -414,36 +459,17 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
     const wrapperGiornata = document.getElementById("wrapperGiornataSelect");
     const giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
 
-    if (wrapperGiornata) {
-      const isRegular = fase === "REGULAR";
-      wrapperGiornata.style.display = isRegular ? "flex" : "none";
-    }
+    updateGiornataFilter(fase, giornateDisponibili, giornataSelezionata);
 
-    if (giornataSelect) {
-      if (giornataSelect.options.length <= 1 || giornataSelezionata === "") {
-        giornataSelect.innerHTML = '<option value="">Tutte</option>';
-        if (fase === "REGULAR") {
-          giornateDisponibili.forEach(g => {
-            const opt = document.createElement("option");
-            opt.value = g;
-            opt.textContent = `Giornata ${g}`;
-            giornataSelect.appendChild(opt);
-          });
-        }
-      }
-    }
-
-    // Filtra le giornate mostrate
-    const giornateDaMostrare = giornataSelezionata && fase === "REGULAR"
-      ? [giornataSelezionata]
-      : giornateDisponibili;
+    const selectedRound = giornataSelect ? String(giornataSelect.value || "") : "";
+    const giornateDaMostrare = selectedRound ? [selectedRound] : giornateDisponibili;
 
     giornateDaMostrare.forEach(numGiornata => {
       const giornataDiv = document.createElement("div");
       giornataDiv.classList.add("giornata");
 
       const titolo = document.createElement("h3");
-      if (fase === "REGULAR") {
+      if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
         titolo.textContent = `Giornata ${numGiornata}`;
       } else {
         const labelRound = roundLabelByKey[String(numGiornata)] || "Fase eliminazione";
@@ -451,8 +477,8 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       }
       giornataDiv.appendChild(titolo);
 
-            const partiteGiornata = dataFiltrata[numGiornata] || [];
-      const isSemifinale = String(numGiornata) === "2";
+      const partiteGiornata = dataFiltrata[numGiornata] || [];
+      const isSemifinale = fase !== "REGULAR" && String(numGiornata) === "2";
 
       const renderPartita = (container, partita) => {
         const partitaDiv = document.createElement("div");
@@ -546,7 +572,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       } else {
         partiteGiornata.forEach(p => renderPartita(giornataDiv, p));
       }
-calendarioSection.appendChild(giornataDiv);
+      calendarioSection.appendChild(giornataDiv);
     });
   } catch (err) {
     console.error("Errore nel caricamento del calendario:", err);
@@ -861,6 +887,30 @@ card.innerHTML = `
 
 // ====================== GESTIONE UI DINAMICA ======================
 document.addEventListener("DOMContentLoaded", () => {
+  // helper: crea toggle pill a partire dai select
+  const buildPillToggle = (selectEl) => {
+    if (!selectEl) return null;
+    const wrap = document.createElement("div");
+    wrap.className = "pill-toggle-group";
+    Array.from(selectEl.options || []).forEach(opt => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = opt.textContent;
+      btn.dataset.value = opt.value;
+      btn.className = "pill-btn pill-btn--toggle";
+      if (opt.selected) btn.classList.add("active");
+      btn.addEventListener("click", () => {
+        selectEl.value = opt.value;
+        selectEl.dispatchEvent(new Event("change"));
+        wrap.querySelectorAll("button").forEach(b => b.classList.toggle("active", b === btn));
+      });
+      wrap.appendChild(btn);
+    });
+    selectEl.classList.add("visually-hidden");
+    selectEl.after(wrap);
+    return wrap;
+  };
+
   const faseSelect = document.getElementById("faseSelect");
   const coppaSelect = document.getElementById("coppaSelect");
   const classificaWrapper = document.getElementById("classificaWrapper");
@@ -873,6 +923,9 @@ document.addEventListener("DOMContentLoaded", () => {
   caricaClassifica();
   const faseCalendario = document.getElementById("faseCalendario");
   const giornataSelect = document.getElementById("giornataSelect");
+  if (faseCalendario) {
+    faseCalendario.value = "REGULAR";
+  }
   const prevMarcatoriBtn = document.getElementById("prevMarcatori");
   const nextMarcatoriBtn = document.getElementById("nextMarcatori");
 
@@ -945,6 +998,22 @@ document.addEventListener("DOMContentLoaded", () => {
     // la classifica rimane quella del torneo base; le coppe usano solo le partite filtrate per fase
     loadClassifica(TORNEO);
   });
+
+  // costruisci toggle pill per selezioni classifica/calendario
+  const faseToggle = buildPillToggle(faseSelect);
+  const coppaToggle = buildPillToggle(coppaSelect);
+  const faseCalendarioToggle = buildPillToggle(faseCalendario);
+
+  // mostra/nascondi toggle coppa in base a selezione fase
+  const syncCoppaToggle = () => {
+    const isElim = faseSelect.value === "eliminazione";
+    if (coppaSelect) coppaSelect.classList.toggle("visually-hidden", true);
+    if (coppaToggle) coppaToggle.style.display = isElim ? "flex" : "none";
+  };
+  if (faseToggle || coppaToggle) {
+    syncCoppaToggle();
+    faseSelect.addEventListener("change", syncCoppaToggle);
+  }
 });
 
 // ====================== GESTIONE TAB NAVIGAZIONE ======================
