@@ -745,9 +745,11 @@ async function caricaPlayoff(tipoCoppa) {
     });
 
     const defaultOttavi = [
-      [1, 16], [2, 15], [3, 14], [4, 13],
-      [5, 12], [6, 11], [7, 10], [8, 9],
-    ].map(([a, b]) => baseMatch(`${a}\u00B0 in classifica`, `${b}\u00B0 in classifica`, `${a} vs ${b}`));
+      [3, 14], [4, 13], [5, 12],
+      [6, 11], [7, 10], [8, 9],
+    ].map(([a, b], idx) => baseMatch(`${a}\u00B0 in classifica`, `${b}\u00B0 in classifica`, `Ottavo ${idx + 1}`));
+
+    const defaultQuarti = []; // i quarti richiedono dati reali o logica di seeding lato backend
 
     const defaultSemifinaliGold = [
       baseMatch("Vincente Quarto 1", "Vincente Quarto 4"),
@@ -756,8 +758,8 @@ async function caricaPlayoff(tipoCoppa) {
     const defaultFinaleGold = [baseMatch("Vincente Semifinale 1", "Vincente Semifinale 2")];
 
     const defaultSemifinaliSilver = [
-      baseMatch("Silver Seed 1", "Silver Seed 4"),
-      baseMatch("Silver Seed 2", "Silver Seed 3"),
+      baseMatch("15\u00B0 in classifica", "18\u00B0 in classifica", "Semifinale 1"),
+      baseMatch("16\u00B0 in classifica", "17\u00B0 in classifica", "Semifinale 2"),
     ];
     const defaultFinaleSilver = [baseMatch("Vincente Semifinale 1", "Vincente Semifinale 2")];
 

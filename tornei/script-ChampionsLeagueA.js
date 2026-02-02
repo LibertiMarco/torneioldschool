@@ -727,6 +727,50 @@ async function caricaPlayoff(tipoCoppa) {
       return;
     }
 
+    const baseMatch = (casa, ospite, faseLeg = "") => ({
+      squadra_casa: casa,
+      squadra_ospite: ospite,
+      gol_casa: null,
+      gol_ospite: null,
+      giocata: 0,
+      data_partita: "",
+      ora_partita: "",
+      campo: "Da definire",
+      fase_leg: faseLeg
+    });
+
+    const defaultOttavi = [
+      [3, 14], [4, 13], [5, 12],
+      [6, 11], [7, 10], [8, 9],
+    ].map(([a, b], idx) => baseMatch(`${a}\u00B0 in classifica`, `${b}\u00B0 in classifica`, `Ottavo ${idx + 1}`));
+
+    const defaultQuarti = []; // quarti richiedono dati reali o seeding lato backend
+
+    const defaultSemifinaliGold = [
+      baseMatch("Vincente Quarto 1", "Vincente Quarto 4"),
+      baseMatch("Vincente Quarto 2", "Vincente Quarto 3"),
+    ];
+    const defaultFinaleGold = [baseMatch("Vincente Semifinale 1", "Vincente Semifinale 2")];
+
+    const defaultSemifinaliSilver = [
+      baseMatch("15\u00B0 in classifica", "18\u00B0 in classifica", "Semifinale 1"),
+      baseMatch("16\u00B0 in classifica", "17\u00B0 in classifica", "Semifinale 2"),
+    ];
+    const defaultFinaleSilver = [baseMatch("Vincente Semifinale 1", "Vincente Semifinale 2")];
+
+    const getDefaultMatches = (giornata) => {
+      if (faseParam === "GOLD") {
+        if (giornata === 4) return defaultOttavi;
+        if (giornata === 3) return defaultQuarti;
+        if (giornata === 2) return defaultSemifinaliGold;
+        if (giornata === 1) return defaultFinaleGold;
+      } else {
+        if (giornata === 2) return defaultSemifinaliSilver;
+        if (giornata === 1) return defaultFinaleSilver;
+      }
+      return [];
+    };
+
     const fasiMap = { 1: "Finale", 2: "Semifinali", 3: "Quarti di finale", 4: "Ottavi di finale" };
     const fasiContainer = document.getElementById("fasiPlayoff");
     fasiContainer.innerHTML = "";
@@ -734,7 +778,8 @@ async function caricaPlayoff(tipoCoppa) {
 
     ordineGiornate.forEach(g => {
       const matchList = data[g] || [];
-      if (!matchList.length) return;
+      const elenco = matchList.length ? matchList : getDefaultMatches(g);
+      if (!elenco.length) return;
 
       const col = document.createElement("div");
       col.className = "bracket-col";
@@ -744,7 +789,7 @@ async function caricaPlayoff(tipoCoppa) {
       col.appendChild(titolo);
 
       const pairMap = {};
-      matchList.forEach(p => {
+      elenco.forEach(p => {
         const key = [p.squadra_casa || "", p.squadra_ospite || ""].sort((a, b) => a.localeCompare(b)).join("|||");
         if (!pairMap[key]) pairMap[key] = [];
         pairMap[key].push(p);
