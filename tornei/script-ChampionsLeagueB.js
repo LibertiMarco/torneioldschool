@@ -1,4 +1,4 @@
-﻿const TORNEO = "ChampionsLeagueB"; // Nome base del torneo nel DB (fase girone)
+const TORNEO = "ChampionsLeagueB"; // Nome base del torneo nel DB (fase girone)
 const GOLD_QUARTI_SPOTS = 2;        // prime 2 ai quarti di Coppa Gold
 const GOLD_OTTAVI_SPOTS = 12;       // posizioni 3-14 agli ottavi di Coppa Gold
 const TEAM_COUNT = 18;              // totale squadre in regular
@@ -18,7 +18,7 @@ function updateFavTournamentButton() {
   if (!btn) return;
   const isFav = favState.tournaments.has(TORNEO);
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "★ Torneo seguito" : "☆ Segui torneo";
+  btn.textContent = isFav ? "? Torneo seguito" : "? Segui torneo";
 }
 
 function updateFavTeamButton(squadra, btnEl) {
@@ -26,7 +26,7 @@ function updateFavTeamButton(squadra, btnEl) {
   if (!btn || !squadra) return;
   const isFav = favState.teams.has(teamKey(squadra));
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "★" : "☆";
+  btn.textContent = isFav ? "?" : "?";
   btn.setAttribute("aria-label", isFav ? "Smetti di seguire la squadra" : "Segui la squadra");
 }
 
@@ -168,7 +168,7 @@ function ensureTeamMatchesModal() {
     <div id="teamMatchesCard" role="dialog" aria-modal="true">
       <div id="teamMatchesHeader">
         <h3>Partite squadra</h3>
-        <button id="teamMatchesClose" aria-label="Chiudi">×</button>
+        <button id="teamMatchesClose" aria-label="Chiudi">�</button>
       </div>
       <ul id="teamMatchesList"></ul>
       <div id="teamMatchesEmpty" style="display:none;"></div>
@@ -214,14 +214,14 @@ async function mostraPartiteSquadra(squadra) {
       const casa = p.squadra_casa === squadra;
       const avversario = casa ? p.squadra_ospite : p.squadra_casa;
       const score = (p.gol_casa === null || p.gol_casa === undefined || p.gol_ospite === null || p.gol_ospite === undefined)
-        ? "—"
+        ? "�"
         : `${p.gol_casa} - ${p.gol_ospite}`;
       const esito = esitoLabel(p, squadra);
       const li = document.createElement("li");
       li.innerHTML = `
         <div>
           <span class="match-vs">${casa ? "Casa" : "Trasferta"} vs ${avversario}</span>
-          <span class="match-meta">${formattaDataOra(p.data_partita, p.ora_partita)} · ${p.campo || "Campo da definire"}</span>
+          <span class="match-meta">${formattaDataOra(p.data_partita, p.ora_partita)} � ${p.campo || "Campo da definire"}</span>
         </div>
         <div class="score ${esito.cls}" title="Esito">${score} ${esito.label !== "ND" ? "(" + esito.label + ")" : ""}</div>
       `;
@@ -344,9 +344,9 @@ function mostraClassifica(classifica) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
-      <div class="box gold-box">🏆 1-2: Coppa Gold (quarti)</div>
-      <div class="box gold-box gold-ottavi">🥇 Coppa Gold (ottavi): 3 vs 14, 4 vs 13, 5 vs 12, 6 vs 11, 7 vs 10, 8 vs 9</div>
-      <div class="box silver-box">🥈 Coppa Silver: 15 vs 18, 16 vs 17</div>
+      <div class="box gold-box">?? 1-2: Coppa Gold (quarti)</div>
+      <div class="box gold-box gold-ottavi">?? Coppa Gold (ottavi): 3 vs 14, 4 vs 13, 5 vs 12, 6 vs 11, 7 vs 10, 8 vs 9</div>
+      <div class="box silver-box">?? Coppa Silver: 15 vs 18, 16 vs 17</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
@@ -728,10 +728,6 @@ async function caricaPlayoff(tipoCoppa) {
       return;
     }
 
-    const fasiMap = { 1: "Finale", 2: "Semifinali", 3: "Quarti di finale", 4: "Ottavi di finale" };
-    const fasiContainer = document.getElementById("fasiPlayoff");
-    fasiContainer.innerHTML = "";
-
     const baseMatch = (casa, ospite, faseLeg = "") => ({
       squadra_casa: casa,
       squadra_ospite: ospite,
@@ -742,7 +738,6 @@ async function caricaPlayoff(tipoCoppa) {
       ora_partita: "",
       campo: "Da definire",
       fase_leg: faseLeg,
-      // for template placeholders show a neutral logo to avoid broken images
       logo_casa: "/img/scudetti/default.png",
       logo_ospite: "/img/scudetti/default.png",
     });
@@ -752,7 +747,7 @@ async function caricaPlayoff(tipoCoppa) {
       [6, 11], [7, 10], [8, 9],
     ].map(([a, b], idx) => baseMatch(`${a}\u00B0 in classifica`, `${b}\u00B0 in classifica`, `Ottavo ${idx + 1}`));
 
-    const defaultQuarti = []; // i quarti richiedono dati reali o logica di seeding lato backend
+    const defaultQuarti = []; // quarti richiedono dati reali o seeding lato backend
 
     const defaultSemifinaliGold = [
       baseMatch("Vincente Quarto 1", "Vincente Quarto 4"),
@@ -779,6 +774,9 @@ async function caricaPlayoff(tipoCoppa) {
       return [];
     };
 
+    const fasiMap = { 1: "Finale", 2: "Semifinali", 3: "Quarti di finale", 4: "Ottavi di finale" };
+    const fasiContainer = document.getElementById("fasiPlayoff");
+    fasiContainer.innerHTML = "";
     const ordineGiornate = [4, 3, 2, 1];
 
     ordineGiornate.forEach(g => {
@@ -1148,7 +1146,7 @@ document.addEventListener("DOMContentLoaded", () => {
       classificaWrapper.style.display = "none";
       playoffContainer.style.display = "block";
 
-      // se non � selezionata nessuna coppa ancora, default gold
+      // se non ? selezionata nessuna coppa ancora, default gold
       if (!coppaSelect.value) {
         coppaSelect.value = "gold";
       }
