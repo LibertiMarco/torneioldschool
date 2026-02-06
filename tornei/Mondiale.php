@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../includi/require_login.php';
-$assetVersion = '20260206';
+$assetVersion = '20260206b';
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -249,15 +249,15 @@ $assetVersion = '20260206';
     <div class="regola">
       <h3>Struttura del Campionato</h3>
       <p>
-        Il torneo &egrave; composto da <strong>8 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
+        Il torneo &egrave; composto da <strong>14 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
       </p>
     </div>
 
     <div class="regola">
       <h3>Fase 1 &mdash; Regular Season</h3>
       <p>
-        Tutte le squadre partecipano a una <strong>Regular Season</strong> in stile Champions League.
-        Ogni squadra disputa <strong>7 partite</strong> totali.
+        Tutte le squadre partecipano a una <strong>Regular Season</strong> a girone unico.
+        Ogni squadra disputa <strong>13 partite</strong> totali, affrontando una volta tutte le avversarie.
       </p>
       <p>
         La squadra prima in classifica al termine del girone riceve il
@@ -268,8 +268,9 @@ $assetVersion = '20260206';
     <div class="regola">
       <h3>Fase 2 &mdash; Coppe</h3>
       <ul>
-        <li>Le <strong>prime 4</strong> classificate accedono alla <span class="gold">Coppa Gold</span>.</li>
-        <li>Le <strong>ultime 4</strong> accedono alla <span class="silver">Coppa Silver</span>.</li>
+        <li>Le <strong>prime 8</strong> classificate accedono direttamente ai <span class="gold">quarti</span> di <span class="gold">Coppa Gold</span>.</li>
+        <li>Le classificate <strong>9&ordf; e 10&ordf;</strong> disputano gli <strong>ottavi</strong> di <span class="gold">Coppa Gold</span>.</li>
+        <li>Le <strong>ultime 4</strong> (11&ordf;&ndash;14&ordf;) accedono alla <span class="silver">Coppa Silver</span>.</li>
         <li>Entrambe le coppe prevedono una <strong>premiazione con trofeo</strong> per la vincitrice.</li>
       </ul>
     </div>
