@@ -123,9 +123,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 exit;
             } else {
             // imposta le variabili di sessione
-            if ($rememberMe) {
-                ini_set('session.gc_maxlifetime', (string)REMEMBER_COOKIE_LIFETIME);
-            }
             session_regenerate_id(true);
             $_SESSION['user_id'] = $row['id'];
             $_SESSION['email'] = $row['email'];
@@ -181,7 +178,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $rememberStmt->execute();
                     $rememberStmt->close();
                 }
-                setcookie(REMEMBER_COOKIE_NAME, '', time() - 3600, [
+                setcookie(REMEMBER_COOKIE_NAME, '', [
+                    'expires' => time() - 3600,
                     'path' => $cookieParams['path'] ?? '/',
                     'domain' => $cookieParams['domain'] ?? '',
                     'secure' => (bool)($cookieParams['secure'] ?? false),
