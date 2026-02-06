@@ -7,6 +7,32 @@ if (!defined('REMEMBER_COOKIE_LIFETIME')) {
     define('REMEMBER_COOKIE_LIFETIME', 60 * 60 * 24 * 30); // 30 giorni
 }
 
+$defaultErrorLog = __DIR__ . '/../error.txt';
+if (!ini_get('log_errors')) {
+    ini_set('log_errors', '1');
+}
+if (ini_get('error_log') === '' || ini_get('error_log') === false) {
+    ini_set('error_log', $defaultErrorLog);
+}
+if (!function_exists('tos_register_shutdown_logger')) {
+    function tos_register_shutdown_logger(): void
+    {
+        static $registered = false;
+        if ($registered) {
+            return;
+        }
+        $registered = true;
+        register_shutdown_function(function () {
+            $err = error_get_last();
+            if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+                $msg = sprintf('[fatal] %s in %s:%d', $err['message'], $err['file'], $err['line']);
+                error_log($msg);
+            }
+        });
+    }
+}
+tos_register_shutdown_logger();
+
 $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
 
 if (session_status() === PHP_SESSION_NONE) {
