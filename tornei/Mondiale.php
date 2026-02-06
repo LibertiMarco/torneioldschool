@@ -1,6 +1,6 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../includi/require_login.php';
-$assetVersion = '20260122';
+$assetVersion = '20260206';
 ?>
 <!DOCTYPE html>
 <html lang="it">

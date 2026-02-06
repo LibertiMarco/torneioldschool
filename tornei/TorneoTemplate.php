@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../includi/require_login.php';
 
 // Template base per creare un nuovo torneo:
@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includi/require_login.php';
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
 $torneoSlug = 'TEMPLATE_SLUG';
 $torneoName = 'Torneo Template';
-$assetVersion = '20260122';
+$assetVersion = '20260206';
 
 require_once __DIR__ . '/../includi/db.php';
 $torneoConfig = [];
@@ -170,7 +170,7 @@ if (!empty($torneoConfig['regole_html'])) {
       <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo <?= htmlspecialchars($torneoName) ?>">
       <div class="torneo-title">
         <h1 class="titolo"><?= htmlspecialchars($torneoName) ?></h1>
-        <button type="button" class="fav-toggle" id="favTournamentBtn">Ã¢Ëœâ€  Segui torneo</button>
+        <button type="button" class="fav-toggle" id="favTournamentBtn">â˜† Segui torneo</button>
       </div>
     </div>
 

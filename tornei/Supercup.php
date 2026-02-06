@@ -7,9 +7,9 @@ require_once __DIR__ . '/../includi/require_login.php';
 // 3) Duplica anche script-Supercup.js rinominandolo in script-NuovoTorneo.js
 // 4) Nel nuovo JS sostituisci TORNEO con lo stesso slug usato nel DB/API
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
-$torneoSlug = 'Supercup';
+$torneoSlug = 'supercup';
 $torneoName = 'Supercup';
-$assetVersion = '20260122';
+$assetVersion = '20260206';
 ?>
 <!DOCTYPE html>
 <html lang="it">
