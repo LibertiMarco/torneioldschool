@@ -9,30 +9,6 @@ if (!defined('REMEMBER_COOKIE_LIFETIME')) {
 
 $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
 
-if (!function_exists('tos_cookie_domain')) {
-    function tos_cookie_domain(): string
-    {
-        static $cached = null;
-        if ($cached !== null) {
-            return $cached;
-        }
-
-        $host = $_SERVER['HTTP_HOST'] ?? '';
-        if ($host === '') {
-            return $cached = '';
-        }
-
-        $host = strtolower((string)explode(':', $host)[0]);
-        if ($host === 'localhost' || filter_var($host, FILTER_VALIDATE_IP)) {
-            return $cached = '';
-        }
-
-        // Condivide il cookie tra dominio root e www.
-        $host = preg_replace('/^www\./', '', $host);
-        return $cached = $host;
-    }
-}
-
 if (session_status() === PHP_SESSION_NONE) {
     $rememberRequested = !empty($_COOKIE[REMEMBER_COOKIE_NAME]);
     $cookieLifetime = $rememberRequested ? REMEMBER_COOKIE_LIFETIME : 0;
@@ -44,7 +20,6 @@ if (session_status() === PHP_SESSION_NONE) {
         session_set_cookie_params([
             'lifetime' => $cookieLifetime,
             'path' => '/',
-            'domain' => tos_cookie_domain(),
             'secure' => $isHttps,
             'httponly' => true,
             'samesite' => 'Lax',
@@ -73,9 +48,6 @@ if (session_status() === PHP_SESSION_NONE) {
             'httponly' => true,
             'samesite' => 'Lax',
         ];
-        if ($cookieParams['domain'] === '') {
-            $cookieParams['domain'] = tos_cookie_domain();
-        }
 
         setcookie(session_name(), session_id(), array_merge($cookieParams, ['expires' => $expires]));
 
@@ -98,9 +70,6 @@ function tos_cookie_params(bool $isHttps): array
 
     $path = $params['path'] ?? '/';
     $domain = $params['domain'] ?? '';
-    if ($domain === '') {
-        $domain = tos_cookie_domain();
-    }
 
     return [
         'path' => $path === '' ? '/' : $path,
