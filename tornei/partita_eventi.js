@@ -61,6 +61,19 @@ function ensureAutogolStyle() {
         line-height: 1;
         box-shadow: 0 0 0 1px #be0f0f, 0 0 0 3px rgba(189, 15, 15, 0.2);
       }
+      .pill-autogol {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #ffe6e6;
+        color: #b11226;
+        font-weight: 800;
+        font-size: 12px;
+        line-height: 1;
+        border: 1px solid #f3c7c7;
+      }
     `;
     document.head.appendChild(style);
 }
@@ -247,11 +260,12 @@ async function caricaEventiGiocatori() {
                   ...(new Array(g.gialli || 0)).fill(ICONS.giallo),
                   ...(new Array(g.rossi || 0)).fill(ICONS.rosso),
                 ].join("");
+                const autogolBadge = g.autogol ? `<span class="pill-autogol">Autogol x${g.autogol}</span>` : "";
                 const hasVoto = g.voto !== null && g.voto !== undefined;
                 const voto = hasVoto ? `<span class="voto voto-pill">${formatVoto(g.voto)}</span>` : "";
                 const iconsMarkup = icons ? `<span class="icons-after-name">${icons}</span>` : "";
-                const dettagli = voto || iconsMarkup
-                  ? `<div class="evento-dettagli">${voto}${iconsMarkup}</div>`
+                const dettagli = voto || iconsMarkup || autogolBadge
+                  ? `<div class="evento-dettagli">${voto}${autogolBadge}${iconsMarkup}</div>`
                   : "";
 
                 return `
