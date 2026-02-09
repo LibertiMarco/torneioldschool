@@ -1,10 +1,5 @@
 ﻿<?php
-session_start();
-if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
-  header("Location: /index.php");
-  exit;
-}
-
+require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/../includi/db.php';
 
 $partita_id = isset($_GET['partitaid']) ? (int)$_GET['partitaid'] : 0;
@@ -639,4 +634,6 @@ document.getElementById("btnBackStats")?.addEventListener("click", (e) => {
 
 </body>
 </html>
+
+
 
