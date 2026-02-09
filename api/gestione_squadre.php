@@ -1,10 +1,5 @@
 <?php
-session_start();
-if (!isset($_SESSION['ruolo']) || $_SESSION['ruolo'] !== 'admin') {
-    header('Location: /index.php');
-    exit;
-}
-header('X-Robots-Tag: noindex, nofollow', true);
+require_once __DIR__ . '/../includi/admin_guard.php';
 
 require_once __DIR__ . '/crud/Squadra.php';
 require_once __DIR__ . '/crud/torneo.php';

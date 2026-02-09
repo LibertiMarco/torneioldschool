@@ -1,25 +1,5 @@
 <?php
-require_once __DIR__ . '/includi/security.php';
-
-$currentPath = $_SERVER['REQUEST_URI'] ?? '/admin_dashboard.php';
-
-// Se non loggato, salva la destinazione e chiedi il login
-if (!isset($_SESSION['user_id'])) {
-    login_remember_redirect($currentPath, '/admin_dashboard.php');
-    header("Location: /login.php");
-    exit;
-}
-
-// Solo gli admin possono accedere al pannello
-if (($_SESSION['ruolo'] ?? '') !== 'admin') {
-    header("Location: /index.php");
-    exit;
-}
-
-header('X-Robots-Tag: noindex, nofollow', true);
-header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-header('Pragma: no-cache');
-header('Expires: Mon, 01 Jan 1990 00:00:00 GMT');
+require_once __DIR__ . '/includi/admin_guard.php';
 ?>
 
 <!DOCTYPE html>
