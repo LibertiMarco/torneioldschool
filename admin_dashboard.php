@@ -49,55 +49,55 @@ header('X-Robots-Tag: noindex, nofollow', true);
             <div class="admin-card">
                 <h3>Gestione Tornei</h3>
                 <p>Crea, modifica o elimina tornei esistenti.</p><br>
-                <a href="api/gestione_tornei.php">Gestisci</a>
+                <a href="/api/gestione_tornei.php">Gestisci</a>
             </div>
 
             <div class="admin-card">
                 <h3>Gestione Squadre</h3>
                 <p>Visualizza e aggiorna le squadre iscritte ai tornei.</p><br>
-                <a href="api/gestione_squadre.php">Vai</a>
+                <a href="/api/gestione_squadre.php">Vai</a>
             </div>
 
             <div class="admin-card">
                 <h3>Gestione Giocatori</h3>
                 <p>Visualizza e aggiorna i giocatori delle squadre.</p><br>
-                <a href="api/gestione_giocatori.php">Vai</a>
+                <a href="/api/gestione_giocatori.php">Vai</a>
             </div>
 
             <div class="admin-card">
                 <h3>Account - Giocatori</h3>
                 <p>Associa un account utente al relativo giocatore (solo admin).</p><br>
-                <a href="api/gestione_account_giocatore.php">Abbina</a>
+                <a href="/api/gestione_account_giocatore.php">Abbina</a>
             </div>
 
             <div class="admin-card">
                 <h3>Calendario & Risultati</h3>
                 <p>Inserisci o aggiorna date e punteggi dei tornei.</p><br>
-                <a href="api/gestione_partite.php">Apri</a>
+                <a href="/api/gestione_partite.php">Apri</a>
             </div>
 
       <div class="admin-card">
           <h3>Utenti & Iscrizioni</h3>
           <p>Controlla gli utenti registrati e le loro iscrizioni.</p><br>
-          <a href="api/gestione_utenti.php">Visualizza</a>
+          <a href="/api/gestione_utenti.php">Visualizza</a>
       </div>
 
       <div class="admin-card">
         <h3>Gestione Blog</h3>
         <p>Pubblica nuovi articoli e tieni aggiornato il blog.</p><br>
-        <a href="api/gestione_blog.php">Crea articoli</a>
+        <a href="/api/gestione_blog.php">Crea articoli</a>
       </div>
 
       <div class="admin-card">
         <h3>Gestione Staff</h3>
         <p>Aggiungi arbitri, videomaker e altri ruoli dello staff.</p><br>
-        <a href="api/gestione_staff.php">Gestisci</a>
+        <a href="/api/gestione_staff.php">Gestisci</a>
       </div>
 
       <div class="admin-card">
         <h3>Albo d'oro</h3>
         <p>Inserisci e aggiorna le vincitrici dei tornei.</p><br>
-        <a href="api/gestione_albo.php">Gestisci</a>
+        <a href="/api/gestione_albo.php">Gestisci</a>
       </div>
     </div>
 
