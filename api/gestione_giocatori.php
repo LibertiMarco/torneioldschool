@@ -32,7 +32,8 @@ function redirectGestione($action = null, $extraParams = []) {
         $params[$key] = $value;
     }
     $query = $params ? '?' . http_build_query($params) : '';
-    header("Location: gestione_giocatori.php{$query}");
+    // usa percorso assoluto per evitare redirect strani da percorsi relativi
+    header("Location: /api/gestione_giocatori.php{$query}");
     exit;
 }
 
