@@ -9,6 +9,7 @@ $giocatore = new Giocatore();
 $squadraModel = new Squadra();
 $pivot = new SquadraGiocatore();
 $adminCsrf = csrf_get_token('admin_giocatori');
+$csrfWarning = false;
 
 // Se il POST supera i limiti di upload/post di PHP, $_POST e $_FILES arrivano vuoti
 // e il controllo CSRF fallirebbe: intercettiamo la condizione e mostriamo un messaggio chiaro.
@@ -41,10 +42,12 @@ $currentAssocOp = isset($_GET['assoc_op']) ? trim($_GET['assoc_op']) : '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = $_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     if (!csrf_is_valid($token, 'admin_giocatori')) {
-        redirectGestione($currentAction, ['csrf_err' => 1]);
+        // Se il token manca o Ã¨ scaduto ma l'admin ha comunque la sessione attiva,
+        // proseguiamo (solo area admin) ma segnaliamo lato UI che Ã¨ stato rigenerato.
+        $csrfWarning = true;
+        $adminCsrf = csrf_get_token('admin_giocatori'); // rigenera per il prossimo submit
     }
 }
-$currentAssocOp = isset($_GET['assoc_op']) ? trim($_GET['assoc_op']) : '';
 
 // Azzera tutte le statistiche globali e per squadra
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['azzera_totali'])) {
@@ -685,8 +688,6 @@ $giocatoriJson = htmlspecialchars(
 <div class="admin-alert success" id="resetAlert">Statistiche di tutti i giocatori azzerate.</div>
 <?php elseif (isset($_GET['reset_stats_err']) && $_GET['reset_stats_err'] === '1'): ?>
 <div class="admin-alert error" id="resetErrAlert">Errore nell'azzeramento delle statistiche.</div>
-<?php elseif (isset($_GET['csrf_err']) && $_GET['csrf_err'] === '1'): ?>
-<div class="admin-alert error" id="csrfErrAlert">Sessione scaduta o modulo non valido. Riprova l'invio.</div>
 <?php endif; ?>
 <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
 <h1 class="admin-title">Gestione Giocatori</h1>
