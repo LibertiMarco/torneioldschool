@@ -10,10 +10,40 @@ $squadraModel = new Squadra();
 $pivot = new SquadraGiocatore();
 $adminCsrf = csrf_get_token('admin_giocatori');
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    csrf_require('admin_giocatori');
+// Se il POST supera i limiti di upload/post di PHP, $_POST e $_FILES arrivano vuoti
+// e il controllo CSRF fallirebbe: intercettiamo la condizione e mostriamo un messaggio chiaro.
+function tos_bytes_from_shorthand(string $val): int {
+    $val = trim($val);
+    if ($val === '') return 0;
+    $last = strtolower($val[strlen($val) - 1]);
+    $num = (float)$val;
+    switch ($last) {
+        case 'g': return (int)($num * 1024 * 1024 * 1024);
+        case 'm': return (int)($num * 1024 * 1024);
+        case 'k': return (int)($num * 1024);
+        default:  return (int)$num;
+    }
 }
-$currentAction = $_GET['action'] ?? 'crea';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES) && !empty($_SERVER['CONTENT_LENGTH'])) {
+    $contentLength = (int)$_SERVER['CONTENT_LENGTH'];
+    $postMax = tos_bytes_from_shorthand((string)ini_get('post_max_size'));
+    $uploadMax = tos_bytes_from_shorthand((string)ini_get('upload_max_filesize'));
+    $hardLimit = min(array_filter([$postMax, $uploadMax, $contentLength], fn($v) => $v > 0));
+    http_response_code(413);
+    $human = $hardLimit > 0 ? round($hardLimit / (1024 * 1024), 1) . ' MB' : 'dimensione limite';
+    exit("Caricamento troppo grande. Riduci la dimensione del file (max circa {$human}) e riprova.");
+}
+
+$currentAction = $_POST['action'] ?? ($_GET['action'] ?? 'crea');
+$currentAssocOp = isset($_GET['assoc_op']) ? trim($_GET['assoc_op']) : '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $token = $_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!csrf_is_valid($token, 'admin_giocatori')) {
+        redirectGestione($currentAction, ['csrf_err' => 1]);
+    }
+}
 $currentAssocOp = isset($_GET['assoc_op']) ? trim($_GET['assoc_op']) : '';
 
 // Azzera tutte le statistiche globali e per squadra
@@ -651,11 +681,13 @@ $giocatoriJson = htmlspecialchars(
 
   <main class="admin-wrapper">
     <section class="admin-container">
-    <?php if (isset($_GET['reset_stats']) && $_GET['reset_stats'] === '1'): ?>
-    <div class="admin-alert success" id="resetAlert">Statistiche di tutti i giocatori azzerate.</div>
-    <?php elseif (isset($_GET['reset_stats_err']) && $_GET['reset_stats_err'] === '1'): ?>
-    <div class="admin-alert error" id="resetErrAlert">Errore nell'azzeramento delle statistiche.</div>
-    <?php endif; ?>
+<?php if (isset($_GET['reset_stats']) && $_GET['reset_stats'] === '1'): ?>
+<div class="admin-alert success" id="resetAlert">Statistiche di tutti i giocatori azzerate.</div>
+<?php elseif (isset($_GET['reset_stats_err']) && $_GET['reset_stats_err'] === '1'): ?>
+<div class="admin-alert error" id="resetErrAlert">Errore nell'azzeramento delle statistiche.</div>
+<?php elseif (isset($_GET['csrf_err']) && $_GET['csrf_err'] === '1'): ?>
+<div class="admin-alert error" id="csrfErrAlert">Sessione scaduta o modulo non valido. Riprova l'invio.</div>
+<?php endif; ?>
 <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
 <h1 class="admin-title">Gestione Giocatori</h1>
 
