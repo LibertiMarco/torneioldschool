@@ -18,7 +18,7 @@ function updateFavTournamentButton() {
   if (!btn) return;
   const isFav = favState.tournaments.has(TORNEO);
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "? Torneo seguito" : "? Segui torneo";
+  btn.textContent = isFav ? "★ Torneo seguito" : "☆ Segui torneo";
 }
 
 function updateFavTeamButton(squadra, btnEl) {
@@ -26,7 +26,7 @@ function updateFavTeamButton(squadra, btnEl) {
   if (!btn || !squadra) return;
   const isFav = favState.teams.has(teamKey(squadra));
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "?" : "?";
+  btn.textContent = isFav ? "★" : "☆";
   btn.setAttribute("aria-label", isFav ? "Smetti di seguire la squadra" : "Segui la squadra");
 }
 
@@ -168,7 +168,7 @@ function ensureTeamMatchesModal() {
     <div id="teamMatchesCard" role="dialog" aria-modal="true">
       <div id="teamMatchesHeader">
         <h3>Partite squadra</h3>
-        <button id="teamMatchesClose" aria-label="Chiudi">�</button>
+        <button id="teamMatchesClose" aria-label="Chiudi">�</button>
       </div>
       <ul id="teamMatchesList"></ul>
       <div id="teamMatchesEmpty" style="display:none;"></div>
@@ -214,14 +214,14 @@ async function mostraPartiteSquadra(squadra) {
       const casa = p.squadra_casa === squadra;
       const avversario = casa ? p.squadra_ospite : p.squadra_casa;
       const score = (p.gol_casa === null || p.gol_casa === undefined || p.gol_ospite === null || p.gol_ospite === undefined)
-        ? "�"
+        ? "�"
         : `${p.gol_casa} - ${p.gol_ospite}`;
       const esito = esitoLabel(p, squadra);
       const li = document.createElement("li");
       li.innerHTML = `
         <div>
           <span class="match-vs">${casa ? "Casa" : "Trasferta"} vs ${avversario}</span>
-          <span class="match-meta">${formattaDataOra(p.data_partita, p.ora_partita)} � ${p.campo || "Campo da definire"}</span>
+          <span class="match-meta">${formattaDataOra(p.data_partita, p.ora_partita)} � ${p.campo || "Campo da definire"}</span>
         </div>
         <div class="score ${esito.cls}" title="Esito">${score} ${esito.label !== "ND" ? "(" + esito.label + ")" : ""}</div>
       `;
@@ -344,9 +344,9 @@ function mostraClassifica(classifica) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
-      <div class="box gold-box">?? 1-2: Coppa Gold (quarti)</div>
-      <div class="box gold-box gold-ottavi">?? Coppa Gold (ottavi): 3 vs 14, 4 vs 13, 5 vs 12, 6 vs 11, 7 vs 10, 8 vs 9</div>
-      <div class="box silver-box">?? Coppa Silver: 15 vs 18, 16 vs 17</div>
+      <div class="box gold-box">🏆 1-2: Coppa Gold (quarti)</div>
+      <div class="box gold-box gold-ottavi">🥇 Coppa Gold (ottavi): 3 vs 14, 4 vs 13, 5 vs 12, 6 vs 11, 7 vs 10, 8 vs 9</div>
+      <div class="box silver-box">🥈 Coppa Silver: 15 vs 18, 16 vs 17</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
