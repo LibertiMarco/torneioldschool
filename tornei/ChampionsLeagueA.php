@@ -132,7 +132,7 @@ $assetVersion = '20260206';
       <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Champions League A">
       <div class="torneo-title">
         <h1 class="titolo">Champions League A</h1>
-        <button type="button" class="fav-toggle" id="favTournamentBtn">â˜† Segui torneo</button>
+        <button type="button" class="fav-toggle" id="favTournamentBtn">☆ Segui torneo</button>
       </div>
     </div>
 
