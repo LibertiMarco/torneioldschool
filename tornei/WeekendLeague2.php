@@ -118,6 +118,10 @@ $assetVersion = '20260213';
         flex-wrap: wrap;
       }
     }
+    /* Evidenziazione posizioni Weekend League 2 */
+    #tableClassifica tr.gold-bye-row { background: #ffd46b; }       /* pos 1-2 */
+    #tableClassifica tr.gold-qual-row { background: #fff1b3; }      /* pos 3-6 */
+    #tableClassifica tr.silver-row { background: #e8f1ff; }         /* pos 7-10 */
   </style>
 </head>
 

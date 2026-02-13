@@ -7,6 +7,7 @@ let partiteCache = null;
 const GOLD_SLOTS = 6;       // posizioni che vanno in Coppa Gold
 const GOLD_BYE = 2;         // prime classificate con bye in semifinale Gold
 const SILVER_START = 7;     // posizioni che vanno in Coppa Silver
+const SILVER_END = 10;      // ultime posizioni in Coppa Silver
 
 function teamKey(name = "") {
   return `${TORNEO}|||${name}`;
@@ -298,17 +299,17 @@ function mostraClassifica(classifica) {
   classifica.sort((a, b) => b.punti - a.punti || b.differenza_reti - a.differenza_reti);
   const goldLimit = Math.min(GOLD_SLOTS, classifica.length || GOLD_SLOTS);
   const byeLimit = Math.min(GOLD_BYE, goldLimit);
-  const silverEnd = Math.max(classifica.length, SILVER_START + 3);
+  const silverEnd = SILVER_END;
 
   classifica.forEach((team, i) => {
     const pos = i + 1;
     const tr = document.createElement("tr");
 
-    if (pos <= goldLimit) {
-      tr.classList.add("gold-row");
-    } else if (pos >= SILVER_START) {
-      tr.classList.add("silver-row");
-    } else {
+    if (pos <= byeLimit) {
+      tr.classList.add("gold-bye-row");
+    } else if (pos <= goldLimit) {
+      tr.classList.add("gold-qual-row");
+    } else if (pos >= SILVER_START && pos <= silverEnd) {
       tr.classList.add("silver-row");
     }
 
@@ -346,9 +347,9 @@ function mostraClassifica(classifica) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
-      <div class="box gold-box">Pos 1-${byeLimit}: semifinali Gold</div>
-      <div class="box gold-box">Pos ${byeLimit + 1}-${goldLimit}: quarti Gold</div>
-      <div class="box silver-box">Pos ${SILVER_START}-${silverEnd}: semifinali Silver</div>
+      <div class="box gold-box" style="background:#ffd46b;">Pos 1-${byeLimit}: semifinali Gold</div>
+      <div class="box gold-box" style="background:#fff1b3;">Pos ${byeLimit + 1}-${goldLimit}: quarti Gold</div>
+      <div class="box silver-box" style="background:#e8f1ff;">Pos ${SILVER_START}-${SILVER_END}: semifinali Silver</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
@@ -687,6 +688,41 @@ async function caricaPlayoff(tipoCoppa) {
       return;
     }
 
+    const makeStub = (casa, ospite, faseLeg = "UNICA") => ({
+      id: null,
+      squadra_casa: casa,
+      squadra_ospite: ospite,
+      gol_casa: null,
+      gol_ospite: null,
+      giocata: 0,
+      campo: "Campo da definire",
+      data_partita: "2000-01-01",
+      ora_partita: "00:00:00",
+      fase_leg: faseLeg
+    });
+
+    const buildPlaceholders = (coppa) => {
+      if ((coppa || "").toLowerCase() === "gold") {
+        return {
+          3: [makeStub("3a CLASS", "6a CLASS"), makeStub("4a CLASS", "5a CLASS")], // Quarti
+          2: [makeStub("1a CLASS", "Vincente (3 vs 6)"), makeStub("2a CLASS", "Vincente (4 vs 5)")], // Semi
+          1: [makeStub("Vincente Semi 1", "Vincente Semi 2")] // Finale
+        };
+      }
+      return {
+        2: [makeStub("7a CLASS", "10a CLASS"), makeStub("8a CLASS", "9a CLASS")], // Semi Silver
+        1: [makeStub("Vincente Semi 1", "Vincente Semi 2")] // Finale Silver
+      };
+    };
+
+    const hasMatches = Object.values(data || {}).some(list => Array.isArray(list) && list.length);
+    const partiteData = hasMatches ? data : buildPlaceholders(tipoCoppa);
+    const usingPlaceholders = !hasMatches;
+
+    if (usingPlaceholders) {
+      container.innerHTML += `<p class="placeholder-note" style="margin:8px 0 4px;color:#51607a;">Template sfide in attesa di calendario ufficiale.</p>`;
+    }
+
     const fasiMap = {
       1: "Finale",
       2: "Semifinali",
@@ -869,7 +905,7 @@ async function caricaPlayoff(tipoCoppa) {
 
       ordineGiornate.forEach(g => {
         if (currentPhase && String(g) !== currentPhase) return;
-        const matchList = (data[g] || []);
+        const matchList = (partiteData[g] || []);
         if (!matchList.length) return;
 
         const col = document.createElement("div");
@@ -1289,6 +1325,3 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     });
   }
 });
-
-
-
