@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includi/require_login.php';
 $assetVersion = '20260206';
 ?>
@@ -201,7 +201,7 @@ $assetVersion = '20260206';
 
       <!-- PLAYOFF / BRACKET -->
       <div id="playoffContainer" style="display:none;">
-        <!-- verrÃ  popolato via JS -->
+        <!-- verrà popolato via JS -->
       </div>
 
     </section>
@@ -286,7 +286,7 @@ $assetVersion = '20260206';
       </div>
       <p>
         Il <strong>Miglior Giocatore</strong> vincerà un
-        <span class="highlight">buono tatuaggio da 500€</span>.
+        <span class="highlight">buono tatuaggio da 500 euro</span>.
       </p>
     </div>
 
@@ -465,3 +465,4 @@ $assetVersion = '20260206';
 
 </body>
 </html>
+

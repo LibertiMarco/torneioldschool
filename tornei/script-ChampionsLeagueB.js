@@ -1,4 +1,4 @@
-const TORNEO = "ChampionsLeagueB"; // Nome base del torneo nel DB (fase girone)
+﻿const TORNEO = "ChampionsLeagueB"; // Nome base del torneo nel DB (fase girone)
 const GOLD_QUARTI_SPOTS = 2;        // prime 2 ai quarti di Coppa Gold
 const GOLD_OTTAVI_SPOTS = 12;       // posizioni 3-14 agli ottavi di Coppa Gold
 const TEAM_COUNT = 18;              // totale squadre in regular
@@ -168,7 +168,7 @@ function ensureTeamMatchesModal() {
     <div id="teamMatchesCard" role="dialog" aria-modal="true">
       <div id="teamMatchesHeader">
         <h3>Partite squadra</h3>
-        <button id="teamMatchesClose" aria-label="Chiudi">�</button>
+        <button id="teamMatchesClose" aria-label="Chiudi">×</button>
       </div>
       <ul id="teamMatchesList"></ul>
       <div id="teamMatchesEmpty" style="display:none;"></div>
@@ -214,7 +214,7 @@ async function mostraPartiteSquadra(squadra) {
       const casa = p.squadra_casa === squadra;
       const avversario = casa ? p.squadra_ospite : p.squadra_casa;
       const score = (p.gol_casa === null || p.gol_casa === undefined || p.gol_ospite === null || p.gol_ospite === undefined)
-        ? "�"
+        ? "—"
         : `${p.gol_casa} - ${p.gol_ospite}`;
       const esito = esitoLabel(p, squadra);
       const li = document.createElement("li");
@@ -963,7 +963,7 @@ async function caricaRosaSquadra(squadra) {
   header.innerHTML = `
       <img src="${squadraLogo}" alt="${squadra}" class="team-logo-large">
       <h3>${squadra}</h3>
-      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn" aria-label="Segui la squadra">?</button>
+      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn" aria-label="Segui la squadra">☆</button>
     `;
     const favBtn = header.querySelector(".fav-team-btn");
     if (favBtn) {
@@ -1196,6 +1196,7 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
+
 
 
 
