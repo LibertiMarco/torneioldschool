@@ -35,52 +35,21 @@ tos_register_shutdown_logger();
 
 $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
 
-// Rende condivisibile il cookie tra dominio nudo e www, senza rompere localhost/IP
-if (!function_exists('tos_cookie_domain')) {
-    function tos_cookie_domain(): string
-    {
-        static $cached = null;
-        if ($cached !== null) {
-            return $cached;
-        }
-
-        $host = $_SERVER['HTTP_HOST'] ?? '';
-        if ($host === '') {
-            return $cached = '';
-        }
-
-        $host = strtolower(preg_replace('/:\d+$/', '', (string)$host));
-        if ($host === 'localhost' || filter_var($host, FILTER_VALIDATE_IP)) {
-            return $cached = '';
-        }
-
-        // Condivide il cookie tra apex e www
-        $host = preg_replace('/^www\./', '', $host);
-        return $cached = $host;
-    }
-}
-
 if (session_status() === PHP_SESSION_NONE) {
     $rememberRequested = !empty($_COOKIE[REMEMBER_COOKIE_NAME]);
     $cookieLifetime = $rememberRequested ? REMEMBER_COOKIE_LIFETIME : 0;
-    $cookieDomain = tos_cookie_domain();
 
     // Mantieni i file di sessione per almeno 30 giorni (allineato al cookie remember)
     ini_set('session.gc_maxlifetime', (string)REMEMBER_COOKIE_LIFETIME);
 
     if (function_exists('session_set_cookie_params')) {
-        $sessionParams = [
+        session_set_cookie_params([
             'lifetime' => $cookieLifetime,
             'path' => '/',
             'secure' => $isHttps,
             'httponly' => true,
             'samesite' => 'Lax',
-        ];
-        // Domain deve essere incluso solo se non vuoto, altrimenti alcuni browser scartano il cookie
-        if ($cookieDomain !== '') {
-            $sessionParams['domain'] = $cookieDomain;
-        }
-        session_set_cookie_params($sessionParams);
+        ]);
     }
     if (!ini_get('session.use_strict_mode')) {
         ini_set('session.use_strict_mode', '1');
@@ -98,16 +67,13 @@ if (session_status() === PHP_SESSION_NONE) {
     if (!empty($_SESSION['remember_me'])) {
         $params = session_get_cookie_params();
         $expires = time() + REMEMBER_COOKIE_LIFETIME;
-        $cookieDomain = tos_cookie_domain();
         $cookieParams = [
             'path' => ($params['path'] ?? '/') ?: '/',
+            'domain' => is_string($params['domain'] ?? '') ? ($params['domain'] ?? '') : '',
             'secure' => $isHttps,
             'httponly' => true,
             'samesite' => 'Lax',
         ];
-        if ($cookieDomain !== '') {
-            $cookieParams['domain'] = $cookieDomain;
-        }
 
         setcookie(session_name(), session_id(), array_merge($cookieParams, ['expires' => $expires]));
 
@@ -130,20 +96,14 @@ function tos_cookie_params(bool $isHttps): array
 
     $path = $params['path'] ?? '/';
     $domain = $params['domain'] ?? '';
-    if ($domain === '') {
-        $domain = tos_cookie_domain();
-    }
 
-    $result = [
+    return [
         'path' => $path === '' ? '/' : $path,
+        'domain' => is_string($domain) ? $domain : '',
         'secure' => $isHttps,
         'httponly' => true,
         'samesite' => $samesite,
     ];
-    if (is_string($domain) && $domain !== '') {
-        $result['domain'] = $domain;
-    }
-    return $result;
 }
 
 function tos_clear_remember_cookie(bool $isHttps): void

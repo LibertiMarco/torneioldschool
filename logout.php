@@ -22,31 +22,22 @@ session_destroy();
 
 if (ini_get('session.use_cookies')) {
     $params = session_get_cookie_params();
-    $cookieDomain = $params['domain'] ?? '';
-    $sessionClear = [
+    setcookie(session_name(), '', time() - 42000, [
         'path' => $params['path'] ?? '/',
+        'domain' => $params['domain'] ?? '',
         'secure' => (bool)($params['secure'] ?? false),
         'httponly' => (bool)($params['httponly'] ?? true),
         'samesite' => $params['samesite'] ?? 'Lax',
-        'expires' => time() - 42000,
-    ];
-    if ($cookieDomain !== '') {
-        $sessionClear['domain'] = $cookieDomain;
-    }
-    setcookie(session_name(), '', $sessionClear);
+    ]);
 
     $rememberCookieName = defined('REMEMBER_COOKIE_NAME') ? REMEMBER_COOKIE_NAME : 'tos_keep_login';
-    $rememberClear = [
+    setcookie($rememberCookieName, '', time() - 42000, [
         'path' => $params['path'] ?? '/',
+        'domain' => $params['domain'] ?? '',
         'secure' => (bool)($params['secure'] ?? false),
         'httponly' => true,
         'samesite' => $params['samesite'] ?? 'Lax',
-        'expires' => time() - 42000,
-    ];
-    if ($cookieDomain !== '') {
-        $rememberClear['domain'] = $cookieDomain;
-    }
-    setcookie($rememberCookieName, '', $rememberClear);
+    ]);
 }
 
 $currentDir = dirname($_SERVER['SCRIPT_NAME'] ?? '/');

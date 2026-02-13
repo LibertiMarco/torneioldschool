@@ -151,27 +151,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 if ($rememberSaved) {
                     $rememberCookieValue = $rememberSelector . ':' . $rememberValidator;
-                    $cookieDomain = $cookieParams['domain'] ?? '';
-                    $sessionCookieOpts = [
+                    setcookie(session_name(), session_id(), [
                         'expires' => time() + $cookieLifetime,
                         'path' => $cookieParams['path'] ?? '/',
+                        'domain' => $cookieParams['domain'] ?? '',
                         'secure' => (bool)($cookieParams['secure'] ?? false),
                         'httponly' => (bool)($cookieParams['httponly'] ?? true),
                         'samesite' => $cookieParams['samesite'] ?? 'Lax',
-                    ];
-                    $rememberCookieOpts = [
+                    ]);
+                    setcookie(REMEMBER_COOKIE_NAME, $rememberCookieValue, [
                         'expires' => time() + $cookieLifetime,
                         'path' => $cookieParams['path'] ?? '/',
+                        'domain' => $cookieParams['domain'] ?? '',
                         'secure' => (bool)($cookieParams['secure'] ?? false),
                         'httponly' => true,
                         'samesite' => $cookieParams['samesite'] ?? 'Lax',
-                    ];
-                    if ($cookieDomain !== '') {
-                        $sessionCookieOpts['domain'] = $cookieDomain;
-                        $rememberCookieOpts['domain'] = $cookieDomain;
-                    }
-                    setcookie(session_name(), session_id(), $sessionCookieOpts);
-                    setcookie(REMEMBER_COOKIE_NAME, $rememberCookieValue, $rememberCookieOpts);
+                    ]);
                 } else {
                     $_SESSION['remember_me'] = false;
                 }
@@ -183,18 +178,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $rememberStmt->execute();
                     $rememberStmt->close();
                 }
-                $cookieDomain = $cookieParams['domain'] ?? '';
-                $clearRememberOpts = [
+                setcookie(REMEMBER_COOKIE_NAME, '', [
                     'expires' => time() - 3600,
                     'path' => $cookieParams['path'] ?? '/',
+                    'domain' => $cookieParams['domain'] ?? '',
                     'secure' => (bool)($cookieParams['secure'] ?? false),
                     'httponly' => true,
                     'samesite' => $cookieParams['samesite'] ?? 'Lax',
-                ];
-                if ($cookieDomain !== '') {
-                    $clearRememberOpts['domain'] = $cookieDomain;
-                }
-                setcookie(REMEMBER_COOKIE_NAME, '', $clearRememberOpts);
+                ]);
             }
 
             // salva la sessione e poi reindirizza
