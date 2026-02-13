@@ -184,7 +184,7 @@ async function mostraPartiteSquadra(squadra) {
   emptyEl.style.display = "none";
   document.querySelector("#teamMatchesHeader h3").textContent = `Partite ${squadra}`;
 
-  const partite = (await loadPartiteTorneo()).filter(p => faseKey(p.fase) === "REGULAR" && (p.squadra_casa === squadra || p.squadra_ospite === squadra));
+  const partite = (await loadPartiteTorneo()).filter(p => Number(p.giocata) === 1 && faseKey(p.fase) === "REGULAR" && (p.squadra_casa === squadra || p.squadra_ospite === squadra));
   partite.sort((a, b) => (a.data_partita || "").localeCompare(b.data_partita || "") || (a.ora_partita || "").localeCompare(b.ora_partita || ""));
 
   if (!partite.length) {
