@@ -1,44 +1,6 @@
 <?php
 require_once __DIR__ . '/../includi/require_login.php';
-
-// Template base per creare un nuovo torneo:
-// 1) Duplica questo file e rinominalo (es. NuovoTorneo.php)
-// 2) Imposta $torneoSlug e $torneoName qui sotto
-// 3) Duplica anche script-TorneoTemplate.js rinominandolo in script-NuovoTorneo.js
-// 4) Nel nuovo JS sostituisci TORNEO con lo stesso slug usato nel DB/API
-// 5) (Opzionale) Aggiorna assetVersion per forzare la cache
-$torneoSlug = 'TEMPLATE_SLUG';
-$torneoName = 'Torneo Template';
-$assetVersion = '20260206';
-
-require_once __DIR__ . '/../includi/db.php';
-$torneoConfig = [];
-$regoleHtmlSafe = '';
-try {
-    if (isset($conn) && $conn instanceof mysqli) {
-        $filetorneo = $torneoSlug . '.php';
-        if ($stmt = $conn->prepare("SELECT config FROM tornei WHERE filetorneo = ? LIMIT 1")) {
-            $stmt->bind_param('s', $filetorneo);
-            if ($stmt->execute()) {
-                $res = $stmt->get_result();
-                $row = $res->fetch_assoc();
-                if ($row && !empty($row['config'])) {
-                    $decoded = json_decode($row['config'], true);
-                    if (is_array($decoded)) {
-                        $torneoConfig = $decoded;
-                    }
-                }
-            }
-            $stmt->close();
-        }
-    }
-} catch (Throwable $e) {
-    // ignora eventuali errori di lettura config
-}
-
-if (!empty($torneoConfig['regole_html'])) {
-    $regoleHtmlSafe = nl2br(htmlspecialchars((string)$torneoConfig['regole_html'], ENT_QUOTES, 'UTF-8'));
-}
+$assetVersion = '20260213';
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -54,7 +16,7 @@ if (!empty($torneoConfig['regole_html'])) {
   </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title><?= htmlspecialchars($torneoName) ?> - Tornei Old School</title>
+  <title>Weekend League 2 - Tornei Old School</title>
   <link rel="stylesheet" href="../style.css?v=<?= $assetVersion ?>" />
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
@@ -167,9 +129,9 @@ if (!empty($torneoConfig['regole_html'])) {
   <!-- CONTENUTO PRINCIPALE -->
   <main class="content">
     <div class="torneo-hero">
-      <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo <?= htmlspecialchars($torneoName) ?>">
+      <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Weekend League 2">
       <div class="torneo-title">
-        <h1 class="titolo"><?= htmlspecialchars($torneoName) ?></h1>
+        <h1 class="titolo">Weekend League 2</h1>
         <button type="button" class="fav-toggle" id="favTournamentBtn">&#9734; Segui torneo</button>
       </div>
     </div>
@@ -239,7 +201,7 @@ if (!empty($torneoConfig['regole_html'])) {
 
       <!-- PLAYOFF / BRACKET -->
       <div id="playoffContainer" style="display:none;">
-        <!-- popolato via JS -->
+        <!-- verra popolato via JS -->
       </div>
 
     </section>
@@ -279,33 +241,50 @@ if (!empty($torneoConfig['regole_html'])) {
     </section>
   </main>
 
-    <!-- REGOLE -->
-  <section id="regole" class="tab-section">
-    <h2 class="titolo-sezione">Regole del Torneo</h2>
-    <div class="regole-box" id="regoleBox">
-      <?php if ($regoleHtmlSafe !== ''): ?>
-        <div class="regola">
-          <p><?= $regoleHtmlSafe ?></p>
-        </div>
-      <?php else: ?>
-        <div class="regola">
-          <p>Le regole saranno pubblicate a breve.</p>
-        </div>
-      <?php endif; ?>
-    </div>
-    <br><br><br><br>
-  </section>
+<!-- REGOLE -->
+<section id="regole" class="tab-section">
+  <h2 class="titolo-sezione">Regole Weekend League 2</h2>
 
-  <!-- MARCATORI --><!-- MARCATORI -->
-  <section id="marcatori" class="tab-section">
-    <h2>Classifica Marcatori</h2>
-    <div class="marcatori-list" id="marcatoriList"></div>
-    <div class="marcatori-pagination">
-      <button class="pill-btn pill-btn--ghost" id="prevMarcatori" disabled>Precedente</button>
-      <span id="marcatoriPageInfo"></span>
-      <button class="pill-btn" id="nextMarcatori" disabled>Successiva</button>
+  <div class="regole-box">
+    <div class="regola">
+      <h3>Formato generale</h3>
+      <p>10 squadre, regular season di 9 giornate con gare la domenica mattina.</p>
     </div>
-  </section>
+
+    <div class="regola">
+      <h3>Playoff Gold</h3>
+      <ul>
+        <li>1a e 2a classificate accedono direttamente alle semifinali Gold.</li>
+        <li>3a vs 6a e 4a vs 5a giocano i quarti Gold; le vincenti sfidano le prime due.</li>
+      </ul>
+    </div>
+
+    <div class="regola">
+      <h3>Playoff Silver</h3>
+      <ul>
+        <li>7a vs 10a e 8a vs 9a disputano le semifinali Silver.</li>
+        <li>Le vincenti si affrontano in finale Silver.</li>
+      </ul>
+    </div>
+
+    <div class="regola">
+      <h3>Note calendario</h3>
+      <p>Tutta la fase di regular season si gioca la domenica mattina salvo recuperi concordati.</p>
+    </div>
+  </div>
+  <br><br><br><br>
+</section>
+
+    <!-- MARCATORI -->
+    <section id="marcatori" class="tab-section">
+      <h2>Classifica Marcatori</h2>
+      <div class="marcatori-list" id="marcatoriList"></div>
+      <div class="marcatori-pagination">
+        <button class="pill-btn pill-btn--ghost" id="prevMarcatori" disabled>Precedente</button>
+        <span id="marcatoriPageInfo"></span>
+        <button class="pill-btn" id="nextMarcatori" disabled>Successiva</button>
+      </div>
+    </section>
 
   <!-- FOOTER -->
   <div id="footer-container"></div>
@@ -315,7 +294,7 @@ if (!empty($torneoConfig['regole_html'])) {
   <script>
     document.addEventListener("DOMContentLoaded", () => {
 
-      // Gestione scelta fase classifica (UI base)
+      // ====== GESTIONE SCELTA FASE CLASSIFICA (UI base) ======
       const faseSelect = document.getElementById("faseSelect");
       const coppaSelect = document.getElementById("coppaSelect");
 
@@ -333,75 +312,37 @@ if (!empty($torneoConfig['regole_html'])) {
         });
       }
 
-      // HEADER dinamico
+      // ====== HEADER DINAMICO ======
       fetch("/includi/header.php?v=<?= $assetVersion ?>")
         .then(response => response.text())
         .then(data => {
           document.getElementById("header-container").innerHTML = data;
           initHeaderInteractions();
 
-          // Fallback mobile toggle
-          const headerEl = document.querySelector(".site-header");
-          if (headerEl) {
-            const mobileBtn = headerEl.querySelector("#mobileMenuBtn");
-            const mainNav = headerEl.querySelector("#mainNav");
-            const userBtn = headerEl.querySelector("#userBtn");
-            const userMenu = headerEl.querySelector("#userMenu");
-            let fallbackBound = false;
+          const header = document.querySelector(".site-header");
+          window.addEventListener("scroll", () => {
+            if (window.scrollY > 50) header.classList.add("scrolled");
+            else header.classList.remove("scrolled");
+          });
 
-            const applyDisplay = (open) => {
-              if (!mainNav) return;
-              mainNav.classList.toggle("open", open);
-              if (window.matchMedia("(max-width: 768px)").matches) {
-                mainNav.style.display = open ? "flex" : "none";
-              } else {
-                mainNav.style.display = "";
-              }
-            };
+          const dropdown = document.querySelector(".dropdown");
+          if (dropdown) {
+            const btn = dropdown.querySelector(".dropbtn");
+            const menu = dropdown.querySelector(".dropdown-content");
 
-            const toggleWorks = (() => {
-              if (!mobileBtn || !mainNav) return false;
-              const wasOpen = mainNav.classList.contains("open");
-              mobileBtn.click();
-              const changed = mainNav.classList.contains("open");
-              if (changed !== wasOpen) {
-                mainNav.classList.toggle("open");
-                return true;
-              }
-              return false;
-            })();
-
-            if (!toggleWorks && mobileBtn && mainNav && !fallbackBound) {
-              fallbackBound = true;
-
-              const closeMenus = () => {
-                applyDisplay(false);
-                if (userMenu) userMenu.classList.remove("open");
-              };
-
-              mobileBtn.addEventListener("click", (e) => {
+            if (btn && menu) {
+              btn.addEventListener("click", (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const isOpen = !mainNav.classList.contains("open");
-                applyDisplay(isOpen);
-                if (isOpen && userMenu) userMenu.classList.remove("open");
+                dropdown.classList.toggle("open");
+                menu.style.display = dropdown.classList.contains("open") ? "block" : "none";
               });
-
-              if (userBtn && userMenu) {
-                userBtn.addEventListener("click", (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const isOpen = userMenu.classList.toggle("open");
-                  if (isOpen) applyDisplay(false);
-                });
-              }
 
               document.addEventListener("click", (e) => {
-                if (!headerEl.contains(e.target)) closeMenus();
-              });
-
-              window.addEventListener("resize", () => {
-                if (window.innerWidth > 768) closeMenus();
+                if (!dropdown.contains(e.target)) {
+                  dropdown.classList.remove("open");
+                  menu.style.display = "none";
+                }
               });
             }
           }
@@ -420,13 +361,8 @@ if (!empty($torneoConfig['regole_html'])) {
       .catch(error => console.error("Errore nel caricamento del footer:", error));
   </script>
 
-  <!-- SCRIPT: TEMPLATE -->
-  <script>
-    // espone lo slug al JS template
-    window.__TEMPLATE_TORNEO_SLUG__ = <?= json_encode($torneoSlug) ?>;
-    window.__TORNEO_CONFIG__ = <?= json_encode($torneoConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-  </script>
-  <script src="script-TorneoTemplate.js?v=<?= $assetVersion ?>"></script>
+  <!-- SCRIPT: SERIE A -->
+  <script src="script-WeekendLeague2.js?v=<?= $assetVersion ?>"></script>
 
 </body>
 </html>
