@@ -63,19 +63,24 @@ if (!function_exists('tos_cookie_domain')) {
 if (session_status() === PHP_SESSION_NONE) {
     $rememberRequested = !empty($_COOKIE[REMEMBER_COOKIE_NAME]);
     $cookieLifetime = $rememberRequested ? REMEMBER_COOKIE_LIFETIME : 0;
+    $cookieDomain = tos_cookie_domain();
 
     // Mantieni i file di sessione per almeno 30 giorni (allineato al cookie remember)
     ini_set('session.gc_maxlifetime', (string)REMEMBER_COOKIE_LIFETIME);
 
     if (function_exists('session_set_cookie_params')) {
-        session_set_cookie_params([
+        $sessionParams = [
             'lifetime' => $cookieLifetime,
             'path' => '/',
-            'domain' => tos_cookie_domain(),
             'secure' => $isHttps,
             'httponly' => true,
             'samesite' => 'Lax',
-        ]);
+        ];
+        // Domain deve essere incluso solo se non vuoto, altrimenti alcuni browser scartano il cookie
+        if ($cookieDomain !== '') {
+            $sessionParams['domain'] = $cookieDomain;
+        }
+        session_set_cookie_params($sessionParams);
     }
     if (!ini_get('session.use_strict_mode')) {
         ini_set('session.use_strict_mode', '1');
@@ -93,15 +98,15 @@ if (session_status() === PHP_SESSION_NONE) {
     if (!empty($_SESSION['remember_me'])) {
         $params = session_get_cookie_params();
         $expires = time() + REMEMBER_COOKIE_LIFETIME;
+        $cookieDomain = tos_cookie_domain();
         $cookieParams = [
             'path' => ($params['path'] ?? '/') ?: '/',
-            'domain' => is_string($params['domain'] ?? '') ? ($params['domain'] ?? '') : '',
             'secure' => $isHttps,
             'httponly' => true,
             'samesite' => 'Lax',
         ];
-        if ($cookieParams['domain'] === '') {
-            $cookieParams['domain'] = tos_cookie_domain();
+        if ($cookieDomain !== '') {
+            $cookieParams['domain'] = $cookieDomain;
         }
 
         setcookie(session_name(), session_id(), array_merge($cookieParams, ['expires' => $expires]));
@@ -129,13 +134,16 @@ function tos_cookie_params(bool $isHttps): array
         $domain = tos_cookie_domain();
     }
 
-    return [
+    $result = [
         'path' => $path === '' ? '/' : $path,
-        'domain' => is_string($domain) ? $domain : '',
         'secure' => $isHttps,
         'httponly' => true,
         'samesite' => $samesite,
     ];
+    if (is_string($domain) && $domain !== '') {
+        $result['domain'] = $domain;
+    }
+    return $result;
 }
 
 function tos_clear_remember_cookie(bool $isHttps): void
