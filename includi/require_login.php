@@ -4,8 +4,8 @@ require_once __DIR__ . '/security.php';
 
 if (!isset($_SESSION['user_id'])) {
     $currentPath = $_SERVER['REQUEST_URI'] ?? '/index.php';
-    login_remember_redirect($currentPath);
-    header('Location: /login.php');
+    login_remember_redirect($currentPath, login_with_base_path('/index.php'));
+    header('Location: ' . login_with_base_path('/login.php'));
     exit;
 }
 

@@ -5,14 +5,14 @@ $currentPath = $_SERVER['REQUEST_URI'] ?? '/admin_dashboard.php';
 
 // Se non loggato, ricorda la destinazione e chiedi il login
 if (!isset($_SESSION['user_id'])) {
-    login_remember_redirect($currentPath, '/admin_dashboard.php');
-    header('Location: /login.php');
+    login_remember_redirect($currentPath, login_with_base_path('/admin_dashboard.php'));
+    header('Location: ' . login_with_base_path('/login.php'));
     exit;
 }
 
 // Solo admin
 if (($_SESSION['ruolo'] ?? '') !== 'admin') {
-    header('Location: /index.php');
+    header('Location: ' . login_with_base_path('/index.php'));
     exit;
 }
 

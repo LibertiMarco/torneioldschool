@@ -6,6 +6,37 @@ if (!defined('REMEMBER_COOKIE_NAME')) {
 if (!defined('REMEMBER_COOKIE_LIFETIME')) {
     define('REMEMBER_COOKIE_LIFETIME', 60 * 60 * 24 * 30); // 30 giorni
 }
+if (!function_exists('login_base_path')) {
+    function login_base_path(): string
+    {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        $docRoot = rtrim(str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? ''), '/');
+        $projectRoot = str_replace('\\', '/', realpath(__DIR__ . '/..') ?: '');
+
+        if ($docRoot !== '' && strpos($projectRoot, $docRoot) === 0) {
+            $relative = substr($projectRoot, strlen($docRoot));
+            $relative = trim($relative, '/');
+            $cached = $relative === '' ? '' : '/' . $relative;
+            return $cached;
+        }
+
+        $cached = '';
+        return $cached;
+    }
+}
+
+if (!function_exists('login_with_base_path')) {
+    function login_with_base_path(string $path): string
+    {
+        $base = login_base_path();
+        $cleanPath = '/' . ltrim($path, '/');
+        return $base !== '' ? $base . $cleanPath : $cleanPath;
+    }
+}
 
 $defaultErrorLog = __DIR__ . '/../error.txt';
 if (!ini_get('log_errors')) {
@@ -412,7 +443,9 @@ if (!function_exists('login_sanitize_redirect')) {
         }
 
         $path = parse_url($trimmed, PHP_URL_PATH) ?: '';
-        if (preg_match('#^/login\.php$#i', $path)) {
+        $loginPath = login_with_base_path('/login.php');
+        $loginPattern = '#^(' . preg_quote($loginPath, '#') . '|/login\.php)$#i';
+        if (preg_match($loginPattern, $path)) {
             return null; // evita loop su login.php
         }
 
@@ -423,7 +456,8 @@ if (!function_exists('login_sanitize_redirect')) {
 if (!function_exists('login_remember_redirect')) {
     function login_remember_redirect(?string $target = null, string $fallback = '/index.php'): string
     {
-        $safe = login_sanitize_redirect($target) ?: $fallback;
+        $safeFallback = login_with_base_path($fallback);
+        $safe = login_sanitize_redirect($target) ?: $safeFallback;
         $_SESSION['login_redirect'] = $safe;
         return $safe;
     }
@@ -432,6 +466,7 @@ if (!function_exists('login_remember_redirect')) {
 if (!function_exists('login_get_redirect')) {
     function login_get_redirect(string $fallback = '/index.php'): string
     {
-        return login_sanitize_redirect($_SESSION['login_redirect'] ?? null) ?: $fallback;
+        $safeFallback = login_with_base_path($fallback);
+        return login_sanitize_redirect($_SESSION['login_redirect'] ?? null) ?: $safeFallback;
     }
 }

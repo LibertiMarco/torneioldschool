@@ -17,7 +17,7 @@ $loginBreadcrumbs = seo_breadcrumb_schema([
     ['name' => 'Login', 'url' => $baseUrl . '/login.php'],
 ]);
 
-$defaultRedirect = '/index.php';
+$defaultRedirect = login_with_base_path('/index.php');
 if (isset($_GET['redirect'])) {
     $candidateRedirect = login_sanitize_redirect($_GET['redirect']);
     if ($candidateRedirect) {
@@ -518,5 +518,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   </script>
 </body>
 </html>
-
 

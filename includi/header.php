@@ -43,17 +43,17 @@ if (!empty($sessionAvatar)) {
 
     <!-- LOGO -->
     <div class="header-logo">
-        <a href="/index.php">
+        <a href="<?= htmlspecialchars(login_with_base_path('/index.php')) ?>">
             <img src="/img/logo_old_school.png" alt="Logo">
         </a>
     </div>
 
     <!-- NAVIGAZIONE DESKTOP + MOBILE -->
     <nav class="header-nav" id="mainNav">
-        <a href="/tornei.php">Tornei</a>
-        <a href="/blog.php">Blog</a>
-        <a href="/chisiamo.php">Chi siamo</a>
-        <a href="/contatti.php">Contatti</a>
+        <a href="<?= htmlspecialchars(login_with_base_path('/tornei.php')) ?>">Tornei</a>
+        <a href="<?= htmlspecialchars(login_with_base_path('/blog.php')) ?>">Blog</a>
+        <a href="<?= htmlspecialchars(login_with_base_path('/chisiamo.php')) ?>">Chi siamo</a>
+        <a href="<?= htmlspecialchars(login_with_base_path('/contatti.php')) ?>">Contatti</a>
     </nav>
 
     <div class="header-actions">
@@ -93,22 +93,22 @@ if (!empty($sessionAvatar)) {
                       </div>
                   </div>
                   <div class="user-actions">
-                      <a class="user-menu-item" href="/account.php">
+                      <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/account.php')) ?>">
                           <span>Il mio account</span>
                       </a>
                       <?php if ($hasPlayerProfile): ?>
-                          <a class="user-menu-item" href="/statistiche_giocatore.php">
+                          <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/statistiche_giocatore.php')) ?>">
                               <span>Statistiche giocatore</span>
                           </a>
                       <?php endif; ?>
 
                       <?php if ($_SESSION['ruolo'] === 'admin'): ?>
-                          <a class="user-menu-item" href="/admin_dashboard.php">
+                          <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/admin_dashboard.php')) ?>">
                               <span>Gestione Sito</span>
                           </a>
                       <?php endif; ?>
 
-                      <a class="user-menu-item" href="/logout.php">
+                      <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/logout.php')) ?>">
                           <span>Logout</span>
                       </a>
                   </div>
@@ -120,10 +120,10 @@ if (!empty($sessionAvatar)) {
                       </div>
                   </div>
                   <div class="user-actions">
-                      <a class="user-menu-item" href="/register.php">
+                      <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/register.php')) ?>">
                           <span>Iscriviti</span>
                       </a>
-                      <a class="user-menu-item" href="/login.php">
+                      <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/login.php')) ?>">
                           <span>Accedi</span>
                       </a>
                   </div>
