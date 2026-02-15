@@ -3,6 +3,7 @@ require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/seo.php';
 $loginDebugEnabled = getenv('LOGIN_DEBUG') === '1';
+$isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
 if ($loginDebugEnabled) {
     // Forza un log locale visibile (fallback se php.ini punta altrove)
     ini_set('log_errors', '1');
@@ -81,6 +82,15 @@ foreach ($noCacheHeaders as $h) {
 $error = "";
 $invalidCredentialsMessage = "Email o password errati.";
 $loginCsrf = csrf_get_token('login_form');
+// Double-submit cookie per robustezza se la sessione non persiste tra GET e POST (es. bilanciamento / caching)
+setcookie('login_csrf', $loginCsrf, [
+    'expires' => time() + 600,
+    'path' => '/',
+    'domain' => '',
+    'secure' => $isHttps,
+    'httponly' => false,
+    'samesite' => 'Lax',
+]);
 
 function verify_recaptcha(string $secret, string $token, string $ip = '', string $expectedAction = '', float $minScore = 0.0): bool
 {
@@ -124,14 +134,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         login_debug_log('set_redirect_from_post', $loginDebugEnabled, ['redirect' => $postRedirect]);
     }
 
-    if (!csrf_is_valid($_POST['_csrf'] ?? '', 'login_form')) {
+$postedCsrf = $_POST['_csrf'] ?? '';
+$cookieCsrf = $_COOKIE['login_csrf'] ?? '';
+$csrfValid = ($postedCsrf !== '' && $cookieCsrf !== '' && hash_equals($cookieCsrf, $postedCsrf))
+    || csrf_is_valid($postedCsrf, 'login_form');
+
+    if (!$csrfValid) {
         $error = "Sessione scaduta. Ricarica la pagina e riprova.";
         login_debug_log('csrf_invalid', $loginDebugEnabled, [
             'session_id' => session_id(),
-            'posted_token_len' => strlen($_POST['_csrf'] ?? ''),
+            'posted_token_len' => strlen($postedCsrf),
             'session_token_len' => strlen($_SESSION['_csrf_tokens']['login_form'] ?? ''),
-            'posted_token_preview' => substr($_POST['_csrf'] ?? '', 0, 8),
+            'posted_token_preview' => substr($postedCsrf, 0, 8),
             'session_token_preview' => substr($_SESSION['_csrf_tokens']['login_form'] ?? '', 0, 8),
+            'cookie_token_len' => strlen($cookieCsrf),
+            'cookie_token_preview' => substr($cookieCsrf, 0, 8),
             'cookie_sent' => $_COOKIE[session_name()] ?? '(none)',
             'headers' => [
                 'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
