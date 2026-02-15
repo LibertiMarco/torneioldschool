@@ -196,18 +196,6 @@ $csrfValid = ($postedCsrf !== '' && $cookieCsrf !== '' && hash_equals($cookieCsr
                 exit;
             } else {
             // imposta le variabili di sessione
-            $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
-            if ($rememberMe) {
-                $baseParams = session_get_cookie_params();
-                session_set_cookie_params([
-                    'lifetime' => REMEMBER_COOKIE_LIFETIME,
-                    'path' => $baseParams['path'] ?? '/',
-                    'domain' => $baseParams['domain'] ?? '',
-                    'secure' => $isHttps,
-                    'httponly' => true,
-                    'samesite' => $baseParams['samesite'] ?? 'Lax',
-                ]);
-            }
             session_regenerate_id(true);
             $_SESSION['user_id'] = $row['id'];
             $_SESSION['email'] = $row['email'];
@@ -222,9 +210,24 @@ $csrfValid = ($postedCsrf !== '' && $cookieCsrf !== '' && hash_equals($cookieCsr
                 'session_id' => session_id(),
             ]);
 
+            // Imposta sempre il cookie di sessione con durata coerente
             $cookieParams = session_get_cookie_params();
+            $cookieLifetime = $rememberMe ? REMEMBER_COOKIE_LIFETIME : 0;
+            $sessionCookieExpires = $cookieLifetime ? time() + $cookieLifetime : 0;
+            setcookie(session_name(), session_id(), [
+                'expires' => $sessionCookieExpires,
+                'path' => $cookieParams['path'] ?? '/',
+                'domain' => $cookieParams['domain'] ?? '',
+                'secure' => (bool)($cookieParams['secure'] ?? false),
+                'httponly' => true,
+                'samesite' => $cookieParams['samesite'] ?? 'Lax',
+            ]);
+            login_debug_log('session_cookie_set', $loginDebugEnabled, [
+                'session_id' => session_id(),
+                'expires' => $sessionCookieExpires,
+            ]);
+
             if ($rememberMe) {
-                $cookieLifetime = REMEMBER_COOKIE_LIFETIME;
                 $rememberSelector = bin2hex(random_bytes(9));
                 $rememberValidator = bin2hex(random_bytes(32));
                 $rememberHash = hash('sha256', $rememberValidator);
@@ -247,14 +250,6 @@ $csrfValid = ($postedCsrf !== '' && $cookieCsrf !== '' && hash_equals($cookieCsr
 
                 if ($rememberSaved) {
                     $rememberCookieValue = $rememberSelector . ':' . $rememberValidator;
-                    setcookie(session_name(), session_id(), [
-                        'expires' => time() + $cookieLifetime,
-                        'path' => $cookieParams['path'] ?? '/',
-                        'domain' => $cookieParams['domain'] ?? '',
-                        'secure' => (bool)($cookieParams['secure'] ?? false),
-                        'httponly' => (bool)($cookieParams['httponly'] ?? true),
-                        'samesite' => $cookieParams['samesite'] ?? 'Lax',
-                    ]);
                     setcookie(REMEMBER_COOKIE_NAME, $rememberCookieValue, [
                         'expires' => time() + $cookieLifetime,
                         'path' => $cookieParams['path'] ?? '/',
