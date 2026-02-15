@@ -119,9 +119,9 @@ $assetVersion = '20260213';
       }
     }
     /* Evidenziazione posizioni Weekend League 2 */
-    #tableClassifica tr.gold-bye-row td { background: #ffd46b; color: #15293e; }   /* pos 1-2 */
-    #tableClassifica tr.gold-qual-row td { background: #fff1b3; color: #15293e; }  /* pos 3-6 */
-    #tableClassifica tr.silver-row td { background: #e8f1ff; color: #15293e; }     /* pos 7-10 */
+    #tableClassifica tr.gold-bye-row td:first-child { background: #ffd46b; color: #15293e; }   /* pos 1-2 */
+    #tableClassifica tr.gold-qual-row td:first-child { background: #fff1b3; color: #15293e; }  /* pos 3-6 */
+    #tableClassifica tr.silver-row td:first-child { background: #e8f1ff; color: #15293e; }     /* pos 7-10 */
   </style>
 </head>
 
