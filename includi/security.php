@@ -6,6 +6,21 @@ if (!defined('REMEMBER_COOKIE_NAME')) {
 if (!defined('REMEMBER_COOKIE_LIFETIME')) {
     define('REMEMBER_COOKIE_LIFETIME', 60 * 60 * 24 * 30); // 30 giorni
 }
+$loginDebugEnabled = getenv('LOGIN_DEBUG') === '1';
+if ($loginDebugEnabled) {
+    ini_set('log_errors', '1');
+    ini_set('error_log', __DIR__ . '/../error.txt');
+}
+if (!function_exists('tos_debug_log')) {
+    function tos_debug_log(string $message, bool $enabled, array $context = []): void
+    {
+        if (!$enabled) {
+            return;
+        }
+        $ctx = $context ? ' ' . json_encode($context, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '';
+        error_log('[security-debug] ' . $message . $ctx);
+    }
+}
 if (!function_exists('login_base_path')) {
     function login_base_path(): string
     {
@@ -69,6 +84,11 @@ $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !=
 if (session_status() === PHP_SESSION_NONE) {
     $rememberRequested = !empty($_COOKIE[REMEMBER_COOKIE_NAME]);
     $cookieLifetime = $rememberRequested ? REMEMBER_COOKIE_LIFETIME : 0;
+    tos_debug_log('session_start', $loginDebugEnabled, [
+        'remember_cookie_present' => $rememberRequested,
+        'session_cookie' => $_COOKIE[session_name()] ?? '(none)',
+        'session_status' => session_status(),
+    ]);
 
     // Mantieni i file di sessione per almeno 30 giorni (allineato al cookie remember)
     ini_set('session.gc_maxlifetime', (string)REMEMBER_COOKIE_LIFETIME);
@@ -112,6 +132,12 @@ if (session_status() === PHP_SESSION_NONE) {
             $rememberValue = $_COOKIE[REMEMBER_COOKIE_NAME];
             setcookie(REMEMBER_COOKIE_NAME, $rememberValue, array_merge($cookieParams, ['expires' => $expires]));
         }
+        tos_debug_log('keepalive_remember', $loginDebugEnabled, [
+            'session_id' => session_id(),
+            'user_id' => $_SESSION['user_id'] ?? null,
+            'remember_cookie' => $_COOKIE[REMEMBER_COOKIE_NAME] ?? '(none)',
+            'expires' => $expires,
+        ]);
     }
 }
 
@@ -246,6 +272,11 @@ if (!isset($_SESSION['user_id']) && !empty($_COOKIE[REMEMBER_COOKIE_NAME])) {
                             setcookie(REMEMBER_COOKIE_NAME, $newSelector . ':' . $newValidator, array_merge($cookieParams, [
                                 'expires' => $cookieExpires,
                             ]));
+                            tos_debug_log('remember_autologin_ok', $loginDebugEnabled, [
+                                'user_id' => $user['id'],
+                                'session_id' => session_id(),
+                                'selector' => $selector,
+                            ]);
                         } else {
                             $forget = $conn->prepare("UPDATE utenti SET remember_selector = NULL, remember_token_hash = NULL, remember_expires_at = NULL WHERE remember_selector = ?");
                             if ($forget) {
@@ -254,19 +285,28 @@ if (!isset($_SESSION['user_id']) && !empty($_COOKIE[REMEMBER_COOKIE_NAME])) {
                                 $forget->close();
                             }
                             tos_clear_remember_cookie($isHttps);
+                            tos_debug_log('remember_autologin_invalid', $loginDebugEnabled, [
+                                'selector' => $selector,
+                                'expires_at' => $expiresAt,
+                                'token_match' => $tokenMatches,
+                            ]);
                         }
                     }
                 } catch (Throwable $e) {
                     error_log('remember auto-login: ' . $e->getMessage());
+                    tos_debug_log('remember_autologin_error', $loginDebugEnabled, ['error' => $e->getMessage()]);
                 }
             } else {
                 error_log('remember auto-login: connessione DB non disponibile, salto auto-login ma mantengo il cookie.');
+                tos_debug_log('remember_autologin_no_db', $loginDebugEnabled);
             }
         } else {
             tos_clear_remember_cookie($isHttps);
+            tos_debug_log('remember_autologin_bad_format', $loginDebugEnabled, ['raw' => $rawRemember]);
         }
     } else {
         tos_clear_remember_cookie($isHttps);
+        tos_debug_log('remember_autologin_missing_sep', $loginDebugEnabled, ['raw' => $rawRemember]);
     }
 }
 
