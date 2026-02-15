@@ -123,6 +123,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 exit;
             } else {
             // imposta le variabili di sessione
+            $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
+            if ($rememberMe) {
+                $baseParams = session_get_cookie_params();
+                session_set_cookie_params([
+                    'lifetime' => REMEMBER_COOKIE_LIFETIME,
+                    'path' => $baseParams['path'] ?? '/',
+                    'domain' => $baseParams['domain'] ?? '',
+                    'secure' => $isHttps,
+                    'httponly' => true,
+                    'samesite' => $baseParams['samesite'] ?? 'Lax',
+                ]);
+            }
             session_regenerate_id(true);
             $_SESSION['user_id'] = $row['id'];
             $_SESSION['email'] = $row['email'];
@@ -144,9 +156,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $rememberStmt = $conn->prepare("UPDATE utenti SET remember_selector = ?, remember_token_hash = ?, remember_expires_at = ? WHERE id = ?");
                 if ($rememberStmt) {
                     $rememberStmt->bind_param("sssi", $rememberSelector, $rememberHash, $rememberExpires, $row['id']);
-                    $rememberStmt->execute();
-                    $rememberSaved = ($rememberStmt->affected_rows >= 0);
+                    $rememberSaved = $rememberStmt->execute();
+                    if (!$rememberSaved) {
+                        error_log('remember save failed: ' . $rememberStmt->error);
+                    }
                     $rememberStmt->close();
+                } else {
+                    error_log('remember save prepare failed: ' . $conn->error);
                 }
 
                 if ($rememberSaved) {
@@ -518,4 +534,3 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   </script>
 </body>
 </html>
-

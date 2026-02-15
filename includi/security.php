@@ -108,8 +108,10 @@ if (session_status() === PHP_SESSION_NONE) {
 
         setcookie(session_name(), session_id(), array_merge($cookieParams, ['expires' => $expires]));
 
-        $rememberValue = $_COOKIE[REMEMBER_COOKIE_NAME] ?? '1';
-        setcookie(REMEMBER_COOKIE_NAME, $rememberValue, array_merge($cookieParams, ['expires' => $expires]));
+        if (isset($_COOKIE[REMEMBER_COOKIE_NAME])) {
+            $rememberValue = $_COOKIE[REMEMBER_COOKIE_NAME];
+            setcookie(REMEMBER_COOKIE_NAME, $rememberValue, array_merge($cookieParams, ['expires' => $expires]));
+        }
     }
 }
 
@@ -256,10 +258,9 @@ if (!isset($_SESSION['user_id']) && !empty($_COOKIE[REMEMBER_COOKIE_NAME])) {
                     }
                 } catch (Throwable $e) {
                     error_log('remember auto-login: ' . $e->getMessage());
-                    tos_clear_remember_cookie($isHttps);
                 }
             } else {
-                tos_clear_remember_cookie($isHttps);
+                error_log('remember auto-login: connessione DB non disponibile, salto auto-login ma mantengo il cookie.');
             }
         } else {
             tos_clear_remember_cookie($isHttps);
