@@ -23,6 +23,10 @@ login_debug_log('page_load', $loginDebugEnabled, [
     'session_id' => session_id(),
     'method' => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
     'error_log' => ini_get('error_log'),
+    'cookie_sent' => $_COOKIE[session_name()] ?? '(none)',
+    'session_status' => session_status(),
+    'csrf_token_len' => strlen($_SESSION['_csrf_tokens']['login_form'] ?? ''),
+    'csrf_token_preview' => substr($_SESSION['_csrf_tokens']['login_form'] ?? '', 0, 8),
 ]);
 
 $recaptchaSiteKey = getenv('RECAPTCHA_SITE_KEY') ?: '';
@@ -126,6 +130,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             'session_id' => session_id(),
             'posted_token_len' => strlen($_POST['_csrf'] ?? ''),
             'session_token_len' => strlen($_SESSION['_csrf_tokens']['login_form'] ?? ''),
+            'posted_token_preview' => substr($_POST['_csrf'] ?? '', 0, 8),
+            'session_token_preview' => substr($_SESSION['_csrf_tokens']['login_form'] ?? '', 0, 8),
+            'cookie_sent' => $_COOKIE[session_name()] ?? '(none)',
+            'headers' => [
+                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
+                'referer' => $_SERVER['HTTP_REFERER'] ?? '',
+                'host' => $_SERVER['HTTP_HOST'] ?? '',
+            ],
         ]);
     } elseif (honeypot_triggered()) {
         $error = "Richiesta non valida.";
