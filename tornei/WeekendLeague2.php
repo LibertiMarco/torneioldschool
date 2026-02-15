@@ -247,33 +247,65 @@ $assetVersion = '20260213';
 
 <!-- REGOLE -->
 <section id="regole" class="tab-section">
-  <h2 class="titolo-sezione">Regole Weekend League 2</h2>
+  <h2 class="titolo-sezione">📜 Regole del Torneo</h2>
 
   <div class="regole-box">
     <div class="regola">
-      <h3>Formato generale</h3>
-      <p>10 squadre, regular season di 9 giornate con gare la domenica mattina.</p>
+      <h3>🏟️ Struttura del Campionato</h3>
+      <p>
+        Il torneo è composto da <strong>10 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
+      </p>
     </div>
 
     <div class="regola">
-      <h3>Playoff Gold</h3>
+      <h3>⚽ Fase 1 — Regular Season</h3>
+      <p>
+        Tutte le squadre partecipano a una <strong>Regular Season</strong> in stile Champions League.
+        Ogni squadra disputa <strong>9 partite</strong> totali.
+      </p>
+      <p>
+        La squadra prima in classifica al termine del girone riceve il
+        <span class="highlight">Trofeo Regular Season 🏆</span>.
+      </p>
+    </div>
+
+    <div class="regola">
+      <h3>🏆 Fase 2 — Coppe</h3>
       <ul>
-        <li>1a e 2a classificate accedono direttamente alle semifinali Gold.</li>
-        <li>3a vs 6a e 4a vs 5a giocano i quarti Gold; le vincenti sfidano le prime due.</li>
+        <li>Le <strong>prime 2</strong> classificate vanno direttamente ai <span class="gold">semifinali di Coppa Gold</span>.</li>
+        <li>Le squadre dalle <strong>posizioni 3-6</strong> accedono agli <span class="gold">quarti di Coppa Gold</span>.</li>
+        <li>Le squadre dalle <strong>posizioni 7-10</strong> disputano la <span class="silver">Coppa Silver</span>.</li>
+        <li>Entrambe le coppe prevedono una <strong>premiazione con trofeo</strong> per la vincitrice.</li>
       </ul>
     </div>
 
     <div class="regola">
-      <h3>Playoff Silver</h3>
+      <h3>🎖️ Premi Finali</h3>
+      <p>Dopo la finale di <span class="gold">Coppa Gold</span> verranno assegnati i seguenti riconoscimenti:</p>
+      <div class="premi-grid">
+        <span>🏅 Miglior Giocatore</span>
+        <span>🧤 Miglior Portiere</span>
+        <span>🛡️ Miglior Difensore</span>
+        <span>⚡ Miglior Attaccante</span>
+      </div>
+    </div>
+
+    <div class="regola">
+      <h3>⏱️ Regole di Gioco</h3>
       <ul>
-        <li>7a vs 10a e 8a vs 9a disputano le semifinali Silver.</li>
-        <li>Le vincenti si affrontano in finale Silver.</li>
+        <li>Ogni partita dura <strong>2 tempi da 25 minuti</strong>.</li>
+        <li>I falli sono cumulativi, con un massimo di 5 per tempo. 
+          Dal sesto fallo in poi, per ogni ulteriore infrazione la squadra che lo subisce ha diritto a uno <strong>shootout</strong>.
+          Al termine del primo tempo, il conteggio dei falli viene azzerato.</li>
+        <li>Ogni squadra ha <strong>1 chiamata VAR</strong> disponibile per partita.</li>
       </ul>
     </div>
 
     <div class="regola">
-      <h3>Note calendario</h3>
-      <p>Tutta la fase di regular season si gioca la domenica mattina salvo recuperi concordati.</p>
+      <h3>📅 Calendario</h3>
+      <ul>
+        <li>Tutte le partite si disputano <strong>la domenica</strong>.</li>
+      </ul>
     </div>
   </div>
   <br><br><br><br>
