@@ -40,6 +40,15 @@ if ($alreadyLogged) {
     exit;
 }
 
+$noCacheHeaders = [
+    'Cache-Control: no-store, no-cache, must-revalidate, max-age=0',
+    'Pragma: no-cache',
+    'Expires: Mon, 01 Jan 1990 00:00:00 GMT',
+];
+foreach ($noCacheHeaders as $h) {
+    header($h);
+}
+
 $error = "";
 $invalidCredentialsMessage = "Email o password errati.";
 $loginCsrf = csrf_get_token('login_form');
