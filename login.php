@@ -3,6 +3,11 @@ require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/seo.php';
 $loginDebugEnabled = getenv('LOGIN_DEBUG') === '1';
+if ($loginDebugEnabled) {
+    // Forza un log locale visibile (fallback se php.ini punta altrove)
+    ini_set('log_errors', '1');
+    ini_set('error_log', __DIR__ . '/error.txt');
+}
 if (!function_exists('login_debug_log')) {
     function login_debug_log(string $message, bool $enabled, array $context = []): void
     {
@@ -17,6 +22,7 @@ if (!function_exists('login_debug_log')) {
 login_debug_log('page_load', $loginDebugEnabled, [
     'session_id' => session_id(),
     'method' => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
+    'error_log' => ini_get('error_log'),
 ]);
 
 $recaptchaSiteKey = getenv('RECAPTCHA_SITE_KEY') ?: '';
