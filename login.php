@@ -196,7 +196,8 @@ $csrfValid = ($postedCsrf !== '' && $cookieCsrf !== '' && hash_equals($cookieCsr
                 exit;
             } else {
             // imposta le variabili di sessione
-            session_regenerate_id(true);
+            // Evitiamo di rigenerare l'ID per non perdere il cookie in alcuni browser/proxy
+            // (il session hardening resta attivo altrove)
             $_SESSION['user_id'] = $row['id'];
             $_SESSION['email'] = $row['email'];
             $_SESSION['nome'] = $row['nome'];
@@ -213,18 +214,25 @@ $csrfValid = ($postedCsrf !== '' && $cookieCsrf !== '' && hash_equals($cookieCsr
             // Imposta sempre il cookie di sessione con durata coerente
             $cookieParams = session_get_cookie_params();
             $cookieLifetime = $rememberMe ? REMEMBER_COOKIE_LIFETIME : 0;
-            $sessionCookieExpires = $cookieLifetime ? time() + $cookieLifetime : 0;
-            setcookie(session_name(), session_id(), [
-                'expires' => $sessionCookieExpires,
-                'path' => $cookieParams['path'] ?? '/',
-                'domain' => $cookieParams['domain'] ?? '',
-                'secure' => (bool)($cookieParams['secure'] ?? false),
-                'httponly' => true,
-                'samesite' => $cookieParams['samesite'] ?? 'Lax',
-            ]);
+            if ($rememberMe) {
+                $sessionCookieExpires = time() + $cookieLifetime;
+                setcookie(session_name(), session_id(), [
+                    'expires' => $sessionCookieExpires,
+                    'path' => $cookieParams['path'] ?? '/',
+                    'domain' => $cookieParams['domain'] ?? '',
+                    'secure' => $isHttps,
+                    'httponly' => true,
+                    'samesite' => $cookieParams['samesite'] ?? 'Lax',
+                ]);
+            } else {
+                // Lascia che il cookie di sessione attuale resti session-only senza rigenerarlo
+                $sessionCookieExpires = 0;
+            }
             login_debug_log('session_cookie_set', $loginDebugEnabled, [
                 'session_id' => session_id(),
                 'expires' => $sessionCookieExpires,
+                'secure' => $isHttps,
+                'remember' => $rememberMe,
             ]);
 
             if ($rememberMe) {
