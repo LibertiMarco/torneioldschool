@@ -84,7 +84,7 @@ $invalidCredentialsMessage = "Email o password errati.";
 $loginCsrf = csrf_get_token('login_form');
 // Double-submit cookie per robustezza se la sessione non persiste tra GET e POST (es. bilanciamento / caching)
 setcookie('login_csrf', $loginCsrf, [
-    'expires' => time() + 600,
+    'expires' => time() + REMEMBER_COOKIE_LIFETIME, // allineato alla durata sessione "ricorda"
     'path' => '/',
     'domain' => '',
     'secure' => $isHttps,
