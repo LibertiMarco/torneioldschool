@@ -2,6 +2,23 @@
 require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/seo.php';
+$loginDebugEnabled = getenv('LOGIN_DEBUG') === '1';
+if (!function_exists('login_debug_log')) {
+    function login_debug_log(string $message, bool $enabled, array $context = []): void
+    {
+        if (!$enabled) {
+            return;
+        }
+        $ctx = $context ? ' ' . json_encode($context, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '';
+        error_log('[login-debug] ' . $message . $ctx);
+    }
+}
+
+login_debug_log('page_load', $loginDebugEnabled, [
+    'session_id' => session_id(),
+    'method' => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
+]);
+
 $recaptchaSiteKey = getenv('RECAPTCHA_SITE_KEY') ?: '';
 $recaptchaSecretKey = getenv('RECAPTCHA_SECRET_KEY') ?: '';
 
@@ -22,6 +39,7 @@ if (isset($_GET['redirect'])) {
     $candidateRedirect = login_sanitize_redirect($_GET['redirect']);
     if ($candidateRedirect) {
         login_remember_redirect($candidateRedirect, $defaultRedirect);
+        login_debug_log('set_redirect_from_get', $loginDebugEnabled, ['redirect' => $candidateRedirect]);
     }
 }
 
@@ -29,6 +47,7 @@ if (empty($_SESSION['login_redirect']) && !empty($_SERVER['HTTP_REFERER'])) {
     $refererRedirect = login_sanitize_redirect($_SERVER['HTTP_REFERER']);
     if ($refererRedirect) {
         login_remember_redirect($refererRedirect, $defaultRedirect);
+        login_debug_log('set_redirect_from_referer', $loginDebugEnabled, ['redirect' => $refererRedirect]);
     }
 }
 
@@ -92,19 +111,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $postRedirect = login_sanitize_redirect($_POST['redirect'] ?? null);
     if ($postRedirect) {
         $redirectTarget = login_remember_redirect($postRedirect, $defaultRedirect);
+        login_debug_log('set_redirect_from_post', $loginDebugEnabled, ['redirect' => $postRedirect]);
     }
 
     if (!csrf_is_valid($_POST['_csrf'] ?? '', 'login_form')) {
         $error = "Sessione scaduta. Ricarica la pagina e riprova.";
+        login_debug_log('csrf_invalid', $loginDebugEnabled, [
+            'session_id' => session_id(),
+            'posted_token_len' => strlen($_POST['_csrf'] ?? ''),
+            'session_token_len' => strlen($_SESSION['_csrf_tokens']['login_form'] ?? ''),
+        ]);
     } elseif (honeypot_triggered()) {
         $error = "Richiesta non valida.";
+        login_debug_log('honeypot_triggered', $loginDebugEnabled, ['session_id' => session_id()]);
     } elseif (!rate_limit_allow('login_attempt', 5, 900)) {
         $wait = rate_limit_retry_after('login_attempt', 900);
         $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
+        login_debug_log('rate_limited', $loginDebugEnabled, ['wait_seconds' => $wait]);
     } elseif ($recaptchaSecretKey === '' || $recaptchaSiteKey === '') {
         $error = "Servizio non disponibile: reCAPTCHA non configurato.";
+        login_debug_log('recaptcha_missing_config', $loginDebugEnabled);
     } elseif (!verify_recaptcha($recaptchaSecretKey, $_POST['g-recaptcha-response'] ?? '', $_SERVER['REMOTE_ADDR'] ?? '')) {
         $error = "Verifica reCAPTCHA non valida. Riprova.";
+        login_debug_log('recaptcha_failed', $loginDebugEnabled, ['ip' => $_SERVER['REMOTE_ADDR'] ?? '']);
     }
 
     if (!$error) {
@@ -152,6 +181,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['ruolo'] = $row['ruolo']; // "admin" oppure "user"
             $_SESSION['avatar'] = $row['avatar'] ?? null;
             $_SESSION['remember_me'] = $rememberMe;
+            login_debug_log('login_success', $loginDebugEnabled, [
+                'user_id' => $row['id'],
+                'remember' => $rememberMe,
+                'session_id' => session_id(),
+            ]);
 
             $cookieParams = session_get_cookie_params();
             if ($rememberMe) {
@@ -168,10 +202,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $rememberSaved = $rememberStmt->execute();
                     if (!$rememberSaved) {
                         error_log('remember save failed: ' . $rememberStmt->error);
+                        login_debug_log('remember_save_failed', $loginDebugEnabled, ['error' => $rememberStmt->error]);
                     }
                     $rememberStmt->close();
                 } else {
                     error_log('remember save prepare failed: ' . $conn->error);
+                    login_debug_log('remember_prepare_failed', $loginDebugEnabled, ['error' => $conn->error]);
                 }
 
                 if ($rememberSaved) {
@@ -194,6 +230,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     ]);
                 } else {
                     $_SESSION['remember_me'] = false;
+                    login_debug_log('remember_not_saved', $loginDebugEnabled);
                 }
             } else {
                 $_SESSION['remember_me'] = false;
@@ -222,9 +259,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
         } else {
             $error = $invalidCredentialsMessage;
+            login_debug_log('invalid_credentials', $loginDebugEnabled, ['email' => $email, 'session_id' => session_id()]);
         }
     } else {
         $error = $invalidCredentialsMessage;
+        login_debug_log('user_not_found', $loginDebugEnabled, ['email' => $email, 'session_id' => session_id()]);
     }
 }
 }
