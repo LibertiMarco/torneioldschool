@@ -10,6 +10,7 @@ if (!isset($_SESSION['user_id'])) {
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
 require_once __DIR__ . '/includi/consent_helpers.php';
+require_once __DIR__ . '/includi/image_optimizer.php';
 require_once __DIR__ . '/includi/seo.php';
 
 $baseUrl = seo_base_url();
@@ -67,16 +68,157 @@ function risolviAvatarUrl($avatarPath) {
     return '/img/icone/user.png';
 }
 
+function caricaGiocatoreAssociato(mysqli $conn, int $userId): ?array {
+    $stmt = $conn->prepare("SELECT id, nome, cognome, foto FROM giocatori WHERE utente_id = ? LIMIT 1");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res->fetch_assoc();
+    $stmt->close();
+    return $row ?: null;
+}
+
+function risolviFotoGiocatoreUrl(?string $path): string {
+    if (!$path) {
+        return '/img/giocatori/unknown.jpg';
+    }
+    if (preg_match('#^https?://#i', $path)) {
+        return $path;
+    }
+    $clean = '/' . ltrim($path, '/');
+    return $clean ?: '/img/giocatori/unknown.jpg';
+}
+
+function eliminaFotoGiocatoreSeLocale(?string $path): void {
+    if (!$path) return;
+    $path = str_replace('\\', '/', $path);
+    if ($path === '/img/giocatori/unknown.jpg') return;
+    if (strpos($path, '/img/giocatori/') !== 0) return;
+    $uploadsDir = realpath(__DIR__ . '/img/giocatori');
+    if (!$uploadsDir) return;
+    $filename = basename($path);
+    $full = $uploadsDir . DIRECTORY_SEPARATOR . $filename;
+    if (is_file($full)) {
+        @unlink($full);
+    }
+}
+
+/**
+ * Tenta più passaggi di compressione/resize per mantenere la foto leggera.
+ * Ritorna true se il file finale rientra nei limiti indicati.
+ */
+function comprimiFotoGiocatoreAggressivo(string $fullPath): bool {
+    $targetLimit = 6 * 1024 * 1024; // 6MB limite duro post-compressione
+    $attempts = [
+        ['maxWidth' => 2200, 'maxHeight' => 2200, 'quality' => 82, 'maxBytes' => (int)round(5.5 * 1024 * 1024)],
+        ['maxWidth' => 1800, 'maxHeight' => 1800, 'quality' => 78, 'maxBytes' => (int)round(4.5 * 1024 * 1024)],
+        ['maxWidth' => 1400, 'maxHeight' => 1400, 'quality' => 74, 'maxBytes' => (int)round(3.5 * 1024 * 1024)],
+        ['maxWidth' => 1100, 'maxHeight' => 1100, 'quality' => 70, 'maxBytes' => (int)round(3.0 * 1024 * 1024)],
+    ];
+
+    foreach ($attempts as $opts) {
+        optimize_image_file($fullPath, $opts);
+        $size = @filesize($fullPath) ?: PHP_INT_MAX;
+        if ($size <= $opts['maxBytes']) {
+            return true;
+        }
+    }
+
+    return (@filesize($fullPath) ?: PHP_INT_MAX) <= $targetLimit;
+}
+
+function aggiornaFotoSuSquadre(mysqli $conn, int $giocatoreId, string $relativePath): void {
+    $stmt = $conn->prepare("UPDATE squadre_giocatori SET foto=? WHERE giocatore_id=?");
+    if ($stmt) {
+        $stmt->bind_param("si", $relativePath, $giocatoreId);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
 $currentUser = caricaUtente($conn, $userId);
 if (!$currentUser) {
     header("Location: /logout.php");
     exit;
 }
 $consents = consent_current_snapshot($conn, $userId, $currentUser['email'] ?? '');
+$giocatoreAssociato = caricaGiocatoreAssociato($conn, $userId);
+$fotoGiocatoreUrl = risolviFotoGiocatoreUrl($giocatoreAssociato['foto'] ?? null);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_is_valid($_POST['_csrf'] ?? '', 'account_form')) {
         $errorMessage = "Sessione scaduta. Ricarica la pagina e riprova.";
+    } elseif (isset($_POST['upload_foto_giocatore'])) {
+        if (!$giocatoreAssociato) {
+            $errorMessage = "Non abbiamo ancora collegato il tuo account a un profilo giocatore. Contatta un amministratore.";
+        } elseif (!isset($_FILES['foto_giocatore']) || $_FILES['foto_giocatore']['error'] === UPLOAD_ERR_NO_FILE) {
+            $errorMessage = "Seleziona una foto da caricare.";
+        } elseif ($_FILES['foto_giocatore']['error'] !== UPLOAD_ERR_OK) {
+            $errorMessage = "Errore nel caricamento della foto. Riprova.";
+        } else {
+            $maxUpload = 50 * 1024 * 1024; // 50MB input massimo
+            if ($_FILES['foto_giocatore']['size'] > $maxUpload) {
+                $errorMessage = "La foto è troppo pesante. Carica un file sotto i 50MB.";
+            } else {
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mime = $finfo ? finfo_file($finfo, $_FILES['foto_giocatore']['tmp_name']) : false;
+                if ($finfo instanceof finfo) {
+                    unset($finfo);
+                }
+                $allowed = [
+                    'image/jpeg' => 'jpg',
+                    'image/png'  => 'png',
+                    'image/webp' => 'webp',
+                ];
+                if (!$mime || !isset($allowed[$mime])) {
+                    $errorMessage = "Formato non valido. Usa JPG, PNG o WEBP.";
+                } else {
+                    $uploadDir = __DIR__ . '/img/giocatori';
+                    if (!is_dir($uploadDir)) {
+                        @mkdir($uploadDir, 0775, true);
+                    }
+                    $ext = $allowed[$mime];
+                    $slug = strtolower(preg_replace('/[^a-z0-9]/i', '', ($giocatoreAssociato['nome'] ?? '') . ($giocatoreAssociato['cognome'] ?? '')));
+                    if ($slug === '') {
+                        $slug = 'giocatore';
+                    }
+                    $base = $slug . '_uid' . $userId;
+                    $filename = $base . '.' . $ext;
+                    $counter = 2;
+                    while (file_exists($uploadDir . '/' . $filename)) {
+                        $filename = $base . '_' . $counter . '.' . $ext;
+                        $counter++;
+                    }
+
+                    $destination = $uploadDir . '/' . $filename;
+                    if (!move_uploaded_file($_FILES['foto_giocatore']['tmp_name'], $destination)) {
+                        $errorMessage = "Salvataggio file non riuscito.";
+                    } else {
+                        $compressed = comprimiFotoGiocatoreAggressivo($destination);
+                        $finalSize = @filesize($destination) ?: PHP_INT_MAX;
+                        if (!$compressed || $finalSize > 6 * 1024 * 1024) {
+                            @unlink($destination);
+                            $errorMessage = "Immagine troppo pesante anche dopo la compressione (usa una foto più leggera).";
+                        } else {
+                            $relativePath = '/img/giocatori/' . $filename;
+                            $stmt = $conn->prepare("UPDATE giocatori SET foto=? WHERE id=? AND utente_id=?");
+                            $stmt->bind_param("sii", $relativePath, $giocatoreAssociato['id'], $userId);
+                            if ($stmt->execute()) {
+                                eliminaFotoGiocatoreSeLocale($giocatoreAssociato['foto'] ?? null);
+                                aggiornaFotoSuSquadre($conn, (int)$giocatoreAssociato['id'], $relativePath);
+                                $successMessage = "Foto giocatore aggiornata con successo.";
+                                $giocatoreAssociato = caricaGiocatoreAssociato($conn, $userId);
+                                $fotoGiocatoreUrl = risolviFotoGiocatoreUrl($giocatoreAssociato['foto'] ?? null);
+                            } else {
+                                @unlink($destination);
+                                $errorMessage = "Errore durante il salvataggio nel database.";
+                            }
+                            $stmt->close();
+                        }
+                    }
+                }
+            }
+        }
     } elseif (isset($_POST['revoca_consensi'])) {
         $consents = consent_save($conn, $userId, $currentUser['email'] ?? '', [
             'marketing' => 0,
@@ -364,6 +506,31 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
       border: 2px solid rgba(21, 41, 62, 0.1);
       background: #fff;
     }
+    .player-photo-card {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #f8fafc;
+    }
+    .player-photo-card.muted {
+      background: #fff7ed;
+      border-color: #fed7aa;
+    }
+    .player-photo-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .player-photo-row img {
+      width: 120px;
+      height: 120px;
+      border-radius: 14px;
+      object-fit: cover;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+    }
     .upload-actions {
       display: flex;
       flex-direction: column;
@@ -485,6 +652,10 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
         flex-direction: column;
         align-items: flex-start;
       }
+      .player-photo-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
   </style>
 </head>
@@ -592,6 +763,33 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
         </div>
         <button type="submit" class="save-btn">Salva modifiche</button>
       </form>
+
+      <?php if ($giocatoreAssociato): ?>
+      <div class="player-photo-card">
+        <div class="eyebrow" style="margin-bottom:6px;">Foto giocatore</div>
+        <h2 style="margin:0 0 10px;"><?= htmlspecialchars(($giocatoreAssociato['nome'] ?? '') . ' ' . ($giocatoreAssociato['cognome'] ?? '')) ?></h2>
+        <div class="player-photo-row">
+          <img src="<?= htmlspecialchars($fotoGiocatoreUrl) ?>" alt="Foto giocatore" id="fotoGiocatorePreview">
+          <form method="POST" enctype="multipart/form-data" class="player-photo-form" style="display:flex;flex-direction:column;gap:6px;">
+            <?= csrf_field('account_form') ?>
+            <input type="hidden" name="upload_foto_giocatore" value="1">
+            <label class="file-btn">
+              <input type="file" name="foto_giocatore" id="foto_giocatore" accept="image/jpeg,image/png,image/webp">
+              Carica nuova foto
+            </label>
+            <span class="file-name" id="fotoGiocatoreName">Nessun file selezionato</span>
+            <span class="hint">Accettiamo file fino a 50MB e li riduciamo sotto i 6MB (max ~2200px). Formati: JPG, PNG o WEBP.</span>
+            <button type="submit" class="save-btn" style="margin-top:4px;">Aggiorna foto giocatore</button>
+          </form>
+        </div>
+      </div>
+      <?php else: ?>
+      <div class="player-photo-card muted">
+        <div class="eyebrow" style="margin-bottom:6px;">Foto giocatore</div>
+        <p style="margin:0;">Non hai ancora un profilo giocatore collegato al tuo account. Contatta un admin per abilitarlo.</p>
+      </div>
+      <?php endif; ?>
+
       <form method="POST" style="margin-top: 6px;">
         <?= csrf_field('account_form') ?>
         <input type="hidden" name="revoca_consensi" value="1">
@@ -654,6 +852,23 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
             reader.onload = e => {
               avatarPreview.src = e.target.result;
             };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+
+      const fotoGiocInput = document.getElementById("foto_giocatore");
+      const fotoGiocName = document.getElementById("fotoGiocatoreName");
+      const fotoGiocPreview = document.getElementById("fotoGiocatorePreview");
+      if (fotoGiocInput) {
+        fotoGiocInput.addEventListener("change", () => {
+          const file = fotoGiocInput.files && fotoGiocInput.files[0] ? fotoGiocInput.files[0] : null;
+          if (fotoGiocName) {
+            fotoGiocName.textContent = file ? file.name : "Nessun file selezionato";
+          }
+          if (file && fotoGiocPreview) {
+            const reader = new FileReader();
+            reader.onload = e => { fotoGiocPreview.src = e.target.result; };
             reader.readAsDataURL(file);
           }
         });

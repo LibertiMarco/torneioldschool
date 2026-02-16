@@ -841,6 +841,37 @@ async function caricaPlayoff(tipoCoppa) {
       return;
     }
 
+    const makeStub = (casa, ospite, faseLeg = "UNICA") => ({
+      id: null,
+      squadra_casa: casa,
+      squadra_ospite: ospite,
+      gol_casa: null,
+      gol_ospite: null,
+      giocata: 0,
+      campo: "Campo da definire",
+      data_partita: "2000-01-01",
+      ora_partita: "00:00:00",
+      fase_leg: faseLeg
+    });
+
+    const getDefaultMatches = (giornata) => {
+      if (faseParam === "GOLD") {
+        if (giornata === 3) return [makeStub("3a CLASS", "6a CLASS"), makeStub("4a CLASS", "5a CLASS")];
+        if (giornata === 2) return [makeStub("1a CLASS", "Vincente (3 vs 6)"), makeStub("2a CLASS", "Vincente (4 vs 5)")];
+        if (giornata === 1) return [makeStub("Vincente Semi 1", "Vincente Semi 2")];
+      } else {
+        if (giornata === 2) return [makeStub("7a CLASS", "10a CLASS"), makeStub("8a CLASS", "9a CLASS")];
+        if (giornata === 1) return [makeStub("Vincente Semi 1", "Vincente Semi 2")];
+      }
+      return [];
+    };
+
+    const ordineGiornate = faseParam === "GOLD" ? [3, 2, 1] : [2, 1]; // Gold parte dai quarti, Silver dalle semifinali
+    const usingPlaceholders = ordineGiornate.some(g => !(Array.isArray(data[g]) && data[g].length) && getDefaultMatches(g).length);
+    if (usingPlaceholders) {
+      container.innerHTML += `<p class="placeholder-note" style="margin:8px 0 4px;color:#51607a;">Template sfide in attesa di calendario ufficiale.</p>`;
+    }
+
     const fasiMap = {
       1: "Finale",
       2: "Semifinali",
@@ -872,7 +903,6 @@ async function caricaPlayoff(tipoCoppa) {
         tipoCoppa.toLowerCase() === "gold"
           ? [
               { label: "Tutte", val: "" },
-              { label: "Ottavi", val: "4" },
               { label: "Quarti", val: "3" },
               { label: "Semifinali", val: "2" },
               { label: "Finale", val: "1" },
@@ -901,11 +931,10 @@ async function caricaPlayoff(tipoCoppa) {
     const renderPlayoff = () => {
       if (!fasiContainer) return;
       fasiContainer.innerHTML = "";
-      const ordineGiornate = [4, 3, 2, 1]; // Ottavi -> Quarti -> Semi -> Finale
 
       ordineGiornate.forEach(g => {
         if (currentPhase && String(g) !== currentPhase) return;
-        const matchList = (partiteData[g] || []);
+        const matchList = (Array.isArray(data[g]) && data[g].length) ? data[g] : getDefaultMatches(g);
         if (!matchList.length) return;
 
         const col = document.createElement("div");
