@@ -851,16 +851,18 @@ async function caricaPlayoff(tipoCoppa) {
       campo: "Campo da definire",
       data_partita: "2000-01-01",
       ora_partita: "00:00:00",
-      fase_leg: faseLeg
+      fase_leg: faseLeg,
+      logo_casa: "/img/scudetti/default.png",
+      logo_ospite: "/img/scudetti/default.png",
     });
 
     const getDefaultMatches = (giornata) => {
       if (faseParam === "GOLD") {
-        if (giornata === 3) return [makeStub("3a CLASS", "6a CLASS"), makeStub("4a CLASS", "5a CLASS")];
-        if (giornata === 2) return [makeStub("1a CLASS", "Vincente (3 vs 6)"), makeStub("2a CLASS", "Vincente (4 vs 5)")];
+        if (giornata === 3) return [makeStub("3° CLASS", "6° CLASS"), makeStub("4° CLASS", "5° CLASS")];
+        if (giornata === 2) return [makeStub("1° CLASS", "Vincente (3 vs 6)"), makeStub("2° CLASS", "Vincente (4 vs 5)")];
         if (giornata === 1) return [makeStub("Vincente Semi 1", "Vincente Semi 2")];
       } else {
-        if (giornata === 2) return [makeStub("7a CLASS", "10a CLASS"), makeStub("8a CLASS", "9a CLASS")];
+        if (giornata === 2) return [makeStub("7° CLASS", "10° CLASS"), makeStub("8° CLASS", "9° CLASS")];
         if (giornata === 1) return [makeStub("Vincente Semi 1", "Vincente Semi 2")];
       }
       return [];
