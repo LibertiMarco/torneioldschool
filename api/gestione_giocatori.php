@@ -703,9 +703,9 @@ $giocatoriJson = htmlspecialchars(
 -->
 
 <?php if (isset($_GET['duplicate']) && $_GET['duplicate'] === '1'): ?>
-<div class="admin-alert error" id="duplicateAlert">Giocatore giÃƒÆ’Ã‚Â  esistente</div>
+<div class="admin-alert error" id="duplicateAlert">Giocatore già esistente</div>
 <?php elseif (isset($_GET['assoc_exists']) && $_GET['assoc_exists'] === '1'): ?>
-<div class="admin-alert error" id="assocAlert">Il giocatore fa giÃƒÆ’Ã‚Â  parte di questa squadra</div>
+<div class="admin-alert error" id="assocAlert">Il giocatore fa già parte di questa squadra</div>
 <?php endif; ?>
 
 <!-- PICKLIST -->
@@ -844,6 +844,7 @@ $giocatoriJson = htmlspecialchars(
 
       <div class="form-group">
           <label>Giocatori</label>
+          <input type="search" id="assocGiocatoreSearch" placeholder="Cerca per nome o cognome" autocomplete="off">
           <select name="giocatore_associa[]" id="assocGiocatore" required multiple size="8">
               <option value="" disabled>-- Seleziona uno o piu giocatori --</option>
               <?php foreach ($giocatori as $g): ?>
@@ -855,7 +856,7 @@ $giocatoriJson = htmlspecialchars(
               <option value="<?= $g['id'] ?>"><?= htmlspecialchars($label) ?></option>
               <?php endforeach; ?>
           </select>
-          <small>Puoi selezionare piu giocatori (Ctrl/Cmd + click); verranno aggiunti tutti alla squadra.</small>
+          <small>Puoi selezionare piu giocatori (Ctrl/Cmd + click); digita 2-3 lettere per filtrare l'elenco.</small>
       </div>
       <div class="form-group">
           <label>Ruolo in squadra</label>
@@ -1203,6 +1204,7 @@ let pendingDeleteName = "";
 const assocTorneo = document.getElementById("assocTorneo");
 const assocSquadra = document.getElementById("assocSquadra");
 const assocGiocatore = document.getElementById("assocGiocatore");
+const assocGiocatoreSearch = document.getElementById("assocGiocatoreSearch");
 const assocCapitano = document.getElementById("capitano_associa");
 const remTorneo = document.getElementById("remTorneo");
 const remSquadra = document.getElementById("remSquadra");
@@ -1422,6 +1424,23 @@ async function aggiornaGiocatoriDisponibiliPerAssociazione() {
             assocGiocatore.appendChild(opt);
         });
     updateCaptainAvailability();
+    if (assocGiocatoreSearch) {
+        filterAssocGiocatori(assocGiocatoreSearch.value);
+    }
+}
+
+function filterAssocGiocatori(term) {
+    if (!assocGiocatore) return;
+    const normalized = (term || "").trim().toLowerCase();
+    Array.from(assocGiocatore.options || []).forEach(opt => {
+        if (!opt.value) {
+            opt.hidden = false;
+            return;
+        }
+        const text = (opt.textContent || "").toLowerCase();
+        const match = normalized === "" || text.includes(normalized) || opt.selected;
+        opt.hidden = !match;
+    });
 }
 
 function filterGiocatori(term) {
@@ -1702,10 +1721,12 @@ if (removeAssocModal) {
 }
 
 assocTorneo?.addEventListener("change", async () => {
+    if (assocGiocatoreSearch) assocGiocatoreSearch.value = "";
     await loadSquadre(assocSquadra, assocTorneo.value);
     await aggiornaGiocatoriDisponibiliPerAssociazione();
 });
 if (assocTorneo?.value) {
+    if (assocGiocatoreSearch) assocGiocatoreSearch.value = "";
     loadSquadre(assocSquadra, assocTorneo.value).then(() => aggiornaGiocatoriDisponibiliPerAssociazione());
 }
 
@@ -1743,8 +1764,12 @@ modAssocGiocatore?.addEventListener("change", () => {
     saveModAssocState(modAssocTorneo.value, modAssocSquadra.value, modAssocGiocatore.value);
 });
 
-assocSquadra?.addEventListener("change", () => aggiornaGiocatoriDisponibiliPerAssociazione());
+assocSquadra?.addEventListener("change", () => {
+    if (assocGiocatoreSearch) assocGiocatoreSearch.value = "";
+    aggiornaGiocatoriDisponibiliPerAssociazione();
+});
 assocGiocatore?.addEventListener("change", () => updateCaptainAvailability());
+assocGiocatoreSearch?.addEventListener("input", e => filterAssocGiocatori(e.target.value));
 updateCaptainAvailability();
 
 function mostraFormAssoc(val) {
@@ -1858,10 +1883,5 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
-
-
-
-
 
 
