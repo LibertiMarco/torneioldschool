@@ -1435,11 +1435,13 @@ function filterAssocGiocatori(term) {
     Array.from(assocGiocatore.options || []).forEach(opt => {
         if (!opt.value) {
             opt.hidden = false;
+            opt.style.display = "";
             return;
         }
         const text = (opt.textContent || "").toLowerCase();
         const match = normalized === "" || text.includes(normalized) || opt.selected;
         opt.hidden = !match;
+        opt.style.display = match ? "" : "none";
     });
 }
 
@@ -1883,5 +1885,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
 
