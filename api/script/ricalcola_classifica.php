@@ -93,7 +93,12 @@ if (PHP_SAPI === 'cli' && strtolower($confirm) !== 'yes') {
   exit("Conferma richiesta. Secondo parametro CLI 'yes'.\n");
 }
 
+function normalize_torneo(string $torneo): string {
+  return trim($torneo);
+}
+
 function reset_classifica(mysqli $conn, string $torneo): void {
+  $torneo = normalize_torneo($torneo);
   $stmt = $conn->prepare("
     UPDATE squadre
     SET giocate = 0, vinte = 0, pareggiate = 0, perse = 0,
@@ -114,7 +119,7 @@ function normalize_team_name(string $name): string {
 }
 
 function ensure_squadra_exists(mysqli $conn, string $torneo, string $nome): void {
-  $torneo = trim($torneo);
+  $torneo = normalize_torneo($torneo);
   $nome = normalize_team_name($nome);
   if ($torneo === '' || $nome === '') return;
 
@@ -148,7 +153,7 @@ function ensure_squadra_exists(mysqli $conn, string $torneo, string $nome): void
 }
 
 function applica_risultato_classifica(mysqli $conn, string $torneo, string $squadra, int $gf, int $gs): void {
-  $torneo = trim($torneo);
+  $torneo = normalize_torneo($torneo);
   $squadra = normalize_team_name($squadra);
   ensure_squadra_exists($conn, $torneo, $squadra);
   $vittoria = $gf > $gs ? 1 : 0;
@@ -218,5 +223,5 @@ function ricostruisci_classifica_da_partite(mysqli $conn, string $torneo): void 
   $sel->close();
 }
 
-ricostruisci_classifica_da_partite($conn, $torneo);
-echo "Classifica ricalcolata per il torneo '{$torneo}' usando solo partite con giocata = 1 (fase regular).\n";
+ricostruisci_classifica_da_partite($conn, normalize_torneo($torneo));
+echo "Classifica ricalcolata per il torneo '" . normalize_torneo($torneo) . "' usando solo partite con giocata = 1 (fase regular).\n";

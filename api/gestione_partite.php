@@ -152,7 +152,12 @@ function ensure_follow_table(mysqli $conn): void {
   ");
 }
 
+function normalize_torneo(string $torneo): string {
+  return trim($torneo);
+}
+
 function reset_classifica(mysqli $conn, string $torneo): void {
+  $torneo = normalize_torneo($torneo);
   if ($torneo === '') return;
   $stmt = $conn->prepare("
     UPDATE squadre
@@ -214,7 +219,7 @@ function ensure_squadra_exists(mysqli $conn, string $torneo, string $nome): void
 }
 
 function applica_risultato_classifica(mysqli $conn, string $torneo, string $squadra, int $gf, int $gs): void {
-  $torneo = trim($torneo);
+  $torneo = normalize_torneo($torneo);
   $squadra = normalize_team_name($squadra);
   ensure_squadra_exists($conn, $torneo, $squadra);
 
@@ -277,6 +282,7 @@ function marca_partite_giocate_da_score(mysqli $conn, string $torneo): void {
 }
 
 function ricostruisci_classifica_da_partite(mysqli $conn, string $torneo): void {
+  $torneo = normalize_torneo($torneo);
   if ($torneo === '') return;
   reset_classifica($conn, $torneo);
   $sel = $conn->prepare("
