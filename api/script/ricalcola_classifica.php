@@ -107,7 +107,15 @@ function reset_classifica(mysqli $conn, string $torneo): void {
   }
 }
 
+function normalize_team_name(string $name): string {
+  $name = trim($name);
+  $name = preg_replace('/\s+/', ' ', $name);
+  return $name;
+}
+
 function ensure_squadra_exists(mysqli $conn, string $torneo, string $nome): void {
+  $torneo = trim($torneo);
+  $nome = normalize_team_name($nome);
   if ($torneo === '' || $nome === '') return;
 
   $check = $conn->prepare("SELECT 1 FROM squadre WHERE torneo = ? AND nome = ? LIMIT 1");
@@ -140,6 +148,8 @@ function ensure_squadra_exists(mysqli $conn, string $torneo, string $nome): void
 }
 
 function applica_risultato_classifica(mysqli $conn, string $torneo, string $squadra, int $gf, int $gs): void {
+  $torneo = trim($torneo);
+  $squadra = normalize_team_name($squadra);
   ensure_squadra_exists($conn, $torneo, $squadra);
   $vittoria = $gf > $gs ? 1 : 0;
   $pareggio = $gf === $gs ? 1 : 0;
@@ -197,10 +207,12 @@ function ricostruisci_classifica_da_partite(mysqli $conn, string $torneo): void 
   if ($sel->execute()) {
     $res = $sel->get_result();
     while ($row = $res->fetch_assoc()) {
-      ensure_squadra_exists($conn, $torneo, $row['squadra_casa']);
-      ensure_squadra_exists($conn, $torneo, $row['squadra_ospite']);
-      applica_risultato_classifica($conn, $torneo, $row['squadra_casa'], (int)$row['gol_casa'], (int)$row['gol_ospite']);
-      applica_risultato_classifica($conn, $torneo, $row['squadra_ospite'], (int)$row['gol_ospite'], (int)$row['gol_casa']);
+      $casa = normalize_team_name($row['squadra_casa'] ?? '');
+      $osp = normalize_team_name($row['squadra_ospite'] ?? '');
+      ensure_squadra_exists($conn, $torneo, $casa);
+      ensure_squadra_exists($conn, $torneo, $osp);
+      applica_risultato_classifica($conn, $torneo, $casa, (int)$row['gol_casa'], (int)$row['gol_ospite']);
+      applica_risultato_classifica($conn, $torneo, $osp, (int)$row['gol_ospite'], (int)$row['gol_casa']);
     }
   }
   $sel->close();
