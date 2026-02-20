@@ -183,6 +183,7 @@ function applica_risultato_classifica(mysqli $conn, string $torneo, string $squa
         gol_subiti = gol_subiti + ?,
         differenza_reti = gol_fatti - gol_subiti
     WHERE torneo = ? AND nome = ?
+    LIMIT 1
   ");
   if ($stmt) {
     $stmt->bind_param(
@@ -229,19 +230,24 @@ function ricostruisci_classifica_da_partite(mysqli $conn, string $torneo): void 
   if ($torneo === '') return;
   reset_classifica($conn, $torneo);
   $sel = $conn->prepare("
-    SELECT squadra_casa, squadra_ospite, COALESCE(gol_casa,0) AS gol_casa, COALESCE(gol_ospite,0) AS gol_ospite
-    FROM partite
-    WHERE torneo = ?
-      AND giocata = 1
+    SELECT p.squadra_casa,
+           p.squadra_ospite,
+           COALESCE(p.gol_casa,0)   AS gol_casa,
+           COALESCE(p.gol_ospite,0) AS gol_ospite
+    FROM partite p
+    INNER JOIN squadre sc ON sc.nome = p.squadra_casa AND sc.torneo = ?
+    INNER JOIN squadre so ON so.nome = p.squadra_ospite AND so.torneo = ?
+    WHERE p.torneo = ?
+      AND p.giocata = 1
       AND UPPER(
             CASE
-              WHEN TRIM(COALESCE(fase, '')) IN ('', 'GIRONE') THEN 'REGULAR'
-              ELSE TRIM(COALESCE(fase, ''))
+              WHEN TRIM(COALESCE(p.fase, '')) IN ('', 'GIRONE') THEN 'REGULAR'
+              ELSE TRIM(COALESCE(p.fase, ''))
             END
           ) = 'REGULAR'
   ");
   if (!$sel) return;
-  $sel->bind_param('s', $torneo);
+  $sel->bind_param('sss', $torneo, $torneo, $torneo);
   if ($sel->execute()) {
     $res = $sel->get_result();
     while ($row = $res->fetch_assoc()) {
