@@ -167,7 +167,47 @@ function reset_classifica(mysqli $conn, string $torneo): void {
   }
 }
 
+/**
+ * Garantisce che la squadra esista per il torneo indicato.
+ * Se non esiste, la crea con statistiche a zero e prova a riutilizzare
+ * un eventuale logo esistente per lo stesso nome su altri tornei.
+ */
+function ensure_squadra_exists(mysqli $conn, string $torneo, string $nome): void {
+  if ($torneo === '' || $nome === '') return;
+
+  $check = $conn->prepare("SELECT 1 FROM squadre WHERE torneo = ? AND nome = ? LIMIT 1");
+  if ($check) {
+    $check->bind_param('ss', $torneo, $nome);
+    if ($check->execute() && $check->get_result()->fetch_row()) {
+      $check->close();
+      return; // già presente
+    }
+    $check->close();
+  }
+
+  // tenta di riciclare un logo se esiste per lo stesso nome (altro torneo)
+  $logo = null;
+  $logoStmt = $conn->prepare("SELECT logo FROM squadre WHERE nome = ? AND logo IS NOT NULL AND logo <> '' ORDER BY created_at DESC, id DESC LIMIT 1");
+  if ($logoStmt) {
+    $logoStmt->bind_param('s', $nome);
+    if ($logoStmt->execute()) {
+      $resLogo = $logoStmt->get_result()->fetch_assoc();
+      $logo = $resLogo['logo'] ?? null;
+    }
+    $logoStmt->close();
+  }
+
+  $ins = $conn->prepare("INSERT INTO squadre (nome, torneo, logo) VALUES (?, ?, ?)");
+  if ($ins) {
+    $ins->bind_param('sss', $nome, $torneo, $logo);
+    $ins->execute();
+    $ins->close();
+  }
+}
+
 function applica_risultato_classifica(mysqli $conn, string $torneo, string $squadra, int $gf, int $gs): void {
+  ensure_squadra_exists($conn, $torneo, $squadra);
+
   $vittoria = $gf > $gs ? 1 : 0;
   $pareggio = $gf === $gs ? 1 : 0;
   $sconfitta = $gf < $gs ? 1 : 0;
@@ -230,27 +270,27 @@ function ricostruisci_classifica_da_partite(mysqli $conn, string $torneo): void 
   if ($torneo === '') return;
   reset_classifica($conn, $torneo);
   $sel = $conn->prepare("
-    SELECT p.squadra_casa,
-           p.squadra_ospite,
-           COALESCE(p.gol_casa,0)   AS gol_casa,
-           COALESCE(p.gol_ospite,0) AS gol_ospite
-    FROM partite p
-    INNER JOIN squadre sc ON sc.nome = p.squadra_casa AND sc.torneo = ?
-    INNER JOIN squadre so ON so.nome = p.squadra_ospite AND so.torneo = ?
-    WHERE p.torneo = ?
-      AND p.giocata = 1
+    SELECT squadra_casa,
+           squadra_ospite,
+           COALESCE(gol_casa,0)   AS gol_casa,
+           COALESCE(gol_ospite,0) AS gol_ospite
+    FROM partite
+    WHERE torneo = ?
+      AND giocata = 1
       AND UPPER(
             CASE
-              WHEN TRIM(COALESCE(p.fase, '')) IN ('', 'GIRONE') THEN 'REGULAR'
-              ELSE TRIM(COALESCE(p.fase, ''))
+              WHEN TRIM(COALESCE(fase, '')) IN ('', 'GIRONE') THEN 'REGULAR'
+              ELSE TRIM(COALESCE(fase, ''))
             END
           ) = 'REGULAR'
   ");
   if (!$sel) return;
-  $sel->bind_param('sss', $torneo, $torneo, $torneo);
+  $sel->bind_param('s', $torneo);
   if ($sel->execute()) {
     $res = $sel->get_result();
     while ($row = $res->fetch_assoc()) {
+      ensure_squadra_exists($conn, $torneo, $row['squadra_casa']);
+      ensure_squadra_exists($conn, $torneo, $row['squadra_ospite']);
       applica_risultato_classifica($conn, $torneo, $row['squadra_casa'], (int)$row['gol_casa'], (int)$row['gol_ospite']);
       applica_risultato_classifica($conn, $torneo, $row['squadra_ospite'], (int)$row['gol_ospite'], (int)$row['gol_casa']);
     }
