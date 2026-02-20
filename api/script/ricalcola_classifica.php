@@ -152,10 +152,8 @@ function ensure_squadra_exists(mysqli $conn, string $torneo, string $nome): void
   }
 }
 
-function applica_risultato_classifica(mysqli $conn, string $torneo, string $squadra, int $gf, int $gs): void {
-  $torneo = normalize_torneo($torneo);
-  $squadra = normalize_team_name($squadra);
-  ensure_squadra_exists($conn, $torneo, $squadra);
+function applica_risultato_classifica_by_id(mysqli $conn, int $squadraId, int $gf, int $gs): void {
+  if ($squadraId <= 0) return;
   $vittoria = $gf > $gs ? 1 : 0;
   $pareggio = $gf === $gs ? 1 : 0;
   $sconfitta = $gf < $gs ? 1 : 0;
@@ -170,20 +168,19 @@ function applica_risultato_classifica(mysqli $conn, string $torneo, string $squa
         gol_fatti = gol_fatti + ?,
         gol_subiti = gol_subiti + ?,
         differenza_reti = gol_fatti - gol_subiti
-    WHERE torneo = ? AND nome = ?
+    WHERE id = ?
     LIMIT 1
   ");
   if ($stmt) {
     $stmt->bind_param(
-      'iiiiiiis',
+      'iiiiiii',
       $vittoria,
       $pareggio,
       $sconfitta,
       $punti,
       $gf,
       $gs,
-      $torneo,
-      $squadra
+      $squadraId
     );
     $stmt->execute();
     $stmt->close();
@@ -191,33 +188,34 @@ function applica_risultato_classifica(mysqli $conn, string $torneo, string $squa
 }
 
 function ricostruisci_classifica_da_partite(mysqli $conn, string $torneo): void {
+  $torneo = normalize_torneo($torneo);
   reset_classifica($conn, $torneo);
   $sel = $conn->prepare("
-    SELECT squadra_casa,
-           squadra_ospite,
-           COALESCE(gol_casa,0)   AS gol_casa,
-           COALESCE(gol_ospite,0) AS gol_ospite
-    FROM partite
-    WHERE torneo = ?
-      AND giocata = 1
+    SELECT sc.id AS id_casa,
+           so.id AS id_osp,
+           COALESCE(p.gol_casa,0)   AS gol_casa,
+           COALESCE(p.gol_ospite,0) AS gol_ospite
+    FROM partite p
+    INNER JOIN squadre sc ON sc.nome = p.squadra_casa AND sc.torneo = ?
+    INNER JOIN squadre so ON so.nome = p.squadra_ospite AND so.torneo = ?
+    WHERE p.torneo = ?
+      AND p.giocata = 1
       AND UPPER(
             CASE
-              WHEN TRIM(COALESCE(fase, '')) IN ('', 'GIRONE') THEN 'REGULAR'
-              ELSE TRIM(COALESCE(fase, ''))
+              WHEN TRIM(COALESCE(p.fase, '')) IN ('', 'GIRONE') THEN 'REGULAR'
+              ELSE TRIM(COALESCE(p.fase, ''))
             END
           ) = 'REGULAR'
   ");
   if (!$sel) return;
-  $sel->bind_param('s', $torneo);
+  $sel->bind_param('sss', $torneo, $torneo, $torneo);
   if ($sel->execute()) {
     $res = $sel->get_result();
     while ($row = $res->fetch_assoc()) {
-      $casa = normalize_team_name($row['squadra_casa'] ?? '');
-      $osp = normalize_team_name($row['squadra_ospite'] ?? '');
-      ensure_squadra_exists($conn, $torneo, $casa);
-      ensure_squadra_exists($conn, $torneo, $osp);
-      applica_risultato_classifica($conn, $torneo, $casa, (int)$row['gol_casa'], (int)$row['gol_ospite']);
-      applica_risultato_classifica($conn, $torneo, $osp, (int)$row['gol_ospite'], (int)$row['gol_casa']);
+      $idCasa = (int)($row['id_casa'] ?? 0);
+      $idOsp  = (int)($row['id_osp'] ?? 0);
+      applica_risultato_classifica_by_id($conn, $idCasa, (int)$row['gol_casa'], (int)$row['gol_ospite']);
+      applica_risultato_classifica_by_id($conn, $idOsp, (int)$row['gol_ospite'], (int)$row['gol_casa']);
     }
   }
   $sel->close();
