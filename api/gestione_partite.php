@@ -178,46 +178,6 @@ function normalize_team_name(string $name): string {
   return $name;
 }
 
-/**
- * Garantisce che la squadra esista per il torneo indicato.
- * Se non esiste, la crea con statistiche a zero e prova a riutilizzare
- * un eventuale logo esistente per lo stesso nome su altri tornei.
- */
-function ensure_squadra_exists(mysqli $conn, string $torneo, string $nome): void {
-  $torneo = trim($torneo);
-  $nome = normalize_team_name($nome);
-  if ($torneo === '' || $nome === '') return;
-
-  $check = $conn->prepare("SELECT 1 FROM squadre WHERE torneo = ? AND nome = ? LIMIT 1");
-  if ($check) {
-    $check->bind_param('ss', $torneo, $nome);
-    if ($check->execute() && $check->get_result()->fetch_row()) {
-      $check->close();
-      return; // già presente
-    }
-    $check->close();
-  }
-
-  // tenta di riciclare un logo se esiste per lo stesso nome (altro torneo)
-  $logo = null;
-  $logoStmt = $conn->prepare("SELECT logo FROM squadre WHERE nome = ? AND logo IS NOT NULL AND logo <> '' ORDER BY created_at DESC, id DESC LIMIT 1");
-  if ($logoStmt) {
-    $logoStmt->bind_param('s', $nome);
-    if ($logoStmt->execute()) {
-      $resLogo = $logoStmt->get_result()->fetch_assoc();
-      $logo = $resLogo['logo'] ?? null;
-    }
-    $logoStmt->close();
-  }
-
-  $ins = $conn->prepare("INSERT INTO squadre (nome, torneo, logo) VALUES (?, ?, ?)");
-  if ($ins) {
-    $ins->bind_param('sss', $nome, $torneo, $logo);
-    $ins->execute();
-    $ins->close();
-  }
-}
-
 function applica_risultato_classifica_by_id(mysqli $conn, int $squadraId, int $gf, int $gs): void {
   if ($squadraId <= 0) return;
 
