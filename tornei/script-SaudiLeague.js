@@ -1,7 +1,8 @@
 ﻿const TORNEO = "SaudiLeague"; // Nome base del torneo nel DB (fase girone)
 const GOLD_QUARTI_SPOTS = 2;        // prime 2 ai quarti di Coppa Gold
 const GOLD_OTTAVI_SPOTS = 12;       // posizioni 3-14 agli ottavi di Coppa Gold
-const SILVER_SPOTS = 4;             // ultime 4 in Coppa Silver (stile Champions)const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
+const SILVER_SPOTS = 4;             // ultime 4 in Coppa Silver (stile Champions)
+const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
 const teamLogos = {};
 const favState = { tournaments: new Set(), teams: new Set() };
 let currentRosaTeam = "";
@@ -294,9 +295,20 @@ function mostraClassifica(classifica) {
   const tbody = document.querySelector("#tableClassifica tbody");
   tbody.innerHTML = "";
 
-  classifica.sort((a, b) => b.punti - a.punti || b.differenza_reti - a.differenza_reti);`r`n  const teamCount = classifica.length;
+  classifica.sort((a, b) => b.punti - a.punti || b.differenza_reti - a.differenza_reti);
+  const teamCount = classifica.length;
 
-  classifica.forEach((team, i) => {`r`n    const tr = document.createElement("tr");`r`n    const posizione = i + 1;`r`n`r`n    if (posizione <= GOLD_QUARTI_SPOTS) {`r`n      tr.classList.add("gold-row"); // Coppa Gold - quarti`r`n    } else if (posizione <= GOLD_QUARTI_SPOTS + GOLD_OTTAVI_SPOTS) {`r`n      tr.classList.add("gold-ottavi"); // Coppa Gold - ottavi`r`n    } else if (posizione > teamCount - SILVER_SPOTS) {`r`n      tr.classList.add("silver-row"); // Coppa Silver`r`n    }
+  classifica.forEach((team, i) => {
+    const tr = document.createElement("tr");
+    const posizione = i + 1;
+
+    if (posizione <= GOLD_QUARTI_SPOTS) {
+      tr.classList.add("gold-row"); // Coppa Gold - quarti
+    } else if (posizione <= GOLD_QUARTI_SPOTS + GOLD_OTTAVI_SPOTS) {
+      tr.classList.add("gold-ottavi"); // Coppa Gold - ottavi
+    } else if (posizione > teamCount - SILVER_SPOTS) {
+      tr.classList.add("silver-row"); // Coppa Silver
+    }
 
     const logoPath = resolveLogoPath(team.nome, team.logo);
 
@@ -1306,7 +1318,6 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     });
   }
 });
-
 
 
 
