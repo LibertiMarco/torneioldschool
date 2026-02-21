@@ -1,5 +1,7 @@
 ﻿const TORNEO = "SaudiLeague"; // Nome base del torneo nel DB (fase girone)
-const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
+const GOLD_QUARTI_SPOTS = 2;        // prime 2 ai quarti di Coppa Gold
+const GOLD_OTTAVI_SPOTS = 12;       // posizioni 3-14 agli ottavi di Coppa Gold
+const SILVER_SPOTS = 4;             // ultime 4 in Coppa Silver (stile Champions)const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
 const teamLogos = {};
 const favState = { tournaments: new Set(), teams: new Set() };
 let currentRosaTeam = "";
@@ -292,16 +294,9 @@ function mostraClassifica(classifica) {
   const tbody = document.querySelector("#tableClassifica tbody");
   tbody.innerHTML = "";
 
-  classifica.sort((a, b) => b.punti - a.punti || b.differenza_reti - a.differenza_reti);
+  classifica.sort((a, b) => b.punti - a.punti || b.differenza_reti - a.differenza_reti);`r`n  const teamCount = classifica.length;
 
-  classifica.forEach((team, i) => {
-    const tr = document.createElement("tr");
-
-    if (i + 1 <= 16) {
-      tr.classList.add("gold-row");
-    } else {
-      tr.classList.add("silver-row");
-    }
+  classifica.forEach((team, i) => {`r`n    const tr = document.createElement("tr");`r`n    const posizione = i + 1;`r`n`r`n    if (posizione <= GOLD_QUARTI_SPOTS) {`r`n      tr.classList.add("gold-row"); // Coppa Gold - quarti`r`n    } else if (posizione <= GOLD_QUARTI_SPOTS + GOLD_OTTAVI_SPOTS) {`r`n      tr.classList.add("gold-ottavi"); // Coppa Gold - ottavi`r`n    } else if (posizione > teamCount - SILVER_SPOTS) {`r`n      tr.classList.add("silver-row"); // Coppa Silver`r`n    }
 
     const logoPath = resolveLogoPath(team.nome, team.logo);
 
@@ -336,9 +331,11 @@ function mostraClassifica(classifica) {
   if (!faseSelect || faseSelect.value === "girone") {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
+    const silverStart = Math.max(1, teamCount - SILVER_SPOTS + 1);
     legenda.innerHTML = `
-      <div class="box gold-box">🏆 COPPA GOLD</div>
-      <div class="box silver-box">🥈 COPPA SILVER</div>
+      <div class="box gold-box">🏆 1-2: Coppa Gold (quarti)</div>
+      <div class="box gold-box gold-ottavi">🥇 Coppa Gold (ottavi): posizioni 3-14</div>
+      <div class="box silver-box">🥈 Coppa Silver: posizioni ${silverStart}-${teamCount}</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
@@ -795,16 +792,46 @@ async function caricaPlayoff(tipoCoppa) {
       return;
     }
 
+    const totalMatches = Object.values(data || {}).reduce((acc, arr) => {
+      if (Array.isArray(arr)) return acc + arr.length;
+      if (arr && typeof arr === "object") {
+        return acc + Object.values(arr).reduce((a, b) => a + (Array.isArray(b) ? b.length : 0), 0);
+      }
+      return acc;
+    }, 0);
+
+    const fasiContainer = document.getElementById("fasiPlayoff");
+    const phaseFilter = document.getElementById("playoffPhaseFilters");
+    let currentPhase = "";
+
+    const renderPlaceholder = () => {
+      if (!fasiContainer) return;
+      const goldPairs = [
+        "3 vs 14", "4 vs 13", "5 vs 12",
+        "6 vs 11", "7 vs 10", "8 vs 9"
+      ];
+      const silverPairs = ["15 vs 18", "16 vs 17"];
+      const pairs = tipoCoppa.toLowerCase() === "gold" ? goldPairs : silverPairs;
+      fasiContainer.innerHTML = `
+        <div class="bracket-placeholder">
+          <p>Le partite di ${tipoCoppa === "gold" ? "Coppa Gold" : "Coppa Silver"} non sono ancora state inserite.</p>
+          <p>Accoppiamenti previsti:</p>
+          <ul>${pairs.map(p => `<li>${p}</li>`).join("")}</ul>
+        </div>
+      `;
+    };
+
+    if (totalMatches === 0) {
+      renderPlaceholder();
+      return;
+    }
+
     const fasiMap = {
       1: "Finale",
       2: "Semifinali",
       3: "Quarti di finale",
       4: "Ottavi di finale"
     };
-
-    const fasiContainer = document.getElementById("fasiPlayoff");
-    const phaseFilter = document.getElementById("playoffPhaseFilters");
-    let currentPhase = "";
 
     if (!window.__LEG_TOGGLE_STYLES__) {
       window.__LEG_TOGGLE_STYLES__ = true;
@@ -1279,8 +1306,6 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     });
   }
 });
-
-
 
 
 
