@@ -743,7 +743,7 @@ $giocatoriJson = htmlspecialchars(
         <button type="button" class="file-btn" data-target="foto_upload">Scegli immagine</button>
         <span class="file-name" id="foto_upload_name">Nessun file selezionato</span>
     </div>
-    <small>Se non carichi un'immagine verrÃƒÆ’Ã‚Â  usata <code>unknown.jpg</code>.</small>
+    <small>Se non carichi un'immagine verrà usata <code>unknown.jpg</code>.</small>
 </div>
 
 <button type="submit" name="crea" class="btn-primary">Crea Giocatore</button>
@@ -881,7 +881,7 @@ $giocatoriJson = htmlspecialchars(
               <button type="button" class="file-btn" data-target="foto_associazione_upload">Scegli immagine</button>
               <span class="file-name" id="foto_associazione_upload_name">Nessun file selezionato</span>
           </div>
-          <small>Se non carichi nulla verrÃƒÆ’Ã‚Â  usata la foto del giocatore.</small>
+          <small>Se non carichi nulla verrà usata la foto del giocatore.</small>
       </div>
 
       <button type="submit" name="associa_squadra" class="btn-primary">Aggiungi associazione</button>

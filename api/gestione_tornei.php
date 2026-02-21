@@ -713,14 +713,14 @@ if ($lista instanceof mysqli_result) {
                         <button type="button" class="file-btn" data-target="img_upload">Scegli immagine</button>
                         <span class="file-name" id="img_upload_name">Nessun file selezionato</span>
                     </div>
-                    <small>Se non carichi un file verrÃƒÂ  usata l'immagine predefinita.</small>
+                    <small>Se non carichi un file verrà usata l'immagine predefinita.</small>
                 </div>
                 <div class="form-group"><label>File Torneo</label><input type="text" name="filetorneo" required></div>
                 <div class="form-group"><label>Categoria</label><input type="text" name="categoria" required></div>
                 <div class="form-group checkbox-group">
                     <label>
                         <input type="checkbox" name="squadre_complete" value="1">
-                        Tutte le squadre giÃ  create (nascondi torneo nella creazione squadre)
+                        Tutte le squadre già create (nascondi torneo nella creazione squadre)
                     </label>
                 </div>
                 <button type="submit" name="crea" class="btn-primary">Crea Torneo</button>
@@ -843,14 +843,14 @@ if ($lista instanceof mysqli_result) {
                         <button type="button" class="file-btn" data-target="img_upload_mod">Scegli immagine</button>
                         <span class="file-name" id="img_upload_mod_name">Nessun file selezionato</span>
                     </div>
-                    <small>Se non carichi nulla resterÃƒÂ  l'immagine attuale.</small>
+                    <small>Se non carichi nulla resterà l'immagine attuale.</small>
                 </div>
                 <div class="form-group"><label>File Torneo</label><input type="text" name="filetorneo" id="mod_file"></div>
                 <div class="form-group"><label>Categoria</label><input type="text" name="categoria" id="mod_categoria"></div>
                 <div class="form-group checkbox-group">
                     <label>
                         <input type="checkbox" name="squadre_complete" id="mod_squadre_complete" value="1">
-                        Tutte le squadre giÃ  create (nascondi torneo nella creazione squadre)
+                        Tutte le squadre già create (nascondi torneo nella creazione squadre)
                     </label>
                 </div>
                         
