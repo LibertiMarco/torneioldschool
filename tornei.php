@@ -1,6 +1,6 @@
 <?php
-// === AVVIO SESSIONE ===
-session_start();
+// === AVVIO SESSIONE E SICUREZZA ===
+require_once __DIR__ . '/includi/security.php';
 
 // === CONNESSIONE AL DATABASE ===
 require_once __DIR__ . '/includi/db.php'; // contiene $conn
