@@ -72,9 +72,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $resT = [];
     $resS = [];
 
-    $stmt = $GLOBALS['conn']->prepare("SELECT tipo, torneo_slug, squadra_nome FROM seguiti WHERE utente_id = ?");
+    // Usa la variabile locale $userId (non $GLOBALS) per evitare valori vuoti
+    $stmt = $conn->prepare("SELECT tipo, torneo_slug, squadra_nome FROM seguiti WHERE utente_id = ?");
     if ($stmt) {
-        $stmt->bind_param('i', $GLOBALS['userId']);
+        $stmt->bind_param('i', $userId);
         if ($stmt->execute()) {
             $r = $stmt->get_result();
             while ($row = $r->fetch_assoc()) {

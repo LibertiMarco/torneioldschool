@@ -243,30 +243,30 @@ $assetVersion = '20260206';
 
 <!-- REGOLE -->
 <section id="regole" class="tab-section">
-  <h2 class="titolo-sezione">Regole del Torneo</h2>
+  <h2 class="titolo-sezione">📜 Regole del Torneo</h2>
 
   <div class="regole-box">
     <div class="regola">
-      <h3>Struttura del campionato</h3>
+      <h3>🏟️ Struttura del campionato</h3>
       <p>
         Il torneo &egrave; composto da <strong>20 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>Fase 1 &mdash; Regular Season</h3>
+      <h3>⚽ Fase 1 &mdash; Regular Season</h3>
       <p>
         Tutte le squadre partecipano a una <strong>Regular Season</strong> in stile Champions League.
         Ogni squadra disputa <strong>8 partite</strong> totali.
       </p>
       <p>
         La squadra prima in classifica al termine del girone riceve il
-        <span class="highlight">Trofeo Regular Season</span>.
+        <span class="highlight">Trofeo Regular Season 🏆</span>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>Fase 2 &mdash; Coppe</h3>
+      <h3>🏆 Fase 2 &mdash; Coppe</h3>
       <ul>
         <li>Le <strong>prime 16</strong> classificate accedono alla <span class="gold">Coppa Gold</span>.</li>
         <li>Le <strong>ultime 4</strong> accedono alla <span class="silver">Coppa Silver</span>.</li>
@@ -275,13 +275,13 @@ $assetVersion = '20260206';
     </div>
 
     <div class="regola">
-      <h3>Premi finali</h3>
+      <h3>🎖️ Premi finali</h3>
       <p>Dopo la finale di <span class="gold">Coppa Gold</span> verranno assegnati i seguenti riconoscimenti:</p>
       <div class="premi-grid">
-        <span>Miglior Giocatore</span>
-        <span>Miglior Portiere</span>
-        <span>Miglior Difensore</span>
-        <span>Miglior Attaccante</span>
+        <span>🏅 Miglior Giocatore</span>
+        <span>🧤 Miglior Portiere</span>
+        <span>🛡️ Miglior Difensore</span>
+        <span>⚡ Miglior Attaccante</span>
       </div>
       <p>
         Il <strong>Miglior Giocatore</strong> ricever&agrave; un
@@ -290,7 +290,7 @@ $assetVersion = '20260206';
     </div>
 
     <div class="regola">
-      <h3>Regole di gioco</h3>
+      <h3>⏱️ Regole di gioco</h3>
       <ul>
         <li>Ogni partita dura <strong>2 tempi da 25 minuti</strong>.</li>
         <li>Ogni squadra ha <strong>1 chiamata VAR</strong> disponibile per partita.</li>
@@ -298,7 +298,7 @@ $assetVersion = '20260206';
     </div>
 
     <div class="regola">
-      <h3>Calendario</h3>
+      <h3>📅 Calendario</h3>
       <ul>
         <li>Le partite si disputano principalmente <strong>il mercoled&igrave; e il gioved&igrave;</strong>.</li>
         <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>gioved&igrave; o venerd&igrave;</strong>.</li>
