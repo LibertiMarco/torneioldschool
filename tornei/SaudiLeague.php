@@ -293,6 +293,9 @@ $assetVersion = '20260206';
       <h3>⏱️ Regole di gioco</h3>
       <ul>
         <li>Ogni partita dura <strong>2 tempi da 25 minuti</strong>.</li>
+                <li>I falli sono cumulativi, con un massimo di 5 per tempo. 
+          Dal sesto fallo in poi, per ogni ulteriore infrazione la squadra che lo subisce ha diritto a uno <strong>shootout</strong>.
+          Al termine del primo tempo, il conteggio dei falli viene azzerato.</li>
         <li>Ogni squadra ha <strong>1 chiamata VAR</strong> disponibile per partita.</li>
       </ul>
     </div>
