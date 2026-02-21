@@ -776,22 +776,45 @@ async function caricaPlayoff(tipoCoppa) {
   }
 }
 
-// override con filtro andata/ritorno semifinali in stile bracket
+// override con template playoff uguale a Champions (placeholder se mancano partite)
 async function caricaPlayoff(tipoCoppa) {
   const faseParam = (tipoCoppa || "gold").toUpperCase(); // GOLD / SILVER
   const container = document.getElementById("playoffContainer");
 
+  // stili bracket una sola volta
+  (function ensureBracketStyles() {
+    if (window.__BRACKET_STYLES__) return;
+    window.__BRACKET_STYLES__ = true;
+    const style = document.createElement("style");
+    style.textContent = `
+      .bracket-wrapper { display: flex; gap: 12px; overflow-x: auto; padding: 6px 2px; }
+      .bracket-col { flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 10px; }
+      .bracket-col-title { font-weight: 800; color: #15293e; margin: 4px 2px; }
+      .bracket-match { background: #fff; border: 1px solid #dce3ef; border-radius: 14px; padding: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.06); display: flex; flex-direction: column; gap: 8px; transition: transform .15s, box-shadow .15s, border-color .15s; cursor: default; }
+      .bracket-match.is-played { border-color: #15293e; cursor: pointer; }
+      .bracket-match.is-played:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(0,0,0,0.1); }
+      .bracket-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .bracket-status { font-size: 12px; font-weight: 800; padding: 4px 8px; border-radius: 999px; background: #eef3ff; color: #15293e; text-transform: uppercase; }
+      .bracket-status.played { background: #15293e; color: #fff; }
+      .bracket-leg { font-size: 12px; font-weight: 700; color: #4c5b71; }
+      .bracket-team { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+      .bracket-team .team-side { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+      .bracket-team .team-name { font-weight: 800; color: #15293e; text-transform: none; white-space: normal; word-break: break-word; }
+      .bracket-team .team-logo { width: 34px; height: 34px; object-fit: contain; }
+      .bracket-team .team-score { font-weight: 800; font-size: 18px; color: #15293e; min-width: 24px; text-align: right; }
+      .bracket-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: #4c5b71; }
+      .leg-toggle { display: inline-flex; gap: 6px; background: #f3f6fb; padding: 4px; border-radius: 999px; }
+      .leg-btn { border: 1px solid #cbd5e1; background: #fff; color: #15293e; padding: 6px 10px; border-radius: 999px; font-weight: 700; cursor: pointer; }
+      .leg-btn.active { background: #15293e; color: #fff; border-color: #15293e; }
+      .leg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .leg-content { display: none; }
+      .leg-content.active { display: block; }
+    `;
+    document.head.appendChild(style);
+  })();
+
   container.innerHTML = `
     <h3 class="bracket-titolo">Playoff ${tipoCoppa === "gold" ? "COPPA GOLD" : "COPPA SILVER"}</h3>
-    <div class="leg-filter" id="playoffLegFilterWrap" style="display:none; gap: 8px; align-items: center; margin: 10px 0;">
-      <label for="playoffLegFilter">Semifinali:</label>
-      <select id="playoffLegFilter">
-        <option value="">Tutte</option>
-        <option value="ANDATA">Andata</option>
-        <option value="RITORNO">Ritorno</option>
-      </select>
-    </div>
-    <div class="phase-filter" id="playoffPhaseFilters"></div>
     <div class="bracket-wrapper" id="fasiPlayoff"></div>
   `;
 
@@ -804,112 +827,72 @@ async function caricaPlayoff(tipoCoppa) {
       return;
     }
 
-    const totalMatches = Object.values(data || {}).reduce((acc, arr) => {
-      if (Array.isArray(arr)) return acc + arr.length;
-      if (arr && typeof arr === "object") {
-        return acc + Object.values(arr).reduce((a, b) => a + (Array.isArray(b) ? b.length : 0), 0);
+    // template di default (placeholder) se non ci sono partite
+    const baseMatch = (casa, ospite, faseLeg = "") => ({
+      squadra_casa: casa,
+      squadra_ospite: ospite,
+      gol_casa: null,
+      gol_ospite: null,
+      giocata: 0,
+      data_partita: "",
+      ora_partita: "",
+      campo: "Da definire",
+      fase_leg: faseLeg,
+      logo_casa: "/img/scudetti/default.png",
+      logo_ospite: "/img/scudetti/default.png",
+    });
+
+    const defaultOttavi = [
+      [3, 14], [4, 13], [5, 12],
+      [6, 11], [7, 10], [8, 9],
+    ].map(([a, b], idx) => baseMatch(`${a}\u00B0 in classifica`, `${b}\u00B0 in classifica`, `Ottavo ${idx + 1}`));
+
+    const defaultQuarti = []; // quarti da popolare quando disponibili
+
+    const defaultSemifinaliGold = [
+      baseMatch("Vincente Quarto 1", "Vincente Quarto 4"),
+      baseMatch("Vincente Quarto 2", "Vincente Quarto 3"),
+    ];
+    const defaultFinaleGold = [baseMatch("Vincente Semifinale 1", "Vincente Semifinale 2")];
+
+    const defaultSemifinaliSilver = [
+      baseMatch("15\u00B0 in classifica", "18\u00B0 in classifica", "Semifinale 1"),
+      baseMatch("16\u00B0 in classifica", "17\u00B0 in classifica", "Semifinale 2"),
+    ];
+    const defaultFinaleSilver = [baseMatch("Vincente Semifinale 1", "Vincente Semifinale 2")];
+
+    const getDefaultMatches = (giornata) => {
+      if (faseParam === "GOLD") {
+        if (giornata === 4) return defaultOttavi;
+        if (giornata === 3) return defaultQuarti;
+        if (giornata === 2) return defaultSemifinaliGold;
+        if (giornata === 1) return defaultFinaleGold;
+      } else {
+        if (giornata === 2) return defaultSemifinaliSilver;
+        if (giornata === 1) return defaultFinaleSilver;
       }
-      return acc;
-    }, 0);
+      return [];
+    };
 
+    const fasiMap = { 1: "Finale", 2: "Semifinali", 3: "Quarti di finale", 4: "Ottavi di finale" };
     const fasiContainer = document.getElementById("fasiPlayoff");
-    const phaseFilter = document.getElementById("playoffPhaseFilters");
-    let currentPhase = "";
+    fasiContainer.innerHTML = "";
+    const ordineGiornate = [4, 3, 2, 1]; // Ottavi -> Quarti -> Semi -> Finale
 
-    const renderPlaceholder = () => {
-      if (!fasiContainer) return;
-      const goldPairs = [
-        "3 vs 14", "4 vs 13", "5 vs 12",
-        "6 vs 11", "7 vs 10", "8 vs 9"
-      ];
-      const silverPairs = ["15 vs 18", "16 vs 17"];
-      const pairs = tipoCoppa.toLowerCase() === "gold" ? goldPairs : silverPairs;
-      fasiContainer.innerHTML = `
-        <div class="bracket-placeholder">
-          <p>Le partite di ${tipoCoppa === "gold" ? "Coppa Gold" : "Coppa Silver"} non sono ancora state inserite.</p>
-          <p>Accoppiamenti previsti:</p>
-          <ul>${pairs.map(p => `<li>${p}</li>`).join("")}</ul>
-        </div>
-      `;
-    };
+    ordineGiornate.forEach(g => {
+      const matchList = data[g] || [];
+      const elenco = matchList.length ? matchList : getDefaultMatches(g);
+      if (!elenco.length) return;
 
-    if (totalMatches === 0) {
-      renderPlaceholder();
-      return;
-    }
-
-    const fasiMap = {
-      1: "Finale",
-      2: "Semifinali",
-      3: "Quarti di finale",
-      4: "Ottavi di finale"
-    };
-
-    if (!window.__LEG_TOGGLE_STYLES__) {
-      window.__LEG_TOGGLE_STYLES__ = true;
-      const style = document.createElement("style");
-      style.textContent = `
-        .leg-toggle { display: inline-flex; gap: 6px; background: #f3f6fb; padding: 4px; border-radius: 999px; }
-        .leg-btn { border: 1px solid #cbd5e1; background: #fff; color: #15293e; padding: 6px 10px; border-radius: 999px; font-weight: 700; cursor: pointer; }
-        .leg-btn.active { background: #15293e; color: #fff; border-color: #15293e; }
-        .leg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .leg-content { display: none; }
-        .leg-content.active { display: block; }
-      `;
-      document.head.appendChild(style);
-    }
-
-    if (phaseFilter) {
-      phaseFilter.innerHTML = "";
-      const phases =
-        tipoCoppa.toLowerCase() === "gold"
-          ? [
-              { label: "Tutte", val: "" },
-              { label: "Ottavi", val: "4" },
-              { label: "Quarti", val: "3" },
-              { label: "Semifinali", val: "2" },
-              { label: "Finale", val: "1" },
-            ]
-          : [
-              { label: "Tutte", val: "" },
-              { label: "Semifinali", val: "2" },
-              { label: "Finale", val: "1" },
-            ];
-      phases.forEach(ph => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "phase-btn" + (ph.val === "" ? " active" : "");
-        btn.dataset.phase = ph.val;
-        btn.textContent = ph.label;
-        btn.onclick = () => {
-          phaseFilter.querySelectorAll(".phase-btn").forEach(b => b.classList.remove("active"));
-          btn.classList.add("active");
-          currentPhase = ph.val;
-          renderPlayoff();
-        };
-        phaseFilter.appendChild(btn);
-      });
-    }
-
-    const renderPlayoff = () => {
-      if (!fasiContainer) return;
-      fasiContainer.innerHTML = "";
-      const ordineGiornate = [4, 3, 2, 1]; // Ottavi -> Quarti -> Semi -> Finale
-
-      ordineGiornate.forEach(g => {
-        if (currentPhase && String(g) !== currentPhase) return;
-        const matchList = (data[g] || []);
-        if (!matchList.length) return;
-
-        const col = document.createElement("div");
-        col.className = "bracket-col";
-        const titolo = document.createElement("div");
-        titolo.className = "bracket-col-title";
-        titolo.textContent = fasiMap[g] || `Fase ${g}`;
-        col.appendChild(titolo);
+      const col = document.createElement("div");
+      col.className = "bracket-col";
+      const titolo = document.createElement("div");
+      titolo.className = "bracket-col-title";
+      titolo.textContent = fasiMap[g] || `Fase ${g}`;
+      col.appendChild(titolo);
 
       const pairMap = {};
-      matchList.forEach(p => {
+      elenco.forEach(p => {
         const key = [p.squadra_casa || "", p.squadra_ospite || ""].sort((a, b) => a.localeCompare(b)).join("|||");
         if (!pairMap[key]) pairMap[key] = [];
         pairMap[key].push(p);
@@ -949,10 +932,10 @@ async function caricaPlayoff(tipoCoppa) {
           const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
           const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
           const dataStr = formattaData(partita.data_partita);
+          const showOra = dataStr !== "Data da definire" && partita.ora_partita;
           const body = document.createElement("div");
           body.className = "leg-content" + (activeLeg ? " active" : "");
           body.dataset.leg = (partita.fase_leg || "").toUpperCase() || "UNICA";
-          const showOra = dataStr !== "Data da definire" && partita.ora_partita;
           body.innerHTML = `
             <div class="bracket-team">
               <div class="team-side">
@@ -1006,21 +989,14 @@ async function caricaPlayoff(tipoCoppa) {
         col.appendChild(match);
       });
 
-        fasiContainer.appendChild(col);
-      });
-    };
+      fasiContainer.appendChild(col);
+    });
 
-    renderPlayoff();
   } catch (err) {
     console.error("Errore nel caricamento playoff:", err);
     container.innerHTML += `<p>Errore nel caricamento playoff.</p>`;
   }
-}
-
-
-
-
-// ====================== ROSE SQUADRE ======================
+}// ====================== ROSE SQUADRE ======================
 async function caricaSquadrePerRosa() {
   try {
     const res = await fetch(`/api/leggiClassifica.php?torneo=${TORNEO}`);
