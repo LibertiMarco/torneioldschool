@@ -249,7 +249,7 @@ $assetVersion = '20260222';
     <div class="regola">
       <h3>🏟️ Struttura del Campionato</h3>
       <p>
-        Il torneo è composto da <strong>10 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
+        Il torneo è composto da <strong>12 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
       </p>
     </div>
 
@@ -300,7 +300,6 @@ $assetVersion = '20260222';
     <div class="regola">
       <h3>📅 Calendario</h3>
       <ul>
-        <li>Le partite si disputano principalmente <strong>il mercoledì e il giovedì</strong>.</li>
         <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedì o venerdì</strong>.</li>
       </ul>
     </div>
