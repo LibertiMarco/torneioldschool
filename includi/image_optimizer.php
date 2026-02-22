@@ -62,6 +62,49 @@ if (!function_exists('optimize_image_file')) {
         $maxH = (int)($options['maxHeight'] ?? 1920);
         $quality = (int)($options['quality'] ?? 82);
 
+        // Evita fatal error di memoria quando l'immagine Ã¨ troppo grande per GD.
+        $shorthandToBytes = static function ($value): int {
+            if ($value === null || $value === '' || $value === false) {
+                return -1;
+            }
+            $value = trim((string)$value);
+            if ($value === '-1') {
+                return -1; // memory_limit illimitato
+            }
+            $unit = strtolower(substr($value, -1));
+            $number = (float)$value;
+            $factor = [
+                'k' => 1024,
+                'm' => 1024 * 1024,
+                'g' => 1024 * 1024 * 1024,
+            ][$unit] ?? 1;
+            return (int)($number * $factor);
+        };
+
+        $channels = (int)($info['channels'] ?? ($supportsAlpha ? 4 : 3));
+        $bitsPerChannel = max(1, (int)($info['bits'] ?? 8));
+        // Moltiplicatore 1.7 per overhead GD + 2MB di margine
+        $estimatedBytes = (int)ceil($info[0] * $info[1] * $channels * ($bitsPerChannel / 8) * 1.7 + 2_000_000);
+
+        $limitBytes = $shorthandToBytes(ini_get('memory_limit'));
+        $usageBytes = memory_get_usage(true);
+        $headroom = 16 * 1024 * 1024; // buffer addizionale per operazioni successive
+
+        if ($limitBytes > 0 && ($usageBytes + $estimatedBytes + $headroom) > $limitBytes) {
+            // Prova ad alzare il memory_limit senza superare 512M (configurabile tramite options)
+            $maxRaisable = $shorthandToBytes($options['memoryLimit'] ?? '512M');
+            $desired = min($maxRaisable, $usageBytes + $estimatedBytes + $headroom);
+            if ($desired > $limitBytes) {
+                @ini_set('memory_limit', (int)ceil($desired / (1024 * 1024)) . 'M');
+                $limitBytes = $shorthandToBytes(ini_get('memory_limit'));
+            }
+        }
+
+        if ($limitBytes > 0 && ($usageBytes + $estimatedBytes + $headroom) > $limitBytes) {
+            // L'immagine Ã¨ troppo grande per essere caricata con l'attuale memory_limit: evita fatal.
+            return false;
+        }
+
         $src = @$loaderFn($path);
         if (!$src) {
             return false;

@@ -249,7 +249,7 @@ $assetVersion = '20260206';
     <div class="regola">
       <h3>🏟️ Struttura del campionato</h3>
       <p>
-        Il torneo &egrave; composto da <strong>20 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
+        Il torneo &egrave; composto da <strong>18 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
       </p>
     </div>
 
@@ -268,7 +268,8 @@ $assetVersion = '20260206';
     <div class="regola">
       <h3>🏆 Fase 2 &mdash; Coppe</h3>
       <ul>
-        <li>Le <strong>prime 16</strong> classificate accedono alla <span class="gold">Coppa Gold</span>.</li>
+        <li>Le <strong>prime 2</strong> classificate accedono ai <span class="gold">quarti della Coppa Gold</span>.</li>
+        <li>Le <strong>prime 12</strong> classificate accedono agli <span class="gold">ottavi della Coppa Gold</span>.</li>
         <li>Le <strong>ultime 4</strong> accedono alla <span class="silver">Coppa Silver</span>.</li>
         <li>Entrambe le coppe prevedono una <strong>premiazione con trofeo</strong> per la vincitrice.</li>
       </ul>
@@ -303,7 +304,7 @@ $assetVersion = '20260206';
     <div class="regola">
       <h3>📅 Calendario</h3>
       <ul>
-        <li>Le partite si disputano principalmente <strong>il mercoled&igrave; e il gioved&igrave;</strong>.</li>
+        <li>Le partite si disputano principalmente <strong>il marted&igrave; il mercoled&igrave; e il gioved&igrave;</strong>.</li>
         <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>gioved&igrave; o venerd&igrave;</strong>.</li>
       </ul>
     </div>
