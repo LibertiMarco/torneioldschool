@@ -293,13 +293,15 @@ function mostraClassifica(classifica) {
   tbody.innerHTML = "";
 
   classifica.sort((a, b) => b.punti - a.punti || b.differenza_reti - a.differenza_reti);
+  const teamCount = classifica.length;
 
   classifica.forEach((team, i) => {
     const tr = document.createElement("tr");
+    const posizione = i + 1;
 
-    if (i + 1 <= 6) {
+    if (posizione <= 8) {
       tr.classList.add("gold-row");
-    } else {
+    } else if (posizione > teamCount - 4) {
       tr.classList.add("silver-row");
     }
 
@@ -336,9 +338,10 @@ function mostraClassifica(classifica) {
   if (!faseSelect || faseSelect.value === "girone") {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
+    const silverStart = Math.max(1, teamCount - 4 + 1);
     legenda.innerHTML = `
-      <div class="box gold-box">🏆 COPPA GOLD</div>
-      <div class="box silver-box">🥈 COPPA SILVER</div>
+      <div class="box gold-box">🏆 Prime 8: Coppa Gold</div>
+      <div class="box silver-box">🥈 Ultime 4: Coppa Silver (posizioni ${silverStart}-${teamCount})</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
@@ -680,8 +683,7 @@ async function caricaPlayoff(tipoCoppa) {
     const fasiMap = {
       1: "Finale",
       2: "Semifinali",
-      3: "Quarti di finale",
-      4: "Ottavi di finale"
+      3: "Quarti di finale"
     };
 
     const fasiContainer = document.getElementById("fasiPlayoff");
@@ -826,7 +828,6 @@ async function caricaPlayoff(tipoCoppa) {
         tipoCoppa.toLowerCase() === "gold"
           ? [
               { label: "Tutte", val: "" },
-              { label: "Ottavi", val: "4" },
               { label: "Quarti", val: "3" },
               { label: "Semifinali", val: "2" },
               { label: "Finale", val: "1" },
@@ -855,7 +856,7 @@ async function caricaPlayoff(tipoCoppa) {
     const renderPlayoff = () => {
       if (!fasiContainer) return;
       fasiContainer.innerHTML = "";
-      const ordineGiornate = [4, 3, 2, 1]; // Ottavi -> Quarti -> Semi -> Finale
+      const ordineGiornate = tipoCoppa.toLowerCase() === "gold" ? [3, 2, 1] : [2, 1]; // Gold: Quarti -> Semi -> Finale; Silver: Semi -> Finale
 
       ordineGiornate.forEach(g => {
         if (currentPhase && String(g) !== currentPhase) return;
@@ -1279,5 +1280,3 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     });
   }
 });
-
-

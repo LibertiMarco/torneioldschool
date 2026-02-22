@@ -1,6 +1,6 @@
 ﻿<?php
 require_once __DIR__ . '/../includi/require_login.php';
-$assetVersion = '20260213';
+$assetVersion = '20260222';
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -268,8 +268,8 @@ $assetVersion = '20260213';
     <div class="regola">
       <h3>🏆 Fase 2 — Coppe</h3>
       <ul>
-        <li>Le <strong>prime 6</strong> classificate accedono alla <span class="gold">Coppa Gold</span>.</li>
-        <li>Le <strong>ultime 4</strong> accedono alla <span class="silver">Coppa Silver</span>.</li>
+        <li>Le <strong>prime 8</strong> classificate accedono alla <span class="gold">Coppa Gold</span>.</li>
+        <li>Le <strong>ultime 4</strong> classificate accedono alla <span class="silver">Coppa Silver</span>.</li>
         <li>Entrambe le coppe prevedono una <strong>premiazione con trofeo</strong> per la vincitrice.</li>
       </ul>
     </div>
