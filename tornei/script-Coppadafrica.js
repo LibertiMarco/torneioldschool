@@ -243,7 +243,11 @@ async function caricaClassifica(torneoSlug = TORNEO) {
       }
     });
 
-    mostraClassifica(data);
+    const partiteRegularGiocate = (await loadPartiteTorneo()).filter(
+      p => Number(p.giocata) === 1 && faseKey(p.fase) === "REGULAR"
+    );
+
+    mostraClassifica(data, partiteRegularGiocate);
 
     // Clic su una squadra: mostra elenco partite giocate in Regular Season
     document.querySelectorAll("#tableClassificaA tbody .team-cell, #tableClassificaB tbody .team-cell").forEach(cell => {
@@ -273,18 +277,84 @@ async function caricaClassifica(torneoSlug = TORNEO) {
   }
 }
 
-function mostraClassifica(classifica) {
+function buildHeadToHeadMap(partiteGiocate = []) {
+  const map = new Map();
+
+  partiteGiocate.forEach(p => {
+    const casa = p.squadra_casa || "";
+    const ospite = p.squadra_ospite || "";
+    if (!casa || !ospite) return;
+
+    const golCasa = Number(p.gol_casa);
+    const golOspite = Number(p.gol_ospite);
+    if (!Number.isFinite(golCasa) || !Number.isFinite(golOspite)) return;
+
+    const key = [casa, ospite].sort((a, b) => a.localeCompare(b, "it", { sensitivity: "base" })).join("|||");
+    if (!map.has(key)) {
+      const [t1, t2] = key.split("|||");
+      map.set(key, { t1, t2, points1: 0, points2: 0, matches: 0 });
+    }
+
+    const entry = map.get(key);
+    entry.matches += 1;
+
+    if (golCasa === golOspite) {
+      entry.points1 += 1;
+      entry.points2 += 1;
+    } else {
+      const winnerIsT1 =
+        (golCasa > golOspite && casa === entry.t1) ||
+        (golOspite > golCasa && ospite === entry.t1);
+      if (winnerIsT1) entry.points1 += 3;
+      else entry.points2 += 3;
+    }
+  });
+
+  return map;
+}
+
+function headToHeadWinner(h2hMap, teamA, teamB) {
+  if (!teamA || !teamB) return null;
+  const key = [teamA, teamB].sort((a, b) => a.localeCompare(b, "it", { sensitivity: "base" })).join("|||");
+  const entry = h2hMap.get(key);
+  if (!entry || entry.matches === 0) return null;
+  if (entry.points1 === entry.points2) return null;
+  return entry.points1 > entry.points2 ? entry.t1 : entry.t2;
+}
+
+function ordinaGruppoPariPunti(gruppo, h2hMap) {
+  const diffComparator = (a, b) =>
+    (b.differenza_reti ?? 0) - (a.differenza_reti ?? 0) ||
+    (b.gol_fatti ?? 0) - (a.gol_fatti ?? 0) ||
+    a.nome.localeCompare(b.nome, "it", { sensitivity: "base" });
+
+  if (gruppo.length === 2) {
+    const [t1, t2] = gruppo;
+    const winner = headToHeadWinner(h2hMap, t1.nome, t2.nome);
+    if (winner === t1.nome) return [t1, t2];
+    if (winner === t2.nome) return [t2, t1];
+  }
+
+  return gruppo.slice().sort(diffComparator);
+}
+
+function mostraClassifica(classifica, partiteGiocate = []) {
   const tbodyA = document.querySelector("#tableClassificaA tbody");
   const tbodyB = document.querySelector("#tableClassificaB tbody");
   if (tbodyA) tbodyA.innerHTML = "";
   if (tbodyB) tbodyB.innerHTML = "";
 
-  const sortTeams = (a, b) =>
-    b.punti - a.punti ||
-    b.differenza_reti - a.differenza_reti ||
-    b.gol_fatti - a.gol_fatti ||
-    a.gol_subiti - b.gol_subiti ||
-    a.nome.localeCompare(b.nome, "it", { sensitivity: "base" });
+  const h2hMap = buildHeadToHeadMap(partiteGiocate);
+
+  const ordina = (teams) => {
+    const puntiValues = [...new Set(teams.map(t => t.punti))].sort((a, b) => b - a);
+    const ordered = [];
+    puntiValues.forEach(punti => {
+      const gruppo = teams.filter(t => t.punti === punti);
+      ordered.push(...ordinaGruppoPariPunti(gruppo, h2hMap));
+    });
+    return ordered;
+  };
 
   const normalizeId = (team) => Number(team.id);
   const normalizeName = (name = "") => name.trim().toLowerCase();
@@ -316,14 +386,14 @@ function mostraClassifica(classifica) {
     else leftovers.push(team);
   });
 
-  leftovers.sort(sortTeams);
+  let leftoversOrdered = ordina(leftovers);
 
   const fillGroup = (group, targetSize) => {
-    while (group.length < targetSize && leftovers.length) {
-      group.push(leftovers.shift());
+    while (group.length < targetSize && leftoversOrdered.length) {
+      group.push(leftoversOrdered.shift());
     }
-    group.sort(sortTeams);
-    if (group.length > targetSize) group.length = targetSize;
+    const orderedGroup = ordina(group).slice(0, targetSize);
+    group.splice(0, group.length, ...orderedGroup);
   };
 
   fillGroup(gironeA, 4);

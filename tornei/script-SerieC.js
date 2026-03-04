@@ -258,7 +258,11 @@ async function caricaClassifica(torneoSlug = TORNEO) {
       }
     });
 
-    mostraClassifica(data);
+    const partiteRegularGiocate = (await loadPartiteTorneo()).filter(
+      p => Number(p.giocata) === 1 && faseKey(p.fase) === "REGULAR"
+    );
+
+    mostraClassifica(data, partiteRegularGiocate);
 
     // Clic su una squadra: mostra elenco partite giocate in Regular Season
     document.querySelectorAll("#tableClassifica tbody .team-cell").forEach(cell => {
@@ -288,14 +292,84 @@ async function caricaClassifica(torneoSlug = TORNEO) {
   }
 }
 
-function mostraClassifica(classifica) {
+function buildHeadToHeadMap(partiteGiocate = []) {
+  const map = new Map();
+
+  partiteGiocate.forEach(p => {
+    const casa = p.squadra_casa || "";
+    const ospite = p.squadra_ospite || "";
+    if (!casa || !ospite) return;
+
+    const golCasa = Number(p.gol_casa);
+    const golOspite = Number(p.gol_ospite);
+    if (!Number.isFinite(golCasa) || !Number.isFinite(golOspite)) return;
+
+    const key = [casa, ospite].sort((a, b) => a.localeCompare(b, "it", { sensitivity: "base" })).join("|||");
+    if (!map.has(key)) {
+      const [t1, t2] = key.split("|||");
+      map.set(key, { t1, t2, points1: 0, points2: 0, matches: 0 });
+    }
+
+    const entry = map.get(key);
+    entry.matches += 1;
+
+    if (golCasa === golOspite) {
+      entry.points1 += 1;
+      entry.points2 += 1;
+    } else {
+      const winnerIsT1 =
+        (golCasa > golOspite && casa === entry.t1) ||
+        (golOspite > golCasa && ospite === entry.t1);
+      if (winnerIsT1) entry.points1 += 3;
+      else entry.points2 += 3;
+    }
+  });
+
+  return map;
+}
+
+function headToHeadWinner(h2hMap, teamA, teamB) {
+  if (!teamA || !teamB) return null;
+  const key = [teamA, teamB].sort((a, b) => a.localeCompare(b, "it", { sensitivity: "base" })).join("|||");
+  const entry = h2hMap.get(key);
+  if (!entry || entry.matches === 0) return null;
+  if (entry.points1 === entry.points2) return null;
+  return entry.points1 > entry.points2 ? entry.t1 : entry.t2;
+}
+
+function ordinaGruppoPariPunti(gruppo, h2hMap) {
+  const diffComparator = (a, b) =>
+    (b.differenza_reti ?? 0) - (a.differenza_reti ?? 0) ||
+    (b.gol_fatti ?? 0) - (a.gol_fatti ?? 0) ||
+    a.nome.localeCompare(b.nome, "it", { sensitivity: "base" });
+
+  if (gruppo.length === 2) {
+    const [t1, t2] = gruppo;
+    const winner = headToHeadWinner(h2hMap, t1.nome, t2.nome);
+    if (winner === t1.nome) return [t1, t2];
+    if (winner === t2.nome) return [t2, t1];
+  }
+
+  return gruppo.slice().sort(diffComparator);
+}
+
+function mostraClassifica(classifica, partiteGiocate = []) {
   const tbody = document.querySelector("#tableClassifica tbody");
   tbody.innerHTML = "";
 
-  classifica.sort((a, b) => b.punti - a.punti || b.differenza_reti - a.differenza_reti);
-  const teamCount = classifica.length;
+  const h2hMap = buildHeadToHeadMap(partiteGiocate);
+  const puntiValues = [...new Set(classifica.map(team => team.punti))].sort((a, b) => b - a);
+  const orderedTeams = [];
 
-  classifica.forEach((team, i) => {
+  puntiValues.forEach(punti => {
+    const gruppo = classifica.filter(t => t.punti === punti);
+    const ordinati = ordinaGruppoPariPunti(gruppo, h2hMap);
+    orderedTeams.push(...ordinati);
+  });
+
+  const teamCount = orderedTeams.length;
+
+  orderedTeams.forEach((team, i) => {
     const tr = document.createElement("tr");
     const posizione = i + 1;
 
