@@ -264,7 +264,7 @@ $torneoSeo = [
     <div class="torneo-hero">
       <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Coppa d’Africa">
       <div class="torneo-title">
-        <h1 class="titolo">Coppa d’Africa</h1>
+        <h1 class="titolo">ALL IN ONE NIGHT: MONDIALE</h1>
         <button type="button" class="fav-toggle" id="favTournamentBtn">☆ Segui torneo</button>
       </div>
     </div>
