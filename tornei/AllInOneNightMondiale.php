@@ -43,6 +43,7 @@ $torneoSeo = [
       margin-bottom: 25px;
       text-align: center;
       flex-wrap: wrap;
+      padding: 0 12px;
     }
     .torneo-hero img {
       width: 80px;
@@ -60,6 +61,7 @@ $torneoSeo = [
       justify-content: center;
       height: 80px;
       gap: 12px;
+      flex: 1 1 240px;
     }
     .torneo-title .fav-toggle {
       align-self: center;
@@ -68,6 +70,9 @@ $torneoSeo = [
     .torneo-title h1 {
       margin: 0;
       text-align: center;
+      font-size: clamp(22px, 6vw, 32px);
+      line-height: 1.15;
+      word-break: break-word;
     }
     .fav-toggle {
       border: 1px solid #15293e;
@@ -226,6 +231,17 @@ $torneoSeo = [
     @media (max-width: 600px) {
       .torneo-hero {
         flex-wrap: wrap;
+      }
+    }
+    @media (max-width: 480px) {
+      .torneo-title {
+        min-width: 0;
+        height: auto;
+        flex-direction: column;
+      }
+      .torneo-title .fav-toggle {
+        width: 100%;
+        max-width: 260px;
       }
     }
   </style>
@@ -524,7 +540,6 @@ $torneoSeo = [
 
 </body>
 </html>
-
 
 
 
