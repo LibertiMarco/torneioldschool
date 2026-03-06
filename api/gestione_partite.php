@@ -1219,7 +1219,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="">-- Seleziona campo --</option>
             <option value="Sporting Club San Francesco, Napoli">Sporting Club San Francesco, Napoli</option>
             <option value="Centro Sportivo La Paratina, Napoli">Centro Sportivo La Paratina, Napoli</option>
-            <option value="Paratina (campo su)">Paratina (campo su)</option>
+            <option value="Paratina (campo sopra)">Paratina (campo sopra)</option>
             <option value="Paratina (campo giu)">Paratina (campo giu)</option>
             <option value="Sporting S.Antonio, Napoli">Sporting S.Antonio, Napoli</option>
             <option value="La Boutique del Calcio, Napoli">La Boutique del Calcio, Napoli</option>
@@ -1354,7 +1354,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="">-- Seleziona campo --</option>
             <option value="Sporting Club San Francesco, Napoli">Sporting Club San Francesco, Napoli</option>
             <option value="Centro Sportivo La Paratina, Napoli">Centro Sportivo La Paratina, Napoli</option>
-            <option value="Paratina (campo su)">Paratina (campo su)</option>
+            <option value="Paratina (campo sopra)">Paratina (campo sopra)</option>
             <option value="Paratina (campo giu)">Paratina (campo giu)</option>
             <option value="Sporting S.Antonio, Napoli">Sporting S.Antonio, Napoli</option>
             <option value="La Boutique del Calcio, Napoli">La Boutique del Calcio, Napoli</option>
