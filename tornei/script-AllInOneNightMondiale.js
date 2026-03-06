@@ -1,7 +1,7 @@
 ﻿const TORNEO = "AllInOneNightMondiale"; // Nome base del torneo nel DB (fase girone)
 const GIRONE_CONFIG = {
-  A: { ids: [], names: ["BRASILE", "ARGENTINA", "PORTOGALLO", "ITALIA"] },
-  B: { ids: [], names: ["MESSICO", "INGHILTERRA", "SCOZIA", "SPAGNA"] },
+  A: { ids: [], names: ["BRASILE", "ARGENTINA", "PORTOGALLO", "MESSICO"] },
+  B: { ids: [], names: ["STATI UNITI", "ITALIA", "SCOZIA", "SPAGNA"] },
 };
 const teamLogos = {};
 const FALLBACK_AVATAR = "/img/giocatori/unknown.jpg";
