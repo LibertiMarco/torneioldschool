@@ -10,11 +10,17 @@ if ($torneo === '') {
     exit;
 }
 
-// Per Coppa d'Africa contiamo anche la fase finale, per gli altri solo fase REGULAR (anche se fase vuota o \"GIRONE\")
+// Per Coppa d'Africa contiamo tutte le fasi. Per AllInOneNightMondiale includiamo anche la Coppa Gold.
+// Per gli altri tornei consideriamo solo la fase REGULAR (anche se fase vuota o \"GIRONE\").
 // Uso COALESCE per includere anche valori NULL di fase come regular, evitando di escludere partite registrate senza fase.
-$phaseClause = ($torneo === 'Coppadafrica')
-    ? ''
-    : "AND UPPER(CASE WHEN TRIM(COALESCE(p.fase, '')) IN ('', 'GIRONE') THEN 'REGULAR' ELSE TRIM(COALESCE(p.fase, '')) END) = 'REGULAR'";
+$phaseExpr = "UPPER(CASE WHEN TRIM(COALESCE(p.fase, '')) IN ('', 'GIRONE') THEN 'REGULAR' ELSE TRIM(COALESCE(p.fase, '')) END)";
+if ($torneo === 'Coppadafrica') {
+    $phaseClause = '';
+} elseif ($torneo === 'AllInOneNightMondiale') {
+    $phaseClause = "AND $phaseExpr IN ('REGULAR','GOLD')";
+} else {
+    $phaseClause = "AND $phaseExpr = 'REGULAR'";
+}
 
 $sql = "
     SELECT 
