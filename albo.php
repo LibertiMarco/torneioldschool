@@ -101,8 +101,9 @@ $pageSeo = [
 
     function labelPeriodo(item) {
       const nome = (item.competizione || '').toLowerCase();
-      if (nome.includes("coppa d'africa") && nome.includes('all in one night')) {
-        return '12 dic 2025';
+      if (nome.includes('all in one night')) {
+        if (nome.includes("coppa d'africa")) return '12 dic 2025';
+        if (nome.includes('mondiale')) return '06 Mar 2026';
       }
       return formatPeriodo(item.data_inizio, item.data_fine, item.anno);
     }
