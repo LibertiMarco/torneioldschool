@@ -1147,6 +1147,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const heroImg = document.getElementById("torneoHeroImg");
   const torneoTitle = document.querySelector(".torneo-title .titolo");
   const loadClassifica = (slug) => caricaClassifica(slug || TORNEO);
+  const removeLegendaCoppe = () => {
+    const legenda = document.querySelector(".legenda-coppe");
+    if (legenda) legenda.remove();
+  };
   const favTorneoBtn = document.getElementById("favTournamentBtn");
   if (favTorneoBtn) {
     favTorneoBtn.addEventListener("click", () => toggleTournamentFollow(favTorneoBtn));
@@ -1205,6 +1209,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // cambio fase girone/eliminazione
   faseSelect.addEventListener("change", () => {
     if (faseSelect.value === "eliminazione") {
+      removeLegendaCoppe();
       // mostra bracket playoff
       classificaWrapper.style.display = "none";
       playoffContainer.style.display = "block";
