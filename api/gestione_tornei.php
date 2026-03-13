@@ -20,6 +20,21 @@ function sanitizeTorneoSlug($value) {
     return $slug;
 }
 
+/**
+ * Pulisce il testo mantenendolo in UTF-8, eliminando eventuali byte non validi
+ * e caratteri di controllo che generano simboli strani a video.
+ */
+function cleanUtf8Text($value): string {
+    if (!is_string($value)) {
+        $value = (string)$value;
+    }
+    $value = str_replace("\r\n", "\n", $value);
+    $value = @iconv('UTF-8', 'UTF-8//IGNORE', $value) ?: $value;
+    // rimuove caratteri di controllo non stampabili (tranne tab e newline)
+    $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value);
+    return trim($value);
+}
+
 function buildTorneoConfigFromRequest(array $src): array {
     $config = [
         'formato'            => $src['formula_torneo'] ?? '',
@@ -31,7 +46,7 @@ function buildTorneoConfigFromRequest(array $src): array {
         'qualificati_gold'   => intOrZero($src['qualificati_gold'] ?? 0),
         'qualificati_silver' => intOrZero($src['qualificati_silver'] ?? 0),
         'eliminate'          => intOrZero($src['eliminate'] ?? 0),
-        'regole_html'        => trim($src['regole_html'] ?? ''),
+        'regole_html'        => cleanUtf8Text($src['regole_html'] ?? ''),
     ];
 
     if ($config['totale_squadre'] === 0) {
@@ -97,6 +112,8 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $fase
         return;
     }
 
+    $nomePulito = cleanUtf8Text($nomeTorneo);
+
     // Sceglie il template piÃ¹ adatto in base alle scelte
     $templates = scegliTemplatePerFormula($formulaTorneo, $faseFinale, $baseDir);
     $htmlTemplate = $templates['html'] ?? null;
@@ -132,15 +149,15 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $fase
         ],
         [
             $slug,
-            $nomeTorneo,
+            $nomePulito,
             $newScriptName,
-            $nomeTorneo,
-            $newScriptName,
-            $slug,
-            $nomeTorneo,
+            $nomePulito,
             $newScriptName,
             $slug,
-            $nomeTorneo,
+            $nomePulito,
+            $newScriptName,
+            $slug,
+            $nomePulito,
             $newScriptName,
             $slug,
             $newScriptName
@@ -153,6 +170,9 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $fase
         [$slug, $slug, $slug, $slug, $slug],
         $jsContent
     );
+
+    $htmlContent = cleanUtf8Text($htmlContent);
+    $jsContent = cleanUtf8Text($jsContent);
 
     @file_put_contents($baseDir . '/' . $slug . '.php', $htmlContent);
     @file_put_contents($baseDir . '/' . $newScriptName, $jsContent);
@@ -375,14 +395,15 @@ function eliminaImmagineTorneo($imgPath) {
 
 // --- CREA ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
-    $nome = trim($_POST['nome']);
+    $nome = cleanUtf8Text($_POST['nome'] ?? '');
     $stato = $_POST['stato'];
     $data_inizio = $_POST['data_inizio'];
     $data_fine = $_POST['data_fine'];
-    $rawFile = preg_replace('/\.(html?|php)$/i', '', trim($_POST['filetorneo']));
+    $rawFileInput = cleanUtf8Text($_POST['filetorneo'] ?? '');
+    $rawFile = preg_replace('/\.(html?|php)$/i', '', trim($rawFileInput));
     $slug = sanitizeTorneoSlug($rawFile);
     $filetorneo = $slug . '.php';
-    $categoria = trim($_POST['categoria']);
+    $categoria = cleanUtf8Text($_POST['categoria'] ?? '');
     $img = salvaImmagineTorneo($nome, 'img_upload');
     $formulaTorneo = $_POST['formula_torneo'] ?? '';
     $faseFinale = $_POST['fase_finale'] ?? '';
@@ -399,14 +420,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
 // --- AGGIORNA ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $id = (int)$_POST['id'];
-    $nome = trim($_POST['nome']);
+    $nome = cleanUtf8Text($_POST['nome'] ?? '');
     $stato = $_POST['stato'];
     $data_inizio = $_POST['data_inizio'];
     $data_fine = $_POST['data_fine'];
-    $rawFile = preg_replace('/\.(html?|php)$/i', '', trim($_POST['filetorneo']));
+    $rawFileInput = cleanUtf8Text($_POST['filetorneo'] ?? '');
+    $rawFile = preg_replace('/\.(html?|php)$/i', '', trim($rawFileInput));
     $slug = sanitizeTorneoSlug($rawFile);
     $filetorneo = $slug . '.php';
-    $categoria = trim($_POST['categoria']);
+    $categoria = cleanUtf8Text($_POST['categoria'] ?? '');
     $record = $torneo->getById($id);
     $img = salvaImmagineTorneo($nome, 'img_upload_mod');
     if (!$img && $record && !empty($record['img'])) {
