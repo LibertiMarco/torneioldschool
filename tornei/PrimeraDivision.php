@@ -248,7 +248,7 @@ $assetVersion = '20260206';
   <div class="regole-box">
     <div class="regola">
       <h3>Struttura del campionato</h3>
-      <p>Il torneo è composto da <strong>20 squadre</strong> e si sviluppa in <strong>due fasi</strong>.</p>
+      <p>Il torneo è composto da <strong>12 squadre</strong> e si sviluppa in <strong>due fasi</strong>.</p>
     </div>
 
     <div class="regola">
@@ -266,7 +266,7 @@ $assetVersion = '20260206';
     <div class="regola">
       <h3>Fase 2 &mdash; Coppe</h3>
       <ul>
-        <li>Le <strong>prime 16</strong> classificate accedono alla <span class="gold">Coppa Gold</span>.</li>
+        <li>Le <strong>prime 8</strong> classificate accedono alla <span class="gold">Coppa Gold</span>.</li>
         <li>Le <strong>ultime 4</strong> accedono alla <span class="silver">Coppa Silver</span>.</li>
         <li>Entrambe le coppe prevedono una <strong>premiazione con trofeo</strong> per la vincitrice.</li>
       </ul>
@@ -281,10 +281,6 @@ $assetVersion = '20260206';
         <span>Miglior Difensore</span>
         <span>Miglior Attaccante</span>
       </div>
-      <p>
-        Il <strong>Miglior Giocatore</strong> vince un
-        <span class="highlight">buono tatuaggio da 500&nbsp;&euro;</span>.
-      </p>
     </div>
 
     <div class="regola">
@@ -298,7 +294,7 @@ $assetVersion = '20260206';
     <div class="regola">
       <h3>Calendario</h3>
       <ul>
-        <li>Si gioca principalmente <strong>mercoledì e giovedì</strong>.</li>
+        <li>Si gioca principalmente <strong>di venerdi</strong>.</li>
         <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedì o venerdì</strong>.</li>
       </ul>
     </div>
