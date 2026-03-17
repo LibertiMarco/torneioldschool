@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includi/require_login.php';
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
 $torneoSlug = 'supercup';
 $torneoName = 'Supercup';
-$assetVersion = '20260206';
+$assetVersion = '20260317a';
 ?>
 <!DOCTYPE html>
 <html lang="it">
