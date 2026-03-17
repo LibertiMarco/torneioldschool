@@ -712,6 +712,7 @@ async function caricaPlayoff(tipoCoppa) {
 
   container.innerHTML = `
     <h3 class="bracket-titolo">Playoff ${tipoCoppa === "gold" ? "COPPA GOLD" : "COPPA SILVER"}</h3>
+    <div class="phase-filter" id="playoffPhaseFilters"></div>
     <div class="bracket-wrapper" id="fasiPlayoff"></div>
   `;
 
@@ -735,6 +736,7 @@ async function caricaPlayoff(tipoCoppa) {
 
       const col = document.createElement("div");
       col.className = "bracket-col";
+      col.dataset.phase = String(g);
       const titolo = document.createElement("div");
       titolo.className = "bracket-col-title";
       titolo.textContent = fasiMap[g] || `Fase ${g}`;
@@ -840,6 +842,37 @@ async function caricaPlayoff(tipoCoppa) {
 
       fasiContainer.appendChild(col);
     });
+
+    const phaseFilter = document.getElementById("playoffPhaseFilters");
+    const bracketCols = Array.from(fasiContainer.querySelectorAll(".bracket-col"));
+    if (phaseFilter) {
+      const stageLabelMap = { "4": "Ottavi", "3": "Quarti", "2": "Semifinali", "1": "Finale" };
+      const availableStages = bracketCols.map(col => col.dataset.phase).filter(Boolean);
+      const applyStageFilter = (phase) => {
+        bracketCols.forEach(col => {
+          col.style.display = col.dataset.phase === phase ? "" : "none";
+        });
+        phaseFilter.querySelectorAll(".phase-btn").forEach(btn => {
+          btn.classList.toggle("active", btn.dataset.phase === phase);
+        });
+      };
+
+      phaseFilter.innerHTML = "";
+      phaseFilter.style.display = availableStages.length > 1 ? "flex" : "none";
+      availableStages.forEach((phase, index) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "phase-btn pill-btn pill-btn--toggle" + (index === 0 ? " active" : "");
+        btn.dataset.phase = phase;
+        btn.textContent = stageLabelMap[phase] || `Fase ${phase}`;
+        btn.addEventListener("click", () => applyStageFilter(phase));
+        phaseFilter.appendChild(btn);
+      });
+
+      if (availableStages[0]) {
+        applyStageFilter(availableStages[0]);
+      }
+    }
 
   } catch (err) {
     console.error("Errore nel caricamento playoff:", err);

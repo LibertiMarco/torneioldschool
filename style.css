@@ -3194,25 +3194,26 @@ body {
 
 .phase-filter .phase-btn {
   padding: 8px 12px;
-  border: 1px solid #cbd5e1;
-  background: #f7f9fc;
-  border-radius: 10px;
-  font-weight: 600;
+  border: 1px solid #cfd7e7;
+  background: #eef2f7;
+  border-radius: 12px;
+  font-weight: 700;
   color: #15293e;
   cursor: pointer;
+  box-shadow: 0 4px 10px rgba(21,41,62,0.1);
   transition: all 0.15s ease;
 }
 
 .phase-filter .phase-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  border-color: #b8c4d8;
 }
 
 .phase-filter .phase-btn.active {
-  background: linear-gradient(135deg, #15293e, #1f3f63);
+  background: #15293e;
   color: #fff;
   border-color: #15293e;
-  box-shadow: 0 8px 18px rgba(21,41,62,0.2);
+  box-shadow: 0 8px 18px rgba(21,41,62,0.22);
 }
 
 /* ====== PLAYOFF STILE CALENDARIO ====== */

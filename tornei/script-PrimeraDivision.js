@@ -898,21 +898,21 @@ async function caricaPlayoff(tipoCoppa) {
       const phases =
         tipoCoppa.toLowerCase() === "gold"
           ? [
-              { label: "Tutte", val: "" },
               { label: "Ottavi", val: "4" },
               { label: "Quarti", val: "3" },
               { label: "Semifinali", val: "2" },
               { label: "Finale", val: "1" },
             ]
           : [
-              { label: "Tutte", val: "" },
               { label: "Semifinali", val: "2" },
               { label: "Finale", val: "1" },
             ];
+      currentPhase = phases[0]?.val || "";
+      phaseFilter.style.display = phases.length > 1 ? "flex" : "none";
       phases.forEach(ph => {
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = "phase-btn" + (ph.val === "" ? " active" : "");
+        btn.className = "phase-btn pill-btn pill-btn--toggle" + (ph.val === currentPhase ? " active" : "");
         btn.dataset.phase = ph.val;
         btn.textContent = ph.label;
         btn.onclick = () => {
@@ -1352,7 +1352,6 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     });
   }
 });
-
 
 
 
