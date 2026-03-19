@@ -118,27 +118,12 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-VZ982XSRRN');
-  </script>
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <?php render_seo_tags($torneiSeo); ?>
   <?php render_jsonld($torneiBreadcrumbs); ?>
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
-  <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js"></script>
-  <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js"></script><script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
-  <script>
-    window.ezstandalone = window.ezstandalone || {};
-    ezstandalone.cmd = ezstandalone.cmd || [];
-  </script>
-  <style>
+<style>
     .content {
       margin-top: 30px;
       padding-top: 10px;
@@ -321,19 +306,6 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       <button type="button" data-target="programmati">Tornei programmati</button>
       <button type="button" data-target="terminati">Tornei terminati</button>
     </div>
-    <div class="albo-ad" style="margin: 10px 0 18px;">
-      <!-- Pub orizz -->
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-8390787841690316"
-           data-ad-slot="3707275285"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-      <script>
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
-    </div>
-
     <!-- TORNEI IN CORSO -->
     <section class="home-news tornei-section active" id="tornei-incorso" style="margin-top:20px;">
       <h2>Tornei in corso</h2>
@@ -441,7 +413,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       <div class="box">
         <div>
           <h2>Vuoi seguire i tornei?</h2>
-          <p>Crea un account o accedi per consultare calendari, risultati e notifiche.</p>
+          <p>Crea un account o accedi per salvare preferiti, ricevere notifiche e seguire squadre e tornei.</p>
         </div>
         <div class="cta-actions">
           <a class="btn" href="/register.php">Iscriviti</a>

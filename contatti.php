@@ -45,16 +45,7 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-VZ982XSRRN');
-  </script>
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($contattiSeo); ?>
   <?php render_jsonld($contattiBreadcrumbs); ?>
@@ -173,8 +164,32 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
       margin-top: 15px;
       font-weight: 600;
     }
-    .contact-ads {
-      margin: 16px 0;
+    .contact-details {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      text-align: left;
+    }
+
+    .contact-detail {
+      background: #f7f9fc;
+      border: 1px solid #dbe3f0;
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+
+    .contact-detail strong {
+      display: block;
+      color: #15293e;
+      margin-bottom: 6px;
+    }
+
+    .contact-detail a,
+    .contact-detail span {
+      color: #41526a;
+      font-weight: 600;
+      text-decoration: none;
     }
 
     .footer-socials {
@@ -234,21 +249,10 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
   <div id="header-container"></div>
 
   <div class="page-wrapper">
-    <div class="contact-ads" style="text-align:center;">
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-8390787841690316"
-           data-ad-slot="3707275285"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-      <script>
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
-    </div>
-
     <section class="contact-container">
       <div class="contact-form">
         <h1>Contattaci</h1>
+        <p>Per iscrizioni, collaborazioni e sponsorizzazioni puoi usare il modulo qui sotto oppure contattarci direttamente sui riferimenti ufficiali.</p>
 
         <form method="POST" action="" id="contactForm">
           <?= csrf_field('contact_form') ?> 
@@ -266,6 +270,25 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
         <?php elseif ($error): ?>
           <div class="error-message"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
+
+        <div class="contact-details">
+          <div class="contact-detail">
+            <strong>Email generale</strong>
+            <a href="mailto:info@torneioldschool.it">info@torneioldschool.it</a>
+          </div>
+          <div class="contact-detail">
+            <strong>Sponsorizzazioni</strong>
+            <a href="mailto:sponsor@torneioldschool.it">sponsor@torneioldschool.it</a>
+          </div>
+          <div class="contact-detail">
+            <strong>WhatsApp</strong>
+            <a href="https://wa.me/393383213272" target="_blank" rel="noreferrer">+39 338 321 3272</a>
+          </div>
+          <div class="contact-detail">
+            <strong>Area operativa</strong>
+            <span>Napoli e provincia</span>
+          </div>
+        </div>
 
         <div class="footer-socials">
           <a href="https://www.instagram.com/tornei_old_school/" target="_blank" aria-label="Instagram">
@@ -286,18 +309,6 @@ $contattiBreadcrumbs = seo_breadcrumb_schema([
         </div>
       </div>
     </section>
-  </div>
-
-  <div class="contact-ads" style="text-align:center; margin: 10px auto 20px;">
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-8390787841690316"
-         data-ad-slot="3707275285"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-    <script>
-      (adsbygoogle = window.adsbygoogle || []).push({});
-    </script>
   </div>
 
   <div id="footer-container"></div>

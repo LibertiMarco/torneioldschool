@@ -1,32 +1,17 @@
-﻿<?php
-require_once __DIR__ . '/../includi/require_login.php';
+<?php
+require_once __DIR__ . '/../includi/security.php';
 $assetVersion = '20260317a';
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-VZ982XSRRN');
-  </script>
-  <meta charset="UTF-8" />
+<meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Primera Division 3.0 - Tornei Old School</title>
   <link rel="stylesheet" href="../style.css?v=<?= $assetVersion ?>" />
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js"></script>
-  <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js"></script><script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
-  <script>
-    window.ezstandalone = window.ezstandalone || {};
-    ezstandalone.cmd = ezstandalone.cmd || [];
-  </script>
-  <style>
+<style>
     main.content {
       margin-top: 30px;
       padding-top: 10px;
@@ -144,21 +129,7 @@ $assetVersion = '20260317a';
       <button class="tab-button" data-tab="rose">Rose Squadre</button>
       <button class="tab-button" data-tab="regole">Regole</button>
     </nav>
-
-    <div class="albo-ad" style="margin: 10px 0 18px;">
-      <!-- Pub orizz -->
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-8390787841690316"
-           data-ad-slot="3707275285"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-      <script>
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
-    </div>
-
-    <!-- CLASSIFICA -->
+<!-- CLASSIFICA -->
     <section id="classifica" class="tab-section active">
       <h2>Classifica</h2>
 
@@ -201,7 +172,7 @@ $assetVersion = '20260317a';
 
       <!-- PLAYOFF / BRACKET -->
       <div id="playoffContainer" style="display:none;">
-        <!-- verrà popolato via JS -->
+        <!-- verrÃƒÂ  popolato via JS -->
       </div>
 
     </section>
@@ -248,7 +219,7 @@ $assetVersion = '20260317a';
   <div class="regole-box">
     <div class="regola">
       <h3>Struttura del campionato</h3>
-      <p>Il torneo è composto da <strong>12 squadre</strong> e si sviluppa in <strong>due fasi</strong>.</p>
+      <p>Il torneo ÃƒÂ¨ composto da <strong>12 squadre</strong> e si sviluppa in <strong>due fasi</strong>.</p>
     </div>
 
     <div class="regola">
@@ -295,7 +266,7 @@ $assetVersion = '20260317a';
       <h3>Calendario</h3>
       <ul>
         <li>Si gioca principalmente <strong>di venerdi</strong>.</li>
-        <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedì o venerdì</strong>.</li>
+        <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedÃƒÂ¬ o venerdÃƒÂ¬</strong>.</li>
       </ul>
     </div>
   </div>

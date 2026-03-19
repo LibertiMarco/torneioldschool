@@ -86,13 +86,6 @@ if (!function_exists('seo_base_url')) {
         echo '<meta name="twitter:title" content="' . seo_clean($title) . '">' . "\n";
         echo '<meta name="twitter:description" content="' . seo_clean($description) . '">' . "\n";
         echo '<meta name="twitter:image" content="' . seo_clean($image) . '">' . "\n";
-        echo '<script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js"></script>
-  <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js"></script><script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
-  <script>
-    window.ezstandalone = window.ezstandalone || {};
-    ezstandalone.cmd = ezstandalone.cmd || [];
-  </script>' . "\n";
-
         render_analytics_bootstrap();
 
         // Schema markup di base per brand/logo e sito
@@ -244,42 +237,5 @@ if (!function_exists('seo_base_url')) {
         $debug = GA_DEBUG_MODE ? 'true' : 'false';
         echo '<script>window.__GA_MEASUREMENT_ID=' . json_encode($safeId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';window.__GA_DEBUG__=window.__GA_DEBUG__||' . $debug . ';</script>' . "\n";
 
-        // Load GA4 with consent defaults (cookieless until consent is granted). If a manual gtag
-        // snippet already ran, this script skips re-configuring to avoid duplicate pageviews.
-        echo '<script>
-(function() {
-  var gaId = ' . json_encode($safeId, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';
-  var gaDebug = !!window.__GA_DEBUG__;
-  if (gaDebug) console.info("[GA] bootstrap start", { id: gaId });
-  if (!gaId) { if (gaDebug) console.warn("[GA] missing measurement id"); return; }
-  var dl = window.dataLayer = window.dataLayer || [];
-  var alreadyConfigured = Array.isArray(dl) && dl.some(function (entry) {
-    return entry && entry[0] === "config" && entry[1] === gaId;
-  });
-  window.gtag = window.gtag || function gtag(){ dl.push(arguments); };
-  window.gtag("consent", "default", {
-    analytics_storage: "granted",
-    ad_storage: "denied",
-    ad_user_data: "denied",
-    ad_personalization: "denied",
-    functionality_storage: "granted",
-    security_storage: "granted"
-  });
-  if (alreadyConfigured) { if (gaDebug) console.warn("[GA] config already present in dataLayer, skipping duplicate config"); return; }
-  var s = document.createElement("script");
-  s.async = true;
-  s.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(gaId);
-  s.onload = function(){ if (gaDebug) console.info("[GA] gtag.js loaded"); };
-  s.onerror = function(){ if (gaDebug) console.error("[GA] gtag.js failed to load", s.src); };
-  document.head.appendChild(s);
-  window.gtag("js", new Date());
-  window.gtag("config", gaId, {
-    anonymize_ip: true,
-    allow_ad_personalization_signals: false,
-    transport_type: "beacon"
-  });
-  if (gaDebug) window.gtag("event", "ga_diagnostic", { status: "config_sent", id: gaId, ts: Date.now() });
-})();
-</script>' . "\n";
     }
 }

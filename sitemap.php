@@ -33,9 +33,17 @@ sitemap_add($urls, $baseUrl . '/privacy.php', sitemap_file_lastmod(__DIR__ . '/p
 sitemap_add($urls, $baseUrl . '/cookie.php', sitemap_file_lastmod(__DIR__ . '/cookie.php'), 'yearly', '0.4');
 sitemap_add($urls, $baseUrl . '/note_legali.php', sitemap_file_lastmod(__DIR__ . '/note_legali.php'), 'yearly', '0.4');
 
-$torneoPages = glob(__DIR__ . '/tornei/*.html') ?: [];
+$torneoPages = glob(__DIR__ . '/tornei/*.php') ?: [];
+$torneoExclusions = [
+    'partita_eventi.php',
+    'TorneoTemplate.php',
+];
+
 foreach ($torneoPages as $file) {
     $slug = basename((string)$file);
+    if (in_array($slug, $torneoExclusions, true)) {
+        continue;
+    }
     sitemap_add(
         $urls,
         $baseUrl . '/tornei/' . $slug,

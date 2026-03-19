@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../includi/require_login.php';
+require_once __DIR__ . '/../includi/security.php';
 require_once __DIR__ . '/../includi/seo.php';
 
 $assetVersion = '20260308';
@@ -16,16 +16,7 @@ $torneoSeo = [
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-VZ982XSRRN');
-  </script>
-  <meta charset="UTF-8" />
+<meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <?php render_seo_tags($torneoSeo); ?>
   <link rel="stylesheet" href="../style.css?v=<?= $assetVersion ?>" />
@@ -262,10 +253,10 @@ $torneoSeo = [
   <!-- CONTENUTO PRINCIPALE -->
   <main class="content">
     <div class="torneo-hero">
-      <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Coppa d’Africa">
+      <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Coppa dÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢Africa">
       <div class="torneo-title">
         <h1 class="titolo">ALL IN ONE NIGHT: MONDIALE</h1>
-        <button type="button" class="fav-toggle" id="favTournamentBtn">☆ Segui torneo</button>
+        <button type="button" class="fav-toggle" id="favTournamentBtn">ÃƒÂ¢Ã‹Å“Ã¢â‚¬Â  Segui torneo</button>
       </div>
     </div>
 
@@ -277,21 +268,7 @@ $torneoSeo = [
       <button class="tab-button" data-tab="rose">Rose Squadre</button>
       <button class="tab-button" data-tab="regole">Regole</button>
     </nav>
-
-    <div class="albo-ad" style="margin: 10px 0 18px;">
-      <!-- Pub orizz -->
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-8390787841690316"
-           data-ad-slot="3707275285"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-      <script>
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
-    </div>
-
-    <!-- CLASSIFICA -->
+<!-- CLASSIFICA -->
     <section id="classifica" class="tab-section active">
       <h2>Classifica</h2>
 
@@ -362,7 +339,7 @@ $torneoSeo = [
 
       <!-- PLAYOFF / BRACKET -->
       <div id="playoffContainer" style="display:none;">
-        <!-- verrà popolato via JS -->
+        <!-- verrÃƒÆ’Ã‚Â  popolato via JS -->
       </div>
 
     </section>
@@ -425,7 +402,7 @@ $torneoSeo = [
     <div class="regola">
       <h3>Semifinali e Finale</h3>
       <p>
-        Semifinali incrociate: <strong>1° Girone A vs 2° Girone B</strong> e <strong>1° Girone B vs 2° Girone A</strong>.
+        Semifinali incrociate: <strong>1Ãƒâ€šÃ‚Â° Girone A vs 2Ãƒâ€šÃ‚Â° Girone B</strong> e <strong>1Ãƒâ€šÃ‚Â° Girone B vs 2Ãƒâ€šÃ‚Â° Girone A</strong>.
         Semifinali e finale durano <strong style="color:#d9a441;">20 minuti</strong> (tempo unico).
       </p>
       <p>Vince la All in one night: Mondiale la squadra che si impone in finale.</p>

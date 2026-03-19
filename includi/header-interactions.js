@@ -49,6 +49,23 @@
     });
   }
 
+  function handleAuthRequiredAction(event) {
+    const target = event.target instanceof Element ? event.target.closest(".fav-toggle, .fav-team-btn") : null;
+    if (!target) {
+      return;
+    }
+
+    const isAuth = document.documentElement.getAttribute("data-user-auth") === "1" || window.__TOS_IS_AUTH === true;
+    if (isAuth) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    const next = encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
+    window.location.href = `/login.php?redirect=${next}`;
+  }
+
   function handleResize() {
     if (window.innerWidth > 768) {
       headerStates.forEach((state, header) => {
@@ -63,6 +80,7 @@
     }
 
     document.addEventListener("click", handleDocumentClick);
+    document.addEventListener("click", handleAuthRequiredAction, true);
     window.addEventListener("resize", handleResize);
     globalListenersReady = true;
   }

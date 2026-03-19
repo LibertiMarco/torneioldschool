@@ -8,6 +8,17 @@ header('Content-Type: text/plain; charset=utf-8');
 $baseUrl = rtrim(seo_base_url(), '/');
 $adminDisallow = [
     '/admin_dashboard.php',
+    '/account.php',
+    '/account_delete.php',
+    '/forgot_password.php',
+    '/login.php',
+    '/logout.php',
+    '/register.php',
+    '/register_new.php',
+    '/resend_verification.php',
+    '/reset_password.php',
+    '/verify_email.php',
+    '/verify_pending.php',
     '/api/gestione_blog.php',
     '/api/gestione_blog_new.php',
     '/api/gestione_giocatori.php',

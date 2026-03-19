@@ -1,32 +1,17 @@
 <?php
-require_once __DIR__ . '/../includi/require_login.php';
+require_once __DIR__ . '/../includi/security.php';
 $assetVersion = '20260317a';
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-VZ982XSRRN');
-  </script>
-  <meta charset="UTF-8" />
+<meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Christmas's cup - Tornei Old School</title>
   <link rel="stylesheet" href="../style.css?v=<?= $assetVersion ?>" />
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js"></script>
-  <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js"></script><script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
-  <script>
-    window.ezstandalone = window.ezstandalone || {};
-    ezstandalone.cmd = ezstandalone.cmd || [];
-  </script>
-  <style>
+<style>
     main.content {
       margin-top: 30px;
       padding-top: 10px;
@@ -132,7 +117,7 @@ $assetVersion = '20260317a';
       <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Christmas's cup">
       <div class="torneo-title">
         <h1 class="titolo">Christmas's cup</h1>
-        <button type="button" class="fav-toggle" id="favTournamentBtn">☆ Segui torneo</button>
+        <button type="button" class="fav-toggle" id="favTournamentBtn">ÃƒÂ¢Ã‹Å“Ã¢â‚¬Â  Segui torneo</button>
       </div>
     </div>
 
@@ -144,21 +129,7 @@ $assetVersion = '20260317a';
       <button class="tab-button" data-tab="rose">Rose Squadre</button>
       <button class="tab-button" data-tab="regole">Regole</button>
     </nav>
-
-    <div class="albo-ad" style="margin: 10px 0 18px;">
-      <!-- Pub orizz -->
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-8390787841690316"
-           data-ad-slot="3707275285"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-      <script>
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
-    </div>
-
-    <!-- CLASSIFICA -->
+<!-- CLASSIFICA -->
     <section id="classifica" class="tab-section active">
       <h2>Classifica</h2>
 
@@ -200,7 +171,7 @@ $assetVersion = '20260317a';
 
       <!-- PLAYOFF / BRACKET -->
       <div id="playoffContainer" style="display:none;">
-        <!-- verrÃ  popolato via JS -->
+        <!-- verrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  popolato via JS -->
       </div>
 
     </section>
@@ -240,8 +211,8 @@ $assetVersion = '20260317a';
     <div class="regola">
       <h3>Struttura</h3>
       <p>
-        Christmas Cup è <strong>solo eliminazione diretta</strong> a partire dagli <strong>ottavi di finale</strong>.
-        Ogni turno è gara secca: in caso di pareggio si va direttamente ai <strong>rigori</strong>.
+        Christmas Cup ÃƒÆ’Ã‚Â¨ <strong>solo eliminazione diretta</strong> a partire dagli <strong>ottavi di finale</strong>.
+        Ogni turno ÃƒÆ’Ã‚Â¨ gara secca: in caso di pareggio si va direttamente ai <strong>rigori</strong>.
       </p>
     </div>
 

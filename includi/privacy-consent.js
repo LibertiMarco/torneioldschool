@@ -171,7 +171,7 @@
         window.dataLayer.push(arguments);
       };
       window.gtag('consent', 'default', {
-        analytics_storage: 'granted',
+        analytics_storage: 'denied',
         ad_storage: 'denied',
         functionality_storage: 'granted',
         security_storage: 'granted',

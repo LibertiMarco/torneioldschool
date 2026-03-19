@@ -26,16 +26,7 @@ $localSchema = [
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-VZ982XSRRN');
-  </script>
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <?php render_seo_tags($homeSeo); ?>
   <?php render_jsonld($localSchema); ?>
@@ -122,7 +113,7 @@ $localSchema = [
         <div class="hero-overlay">
           <h1>Chi Siamo</h1>
           <p>Lo facciamo per passione, per condividere divertimento e amicizia con chiunque voglia partecipare.</p>
-          <a href="chisiamo.php" class="hero-btn">Scopri di più</a>
+          <a href="chisiamo.php" class="hero-btn">Scopri di piÃ¹</a>
         </div>
       </section>
 
@@ -145,26 +136,6 @@ $localSchema = [
         </div>
       </section>
       <?php endif; ?>
-
-      <!-- AdSense tra contatti e footer -->
-      <div class="home-adsense" style="max-width: 960px; margin: 30px auto 10px; padding: 0 12px;">
-        <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js"></script>
-  <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js"></script><script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
-  <script>
-    window.ezstandalone = window.ezstandalone || {};
-    ezstandalone.cmd = ezstandalone.cmd || [];
-  </script>
-        <!-- Pub orizz -->
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-8390787841690316"
-             data-ad-slot="3707275285"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>
-          (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
-      </div>
 
     </div> <!-- fine homepage -->
   </div> <!-- fine content -->
@@ -402,7 +373,7 @@ loadHallOfFame();
         })
         .catch(error => console.error("Errore nel caricamento dell'header:", error));
     } else {
-      // Header giÃƒÂ  incluso via PHP
+      // Header giÃƒÆ’Ã‚Â  incluso via PHP
       initHeaderInteractions(document);
       attachHeaderExtras();
     }
@@ -440,7 +411,6 @@ loadHallOfFame();
 
 </body>
 </html>
-
 
 
 

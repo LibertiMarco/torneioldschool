@@ -19,16 +19,7 @@ $leadersBreadcrumbs = seo_breadcrumb_schema([
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-VZ982XSRRN');
-  </script>
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?php render_seo_tags($leadersSeo); ?>
     <?php render_jsonld($leadersBreadcrumbs); ?>
@@ -156,7 +147,7 @@ function renderCards(players) {
         const ruolo = p.ruolo ? `<span class="leader-role">${escapeHTML(p.ruolo)}</span>` : '';
         const team = p.squadra ? escapeHTML(p.squadra) : '';
         const teamLine = team ? `<div class="leader-team">${team}</div>` : '';
-        // Usa entità HTML per evitare problemi di encoding
+        // Usa entitÃ  HTML per evitare problemi di encoding
         const media = p.media_voti ? `<span>&#x2B50; Media voto: ${p.media_voti}</span>` : '';
         const metaPresenze = `<span>Presenze: ${p.presenze ?? 0}</span>`;
         const metaGol = `<span>&#x26BD; Gol: ${p.gol ?? 0}</span>`;

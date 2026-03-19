@@ -16,16 +16,7 @@ $lastUpdate = date('d/m/Y', @filemtime(__FILE__) ?: time());
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-VZ982XSRRN');
-  </script>
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($legalSeo); ?>
   <?php render_jsonld($legalBreadcrumbs); ?>
@@ -52,7 +43,8 @@ $lastUpdate = date('d/m/Y', @filemtime(__FILE__) ?: time());
     <section class="legal-block">
       <h2>Chi siamo e contatti</h2>
       <p>Titolare/gestore: Tornei Old School (gestione amatoriale).</p>
-      <p>Contatti: <a href="mailto:info@torneioldschool.it">info@torneioldschool.it</a></p>
+      <p>Area operativa: Napoli e provincia.</p>
+      <p>Contatti: <a href="mailto:info@torneioldschool.it">info@torneioldschool.it</a> · Sponsorizzazioni: <a href="mailto:sponsor@torneioldschool.it">sponsor@torneioldschool.it</a></p>
     </section>
 
     <section class="legal-block">

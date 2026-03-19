@@ -1,32 +1,17 @@
-﻿<?php
-require_once __DIR__ . '/../includi/require_login.php';
+<?php
+require_once __DIR__ . '/../includi/security.php';
 $assetVersion = '20260317a';
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-VZ982XSRRN');
-  </script>
-  <meta charset="UTF-8" />
+<meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Saudi League 3.0 - Tornei Old School</title>
   <link rel="stylesheet" href="../style.css?v=<?= $assetVersion ?>" />
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js"></script>
-  <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js"></script><script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
-  <script>
-    window.ezstandalone = window.ezstandalone || {};
-    ezstandalone.cmd = ezstandalone.cmd || [];
-  </script>
-  <style>
+<style>
     main.content {
       margin-top: 30px;
       padding-top: 10px;
@@ -144,21 +129,7 @@ $assetVersion = '20260317a';
       <button class="tab-button" data-tab="rose">Rose Squadre</button>
       <button class="tab-button" data-tab="regole">Regole</button>
     </nav>
-
-    <div class="albo-ad" style="margin: 10px 0 18px;">
-      <!-- Pub orizz -->
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-8390787841690316"
-           data-ad-slot="3707275285"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-      <script>
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
-    </div>
-
-    <!-- CLASSIFICA -->
+<!-- CLASSIFICA -->
     <section id="classifica" class="tab-section active">
       <h2>Classifica</h2>
 
@@ -243,30 +214,30 @@ $assetVersion = '20260317a';
 
 <!-- REGOLE -->
 <section id="regole" class="tab-section">
-  <h2 class="titolo-sezione">📜 Regole del Torneo</h2>
+  <h2 class="titolo-sezione">Ã°Å¸â€œÅ“ Regole del Torneo</h2>
 
   <div class="regole-box">
     <div class="regola">
-      <h3>🏟️ Struttura del campionato</h3>
+      <h3>Ã°Å¸ÂÅ¸Ã¯Â¸Â Struttura del campionato</h3>
       <p>
         Il torneo &egrave; composto da <strong>18 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>⚽ Fase 1 &mdash; Regular Season</h3>
+      <h3>Ã¢Å¡Â½ Fase 1 &mdash; Regular Season</h3>
       <p>
         Tutte le squadre partecipano a una <strong>Regular Season</strong> in stile Champions League.
         Ogni squadra disputa <strong>8 partite</strong> totali.
       </p>
       <p>
         La squadra prima in classifica al termine del girone riceve il
-        <span class="highlight">Trofeo Regular Season 🏆</span>.
+        <span class="highlight">Trofeo Regular Season Ã°Å¸Ââ€ </span>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>🏆 Fase 2 &mdash; Coppe</h3>
+      <h3>Ã°Å¸Ââ€  Fase 2 &mdash; Coppe</h3>
       <ul>
         <li>Le <strong>prime 2</strong> classificate accedono ai <span class="gold">quarti della Coppa Gold</span>.</li>
         <li>Le <strong>prime 12</strong> classificate accedono agli <span class="gold">ottavi della Coppa Gold</span>.</li>
@@ -276,13 +247,13 @@ $assetVersion = '20260317a';
     </div>
 
     <div class="regola">
-      <h3>🎖️ Premi finali</h3>
+      <h3>Ã°Å¸Å½â€“Ã¯Â¸Â Premi finali</h3>
       <p>Dopo la finale di <span class="gold">Coppa Gold</span> verranno assegnati i seguenti riconoscimenti:</p>
       <div class="premi-grid">
-        <span>🏅 Miglior Giocatore</span>
-        <span>🧤 Miglior Portiere</span>
-        <span>🛡️ Miglior Difensore</span>
-        <span>⚡ Miglior Attaccante</span>
+        <span>Ã°Å¸Ââ€¦ Miglior Giocatore</span>
+        <span>Ã°Å¸Â§Â¤ Miglior Portiere</span>
+        <span>Ã°Å¸â€ºÂ¡Ã¯Â¸Â Miglior Difensore</span>
+        <span>Ã¢Å¡Â¡ Miglior Attaccante</span>
       </div>
       <p>
         Il <strong>Miglior Giocatore</strong> ricever&agrave; un
@@ -291,7 +262,7 @@ $assetVersion = '20260317a';
     </div>
 
     <div class="regola">
-      <h3>⏱️ Regole di gioco</h3>
+      <h3>Ã¢ÂÂ±Ã¯Â¸Â Regole di gioco</h3>
       <ul>
         <li>Ogni partita dura <strong>2 tempi da 25 minuti</strong>.</li>
                 <li>I falli sono cumulativi, con un massimo di 5 per tempo. 
@@ -302,7 +273,7 @@ $assetVersion = '20260317a';
     </div>
 
     <div class="regola">
-      <h3>📅 Calendario</h3>
+      <h3>Ã°Å¸â€œâ€¦ Calendario</h3>
       <ul>
         <li>Le partite si disputano principalmente <strong>il marted&igrave; il mercoled&igrave; e il gioved&igrave;</strong>.</li>
         <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>gioved&igrave; o venerd&igrave;</strong>.</li>

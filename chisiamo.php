@@ -87,16 +87,7 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-VZ982XSRRN');
-  </script>
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <?php render_seo_tags($aboutSeo); ?>
   <?php render_jsonld($aboutBreadcrumbs); ?>
@@ -169,6 +160,35 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
       font-weight: 600;
       margin-top: 35px;
       box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .about-facts {
+      margin: 30px auto 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      text-align: left;
+    }
+
+    .about-fact {
+      background: #ffffff;
+      border: 1px solid #dfe6f2;
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 10px 24px rgba(21,41,62,0.08);
+    }
+
+    .about-fact strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #15293e;
+    }
+
+    .about-fact a,
+    .about-fact span {
+      color: #41526a;
+      font-weight: 600;
+      text-decoration: none;
     }
 
     .about-team {
@@ -368,16 +388,35 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
       <p class="about-text">
         Organizziamo <strong>tornei amatoriali di calcio a 5 e calcio a 8</strong> - e, qualche volta, anche di altri sport -  
         nella zona di <strong>Napoli Nord</strong>.  
-        I nostri eventi non hanno premi in denaro, ma offrono qualcosa di molto più importante:  
+        I nostri eventi non hanno premi in denaro, ma offrono qualcosa di molto piÃ¹ importante:  
         <strong>unione, amicizia e divertimento puro</strong>.
       </p>
 
       <p class="about-text">
-        Ogni torneo è pensato per essere un'esperienza completa:  
-        arbitri qualificati, sistema <strong>VAR</strong>, <strong>highlights</strong>, completini personalizzati e anche <strong>contenuti TikTok</strong> per far rivivere i momenti più belli di ogni partita.
+        Ogni torneo Ã¨ pensato per essere un'esperienza completa:  
+        arbitri qualificati, sistema <strong>VAR</strong>, <strong>highlights</strong>, completini personalizzati e anche <strong>contenuti TikTok</strong> per far rivivere i momenti piÃ¹ belli di ogni partita.
       </p>
 
       <p class="about-highlight">Tornei Old School - il calcio come una volta, con lo spirito di oggi.</p>
+
+      <div class="about-facts">
+        <div class="about-fact">
+          <strong>Dove operiamo</strong>
+          <span>Napoli e area nord della provincia.</span>
+        </div>
+        <div class="about-fact">
+          <strong>Contatto diretto</strong>
+          <a href="mailto:info@torneioldschool.it">info@torneioldschool.it</a>
+        </div>
+        <div class="about-fact">
+          <strong>Sponsor e partnership</strong>
+          <a href="mailto:sponsor@torneioldschool.it">sponsor@torneioldschool.it</a>
+        </div>
+        <div class="about-fact">
+          <strong>Community</strong>
+          <span>Calendari, classifiche, articoli e storie dei nostri tornei amatoriali.</span>
+        </div>
+      </div>
 
       <div class="team-switch">
         <button class="team-tab active" data-target="organizzatori">Organizzatori</button>

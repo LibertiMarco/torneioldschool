@@ -1,32 +1,17 @@
 <?php
-require_once __DIR__ . '/../includi/require_login.php';
+require_once __DIR__ . '/../includi/security.php';
 $assetVersion = '20260317a'; // bump per forzare l'hard refresh dei client in cache
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZ982XSRRN"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-VZ982XSRRN');
-  </script>
-  <meta charset="UTF-8" />
+<meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Weekend League 2 - Tornei Old School</title>
   <link rel="stylesheet" href="../style.css?v=<?= $assetVersion ?>" />
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
-  <script data-cfasync="false" src="https://cmp.gatekeeperconsent.com/min.js"></script>
-  <script data-cfasync="false" src="https://the.gatekeeperconsent.com/cmp.min.js"></script><script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
-  <script>
-    window.ezstandalone = window.ezstandalone || {};
-    ezstandalone.cmd = ezstandalone.cmd || [];
-  </script>
-  <style>
+<style>
     main.content {
       margin-top: 30px;
       padding-top: 10px;
@@ -148,21 +133,7 @@ $assetVersion = '20260317a'; // bump per forzare l'hard refresh dei client in ca
       <button class="tab-button" data-tab="rose">Rose Squadre</button>
       <button class="tab-button" data-tab="regole">Regole</button>
     </nav>
-
-    <div class="albo-ad" style="margin: 10px 0 18px;">
-      <!-- Pub orizz -->
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-8390787841690316"
-           data-ad-slot="3707275285"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-      <script>
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
-    </div>
-
-    <!-- CLASSIFICA -->
+<!-- CLASSIFICA -->
     <section id="classifica" class="tab-section active">
       <h2>Classifica</h2>
 
@@ -247,30 +218,30 @@ $assetVersion = '20260317a'; // bump per forzare l'hard refresh dei client in ca
 
 <!-- REGOLE -->
 <section id="regole" class="tab-section">
-  <h2 class="titolo-sezione">📜 Regole del Torneo</h2>
+  <h2 class="titolo-sezione">ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…â€œ Regole del Torneo</h2>
 
   <div class="regole-box">
     <div class="regola">
-      <h3>🏟️ Struttura del Campionato</h3>
+      <h3>ÃƒÂ°Ã…Â¸Ã‚ÂÃ…Â¸ÃƒÂ¯Ã‚Â¸Ã‚Â Struttura del Campionato</h3>
       <p>
-        Il torneo è composto da <strong>10 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
+        Il torneo ÃƒÆ’Ã‚Â¨ composto da <strong>10 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>⚽ Fase 1 — Regular Season</h3>
+      <h3>ÃƒÂ¢Ã…Â¡Ã‚Â½ Fase 1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Regular Season</h3>
       <p>
         Tutte le squadre partecipano a una <strong>Regular Season</strong> in stile Champions League.
         Ogni squadra disputa <strong>9 partite</strong> totali.
       </p>
       <p>
         La squadra prima in classifica al termine del girone riceve il
-        <span class="highlight">Trofeo Regular Season 🏆</span>.
+        <span class="highlight">Trofeo Regular Season ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â </span>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>🏆 Fase 2 — Coppe</h3>
+      <h3>ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â  Fase 2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Coppe</h3>
       <ul>
         <li>Le <strong>prime 2</strong> classificate vanno direttamente ai <span class="gold">semifinali di Coppa Gold</span>.</li>
         <li>Le squadre dalle <strong>posizioni 3-6</strong> accedono agli <span class="gold">quarti di Coppa Gold</span>.</li>
@@ -280,18 +251,18 @@ $assetVersion = '20260317a'; // bump per forzare l'hard refresh dei client in ca
     </div>
 
     <div class="regola">
-      <h3>🎖️ Premi Finali</h3>
+      <h3>ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬â€œÃƒÂ¯Ã‚Â¸Ã‚Â Premi Finali</h3>
       <p>Dopo la finale di <span class="gold">Coppa Gold</span> verranno assegnati i seguenti riconoscimenti:</p>
       <div class="premi-grid">
-        <span>🏅 Miglior Giocatore</span>
-        <span>🧤 Miglior Portiere</span>
-        <span>🛡️ Miglior Difensore</span>
-        <span>⚡ Miglior Attaccante</span>
+        <span>ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â¦ Miglior Giocatore</span>
+        <span>ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¤ Miglior Portiere</span>
+        <span>ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Miglior Difensore</span>
+        <span>ÃƒÂ¢Ã…Â¡Ã‚Â¡ Miglior Attaccante</span>
       </div>
     </div>
 
     <div class="regola">
-      <h3>⏱️ Regole di Gioco</h3>
+      <h3>ÃƒÂ¢Ã‚ÂÃ‚Â±ÃƒÂ¯Ã‚Â¸Ã‚Â Regole di Gioco</h3>
       <ul>
         <li>Ogni partita dura <strong>2 tempi da 25 minuti</strong>.</li>
         <li>I falli sono cumulativi, con un massimo di 5 per tempo. 
@@ -302,7 +273,7 @@ $assetVersion = '20260317a'; // bump per forzare l'hard refresh dei client in ca
     </div>
 
     <div class="regola">
-      <h3>📅 Calendario</h3>
+      <h3>ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¦ Calendario</h3>
       <ul>
         <li>Tutte le partite si disputano <strong>la domenica</strong>.</li>
       </ul>
