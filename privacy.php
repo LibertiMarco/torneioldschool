@@ -57,9 +57,9 @@
     </section>
 
     <section class="policy-block">
-      <h2>FinalitÃ  e basi giuridiche</h2>
+      <h2>Finalità e basi giuridiche</h2>
       <ul>
-        <li>Iscrizione e gestione del torneo, comunicazioni correlate: necessitÃ  contrattuale.</li>
+        <li>Iscrizione e gestione del torneo, comunicazioni correlate: necessità contrattuale.</li>
         <li>Uso della foto profilo: consenso facoltativo.</li>
         <li>Sicurezza, prevenzione abusi e manutenzione: legittimo interesse.</li>
         <li>Analisi dell'utilizzo e tracciamento delle operazioni sul sito: consenso tramite banner.</li>
@@ -81,7 +81,7 @@
       <h2>Condivisione e trasferimenti</h2>
       <ul>
         <li>Fornitori tecnici e hosting strettamente necessari al funzionamento del sito.</li>
-        <li>Nessuna vendita o cessione a terzi per finalitÃ  di marketing.</li>
+        <li>Nessuna vendita o cessione a terzi per finalità di marketing.</li>
         <li>Eventuali trasferimenti extra UE dipendono dai provider utilizzati; se presenti, verranno indicati con il relativo Paese.</li>
       </ul>
     </section>
@@ -93,11 +93,11 @@
 
     <section class="policy-block">
       <h2>I tuoi diritti</h2>
-      <p>Puoi chiedere accesso, rettifica, cancellazione, limitazione, opposizione e portabilitÃ  dei dati. Puoi revocare in qualsiasi momento i consensi (foto e tracciamento) scrivendo a <a href="mailto:info@torneioldschool.it">info@torneioldschool.it</a>.</p>
+      <p>Puoi chiedere accesso, rettifica, cancellazione, limitazione, opposizione e portabilità dei dati. Puoi revocare in qualsiasi momento i consensi (foto e tracciamento) scrivendo a <a href="mailto:info@torneioldschool.it">info@torneioldschool.it</a>.</p>
     </section>
 
     <section class="policy-block">
-      <h2>ObbligatorietÃ  e preferenze</h2>
+      <h2>Obbligatorietà e preferenze</h2>
       <p>L'email Ã¨ necessaria per l'iscrizione ai tornei. La foto Ã¨ facoltativa. Il tracciamento delle operazioni Ã¨ facoltativo e resta disattivato finchÃ© non esprimi il consenso; puoi modificarlo dal pulsante "Gestisci preferenze" o dal banner.</p>
     </section>
 
