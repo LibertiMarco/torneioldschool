@@ -43,7 +43,7 @@
     <section class="policy-block">
       <h2>Cookie tecnici</h2>
       <ul>
-        <li>Cookie di sessione (es. PHPSESSID) per login e funzionalitÃ  di base.</li>
+        <li>Cookie di sessione (es. PHPSESSID) per login e funzionalità di base.</li>
         <li>Cookie/localStorage per ricordare la tua scelta nel banner di consenso.</li>
         <li>Altri cookie tecnici legati a preferenze del sito. Non usiamo cookie pubblicitari di terze parti attivi al momento.</li>
         <li>reCAPTCHA di Google per proteggere i form (login, registrazione, contatti): Google puÃ² impostare cookie e tracciare l'IP per rilevare abusi. Vedi la <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Privacy Policy di Google</a> e i <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">Termini di servizio</a>.</li>
