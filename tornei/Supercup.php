@@ -126,7 +126,7 @@ $assetVersion = '20260317a';
       <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo <?= htmlspecialchars($torneoName) ?>">
       <div class="torneo-title">
         <h1 class="titolo"><?= htmlspecialchars($torneoName) ?></h1>
-        <button type="button" class="fav-toggle" id="favTournamentBtn">ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  Segui torneo</button>
+        <button type="button" class="fav-toggle" id="favTournamentBtn">&#9734; Segui torneo</button>
       </div>
     </div>
 

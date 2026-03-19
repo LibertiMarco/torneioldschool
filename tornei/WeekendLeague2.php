@@ -218,62 +218,60 @@ $assetVersion = '20260317a'; // bump per forzare l'hard refresh dei client in ca
 
 <!-- REGOLE -->
 <section id="regole" class="tab-section">
-  <h2 class="titolo-sezione">ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…â€œ Regole del Torneo</h2>
+  <h2 class="titolo-sezione">Regole del Torneo</h2>
 
   <div class="regole-box">
     <div class="regola">
-      <h3>ÃƒÂ°Ã…Â¸Ã‚ÂÃ…Â¸ÃƒÂ¯Ã‚Â¸Ã‚Â Struttura del Campionato</h3>
+      <h3>Struttura del campionato</h3>
       <p>
-        Il torneo ÃƒÆ’Ã‚Â¨ composto da <strong>10 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
+        Il torneo &egrave; composto da <strong>10 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>ÃƒÂ¢Ã…Â¡Ã‚Â½ Fase 1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Regular Season</h3>
+      <h3>Fase 1 &mdash; Regular Season</h3>
       <p>
         Tutte le squadre partecipano a una <strong>Regular Season</strong> in stile Champions League.
         Ogni squadra disputa <strong>9 partite</strong> totali.
       </p>
       <p>
         La squadra prima in classifica al termine del girone riceve il
-        <span class="highlight">Trofeo Regular Season ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â </span>.
+        <span class="highlight">Trofeo Regular Season</span>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â  Fase 2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Coppe</h3>
+      <h3>Fase 2 &mdash; Coppe</h3>
       <ul>
-        <li>Le <strong>prime 2</strong> classificate vanno direttamente ai <span class="gold">semifinali di Coppa Gold</span>.</li>
-        <li>Le squadre dalle <strong>posizioni 3-6</strong> accedono agli <span class="gold">quarti di Coppa Gold</span>.</li>
+        <li>Le <strong>prime 2</strong> classificate vanno direttamente alle <span class="gold">semifinali di Coppa Gold</span>.</li>
+        <li>Le squadre dalle <strong>posizioni 3-6</strong> accedono ai <span class="gold">quarti di Coppa Gold</span>.</li>
         <li>Le squadre dalle <strong>posizioni 7-10</strong> disputano la <span class="silver">Coppa Silver</span>.</li>
         <li>Entrambe le coppe prevedono una <strong>premiazione con trofeo</strong> per la vincitrice.</li>
       </ul>
     </div>
 
     <div class="regola">
-      <h3>ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬â€œÃƒÂ¯Ã‚Â¸Ã‚Â Premi Finali</h3>
+      <h3>Premi finali</h3>
       <p>Dopo la finale di <span class="gold">Coppa Gold</span> verranno assegnati i seguenti riconoscimenti:</p>
       <div class="premi-grid">
-        <span>ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â¦ Miglior Giocatore</span>
-        <span>ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¤ Miglior Portiere</span>
-        <span>ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Miglior Difensore</span>
-        <span>ÃƒÂ¢Ã…Â¡Ã‚Â¡ Miglior Attaccante</span>
+        <span>Miglior Giocatore</span>
+        <span>Miglior Portiere</span>
+        <span>Miglior Difensore</span>
+        <span>Miglior Attaccante</span>
       </div>
     </div>
 
     <div class="regola">
-      <h3>ÃƒÂ¢Ã‚ÂÃ‚Â±ÃƒÂ¯Ã‚Â¸Ã‚Â Regole di Gioco</h3>
+      <h3>Regole di gioco</h3>
       <ul>
         <li>Ogni partita dura <strong>2 tempi da 25 minuti</strong>.</li>
-        <li>I falli sono cumulativi, con un massimo di 5 per tempo. 
-          Dal sesto fallo in poi, per ogni ulteriore infrazione la squadra che lo subisce ha diritto a uno <strong>shootout</strong>.
-          Al termine del primo tempo, il conteggio dei falli viene azzerato.</li>
+        <li>I falli sono cumulativi, con un massimo di 5 per tempo. Dal sesto fallo in poi, per ogni ulteriore infrazione la squadra che lo subisce ha diritto a uno <strong>shootout</strong>. Al termine del primo tempo, il conteggio dei falli viene azzerato.</li>
         <li>Ogni squadra ha <strong>1 chiamata VAR</strong> disponibile per partita.</li>
       </ul>
     </div>
 
     <div class="regola">
-      <h3>ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¦ Calendario</h3>
+      <h3>Calendario</h3>
       <ul>
         <li>Tutte le partite si disputano <strong>la domenica</strong>.</li>
       </ul>

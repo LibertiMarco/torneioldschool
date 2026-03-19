@@ -513,10 +513,10 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 
 <section class="blog-hero">
   <div class="blog-hero-content">
-    <p class="eyebrow">NovitÃƒÂ  dal club</p>
+    <p class="eyebrow">Novita dal club</p>
     <h1>Blog &amp; approfondimenti</h1>
     <p class="lead">
-      Raccontiamo tornei, backstage e consigli per la community. Filtra gli articoli per trovare subito ciÃ² che ti interessa.
+      Raccontiamo tornei, backstage e consigli per la community. Filtra gli articoli per trovare subito quello che ti interessa.
     </p>
     <label class="blog-search" for="blogSearch">
       <span class="sr-only">Cerca nel blog</span>
@@ -571,7 +571,7 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
 
   <aside class="blog-sidebar">
     <h3>Consigli di lettura</h3>
-    <p class="sidebar-desc">Gli aggiornamenti piÃƒÂ¹ freschi da non perdere.</p>
+    <p class="sidebar-desc">Gli aggiornamenti piu freschi da non perdere.</p>
     <div id="miniList">Stiamo preparando la lista...</div>
   </aside>
 </main>
@@ -698,7 +698,7 @@ function renderGrid(posts) {
         cardGrid.innerHTML = `
             <div class="blog-card">
                 <div class="card-body">
-                    <h3>Hai giÃƒÂ  letto il pezzo principale!</h3>
+                    <h3>Hai gia letto il pezzo principale!</h3>
                     <p>Quando pubblicheremo nuovi contenuti compariranno qui.</p>
                 </div>
             </div>`;
@@ -785,7 +785,7 @@ async function loadBlog() {
         featuredBox.innerHTML = `
             <div class="featured-copy">
                 <span>Errore</span>
-                <h3>Ops, qualcosa ÃƒÂ¨ andato storto</h3>
+                <h3>Ops, qualcosa e andato storto</h3>
                 <p>${escapeHTML(error.message)}</p>
             </div>`;
         cardGrid.innerHTML = '';

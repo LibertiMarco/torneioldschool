@@ -117,7 +117,7 @@ $assetVersion = '20260317a';
       <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Serie A">
       <div class="torneo-title">
         <h1 class="titolo">Serie A</h1>
-        <button type="button" class="fav-toggle" id="favTournamentBtn">ÃƒÆ’Ã‚Â¢Ãƒâ€¹Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  Segui torneo</button>
+        <button type="button" class="fav-toggle" id="favTournamentBtn">&#9734; Segui torneo</button>
       </div>
     </div>
 
@@ -172,7 +172,7 @@ $assetVersion = '20260317a';
 
       <!-- PLAYOFF / BRACKET -->
       <div id="playoffContainer" style="display:none;">
-        <!-- verrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  popolato via JS -->
+        <!-- verrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  popolato via JS -->
       </div>
 
     </section>
@@ -214,30 +214,30 @@ $assetVersion = '20260317a';
 
 <!-- REGOLE -->
 <section id="regole" class="tab-section">
-  <h2 class="titolo-sezione">ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒâ€¦Ã¢â‚¬Å“ Regole del Torneo</h2>
+  <h2 class="titolo-sezione">Regole del Torneo</h2>
 
   <div class="regole-box">
     <div class="regola">
-      <h3>ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒâ€¦Ã‚Â¸ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Struttura del Campionato</h3>
+      <h3>Struttura del campionato</h3>
       <p>
-        Il torneo ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ composto da <strong>20 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
+        Il torneo &egrave; composto da <strong>20 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â½ Fase 1 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Regular Season</h3>
+      <h3>Fase 1 &mdash; Regular Season</h3>
       <p>
         Tutte le squadre partecipano a una <strong>Regular Season</strong> in stile Champions League.
         Ogni squadra disputa <strong>8 partite</strong> totali.
       </p>
       <p>
         La squadra prima in classifica al termine del girone riceve il
-        <span class="highlight">Trofeo Regular Season ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â </span>.
+        <span class="highlight">Trofeo Regular Season</span>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  Fase 2 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Coppe</h3>
+      <h3>Fase 2 &mdash; Coppe</h3>
       <ul>
         <li>Le <strong>prime 16</strong> classificate accedono alla <span class="gold">Coppa Gold</span>.</li>
         <li>Le <strong>ultime 4</strong> accedono alla <span class="silver">Coppa Silver</span>.</li>
@@ -246,22 +246,22 @@ $assetVersion = '20260317a';
     </div>
 
     <div class="regola">
-      <h3>ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â½ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Premi Finali</h3>
+      <h3>Premi finali</h3>
       <p>Dopo la finale di <span class="gold">Coppa Gold</span> verranno assegnati i seguenti riconoscimenti:</p>
       <div class="premi-grid">
-        <span>ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Miglior Giocatore</span>
-        <span>ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€šÃ‚Â§Ãƒâ€šÃ‚Â¤ Miglior Portiere</span>
-        <span>ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂºÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Miglior Difensore</span>
-        <span>ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â¡ Miglior Attaccante</span>
+        <span>Miglior Giocatore</span>
+        <span>Miglior Portiere</span>
+        <span>Miglior Difensore</span>
+        <span>Miglior Attaccante</span>
       </div>
       <p>
-        Il <strong>Miglior Giocatore</strong> vincerÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  un
-        <span class="highlight">buono tatuaggio da 500ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬</span>.
+        Il <strong>Miglior Giocatore</strong> vincera un
+        <span class="highlight">buono tatuaggio da 500 euro</span>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€šÃ‚Â±ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â Regole di Gioco</h3>
+      <h3>Regole di gioco</h3>
       <ul>
         <li>Ogni partita dura <strong>2 tempi da 25 minuti</strong>.</li>
         <li>Ogni squadra ha <strong>1 chiamata VAR</strong> disponibile per partita.</li>
@@ -269,10 +269,10 @@ $assetVersion = '20260317a';
     </div>
 
     <div class="regola">
-      <h3>ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Calendario</h3>
+      <h3>Calendario</h3>
       <ul>
-        <li>Le partite si disputano principalmente <strong>il lunedÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¬ e il martedÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¬</strong>.</li>
-        <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¬ o venerdÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¬</strong>.</li>
+        <li>Le partite si disputano principalmente <strong>il lunedi e il martedi</strong>.</li>
+        <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedi o venerdi</strong>.</li>
       </ul>
     </div>
   </div>

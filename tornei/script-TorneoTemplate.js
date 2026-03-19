@@ -1,4 +1,4 @@
-﻿// TEMPLATE BASE: duplica e rinomina questo file per un nuovo torneo.
+// TEMPLATE BASE: duplica e rinomina questo file per un nuovo torneo.
 // Sostituisci TORNEO con lo slug usato nel DB/API e aggiorna eventuali testi.
 const TORNEO = window.__TEMPLATE_TORNEO_SLUG__ || "TEMPLATE_SLUG"; // Nome base del torneo nel DB
 const CONFIG = window.__TORNEO_CONFIG__ || {};
@@ -1013,7 +1013,7 @@ async function caricaRosaSquadra(squadra) {
     header.innerHTML = `
       <img src="${squadraLogo}" alt="${squadra}" class="team-logo-large">
       <h3>${squadra}</h3>
-      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn" aria-label="Segui la squadra">â˜†</button>
+      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn" aria-label="Segui la squadra">&#9734;</button>
     `;
     const favBtn = header.querySelector(".fav-team-btn");
     if (favBtn) {

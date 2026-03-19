@@ -214,12 +214,12 @@ $assetVersion = '20260317a';
 
 <!-- REGOLE -->
 <section id="regole" class="tab-section">
-  <h2 class="titolo-sezione">&#128221; Regole del Torneo</h2>
+  <h2 class="titolo-sezione">Regole del Torneo</h2>
 
   <div class="regole-box">
     <div class="regola">
       <h3>Struttura del campionato</h3>
-      <p>Il torneo ÃƒÂ¨ composto da <strong>12 squadre</strong> e si sviluppa in <strong>due fasi</strong>.</p>
+      <p>Il torneo &egrave; composto da <strong>12 squadre</strong> e si sviluppa in <strong>due fasi</strong>.</p>
     </div>
 
     <div class="regola">
@@ -266,7 +266,7 @@ $assetVersion = '20260317a';
       <h3>Calendario</h3>
       <ul>
         <li>Si gioca principalmente <strong>di venerdi</strong>.</li>
-        <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedÃƒÂ¬ o venerdÃƒÂ¬</strong>.</li>
+        <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedi o venerdi</strong>.</li>
       </ul>
     </div>
   </div>

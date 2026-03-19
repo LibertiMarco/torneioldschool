@@ -388,13 +388,13 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
       <p class="about-text">
         Organizziamo <strong>tornei amatoriali di calcio a 5 e calcio a 8</strong> - e, qualche volta, anche di altri sport -  
         nella zona di <strong>Napoli Nord</strong>.  
-        I nostri eventi non hanno premi in denaro, ma offrono qualcosa di molto piÃ¹ importante:  
+        I nostri eventi non hanno premi in denaro, ma offrono qualcosa di molto piu importante:  
         <strong>unione, amicizia e divertimento puro</strong>.
       </p>
 
       <p class="about-text">
-        Ogni torneo Ã¨ pensato per essere un'esperienza completa:  
-        arbitri qualificati, sistema <strong>VAR</strong>, <strong>highlights</strong>, completini personalizzati e anche <strong>contenuti TikTok</strong> per far rivivere i momenti piÃ¹ belli di ogni partita.
+        Ogni torneo e pensato per essere un'esperienza completa:  
+        arbitri qualificati, sistema <strong>VAR</strong>, <strong>highlights</strong>, completini personalizzati e anche <strong>contenuti TikTok</strong> per far rivivere i momenti piu belli di ogni partita.
       </p>
 
       <p class="about-highlight">Tornei Old School - il calcio come una volta, con lo spirito di oggi.</p>

@@ -114,10 +114,10 @@ $assetVersion = '20260317a';
   <!-- CONTENUTO PRINCIPALE -->
   <main class="content">
     <div class="torneo-hero">
-      <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Christmas's cup">
+      <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Christmas Cup">
       <div class="torneo-title">
-        <h1 class="titolo">Christmas's cup</h1>
-        <button type="button" class="fav-toggle" id="favTournamentBtn">ÃƒÂ¢Ã‹Å“Ã¢â‚¬Â  Segui torneo</button>
+        <h1 class="titolo">Christmas Cup</h1>
+        <button type="button" class="fav-toggle" id="favTournamentBtn">&#9734; Segui torneo</button>
       </div>
     </div>
 
@@ -171,7 +171,7 @@ $assetVersion = '20260317a';
 
       <!-- PLAYOFF / BRACKET -->
       <div id="playoffContainer" style="display:none;">
-        <!-- verrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  popolato via JS -->
+        <!-- verrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  popolato via JS -->
       </div>
 
     </section>
@@ -211,13 +211,13 @@ $assetVersion = '20260317a';
     <div class="regola">
       <h3>Struttura</h3>
       <p>
-        Christmas Cup ÃƒÆ’Ã‚Â¨ <strong>solo eliminazione diretta</strong> a partire dagli <strong>ottavi di finale</strong>.
-        Ogni turno ÃƒÆ’Ã‚Â¨ gara secca: in caso di pareggio si va direttamente ai <strong>rigori</strong>.
+        Christmas Cup e <strong>solo eliminazione diretta</strong> a partire dagli <strong>ottavi di finale</strong>.
+        Ogni turno e gara secca: in caso di pareggio si va direttamente ai <strong>rigori</strong>.
       </p>
     </div>
 
     <div class="regola">
-      <h3>Regole di Gioco</h3>
+      <h3>Regole di gioco</h3>
       <ul>
         <li>Partita da <strong>2 tempi da 25 minuti</strong>.</li>
         <li><strong>1 VAR</strong> disponibile per squadra, con <strong>arbitro video</strong>.</li>

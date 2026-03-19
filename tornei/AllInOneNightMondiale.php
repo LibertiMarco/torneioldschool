@@ -253,10 +253,10 @@ $torneoSeo = [
   <!-- CONTENUTO PRINCIPALE -->
   <main class="content">
     <div class="torneo-hero">
-      <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo Coppa dÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢Africa">
+      <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo All In One Night: Mondiale">
       <div class="torneo-title">
         <h1 class="titolo">ALL IN ONE NIGHT: MONDIALE</h1>
-        <button type="button" class="fav-toggle" id="favTournamentBtn">ÃƒÂ¢Ã‹Å“Ã¢â‚¬Â  Segui torneo</button>
+        <button type="button" class="fav-toggle" id="favTournamentBtn">&#9734; Segui torneo</button>
       </div>
     </div>
 
@@ -339,7 +339,7 @@ $torneoSeo = [
 
       <!-- PLAYOFF / BRACKET -->
       <div id="playoffContainer" style="display:none;">
-        <!-- verrÃƒÆ’Ã‚Â  popolato via JS -->
+        <!-- verrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  popolato via JS -->
       </div>
 
     </section>
@@ -384,7 +384,7 @@ $torneoSeo = [
 
   <div class="regole-box">
     <div class="regola">
-      <h3>Struttura del Torneo</h3>
+      <h3>Struttura del torneo</h3>
       <p>
         Il torneo prevede <strong style="color:#d9a441;">8 squadre</strong> suddivise in <strong style="color:#d9a441;">2 gironi da 4</strong>, tutto in una sola serata.
       </p>
@@ -400,12 +400,12 @@ $torneoSeo = [
     </div>
 
     <div class="regola">
-      <h3>Semifinali e Finale</h3>
+      <h3>Semifinali e finale</h3>
       <p>
-        Semifinali incrociate: <strong>1Ãƒâ€šÃ‚Â° Girone A vs 2Ãƒâ€šÃ‚Â° Girone B</strong> e <strong>1Ãƒâ€šÃ‚Â° Girone B vs 2Ãƒâ€šÃ‚Â° Girone A</strong>.
+        Semifinali incrociate: <strong>1&deg; Girone A vs 2&deg; Girone B</strong> e <strong>1&deg; Girone B vs 2&deg; Girone A</strong>.
         Semifinali e finale durano <strong style="color:#d9a441;">20 minuti</strong> (tempo unico).
       </p>
-      <p>Vince la All in one night: Mondiale la squadra che si impone in finale.</p>
+      <p>Vince il torneo la squadra che si impone in finale.</p>
     </div>
 
     <div class="regola">
@@ -414,7 +414,7 @@ $torneoSeo = [
     </div>
 
     <div class="regola">
-      <h3>Regole di Gioco</h3>
+      <h3>Regole di gioco</h3>
       <ul>
         <li>Gironi: <strong>15 minuti</strong> tempo unico.</li>
         <li>Semifinali e finale: <strong>20 minuti</strong> tempo unico.</li>
