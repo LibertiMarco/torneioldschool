@@ -46,7 +46,7 @@
         <li>Cookie di sessione (es. PHPSESSID) per login e funzionalità di base.</li>
         <li>Cookie/localStorage per ricordare la tua scelta nel banner di consenso.</li>
         <li>Altri cookie tecnici legati a preferenze del sito. Non usiamo cookie pubblicitari di terze parti attivi al momento.</li>
-        <li>reCAPTCHA di Google per proteggere i form (login, registrazione, contatti): Google puÃ² impostare cookie e tracciare l'IP per rilevare abusi. Vedi la <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Privacy Policy di Google</a> e i <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">Termini di servizio</a>.</li>
+        <li>reCAPTCHA di Google per proteggere i form (login, registrazione, contatti): Google può impostare cookie e tracciare l'IP per rilevare abusi. Vedi la <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Privacy Policy di Google</a> e i <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer">Termini di servizio</a>.</li>
       </ul>
     </section>
 
@@ -65,7 +65,7 @@
       <ul>
         <li>Puoi accettare o rifiutare dal banner al primo accesso.</li>
         <li>Puoi modificare la scelta in qualsiasi momento dal link "Gestisci preferenze" presente nel footer.</li>
-        <li>Puoi anche cancellare i cookie dalle impostazioni del browser; questo farÃ  riapparire il banner.</li>
+        <li>Puoi anche cancellare i cookie dalle impostazioni del browser; questo farà riapparire il banner.</li>
       </ul>
     </section>
 
