@@ -1237,6 +1237,16 @@ document.addEventListener("DOMContentLoaded", () => {
   if (favTorneoBtn) {
     favTorneoBtn.addEventListener("click", () => toggleTournamentFollow(favTorneoBtn));
   }
+  if (prevMarcatori) {
+    prevMarcatori.addEventListener("click", () => {
+      renderMarcatoriPagina(marcatoriPage - 1);
+    });
+  }
+  if (nextMarcatori) {
+    nextMarcatori.addEventListener("click", () => {
+      renderMarcatoriPagina(marcatoriPage + 1);
+    });
+  }
   loadFavorites();
 
   // carico subito la parte girone
@@ -1340,19 +1350,7 @@ document.querySelectorAll(".tab-button").forEach(btn => {
       caricaMarcatori();
     }
   });
-
-  if (prevMarcatori) {
-    prevMarcatori.addEventListener("click", () => {
-      renderMarcatoriPagina(marcatoriPage - 1);
-    });
-  }
-  if (nextMarcatori) {
-    nextMarcatori.addEventListener("click", () => {
-      renderMarcatoriPagina(marcatoriPage + 1);
-    });
-  }
 });
-
 
 
 
