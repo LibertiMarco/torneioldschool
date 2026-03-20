@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../includi/security.php';
-$assetVersion = '20260317a'; // bump per forzare l'hard refresh dei client in cache
+$assetVersion = '20260320a'; // bump per forzare l'hard refresh dei client in cache
 ?>
 <!DOCTYPE html>
 <html lang="it">
