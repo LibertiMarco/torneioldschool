@@ -236,8 +236,6 @@ function nomeFaseDaGiornata(g) {
     case 1: return "Finale";
     case 2: return "Semifinali";
     case 3: return "Quarti di finale";
-    case 4: return "Ottavi di finale";
-    case 5: return "Sedicesimi";
     default: return "Fase " + g;
   }
 }
@@ -530,11 +528,8 @@ async function caricaMarcatori(torneoSlug = TORNEO) {
 // ====================== CALENDARIO (GIRONE) ======================
 const roundLabelByKey = {
   "1": "Finale",
-  "2": "Semifinale",
+  "2": "Semifinali",
   "3": "Quarti di finale",
-  "4": "Ottavi di finale",
-  "5": "Sedicesimi di finale",
-  "6": "Trentaduesimi di finale",
   "KO": "Fase eliminazione"
 };
 
@@ -560,7 +555,7 @@ function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], selecte
   }
 
   const disponibili = new Set(giornateDisponibili.map(String));
-  const orderedRounds = ["1", "2", "3", "4"]; // Finale -> Ottavi
+  const orderedRounds = ["1", "2", "3"]; // Finale -> Quarti
   let firstVal = "";
   const latestAvailable = giornateDisponibili.reduce((max, g) => (max === null || Number(g) > Number(max) ? g : max), null);
 
@@ -603,6 +598,10 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         const matches = (data[g] || []).filter(p => (p.fase || "REGULAR").toUpperCase() === "REGULAR");
         if (matches.length) dataFiltrata[g] = matches;
       });
+    } else {
+      dataFiltrata = Object.fromEntries(
+        Object.entries(dataFiltrata || {}).filter(([g]) => ["1", "2", "3"].includes(String(g)))
+      );
     }
 
     const calendarioSection = document.getElementById("contenitoreGiornate");
@@ -754,17 +753,16 @@ async function caricaPlayoff(tipoCoppa) {
     const fasiMap = {
       1: "Finale",
       2: "Semifinali",
-      3: "Quarti di finale",
-      4: "Ottavi di finale"
+      3: "Quarti di finale"
     };
 
     const fasiContainer = document.getElementById("fasiPlayoff");
     fasiContainer.innerHTML = "";
 
-    // ordina e mostra solo giornate 1–4
+    // ordina e mostra solo giornate 1–3
     const giornate = Object.keys(data)
       .map(g => parseInt(g))
-      .filter(g => g >= 1 && g <= 4)
+      .filter(g => g >= 1 && g <= 3)
       .sort((a, b) => a - b);
 
     giornate.forEach(g => {
@@ -872,8 +870,7 @@ async function caricaPlayoff(tipoCoppa) {
     const fasiMap = {
       1: "Finale",
       2: "Semifinali",
-      3: "Quarti di finale",
-      4: "Ottavi di finale"
+      3: "Quarti di finale"
     };
 
     const fasiContainer = document.getElementById("fasiPlayoff");
@@ -896,18 +893,11 @@ async function caricaPlayoff(tipoCoppa) {
 
     if (phaseFilter) {
       phaseFilter.innerHTML = "";
-      const phases =
-        tipoCoppa.toLowerCase() === "gold"
-          ? [
-              { label: "Ottavi", val: "4" },
-              { label: "Quarti", val: "3" },
-              { label: "Semifinali", val: "2" },
-              { label: "Finale", val: "1" },
-            ]
-          : [
-              { label: "Semifinali", val: "2" },
-              { label: "Finale", val: "1" },
-            ];
+      const phases = [
+        { label: "Quarti", val: "3" },
+        { label: "Semifinali", val: "2" },
+        { label: "Finale", val: "1" },
+      ];
       currentPhase = phases[0]?.val || "";
       phaseFilter.style.display = phases.length > 1 ? "flex" : "none";
       phases.forEach(ph => {
@@ -929,7 +919,7 @@ async function caricaPlayoff(tipoCoppa) {
     const renderPlayoff = () => {
       if (!fasiContainer) return;
       fasiContainer.innerHTML = "";
-      const ordineGiornate = [4, 3, 2, 1]; // Ottavi -> Quarti -> Semi -> Finale
+      const ordineGiornate = [3, 2, 1]; // Quarti -> Semi -> Finale
 
       ordineGiornate.forEach(g => {
         if (currentPhase && String(g) !== currentPhase) return;

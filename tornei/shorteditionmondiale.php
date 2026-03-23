@@ -220,7 +220,7 @@ $assetVersion = '20260320b';
     <div class="regola">
       <h3>Struttura del campionato</h3>
       <p>
-        Il torneo &egrave; composto da <strong>20 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
+        Il torneo &egrave; composto da <strong>16 squadre</strong> e si sviluppa in <strong>due fasi principali</strong>.
       </p>
     </div>
 
@@ -241,6 +241,7 @@ $assetVersion = '20260320b';
       <ul>
         <li>Le squadre classificate dal <strong>1&deg; all'8&deg; posto</strong> accedono alla <span class="gold">Coppa Gold</span>.</li>
         <li>Le squadre classificate dal <strong>9&deg; al 16&deg; posto</strong> accedono alla <span class="silver">Coppa Silver</span>.</li>
+        <li>Sia la <span class="gold">Coppa Gold</span> sia la <span class="silver">Coppa Silver</span> prevedono <strong>quarti di finale, semifinali e finale</strong>.</li>
         <li>Entrambe le coppe prevedono una <strong>premiazione con trofeo</strong> per la vincitrice.</li>
       </ul>
     </div>
