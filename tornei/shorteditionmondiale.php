@@ -255,10 +255,6 @@ $assetVersion = '20260320b';
         <span>Miglior Difensore</span>
         <span>Miglior Attaccante</span>
       </div>
-      <p>
-        Il <strong>Miglior Giocatore</strong> vincera un
-        <span class="highlight">buono tatuaggio da 500 euro</span>.
-      </p>
     </div>
 
     <div class="regola">
