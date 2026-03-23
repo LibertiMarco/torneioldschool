@@ -357,7 +357,10 @@ function rebuildAggregates(mysqli $conn): void {
                 SUM(CASE WHEN pg.voto IS NOT NULL THEN pg.voto ELSE 0 END) AS somma_voti,
                 SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
             FROM squadre_giocatori sg2
-            JOIN partite p ON p.torneo = (SELECT torneo FROM squadre s WHERE s.id = sg2.squadra_id LIMIT 1)
+            JOIN squadre s2 ON s2.id = sg2.squadra_id
+            JOIN partite p 
+              ON p.torneo = s2.torneo
+             AND (p.squadra_casa = s2.nome OR p.squadra_ospite = s2.nome)
             JOIN partita_giocatore pg ON pg.giocatore_id = sg2.giocatore_id AND pg.partita_id = p.id
             WHERE p.giocata = 1
             GROUP BY sg2.id
