@@ -1,19 +1,25 @@
 <?php
 require_once __DIR__ . '/../includi/security.php';
-
-// Template base per creare un nuovo torneo:
-// 1) Duplica questo file e rinominalo (es. NuovoTorneo.php)
-// 2) Imposta $torneoSlug e $torneoName qui sotto
-// 3) Duplica anche script-TorneoTemplate.js rinominandolo in script-NuovoTorneo.js
-// 4) Nel nuovo JS sostituisci TORNEO con lo stesso slug usato nel DB/API
-// 5) (Opzionale) Aggiorna assetVersion per forzare la cache
-$torneoSlug = 'TEMPLATE_SLUG';
-$torneoName = 'Torneo Template';
-$assetVersion = '20260317a';
-
 require_once __DIR__ . '/../includi/db.php';
-$torneoConfig = [];
-$regoleMarkup = '';
+
+$normalizeTorneoText = static function ($value): string {
+    if (!is_string($value)) {
+        $value = (string)$value;
+    }
+    $value = str_replace("\r\n", "\n", $value);
+    $value = @iconv('UTF-8', 'UTF-8//IGNORE', $value) ?: $value;
+    $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value);
+    return trim($value);
+};
+
+$torneoSlug = isset($torneoSlug) ? $normalizeTorneoText((string)$torneoSlug) : 'TEMPLATE_SLUG';
+$torneoName = isset($torneoName) ? $normalizeTorneoText((string)$torneoName) : 'Torneo Template';
+$assetVersion = isset($assetVersion) ? (string)$assetVersion : '20260323a';
+$torneoConfigFallback = (isset($torneoConfigFallback) && is_array($torneoConfigFallback)) ? $torneoConfigFallback : [];
+$torneoRulesMarkup = isset($torneoRulesMarkup) ? (string)$torneoRulesMarkup : '';
+
+$torneoConfig = $torneoConfigFallback;
+
 try {
     if (isset($conn) && $conn instanceof mysqli) {
         $filetorneo = $torneoSlug . '.php';
@@ -25,7 +31,7 @@ try {
                 if ($row && !empty($row['config'])) {
                     $decoded = json_decode($row['config'], true);
                     if (is_array($decoded)) {
-                        $torneoConfig = $decoded;
+                        $torneoConfig = array_replace($torneoConfigFallback, $decoded);
                     }
                 }
             }
@@ -33,7 +39,7 @@ try {
         }
     }
 } catch (Throwable $e) {
-    // ignora eventuali errori di lettura config
+    // ignora errori di lettura config: il fallback locale resta valido
 }
 
 if (!function_exists('renderRegoleMarkupFromText')) {
@@ -98,8 +104,13 @@ $qualificatiSilver = array_key_exists('qualificati_silver', $torneoConfig)
 $showGoldCup = $qualificatiGold === null ? true : $qualificatiGold > 0;
 $showSilverCup = $qualificatiSilver === null ? true : $qualificatiSilver > 0;
 
+$regoleMarkup = '';
 if (!empty($torneoConfig['regole_html'])) {
     $regoleMarkup = renderRegoleMarkupFromText((string)$torneoConfig['regole_html']);
+} elseif ($torneoRulesMarkup !== '') {
+    $regoleMarkup = $torneoRulesMarkup;
+} else {
+    $regoleMarkup = '<div class="regola"><p>Le regole saranno pubblicate a breve.</p></div>';
 }
 ?>
 <!DOCTYPE html>
@@ -208,10 +219,8 @@ if (!empty($torneoConfig['regole_html'])) {
 
 <body>
 
-  <!-- HEADER -->
   <div id="header-container"></div>
 
-  <!-- CONTENUTO PRINCIPALE -->
   <main class="content">
     <div class="torneo-hero">
       <img id="torneoHeroImg" src="/img/tornei/pallone.png" alt="Logo <?= htmlspecialchars($torneoName) ?>">
@@ -221,7 +230,6 @@ if (!empty($torneoConfig['regole_html'])) {
       </div>
     </div>
 
-    <!-- Sezioni navigazione -->
     <nav class="tabs">
       <button class="tab-button active" data-tab="classifica">Classifica</button>
       <button class="tab-button" data-tab="marcatori">Classifica Marcatori</button>
@@ -229,11 +237,10 @@ if (!empty($torneoConfig['regole_html'])) {
       <button class="tab-button" data-tab="rose">Rose Squadre</button>
       <button class="tab-button" data-tab="regole">Regole</button>
     </nav>
-<!-- CLASSIFICA -->
+
     <section id="classifica" class="tab-section active">
       <h2>Classifica</h2>
 
-      <!-- FILTRI FASE -->
       <div class="filtro-fase">
         <label for="faseSelect">Seleziona fase:</label>
         <div class="filtro-fase-selects">
@@ -253,7 +260,6 @@ if (!empty($torneoConfig['regole_html'])) {
         </div>
       </div>
 
-      <!-- CLASSIFICA NORMALE -->
       <div class="table-wrapper" id="classificaWrapper">
         <table id="tableClassifica">
           <thead>
@@ -274,14 +280,11 @@ if (!empty($torneoConfig['regole_html'])) {
         </table>
       </div>
 
-      <!-- PLAYOFF / BRACKET -->
       <div id="playoffContainer" style="display:none;">
         <!-- popolato via JS -->
       </div>
-
     </section>
 
-    <!-- CALENDARIO -->
     <section id="calendario" class="tab-section">
       <h2>Calendario</h2>
       <div class="filtro-giornata">
@@ -307,7 +310,6 @@ if (!empty($torneoConfig['regole_html'])) {
       <div id="contenitoreGiornate"></div>
     </section>
 
-    <!-- ROSE -->
     <section id="rose" class="tab-section">
       <h2>Rose Squadre</h2>
       <div class="filtro-rosa">
@@ -320,22 +322,14 @@ if (!empty($torneoConfig['regole_html'])) {
     </section>
   </main>
 
-    <!-- REGOLE -->
   <section id="regole" class="tab-section">
     <h2 class="titolo-sezione">Regole del Torneo</h2>
     <div class="regole-box" id="regoleBox">
-      <?php if ($regoleMarkup !== ''): ?>
-        <?= $regoleMarkup ?>
-      <?php else: ?>
-        <div class="regola">
-          <p>Le regole saranno pubblicate a breve.</p>
-        </div>
-      <?php endif; ?>
+      <?= $regoleMarkup ?>
     </div>
     <br><br><br><br>
   </section>
 
-  <!-- MARCATORI --><!-- MARCATORI -->
   <section id="marcatori" class="tab-section">
     <h2>Classifica Marcatori</h2>
     <div class="marcatori-list" id="marcatoriList"></div>
@@ -346,15 +340,11 @@ if (!empty($torneoConfig['regole_html'])) {
     </div>
   </section>
 
-  <!-- FOOTER -->
   <div id="footer-container"></div>
 
-  <!-- SCRIPT: HEADER -->
   <script src="/includi/header-interactions.js?v=<?= $assetVersion ?>"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-
-      // Gestione scelta fase classifica (UI base)
       const faseSelect = document.getElementById("faseSelect");
       const coppaSelect = document.getElementById("coppaSelect");
 
@@ -372,14 +362,12 @@ if (!empty($torneoConfig['regole_html'])) {
         });
       }
 
-      // HEADER dinamico
       fetch("/includi/header.php?v=<?= $assetVersion ?>")
         .then(response => response.text())
         .then(data => {
           document.getElementById("header-container").innerHTML = data;
           initHeaderInteractions();
 
-          // Fallback mobile toggle
           const headerEl = document.querySelector(".site-header");
           if (headerEl) {
             const mobileBtn = headerEl.querySelector("#mobileMenuBtn");
@@ -449,7 +437,6 @@ if (!empty($torneoConfig['regole_html'])) {
     });
   </script>
 
-  <!-- SCRIPT: FOOTER -->
   <script>
     fetch("/includi/footer.html?v=<?= $assetVersion ?>")
       .then(response => response.text())
@@ -459,9 +446,7 @@ if (!empty($torneoConfig['regole_html'])) {
       .catch(error => console.error("Errore nel caricamento del footer:", error));
   </script>
 
-  <!-- SCRIPT: TEMPLATE -->
   <script>
-    // espone lo slug al JS template
     window.__TEMPLATE_TORNEO_SLUG__ = <?= json_encode($torneoSlug) ?>;
     window.__TORNEO_CONFIG__ = <?= json_encode($torneoConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
   </script>
@@ -469,4 +454,3 @@ if (!empty($torneoConfig['regole_html'])) {
 
 </body>
 </html>
-

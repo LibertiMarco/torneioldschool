@@ -35,10 +35,28 @@ function cleanUtf8Text($value): string {
     return trim($value);
 }
 
+function normalizeFaseFinaleValue(string $formula, string $fase): string {
+    if ($formula === 'campionato') {
+        if ($fase === 'gold') {
+            return 'gold';
+        }
+        return 'coppe';
+    }
+
+    if ($formula === 'girone') {
+        if ($fase === 'eliminazione_diretta') {
+            return 'eliminazione_diretta';
+        }
+        return 'coppe';
+    }
+
+    return '';
+}
+
 function buildTorneoConfigFromRequest(array $src): array {
     $config = [
         'formato'            => $src['formula_torneo'] ?? '',
-        'fase_finale'        => $src['fase_finale'] ?? '',
+        'fase_finale'        => '',
         'campionato_squadre' => intOrZero($src['campionato_squadre'] ?? 0),
         'numero_gironi'      => intOrZero($src['numero_gironi'] ?? 0),
         'squadre_per_girone' => intOrZero($src['squadre_per_girone'] ?? 0),
@@ -57,6 +75,15 @@ function buildTorneoConfigFromRequest(array $src): array {
         }
     }
 
+    $config['fase_finale'] = normalizeFaseFinaleValue(
+        (string)$config['formato'],
+        (string)($src['fase_finale'] ?? '')
+    );
+
+    if ($config['formato'] === 'campionato' && $config['fase_finale'] === 'gold') {
+        $config['qualificati_silver'] = 0;
+    }
+
     return $config;
 }
 
@@ -70,10 +97,6 @@ function scegliTemplatePerFormula(string $formula, string $faseFinale, string $b
         return $default;
     }
 
-    $serieB = [
-        'html' => $baseDir . '/SerieB.php',
-        'js'   => $baseDir . '/script-SerieB.js',
-    ];
     $coppaAfrica = [
         'html' => $baseDir . '/Coppadafrica.php',
         'js'   => $baseDir . '/script-Coppadafrica.js',
@@ -81,11 +104,7 @@ function scegliTemplatePerFormula(string $formula, string $faseFinale, string $b
 
     switch ($formula) {
         case 'campionato':
-            // Campionato con Coppa Gold/Silver -> usa impianto Serie B se disponibile
-            if ($faseFinale === 'coppe' && file_exists($serieB['html']) && file_exists($serieB['js'])) {
-                return $serieB;
-            }
-            break;
+            return $default;
         case 'girone':
             if ($faseFinale === 'eliminazione_diretta' && file_exists($coppaAfrica['html']) && file_exists($coppaAfrica['js'])) {
                 return $coppaAfrica; // Gironi + eliminazione diretta stile Coppa d'Africa
@@ -608,6 +627,33 @@ if ($lista instanceof mysqli_result) {
             padding: 12px;
             margin-bottom: 14px;
         }
+        .notes-editor {
+            min-height: 280px;
+            line-height: 1.55;
+            white-space: pre-wrap;
+        }
+        .notes-editor-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        .notes-reset-btn {
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #15293e;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+        .notes-reset-btn:hover {
+            background: #eef3f9;
+            border-color: #b7c4d8;
+        }
     </style>
 </head>
 <body>
@@ -633,25 +679,16 @@ if ($lista instanceof mysqli_result) {
             <form method="POST" class="admin-form form-crea" enctype="multipart/form-data">
                 <h2>Aggiungi Torneo</h2>
                 <div class="form-group">
-                    <label>Formula torneo</label>
-                    <div class="pill-group" id="tipoTorneoGroup">
-                        <label class="pill-toggle">
-                            <input type="radio" name="formula_torneo" value="campionato" required>
-                            Campionato
-                        </label>
-                        <label class="pill-toggle">
-                            <input type="radio" name="formula_torneo" value="girone">
-                            Girone
-                        </label>
-                        <label class="pill-toggle">
-                            <input type="radio" name="formula_torneo" value="eliminazione">
-                            Eliminazione diretta
-                        </label>
-                    </div>
-                    <small>Scegli la formula prima di inserire gli altri dettagli.</small>
+                    <label for="formula_torneo">Formula torneo</label>
+                    <select name="formula_torneo" id="formula_torneo" required>
+                        <option value="campionato" selected>Campionato</option>
+                        <option value="girone">Girone</option>
+                        <option value="eliminazione">Eliminazione diretta</option>
+                    </select>
+                    <small>Il form si adatta automaticamente alla formula selezionata.</small>
                 </div>
 
-                <div class="form-subgroup hidden" id="campionatoSettings">
+                <div class="form-subgroup" id="campionatoSettings">
                     <div class="form-group">
                         <label>Numero squadre</label>
                         <input type="number" name="campionato_squadre" min="2" step="1" inputmode="numeric" placeholder="Es. 10">
@@ -671,19 +708,11 @@ if ($lista instanceof mysqli_result) {
                     </div>
                 </div>
 
-                <div class="form-subgroup hidden" id="faseFinaleSettings">
+                <div class="form-subgroup" id="faseFinaleSettings">
                     <div class="form-group">
-                        <label>Fase finale prevista</label>
-                        <div class="pill-group">
-                            <label class="pill-toggle">
-                                <input type="radio" name="fase_finale" value="coppe">
-                                Coppa Gold e Silver
-                            </label>
-                            <label class="pill-toggle">
-                                <input type="radio" name="fase_finale" value="eliminazione_diretta">
-                                Eliminazione diretta
-                            </label>
-                        </div>
+                        <label for="fase_finale">Fase finale prevista</label>
+                        <select name="fase_finale" id="fase_finale"></select>
+                        <small>I valori disponibili cambiano in base alla formula torneo.</small>
                     </div>
                 </div>
 
@@ -700,7 +729,7 @@ if ($lista instanceof mysqli_result) {
                         </div>
                     </div>
                     <div class="form-row">
-                        <div class="form-group half">
+                        <div class="form-group half" data-role="qualificati-silver-group">
                             <label>Qualificate in Coppa Silver</label>
                             <input type="number" name="qualificati_silver" id="qualificati_silver" min="0" step="1" inputmode="numeric" placeholder="Es. 8">
                         </div>
@@ -712,8 +741,12 @@ if ($lista instanceof mysqli_result) {
                 </div>
 
                 <div class="form-group">
-                    <label>Regole / Note torneo</label>
-                    <textarea name="regole_html" id="regole_html" rows="4" placeholder="Criteri di qualificazione, punti bonus, regole speciali"></textarea>
+                    <div class="notes-editor-toolbar">
+                        <label for="regole_html">Regole / Note torneo</label>
+                        <button type="button" class="notes-reset-btn" data-action="reset-regole">Ripristina testo predefinito</button>
+                    </div>
+                    <textarea name="regole_html" id="regole_html" class="notes-editor" rows="12" placeholder="Criteri di qualificazione, punti bonus, regole speciali"></textarea>
+                    <small>Per i campionati il testo viene precompilato con righe modificabili in base ai campi inseriti.</small>
                 </div>
 
                 <div class="form-group"><label>Nome</label><input type="text" name="nome" required></div>
@@ -805,17 +838,9 @@ if ($lista instanceof mysqli_result) {
 
                 <div class="form-subgroup hidden" id="faseFinaleSettingsMod">
                     <div class="form-group">
-                        <label>Fase finale prevista</label>
-                        <div class="pill-group">
-                            <label class="pill-toggle">
-                                <input type="radio" name="fase_finale" value="coppe" id="mod_fase_coppe">
-                                Coppa Gold e Silver
-                            </label>
-                            <label class="pill-toggle">
-                                <input type="radio" name="fase_finale" value="eliminazione_diretta" id="mod_fase_eliminazione">
-                                Eliminazione diretta
-                            </label>
-                        </div>
+                        <label for="mod_fase_finale">Fase finale prevista</label>
+                        <select name="fase_finale" id="mod_fase_finale"></select>
+                        <small>I valori disponibili cambiano in base alla formula torneo.</small>
                     </div>
                 </div>
 
@@ -832,7 +857,7 @@ if ($lista instanceof mysqli_result) {
                         </div>
                     </div>
                     <div class="form-row">
-                        <div class="form-group half">
+                        <div class="form-group half" data-role="qualificati-silver-group">
                             <label>Qualificate in Coppa Silver</label>
                             <input type="number" name="qualificati_silver" id="mod_qualificati_silver" min="0" step="1" inputmode="numeric" placeholder="Es. 8">
                         </div>
@@ -844,8 +869,12 @@ if ($lista instanceof mysqli_result) {
                 </div>
 
                 <div class="form-group">
-                    <label>Regole / Note torneo</label>
-                    <textarea name="regole_html" id="mod_regole_html" rows="4" placeholder="Criteri di qualificazione, punti bonus, regole speciali"></textarea>
+                    <div class="notes-editor-toolbar">
+                        <label for="mod_regole_html">Regole / Note torneo</label>
+                        <button type="button" class="notes-reset-btn" data-action="reset-regole">Ripristina testo predefinito</button>
+                    </div>
+                    <textarea name="regole_html" id="mod_regole_html" class="notes-editor" rows="12" placeholder="Criteri di qualificazione, punti bonus, regole speciali"></textarea>
+                    <small>Per i campionati il testo viene precompilato con righe modificabili in base ai campi inseriti.</small>
                 </div>
 
                 <div class="form-group"><label>Nome</label><input type="text" name="nome" id="mod_nome"></div>
@@ -980,6 +1009,7 @@ if ($lista instanceof mysqli_result) {
         (() => {
             function setupFormulaForm(formEl) {
                 if (!formEl) return null;
+                const tipoSelect = formEl.querySelector('select[name="formula_torneo"]');
                 const tipoRadios = Array.from(formEl.querySelectorAll('input[name="formula_torneo"]'));
                 const campionatoBox = formEl.querySelector('[id^="campionatoSettings"]');
                 const gironeBox = formEl.querySelector('[id^="gironeSettings"]');
@@ -988,11 +1018,30 @@ if ($lista instanceof mysqli_result) {
                 const campionatoInput = formEl.querySelector('input[name="campionato_squadre"]');
                 const numeroGironiInput = formEl.querySelector('input[name="numero_gironi"]');
                 const squadrePerGironeInput = formEl.querySelector('input[name="squadre_per_girone"]');
-                const finaleRadios = Array.from(formEl.querySelectorAll('input[name="fase_finale"]'));
+                const finaleSelect = formEl.querySelector('select[name="fase_finale"]');
                 const totaleInput = formEl.querySelector('input[name="totale_squadre"]');
                 const goldInput = formEl.querySelector('input[name="qualificati_gold"]');
                 const silverInput = formEl.querySelector('input[name="qualificati_silver"]');
+                const silverGroup = formEl.querySelector('[data-role="qualificati-silver-group"]');
                 const eliminateInput = formEl.querySelector('input[name="eliminate"]');
+                const regoleInput = formEl.querySelector('textarea[name="regole_html"]');
+                const resetRegoleBtn = formEl.querySelector('[data-action="reset-regole"]');
+
+                function getTipoValue() {
+                    if (tipoSelect) return tipoSelect.value || '';
+                    const checked = tipoRadios.find(radio => radio.checked);
+                    return checked ? checked.value : '';
+                }
+
+                function setTipoValue(value) {
+                    if (tipoSelect) {
+                        tipoSelect.value = value;
+                        return;
+                    }
+                    tipoRadios.forEach(radio => {
+                        radio.checked = radio.value === value;
+                    });
+                }
 
                 function setRequired(inputs, value) {
                     inputs.forEach(el => {
@@ -1000,18 +1049,76 @@ if ($lista instanceof mysqli_result) {
                     });
                 }
 
-                function toggleFinale(show) {
-                    if (!finaleBox) return;
+                function getFinaleOptions(formula) {
+                    if (formula === 'campionato') {
+                        return [
+                            { value: 'coppe', label: 'Coppa Gold e Silver' },
+                            { value: 'gold', label: 'Coppa Gold' }
+                        ];
+                    }
+
+                    if (formula === 'girone') {
+                        return [
+                            { value: 'coppe', label: 'Coppa Gold e Silver' },
+                            { value: 'eliminazione_diretta', label: 'Eliminazione diretta' }
+                        ];
+                    }
+
+                    return [];
+                }
+
+                function normalizeFinaleValue(formula, value) {
+                    if (formula === 'campionato') {
+                        return value === 'gold' ? 'gold' : 'coppe';
+                    }
+
+                    if (formula === 'girone') {
+                        return value === 'eliminazione_diretta' ? 'eliminazione_diretta' : 'coppe';
+                    }
+
+                    return '';
+                }
+
+                function syncFinaleOptions(formula, preferredValue = '') {
+                    if (!finaleSelect) return '';
+
+                    const options = getFinaleOptions(formula);
+                    const currentValue = preferredValue || finaleSelect.value || '';
+                    finaleSelect.innerHTML = '';
+
+                    options.forEach(({ value, label }) => {
+                        const option = document.createElement('option');
+                        option.value = value;
+                        option.textContent = label;
+                        finaleSelect.appendChild(option);
+                    });
+
+                    if (!options.length) {
+                        finaleSelect.required = false;
+                        return '';
+                    }
+
+                    const normalizedValue = normalizeFinaleValue(formula, currentValue);
+                    const nextValue = options.some(option => option.value === normalizedValue)
+                        ? normalizedValue
+                        : options[0].value;
+                    finaleSelect.value = nextValue;
+                    finaleSelect.required = true;
+                    return nextValue;
+                }
+
+                function toggleFinale(show, formula, preferredValue = '') {
+                    if (!finaleBox || !finaleSelect) return '';
+
                     if (show) {
                         finaleBox.classList.remove('hidden');
-                        finaleRadios.forEach(r => r.required = true);
-                    } else {
-                        finaleBox.classList.add('hidden');
-                        finaleRadios.forEach(r => {
-                            r.required = false;
-                            r.checked = false;
-                        });
+                        return syncFinaleOptions(formula, preferredValue);
                     }
+
+                    finaleBox.classList.add('hidden');
+                    finaleSelect.innerHTML = '';
+                    finaleSelect.required = false;
+                    return '';
                 }
 
                 function toggleQualifiche(show) {
@@ -1027,25 +1134,62 @@ if ($lista instanceof mysqli_result) {
                     }
                 }
 
+                function toggleSilverField(show) {
+                    if (silverGroup) {
+                        silverGroup.classList.toggle('hidden', !show);
+                    }
+                    if (!silverInput) return;
+
+                    if (show) {
+                        silverInput.disabled = false;
+                        const prevValue = silverInput.dataset.prevValue || '';
+                        if ((silverInput.value === '' || silverInput.value === '0') && prevValue !== '') {
+                            silverInput.value = prevValue;
+                        }
+                        return;
+                    }
+
+                    if (!silverInput.disabled) {
+                        silverInput.dataset.prevValue = silverInput.value;
+                    }
+                    silverInput.value = '0';
+                    silverInput.disabled = true;
+                }
+
+                function getEffectiveSilverValue() {
+                    if (!silverInput || silverInput.disabled) return 0;
+                    const silver = parseInt(silverInput.value || '0', 10);
+                    return Number.isFinite(silver) ? silver : 0;
+                }
+
                 function updateTotale() {
                     if (!totaleInput) return;
-                    const campVal = parseInt(campionatoInput?.value || "0", 10);
-                    const gironi = parseInt(numeroGironiInput?.value || "0", 10);
-                    const perGirone = parseInt(squadrePerGironeInput?.value || "0", 10);
-                    if (!totaleInput.value) {
-                        if (campVal > 0) {
-                            totaleInput.value = campVal;
-                        } else if (gironi > 0 && perGirone > 0) {
-                            totaleInput.value = gironi * perGirone;
-                        }
+                    const campVal = parseInt(campionatoInput?.value || '0', 10);
+                    const gironi = parseInt(numeroGironiInput?.value || '0', 10);
+                    const perGirone = parseInt(squadrePerGironeInput?.value || '0', 10);
+                    let computed = 0;
+
+                    if (campVal > 0) {
+                        computed = campVal;
+                    } else if (gironi > 0 && perGirone > 0) {
+                        computed = gironi * perGirone;
+                    }
+
+                    if (!computed) {
+                        return;
+                    }
+
+                    if (!totaleInput.value || totaleInput.dataset.auto === '1') {
+                        totaleInput.value = computed;
+                        totaleInput.dataset.auto = '1';
                     }
                 }
 
                 function updateEliminate(force = false) {
                     if (!eliminateInput) return;
-                    const tot = parseInt(totaleInput?.value || "0", 10);
-                    const gold = parseInt(goldInput?.value || "0", 10);
-                    const silver = parseInt(silverInput?.value || "0", 10);
+                    const tot = parseInt(totaleInput?.value || '0', 10);
+                    const gold = parseInt(goldInput?.value || '0', 10);
+                    const silver = getEffectiveSilverValue();
                     if (!tot) return;
                     const computed = Math.max(0, tot - gold - silver);
                     if (force || !eliminateInput.value || eliminateInput.dataset.auto === '1') {
@@ -1054,7 +1198,75 @@ if ($lista instanceof mysqli_result) {
                     }
                 }
 
-                function handleTipoChange(value) {
+                function resolveTeamCount() {
+                    const totale = parseInt(totaleInput?.value || '0', 10);
+                    const campionato = parseInt(campionatoInput?.value || '0', 10);
+                    const gironi = parseInt(numeroGironiInput?.value || '0', 10);
+                    const perGirone = parseInt(squadrePerGironeInput?.value || '0', 10);
+                    if (totale > 0) return totale;
+                    if (campionato > 0) return campionato;
+                    if (gironi > 0 && perGirone > 0) return gironi * perGirone;
+                    return 0;
+                }
+
+                function buildDefaultRegole() {
+                    if (getTipoValue() !== 'campionato') {
+                        return '';
+                    }
+
+                    const teamCount = resolveTeamCount();
+                    const gold = parseInt(goldInput?.value || '0', 10);
+                    const silver = getEffectiveSilverValue();
+                    const finaleValue = finaleSelect?.value || 'coppe';
+                    const teamLabel = teamCount > 0 ? String(teamCount) : 'X';
+                    const goldLabel = gold > 0 ? String(gold) : 'X';
+                    const silverStartLabel = gold > 0 ? String(gold + 1) : 'X';
+                    const silverEndLabel = gold > 0 && silver > 0 ? String(gold + silver) : 'X';
+
+                    const sections = [
+                        `Struttura del campionato: Il torneo è composto da ${teamLabel} squadre e si sviluppa in due fasi principali.`,
+                        `Fase 1 - Regular Season: Le ${teamLabel} squadre partecipano a una Regular Season di X giornate.\nLa squadra prima in classifica al termine del girone riceve il Trofeo Regular Season.`,
+                        finaleValue === 'gold'
+                            ? `Fase 2 - Coppe: Le squadre classificate dal 1° all'${goldLabel}° posto accedono alla Coppa Gold.\nLa Coppa Gold prevede una premiazione con trofeo per la vincitrice.`
+                            : `Fase 2 - Coppe: Le squadre classificate dal 1° all'${goldLabel}° posto accedono alla Coppa Gold.\nLe squadre classificate dal ${silverStartLabel}° al ${silverEndLabel}° posto accedono alla Coppa Silver.\nEntrambe le coppe prevedono una premiazione con trofeo per la vincitrice.`,
+                        `Premi finali: Dopo la finale di Coppa Gold verranno assegnati i seguenti riconoscimenti:\nMiglior Giocatore\nMiglior Portiere\nMiglior Difensore\nMiglior Attaccante`,
+                        `Regole di gioco: Ogni partita dura 2 tempi da 25 minuti.\nOgni squadra ha 1 chiamata VAR disponibile per partita.`,
+                        `Calendario: Le partite si disputano principalmente il mercoledi e il giovedi.\nIl calendario della settimana successiva viene pubblicato ogni giovedi o venerdi.`
+                    ];
+
+                    return sections.join('\n\n');
+                }
+
+                function syncRegole(force = false) {
+                    if (!regoleInput) return;
+                    const generated = buildDefaultRegole();
+                    const isAuto = regoleInput.dataset.auto === '1';
+                    const isEmpty = regoleInput.value.trim() === '';
+
+                    if (generated === '') {
+                        if (force || isAuto || isEmpty) {
+                            regoleInput.value = '';
+                            regoleInput.dataset.auto = '';
+                        }
+                        return;
+                    }
+
+                    if (force || isAuto || isEmpty) {
+                        regoleInput.value = generated;
+                        regoleInput.dataset.auto = '1';
+                    }
+                }
+
+                function syncFaseDependents() {
+                    const formula = getTipoValue();
+                    const finaleValue = finaleSelect?.value || '';
+                    const showSilver = formula !== 'eliminazione' && finaleValue === 'coppe';
+                    toggleSilverField(showSilver);
+                    updateEliminate(false);
+                    syncRegole(false);
+                }
+
+                function handleTipoChange(value, preferredFinale = '') {
                     const hasSelection = value === 'campionato' || value === 'girone' || value === 'eliminazione';
                     const showFinale = hasSelection && value !== 'eliminazione';
 
@@ -1064,71 +1276,122 @@ if ($lista instanceof mysqli_result) {
                     setRequired([campionatoInput], value === 'campionato');
                     setRequired([numeroGironiInput, squadrePerGironeInput], value === 'girone');
 
-                    toggleFinale(showFinale);
+                    toggleFinale(showFinale, value, preferredFinale);
                     toggleQualifiche(hasSelection && value !== 'eliminazione');
+                    updateTotale();
+                    syncFaseDependents();
                 }
 
+                if (tipoSelect) {
+                    tipoSelect.addEventListener('change', () => handleTipoChange(tipoSelect.value));
+                }
                 tipoRadios.forEach(radio => {
                     radio.addEventListener('change', () => handleTipoChange(radio.value));
                 });
 
+                if (finaleSelect) {
+                    finaleSelect.addEventListener('change', () => syncFaseDependents());
+                }
+
                 [campionatoInput, numeroGironiInput, squadrePerGironeInput].forEach(el => {
                     if (!el) return;
-                    el.addEventListener('change', () => {
+                    el.addEventListener('input', () => {
                         updateTotale();
                         updateEliminate(false);
+                        syncRegole(false);
                     });
                 });
 
                 [totaleInput, goldInput, silverInput].forEach(el => {
                     if (!el) return;
-                    el.addEventListener('input', () => updateEliminate(false));
+                    el.addEventListener('input', () => {
+                        if (el === totaleInput) {
+                            totaleInput.dataset.auto = '';
+                        }
+                        updateEliminate(false);
+                        syncRegole(false);
+                    });
                 });
                 if (eliminateInput) {
                     eliminateInput.addEventListener('input', () => eliminateInput.dataset.auto = '');
                 }
-
-                const preselected = tipoRadios.find(r => r.checked);
-                if (preselected) {
-                    handleTipoChange(preselected.value);
-                } else {
-                    handleTipoChange('');
+                if (regoleInput) {
+                    regoleInput.addEventListener('input', () => {
+                        regoleInput.dataset.auto = '';
+                    });
                 }
+                if (resetRegoleBtn) {
+                    resetRegoleBtn.addEventListener('click', () => syncRegole(true));
+                }
+
+                handleTipoChange(getTipoValue());
                 updateTotale();
+                syncRegole(false);
 
                 function applyConfig(cfg = {}) {
                     const formato = cfg.formato || cfg.formula_torneo || '';
-                    if (formato) {
-                        const radio = tipoRadios.find(r => r.value === formato);
-                        if (radio) {
-                            radio.checked = true;
-                            handleTipoChange(formato);
-                        }
-                    }
+                    setTipoValue(formato);
 
-                    const finaleVal = cfg.fase_finale || '';
-                    if (finaleVal) {
-                        const fRadio = finaleRadios.find(r => r.value === finaleVal);
-                        if (fRadio) fRadio.checked = true;
+                    if (campionatoInput) campionatoInput.value = cfg.campionato_squadre ?? '';
+                    if (numeroGironiInput) numeroGironiInput.value = cfg.numero_gironi ?? '';
+                    if (squadrePerGironeInput) squadrePerGironeInput.value = cfg.squadre_per_girone ?? '';
+                    if (totaleInput) totaleInput.value = cfg.totale_squadre ?? '';
+                    if (goldInput) goldInput.value = cfg.qualificati_gold ?? '';
+                    if (silverInput) {
+                        silverInput.value = cfg.qualificati_silver ?? '';
+                        silverInput.dataset.prevValue = cfg.qualificati_silver ?? '';
                     }
-
-                    if (campionatoInput && cfg.campionato_squadre) campionatoInput.value = cfg.campionato_squadre;
-                    if (numeroGironiInput && cfg.numero_gironi) numeroGironiInput.value = cfg.numero_gironi;
-                    if (squadrePerGironeInput && cfg.squadre_per_girone) squadrePerGironeInput.value = cfg.squadre_per_girone;
-                    if (totaleInput && cfg.totale_squadre) totaleInput.value = cfg.totale_squadre;
-                    if (goldInput && cfg.qualificati_gold !== undefined) goldInput.value = cfg.qualificati_gold;
-                    if (silverInput && cfg.qualificati_silver !== undefined) silverInput.value = cfg.qualificati_silver;
-                    if (eliminateInput && cfg.eliminate !== undefined) {
-                        eliminateInput.value = cfg.eliminate;
+                    if (eliminateInput) {
+                        eliminateInput.value = cfg.eliminate ?? '';
                         eliminateInput.dataset.auto = '';
                     }
+                    if (totaleInput) {
+                        totaleInput.dataset.auto = '';
+                    }
 
-                    handleTipoChange(formato);
+                    handleTipoChange(formato, cfg.fase_finale || '');
                     updateTotale();
                     updateEliminate(true);
+
+                    if (regoleInput) {
+                        const regoleValue = typeof cfg.regole_html === 'string' ? cfg.regole_html.trim() : '';
+                        if (regoleValue !== '') {
+                            regoleInput.value = cfg.regole_html;
+                            regoleInput.dataset.auto = '';
+                        } else {
+                            regoleInput.value = '';
+                            syncRegole(true);
+                        }
+                    }
                 }
 
-                return { applyConfig, handleTipoChange, updateTotale };
+                function reset() {
+                    setTipoValue('');
+                    if (campionatoInput) campionatoInput.value = '';
+                    if (numeroGironiInput) numeroGironiInput.value = '';
+                    if (squadrePerGironeInput) squadrePerGironeInput.value = '';
+                    if (totaleInput) totaleInput.value = '';
+                    if (goldInput) goldInput.value = '';
+                    if (silverInput) {
+                        silverInput.value = '';
+                        silverInput.dataset.prevValue = '';
+                        silverInput.disabled = false;
+                    }
+                    if (eliminateInput) {
+                        eliminateInput.value = '';
+                        eliminateInput.dataset.auto = '';
+                    }
+                    if (totaleInput) {
+                        totaleInput.dataset.auto = '';
+                    }
+                    if (regoleInput) {
+                        regoleInput.value = '';
+                        regoleInput.dataset.auto = '';
+                    }
+                    handleTipoChange('');
+                }
+
+                return { applyConfig, handleTipoChange, reset, updateTotale };
             }
 
             window.__torneoFormControllers__ = {
@@ -1147,7 +1410,6 @@ const campi = {
     file: document.getElementById('mod_file'),
     categoria: document.getElementById('mod_categoria')
 };
-const regoleField = document.getElementById('mod_regole_html');
 const modController = window.__torneoFormControllers__ ? window.__torneoFormControllers__.modifica : null;
 const configInputs = {
     campionato: document.getElementById('mod_campionato_squadre'),
@@ -1159,15 +1421,19 @@ const configInputs = {
     eliminate: document.getElementById('mod_eliminate')
 };
 const radioFormatiMod = Array.from(document.querySelectorAll('#formModifica input[name="formula_torneo"]'));
-const radioFaseMod = Array.from(document.querySelectorAll('#formModifica input[name="fase_finale"]'));
+const faseFinaleMod = document.getElementById('mod_fase_finale');
 
 function resetModFormConfig() {
+    if (modController && modController.reset) {
+        modController.reset();
+        return;
+    }
+
     radioFormatiMod.forEach(r => r.checked = false);
-    radioFaseMod.forEach(r => r.checked = false);
     Object.values(configInputs).forEach(el => { if (el) el.value = ''; });
-    if (regoleField) regoleField.value = '';
-    if (modController && modController.handleTipoChange) {
-        modController.handleTipoChange('');
+    if (faseFinaleMod) {
+        faseFinaleMod.innerHTML = '';
+        faseFinaleMod.value = '';
     }
 }
 
@@ -1202,19 +1468,25 @@ selectTorneo.addEventListener('change', async (e) => {
             campi.categoria.value = data.categoria || '';
 
             const cfg = parseConfig(data.config || {});
-            if (regoleField && typeof cfg.regole_html === 'string') {
-                regoleField.value = cfg.regole_html;
-            } else if (regoleField) {
-                regoleField.value = '';
-            }
-
             if (modController && modController.applyConfig) {
                 modController.applyConfig(cfg);
             } else {
                 const radio = radioFormatiMod.find(r => r.value === (cfg.formato || ''));
                 if (radio) radio.checked = true;
-                const fRadio = radioFaseMod.find(r => r.value === (cfg.fase_finale || ''));
-                if (fRadio) fRadio.checked = true;
+                if (faseFinaleMod) {
+                    faseFinaleMod.innerHTML = '';
+                    const finaleValue = cfg.fase_finale === 'gold' ? 'gold' : 'coppe';
+                    [
+                        { value: 'coppe', label: 'Coppa Gold e Silver' },
+                        { value: 'gold', label: 'Coppa Gold' }
+                    ].forEach(({ value, label }) => {
+                        const option = document.createElement('option');
+                        option.value = value;
+                        option.textContent = label;
+                        faseFinaleMod.appendChild(option);
+                    });
+                    faseFinaleMod.value = finaleValue;
+                }
                 if (configInputs.campionato && cfg.campionato_squadre) configInputs.campionato.value = cfg.campionato_squadre;
                 if (configInputs.gironi && cfg.numero_gironi) configInputs.gironi.value = cfg.numero_gironi;
                 if (configInputs.perGirone && cfg.squadre_per_girone) configInputs.perGirone.value = cfg.squadre_per_girone;
