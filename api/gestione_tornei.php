@@ -506,6 +506,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
     $config = buildTorneoConfigFromRequest($_POST);
     $torneo->aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete, $config);
+    creaFileTorneoDaTemplate($nome, $slug, $formulaTorneo, $faseFinale);
+
+    $filePrecedente = $record['filetorneo'] ?? '';
+    if ($filePrecedente && strcasecmp($filePrecedente, $filetorneo) !== 0) {
+        eliminaFileTorneo($filePrecedente);
+    }
 
     $torneoSlugCorrente = sanitizeTorneoSlug(cleanUtf8Text($_POST['torneo_slug_corrente'] ?? ''));
     $gironiSquadre = isset($_POST['gironi_squadre']) && is_array($_POST['gironi_squadre'])
