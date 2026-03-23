@@ -147,11 +147,27 @@ function scegliTemplatePerFormula(string $formula, string $faseFinale, string $b
         return $default;
     }
 
+    $coppaAfrica = [
+        'html' => $baseDir . '/Coppadafrica.php',
+        'js'   => $baseDir . '/script-Coppadafrica.js',
+    ];
+
     switch ($formula) {
         case 'campionato':
             return $default;
         case 'girone':
-            return $default;
+            if ($faseFinale === 'eliminazione_diretta' && file_exists($coppaAfrica['html']) && file_exists($coppaAfrica['js'])) {
+                return $coppaAfrica; // Gironi + eliminazione diretta stile Coppa d'Africa
+            }
+            if ($faseFinale === 'coppe' && file_exists($default['html']) && file_exists($default['js'])) {
+                return $default; // Gironi + Gold/Silver: usa template generico con entrambe le coppe
+            }
+            break;
+        case 'eliminazione':
+            if (file_exists($coppaAfrica['html']) && file_exists($coppaAfrica['js'])) {
+                return $coppaAfrica; // Eliminazione diretta: bracket stile Coppa d'Africa (Gold)
+            }
+            break;
         default:
             break;
     }
@@ -176,23 +192,13 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $fase
     }
 
     $htmlContent = file_get_contents($htmlTemplate);
-    if ($htmlContent === false) {
+    $jsContent = file_get_contents($jsTemplate);
+    if ($htmlContent === false || $jsContent === false) {
         return;
     }
 
+    $newScriptName = 'script-' . $slug . '.js';
     $templateSlug = basename($htmlTemplate, '.php');
-    $sharedScriptName = basename($jsTemplate);
-    $useSharedScript = $sharedScriptName === 'script-TorneoTemplate.js';
-    $newScriptName = $useSharedScript ? $sharedScriptName : 'script-' . $slug . '.js';
-
-    $jsContent = null;
-    if (!$useSharedScript) {
-        $jsContent = file_get_contents($jsTemplate);
-        if ($jsContent === false) {
-            return;
-        }
-    }
-
     // Rimpiazzi segnaposto del template scelto
     $htmlContent = str_replace(
         [
@@ -228,18 +234,17 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $fase
         $htmlContent
     );
 
-    $htmlContent = cleanUtf8Text($htmlContent);
-    @file_put_contents($baseDir . '/' . $slug . '.php', $htmlContent);
+    $jsContent = str_replace(
+        ['TorneoTemplate', 'SerieA', 'SerieB', 'Coppadafrica', $templateSlug],
+        [$slug, $slug, $slug, $slug, $slug],
+        $jsContent
+    );
 
-    if ($jsContent !== null) {
-        $jsContent = str_replace(
-            ['TorneoTemplate', 'SerieA', 'SerieB', 'Coppadafrica', $templateSlug],
-            [$slug, $slug, $slug, $slug, $slug],
-            $jsContent
-        );
-        $jsContent = cleanUtf8Text($jsContent);
-        @file_put_contents($baseDir . '/' . $newScriptName, $jsContent);
-    }
+    $htmlContent = cleanUtf8Text($htmlContent);
+    $jsContent = cleanUtf8Text($jsContent);
+
+    @file_put_contents($baseDir . '/' . $slug . '.php', $htmlContent);
+    @file_put_contents($baseDir . '/' . $newScriptName, $jsContent);
 }
 
 function eliminaFileTorneo($fileName) {
@@ -500,7 +505,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     }
     $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
     $config = buildTorneoConfigFromRequest($_POST);
-    $aggiornato = $torneo->aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete, $config);
+    $torneo->aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete, $config);
 
     $torneoSlugCorrente = sanitizeTorneoSlug(cleanUtf8Text($_POST['torneo_slug_corrente'] ?? ''));
     $gironiSquadre = isset($_POST['gironi_squadre']) && is_array($_POST['gironi_squadre'])
@@ -508,10 +513,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
         : [];
     if (($config['formato'] ?? '') === 'girone' && $torneoSlugCorrente !== '' && !empty($gironiSquadre)) {
         aggiornaGironiSquadreTorneo($conn ?? null, $torneoSlugCorrente, $gironiSquadre);
-    }
-
-    if ($aggiornato) {
-        creaFileTorneoDaTemplate($nome, $slug, (string)($config['formato'] ?? ''), (string)($config['fase_finale'] ?? ''));
     }
 
     header("Location: gestione_tornei.php");
