@@ -437,8 +437,8 @@ function mostraClassifica(classifica, partiteGiocate = []) {
   if (USE_COPPE && (!faseSelect || faseSelect.value === "girone")) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
-    const goldBox = useGold ? `<div class="box gold-box">? COPPA GOLD</div>` : "";
-    const silverBox = useSilver ? `<div class="box silver-box">? COPPA SILVER</div>` : "";
+    const goldBox = useGold ? `<div class="box gold-box">COPPA GOLD</div>` : "";
+    const silverBox = useSilver ? `<div class="box silver-box">COPPA SILVER</div>` : "";
     legenda.innerHTML = `${goldBox}${silverBox}` || `<div class="box">Coppe non configurate</div>`;
 
     const wrapper = document.getElementById("classificaWrapper");

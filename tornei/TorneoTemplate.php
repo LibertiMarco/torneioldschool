@@ -37,6 +37,23 @@ try {
 }
 
 if (!function_exists('renderRegoleMarkupFromText')) {
+    function decorateRegoleInline(string $text): string {
+        $placeholders = [
+            '__TROFEO_RS_START__' => '<span class="highlight">',
+            '__TROFEO_RS_END__' => '</span>',
+            '__COPPA_GOLD_START__' => '<span class="gold">',
+            '__COPPA_GOLD_END__' => '</span>',
+            '__COPPA_SILVER_START__' => '<span class="silver">',
+            '__COPPA_SILVER_END__' => '</span>',
+        ];
+
+        $text = str_replace('Trofeo Regular Season', '__TROFEO_RS_START__Trofeo Regular Season__TROFEO_RS_END__', $text);
+        $text = str_replace('Coppa Gold', '__COPPA_GOLD_START__Coppa Gold__COPPA_GOLD_END__', $text);
+        $text = str_replace('Coppa Silver', '__COPPA_SILVER_START__Coppa Silver__COPPA_SILVER_END__', $text);
+
+        return strtr(htmlspecialchars(trim($text), ENT_QUOTES, 'UTF-8'), $placeholders);
+    }
+
     function renderRegoleMarkupFromText(string $text): string {
         $blocks = preg_split("/\n\s*\n/u", trim($text));
         $markup = '';
@@ -50,14 +67,17 @@ if (!function_exists('renderRegoleMarkupFromText')) {
             $lines = preg_split("/\n/u", $block);
             $firstLine = trim((string)array_shift($lines));
             $title = '';
+            $titleSource = '';
             $bodyLines = [];
 
             if ($firstLine !== '' && strpos($firstLine, ':') !== false) {
                 [$rawTitle, $rest] = explode(':', $firstLine, 2);
                 $rawTitle = trim($rawTitle);
                 if ($rawTitle !== '') {
-                    $title = htmlspecialchars($rawTitle, ENT_QUOTES, 'UTF-8');
+                    $title = htmlspecialchars(str_replace(' - ', ' — ', $rawTitle), ENT_QUOTES, 'UTF-8');
                     $rest = trim($rest);
+                    $titleSource = $rawTitle;
+                    $title = str_replace(' - ', ' &mdash; ', htmlspecialchars($rawTitle, ENT_QUOTES, 'UTF-8'));
                     if ($rest !== '') {
                         $bodyLines[] = $rest;
                     }
@@ -79,8 +99,64 @@ if (!function_exists('renderRegoleMarkupFromText')) {
             if ($title !== '') {
                 $markup .= '<h3>' . $title . '</h3>';
             }
-            if (!empty($bodyLines)) {
-                $markup .= '<p>' . nl2br(htmlspecialchars(implode("\n", $bodyLines), ENT_QUOTES, 'UTF-8')) . '</p>';
+
+            $normalizedTitle = function_exists('mb_strtolower')
+                ? mb_strtolower(strip_tags($title), 'UTF-8')
+                : strtolower(strip_tags($title));
+            $normalizedTitle = function_exists('mb_strtolower')
+                ? mb_strtolower($titleSource, 'UTF-8')
+                : strtolower($titleSource);
+            $trimmedLines = array_values(array_filter(array_map(static function ($line) {
+                return trim((string)$line);
+            }, $bodyLines), static function ($line) {
+                return $line !== '';
+            }));
+
+            $allBullets = !empty($trimmedLines);
+            foreach ($trimmedLines as $line) {
+                if (!preg_match('/^[-*•]\s+/u', $line)) {
+                    $allBullets = false;
+                    break;
+                }
+            }
+
+            $useList = $allBullets || in_array($normalizedTitle, ['fase 2 — coppe', 'regole di gioco', 'calendario'], true);
+            $allBullets = !empty($trimmedLines);
+            foreach ($trimmedLines as $line) {
+                if (!preg_match('/^(?:[-*]|\x{2022})\s+/u', $line)) {
+                    $allBullets = false;
+                    break;
+                }
+            }
+            $useList = $allBullets || in_array($normalizedTitle, ['fase 2 - coppe', 'regole di gioco', 'calendario'], true);
+            $usePremiGrid = $normalizedTitle === 'premi finali' && count($trimmedLines) > 1;
+
+            if ($usePremiGrid) {
+                $intro = array_shift($trimmedLines);
+                if ($intro !== null && $intro !== '') {
+                    $markup .= '<p>' . decorateRegoleInline($intro) . '</p>';
+                }
+                if (!empty($trimmedLines)) {
+                    $markup .= '<div class="premi-grid">';
+                    foreach ($trimmedLines as $line) {
+                        $line = preg_replace('/^[-*•]\s+/u', '', $line);
+                        $line = preg_replace('/^(?:[-*]|\x{2022})\s+/u', '', $line);
+                        $markup .= '<span>' . decorateRegoleInline($line) . '</span>';
+                    }
+                    $markup .= '</div>';
+                }
+            } elseif ($useList) {
+                $markup .= '<ul>';
+                foreach ($trimmedLines as $line) {
+                    $line = preg_replace('/^[-*•]\s+/u', '', $line);
+                    $line = preg_replace('/^(?:[-*]|\x{2022})\s+/u', '', $line);
+                    $markup .= '<li>' . decorateRegoleInline($line) . '</li>';
+                }
+                $markup .= '</ul>';
+            } elseif (!empty($trimmedLines)) {
+                foreach ($trimmedLines as $line) {
+                    $markup .= '<p>' . decorateRegoleInline($line) . '</p>';
+                }
             }
             $markup .= '</div>';
         }
