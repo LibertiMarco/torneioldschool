@@ -102,16 +102,16 @@ function aggiornaGironiSquadreTorneo(?mysqli $dbConn, string $torneoSlug, array 
         return;
     }
 
-    $hasGirone = false;
     $check = @$dbConn->query("SHOW COLUMNS FROM squadre LIKE 'girone'");
-    if ($check && $check->num_rows > 0) {
-        $hasGirone = true;
+    if (!$check || $check->num_rows === 0) {
+        @$dbConn->query("ALTER TABLE squadre ADD COLUMN girone VARCHAR(32) DEFAULT NULL AFTER torneo");
+        $check = @$dbConn->query("SHOW COLUMNS FROM squadre LIKE 'girone'");
     }
-    if (!$hasGirone) {
-        return;
+    if (!$check || $check->num_rows === 0) {
+        throw new RuntimeException('Colonna girone non disponibile: ' . $dbConn->error);
     }
 
-    $stmt = $dbConn->prepare("UPDATE squadre SET girone = ? WHERE id = ? AND torneo = ?");
+    $stmt = $dbConn->prepare("UPDATE squadre SET girone = ? WHERE id = ?");
     if (!$stmt) {
         throw new RuntimeException('Prepare update gironi fallita: ' . $dbConn->error);
     }
@@ -127,7 +127,7 @@ function aggiornaGironiSquadreTorneo(?mysqli $dbConn, string $torneoSlug, array 
         $gironeValue = preg_replace('/^GRUPPO\s+/u', '', $gironeValue);
         $gironeValue = substr($gironeValue, 0, 32);
 
-        $stmt->bind_param("sis", $gironeValue, $teamId, $torneoSlug);
+        $stmt->bind_param("si", $gironeValue, $teamId);
         if (!$stmt->execute()) {
             $stmt->close();
             throw new RuntimeException('Execute update gironi fallita: ' . $stmt->error);
