@@ -84,13 +84,26 @@ function buildTorneoConfigFromRequest(array $src): array {
     return $config;
 }
 
-function aggiornaGironiSquadreTorneo(mysqli $conn, string $torneoSlug, array $gironiMap): void {
+function aggiornaGironiSquadreTorneo(?mysqli $dbConn, string $torneoSlug, array $gironiMap): void {
     if ($torneoSlug === '' || empty($gironiMap)) {
         return;
     }
 
+    if (!($dbConn instanceof mysqli)) {
+        global $conn;
+        if (!($conn instanceof mysqli)) {
+            require __DIR__ . '/../includi/db.php';
+        }
+        if ($conn instanceof mysqli) {
+            $dbConn = $conn;
+        }
+    }
+    if (!($dbConn instanceof mysqli)) {
+        return;
+    }
+
     $hasGirone = false;
-    $check = @$conn->query("SHOW COLUMNS FROM squadre LIKE 'girone'");
+    $check = @$dbConn->query("SHOW COLUMNS FROM squadre LIKE 'girone'");
     if ($check && $check->num_rows > 0) {
         $hasGirone = true;
     }
@@ -98,9 +111,9 @@ function aggiornaGironiSquadreTorneo(mysqli $conn, string $torneoSlug, array $gi
         return;
     }
 
-    $stmt = $conn->prepare("UPDATE squadre SET girone = ? WHERE id = ? AND torneo = ?");
+    $stmt = $dbConn->prepare("UPDATE squadre SET girone = ? WHERE id = ? AND torneo = ?");
     if (!$stmt) {
-        throw new RuntimeException('Prepare update gironi fallita: ' . $conn->error);
+        throw new RuntimeException('Prepare update gironi fallita: ' . $dbConn->error);
     }
 
     foreach ($gironiMap as $id => $girone) {
@@ -499,7 +512,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
         ? $_POST['gironi_squadre']
         : [];
     if (($config['formato'] ?? '') === 'girone' && $torneoSlugCorrente !== '' && !empty($gironiSquadre)) {
-        aggiornaGironiSquadreTorneo($conn, $torneoSlugCorrente, $gironiSquadre);
+        aggiornaGironiSquadreTorneo($conn ?? null, $torneoSlugCorrente, $gironiSquadre);
     }
 
     header("Location: gestione_tornei.php");
