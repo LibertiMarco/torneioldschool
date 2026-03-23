@@ -1104,6 +1104,18 @@ if ($lista instanceof mysqli_result) {
                     return [];
                 }
 
+                function getDefaultFinaleValue(formula) {
+                    if (formula === 'campionato') {
+                        return 'coppe';
+                    }
+
+                    if (formula === 'girone') {
+                        return 'eliminazione_diretta';
+                    }
+
+                    return '';
+                }
+
                 function normalizeFinaleValue(formula, value) {
                     if (formula === 'campionato') {
                         return value === 'gold' ? 'gold' : 'coppe';
@@ -1120,7 +1132,7 @@ if ($lista instanceof mysqli_result) {
                     if (!finaleSelect) return '';
 
                     const options = getFinaleOptions(formula);
-                    const currentValue = preferredValue || finaleSelect.value || '';
+                    const currentValue = preferredValue || getDefaultFinaleValue(formula);
                     finaleSelect.innerHTML = '';
 
                     options.forEach(({ value, label }) => {
