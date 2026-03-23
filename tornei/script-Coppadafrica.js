@@ -1,4 +1,7 @@
 ﻿const TORNEO = "Coppadafrica"; // Nome base del torneo nel DB (fase girone)
+const GROUP_LABELS = ["A", "B"];
+const TEAMS_PER_GROUP = 4;
+const QUALIFIED_PER_GROUP = 2;
 const GIRONE_CONFIG = {
   B: { ids: [], names: ["ALGERIA", "COSTA D'AVORIO", "GHANA", "NIGERIA"] },
   A: { ids: [], names: ["CAMERUN", "EGITTO", "MAROCCO", "SENEGAL"] },
@@ -95,9 +98,64 @@ function formattaDataOra(data, ora) {
   return base;
 }
 
+function normalizeGironeValue(value = "") {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/^GIRONE\s+/u, "")
+    .replace(/^GRUPPO\s+/u, "");
+}
+
+function normalizeTeamLookupName(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
 function faseKey(fase = "") {
   const f = (fase || "").trim().toUpperCase();
   return f === "" || f === "GIRONE" ? "REGULAR" : f;
+}
+
+async function loadSquadreGironi(torneoSlug = TORNEO) {
+  try {
+    const res = await fetch(`/api/get_squadre_torneo.php?torneo=${encodeURIComponent(torneoSlug)}`);
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.error("Errore nel caricamento gironi squadre", e);
+    return [];
+  }
+}
+
+function mergeGironiIntoClassifica(classifica = [], squadre = []) {
+  const byId = new Map();
+  const byName = new Map();
+
+  squadre.forEach((team) => {
+    const normalizedGirone = normalizeGironeValue(team?.girone);
+    const id = Number(team?.id);
+    if (Number.isFinite(id) && id > 0) {
+      byId.set(id, normalizedGirone);
+    }
+
+    const key = normalizeTeamLookupName(team?.nome);
+    if (key) {
+      byName.set(key, normalizedGirone);
+    }
+  });
+
+  return classifica.map((team) => {
+    const id = Number(team?.id);
+    const nameKey = normalizeTeamLookupName(team?.nome);
+    let girone = normalizeGironeValue(team?.girone);
+
+    if (Number.isFinite(id) && id > 0 && byId.has(id)) {
+      girone = byId.get(id);
+    } else if (nameKey && byName.has(nameKey)) {
+      girone = byName.get(nameKey);
+    }
+
+    return { ...team, girone };
+  });
 }
 
 async function loadPartiteTorneo() {
@@ -229,13 +287,18 @@ function nomeFaseDaGiornata(g) {
 // ====================== CLASSIFICA (GIRONE) ======================
 async function caricaClassifica(torneoSlug = TORNEO) {
   try {
-    const response = await fetch(`/api/leggiClassifica.php?torneo=${encodeURIComponent(torneoSlug)}`);
-    const data = await response.json();
+    const [response, squadreGironi] = await Promise.all([
+      fetch(`/api/leggiClassifica.php?torneo=${encodeURIComponent(torneoSlug)}`),
+      loadSquadreGironi(torneoSlug)
+    ]);
+    const rawData = await response.json();
 
-    if (data.error) {
-      console.error("Errore dal server:", data.error);
+    if (rawData.error) {
+      console.error("Errore dal server:", rawData.error);
       return;
     }
+
+    const data = mergeGironiIntoClassifica(rawData, squadreGironi);
 
     data.forEach(team => {
       if (team.logo) {
@@ -248,94 +311,146 @@ async function caricaClassifica(torneoSlug = TORNEO) {
     );
 
     mostraClassifica(data, partiteRegularGiocate);
-
-    // Clic su una squadra: mostra elenco partite giocate in Regular Season
-    document.querySelectorAll("#tableClassificaA tbody .team-cell, #tableClassificaB tbody .team-cell").forEach(cell => {
-      const squadra = cell.querySelector(".team-name")?.textContent.trim();
-      if (!squadra) return;
-
-      const apriPartite = (e) => {
-        if (e) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-        mostraPartiteSquadra(squadra);
-      };
-
-      cell.style.cursor = "pointer";
-      cell.setAttribute("role", "button");
-      cell.setAttribute("tabindex", "0");
-
-      cell.addEventListener("click", apriPartite);
-      cell.addEventListener("touchend", apriPartite, { passive: false });
-      cell.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") apriPartite(e);
-      });
-    });
+    bindClassificaTeamCells();
   } catch (error) {
     console.error("Errore nel caricamento della classifica:", error);
   }
 }
 
-function buildHeadToHeadMap(partiteGiocate = []) {
+function toClassificaNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function buildMiniClassificaMap(gruppo = [], partiteGiocate = []) {
+  const teamNames = new Set(
+    gruppo
+      .map((team) => normalizeTeamLookupName(team?.nome))
+      .filter(Boolean)
+  );
   const map = new Map();
 
-  partiteGiocate.forEach(p => {
-    const casa = p.squadra_casa || "";
-    const ospite = p.squadra_ospite || "";
-    if (!casa || !ospite) return;
+  gruppo.forEach((team) => {
+    map.set(normalizeTeamLookupName(team.nome), {
+      punti: 0,
+      gol_fatti: 0,
+      gol_subiti: 0,
+      differenza_reti: 0
+    });
+  });
 
-    const golCasa = Number(p.gol_casa);
-    const golOspite = Number(p.gol_ospite);
+  partiteGiocate.forEach((partita) => {
+    const casaKey = normalizeTeamLookupName(partita?.squadra_casa);
+    const ospiteKey = normalizeTeamLookupName(partita?.squadra_ospite);
+    if (!teamNames.has(casaKey) || !teamNames.has(ospiteKey)) return;
+
+    const golCasa = Number(partita?.gol_casa);
+    const golOspite = Number(partita?.gol_ospite);
     if (!Number.isFinite(golCasa) || !Number.isFinite(golOspite)) return;
 
-    const key = [casa, ospite].sort((a, b) => a.localeCompare(b, "it", { sensitivity: "base" })).join("|||");
-    if (!map.has(key)) {
-      const [t1, t2] = key.split("|||");
-      map.set(key, { t1, t2, points1: 0, points2: 0, matches: 0 });
-    }
+    const casaStats = map.get(casaKey);
+    const ospiteStats = map.get(ospiteKey);
+    if (!casaStats || !ospiteStats) return;
 
-    const entry = map.get(key);
-    entry.matches += 1;
+    casaStats.gol_fatti += golCasa;
+    casaStats.gol_subiti += golOspite;
+    casaStats.differenza_reti = casaStats.gol_fatti - casaStats.gol_subiti;
 
-    if (golCasa === golOspite) {
-      entry.points1 += 1;
-      entry.points2 += 1;
+    ospiteStats.gol_fatti += golOspite;
+    ospiteStats.gol_subiti += golCasa;
+    ospiteStats.differenza_reti = ospiteStats.gol_fatti - ospiteStats.gol_subiti;
+
+    if (golCasa > golOspite) {
+      casaStats.punti += 3;
+    } else if (golCasa < golOspite) {
+      ospiteStats.punti += 3;
     } else {
-      const winnerIsT1 =
-        (golCasa > golOspite && casa === entry.t1) ||
-        (golOspite > golCasa && ospite === entry.t1);
-      if (winnerIsT1) entry.points1 += 3;
-      else entry.points2 += 3;
+      casaStats.punti += 1;
+      ospiteStats.punti += 1;
     }
   });
 
   return map;
 }
 
-function headToHeadWinner(h2hMap, teamA, teamB) {
-  if (!teamA || !teamB) return null;
-  const key = [teamA, teamB].sort((a, b) => a.localeCompare(b, "it", { sensitivity: "base" })).join("|||");
-  const entry = h2hMap.get(key);
-  if (!entry || entry.matches === 0) return null;
-  if (entry.points1 === entry.points2) return null;
-  return entry.points1 > entry.points2 ? entry.t1 : entry.t2;
+function overallComparator(a, b) {
+  return toClassificaNumber(b.differenza_reti) - toClassificaNumber(a.differenza_reti) ||
+    toClassificaNumber(b.gol_fatti) - toClassificaNumber(a.gol_fatti) ||
+    a.nome.localeCompare(b.nome, "it", { sensitivity: "base" });
 }
 
-function ordinaGruppoPariPunti(gruppo, h2hMap) {
-  const diffComparator = (a, b) =>
-    (b.differenza_reti ?? 0) - (a.differenza_reti ?? 0) ||
-    (b.gol_fatti ?? 0) - (a.gol_fatti ?? 0) ||
-    a.nome.localeCompare(b.nome, "it", { sensitivity: "base" });
+function ordinaGruppoPariPunti(gruppo, partiteGiocate = []) {
+  const miniClassifica = buildMiniClassificaMap(gruppo, partiteGiocate);
 
-  if (gruppo.length === 2) {
-    const [t1, t2] = gruppo;
-    const winner = headToHeadWinner(h2hMap, t1.nome, t2.nome);
-    if (winner === t1.nome) return [t1, t2];
-    if (winner === t2.nome) return [t2, t1];
+  return gruppo.slice().sort((a, b) => {
+    const aStats = miniClassifica.get(normalizeTeamLookupName(a.nome)) || {};
+    const bStats = miniClassifica.get(normalizeTeamLookupName(b.nome)) || {};
+
+    return toClassificaNumber(bStats.punti) - toClassificaNumber(aStats.punti) ||
+      toClassificaNumber(bStats.differenza_reti) - toClassificaNumber(aStats.differenza_reti) ||
+      toClassificaNumber(bStats.gol_fatti) - toClassificaNumber(aStats.gol_fatti) ||
+      overallComparator(a, b);
+  });
+}
+
+function orderClassificaRows(classifica = [], partiteGiocate = []) {
+  const puntiValues = [...new Set(classifica.map((team) => toClassificaNumber(team.punti)))].sort((a, b) => b - a);
+  const ordered = [];
+
+  puntiValues.forEach((punti) => {
+    const gruppo = classifica.filter((team) => toClassificaNumber(team.punti) === punti);
+    ordered.push(...ordinaGruppoPariPunti(gruppo, partiteGiocate));
+  });
+
+  return ordered;
+}
+
+function resolveTeamGirone(team) {
+  const dbGirone = normalizeGironeValue(team?.girone);
+  if (GROUP_LABELS.includes(dbGirone)) {
+    return dbGirone;
   }
 
-  return gruppo.slice().sort(diffComparator);
+  const idNum = Number(team?.id);
+  const teamName = normalizeTeamLookupName(team?.nome);
+  const seedMatch = String(team?.nome || "").match(/\d+/);
+  const seed = seedMatch ? Number(seedMatch[0]) : NaN;
+  const matchesCfg = (cfg) =>
+    (Number.isFinite(idNum) && idNum > 0 && cfg.ids.includes(idNum)) ||
+    cfg.names.some((name) => normalizeTeamLookupName(name) === teamName) ||
+    (!Number.isNaN(seed) && cfg.ids.includes(seed));
+
+  if (matchesCfg(GIRONE_CONFIG.A)) return "A";
+  if (matchesCfg(GIRONE_CONFIG.B)) return "B";
+  return "";
+}
+
+function bindClassificaTeamCells() {
+  document.querySelectorAll("#tableClassificaA tbody .team-cell, #tableClassificaB tbody .team-cell").forEach((cell) => {
+    if (cell.dataset.bound === "1") return;
+
+    const squadra = cell.dataset.teamName || cell.querySelector(".team-name")?.textContent.trim();
+    if (!squadra) return;
+
+    const apriPartite = (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      mostraPartiteSquadra(squadra);
+    };
+
+    cell.style.cursor = "pointer";
+    cell.setAttribute("role", "button");
+    cell.setAttribute("tabindex", "0");
+    cell.dataset.bound = "1";
+
+    cell.addEventListener("click", apriPartite);
+    cell.addEventListener("touchend", apriPartite, { passive: false });
+    cell.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") apriPartite(e);
+    });
+  });
 }
 
 function mostraClassifica(classifica, partiteGiocate = []) {
@@ -344,70 +459,39 @@ function mostraClassifica(classifica, partiteGiocate = []) {
   if (tbodyA) tbodyA.innerHTML = "";
   if (tbodyB) tbodyB.innerHTML = "";
 
-  const h2hMap = buildHeadToHeadMap(partiteGiocate);
-
-  const ordina = (teams) => {
-    const puntiValues = [...new Set(teams.map(t => t.punti))].sort((a, b) => b - a);
-    const ordered = [];
-    puntiValues.forEach(punti => {
-      const gruppo = teams.filter(t => t.punti === punti);
-      ordered.push(...ordinaGruppoPariPunti(gruppo, h2hMap));
-    });
-    return ordered;
-  };
-
-  const normalizeId = (team) => Number(team.id);
-  const normalizeName = (name = "") => name.trim().toLowerCase();
-  const extractSeedFromName = (name = "") => {
-    const m = String(name).match(/\d+/);
-    return m ? Number(m[0]) : NaN;
-  };
-  const matchTeamToGirone = (team) => {
-    const idNum = normalizeId(team);
-    const name = normalizeName(team.nome);
-    const seed = extractSeedFromName(team.nome);
-    const matchesCfg = (cfg) =>
-      (idNum && cfg.ids.includes(idNum)) ||
-      cfg.names.some((n) => normalizeName(n) === name) ||
-      (!Number.isNaN(seed) && cfg.ids.includes(seed));
-    if (matchesCfg(GIRONE_CONFIG.A)) return "A";
-    if (matchesCfg(GIRONE_CONFIG.B)) return "B";
-    return "";
-  };
-
-  const gironeA = [];
-  const gironeB = [];
+  const groups = new Map(GROUP_LABELS.map((label) => [label, []]));
   const leftovers = [];
 
   classifica.forEach((team) => {
-    const g = matchTeamToGirone(team);
-    if (g === "A") gironeA.push(team);
-    else if (g === "B") gironeB.push(team);
-    else leftovers.push(team);
+    const girone = resolveTeamGirone(team);
+    if (groups.has(girone)) {
+      groups.get(girone).push(team);
+      return;
+    }
+    leftovers.push(team);
   });
 
-  let leftoversOrdered = ordina(leftovers);
+  let leftoversOrdered = orderClassificaRows(leftovers, partiteGiocate);
 
-  const fillGroup = (group, targetSize) => {
-    while (group.length < targetSize && leftoversOrdered.length) {
-      group.push(leftoversOrdered.shift());
+  const fillGroup = (rows) => {
+    while (rows.length < TEAMS_PER_GROUP && leftoversOrdered.length) {
+      rows.push(leftoversOrdered.shift());
     }
-    const orderedGroup = ordina(group).slice(0, targetSize);
-    group.splice(0, group.length, ...orderedGroup);
+    const orderedGroup = orderClassificaRows(rows, partiteGiocate).slice(0, TEAMS_PER_GROUP);
+    rows.splice(0, rows.length, ...orderedGroup);
   };
 
-  fillGroup(gironeA, 4);
-  fillGroup(gironeB, 4);
+  GROUP_LABELS.forEach((label) => fillGroup(groups.get(label)));
 
   const renderGroup = (rows, tbody) => {
     if (!tbody) return;
     rows.forEach((team, idx) => {
       const tr = document.createElement("tr");
-      if (idx + 1 <= 2) tr.classList.add("gold-row");
+      if (idx + 1 <= QUALIFIED_PER_GROUP) tr.classList.add("gold-row");
       const logoPath = resolveLogoPath(team.nome, team.logo);
       tr.innerHTML = `
         <td class="pos-cell">${idx + 1}</td>
-        <td class="team-cell">
+        <td class="team-cell" data-team-name="${team.nome}">
           <div class="team-info">
             <img src="${logoPath}" alt="${team.nome}" class="team-logo">
             <span class="team-name">${team.nome}</span>
@@ -426,8 +510,8 @@ function mostraClassifica(classifica, partiteGiocate = []) {
     });
   };
 
-  renderGroup(gironeA, tbodyA);
-  renderGroup(gironeB, tbodyB);
+  renderGroup(groups.get("A") || [], tbodyA);
+  renderGroup(groups.get("B") || [], tbodyB);
 
   // ======== GESTIONE LEGENDA ========
   const faseSelect = document.getElementById("faseSelect");
@@ -441,11 +525,11 @@ function mostraClassifica(classifica, partiteGiocate = []) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
-      <div class="box gold-box">Prime 2: accesso alle semifinali</div>
+      <div class="box gold-box">Prime ${QUALIFIED_PER_GROUP}: accesso alle semifinali</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
-    wrapper.after(legenda);
+    if (wrapper) wrapper.after(legenda);
   }
 }
 
