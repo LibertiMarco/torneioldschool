@@ -1086,6 +1086,12 @@ if ($lista instanceof mysqli_result) {
                     });
                 }
 
+                function setDisabled(inputs, value) {
+                    inputs.forEach(el => {
+                        if (el) el.disabled = value;
+                    });
+                }
+
                 function getFinaleOptions(formula) {
                     if (formula === 'campionato') {
                         return [
@@ -1161,18 +1167,21 @@ if ($lista instanceof mysqli_result) {
 
                     if (show) {
                         finaleBox.classList.remove('hidden');
+                        finaleSelect.disabled = false;
                         return syncFinaleOptions(formula, preferredValue);
                     }
 
                     finaleBox.classList.add('hidden');
                     finaleSelect.innerHTML = '';
                     finaleSelect.required = false;
+                    finaleSelect.disabled = true;
                     return '';
                 }
 
                 function toggleQualifiche(show) {
                     if (!qualificheBox) return;
                     qualificheBox.classList.toggle('hidden', !show);
+                    setDisabled([totaleInput, goldInput, silverInput, eliminateInput], !show);
                     if (!show) {
                         [totaleInput, goldInput, silverInput, eliminateInput].forEach(el => {
                             if (el) {
@@ -1372,6 +1381,8 @@ if ($lista instanceof mysqli_result) {
 
                     setRequired([campionatoInput], value === 'campionato');
                     setRequired([numeroGironiInput, squadrePerGironeInput], value === 'girone');
+                    setDisabled([campionatoInput], value !== 'campionato');
+                    setDisabled([numeroGironiInput, squadrePerGironeInput], value !== 'girone');
 
                     toggleFinale(showFinale, value, preferredFinale);
                     toggleQualifiche(hasSelection && value !== 'eliminazione');
