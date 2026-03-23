@@ -182,6 +182,8 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $fase
     }
 
     $nomePulito = cleanUtf8Text($nomeTorneo);
+    $formulaTorneo = strtolower(trim((string)($formulaTorneo ?? '')));
+    $faseFinale = strtolower(trim((string)($faseFinale ?? '')));
 
     // Sceglie il template piÃ¹ adatto in base alle scelte
     $templates = scegliTemplatePerFormula($formulaTorneo, $faseFinale, $baseDir);
@@ -503,6 +505,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     if (!$img && $record && !empty($record['img'])) {
         $img = $record['img'];
     }
+    $formulaTorneo = (string)($_POST['formula_torneo'] ?? '');
+    $faseFinale = (string)($_POST['fase_finale'] ?? '');
     $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
     $config = buildTorneoConfigFromRequest($_POST);
     $torneo->aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete, $config);
