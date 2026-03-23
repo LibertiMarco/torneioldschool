@@ -44,10 +44,7 @@ function normalizeFaseFinaleValue(string $formula, string $fase): string {
     }
 
     if ($formula === 'girone') {
-        if ($fase === 'eliminazione_diretta') {
-            return 'eliminazione_diretta';
-        }
-        return 'coppe';
+        return $fase === 'coppe' ? 'coppe' : 'eliminazione_diretta';
     }
 
     return '';
@@ -1099,8 +1096,8 @@ if ($lista instanceof mysqli_result) {
 
                     if (formula === 'girone') {
                         return [
-                            { value: 'coppe', label: 'Coppa Gold e Silver' },
-                            { value: 'eliminazione_diretta', label: 'Eliminazione diretta' }
+                            { value: 'eliminazione_diretta', label: 'Eliminazione diretta' },
+                            { value: 'coppe', label: 'Coppa Gold e Silver' }
                         ];
                     }
 
@@ -1113,7 +1110,7 @@ if ($lista instanceof mysqli_result) {
                     }
 
                     if (formula === 'girone') {
-                        return value === 'eliminazione_diretta' ? 'eliminazione_diretta' : 'coppe';
+                        return value === 'coppe' ? 'coppe' : 'eliminazione_diretta';
                     }
 
                     return '';
@@ -1313,9 +1310,9 @@ if ($lista instanceof mysqli_result) {
                         return [
                             `Struttura del torneo: Il torneo e composto da ${teamLabel} squadre suddivise in ${gironiLabel} gironi da ${perGironeLabel} squadre.`,
                             `Fase 1 - Gironi: Le squadre disputano la Regular Season all'interno del proprio girone.`,
-                            finaleValue === 'gold'
-                                ? `Fase 2 - Coppe: Le prime ${goldPerGironeLabel} squadre di ogni girone accedono alla Coppa Gold.\nLa Coppa Gold prevede una premiazione con trofeo per la vincitrice.`
-                                : `Fase 2 - Coppe: Le prime ${goldPerGironeLabel} squadre di ogni girone accedono alla Coppa Gold.\nLe successive ${silverPerGironeLabel} squadre di ogni girone accedono alla Coppa Silver.\nEntrambe le coppe prevedono una premiazione con trofeo per la vincitrice.`,
+                            finaleValue === 'coppe'
+                                ? `Fase 2 - Coppe: Le prime ${goldPerGironeLabel} squadre di ogni girone accedono alla Coppa Gold.\nLe successive ${silverPerGironeLabel} squadre di ogni girone accedono alla Coppa Silver.\nEntrambe le coppe prevedono una premiazione con trofeo per la vincitrice.`
+                                : `Fase 2 - Eliminazione diretta: Le prime ${goldPerGironeLabel} squadre di ogni girone accedono alla fase finale a eliminazione diretta.\nLa fase finale prevede una premiazione con trofeo per la vincitrice.`,
                             `Premi finali: Dopo la finale di Coppa Gold verranno assegnati i seguenti riconoscimenti:\nMiglior Giocatore\nMiglior Portiere\nMiglior Difensore\nMiglior Attaccante`,
                             `Regole di gioco: Ogni partita dura 2 tempi da 25 minuti.\nOgni squadra ha 1 chiamata VAR disponibile per partita.`,
                             `Calendario: Le partite si disputano principalmente il mercoledi e il giovedi.\nIl calendario della settimana successiva viene pubblicato ogni giovedi o venerdi.`
@@ -1712,11 +1709,20 @@ selectTorneo.addEventListener('change', async (e) => {
                 }
                 if (faseFinaleMod) {
                     faseFinaleMod.innerHTML = '';
-                    const finaleValue = cfg.fase_finale === 'gold' ? 'gold' : 'coppe';
-                    [
-                        { value: 'coppe', label: 'Coppa Gold e Silver' },
-                        { value: 'gold', label: 'Coppa Gold' }
-                    ].forEach(({ value, label }) => {
+                    const formulaValue = cfg.formato || cfg.formula_torneo || '';
+                    const options = formulaValue === 'girone'
+                        ? [
+                            { value: 'eliminazione_diretta', label: 'Eliminazione diretta' },
+                            { value: 'coppe', label: 'Coppa Gold e Silver' }
+                        ]
+                        : [
+                            { value: 'coppe', label: 'Coppa Gold e Silver' },
+                            { value: 'gold', label: 'Coppa Gold' }
+                        ];
+                    const finaleValue = formulaValue === 'girone'
+                        ? (cfg.fase_finale === 'coppe' ? 'coppe' : 'eliminazione_diretta')
+                        : (cfg.fase_finale === 'gold' ? 'gold' : 'coppe');
+                    options.forEach(({ value, label }) => {
                         const option = document.createElement('option');
                         option.value = value;
                         option.textContent = label;
