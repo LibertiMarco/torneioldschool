@@ -16,16 +16,25 @@ require_once __DIR__ . '/../includi/db.php';
 
 $filenamePhp = $slug . '.php';
 $filenameHtml = $slug . '.html';
-$stmt = $conn->prepare("SELECT nome, img, categoria FROM tornei WHERE filetorneo IN (?, ?) ORDER BY (filetorneo LIKE '%.php') DESC LIMIT 1");
+$stmt = $conn->prepare("SELECT nome, img, categoria, config FROM tornei WHERE filetorneo IN (?, ?) ORDER BY (filetorneo LIKE '%.php') DESC LIMIT 1");
 $stmt->bind_param('ss', $filenamePhp, $filenameHtml);
 $stmt->execute();
 $result = $stmt->get_result();
 
 if ($row = $result->fetch_assoc()) {
+    $config = [];
+    if (!empty($row['config'])) {
+        $decoded = json_decode((string)$row['config'], true);
+        if (is_array($decoded)) {
+            $config = $decoded;
+        }
+    }
+
     echo json_encode([
         'nome' => $row['nome'],
         'img' => $row['img'],
-        'categoria' => $row['categoria']
+        'categoria' => $row['categoria'],
+        'config' => $config
     ]);
 } else {
     echo json_encode(['error' => 'Torneo non trovato']);

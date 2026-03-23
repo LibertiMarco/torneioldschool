@@ -5,6 +5,41 @@ const teamLogos = {};
 const favState = { tournaments: new Set(), teams: new Set() };
 let currentRosaTeam = "";
 let partiteCache = null;
+let gironiHelperPromise = null;
+
+function ensureGironiHelper() {
+  if (window.TorneoGironiHelper) {
+    return Promise.resolve(window.TorneoGironiHelper);
+  }
+
+  if (!gironiHelperPromise) {
+    gironiHelperPromise = new Promise(resolve => {
+      const existing = document.querySelector('script[data-torneo-gironi-helper="1"]');
+      if (existing) {
+        if (window.TorneoGironiHelper) {
+          resolve(window.TorneoGironiHelper);
+          return;
+        }
+        existing.addEventListener("load", () => resolve(window.TorneoGironiHelper || null), { once: true });
+        existing.addEventListener("error", () => resolve(null), { once: true });
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = "script-gironi-helper.js";
+      script.async = true;
+      script.dataset.torneoGironiHelper = "1";
+      script.onload = () => resolve(window.TorneoGironiHelper || null);
+      script.onerror = () => {
+        console.error("Errore nel caricamento helper gironi");
+        resolve(null);
+      };
+      document.head.appendChild(script);
+    });
+  }
+
+  return gironiHelperPromise;
+}
 
 function teamKey(name = "") {
   return `${TORNEO}|||${name}`;
@@ -261,31 +296,69 @@ async function caricaClassifica(torneoSlug = TORNEO) {
       p => Number(p.giocata) === 1 && faseKey(p.fase) === "REGULAR"
     );
 
-    mostraClassifica(data, partiteRegularGiocate);
-
-    // Clic su una squadra: mostra elenco partite giocate in Regular Season
-    document.querySelectorAll("#tableClassifica tbody .team-cell").forEach(cell => {
-      const squadra = cell.querySelector(".team-name")?.textContent.trim();
-      if (!squadra) return;
-
-      const apriPartite = (e) => {
-        if (e) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-        mostraPartiteSquadra(squadra);
-      };
-
-      cell.style.cursor = "pointer";
-      cell.setAttribute("role", "button");
-      cell.setAttribute("tabindex", "0");
-
-      cell.addEventListener("click", apriPartite);
-      cell.addEventListener("touchend", apriPartite, { passive: false });
-      cell.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") apriPartite(e);
-      });
+    const gironiHelper = await ensureGironiHelper();
+    const torneoInfo = gironiHelper ? await gironiHelper.loadTorneoInfo(torneoSlug || TORNEO) : null;
+    const groupedSetup = gironiHelper?.renderGroupedClassifica({
+      classifica: data,
+      partiteGiocate: partiteRegularGiocate,
+      torneoInfo,
+      orderRows: orderClassificaRows,
+      resolveLogoPath,
+      fallbackGoldSpots: 16,
+      fallbackSilverSpots: Math.max(data.length - 16, 0)
     });
+
+    if (groupedSetup) {
+      const faseSelect = document.getElementById("faseSelect");
+      const legendaEsistente = document.querySelector(".legenda-coppe");
+      if (legendaEsistente) legendaEsistente.remove();
+
+      if (!faseSelect || faseSelect.value === "girone") {
+        const goldBox = groupedSetup.goldPerGroup > 0
+          ? `<div class="box gold-box">Prime ${groupedSetup.goldPerGroup} di ogni girone: COPPA GOLD</div>`
+          : "";
+        const silverBox = groupedSetup.silverPerGroup > 0
+          ? `<div class="box silver-box">Successive ${groupedSetup.silverPerGroup} di ogni girone: COPPA SILVER</div>`
+          : "";
+        if (goldBox || silverBox) {
+          const legenda = document.createElement("div");
+          legenda.classList.add("legenda-coppe");
+          legenda.innerHTML = `${goldBox}${silverBox}`;
+          const wrapper = document.getElementById("classificaWrapper");
+          if (wrapper) wrapper.after(legenda);
+        }
+      }
+    } else {
+      gironiHelper?.resetGroupedClassifica();
+      mostraClassifica(data, partiteRegularGiocate);
+    }
+
+    if (gironiHelper?.bindClassificaTeamCells) {
+      gironiHelper.bindClassificaTeamCells(document, mostraPartiteSquadra);
+    } else {
+      document.querySelectorAll("#tableClassifica tbody .team-cell").forEach(cell => {
+        const squadra = cell.querySelector(".team-name")?.textContent.trim();
+        if (!squadra) return;
+
+        const apriPartite = (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          mostraPartiteSquadra(squadra);
+        };
+
+        cell.style.cursor = "pointer";
+        cell.setAttribute("role", "button");
+        cell.setAttribute("tabindex", "0");
+
+        cell.addEventListener("click", apriPartite);
+        cell.addEventListener("touchend", apriPartite, { passive: false });
+        cell.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") apriPartite(e);
+        });
+      });
+    }
   } catch (error) {
     console.error("Errore nel caricamento della classifica:", error);
   }
@@ -350,6 +423,20 @@ function ordinaGruppoPariPunti(gruppo, h2hMap) {
   }
 
   return gruppo.slice().sort(diffComparator);
+}
+
+function orderClassificaRows(classifica, partiteGiocate = []) {
+  const h2hMap = buildHeadToHeadMap(partiteGiocate);
+  const puntiValues = [...new Set(classifica.map(team => Number(team.punti) || 0))].sort((a, b) => b - a);
+  const orderedTeams = [];
+
+  puntiValues.forEach(punti => {
+    const gruppo = classifica.filter(t => (Number(t.punti) || 0) === punti);
+    const ordinati = ordinaGruppoPariPunti(gruppo, h2hMap);
+    orderedTeams.push(...ordinati);
+  });
+
+  return orderedTeams;
 }
 
 function mostraClassifica(classifica, partiteGiocate = []) {
