@@ -20,9 +20,16 @@ if (empty($torneo)) {
 }
 
 // --- QUERY CLASSIFICA ---
+$hasGirone = false;
+$gironeCheck = @$conn->query("SHOW COLUMNS FROM squadre LIKE 'girone'");
+if ($gironeCheck && $gironeCheck->num_rows > 0) {
+  $hasGirone = true;
+}
+
+$gironeSelect = $hasGirone ? ", girone" : ", NULL AS girone";
 $sql = "
   SELECT id, nome, torneo, logo, punti, giocate, vinte, pareggiate, perse, 
-         gol_fatti, gol_subiti, differenza_reti
+         gol_fatti, gol_subiti, differenza_reti{$gironeSelect}
   FROM squadre
   WHERE torneo = '$torneo'
   ORDER BY punti DESC, differenza_reti DESC, gol_fatti DESC, gol_subiti ASC, nome ASC

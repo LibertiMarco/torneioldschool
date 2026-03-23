@@ -15,8 +15,9 @@ $squadre = [];
 while ($row = $result->fetch_assoc()) {
     // ritorno solo quello che serve per riempire la tendina
     $squadre[] = [
-        'id'   => $row['id'],
-        'nome' => $row['nome']
+        'id'     => $row['id'],
+        'nome'   => $row['nome'],
+        'girone' => $row['girone'] ?? ''
     ];
 }
 

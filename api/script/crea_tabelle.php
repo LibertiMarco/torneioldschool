@@ -40,6 +40,7 @@ $sql_squadre = "CREATE TABLE IF NOT EXISTS squadre (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
     torneo VARCHAR(255) NOT NULL,
+    girone VARCHAR(32) DEFAULT NULL,
     punti INT DEFAULT 0,
     giocate INT DEFAULT 0,
     vinte INT DEFAULT 0,

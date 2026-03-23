@@ -2,10 +2,145 @@
 class squadra {
     private $conn;
     private $table = "squadre";
+    private $hasGirone = false;
 
     public function __construct() {
         require __DIR__ . '/../../includi/db.php';
         $this->conn = $conn;
+        $this->hasGirone = $this->ensureGironeColumn();
+    }
+
+    private function ensureGironeColumn(): bool {
+        if (!$this->conn) {
+            return false;
+        }
+
+        $check = @$this->conn->query("SHOW COLUMNS FROM {$this->table} LIKE 'girone'");
+        if ($check && $check->num_rows > 0) {
+            return true;
+        }
+
+        @$this->conn->query("ALTER TABLE {$this->table} ADD COLUMN girone VARCHAR(32) DEFAULT NULL AFTER torneo");
+        $check = @$this->conn->query("SHOW COLUMNS FROM {$this->table} LIKE 'girone'");
+        return $check && $check->num_rows > 0;
+    }
+
+    private function normalizeGirone(?string $value): ?string {
+        $value = strtoupper(trim((string)$value));
+        if ($value === '') {
+            return null;
+        }
+        return substr($value, 0, 32);
+    }
+
+    private function buildGironeLabels(int $count): array {
+        $labels = [];
+        for ($i = 0; $i < $count; $i++) {
+            $n = $i;
+            $label = '';
+            do {
+                $label = chr(65 + ($n % 26)) . $label;
+                $n = intdiv($n, 26) - 1;
+            } while ($n >= 0);
+            $labels[] = $label;
+        }
+        return $labels;
+    }
+
+    private function getTorneoConfig(string $torneo): array {
+        if (!$this->conn || $torneo === '') {
+            return [];
+        }
+
+        $filetorneo = preg_replace('/\.(php|html)$/i', '', $torneo) . '.php';
+        $stmt = $this->conn->prepare("SELECT config FROM tornei WHERE filetorneo = ? LIMIT 1");
+        if (!$stmt) {
+            return [];
+        }
+
+        $stmt->bind_param("s", $filetorneo);
+        if (!$stmt->execute()) {
+            $stmt->close();
+            return [];
+        }
+
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$row || empty($row['config'])) {
+            return [];
+        }
+
+        $config = json_decode((string)$row['config'], true);
+        return is_array($config) ? $config : [];
+    }
+
+    private function resolveAutoGironeForTorneo(string $torneo, ?int $excludeId = null): ?string {
+        if (!$this->hasGirone || $torneo === '') {
+            return null;
+        }
+
+        $config = $this->getTorneoConfig($torneo);
+        $formato = strtolower(trim((string)($config['formato'] ?? $config['formula_torneo'] ?? '')));
+        $numeroGironi = max(0, (int)($config['numero_gironi'] ?? 0));
+        $squadrePerGirone = max(0, (int)($config['squadre_per_girone'] ?? 0));
+
+        if ($formato !== 'girone' || $numeroGironi <= 0 || $squadrePerGirone <= 0) {
+            return null;
+        }
+
+        $labels = $this->buildGironeLabels($numeroGironi);
+        $counts = array_fill_keys($labels, 0);
+
+        $sql = "SELECT girone, COUNT(*) AS cnt FROM {$this->table} WHERE torneo = ?";
+        $types = "s";
+        $params = [$torneo];
+        if ($excludeId !== null && $excludeId > 0) {
+            $sql .= " AND id <> ?";
+            $types .= "i";
+            $params[] = $excludeId;
+        }
+        $sql .= " GROUP BY girone";
+
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return $labels[0] ?? null;
+        }
+
+        $stmt->bind_param($types, ...$params);
+        if ($stmt->execute()) {
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $girone = $this->normalizeGirone($row['girone'] ?? null);
+                if ($girone !== null && array_key_exists($girone, $counts)) {
+                    $counts[$girone] = (int)$row['cnt'];
+                }
+            }
+        }
+        $stmt->close();
+
+        foreach ($labels as $label) {
+            if (($counts[$label] ?? 0) < $squadrePerGirone) {
+                return $label;
+            }
+        }
+
+        return $labels[0] ?? null;
+    }
+
+    private function resolveGironeForUpdate(array $existing, string $torneo, int $id): ?string {
+        if (!$this->hasGirone) {
+            return null;
+        }
+
+        $currentGirone = $this->normalizeGirone($existing['girone'] ?? null);
+        $currentTorneo = (string)($existing['torneo'] ?? '');
+
+        if ($currentTorneo === $torneo && $currentGirone !== null) {
+            return $currentGirone;
+        }
+
+        return $this->resolveAutoGironeForTorneo($torneo, $id);
     }
 
     public function getAll() {
@@ -20,27 +155,52 @@ class squadra {
     }
 
     public function crea($nome, $torneo, $logo = null) {
+        if ($this->hasGirone) {
+            $girone = $this->resolveAutoGironeForTorneo($torneo);
+            $stmt = $this->conn->prepare("INSERT INTO {$this->table} (nome, torneo, girone, logo) VALUES (?, ?, ?, ?)");
+            $stmt->bind_param("ssss", $nome, $torneo, $girone, $logo);
+            return $stmt->execute();
+        }
+
         $stmt = $this->conn->prepare("INSERT INTO {$this->table} (nome, torneo, logo) VALUES (?, ?, ?)");
         $stmt->bind_param("sss", $nome, $torneo, $logo);
         return $stmt->execute();
     }
 
     public function aggiorna($id, $nome, $torneo, $punti, $giocate, $vinte, $pareggiate, $perse, $gol_fatti, $gol_subiti, $differenza_reti, $logo = null) {
-        $fields = "nome=?, torneo=?, punti=?, giocate=?, vinte=?, pareggiate=?, perse=?, gol_fatti=?, gol_subiti=?, differenza_reti=?";
-        $types = "ssiiiiiiii";
-        $params = [$nome, $torneo, $punti, $giocate, $vinte, $pareggiate, $perse, $gol_fatti, $gol_subiti, $differenza_reti];
+        $existing = $this->getById($id) ?: [];
+        $fields = ["nome=?", "torneo=?"];
+        $types = "ss";
+        $params = [$nome, $torneo];
+
+        if ($this->hasGirone) {
+            $fields[] = "girone=?";
+            $types .= "s";
+            $params[] = $this->resolveGironeForUpdate($existing, $torneo, $id);
+        }
 
         if ($logo !== null) {
-            $fields = "nome=?, torneo=?, logo=?, punti=?, giocate=?, vinte=?, pareggiate=?, perse=?, gol_fatti=?, gol_subiti=?, differenza_reti=?";
-            $types = "sssiiiiiiii";
-            array_splice($params, 2, 0, $logo);
+            $fields[] = "logo=?";
+            $types .= "s";
+            $params[] = $logo;
         }
+
+        $fields[] = "punti=?";
+        $fields[] = "giocate=?";
+        $fields[] = "vinte=?";
+        $fields[] = "pareggiate=?";
+        $fields[] = "perse=?";
+        $fields[] = "gol_fatti=?";
+        $fields[] = "gol_subiti=?";
+        $fields[] = "differenza_reti=?";
+        $types .= "iiiiiiii";
+        array_push($params, $punti, $giocate, $vinte, $pareggiate, $perse, $gol_fatti, $gol_subiti, $differenza_reti);
 
         $params[] = $id;
 
         $stmt = $this->conn->prepare("
             UPDATE {$this->table}
-            SET $fields
+            SET " . implode(", ", $fields) . "
             WHERE id=?
         ");
         $stmt->bind_param($types . "i", ...$params);
@@ -77,6 +237,30 @@ class squadra {
         $stmt->bind_param("ss", $nome, $torneo);
         $stmt->execute();
         return $stmt->get_result()->fetch_assoc();
+    }
+
+    public function aggiornaGironiTorneo(string $torneo, array $gironiMap): void {
+        if (!$this->hasGirone || $torneo === '') {
+            return;
+        }
+
+        $stmt = $this->conn->prepare("UPDATE {$this->table} SET girone = ? WHERE id = ? AND torneo = ?");
+        if (!$stmt) {
+            return;
+        }
+
+        foreach ($gironiMap as $id => $girone) {
+            $teamId = (int)$id;
+            if ($teamId <= 0) {
+                continue;
+            }
+
+            $normalizedGirone = $this->normalizeGirone(is_scalar($girone) ? (string)$girone : null) ?? '';
+            $stmt->bind_param("sis", $normalizedGirone, $teamId, $torneo);
+            $stmt->execute();
+        }
+
+        $stmt->close();
     }
 
     public function eliminaByTorneo($torneo) {

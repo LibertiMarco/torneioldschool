@@ -270,6 +270,105 @@ if (!empty($torneoConfig['regole_html'])) {
       font-size: 13px;
       letter-spacing: 0.2px;
     }
+    .gironi-grid {
+      display: none;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+    }
+    .gironi-grid.is-active {
+      display: grid;
+    }
+    .girone-box {
+      position: relative;
+    }
+    .girone-box h3 {
+      margin: 0 0 8px;
+      color: #15293e;
+      position: sticky;
+      top: 0;
+      z-index: 9;
+      padding: 10px 10px 8px;
+      background: linear-gradient(145deg, #f7f9fc, #eef2f7);
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(21, 41, 62, 0.08);
+    }
+    .girone-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .gironi-grid table {
+      width: 100%;
+      table-layout: fixed;
+      min-width: 720px;
+    }
+    .gironi-grid table th,
+    .gironi-grid table td {
+      text-align: center;
+      padding: 10px 8px;
+      vertical-align: middle;
+      background: #fff;
+      white-space: nowrap;
+    }
+    .gironi-grid table th {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+    }
+    .gironi-grid table th:nth-child(1),
+    .gironi-grid table td:nth-child(1) {
+      position: sticky;
+      left: 0;
+      min-width: 40px;
+      width: 40px;
+      z-index: 6;
+      background: #fff;
+    }
+    .gironi-grid table th:nth-child(2),
+    .gironi-grid table td:nth-child(2) {
+      position: sticky;
+      left: 40px;
+      min-width: 170px;
+      width: 170px;
+      z-index: 5;
+      background: #fff;
+      text-align: left;
+    }
+    .gironi-grid table th:nth-child(n+3),
+    .gironi-grid table td:nth-child(n+3) {
+      width: 10%;
+    }
+    .gironi-grid .team-cell .team-info {
+      display: inline-flex;
+      justify-content: flex-start;
+      align-items: center;
+      gap: 6px;
+    }
+    .gironi-grid .team-cell {
+      text-align: left;
+    }
+    .gironi-grid .team-logo {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      display: block;
+    }
+    .gironi-grid tr.gold-row td:first-child {
+      font-weight: 800;
+      background: #ffd700 !important;
+      color: #15293e !important;
+    }
+    .gironi-grid tr.silver-row td:first-child {
+      font-weight: 800;
+      background: #d9dee8 !important;
+      color: #15293e !important;
+    }
+    .gironi-grid tr.placeholder-row td {
+      background: #f8fafc;
+      color: #7b8798;
+    }
+    .gironi-grid .team-cell--placeholder {
+      font-style: italic;
+    }
     #marcatori {
       margin-bottom: 48px;
     }
@@ -354,6 +453,7 @@ if (!empty($torneoConfig['regole_html'])) {
           </thead>
           <tbody></tbody>
         </table>
+        <div id="gironiGrid" class="gironi-grid"></div>
       </div>
 
       <div id="playoffContainer" style="display:none;">

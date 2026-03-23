@@ -23,15 +23,58 @@ const configTeamCount = (() => {
 })();
 
 const TEAM_COUNT = configTeamCount > 0 ? configTeamCount : DEFAULT_TEAM_COUNT;
+const FORMATO_TORNEO = String(CONFIG.formato || CONFIG.formula_torneo || "").trim().toLowerCase();
+const GROUP_COUNT = Math.max(0, toNumber(CONFIG.numero_gironi, 0));
+const TEAMS_PER_GROUP = Math.max(0, toNumber(CONFIG.squadre_per_girone, 0));
 const rawGold = Object.prototype.hasOwnProperty.call(CONFIG, "qualificati_gold") ? toNumber(CONFIG.qualificati_gold, 0) : NaN;
 const GOLD_SPOTS = Number.isFinite(rawGold) ? Math.max(0, rawGold) : DEFAULT_GOLD;
 const rawSilver = Object.prototype.hasOwnProperty.call(CONFIG, "qualificati_silver") ? toNumber(CONFIG.qualificati_silver, 0) : NaN;
 const SILVER_SPOTS = Number.isFinite(rawSilver) ? Math.max(0, rawSilver) : Math.max(TEAM_COUNT - GOLD_SPOTS, 0);
+const USE_GROUP_TABLES = GROUP_COUNT > 0 && TEAMS_PER_GROUP > 0 && FORMATO_TORNEO !== "campionato" && FORMATO_TORNEO !== "eliminazione";
+const GOLD_PER_GROUP = USE_GROUP_TABLES && GROUP_COUNT > 0 ? Math.floor(GOLD_SPOTS / GROUP_COUNT) : 0;
+const SILVER_PER_GROUP = USE_GROUP_TABLES && GROUP_COUNT > 0 ? Math.floor(SILVER_SPOTS / GROUP_COUNT) : 0;
 const USE_COPPE = GOLD_SPOTS > 0 || SILVER_SPOTS > 0;
 const teamLogos = {};
 const favState = { tournaments: new Set(), teams: new Set() };
 let currentRosaTeam = "";
 let partiteCache = null;
+
+function indexToLetters(index) {
+  let n = Number(index);
+  if (!Number.isFinite(n) || n < 0) return "";
+  let label = "";
+  do {
+    label = String.fromCharCode(65 + (n % 26)) + label;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return label;
+}
+
+function buildConfiguredGroupLabels(count = GROUP_COUNT) {
+  return Array.from({ length: Math.max(0, count) }, (_, idx) => indexToLetters(idx));
+}
+
+function normalizeGironeValue(value = "") {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/^GIRONE\s+/u, "")
+    .replace(/^GRUPPO\s+/u, "");
+}
+
+function orderClassificaRows(classifica = [], partiteGiocate = []) {
+  const h2hMap = buildHeadToHeadMap(partiteGiocate);
+  const puntiValues = [...new Set(classifica.map(team => Number(team.punti) || 0))].sort((a, b) => b - a);
+  const orderedTeams = [];
+
+  puntiValues.forEach(punti => {
+    const gruppo = classifica.filter(t => (Number(t.punti) || 0) === punti);
+    const ordinati = ordinaGruppoPariPunti(gruppo, h2hMap);
+    orderedTeams.push(...ordinati);
+  });
+
+  return orderedTeams;
+}
 
 function teamKey(name = "") {
   return `${TORNEO}|||${name}`;
@@ -290,29 +333,6 @@ async function caricaClassifica(torneoSlug = TORNEO) {
     );
 
     mostraClassifica(data, partiteRegularGiocate);
-
-    document.querySelectorAll("#tableClassifica tbody .team-cell").forEach(cell => {
-      const squadra = cell.querySelector(".team-name")?.textContent.trim();
-      if (!squadra) return;
-
-      const apriPartite = (e) => {
-        if (e) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-        mostraPartiteSquadra(squadra);
-      };
-
-      cell.style.cursor = "pointer";
-      cell.setAttribute("role", "button");
-      cell.setAttribute("tabindex", "0");
-
-      cell.addEventListener("click", apriPartite);
-      cell.addEventListener("touchend", apriPartite, { passive: false });
-      cell.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") apriPartite(e);
-      });
-    });
   } catch (error) {
     console.error("Errore nel caricamento della classifica:", error);
   }
@@ -379,56 +399,219 @@ function ordinaGruppoPariPunti(gruppo, h2hMap) {
   return gruppo.slice().sort(diffComparator);
 }
 
-function mostraClassifica(classifica, partiteGiocate = []) {
-  const tbody = document.querySelector("#tableClassifica tbody");
-  tbody.innerHTML = "";
+function createClassificaRow(team, posizione, goldThreshold = 0, silverThreshold = null) {
+  const tr = document.createElement("tr");
+  if (goldThreshold > 0 && posizione <= goldThreshold) {
+    tr.classList.add("gold-row");
+  } else if (silverThreshold !== null && silverThreshold > 0 && posizione <= silverThreshold) {
+    tr.classList.add("silver-row");
+  }
 
-  const h2hMap = buildHeadToHeadMap(partiteGiocate);
-  const puntiValues = [...new Set(classifica.map(team => team.punti))].sort((a, b) => b - a);
-  const orderedTeams = [];
+  const logoPath = resolveLogoPath(team.nome, team.logo);
+  tr.innerHTML = `
+    <td>${posizione}</td>
+    <td class="team-cell" data-team-name="${team.nome}">
+      <div class="team-info">
+        <img src="${logoPath}" alt="${team.nome}" class="team-logo">
+        <span class="team-name">${team.nome}</span>
+      </div>
+    </td>
+    <td>${team.punti}</td>
+    <td>${team.giocate}</td>
+    <td>${team.vinte}</td>
+    <td>${team.pareggiate}</td>
+    <td>${team.perse}</td>
+    <td>${team.gol_fatti}</td>
+    <td>${team.gol_subiti}</td>
+    <td>${team.differenza_reti}</td>
+  `;
+  return tr;
+}
 
-  puntiValues.forEach(punti => {
-    const gruppo = classifica.filter(t => t.punti === punti);
-    const ordinati = ordinaGruppoPariPunti(gruppo, h2hMap);
-    orderedTeams.push(...ordinati);
+function createPlaceholderRow(posizione) {
+  const tr = document.createElement("tr");
+  tr.className = "placeholder-row";
+  tr.innerHTML = `
+    <td>${posizione}</td>
+    <td class="team-cell team-cell--placeholder">Da definire</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+  `;
+  return tr;
+}
+
+function bindClassificaTeamCells(scope) {
+  const root = scope || document;
+  root.querySelectorAll(".team-cell[data-team-name]").forEach(cell => {
+    if (cell.dataset.bound === "1") return;
+    const squadra = cell.dataset.teamName || cell.querySelector(".team-name")?.textContent.trim();
+    if (!squadra) return;
+
+    const apriPartite = (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      mostraPartiteSquadra(squadra);
+    };
+
+    cell.style.cursor = "pointer";
+    cell.setAttribute("role", "button");
+    cell.setAttribute("tabindex", "0");
+    cell.dataset.bound = "1";
+    cell.addEventListener("click", apriPartite);
+    cell.addEventListener("touchend", apriPartite, { passive: false });
+    cell.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") apriPartite(e);
+    });
   });
+}
+
+function getGroupedClassifica(classifica, partiteGiocate = []) {
+  const labels = buildConfiguredGroupLabels();
+  const groups = new Map(labels.map(label => [label, []]));
+  const leftovers = [];
+  const seededTeams = classifica.slice().sort((a, b) => {
+    const idA = Number(a.id) || 0;
+    const idB = Number(b.id) || 0;
+    if (idA !== idB) return idA - idB;
+    return String(a.nome || "").localeCompare(String(b.nome || ""), "it", { sensitivity: "base" });
+  });
+
+  seededTeams.forEach(team => {
+    const girone = normalizeGironeValue(team.girone);
+    if (groups.has(girone)) {
+      groups.get(girone).push(team);
+    } else {
+      leftovers.push(team);
+    }
+  });
+
+  labels.forEach(label => {
+    const rows = groups.get(label);
+    while (rows.length < TEAMS_PER_GROUP && leftovers.length) {
+      rows.push(leftovers.shift());
+    }
+  });
+
+  while (leftovers.length && labels.length) {
+    const targetLabel = labels.reduce((best, current) => {
+      return groups.get(current).length < groups.get(best).length ? current : best;
+    }, labels[0]);
+    groups.get(targetLabel).push(leftovers.shift());
+  }
+
+  return labels.map(label => ({
+    label,
+    teams: orderClassificaRows(groups.get(label) || [], partiteGiocate)
+  }));
+}
+
+function renderSingleClassifica(orderedTeams) {
+  const table = document.getElementById("tableClassifica");
+  const tbody = table?.querySelector("tbody");
+  const gironiGrid = document.getElementById("gironiGrid");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+  if (table) table.style.display = "";
+  if (gironiGrid) {
+    gironiGrid.innerHTML = "";
+    gironiGrid.classList.remove("is-active");
+  }
 
   const useGold = GOLD_SPOTS > 0;
   const useSilver = SILVER_SPOTS > 0;
-  const teamCount = orderedTeams.length;
-  const silverThreshold = useSilver ? Math.max(0, teamCount - SILVER_SPOTS) : null;
+  const silverThreshold = useSilver ? Math.max(0, orderedTeams.length - SILVER_SPOTS) : null;
 
-  orderedTeams.forEach((team, i) => {
-    const tr = document.createElement("tr");
-    const posizione = i + 1;
+  orderedTeams.forEach((team, idx) => {
+    let threshold = null;
+    if (useSilver && silverThreshold !== null && idx + 1 > silverThreshold) {
+      threshold = orderedTeams.length;
+    }
+    tbody.appendChild(createClassificaRow(team, idx + 1, useGold ? GOLD_SPOTS : 0, threshold));
+  });
 
-    if (useGold && posizione <= GOLD_SPOTS) {
-      tr.classList.add("gold-row");
-    } else if (useSilver && silverThreshold !== null && posizione > silverThreshold) {
-      tr.classList.add("silver-row");
+  bindClassificaTeamCells(table);
+}
+
+function renderGroupedClassifica(classifica, partiteGiocate = []) {
+  const table = document.getElementById("tableClassifica");
+  const tbody = table?.querySelector("tbody");
+  const gironiGrid = document.getElementById("gironiGrid");
+  if (!gironiGrid) {
+    renderSingleClassifica(orderClassificaRows(classifica, partiteGiocate));
+    return;
+  }
+
+  if (tbody) tbody.innerHTML = "";
+  if (table) table.style.display = "none";
+  gironiGrid.innerHTML = "";
+  gironiGrid.classList.add("is-active");
+
+  const groups = getGroupedClassifica(classifica, partiteGiocate);
+  groups.forEach(group => {
+    const box = document.createElement("div");
+    box.className = "girone-box";
+
+    const heading = document.createElement("h3");
+    heading.textContent = `Girone ${group.label}`;
+    box.appendChild(heading);
+
+    const wrap = document.createElement("div");
+    wrap.className = "girone-table-wrap";
+    wrap.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Squadra</th>
+            <th>Pti</th>
+            <th>G</th>
+            <th>V</th>
+            <th>N</th>
+            <th>P</th>
+            <th>GF</th>
+            <th>GS</th>
+            <th>DR</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    `;
+
+    const tbodyGroup = wrap.querySelector("tbody");
+    group.teams.forEach((team, idx) => {
+      const posizione = idx + 1;
+      const goldThreshold = GOLD_PER_GROUP > 0 ? GOLD_PER_GROUP : 0;
+      const silverThreshold = SILVER_PER_GROUP > 0 ? GOLD_PER_GROUP + SILVER_PER_GROUP : null;
+      tbodyGroup.appendChild(createClassificaRow(team, posizione, goldThreshold, silverThreshold));
+    });
+
+    for (let idx = group.teams.length; idx < TEAMS_PER_GROUP; idx++) {
+      tbodyGroup.appendChild(createPlaceholderRow(idx + 1));
     }
 
-    const logoPath = resolveLogoPath(team.nome, team.logo);
-
-    tr.innerHTML = `
-      <td>${i + 1}</td>
-      <td class="team-cell">
-        <div class="team-info">
-          <img src="${logoPath}" alt="${team.nome}" class="team-logo">
-          <span class="team-name">${team.nome}</span>
-        </div>
-      </td>
-      <td>${team.punti}</td>
-      <td>${team.giocate}</td>
-      <td>${team.vinte}</td>
-      <td>${team.pareggiate}</td>
-      <td>${team.perse}</td>
-      <td>${team.gol_fatti}</td>
-      <td>${team.gol_subiti}</td>
-      <td>${team.differenza_reti}</td>
-    `;
-    tbody.appendChild(tr);
+    box.appendChild(wrap);
+    gironiGrid.appendChild(box);
   });
+
+  bindClassificaTeamCells(gironiGrid);
+}
+
+function mostraClassifica(classifica, partiteGiocate = []) {
+  const orderedTeams = orderClassificaRows(classifica, partiteGiocate);
+  if (USE_GROUP_TABLES) {
+    renderGroupedClassifica(classifica, partiteGiocate);
+  } else {
+    renderSingleClassifica(orderedTeams);
+  }
 
   const faseSelect = document.getElementById("faseSelect");
   const legendaEsistente = document.querySelector(".legenda-coppe");
@@ -437,12 +620,18 @@ function mostraClassifica(classifica, partiteGiocate = []) {
   if (USE_COPPE && (!faseSelect || faseSelect.value === "girone")) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
-    const goldBox = useGold ? `<div class="box gold-box">COPPA GOLD</div>` : "";
-    const silverBox = useSilver ? `<div class="box silver-box">COPPA SILVER</div>` : "";
+    const goldText = USE_GROUP_TABLES && GOLD_PER_GROUP > 0
+      ? `Prime ${GOLD_PER_GROUP} di ogni girone: COPPA GOLD`
+      : "COPPA GOLD";
+    const silverText = USE_GROUP_TABLES && SILVER_PER_GROUP > 0
+      ? `Successive ${SILVER_PER_GROUP} di ogni girone: COPPA SILVER`
+      : "COPPA SILVER";
+    const goldBox = GOLD_SPOTS > 0 ? `<div class="box gold-box">${goldText}</div>` : "";
+    const silverBox = SILVER_SPOTS > 0 ? `<div class="box silver-box">${silverText}</div>` : "";
     legenda.innerHTML = `${goldBox}${silverBox}` || `<div class="box">Coppe non configurate</div>`;
 
     const wrapper = document.getElementById("classificaWrapper");
-    wrapper.after(legenda);
+    if (wrapper) wrapper.after(legenda);
   }
 }
 
@@ -1170,8 +1359,14 @@ document.addEventListener("DOMContentLoaded", () => {
     nextMarcatoriBtn.addEventListener("click", () => renderMarcatoriPagina(marcatoriPage + 1));
   }
 
+  const removeCoppeLegend = () => {
+    const legenda = document.querySelector(".legenda-coppe");
+    if (legenda) legenda.remove();
+  };
+
   faseSelect.addEventListener("change", () => {
     if (faseSelect.value === "eliminazione") {
+      removeCoppeLegend();
       classificaWrapper.style.display = "none";
       playoffContainer.style.display = "block";
 
@@ -1190,6 +1385,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   coppaSelect.addEventListener("change", () => {
     if (faseSelect.value === "eliminazione") {
+      removeCoppeLegend();
       caricaPlayoff(coppaSelect.value);
     }
     loadClassifica(TORNEO);

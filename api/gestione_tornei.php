@@ -456,6 +456,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
     $config = buildTorneoConfigFromRequest($_POST);
     $torneo->aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete, $config);
+
+    $torneoSlugCorrente = sanitizeTorneoSlug(cleanUtf8Text($_POST['torneo_slug_corrente'] ?? ''));
+    $gironiSquadre = isset($_POST['gironi_squadre']) && is_array($_POST['gironi_squadre'])
+        ? $_POST['gironi_squadre']
+        : [];
+    if (($config['formato'] ?? '') === 'girone' && $torneoSlugCorrente !== '' && !empty($gironiSquadre)) {
+        $squadraModel->aggiornaGironiTorneo($torneoSlugCorrente, $gironiSquadre);
+    }
+
     header("Location: gestione_tornei.php");
     exit;
 }
@@ -654,6 +663,34 @@ if ($lista instanceof mysqli_result) {
             background: #eef3f9;
             border-color: #b7c4d8;
         }
+        .team-groups-editor {
+            display: grid;
+            gap: 10px;
+        }
+        .team-group-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 180px;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 14px;
+            border: 1px solid #dbe4ee;
+            border-radius: 12px;
+            background: #fff;
+        }
+        .team-group-name {
+            font-weight: 700;
+            color: #15293e;
+        }
+        .team-group-empty {
+            margin: 0;
+            color: #617085;
+            font-size: 0.95rem;
+        }
+        @media (max-width: 640px) {
+            .team-group-row {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -784,6 +821,7 @@ if ($lista instanceof mysqli_result) {
             <!-- FORM MODIFICA -->
             <form method="POST" class="admin-form form-modifica hidden" id="formModifica" enctype="multipart/form-data">
                 <h2>Modifica Torneo</h2>
+                <input type="hidden" name="torneo_slug_corrente" id="mod_torneo_slug_corrente" value="">
 
                 <div class="form-group">
                     <label>Seleziona Torneo</label>
@@ -826,6 +864,15 @@ if ($lista instanceof mysqli_result) {
                             <label>Squadre per girone</label>
                             <input type="number" name="squadre_per_girone" id="mod_squadre_per_girone" min="2" step="1" inputmode="numeric" placeholder="Es. 4">
                         </div>
+                    </div>
+                </div>
+
+                <div class="form-subgroup hidden" id="gironeSquadreSettingsMod">
+                    <div class="form-group">
+                        <label>Gironi squadre</label>
+                        <div id="mod_gironi_squadre_container" class="team-groups-editor"></div>
+                        <p id="mod_gironi_squadre_empty" class="team-group-empty hidden">Nessuna squadra associata a questo torneo.</p>
+                        <small>Questa sezione compare solo per i tornei a gironi e permette di spostare manualmente ogni squadra nel girone corretto.</small>
                     </div>
                 </div>
 
@@ -1230,9 +1277,57 @@ if ($lista instanceof mysqli_result) {
                     return sections.join('\n\n');
                 }
 
+                function buildFormulaAwareRegole() {
+                    const formula = getTipoValue();
+                    const teamCount = resolveTeamCount();
+                    const gironi = parseInt(numeroGironiInput?.value || '0', 10);
+                    const perGirone = parseInt(squadrePerGironeInput?.value || '0', 10);
+                    const gold = parseInt(goldInput?.value || '0', 10);
+                    const silver = getEffectiveSilverValue();
+                    const finaleValue = finaleSelect?.value || 'coppe';
+                    const teamLabel = teamCount > 0 ? String(teamCount) : 'X';
+                    const goldLabel = gold > 0 ? String(gold) : 'X';
+
+                    if (formula === 'campionato') {
+                        const silverStartLabel = gold > 0 ? String(gold + 1) : 'X';
+                        const silverEndLabel = gold > 0 && silver > 0 ? String(gold + silver) : 'X';
+                        return [
+                            `Struttura del campionato: Il torneo e composto da ${teamLabel} squadre e si sviluppa in due fasi principali.`,
+                            `Fase 1 - Regular Season: Le ${teamLabel} squadre partecipano a una Regular Season di X giornate.\nLa squadra prima in classifica al termine del girone riceve il Trofeo Regular Season.`,
+                            finaleValue === 'gold'
+                                ? `Fase 2 - Coppe: Le squadre classificate dal 1 al ${goldLabel} posto accedono alla Coppa Gold.\nLa Coppa Gold prevede una premiazione con trofeo per la vincitrice.`
+                                : `Fase 2 - Coppe: Le squadre classificate dal 1 al ${goldLabel} posto accedono alla Coppa Gold.\nLe squadre classificate dal ${silverStartLabel} al ${silverEndLabel} posto accedono alla Coppa Silver.\nEntrambe le coppe prevedono una premiazione con trofeo per la vincitrice.`,
+                            `Premi finali: Dopo la finale di Coppa Gold verranno assegnati i seguenti riconoscimenti:\nMiglior Giocatore\nMiglior Portiere\nMiglior Difensore\nMiglior Attaccante`,
+                            `Regole di gioco: Ogni partita dura 2 tempi da 25 minuti.\nOgni squadra ha 1 chiamata VAR disponibile per partita.`,
+                            `Calendario: Le partite si disputano principalmente il mercoledi e il giovedi.\nIl calendario della settimana successiva viene pubblicato ogni giovedi o venerdi.`
+                        ].join('\n\n');
+                    }
+
+                    if (formula === 'girone') {
+                        const gironiLabel = gironi > 0 ? String(gironi) : 'X';
+                        const perGironeLabel = perGirone > 0 ? String(perGirone) : 'X';
+                        const goldPerGirone = gironi > 0 && gold > 0 ? Math.floor(gold / gironi) : 0;
+                        const silverPerGirone = gironi > 0 && silver > 0 ? Math.floor(silver / gironi) : 0;
+                        const goldPerGironeLabel = goldPerGirone > 0 ? String(goldPerGirone) : 'X';
+                        const silverPerGironeLabel = silverPerGirone > 0 ? String(silverPerGirone) : 'X';
+                        return [
+                            `Struttura del torneo: Il torneo e composto da ${teamLabel} squadre suddivise in ${gironiLabel} gironi da ${perGironeLabel} squadre.`,
+                            `Fase 1 - Gironi: Le squadre disputano la Regular Season all'interno del proprio girone.`,
+                            finaleValue === 'gold'
+                                ? `Fase 2 - Coppe: Le prime ${goldPerGironeLabel} squadre di ogni girone accedono alla Coppa Gold.\nLa Coppa Gold prevede una premiazione con trofeo per la vincitrice.`
+                                : `Fase 2 - Coppe: Le prime ${goldPerGironeLabel} squadre di ogni girone accedono alla Coppa Gold.\nLe successive ${silverPerGironeLabel} squadre di ogni girone accedono alla Coppa Silver.\nEntrambe le coppe prevedono una premiazione con trofeo per la vincitrice.`,
+                            `Premi finali: Dopo la finale di Coppa Gold verranno assegnati i seguenti riconoscimenti:\nMiglior Giocatore\nMiglior Portiere\nMiglior Difensore\nMiglior Attaccante`,
+                            `Regole di gioco: Ogni partita dura 2 tempi da 25 minuti.\nOgni squadra ha 1 chiamata VAR disponibile per partita.`,
+                            `Calendario: Le partite si disputano principalmente il mercoledi e il giovedi.\nIl calendario della settimana successiva viene pubblicato ogni giovedi o venerdi.`
+                        ].join('\n\n');
+                    }
+
+                    return buildDefaultRegole();
+                }
+
                 function syncRegole(force = false) {
                     if (!regoleInput) return;
-                    const generated = buildDefaultRegole();
+                    const generated = buildFormulaAwareRegole();
                     const isAuto = regoleInput.dataset.auto === '1';
                     const isEmpty = regoleInput.value.trim() === '';
 
@@ -1415,21 +1510,27 @@ const configInputs = {
 };
 const formulaTorneoMod = document.getElementById('mod_formula_torneo');
 const faseFinaleMod = document.getElementById('mod_fase_finale');
+const modTorneoSlugCorrente = document.getElementById('mod_torneo_slug_corrente');
+const gironiSquadreSection = document.getElementById('gironeSquadreSettingsMod');
+const gironiSquadreContainer = document.getElementById('mod_gironi_squadre_container');
+const gironiSquadreEmpty = document.getElementById('mod_gironi_squadre_empty');
+let squadreGironiState = [];
 
 function resetModFormConfig() {
     if (modController && modController.reset) {
         modController.reset();
-        return;
+    } else {
+        if (formulaTorneoMod) {
+            formulaTorneoMod.value = '';
+        }
+        Object.values(configInputs).forEach(el => { if (el) el.value = ''; });
+        if (faseFinaleMod) {
+            faseFinaleMod.innerHTML = '';
+            faseFinaleMod.value = '';
+        }
     }
 
-    if (formulaTorneoMod) {
-        formulaTorneoMod.value = '';
-    }
-    Object.values(configInputs).forEach(el => { if (el) el.value = ''; });
-    if (faseFinaleMod) {
-        faseFinaleMod.innerHTML = '';
-        faseFinaleMod.value = '';
-    }
+    clearSquadreGironiEditor();
 }
 
 function parseConfig(raw) {
@@ -1440,6 +1541,145 @@ function parseConfig(raw) {
     } catch (e) {
         return {};
     }
+}
+
+function torneoSlugFromFile(fileName = '') {
+    return String(fileName || '').replace(/\.(html?|php)$/i, '').trim();
+}
+
+function buildGironeLabels(count) {
+    const total = Math.max(0, Number.parseInt(count || '0', 10));
+    return Array.from({ length: total }, (_, idx) => {
+        let n = idx;
+        let label = '';
+        do {
+            label = String.fromCharCode(65 + (n % 26)) + label;
+            n = Math.floor(n / 26) - 1;
+        } while (n >= 0);
+        return label;
+    });
+}
+
+function normalizeGironeEditorValue(value = '') {
+    return String(value || '')
+        .trim()
+        .toUpperCase()
+        .replace(/^GIRONE\s+/u, '')
+        .replace(/^GRUPPO\s+/u, '');
+}
+
+function shouldShowGironiEditor() {
+    return (formulaTorneoMod?.value || '') === 'girone';
+}
+
+function clearSquadreGironiEditor() {
+    squadreGironiState = [];
+    if (modTorneoSlugCorrente) {
+        modTorneoSlugCorrente.value = '';
+    }
+    if (gironiSquadreContainer) {
+        gironiSquadreContainer.innerHTML = '';
+    }
+    if (gironiSquadreEmpty) {
+        gironiSquadreEmpty.textContent = 'Nessuna squadra associata a questo torneo.';
+        gironiSquadreEmpty.classList.add('hidden');
+    }
+    if (gironiSquadreSection) {
+        gironiSquadreSection.classList.add('hidden');
+    }
+}
+
+function renderSquadreGironiEditor() {
+    if (!gironiSquadreSection || !gironiSquadreContainer || !gironiSquadreEmpty) return;
+
+    const show = shouldShowGironiEditor();
+    gironiSquadreSection.classList.toggle('hidden', !show);
+    gironiSquadreContainer.innerHTML = '';
+
+    if (!show) {
+        gironiSquadreEmpty.classList.add('hidden');
+        return;
+    }
+
+    const labels = buildGironeLabels(configInputs.gironi?.value || 0);
+    if (!labels.length) {
+        gironiSquadreEmpty.textContent = 'Imposta prima il numero di gironi per assegnare le squadre.';
+        gironiSquadreEmpty.classList.remove('hidden');
+        return;
+    }
+
+    if (!squadreGironiState.length) {
+        gironiSquadreEmpty.textContent = 'Nessuna squadra associata a questo torneo.';
+        gironiSquadreEmpty.classList.remove('hidden');
+        return;
+    }
+
+    gironiSquadreEmpty.classList.add('hidden');
+    squadreGironiState.forEach((team, index) => {
+        const row = document.createElement('div');
+        row.className = 'team-group-row';
+
+        const name = document.createElement('div');
+        name.className = 'team-group-name';
+        name.textContent = team.nome || `Squadra ${index + 1}`;
+
+        const select = document.createElement('select');
+        select.name = `gironi_squadre[${team.id}]`;
+        select.innerHTML = '<option value="">-- Seleziona girone --</option>';
+        labels.forEach(label => {
+            const option = document.createElement('option');
+            option.value = label;
+            option.textContent = `Girone ${label}`;
+            select.appendChild(option);
+        });
+
+        const currentValue = normalizeGironeEditorValue(team.girone);
+        select.value = labels.includes(currentValue) ? currentValue : '';
+        select.addEventListener('change', () => {
+            squadreGironiState[index].girone = select.value;
+        });
+
+        row.appendChild(name);
+        row.appendChild(select);
+        gironiSquadreContainer.appendChild(row);
+    });
+}
+
+async function loadSquadreGironiEditor(torneoSlug) {
+    if (modTorneoSlugCorrente) {
+        modTorneoSlugCorrente.value = torneoSlug || '';
+    }
+
+    if (!torneoSlug) {
+        squadreGironiState = [];
+        renderSquadreGironiEditor();
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/get_squadre_torneo.php?torneo=${encodeURIComponent(torneoSlug)}`);
+        const data = await res.json();
+        squadreGironiState = Array.isArray(data) ? data.map(team => ({
+            id: team.id,
+            nome: team.nome || '',
+            girone: normalizeGironeEditorValue(team.girone || '')
+        })) : [];
+    } catch (err) {
+        console.error('Errore nel recupero delle squadre del torneo:', err);
+        squadreGironiState = [];
+    }
+
+    renderSquadreGironiEditor();
+}
+
+if (formulaTorneoMod) {
+    formulaTorneoMod.addEventListener('change', () => renderSquadreGironiEditor());
+}
+
+if (configInputs.gironi) {
+    ['input', 'change'].forEach(eventName => {
+        configInputs.gironi.addEventListener(eventName, () => renderSquadreGironiEditor());
+    });
 }
 
 selectTorneo.addEventListener('change', async (e) => {
@@ -1461,6 +1701,7 @@ selectTorneo.addEventListener('change', async (e) => {
             campi.fine.value = data.data_fine || '';
             campi.file.value = data.filetorneo || '';
             campi.categoria.value = data.categoria || '';
+            const torneoSlug = torneoSlugFromFile(data.filetorneo || '');
 
             const cfg = parseConfig(data.config || {});
             if (modController && modController.applyConfig) {
@@ -1491,10 +1732,14 @@ selectTorneo.addEventListener('change', async (e) => {
                 if (configInputs.silver && cfg.qualificati_silver !== undefined) configInputs.silver.value = cfg.qualificati_silver;
                 if (configInputs.eliminate && cfg.eliminate !== undefined) configInputs.eliminate.value = cfg.eliminate;
             }
+
+            await loadSquadreGironiEditor(torneoSlug);
         } else {
+            clearSquadreGironiEditor();
             alert('Errore: ' + (data.error || 'Dati non trovati'));
         }
     } catch (err) {
+        clearSquadreGironiEditor();
         console.error('Errore nel recupero del torneo:', err);
     }
 });
