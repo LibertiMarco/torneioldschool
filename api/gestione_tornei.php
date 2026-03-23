@@ -84,6 +84,46 @@ function buildTorneoConfigFromRequest(array $src): array {
     return $config;
 }
 
+function aggiornaGironiSquadreTorneo(mysqli $conn, string $torneoSlug, array $gironiMap): void {
+    if ($torneoSlug === '' || empty($gironiMap)) {
+        return;
+    }
+
+    $hasGirone = false;
+    $check = @$conn->query("SHOW COLUMNS FROM squadre LIKE 'girone'");
+    if ($check && $check->num_rows > 0) {
+        $hasGirone = true;
+    }
+    if (!$hasGirone) {
+        return;
+    }
+
+    $stmt = $conn->prepare("UPDATE squadre SET girone = ? WHERE id = ? AND torneo = ?");
+    if (!$stmt) {
+        throw new RuntimeException('Prepare update gironi fallita: ' . $conn->error);
+    }
+
+    foreach ($gironiMap as $id => $girone) {
+        $teamId = (int)$id;
+        if ($teamId <= 0) {
+            continue;
+        }
+
+        $gironeValue = strtoupper(trim((string)(is_scalar($girone) ? $girone : '')));
+        $gironeValue = preg_replace('/^GIRONE\s+/u', '', $gironeValue);
+        $gironeValue = preg_replace('/^GRUPPO\s+/u', '', $gironeValue);
+        $gironeValue = substr($gironeValue, 0, 32);
+
+        $stmt->bind_param("sis", $gironeValue, $teamId, $torneoSlug);
+        if (!$stmt->execute()) {
+            $stmt->close();
+            throw new RuntimeException('Execute update gironi fallita: ' . $stmt->error);
+        }
+    }
+
+    $stmt->close();
+}
+
 function scegliTemplatePerFormula(string $formula, string $faseFinale, string $baseDir): array {
     $default = [
         'html' => $baseDir . '/TorneoTemplate.php',
@@ -459,7 +499,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
         ? $_POST['gironi_squadre']
         : [];
     if (($config['formato'] ?? '') === 'girone' && $torneoSlugCorrente !== '' && !empty($gironiSquadre)) {
-        $squadraModel->aggiornaGironiTorneo($torneoSlugCorrente, $gironiSquadre);
+        aggiornaGironiSquadreTorneo($conn, $torneoSlugCorrente, $gironiSquadre);
     }
 
     header("Location: gestione_tornei.php");
