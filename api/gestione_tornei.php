@@ -799,21 +799,14 @@ if ($lista instanceof mysqli_result) {
                 </div>
 
                 <div class="form-group">
-                    <label>Formula torneo</label>
-                    <div class="pill-group" id="tipoTorneoGroupMod">
-                        <label class="pill-toggle">
-                            <input type="radio" name="formula_torneo" value="campionato" id="mod_formula_campionato">
-                            Campionato
-                        </label>
-                        <label class="pill-toggle">
-                            <input type="radio" name="formula_torneo" value="girone" id="mod_formula_girone">
-                            Girone
-                        </label>
-                        <label class="pill-toggle">
-                            <input type="radio" name="formula_torneo" value="eliminazione" id="mod_formula_eliminazione">
-                            Eliminazione diretta
-                        </label>
-                    </div>
+                    <label for="mod_formula_torneo">Formula torneo</label>
+                    <select name="formula_torneo" id="mod_formula_torneo">
+                        <option value="">-- Seleziona formula --</option>
+                        <option value="campionato">Campionato</option>
+                        <option value="girone">Girone</option>
+                        <option value="eliminazione">Eliminazione diretta</option>
+                    </select>
+                    <small>Il form si adatta automaticamente alla formula del torneo selezionato.</small>
                 </div>
 
                 <div class="form-subgroup hidden" id="campionatoSettingsMod">
@@ -1420,7 +1413,7 @@ const configInputs = {
     silver: document.getElementById('mod_qualificati_silver'),
     eliminate: document.getElementById('mod_eliminate')
 };
-const radioFormatiMod = Array.from(document.querySelectorAll('#formModifica input[name="formula_torneo"]'));
+const formulaTorneoMod = document.getElementById('mod_formula_torneo');
 const faseFinaleMod = document.getElementById('mod_fase_finale');
 
 function resetModFormConfig() {
@@ -1429,7 +1422,9 @@ function resetModFormConfig() {
         return;
     }
 
-    radioFormatiMod.forEach(r => r.checked = false);
+    if (formulaTorneoMod) {
+        formulaTorneoMod.value = '';
+    }
     Object.values(configInputs).forEach(el => { if (el) el.value = ''; });
     if (faseFinaleMod) {
         faseFinaleMod.innerHTML = '';
@@ -1471,8 +1466,9 @@ selectTorneo.addEventListener('change', async (e) => {
             if (modController && modController.applyConfig) {
                 modController.applyConfig(cfg);
             } else {
-                const radio = radioFormatiMod.find(r => r.value === (cfg.formato || ''));
-                if (radio) radio.checked = true;
+                if (formulaTorneoMod) {
+                    formulaTorneoMod.value = cfg.formato || '';
+                }
                 if (faseFinaleMod) {
                     faseFinaleMod.innerHTML = '';
                     const finaleValue = cfg.fase_finale === 'gold' ? 'gold' : 'coppe';
