@@ -15,6 +15,10 @@
       .replace(/^GRUPPO\s+/u, "");
   }
 
+  function normalizeTeamLookupName(value = "") {
+    return String(value || "").trim().toLowerCase();
+  }
+
   function indexToLetters(index) {
     let n = Number(index);
     if (!Number.isFinite(n) || n < 0) return "";
@@ -54,6 +58,52 @@
     }
 
     return infoCache.get(key);
+  }
+
+  async function loadSquadreGironi(slug) {
+    const key = String(slug || "").trim();
+    if (!key) return [];
+
+    try {
+      const res = await fetch(`/api/get_squadre_torneo.php?torneo=${encodeURIComponent(key)}`);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch (err) {
+      console.error("Errore nel caricamento gironi squadre", err);
+      return [];
+    }
+  }
+
+  function mergeGironiIntoClassifica(classifica = [], squadre = []) {
+    const byId = new Map();
+    const byName = new Map();
+
+    squadre.forEach(team => {
+      const normalizedGirone = normalizeGironeValue(team?.girone);
+      const id = Number(team?.id);
+      if (Number.isFinite(id) && id > 0) {
+        byId.set(id, normalizedGirone);
+      }
+
+      const key = normalizeTeamLookupName(team?.nome);
+      if (key) {
+        byName.set(key, normalizedGirone);
+      }
+    });
+
+    return classifica.map(team => {
+      const id = Number(team?.id);
+      const nameKey = normalizeTeamLookupName(team?.nome);
+      let girone = normalizeGironeValue(team?.girone);
+
+      if (Number.isFinite(id) && id > 0 && byId.has(id)) {
+        girone = byId.get(id);
+      } else if (nameKey && byName.has(nameKey)) {
+        girone = byName.get(nameKey);
+      }
+
+      return { ...team, girone };
+    });
   }
 
   function getConfiguredTotalTeams(config = {}, actualCount = 0) {
@@ -439,7 +489,9 @@
   }
 
   window.TorneoGironiHelper = {
+    loadSquadreGironi,
     loadTorneoInfo,
+    mergeGironiIntoClassifica,
     renderGroupedClassifica,
     resetGroupedClassifica,
     bindClassificaTeamCells

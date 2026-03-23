@@ -220,9 +220,13 @@ async function caricaClassifica(torneoSlug = TORNEO) {
     );
 
     const gironiHelper = await ensureGironiHelper();
+    const squadreGironi = gironiHelper ? await gironiHelper.loadSquadreGironi(torneoSlug || TORNEO) : [];
+    const classificaData = gironiHelper?.mergeGironiIntoClassifica
+      ? gironiHelper.mergeGironiIntoClassifica(data, squadreGironi)
+      : data;
     const torneoInfo = gironiHelper ? await gironiHelper.loadTorneoInfo(torneoSlug || TORNEO) : null;
     const groupedSetup = gironiHelper?.renderGroupedClassifica({
-      classifica: data,
+      classifica: classificaData,
       partiteGiocate: partiteRegularGiocate,
       torneoInfo,
       orderRows: orderClassificaRows,
@@ -253,7 +257,7 @@ async function caricaClassifica(torneoSlug = TORNEO) {
       }
     } else {
       gironiHelper?.resetGroupedClassifica();
-      mostraClassifica(data, partiteRegularGiocate);
+      mostraClassifica(classificaData, partiteRegularGiocate);
     }
 
     if (gironiHelper?.bindClassificaTeamCells) {

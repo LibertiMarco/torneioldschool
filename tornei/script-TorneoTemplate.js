@@ -62,6 +62,53 @@ function normalizeGironeValue(value = "") {
     .replace(/^GRUPPO\s+/u, "");
 }
 
+function normalizeTeamLookupName(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
+async function loadSquadreGironi(torneoSlug = TORNEO) {
+  try {
+    const res = await fetch(`/api/get_squadre_torneo.php?torneo=${encodeURIComponent(torneoSlug)}`);
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.error("Errore nel caricamento gironi squadre", e);
+    return [];
+  }
+}
+
+function mergeGironiIntoClassifica(classifica = [], squadre = []) {
+  const byId = new Map();
+  const byName = new Map();
+
+  squadre.forEach(team => {
+    const normalizedGirone = normalizeGironeValue(team?.girone);
+    const id = Number(team?.id);
+    if (Number.isFinite(id) && id > 0) {
+      byId.set(id, normalizedGirone);
+    }
+
+    const key = normalizeTeamLookupName(team?.nome);
+    if (key) {
+      byName.set(key, normalizedGirone);
+    }
+  });
+
+  return classifica.map(team => {
+    const id = Number(team?.id);
+    const nameKey = normalizeTeamLookupName(team?.nome);
+    let girone = normalizeGironeValue(team?.girone);
+
+    if (Number.isFinite(id) && id > 0 && byId.has(id)) {
+      girone = byId.get(id);
+    } else if (nameKey && byName.has(nameKey)) {
+      girone = byName.get(nameKey);
+    }
+
+    return { ...team, girone };
+  });
+}
+
 function orderClassificaRows(classifica = [], partiteGiocate = []) {
   const h2hMap = buildHeadToHeadMap(partiteGiocate);
   const puntiValues = [...new Set(classifica.map(team => Number(team.punti) || 0))].sort((a, b) => b - a);
@@ -314,13 +361,18 @@ function nomeFaseDaGiornata(g) {
 // ====================== CLASSIFICA (GIRONE) ======================
 async function caricaClassifica(torneoSlug = TORNEO) {
   try {
-    const response = await fetch(`/api/leggiClassifica.php?torneo=${encodeURIComponent(torneoSlug)}`);
-    const data = await response.json();
+    const [response, squadreGironi] = await Promise.all([
+      fetch(`/api/leggiClassifica.php?torneo=${encodeURIComponent(torneoSlug)}`),
+      loadSquadreGironi(torneoSlug)
+    ]);
+    const rawData = await response.json();
 
-    if (data.error) {
-      console.error("Errore dal server:", data.error);
+    if (rawData.error) {
+      console.error("Errore dal server:", rawData.error);
       return;
     }
+
+    const data = mergeGironiIntoClassifica(rawData, squadreGironi);
 
     data.forEach(team => {
       if (team.logo) {
