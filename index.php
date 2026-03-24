@@ -1,6 +1,18 @@
 <?php
 require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/seo.php';
+require_once __DIR__ . '/includi/db.php';
+
+function home_escape(?string $value): string
+{
+  return htmlspecialchars((string)($value ?? ''), ENT_QUOTES, 'UTF-8');
+}
+
+function home_news_permalink(?string $title): string
+{
+  return '/articolo.php?titolo=' . rawurlencode((string)($title ?? ''));
+}
+
 $baseUrl = seo_base_url();
 $homeSeo = [
   'title' => 'Tornei calcio Napoli (5, 6, 8) | Tornei Old School',
@@ -22,6 +34,30 @@ $localSchema = [
   ],
   'url' => $baseUrl . '/',
 ];
+$homeNews = [];
+$homeNewsSql = "SELECT id,
+                       titolo,
+                       COALESCE(
+                           (SELECT CONCAT('/img/blog_media/', file_path)
+                            FROM blog_media
+                            WHERE post_id = blog_post.id AND tipo = 'image'
+                            ORDER BY ordine ASC, id ASC
+                            LIMIT 1),
+                           CASE
+                               WHEN immagine IS NULL OR immagine = '' THEN ''
+                               ELSE CONCAT('/img/blog/', immagine)
+                           END
+                       ) AS cover,
+                       DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data
+                FROM blog_post
+                ORDER BY data_pubblicazione DESC
+                LIMIT 4";
+if ($homeNewsResult = $conn->query($homeNewsSql)) {
+  while ($row = $homeNewsResult->fetch_assoc()) {
+    $homeNews[] = $row;
+  }
+  $homeNewsResult->free();
+}
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -63,7 +99,17 @@ $localSchema = [
         </div>
 
         <div id="newsGrid" class="news-grid">
-          <!-- Caricamento automatico via JS -->
+          <?php if (!empty($homeNews)): ?>
+            <?php foreach ($homeNews as $post): ?>
+              <article onclick="location.href='<?= home_escape(home_news_permalink($post['titolo'] ?? '')) ?>'" style="cursor:pointer">
+                <img src="<?= home_escape($post['cover'] ?: '/img/blog/placeholder.jpg') ?>" alt="<?= home_escape($post['titolo'] ?? 'Articolo') ?>">
+                <h3><?= home_escape($post['titolo'] ?? 'Articolo') ?></h3>
+                <p><?= home_escape($post['data'] ?? '') ?></p>
+              </article>
+            <?php endforeach; ?>
+          <?php else: ?>
+            <p>Nessuna notizia disponibile.</p>
+          <?php endif; ?>
         </div>
       </section>
 
@@ -141,40 +187,9 @@ $localSchema = [
   </div> <!-- fine content -->
 
   <!-- FOOTER -->
-  <div id="footer-container"></div>
-
-  <!-- SCRIPT FOOTER -->
-  <script>
-    fetch("/includi/footer.html")
-      .then(response => response.text())
-      .then(data => document.getElementById("footer-container").innerHTML = data)
-      .catch(error => console.error("Errore nel caricamento del footer:", error));
-  </script>
+  <?php include __DIR__ . '/includi/footer.html'; ?>
 
 <script>
-async function loadNews() {
-    const r = await fetch('/api/blog.php?azione=ultimi');
-    const posts = await r.json();
-    const box = document.getElementById("newsGrid");
-
-    box.innerHTML = ""; // pulizia
-
-    if (posts.length === 0) {
-        box.innerHTML = "<p>Nessuna notizia disponibile.</p>";
-        return;
-    }
-
-    posts.forEach(p => {
-        const imageSrc = p.immagine ? p.immagine : '/img/blog/placeholder.jpg';
-        box.innerHTML += `
-        <article onclick="location.href='/articolo.php?titolo=${encodeURIComponent(p.titolo)}'" style="cursor:pointer">
-            <img src="${imageSrc}" alt="">
-            <h3>${p.titolo}</h3>
-            <p>${p.data}</p>
-        </article>`;
-    });
-}
-
 function renderHomeLeaderCard(player, position, torneoLabel, ordine) {
     const foto = player.foto || '/img/giocatori/unknown.jpg';
     const nome = `${player.nome ?? ''} ${player.cognome ?? ''}`.trim() || 'Profilo';
@@ -353,7 +368,6 @@ document.addEventListener('click', (e) => {
     setHomeOrder(order);
 });
 
-loadNews();
 loadTopScorers();
 loadHallOfFame();
 </script>
@@ -411,7 +425,6 @@ loadHallOfFame();
 
 </body>
 </html>
-
 
 
 

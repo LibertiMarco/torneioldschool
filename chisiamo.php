@@ -372,7 +372,7 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
   </style>
 </head>
 <body>
-  <div id="header-container"></div>
+  <?php include __DIR__ . '/includi/header.php'; ?>
 
   <div class="page-wrapper">
     <div class="banner">Chi Siamo</div>
@@ -505,64 +505,16 @@ if (isset($conn) && $conn instanceof mysqli && !$conn->connect_error) {
     </section>
   </div>
 
-  <div id="footer-container"></div>
+  <?php include __DIR__ . '/includi/footer.html'; ?>
 
   <script src="/includi/app.min.js?v=20251220"></script>
   <script>
-    function bindBasicHeaderToggle(root) {
-      const header = root.querySelector(".site-header");
-      if (!header) return;
-      const mobileBtn = header.querySelector("#mobileMenuBtn");
-      const mainNav = header.querySelector("#mainNav");
-      const userBtn = header.querySelector("#userBtn");
-      const userMenu = header.querySelector("#userMenu");
-      if (mobileBtn && mainNav) {
-        mobileBtn.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const open = mainNav.classList.toggle("open");
-          if (open && userMenu) userMenu.classList.remove("open");
-        });
-      }
-      if (userBtn && userMenu) {
-        userBtn.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const open = userMenu.classList.toggle("open");
-          if (open && mainNav) mainNav.classList.remove("open");
-        });
-      }
-      document.addEventListener("click", (e) => {
-        if (!header.contains(e.target)) {
-          mainNav?.classList.remove("open");
-          userMenu?.classList.remove("open");
-        }
+    const header = document.querySelector(".site-header");
+    if (header) {
+      window.addEventListener("scroll", () => {
+        header.classList.toggle("scrolled", window.scrollY > 50);
       });
     }
-
-    // FOOTER
-    fetch("/includi/footer.html")
-      .then(r => r.text())
-      .then(html => document.getElementById("footer-container").innerHTML = html);
-
-    // HEADER
-    fetch("/includi/header.php")
-      .then(r => r.text())
-      .then(html => {
-        document.getElementById("header-container").innerHTML = html;
-        const header = document.querySelector(".site-header");
-        const hasAdvancedHeader = typeof initHeaderInteractions === "function";
-        if (hasAdvancedHeader) {
-          initHeaderInteractions();
-        } else {
-          bindBasicHeaderToggle(document);
-        }
-        window.addEventListener("scroll", () => {
-          if (header) {
-            header.classList.toggle("scrolled", window.scrollY > 50);
-          }
-        });
-      });
 
     // Switch tra organizzatori e staff
     document.addEventListener("click", (e) => {

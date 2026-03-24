@@ -3,6 +3,55 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/includi/seo.php';
+require_once __DIR__ . '/includi/db.php';
+
+function blog_escape(?string $value): string
+{
+    return htmlspecialchars((string)($value ?? ''), ENT_QUOTES, 'UTF-8');
+}
+
+function blog_cover_select(string $alias = 'cover'): string
+{
+    $safeAlias = preg_replace('/[^a-zA-Z0-9_]/', '', $alias) ?: 'cover';
+    return "COALESCE(
+                (SELECT CONCAT('/img/blog_media/', file_path)
+                 FROM blog_media
+                 WHERE post_id = blog_post.id AND tipo = 'image'
+                 ORDER BY ordine ASC, id ASC
+                 LIMIT 1),
+                CASE
+                    WHEN immagine IS NULL OR immagine = '' THEN ''
+                    ELSE CONCAT('/img/blog/', immagine)
+                END
+            ) AS {$safeAlias}";
+}
+
+function blog_preview_text(string $text, int $length = 160): string
+{
+    $clean = trim(preg_replace('/\s+/u', ' ', strip_tags($text)));
+    if ($clean === '') {
+        return '';
+    }
+    $lenFn = function_exists('mb_strlen') ? 'mb_strlen' : 'strlen';
+    $substrFn = function_exists('mb_substr') ? 'mb_substr' : 'substr';
+    if ($lenFn($clean) <= $length) {
+        return $clean;
+    }
+    return rtrim($substrFn($clean, 0, $length - 3)) . '...';
+}
+
+function blog_render_preview_html(?string $text, string $fallback = ''): string
+{
+    $preview = blog_preview_text($text ?: $fallback);
+    $escaped = blog_escape($preview);
+    return preg_replace('/==(.+?)==/', '<strong>$1</strong>', $escaped) ?: $escaped;
+}
+
+function blog_permalink(?string $title): string
+{
+    return '/articolo.php?titolo=' . rawurlencode((string)($title ?? ''));
+}
+
 $baseUrl = seo_base_url();
 $blogSeo = [
     'title' => 'Blog e novita - Tornei Old School',
@@ -14,6 +63,37 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
     ['name' => 'Home', 'url' => $baseUrl . '/'],
     ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
 ]);
+
+$blogPosts = [];
+$blogSql = "SELECT id,
+                   titolo,
+                   " . blog_cover_select('cover') . ",
+                   SUBSTRING(contenuto, 1, 220) AS anteprima,
+                   DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data
+            FROM blog_post
+            ORDER BY data_pubblicazione DESC";
+
+if ($blogResult = $conn->query($blogSql)) {
+    while ($row = $blogResult->fetch_assoc()) {
+        $row['immagine'] = $row['cover'] ?? '';
+        $blogPosts[] = $row;
+    }
+    $blogResult->free();
+}
+
+$featuredPost = $blogPosts[0] ?? null;
+$archivePosts = array_slice($blogPosts, 1);
+$sidebarPosts = $featuredPost
+    ? array_values(array_filter(
+        $blogPosts,
+        static fn(array $post): bool => (int)($post['id'] ?? 0) !== (int)($featuredPost['id'] ?? 0)
+    ))
+    : $blogPosts;
+$sidebarPosts = array_slice($sidebarPosts, 0, 5);
+$blogPostsJson = json_encode(
+    $blogPosts,
+    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+);
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -537,17 +617,36 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
           <h2>L'articolo del momento</h2>
         </div>
         <div class="section-meta">
-          <span class="meta-pill" id="featuredUpdated">Aggiornato ora</span>
+          <span class="meta-pill" id="featuredUpdated">
+            <?= $featuredPost ? 'Aggiornato ' . blog_escape($featuredPost['data'] ?? '') : 'In attesa di pubblicazioni' ?>
+          </span>
           <a class="meta-pill alt" href="/tornei.php">Vai ai tornei</a>
         </div>
       </div>
       <div class="featured-card" id="featuredPost">
-        <div class="featured-image"></div>
-        <div class="featured-copy">
-          <span>Caricamento</span>
-          <h3>Scarichiamo gli ultimi articoli...</h3>
-          <p>Restiamo un secondo in attesa: il nostro feed sta arrivando dal server.</p>
-        </div>
+        <?php if ($featuredPost): ?>
+          <div class="featured-image">
+            <?php if (!empty($featuredPost['cover'])): ?>
+              <img src="<?= blog_escape($featuredPost['cover']) ?>" alt="<?= blog_escape($featuredPost['titolo'] ?? 'Articolo in evidenza') ?>">
+            <?php endif; ?>
+          </div>
+          <div class="featured-copy">
+            <span><?= blog_escape($featuredPost['data'] ?? '') ?></span>
+            <h3><?= blog_escape($featuredPost['titolo'] ?? 'Articolo in evidenza') ?></h3>
+            <p><?= blog_render_preview_html($featuredPost['anteprima'] ?? '', 'Scopri cosa e successo dietro le quinte del torneo!') ?></p>
+            <div class="featured-actions">
+              <a class="primary" href="<?= blog_escape(blog_permalink($featuredPost['titolo'] ?? '')) ?>">Leggi ora</a>
+              <a class="secondary" href="/tornei.php">Vedi i tornei</a>
+            </div>
+          </div>
+        <?php else: ?>
+          <div class="featured-image"></div>
+          <div class="featured-copy">
+            <span>Nessun articolo</span>
+            <h3>Ancora nessun post disponibile</h3>
+            <p>Stiamo preparando nuovi contenuti per te. Torna a trovarci presto.</p>
+          </div>
+        <?php endif; ?>
       </div>
     </section>
 
@@ -558,11 +657,39 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
           <h2>Tutti gli articoli</h2>
         </div>
         <div class="section-meta">
-          <span class="meta-pill" id="archiveCount">0 articoli</span>
-          <span class="meta-pill alt" id="visibleCount">0 visibili</span>
+          <span class="meta-pill" id="archiveCount"><?= count($blogPosts) ?> <?= count($blogPosts) === 1 ? 'articolo' : 'articoli' ?></span>
+          <span class="meta-pill alt" id="visibleCount"><?= count($blogPosts) ?> <?= count($blogPosts) === 1 ? 'visibile' : 'visibili' ?></span>
         </div>
       </div>
-      <div class="blog-grid" id="articlesGrid"></div>
+      <div class="blog-grid" id="articlesGrid">
+        <?php if (!empty($archivePosts)): ?>
+          <?php foreach ($archivePosts as $post): ?>
+            <article class="blog-card">
+              <a href="<?= blog_escape(blog_permalink($post['titolo'] ?? '')) ?>">
+                <div class="card-image">
+                  <?php if (!empty($post['cover'])): ?>
+                    <img src="<?= blog_escape($post['cover']) ?>" alt="<?= blog_escape($post['titolo'] ?? 'Articolo') ?>" loading="lazy">
+                  <?php endif; ?>
+                </div>
+                <div class="card-body">
+                  <div class="card-date"><?= blog_escape($post['data'] ?? '') ?></div>
+                  <h3><?= blog_escape($post['titolo'] ?? 'Articolo') ?></h3>
+                  <p><?= blog_render_preview_html($post['anteprima'] ?? '', 'Scopri cosa e successo dietro le quinte del torneo!') ?></p>
+                </div>
+              </a>
+            </article>
+          <?php endforeach; ?>
+        <?php elseif ($featuredPost): ?>
+          <div class="blog-card">
+            <div class="card-body">
+              <h3>Hai gia letto il pezzo principale!</h3>
+              <p>Quando pubblicheremo nuovi contenuti compariranno qui.</p>
+            </div>
+          </div>
+        <?php else: ?>
+          <div class="empty-state">Ancora nessun articolo disponibile nel blog.</div>
+        <?php endif; ?>
+      </div>
       <div class="single-card-hint" id="blogEmptyState" hidden>
         Nessun articolo corrisponde alla ricerca. Prova a cambiare parola chiave.
       </div>
@@ -572,7 +699,25 @@ $blogBreadcrumbs = seo_breadcrumb_schema([
   <aside class="blog-sidebar">
     <h3>Consigli di lettura</h3>
     <p class="sidebar-desc">Gli aggiornamenti piu freschi da non perdere.</p>
-    <div id="miniList">Stiamo preparando la lista...</div>
+    <div id="miniList">
+      <?php if (!empty($sidebarPosts)): ?>
+        <?php foreach ($sidebarPosts as $post): ?>
+          <a class="mini-card" href="<?= blog_escape(blog_permalink($post['titolo'] ?? '')) ?>">
+            <div class="mini-thumb">
+              <?php if (!empty($post['cover'])): ?>
+                <img src="<?= blog_escape($post['cover']) ?>" alt="<?= blog_escape($post['titolo'] ?? 'Articolo') ?>">
+              <?php endif; ?>
+            </div>
+            <div>
+              <div class="mini-date"><?= blog_escape($post['data'] ?? '') ?></div>
+              <div class="mini-title"><?= blog_escape($post['titolo'] ?? 'Articolo') ?></div>
+            </div>
+          </a>
+        <?php endforeach; ?>
+      <?php else: ?>
+        <p>Ancora nessun consiglio disponibile.</p>
+      <?php endif; ?>
+    </div>
   </aside>
 </main>
 
@@ -588,7 +733,8 @@ const featuredUpdated = document.getElementById('featuredUpdated');
 const archiveCount = document.getElementById('archiveCount');
 const visibleCount = document.getElementById('visibleCount');
 
-let cachedPosts = [];
+const initialPosts = <?= $blogPostsJson ?: '[]' ?>;
+let cachedPosts = Array.isArray(initialPosts) ? initialPosts : [];
 
 function escapeHTML(str = '') {
     return str.replace(/[&<>"']/g, (char) => ({
@@ -735,6 +881,13 @@ function renderMiniList(posts, excludeId = null) {
 
 function filterPosts(term) {
     if (!term) {
+        if (!cachedPosts.length) {
+            updateArchiveCounters(0, 0);
+            updateFeatured(null);
+            cardGrid.innerHTML = '<div class="empty-state">Ancora nessun articolo disponibile nel blog.</div>';
+            emptyState.hidden = true;
+            return;
+        }
         updateFeatured(cachedPosts[0]);
         renderGrid(cachedPosts.slice(1));
         emptyState.hidden = cachedPosts.length > 0;
@@ -763,42 +916,9 @@ function filterPosts(term) {
     renderGrid(filtered);
 }
 
-async function loadBlog() {
-    try {
-        const response = await fetch('/api/blog.php?azione=lista');
-        if (!response.ok) {
-            throw new Error('Impossibile recuperare gli articoli');
-        }
-
-        const posts = await response.json();
-        cachedPosts = Array.isArray(posts) ? posts : [];
-
-        updateFeatured(cachedPosts[0]);
-        renderGrid(cachedPosts.slice(1));
-        const featuredId = cachedPosts[0]?.id ?? null;
-        renderMiniList(cachedPosts, featuredId);
-        updateArchiveCounters(cachedPosts.length, cachedPosts.length);
-        emptyState.hidden = cachedPosts.length > 0;
-    } catch (error) {
-        setFeaturedMeta('Errore di caricamento');
-        updateArchiveCounters(0, 0);
-        featuredBox.innerHTML = `
-            <div class="featured-copy">
-                <span>Errore</span>
-                <h3>Ops, qualcosa e andato storto</h3>
-                <p>${escapeHTML(error.message)}</p>
-            </div>`;
-        cardGrid.innerHTML = '';
-        miniList.innerHTML = '<p>Ricarica la pagina per riprovare.</p>';
-        emptyState.hidden = false;
-    }
-}
-
 searchInput?.addEventListener('input', event => {
     filterPosts(event.target.value.trim());
 });
-
-loadBlog();
 </script>
 
 </body>

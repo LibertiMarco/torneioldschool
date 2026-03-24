@@ -9,8 +9,60 @@ $isLogged = isset($_SESSION['user_id']);
 require_once __DIR__ . '/includi/seo.php';
 require_once __DIR__ . '/includi/db.php';
 
+function article_escape(?string $value): string
+{
+    return htmlspecialchars((string)($value ?? ''), ENT_QUOTES, 'UTF-8');
+}
+
+function article_apply_inline_formatting(string $escaped): string
+{
+    $formatted = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $escaped);
+    if ($formatted === null) {
+        $formatted = $escaped;
+    }
+    $formatted = preg_replace('/==(.+?)==/', '<strong>$1</strong>', $formatted);
+    return $formatted === null ? $escaped : $formatted;
+}
+
+function article_render_content(string $text): string
+{
+    $raw = trim($text);
+    if ($raw === '') {
+        return '<p>Non abbiamo trovato il contenuto di questo articolo.</p>';
+    }
+
+    $normalized = preg_replace("/\r\n?/", "\n", $raw);
+    $normalized = preg_replace("/\n{3,}/", "\n\n", $normalized ?? $raw);
+    $blocks = preg_split("/\n{2,}/", trim((string)$normalized)) ?: [];
+    $html = [];
+
+    foreach ($blocks as $block) {
+        $line = trim($block);
+        if ($line === '') {
+            continue;
+        }
+
+        if (preg_match('/^##\s+(.+)$/u', $line, $matches) || preg_match('/^==(.+)==$/u', $line, $matches)) {
+            $html[] = '<h3>' . article_apply_inline_formatting(article_escape(trim($matches[1]))) . '</h3>';
+            continue;
+        }
+
+        if (preg_match('/^#\s+(.+)$/u', $line, $matches)) {
+            $html[] = '<h2>' . article_apply_inline_formatting(article_escape(trim($matches[1]))) . '</h2>';
+            continue;
+        }
+
+        $escaped = article_escape($line);
+        $escaped = nl2br($escaped, false);
+        $html[] = '<p>' . article_apply_inline_formatting($escaped) . '</p>';
+    }
+
+    return $html ? implode("\n", $html) : '<p>Non abbiamo trovato il contenuto di questo articolo.</p>';
+}
+
 $baseUrl = seo_base_url();
 $articleId = 0;
+$articleRow = null;
 $articleTitleForUrl = $requestedTitle !== '' ? $requestedTitle : '';
 $articleUrl = $baseUrl . '/articolo.php' . ($articleTitleForUrl !== '' ? ('?titolo=' . rawurlencode($articleTitleForUrl)) : ($requestedId > 0 ? ('?id=' . $requestedId) : ''));
 $articleMeta = [
@@ -27,6 +79,16 @@ $breadcrumbSchema = seo_breadcrumb_schema([
     ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
     ['name' => 'Articolo', 'url' => $articleUrl],
 ]);
+$articleTitleText = 'Articolo';
+$articleSubtitleText = 'Recuperiamo i dettagli e li inquadriamo al meglio.';
+$articleDateLabel = '';
+$articleContentHtml = '<p>Un attimo di pazienza...</p>';
+$articleMedia = [];
+$articleMediaSeed = [];
+$articleCoverPath = '';
+$articleHasMedia = false;
+$articleHasMultipleMedia = false;
+$relatedPosts = [];
 
 $normalizeTitleKey = static function (string $value): string {
     $key = strtolower(trim($value));
@@ -72,6 +134,7 @@ if ($stmt) {
     if ($stmt->execute()) {
         $result = $stmt->get_result();
         if ($row = $result->fetch_assoc()) {
+            $articleRow = $row;
             $articleId = (int)($row['id'] ?? 0);
             $articleTitleForUrl = $row['titolo'] ?? '';
             $targetPath = $articleTitleForUrl !== '' ? '/articolo.php?titolo=' . rawurlencode($articleTitleForUrl) : '/articolo.php?id=' . $articleId;
@@ -156,6 +219,7 @@ if ($articleId === 0 && $fallbackId > 0) {
         if ($stmt->execute()) {
             $result = $stmt->get_result();
             if ($row = $result->fetch_assoc()) {
+                $articleRow = $row;
                 $articleId = (int)($row['id'] ?? 0);
                 $articleTitleForUrl = $row['titolo'] ?? '';
                 $targetPath = $articleTitleForUrl !== '' ? '/articolo.php?titolo=' . rawurlencode($articleTitleForUrl) : '/articolo.php?id=' . $articleId;
@@ -204,6 +268,96 @@ if ($articleId === 0 && $fallbackId > 0) {
         $stmt->close();
     }
 }
+
+if ($articleId > 0 && is_array($articleRow)) {
+    $articleTitleText = $articleRow['titolo'] ?? 'Articolo';
+    $articleCoverPath = $articleRow['cover'] ?? '';
+    $articleContentHtml = article_render_content($articleRow['contenuto'] ?? '');
+    if (!empty($articleRow['data_pubblicazione'])) {
+        $timestamp = strtotime((string)$articleRow['data_pubblicazione']);
+        if ($timestamp) {
+            $articleDateLabel = date('d/m/Y H:i', $timestamp);
+            $articleSubtitleText = 'Pubblicato il ' . $articleDateLabel;
+        }
+    }
+    if ($articleSubtitleText === 'Recuperiamo i dettagli e li inquadriamo al meglio.') {
+        $articleSubtitleText = 'Approfondimento pubblicato dal nostro staff.';
+    }
+
+    $mediaStmt = $conn->prepare(
+        "SELECT id, tipo, file_path, ordine
+         FROM blog_media
+         WHERE post_id = ?
+         ORDER BY ordine ASC, id ASC"
+    );
+    if ($mediaStmt) {
+        $mediaStmt->bind_param('i', $articleId);
+        if ($mediaStmt->execute()) {
+            $mediaResult = $mediaStmt->get_result();
+            while ($mediaRow = $mediaResult->fetch_assoc()) {
+                $articleMedia[] = [
+                    'id' => (int)($mediaRow['id'] ?? 0),
+                    'tipo' => $mediaRow['tipo'] ?? 'image',
+                    'url' => !empty($mediaRow['file_path']) ? '/img/blog_media/' . ltrim((string)$mediaRow['file_path'], '/') : '',
+                    'ordine' => (int)($mediaRow['ordine'] ?? 0),
+                ];
+            }
+        }
+        $mediaStmt->close();
+    }
+
+    $articleMediaSeed = array_values(array_filter(
+        $articleMedia,
+        static fn(array $item): bool => !empty($item['url'])
+    ));
+    if (!$articleMediaSeed && $articleCoverPath !== '') {
+        $articleMediaSeed[] = [
+            'id' => 0,
+            'tipo' => 'image',
+            'url' => $articleCoverPath,
+            'ordine' => 0,
+        ];
+    }
+    $articleHasMedia = !empty($articleMediaSeed);
+    $articleHasMultipleMedia = count($articleMediaSeed) > 1;
+
+    $relatedStmt = $conn->prepare(
+        "SELECT id,
+                titolo,
+                DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data
+         FROM blog_post
+         WHERE id <> ?
+         ORDER BY data_pubblicazione DESC
+         LIMIT 4"
+    );
+    if ($relatedStmt) {
+        $relatedStmt->bind_param('i', $articleId);
+        if ($relatedStmt->execute()) {
+            $relatedResult = $relatedStmt->get_result();
+            while ($relatedRow = $relatedResult->fetch_assoc()) {
+                $relatedPosts[] = $relatedRow;
+            }
+        }
+        $relatedStmt->close();
+    }
+} else {
+    $articleTitleText = 'Articolo non trovato';
+    $articleSubtitleText = 'Il contenuto richiesto non e disponibile o e stato rimosso.';
+    $articleContentHtml = '<p>La pagina che hai richiesto non e disponibile. Torna al blog per leggere gli altri contenuti pubblicati.</p>';
+}
+
+$articleMediaJson = json_encode(
+    $articleMediaSeed,
+    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+);
+$articleInitialCoverJson = json_encode(
+    $articleCoverPath,
+    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+);
+$articleInitialTitleJson = json_encode(
+    $articleTitleText,
+    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+);
 
 if ($articleId === 0) {
     http_response_code(404);
@@ -741,53 +895,83 @@ if ($articleId === 0) {
 
 <main class="article-layout">
   <article class="article-panel" id="articlePanel">
-        <div class="article-meta">
+    <div class="article-meta">
       <a class="article-badge" href="/blog.php" aria-label="Torna al blog">
         <span aria-hidden="true">&#8592;</span> Blog
       </a>
-      <span id="articleDate" class="sr-only">--/--/----</span>
+      <span id="articleDate" class="sr-only"><?= article_escape($articleDateLabel ?: '--/--/----') ?></span>
     </div>
     <div class="article-backlink-inline">
       <a href="/blog.php" class="btn-back-blog" aria-label="Torna al blog">&#8592; Torna al blog</a>
     </div>
-    <h2 id="articleTitle">Caricamento...</h2>
-    <p class="article-subtitle" id="articleSubtitle">Recuperiamo i dettagli e li inquadriamo al meglio.</p>
-<div class="article-media hidden" id="articleMedia">
-    <button class="carousel-nav prev" id="mediaPrev" aria-label="Media precedente">&#8592;</button>
-    <div class="media-stage" id="mediaStage"></div>
-    <button class="carousel-nav next" id="mediaNext" aria-label="Media successivo">&#8594;</button>
-    <div class="media-dots" id="mediaDots"></div>
-</div>
-    <div class="article-content" id="articleContent">Un attimo di pazienza...</div>
+    <h2 id="articleTitle"><?= article_escape($articleTitleText) ?></h2>
+    <p class="article-subtitle" id="articleSubtitle"><?= article_escape($articleSubtitleText) ?></p>
+    <div class="article-media<?= $articleHasMedia ? '' : ' hidden' ?>" id="articleMedia">
+      <button class="carousel-nav prev" id="mediaPrev" aria-label="Media precedente"<?= $articleHasMultipleMedia ? '' : ' hidden' ?>>&#8592;</button>
+      <div class="media-stage" id="mediaStage">
+        <?php if ($articleHasMedia): ?>
+          <?php $initialMedia = $articleMediaSeed[0]; ?>
+          <?php if (($initialMedia['tipo'] ?? 'image') === 'video'): ?>
+            <video controls src="<?= article_escape($initialMedia['url'] ?? '') ?>"></video>
+          <?php else: ?>
+            <img src="<?= article_escape($initialMedia['url'] ?? '') ?>" alt="<?= article_escape($articleTitleText) ?>">
+          <?php endif; ?>
+        <?php endif; ?>
+      </div>
+      <button class="carousel-nav next" id="mediaNext" aria-label="Media successivo"<?= $articleHasMultipleMedia ? '' : ' hidden' ?>>&#8594;</button>
+      <div class="media-dots" id="mediaDots">
+        <?php if ($articleHasMultipleMedia): ?>
+          <?php foreach ($articleMediaSeed as $index => $unused): ?>
+            <button class="media-dot<?= $index === 0 ? ' active' : '' ?>" data-index="<?= $index ?>" aria-label="Mostra media <?= $index + 1 ?>"></button>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </div>
+    </div>
+    <div class="article-content" id="articleContent"><?= $articleContentHtml ?></div>
+  </article>
+
   <aside class="article-sidebar">
     <h3>Da leggere dopo</h3>
     <p class="comments-hint">Altri articoli dal nostro staff.</p>
-    <div id="relatedList">Caricamento...</div>
-  </aside>
-
-  <section class="comments-wrapper">
-    <div class="comments-card">
-      <h3>Commenti della community</h3>
-      <div id="commentsList">Caricamento dei commenti...</div>
-
-      <?php if ($isLogged): ?>
-        <form class="comment-form" id="commentForm">
-          <div class="reply-info" id="replyInfo" hidden style="display:none;">
-            Rispondi a <strong id="replyName"></strong>
-            <button type="button" class="reply-cancel" id="replyCancel">Annulla</button>
-          </div>
-          <label for="commento">Lascia il tuo commento</label>
-          <textarea id="commento" name="commento" placeholder="Condividi il tuo punto di vista..." required></textarea>
-          <button type="submit">Pubblica</button>
-          <div class="feedback-message" id="commentFeedback"></div>
-        </form>
+    <div id="relatedList">
+      <?php if (!empty($relatedPosts)): ?>
+        <?php foreach ($relatedPosts as $post): ?>
+          <a class="related-post" href="/articolo.php?titolo=<?= rawurlencode((string)($post['titolo'] ?? '')) ?>">
+            <span><?= article_escape($post['data'] ?? '') ?></span>
+            <strong><?= article_escape($post['titolo'] ?? 'Articolo') ?></strong>
+          </a>
+        <?php endforeach; ?>
       <?php else: ?>
-        <p class="comments-hint">
-          Vuoi dire la tua? <a href="/login.php">Accedi</a> o <a href="/register.php">registrati</a> per lasciare un commento.
-        </p>
+        <p>Nessun articolo correlato al momento.</p>
       <?php endif; ?>
     </div>
-  </section>
+  </aside>
+
+  <?php if ($articleId > 0): ?>
+    <section class="comments-wrapper">
+      <div class="comments-card">
+        <h3>Commenti della community</h3>
+        <div id="commentsList">Caricamento dei commenti...</div>
+
+        <?php if ($isLogged): ?>
+          <form class="comment-form" id="commentForm">
+            <div class="reply-info" id="replyInfo" hidden style="display:none;">
+              Rispondi a <strong id="replyName"></strong>
+              <button type="button" class="reply-cancel" id="replyCancel">Annulla</button>
+            </div>
+            <label for="commento">Lascia il tuo commento</label>
+            <textarea id="commento" name="commento" placeholder="Condividi il tuo punto di vista..." required></textarea>
+            <button type="submit">Pubblica</button>
+            <div class="feedback-message" id="commentFeedback"></div>
+          </form>
+        <?php else: ?>
+          <p class="comments-hint">
+            Vuoi dire la tua? <a href="/login.php">Accedi</a> o <a href="/register.php">registrati</a> per lasciare un commento.
+          </p>
+        <?php endif; ?>
+      </div>
+    </section>
+  <?php endif; ?>
 </main>
 
 <?php include __DIR__ . '/includi/footer.html'; ?>
@@ -815,6 +999,9 @@ const replyName = document.getElementById('replyName');
 const replyCancelBtn = document.getElementById('replyCancel');
 const defaultAvatar = '/img/icone/user.png';
 const canReply = <?= $isLogged ? 'true' : 'false' ?>;
+const initialArticleMedia = <?= $articleMediaJson ?: '[]' ?>;
+const initialArticleCover = <?= $articleInitialCoverJson ?: '""' ?>;
+const initialArticleTitle = <?= $articleInitialTitleJson ?: '""' ?>;
 let replyTarget = null;
 let replyMention = '';
 
@@ -944,39 +1131,6 @@ function escapeRegex(str = '') {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function formatContent(text = '') {
-    if (!text) {
-        return '<p>Non abbiamo trovato il contenuto di questo articolo.</p>';
-    }
-
-    // Normalizza new line ed elimina i blocchi vuoti per evitare spazi enormi
-    const normalized = text
-        .replace(/\r\n/g, '\n')
-        .replace(/\n{3,}/g, '\n\n');
-
-    const applyInline = (str) =>
-        str
-          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-          .replace(/==(.+?)==/g, '<strong>$1</strong>');
-
-    return normalized
-        .split(/\n{2,}/)
-        .map(block => block.trim())
-        .filter(block => block !== '')
-        .map(raw => {
-            const safe = escapeHTML(raw);
-            const headingMatch = raw.match(/^##\s+(.+)$/) || raw.match(/^==(.+)==$/);
-            if (headingMatch) {
-                return `<h3>${applyInline(escapeHTML(headingMatch[1].trim()))}</h3>`;
-            }
-            if (raw.startsWith('# ')) {
-                return `<h2>${applyInline(safe.slice(2))}</h2>`;
-            }
-            return `<p>${applyInline(safe).replace(/\n/g, '<br>')}</p>`;
-        })
-        .join('');
-}
-
 async function fetchJSON(url, options = {}) {
     const res = await fetch(url, options);
     const text = await res.text();
@@ -987,47 +1141,6 @@ async function fetchJSON(url, options = {}) {
     } catch (error) {
         const clean = text.replace(/<[^>]+>/g, '').trim();
         throw new Error(clean || 'Risposta non valida dal server.');
-    }
-}
-
-async function loadArticle() {
-    try {
-        const { data, ok } = await fetchJSON(`/api/blog.php?azione=articolo&id=${articleId}`);
-        if (!ok) {
-            throw new Error(data?.error || 'Articolo non trovato.');
-        }
-
-        document.title = `${data.titolo} - Tornei Old School`;
-        articleTitle.textContent = data.titolo;
-        articleSubtitle.textContent = 'Pubblicato il ' + data.data;
-        articleDate.textContent = data.data;
-        renderMediaCarousel(data.media || [], data.cover || '', data.titolo || '');
-        articleContent.innerHTML = formatContent(data.contenuto || '');
-    } catch (err) {
-        articleContent.innerHTML = `<p>${escapeHTML(err.message)}</p>`;
-    }
-}
-
-async function loadRelated() {
-    try {
-        const { data: posts } = await fetchJSON('/api/blog.php?azione=ultimi');
-
-        if (!Array.isArray(posts) || !posts.length) {
-            relatedList.innerHTML = '<p>Nessun articolo correlato al momento.</p>';
-            return;
-        }
-
-        relatedList.innerHTML = posts
-            .filter(post => Number(post.id) !== articleId)
-            .slice(0, 4)
-            .map(post => `
-                <a class="related-post" href="/articolo.php?titolo=${encodeURIComponent(post.titolo)}">
-                    <span>${escapeHTML(post.data || '')}</span>
-                    <strong>${escapeHTML(post.titolo)}</strong>
-                </a>
-            `).join('');
-    } catch (err) {
-        relatedList.innerHTML = `<p>${escapeHTML(err.message)}</p>`;
     }
 }
 
@@ -1243,9 +1356,10 @@ if (canReply) {
     });
 }
 
-loadArticle();
-loadRelated();
-fetchComments();
+if (articleId > 0) {
+    renderMediaCarousel(initialArticleMedia, initialArticleCover, initialArticleTitle);
+    fetchComments();
+}
 
 mediaPrev?.addEventListener('click', showPrevMedia);
 mediaNext?.addEventListener('click', showNextMedia);

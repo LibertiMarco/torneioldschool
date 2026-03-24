@@ -31,7 +31,7 @@ $lastUpdate = date('d/m/Y', @filemtime(__FILE__) ?: time());
   </style>
 </head>
 <body>
-  <div id="header-container"></div>
+  <?php include __DIR__ . '/includi/header.php'; ?>
 
   <main class="content legal-page">
     <section class="legal-hero">
@@ -86,34 +86,8 @@ $lastUpdate = date('d/m/Y', @filemtime(__FILE__) ?: time());
     </section>
   </main>
 
-  <div id="footer-container"></div>
-
-  <script src="/includi/header-interactions.js?v=20251220"></script>
+  <?php include __DIR__ . '/includi/footer.html'; ?>
   <script src="/includi/app.min.js?v=20251220"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      fetch('/includi/header.php')
-        .then(r => r.text())
-        .then(html => {
-          const headerSlot = document.getElementById('header-container');
-          if (headerSlot) {
-            headerSlot.innerHTML = html;
-            if (typeof initHeaderInteractions === 'function') {
-              initHeaderInteractions();
-            }
-          }
-        });
-
-      fetch('/includi/footer.html')
-        .then(r => r.text())
-        .then(html => {
-          const footerSlot = document.getElementById('footer-container');
-          if (footerSlot) {
-            footerSlot.innerHTML = html;
-          }
-        });
-    });
-  </script>
 </body>
 </html>
 
