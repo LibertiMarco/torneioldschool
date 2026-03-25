@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includi/security.php';
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
 $torneoSlug = 'supercup';
 $torneoName = 'Supercup';
-$assetVersion = '20260317a';
+$assetVersion = '20260325b';
 ?>
 <!DOCTYPE html>
 <html lang="it">
