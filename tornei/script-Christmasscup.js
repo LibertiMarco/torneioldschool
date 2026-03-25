@@ -499,6 +499,8 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "GOL
         const hasScore = partita.gol_casa !== null && partita.gol_ospite !== null;
         const giocata = String(partita.giocata) === "1";
         const mostraRisultato = giocata && hasScore;
+        const aiRigori = mostraRisultato && Number(partita.decisa_rigori || 0) === 1;
+        const hasPenalties = aiRigori && partita.rigori_casa !== null && partita.rigori_casa !== undefined && partita.rigori_ospite !== null && partita.rigori_ospite !== undefined;
 
         if (mostraRisultato) {
           partitaDiv.style.cursor = "pointer";
@@ -551,6 +553,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "GOL
               <span class="team-name">${partita.squadra_ospite}</span>
             </div>
           </div>
+          ${hasPenalties ? `<div class="match-penalties">d.c.r. ${partita.rigori_casa}-${partita.rigori_ospite}</div>` : ""}
         `;
 
         container.appendChild(partitaDiv);
@@ -708,6 +711,8 @@ async function caricaPlayoff(tipoCoppa) {
           const hasScore = partita.gol_casa !== null && partita.gol_ospite !== null;
           const giocata = Number(partita.giocata) === 1;
           const mostraRisultato = giocata && hasScore;
+          const aiRigori = mostraRisultato && Number(partita.decisa_rigori || 0) === 1;
+          const hasPenalties = aiRigori && partita.rigori_casa !== null && partita.rigori_casa !== undefined && partita.rigori_ospite !== null && partita.rigori_ospite !== undefined;
           const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
           const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
           const dataStr = formattaData(partita.data_partita);
@@ -730,6 +735,7 @@ async function caricaPlayoff(tipoCoppa) {
               </div>
               <span class="team-score">${mostraRisultato ? partita.gol_ospite : "-"}</span>
             </div>
+            ${hasPenalties ? `<div class="bracket-penalties">d.c.r. ${partita.rigori_casa}-${partita.rigori_ospite}</div>` : ""}
             <div class="bracket-meta">
               <span>${dataStr}${showOra ? " - " + partita.ora_partita.slice(0,5) : ""}</span>
               <span>${partita.campo || "Campo da definire"}</span>
