@@ -60,8 +60,8 @@ require_once __DIR__ . '/includi/admin_guard.php';
             </div>
 
       <div class="admin-card">
-          <h3>Utenti & Iscrizioni</h3>
-          <p>Controlla gli utenti registrati e le loro iscrizioni.</p><br>
+        <h3>Utenti & Iscrizioni</h3>
+          <p>Controlla gli utenti registrati, le iscrizioni e i flag delle funzioni nascoste.</p><br>
           <a href="/api/gestione_utenti.php">Visualizza</a>
       </div>
 

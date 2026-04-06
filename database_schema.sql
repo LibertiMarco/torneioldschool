@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS utenti (
     email VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
     ruolo ENUM('user','admin') NOT NULL DEFAULT 'user',
+    feature_flags LONGTEXT DEFAULT NULL,
     avatar VARCHAR(255) DEFAULT NULL,
     email_verificata TINYINT(1) NOT NULL DEFAULT 0,
     token_verifica VARCHAR(64) DEFAULT NULL,

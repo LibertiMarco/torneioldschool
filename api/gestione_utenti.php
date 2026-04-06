@@ -2,7 +2,9 @@
 require_once __DIR__ . '/../includi/admin_guard.php';
 
 require_once __DIR__ . '/crud/utente.php';
+require_once __DIR__ . '/../includi/user_features.php';
 $utente = new Utente();
+$featureDefinitions = user_feature_definitions();
 
 // --- CREA ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
@@ -11,8 +13,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     $cognome = trim($_POST['cognome']);
     $password = trim($_POST['password']);
     $ruolo = trim($_POST['ruolo']);
+    $featureFlags = extract_user_feature_flags_from_request($_POST);
 
-    $result = $utente->crea($email, $nome, $cognome, $password, $ruolo);
+    $result = $utente->crea($email, $nome, $cognome, $password, $ruolo, $featureFlags);
     if (isset($result['error'])) {
         echo "<script>alert('".$result['error']."'); window.history.back();</script>";
         exit;
@@ -29,8 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $cognome = trim($_POST['cognome']);
     $password = !empty($_POST['password']) ? trim($_POST['password']) : null;
     $ruolo = trim($_POST['ruolo']);
+    $featureFlags = extract_user_feature_flags_from_request($_POST);
 
-    $utente->aggiorna($id, $email, $nome, $cognome, $password, $ruolo);
+    $utente->aggiorna($id, $email, $nome, $cognome, $password, $ruolo, $featureFlags);
     header("Location: gestione_utenti.php");
     exit;
 }
@@ -230,6 +234,59 @@ $lista = $utente->getAll();
     .admin-table-section {
       margin-bottom: 140px;
     }
+
+    .feature-flags-box {
+      margin-top: 12px;
+      padding: 16px 18px;
+      border: 1px solid #dbe3ef;
+      border-radius: 14px;
+      background: #f8fafc;
+    }
+
+    .feature-flags-box h3 {
+      margin: 0 0 8px;
+      color: #15293e;
+      font-size: 1.02rem;
+    }
+
+    .feature-flags-box p {
+      margin: 0 0 14px;
+      color: #4b5563;
+      font-size: 0.93rem;
+    }
+
+    .feature-flag-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-top: 1px solid rgba(21, 41, 62, 0.08);
+    }
+
+    .feature-flag-option:first-of-type {
+      border-top: none;
+      padding-top: 0;
+    }
+
+    .feature-flag-option input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      flex: 0 0 auto;
+    }
+
+    .feature-flag-copy strong {
+      display: block;
+      color: #15293e;
+      margin-bottom: 4px;
+    }
+
+    .feature-flag-copy span {
+      display: block;
+      color: #5c6572;
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
   </style>
 </head>
 <body>
@@ -304,6 +361,20 @@ $lista = $utente->getAll();
               <option value="admin">Amministratore</option>
             </select>
 
+            <div class="feature-flags-box">
+              <h3>Funzioni nascoste</h3>
+              <p>Attiva qui le voci speciali che devono comparire nel menu utente. Gli admin le vedono sempre.</p>
+              <?php foreach ($featureDefinitions as $featureKey => $featureConfig): ?>
+                <label class="feature-flag-option">
+                  <input type="checkbox" name="feature_flags[]" value="<?= htmlspecialchars($featureKey) ?>">
+                  <span class="feature-flag-copy">
+                    <strong><?= htmlspecialchars($featureConfig['label']) ?></strong>
+                    <span><?= htmlspecialchars($featureConfig['description'] ?? '') ?></span>
+                  </span>
+                </label>
+              <?php endforeach; ?>
+            </div>
+
             <button type="submit" name="crea" class="btn-primary add-user-submit">Crea Utente</button>
             <div id="form-message" class="form-message"></div>
           </form>
@@ -331,6 +402,19 @@ $lista = $utente->getAll();
             <option value="user">Utente</option>
             <option value="admin">Amministratore</option>
           </select>
+        </div>
+        <div class="feature-flags-box">
+          <h3>Funzioni nascoste</h3>
+          <p>Le voci attive compariranno nel menu del singolo utente; per gli admin resteranno sempre visibili.</p>
+          <?php foreach ($featureDefinitions as $featureKey => $featureConfig): ?>
+            <label class="feature-flag-option">
+              <input type="checkbox" name="feature_flags[]" value="<?= htmlspecialchars($featureKey) ?>">
+              <span class="feature-flag-copy">
+                <strong><?= htmlspecialchars($featureConfig['label']) ?></strong>
+                <span><?= htmlspecialchars($featureConfig['description'] ?? '') ?></span>
+              </span>
+            </label>
+          <?php endforeach; ?>
         </div>
         <button type="submit" name="aggiorna" class="btn-primary">Aggiorna Utente</button>
       </form>
@@ -403,12 +487,20 @@ $lista = $utente->getAll();
       cognome: document.getElementById('mod_cognome'),
       ruolo: document.getElementById('mod_ruolo')
     };
+    const modFeatureInputs = Array.from(document.querySelectorAll('.form-modifica input[name="feature_flags[]"]'));
+
+    function resetModFeatureFlags() {
+      modFeatureInputs.forEach((input) => {
+        input.checked = false;
+      });
+    }
 
     selectUtenteMod.addEventListener('change', async (e) => {
       const id = e.target.value;
       if (!id) {
         Object.values(campi).forEach(f => f.value = '');
         campi.ruolo.value = 'user';
+        resetModFeatureFlags();
         return;
       }
       try {
@@ -419,8 +511,15 @@ $lista = $utente->getAll();
           campi.nome.value = data.nome || '';
           campi.cognome.value = data.cognome || '';
           campi.ruolo.value = data.ruolo || 'user';
+          const enabledFlags = data.feature_flags || {};
+          modFeatureInputs.forEach((input) => {
+            input.checked = Boolean(enabledFlags[input.value]);
+          });
+        } else {
+          resetModFeatureFlags();
         }
       } catch (err) {
+        resetModFeatureFlags();
         console.error('Errore nel recupero utente:', err);
       }
     });

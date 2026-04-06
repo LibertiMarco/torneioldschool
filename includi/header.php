@@ -1,7 +1,14 @@
 <?php
 require_once __DIR__ . '/security.php';
+require_once __DIR__ . '/user_features.php';
+
+$isLoggedIn = isset($_SESSION['user_id']);
+$userFeatureFlags = normalize_user_feature_flags([]);
+$featureDefinitions = user_feature_definitions();
+$sessionRole = $_SESSION['ruolo'] ?? 'user';
+
 $hasPlayerProfile = false;
-if (isset($_SESSION['user_id'])) {
+if ($isLoggedIn) {
     // Usa la connessione solo se disponibile, altrimenti evita fatal error
     if (!isset($conn) || !($conn instanceof mysqli)) {
         require_once __DIR__ . '/db.php';
@@ -16,10 +23,11 @@ if (isset($_SESSION['user_id'])) {
             }
             $stmt->close();
         }
+
+        $userFeatureFlags = load_user_feature_flags($conn, (int)$_SESSION['user_id']);
     }
 }
 
-$isLoggedIn = isset($_SESSION['user_id']);
 $sessionAvatar = $_SESSION['avatar'] ?? '';
 $avatarUrl = '/img/icone/user.png';
 if (!empty($sessionAvatar)) {
@@ -93,13 +101,23 @@ if (!empty($sessionAvatar)) {
                       <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/account.php')) ?>">
                           <span>Il mio account</span>
                       </a>
+
                       <?php if ($hasPlayerProfile): ?>
                           <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/statistiche_giocatore.php')) ?>">
                               <span>Statistiche giocatore</span>
                           </a>
                       <?php endif; ?>
 
-                      <?php if ($_SESSION['ruolo'] === 'admin'): ?>
+                      <?php foreach ($featureDefinitions as $featureKey => $featureConfig): ?>
+                          <?php $isFeatureVisible = $sessionRole === 'admin' || user_feature_enabled($userFeatureFlags, $featureKey); ?>
+                          <?php if ($isFeatureVisible): ?>
+                              <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path($featureConfig['path'])) ?>">
+                                  <span><?= htmlspecialchars($featureConfig['menu_label']) ?></span>
+                              </a>
+                          <?php endif; ?>
+                      <?php endforeach; ?>
+
+                      <?php if ($sessionRole === 'admin'): ?>
                           <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/admin_dashboard.php')) ?>">
                               <span>Gestione Sito</span>
                           </a>
