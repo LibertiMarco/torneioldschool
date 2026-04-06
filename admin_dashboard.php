@@ -61,8 +61,26 @@ require_once __DIR__ . '/includi/admin_guard.php';
 
       <div class="admin-card">
         <h3>Utenti & Iscrizioni</h3>
-          <p>Controlla gli utenti registrati, le iscrizioni e i flag delle funzioni nascoste.</p><br>
+          <p>Controlla gli utenti registrati e le loro iscrizioni.</p><br>
           <a href="/api/gestione_utenti.php">Visualizza</a>
+      </div>
+
+      <div class="admin-card">
+        <h3>Funzioni Account</h3>
+        <p>Abilita o disabilita Totocalcio, Fantacalcio e altre funzioni per ogni account.</p><br>
+        <a href="/api/gestione_funzioni_account.php">Configura</a>
+      </div>
+
+      <div class="admin-card">
+        <h3>Gestione Totocalcio</h3>
+        <p>Prepara l'area admin del Totocalcio da sviluppare passo per passo.</p><br>
+        <a href="/api/gestione_totocalcio.php">Apri</a>
+      </div>
+
+      <div class="admin-card">
+        <h3>Gestione Fantacalcio</h3>
+        <p>Prepara l'area admin del Fantacalcio da sviluppare insieme nelle prossime iterazioni.</p><br>
+        <a href="/api/gestione_fantacalcio.php">Apri</a>
       </div>
 
       <div class="admin-card">

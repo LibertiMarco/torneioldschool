@@ -117,6 +117,31 @@ if (!function_exists('load_user_feature_flags')) {
     }
 }
 
+if (!function_exists('save_user_feature_flags')) {
+    function save_user_feature_flags(mysqli $conn, int $userId, array $flags): bool
+    {
+        if ($userId <= 0) {
+            return false;
+        }
+
+        if (!ensure_user_feature_flags_column($conn)) {
+            return false;
+        }
+
+        $encodedFlags = encode_user_feature_flags($flags);
+        $stmt = $conn->prepare("UPDATE utenti SET feature_flags = ? WHERE id = ?");
+        if (!$stmt) {
+            return false;
+        }
+
+        $stmt->bind_param("si", $encodedFlags, $userId);
+        $result = $stmt->execute();
+        $stmt->close();
+
+        return $result;
+    }
+}
+
 if (!function_exists('extract_user_feature_flags_from_request')) {
     function extract_user_feature_flags_from_request(array $source, string $field = 'feature_flags'): array
     {
