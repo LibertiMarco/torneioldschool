@@ -11,6 +11,8 @@ DROP TABLE IF EXISTS notifiche_commenti;
 DROP TABLE IF EXISTS blog_media;
 DROP TABLE IF EXISTS blog_commenti;
 DROP TABLE IF EXISTS blog_post;
+DROP TABLE IF EXISTS totocalcio_pronostici;
+DROP TABLE IF EXISTS totocalcio_partite;
 DROP TABLE IF EXISTS partita_giocatore;
 DROP TABLE IF EXISTS squadre_giocatori;
 DROP TABLE IF EXISTS partite;
@@ -44,6 +46,34 @@ CREATE TABLE IF NOT EXISTS utenti (
     UNIQUE KEY uq_remember_selector (remember_selector),
     KEY idx_utenti_token_verifica (token_verifica),
     KEY idx_remember_expires_at (remember_expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Totocalcio (totocalcio.php, api/gestione_totocalcio.php)
+CREATE TABLE IF NOT EXISTS totocalcio_partite (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    partita_id INT UNSIGNED NOT NULL,
+    ordine INT NOT NULL DEFAULT 0,
+    attiva TINYINT(1) NOT NULL DEFAULT 1,
+    creato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    aggiornato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_totocalcio_partita_reale (partita_id),
+    KEY idx_totocalcio_attiva_ordine (attiva, ordine),
+    CONSTRAINT fk_totocalcio_match_partita FOREIGN KEY (partita_id) REFERENCES partite(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS totocalcio_pronostici (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    partita_id INT UNSIGNED NOT NULL,
+    utente_id INT UNSIGNED NOT NULL,
+    segno ENUM('1','X','2') NOT NULL,
+    gol_casa_previsti TINYINT UNSIGNED NOT NULL,
+    gol_trasferta_previsti TINYINT UNSIGNED NOT NULL,
+    creato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    aggiornato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_totocalcio_pronostico (partita_id, utente_id),
+    KEY idx_totocalcio_utente (utente_id),
+    CONSTRAINT fk_totocalcio_pronostico_partita FOREIGN KEY (partita_id) REFERENCES totocalcio_partite(id) ON DELETE CASCADE,
+    CONSTRAINT fk_totocalcio_pronostico_utente FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Albo d'oro (api/albo_doro.php, api/gestione_albo.php)

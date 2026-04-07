@@ -73,7 +73,7 @@ require_once __DIR__ . '/includi/admin_guard.php';
 
       <div class="admin-card">
         <h3>Gestione Totocalcio</h3>
-        <p>Prepara l'area admin del Totocalcio da sviluppare passo per passo.</p><br>
+        <p>Seleziona partite dal calendario e gestisci la classifica del Totocalcio.</p><br>
         <a href="/api/gestione_totocalcio.php">Apri</a>
       </div>
 
