@@ -844,7 +844,7 @@ $giocatoriJson = htmlspecialchars(
 
       <div class="form-group">
           <label>Giocatori</label>
-          <input type="search" id="assocGiocatoreSearch" placeholder="Cerca per nome o cognome" autocomplete="off">
+          <input type="search" id="assocGiocatoreSearch" placeholder="Cerca per nome o cognome" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search">
           <select name="giocatore_associa[]" id="assocGiocatore" required multiple size="8">
               <option value="" disabled>-- Seleziona uno o piu giocatori --</option>
               <?php foreach ($giocatori as $g): ?>
@@ -1243,6 +1243,7 @@ try {
 } catch (e) {
     allPlayers = [];
 }
+let assocAvailablePlayers = [];
 
 const API_SQUADRE_TORNEO = "/api/get_squadre_torneo.php";
 const API_GIOCATORI_SQUADRA = "/api/get_giocatori_squadra.php";
@@ -1398,51 +1399,59 @@ function updateCaptainAvailability() {
 async function aggiornaGiocatoriDisponibiliPerAssociazione() {
     if (!assocGiocatore) return;
     const squadraId = assocSquadra?.value;
-    const placeholder = "-- Seleziona uno o piu giocatori --";
     // Nessuna squadra: mostra tutti
     if (!squadraId) {
-        resetSelect(assocGiocatore, placeholder, false);
-        allPlayers.forEach(p => {
-            const opt = document.createElement("option");
-            opt.value = p.id;
-            opt.textContent = buildPlayerLabel(p, "cognome");
-            assocGiocatore.appendChild(opt);
-        });
-        updateCaptainAvailability();
+        assocAvailablePlayers = [...allPlayers];
+        renderAssocGiocatori(assocGiocatoreSearch?.value || "", false);
         return;
     }
 
     const associati = await fetchGiocatoriAssociatiIds(squadraId);
     const setAssociati = new Set(associati);
+    assocAvailablePlayers = allPlayers.filter(p => !setAssociati.has(String(p.id)));
+    renderAssocGiocatori(assocGiocatoreSearch?.value || "", false);
+}
+
+function renderAssocGiocatori(term = "", preserveSelection = true) {
+    if (!assocGiocatore) return;
+    const normalized = (term || "").trim().toLowerCase();
+    const selectedValues = preserveSelection
+        ? new Set(
+            Array.from(assocGiocatore.selectedOptions || [])
+                .map(opt => String(opt.value || ""))
+                .filter(Boolean)
+          )
+        : new Set();
+    const placeholder = "-- Seleziona uno o piu giocatori --";
+
     resetSelect(assocGiocatore, placeholder, false);
-    allPlayers
-        .filter(p => !setAssociati.has(String(p.id)))
-        .forEach(p => {
-            const opt = document.createElement("option");
-            opt.value = p.id;
-            opt.textContent = buildPlayerLabel(p, "cognome");
-            assocGiocatore.appendChild(opt);
-        });
-    updateCaptainAvailability();
-    if (assocGiocatoreSearch) {
-        filterAssocGiocatori(assocGiocatoreSearch.value);
+
+    const filteredPlayers = assocAvailablePlayers.filter(player => {
+        const label = buildPlayerLabel(player, "cognome").toLowerCase();
+        return normalized === "" || label.includes(normalized) || selectedValues.has(String(player.id));
+    });
+
+    filteredPlayers.forEach(player => {
+        const opt = document.createElement("option");
+        opt.value = player.id;
+        opt.textContent = buildPlayerLabel(player, "cognome");
+        opt.selected = selectedValues.has(String(player.id));
+        assocGiocatore.appendChild(opt);
+    });
+
+    if (!filteredPlayers.length) {
+        const emptyOpt = document.createElement("option");
+        emptyOpt.value = "";
+        emptyOpt.textContent = "Nessun giocatore trovato";
+        emptyOpt.disabled = true;
+        assocGiocatore.appendChild(emptyOpt);
     }
+
+    updateCaptainAvailability();
 }
 
 function filterAssocGiocatori(term) {
-    if (!assocGiocatore) return;
-    const normalized = (term || "").trim().toLowerCase();
-    Array.from(assocGiocatore.options || []).forEach(opt => {
-        if (!opt.value) {
-            opt.hidden = false;
-            opt.style.display = "";
-            return;
-        }
-        const text = (opt.textContent || "").toLowerCase();
-        const match = normalized === "" || text.includes(normalized) || opt.selected;
-        opt.hidden = !match;
-        opt.style.display = match ? "" : "none";
-    });
+    renderAssocGiocatori(term, true);
 }
 
 function filterGiocatori(term) {
@@ -1772,6 +1781,7 @@ assocSquadra?.addEventListener("change", () => {
 });
 assocGiocatore?.addEventListener("change", () => updateCaptainAvailability());
 assocGiocatoreSearch?.addEventListener("input", e => filterAssocGiocatori(e.target.value));
+assocGiocatoreSearch?.addEventListener("search", e => filterAssocGiocatori(e.target.value));
 updateCaptainAvailability();
 
 function mostraFormAssoc(val) {
