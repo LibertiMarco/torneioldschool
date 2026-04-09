@@ -233,6 +233,94 @@ if (!$partita_id) {
 .modern-danger { background: linear-gradient(135deg, #d72638, #b1172a); border: none; color: #fff; padding: 12px 18px; border-radius: 12px; box-shadow: 0 10px 25px rgba(183, 23, 42, 0.3); transition: transform .15s, box-shadow .15s; font-weight: 700; letter-spacing: 0.2px; }
 .modern-danger:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(183, 23, 42, 0.4); }
 
+.last-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid #d8e1ec;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #f8fbff 0%, #eef4fb 100%);
+    box-shadow: 0 10px 24px rgba(21, 41, 62, 0.08);
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
+}
+
+.last-stat-card:hover {
+    transform: translateY(-1px);
+    border-color: #b8c8da;
+    box-shadow: 0 14px 28px rgba(21, 41, 62, 0.12);
+}
+
+.last-stat-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.last-stat-switch {
+    position: relative;
+    flex: 0 0 auto;
+    width: 52px;
+    height: 30px;
+    border-radius: 999px;
+    background: #c7d2df;
+    box-shadow: inset 0 2px 5px rgba(15, 23, 42, 0.18);
+    transition: background .18s ease;
+}
+
+.last-stat-switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18);
+    transition: transform .18s ease;
+}
+
+.last-stat-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.last-stat-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #15293e;
+    letter-spacing: 0.2px;
+}
+
+.last-stat-desc {
+    font-size: 13px;
+    line-height: 1.45;
+    color: #516274;
+}
+
+.last-stat-input:checked + .last-stat-switch {
+    background: linear-gradient(135deg, #1f3d5a, #15293e);
+}
+
+.last-stat-input:checked + .last-stat-switch::after {
+    transform: translateX(22px);
+}
+
+.last-stat-input:focus-visible + .last-stat-switch {
+    outline: 3px solid rgba(21, 41, 62, 0.18);
+    outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+    .last-stat-card {
+        align-items: flex-start;
+    }
+}
+
 </style>
 </head>
 
@@ -316,9 +404,13 @@ if (!$partita_id) {
   </div>
 
   <div class="form-group">
-    <label style="display:inline-flex; align-items:center; gap:10px;">
-      <input type="checkbox" name="ultima_statistica" value="1">
-      Ultima statistica
+    <label class="last-stat-card">
+      <input class="last-stat-input" type="checkbox" name="ultima_statistica" value="1">
+      <span class="last-stat-switch" aria-hidden="true"></span>
+      <span class="last-stat-copy">
+        <span class="last-stat-title">Ultima statistica</span>
+        <span class="last-stat-desc">Se attiva, al salvataggio la partita viene segnata come giocata.</span>
+      </span>
     </label>
   </div>
 
