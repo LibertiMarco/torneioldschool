@@ -219,16 +219,14 @@ function applica_risultato_classifica_by_id(mysqli $conn, int $squadraId, int $g
  * cosÇÿ da non perdere i match nella ricostruzione della classifica.
  */
 function marca_partite_giocate_da_score(mysqli $conn, string $torneo): void {
+  // Le statistiche giocatore non devono attivare automaticamente il flag "giocata".
   if ($torneo === '') return;
   $sql = "
     UPDATE partite p
     SET giocata = 1
     WHERE p.torneo = ?
       AND p.giocata = 0
-      AND (
-        p.gol_casa IS NOT NULL OR p.gol_ospite IS NOT NULL
-        OR EXISTS (SELECT 1 FROM partita_giocatore pg WHERE pg.partita_id = p.id)
-      )
+      AND (p.gol_casa IS NOT NULL OR p.gol_ospite IS NOT NULL)
   ";
   $stmt = $conn->prepare($sql);
   if ($stmt) {

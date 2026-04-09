@@ -167,7 +167,7 @@ function ricalcolaStatistiche(mysqli $conn, int $partitaId, int $giocatoreId): v
  * Aggiorna automaticamente i gol della partita sommando quelli inseriti nelle statistiche.
  * Somma i goal per squadra (casa/ospite) e li scrive su partite.gol_casa / partite.gol_ospite.
  */
-function aggiornaGolPartita(mysqli $conn, int $partitaId): ?array {
+function aggiornaGolPartita(mysqli $conn, int $partitaId, bool $markAsPlayed = false): ?array {
     $partInfo = $conn->prepare("SELECT torneo, fase, squadra_casa, squadra_ospite, giocata AS old_giocata, gol_casa AS old_gol_casa, gol_ospite AS old_gol_ospite FROM partite WHERE id=?");
     $partInfo->bind_param("i", $partitaId);
     $partInfo->execute();
@@ -208,12 +208,13 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId): ?array {
     $upd->execute();
     $upd->close();
 
-    // Se esiste un risultato salvato la partita deve essere considerata giocata
-    $setPlayed = $conn->prepare("UPDATE partite SET giocata = 1 WHERE id = ?");
-    if ($setPlayed) {
-        $setPlayed->bind_param("i", $partitaId);
-        $setPlayed->execute();
-        $setPlayed->close();
+    if ($markAsPlayed) {
+        $setPlayed = $conn->prepare("UPDATE partite SET giocata = 1 WHERE id = ?");
+        if ($setPlayed) {
+            $setPlayed->bind_param("i", $partitaId);
+            $setPlayed->execute();
+            $setPlayed->close();
+        }
     }
 
     return [
@@ -476,6 +477,7 @@ if ($azione === 'add') {
 
     $partita_id = (int)$_POST['partita_id'];
     $giocatore  = (int)$_POST['giocatore_id'];
+    $ultimaStatistica = isset($_POST['ultima_statistica']) && (string)$_POST['ultima_statistica'] === '1';
     $goal       = (int)$_POST['goal'];
     $assist     = (int)$_POST['assist'];
     $autogol    = (int)($_POST['autogol'] ?? 0);
@@ -504,7 +506,7 @@ if ($azione === 'add') {
     $stmt->execute();
 
     ricalcolaStatistiche($conn, $partita_id, $giocatore);
-    $infoClassifica = aggiornaGolPartita($conn, $partita_id);
+    $infoClassifica = aggiornaGolPartita($conn, $partita_id, $ultimaStatistica);
     aggiornaClassificaDaInfo($infoClassifica);
     inviaNotificaEsito($conn, $partita_id, $infoClassifica);
 

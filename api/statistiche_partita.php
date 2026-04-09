@@ -315,6 +315,13 @@ if (!$partita_id) {
     </div>
   </div>
 
+  <div class="form-group">
+    <label style="display:inline-flex; align-items:center; gap:10px;">
+      <input type="checkbox" name="ultima_statistica" value="1">
+      Ultima statistica
+    </label>
+  </div>
+
   <button class="btn-primary" type="submit">+ Aggiungi</button>
 </form>
 
@@ -523,6 +530,7 @@ document.getElementById("formAdd").addEventListener("submit", async e => {
   fd.set("cartellino_giallo", e.target.cartellino_giallo?.checked ? 1 : 0);
   fd.set("cartellino_rosso", e.target.cartellino_rosso?.checked ? 1 : 0);
   fd.set("autogol", e.target.autogol?.value || 0);
+  fd.set("ultima_statistica", e.target.ultima_statistica?.checked ? 1 : 0);
 
   const r = await fetch(API, { method:"POST", body:fd });
   const out = await r.json();
