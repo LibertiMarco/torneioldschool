@@ -20,6 +20,62 @@ function sanitizeTorneoSlugValue($value) {
     return $value;
 }
 
+function parseTorneoConfigValue($value): array {
+    if (is_array($value)) {
+        return $value;
+    }
+    if (!is_string($value) || trim($value) === '') {
+        return [];
+    }
+    $decoded = json_decode($value, true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+function buildGironeLabelsList(int $count): array {
+    $labels = [];
+    for ($i = 0; $i < $count; $i++) {
+        $n = $i;
+        $label = '';
+        do {
+            $label = chr(65 + ($n % 26)) . $label;
+            $n = intdiv($n, 26) - 1;
+        } while ($n >= 0);
+        $labels[] = $label;
+    }
+    return $labels;
+}
+
+function normalizeGironeValue($value): string {
+    $value = strtoupper(trim((string)$value));
+    $value = preg_replace('/^GIRONE\s+/u', '', $value);
+    $value = preg_replace('/^GRUPPO\s+/u', '', $value);
+    return substr($value, 0, 32);
+}
+
+function getGironeInfoForTorneo(Torneo $torneoModel, string $torneoSlug): array {
+    if ($torneoSlug === '') {
+        return ['is_girone' => false, 'labels' => []];
+    }
+
+    $torneoRow = $torneoModel->getBySlug($torneoSlug);
+    if (!$torneoRow) {
+        return ['is_girone' => false, 'labels' => []];
+    }
+
+    $config = parseTorneoConfigValue($torneoRow['config'] ?? null);
+    $formato = strtolower(trim((string)($config['formato'] ?? $config['formula_torneo'] ?? '')));
+    $numeroGironi = max(0, (int)($config['numero_gironi'] ?? 0));
+
+    if ($formato !== 'girone' || $numeroGironi <= 0) {
+        return ['is_girone' => false, 'labels' => []];
+    }
+
+    return [
+        'is_girone' => true,
+        'labels' => buildGironeLabelsList($numeroGironi),
+    ];
+}
+
 function salvaScudetto($nomeSquadra, $torneoSlug, $fieldName) {
     if (!isset($_FILES[$fieldName]) || $_FILES[$fieldName]['error'] === UPLOAD_ERR_NO_FILE) {
         return null;
@@ -94,14 +150,28 @@ function salvaScudetto($nomeSquadra, $torneoSlug, $fieldName) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $azione = $_POST['azione'] ?? '';
+    if (in_array($azione, ['crea', 'modifica', 'elimina'], true)) {
+        $defaultTab = $azione;
+    }
 
     if ($azione === 'crea') {
         $nome = trim($_POST['nome'] ?? '');
         $torneo = sanitizeTorneoSlugValue(trim($_POST['torneo'] ?? ''));
+        $girone = normalizeGironeValue($_POST['girone'] ?? '');
         $logoEsistenteId = (int)($_POST['logo_esistente'] ?? 0);
         if ($nome === '' || $torneo === '') {
             $errore = 'Compila tutti i campi obbligatori.';
         } else {
+            $gironeInfo = getGironeInfoForTorneo($torneoModel, $torneo);
+            $gironeSelezionato = null;
+            if ($gironeInfo['is_girone']) {
+                if ($girone === '' || !in_array($girone, $gironeInfo['labels'], true)) {
+                    $errore = 'Seleziona un girone valido per questo torneo.';
+                } else {
+                    $gironeSelezionato = $girone;
+                }
+            }
+
             // Se l'admin ha scelto un logo da una squadra esistente, lo usiamo come default
             $logo = null;
             if ($logoEsistenteId > 0) {
@@ -115,8 +185,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($uploadLogo) {
                 $logo = $uploadLogo;
             }
-            try {
-                $ok = $squadra->crea($nome, $torneo, $logo);
+            if ($errore === '') {
+                try {
+                $ok = $squadra->crea($nome, $torneo, $logo, $gironeSelezionato);
                 if ($ok) {
                     $_SESSION['flash_error'] = '';
                     $_SESSION['flash_success'] = 'Squadra creata correttamente.';
@@ -125,12 +196,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $errore = 'Creazione non riuscita.';
                 }
-            } catch (Throwable $e) {
+                } catch (Throwable $e) {
                 // 1062 = duplicate entry
                 if (method_exists($e, 'getCode') && (int)$e->getCode() === 1062) {
                     $errore = 'Squadra giÃ  iscritta al torneo.';
                 } else {
                     $errore = 'Errore nella creazione: ' . $e->getMessage();
+                }
                 }
             }
         }
@@ -140,6 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id'] ?? 0);
         $nome = trim($_POST['nome'] ?? '');
         $torneo = sanitizeTorneoSlugValue(trim($_POST['torneo'] ?? ''));
+        $girone = normalizeGironeValue($_POST['girone_mod'] ?? '');
         $punti = (int)($_POST['punti'] ?? 0);
         $giocate = (int)($_POST['giocate'] ?? 0);
         $vinte = (int)($_POST['vinte'] ?? 0);
@@ -151,9 +224,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($id <= 0 || $nome === '' || $torneo === '') {
             $errore = 'Seleziona una squadra e compila i campi obbligatori.';
         } else {
+            $gironeInfo = getGironeInfoForTorneo($torneoModel, $torneo);
+            $gironeSelezionato = null;
+            if ($gironeInfo['is_girone']) {
+                if ($girone === '' || !in_array($girone, $gironeInfo['labels'], true)) {
+                    $errore = 'Seleziona un girone valido per questo torneo.';
+                } else {
+                    $gironeSelezionato = $girone;
+                }
+            }
+
             $logo = salvaScudetto($nome, $torneo, 'scudetto_mod');
-            try {
-                $ok = $squadra->aggiorna($id, $nome, $torneo, $punti, $giocate, $vinte, $pareggiate, $perse, $gol_fatti, $gol_subiti, $diff, $logo);
+            if ($errore === '') {
+                try {
+                $ok = $squadra->aggiorna($id, $nome, $torneo, $punti, $giocate, $vinte, $pareggiate, $perse, $gol_fatti, $gol_subiti, $diff, $logo, $gironeSelezionato);
                 if ($ok) {
                     $_SESSION['flash_error'] = '';
                     $_SESSION['flash_success'] = 'Squadra aggiornata correttamente.';
@@ -163,11 +247,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $errore = 'Aggiornamento non riuscito.';
                 }
-            } catch (Throwable $e) {
+                } catch (Throwable $e) {
                 if (method_exists($e, 'getCode') && (int)$e->getCode() === 1062) {
                     $errore = 'Squadra giÃ  iscritta al torneo.';
                 } else {
                     $errore = 'Errore nell\'aggiornamento: ' . $e->getMessage();
+                }
                 }
             }
         }
@@ -189,8 +274,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // dati per le liste (convertiti in array per evitare false/null)
 $torneiList = [];
+$torneiConfigBySlug = [];
 if ($resTornei = $torneoModel->getAll()) {
     while ($r = $resTornei->fetch_assoc()) {
+        $slugValue = sanitizeTorneoSlugValue($r['filetorneo'] ?? $r['nome'] ?? '');
+        if ($slugValue !== '') {
+            $torneiConfigBySlug[$slugValue] = parseTorneoConfigValue($r['config'] ?? null);
+        }
         // Se il torneo ha il flag "squadre_complete" attivo, non lo mostriamo per la creazione squadre
         $flagComplete = $r['squadre_complete'] ?? 0;
         if ((string)$flagComplete === '1') {
@@ -348,13 +438,20 @@ if ($resSquadre = $squadra->getAll()) {
           <div class="form-group"><label>Nome</label><input type="text" name="nome" required></div>
           <div class="form-group">
             <label>Torneo</label>
-            <select name="torneo" required>
+            <select name="torneo" id="crea_torneo" required>
               <option value="">-- Seleziona un torneo --</option>
               <?php foreach ($torneiList as $row): ?>
                 <?php $slugValue = sanitizeTorneoSlugValue($row['filetorneo'] ?? $row['nome']); ?>
                 <option value="<?= htmlspecialchars($slugValue) ?>"><?= htmlspecialchars($row['nome']) ?></option>
               <?php endforeach; ?>
             </select>
+          </div>
+          <div class="form-group hidden" id="crea_girone_group">
+            <label>Girone</label>
+            <select name="girone" id="crea_girone" disabled>
+              <option value="">-- Seleziona un girone --</option>
+            </select>
+            <small>Disponibile solo per i tornei con formula a gironi.</small>
           </div>
           <div class="form-group">
             <label>Riutilizza scudetto esistente (opzionale)</label>
@@ -410,6 +507,13 @@ if ($resSquadre = $squadra->getAll()) {
           </div>
           <div class="form-group"><label>Nome</label><input type="text" name="nome" id="mod_nome"></div>
           <div class="form-group"><label>Torneo</label><input type="text" name="torneo" id="mod_torneo" readonly></div>
+          <div class="form-group hidden" id="mod_girone_group">
+            <label>Girone</label>
+            <select name="girone_mod" id="mod_girone" disabled>
+              <option value="">-- Seleziona un girone --</option>
+            </select>
+            <small>Disponibile solo per i tornei con formula a gironi.</small>
+          </div>
           <div class="form-group">
             <label>Nuovo scudetto</label>
             <div class="file-upload">
@@ -480,6 +584,73 @@ if ($resSquadre = $squadra->getAll()) {
       function ready(fn) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn(); }
       function qs(sel) { return document.querySelector(sel); }
       function qsa(sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+      var torneiConfigMap = <?php echo json_encode($torneiConfigBySlug, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+
+      function normalizeGironeValue(value) {
+        return String(value || '')
+          .trim()
+          .toUpperCase()
+          .replace(/^GIRONE\s+/u, '')
+          .replace(/^GRUPPO\s+/u, '');
+      }
+
+      function buildGironeLabels(count) {
+        var total = parseInt(count || '0', 10);
+        var labels = [];
+        if (!total || total < 1) return labels;
+        for (var i = 0; i < total; i++) {
+          var n = i;
+          var label = '';
+          do {
+            label = String.fromCharCode(65 + (n % 26)) + label;
+            n = Math.floor(n / 26) - 1;
+          } while (n >= 0);
+          labels.push(label);
+        }
+        return labels;
+      }
+
+      function getGironeLabelsForTorneo(torneoSlug) {
+        var config = torneiConfigMap[String(torneoSlug || '')] || {};
+        var formato = String(config.formato || config.formula_torneo || '').trim().toLowerCase();
+        var numeroGironi = parseInt(config.numero_gironi || '0', 10);
+        if (formato !== 'girone' || !numeroGironi || numeroGironi < 1) {
+          return [];
+        }
+        return buildGironeLabels(numeroGironi);
+      }
+
+      function syncGironeField(groupEl, selectEl, torneoSlug, currentValue) {
+        if (!groupEl || !selectEl) return;
+
+        var labels = getGironeLabelsForTorneo(torneoSlug);
+        var normalizedValue = normalizeGironeValue(currentValue || '');
+        selectEl.innerHTML = '<option value="">-- Seleziona un girone --</option>';
+
+        if (!labels.length) {
+          selectEl.value = '';
+          selectEl.required = false;
+          selectEl.disabled = true;
+          groupEl.classList.add('hidden');
+          return;
+        }
+
+        labels.forEach(function(label) {
+          var option = document.createElement('option');
+          option.value = label;
+          option.textContent = 'Girone ' + label;
+          selectEl.appendChild(option);
+        });
+
+        selectEl.disabled = false;
+        selectEl.required = true;
+        groupEl.classList.remove('hidden');
+
+        if (!normalizedValue && labels.length === 1) {
+          normalizedValue = labels[0];
+        }
+        selectEl.value = labels.indexOf(normalizedValue) !== -1 ? normalizedValue : '';
+      }
 
       function initTabs() {
         var tabs = qsa('.tab-buttons button');
@@ -555,10 +726,26 @@ if ($resSquadre = $squadra->getAll()) {
         }
       }
 
+      function initCreateGironeLoader() {
+        var createTorneo = document.getElementById('crea_torneo');
+        var createGironeGroup = document.getElementById('crea_girone_group');
+        var createGironeSelect = document.getElementById('crea_girone');
+        if (!createTorneo || !createGironeGroup || !createGironeSelect) return;
+
+        function refreshCreateGirone() {
+          syncGironeField(createGironeGroup, createGironeSelect, createTorneo.value || '', createGironeSelect.value || '');
+        }
+
+        createTorneo.addEventListener('change', refreshCreateGirone);
+        refreshCreateGirone();
+      }
+
       function initModificaLoader() {
         var selectTorneoFiltro = document.getElementById('selectTorneoFiltro');
         var selectSquadraMod = document.getElementById('selectSquadraMod');
         var hiddenId = document.getElementById('mod_id');
+        var gironeGroup = document.getElementById('mod_girone_group');
+        var gironeSelect = document.getElementById('mod_girone');
         var campi = {
           nome: document.getElementById('mod_nome'),
           torneo: document.getElementById('mod_torneo'),
@@ -577,6 +764,7 @@ if ($resSquadre = $squadra->getAll()) {
           selectSquadraMod.innerHTML = '<option value="">-- Seleziona una squadra --</option>';
           hiddenId.value = '';
           Object.keys(campi).forEach(function(k) { if (campi[k]) campi[k].value = ''; });
+          syncGironeField(gironeGroup, gironeSelect, '', '');
           if (!torneo) { selectSquadraMod.disabled = true; return; }
           fetch('/api/get_squadre_torneo.php?torneo=' + encodeURIComponent(torneo))
             .then(function(res) { return res.json(); })
@@ -595,13 +783,18 @@ if ($resSquadre = $squadra->getAll()) {
         selectSquadraMod.addEventListener('change', function(e) {
           var id = e.target.value;
           hiddenId.value = id;
-          if (!id) { Object.keys(campi).forEach(function(k) { if (campi[k]) campi[k].value = ''; }); return; }
+          if (!id) {
+            Object.keys(campi).forEach(function(k) { if (campi[k]) campi[k].value = ''; });
+            syncGironeField(gironeGroup, gironeSelect, '', '');
+            return;
+          }
           fetch('/api/get_squadra.php?id=' + encodeURIComponent(id))
             .then(function(res) { return res.json(); })
             .then(function(data) {
               if (data && !data.error) {
                 if (campi.nome) campi.nome.value = data.nome || '';
                 if (campi.torneo) campi.torneo.value = data.torneo || '';
+                syncGironeField(gironeGroup, gironeSelect, data.torneo || '', data.girone || '');
                 if (campi.punti) campi.punti.value = data.punti != null ? data.punti : '';
                 if (campi.giocate) campi.giocate.value = data.giocate != null ? data.giocate : '';
                 if (campi.vinte) campi.vinte.value = data.vinte != null ? data.vinte : '';
@@ -730,6 +923,7 @@ if ($resSquadre = $squadra->getAll()) {
         initTabs();
         initFileButtons();
         initFiltroElenco();
+        initCreateGironeLoader();
         initModificaLoader();
         initFooter();
         var modal = document.getElementById('confirmDeleteModal');

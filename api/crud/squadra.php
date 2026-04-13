@@ -27,10 +27,25 @@ class squadra {
 
     private function normalizeGirone(?string $value): ?string {
         $value = strtoupper(trim((string)$value));
+        $value = preg_replace('/^GIRONE\s+/u', '', $value);
+        $value = preg_replace('/^GRUPPO\s+/u', '', $value);
         if ($value === '') {
             return null;
         }
         return substr($value, 0, 32);
+    }
+
+    private function resolvePreferredGironeForTorneo(string $torneo, ?string $selectedGirone = null, ?int $excludeId = null): ?string {
+        if (!$this->hasGirone) {
+            return null;
+        }
+
+        $manualGirone = $this->normalizeGirone($selectedGirone);
+        if ($manualGirone !== null) {
+            return $manualGirone;
+        }
+
+        return $this->resolveAutoGironeForTorneo($torneo, $excludeId);
     }
 
     private function buildGironeLabels(int $count): array {
@@ -128,9 +143,14 @@ class squadra {
         return $labels[0] ?? null;
     }
 
-    private function resolveGironeForUpdate(array $existing, string $torneo, int $id): ?string {
+    private function resolveGironeForUpdate(array $existing, string $torneo, int $id, ?string $selectedGirone = null): ?string {
         if (!$this->hasGirone) {
             return null;
+        }
+
+        $manualGirone = $this->normalizeGirone($selectedGirone);
+        if ($manualGirone !== null) {
+            return $manualGirone;
         }
 
         $currentGirone = $this->normalizeGirone($existing['girone'] ?? null);
@@ -154,11 +174,11 @@ class squadra {
         return $stmt->get_result()->fetch_assoc();
     }
 
-    public function crea($nome, $torneo, $logo = null) {
+    public function crea($nome, $torneo, $logo = null, $girone = null) {
         if ($this->hasGirone) {
-            $girone = $this->resolveAutoGironeForTorneo($torneo);
+            $resolvedGirone = $this->resolvePreferredGironeForTorneo($torneo, $girone);
             $stmt = $this->conn->prepare("INSERT INTO {$this->table} (nome, torneo, girone, logo) VALUES (?, ?, ?, ?)");
-            $stmt->bind_param("ssss", $nome, $torneo, $girone, $logo);
+            $stmt->bind_param("ssss", $nome, $torneo, $resolvedGirone, $logo);
             return $stmt->execute();
         }
 
@@ -167,7 +187,7 @@ class squadra {
         return $stmt->execute();
     }
 
-    public function aggiorna($id, $nome, $torneo, $punti, $giocate, $vinte, $pareggiate, $perse, $gol_fatti, $gol_subiti, $differenza_reti, $logo = null) {
+    public function aggiorna($id, $nome, $torneo, $punti, $giocate, $vinte, $pareggiate, $perse, $gol_fatti, $gol_subiti, $differenza_reti, $logo = null, $girone = null) {
         $existing = $this->getById($id) ?: [];
         $fields = ["nome=?", "torneo=?"];
         $types = "ss";
@@ -176,7 +196,7 @@ class squadra {
         if ($this->hasGirone) {
             $fields[] = "girone=?";
             $types .= "s";
-            $params[] = $this->resolveGironeForUpdate($existing, $torneo, $id);
+            $params[] = $this->resolveGironeForUpdate($existing, $torneo, $id, $girone);
         }
 
         if ($logo !== null) {
