@@ -8,6 +8,7 @@ $successo = '';
 $torneiDisponibili = [];
 $squadrePerTorneo = [];
 $fasiAmmesse = ['REGULAR', 'GOLD', 'SILVER'];
+$maxGiornateRegular = 10;
 $roundMap = [
   'TRENTADUESIMI' => 6,
   'SEDICESIMI' => 5,
@@ -1163,8 +1164,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         <div id="giornataWrapper">
           <label class="required-label">Giornata</label>
           <select name="giornata" id="giornataCrea" required>
-            <option value="">-- Seleziona giornata (1-8) --</option>
-            <?php for ($g = 1; $g <= 8; $g++): ?>
+            <option value="">-- Seleziona giornata (1-<?= $maxGiornateRegular ?>) --</option>
+            <?php for ($g = 1; $g <= $maxGiornateRegular; $g++): ?>
               <option value="<?= $g ?>"><?= $g ?></option>
             <?php endfor; ?>
           </select>
