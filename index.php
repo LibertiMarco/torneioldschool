@@ -249,6 +249,13 @@ function formatShortDate(dateStr) {
     return d.toLocaleDateString('it-IT', { month: 'short', year: 'numeric' });
 }
 
+function formatSingleDay(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 function formatPeriodo(inizio, fine, anno) {
     const start = formatShortDate(inizio);
     const end = formatShortDate(fine);
@@ -260,9 +267,9 @@ function formatPeriodo(inizio, fine, anno) {
 }
 
 function labelPeriodo(item) {
-    const nome = (item.competizione || '').toLowerCase();
-    if (nome.includes("coppa d'africa") && nome.includes('all in one night')) {
-        return '12 dic 2025';
+    const singleDayDate = item.data_evento || ((item.data_inizio && item.data_inizio === item.data_fine) ? item.data_inizio : '');
+    if (Number(item.giornata_unica || 0) === 1 || singleDayDate) {
+        return formatSingleDay(singleDayDate) || formatPeriodo(item.data_inizio, item.data_fine, item.anno);
     }
     return formatPeriodo(item.data_inizio, item.data_fine, item.anno);
 }
@@ -425,6 +432,5 @@ loadHallOfFame();
 
 </body>
 </html>
-
 
 

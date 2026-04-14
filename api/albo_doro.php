@@ -27,6 +27,14 @@ function dateFromParts(?int $month, ?int $year): string {
     return sprintf('%04d-%02d-01', $year, $m);
 }
 
+function normalizeDateValue(?string $date): string {
+    $date = trim((string)$date);
+    if ($date === '' || $date === '0000-00-00') {
+        return '';
+    }
+    return $date;
+}
+
 function fetchAlboCustom(mysqli $conn): array {
     $check = $conn->query("SHOW TABLES LIKE 'albo'");
     if (!$check || $check->num_rows === 0) {
@@ -43,6 +51,8 @@ function fetchAlboCustom(mysqli $conn): array {
     $inizioAnnoCol = isset($cols['inizio_anno']) ? 'inizio_anno' : 'NULL';
     $fineMeseCol = isset($cols['fine_mese']) ? 'fine_mese' : 'NULL';
     $fineAnnoCol = isset($cols['fine_anno']) ? 'fine_anno' : 'NULL';
+    $giornataUnicaCol = isset($cols['giornata_unica']) ? 'giornata_unica' : '0';
+    $dataEventoCol = isset($cols['data_evento']) ? 'data_evento' : 'NULL';
     $createdCol = isset($cols['created_at']) ? 'created_at' : 'NULL';
     $hasSort = isset($cols['ordinamento']);
     $sortSelect = $hasSort ? ', ordinamento' : '';
@@ -60,6 +70,8 @@ function fetchAlboCustom(mysqli $conn): array {
                {$inizioAnnoCol} AS inizio_anno,
                {$fineMeseCol} AS fine_mese,
                {$fineAnnoCol} AS fine_anno,
+               {$giornataUnicaCol} AS giornata_unica,
+               {$dataEventoCol} AS data_evento,
                {$createdCol} AS created_at{$sortSelect}
         FROM albo
         ORDER BY {$sortOrder} COALESCE(fine_anno, inizio_anno, YEAR(created_at)) DESC,
@@ -90,6 +102,8 @@ function fetchAlboCustom(mysqli $conn): array {
             'torneo_logo' => $row['torneo_logo'],
             'vincitrice' => $row['vincitrice'],
             'logo_vincitrice' => $row['vincitrice_logo'],
+            'giornata_unica' => (int)($row['giornata_unica'] ?? 0),
+            'data_evento' => normalizeDateValue($row['data_evento'] ?? ''),
             'ordinamento' => $hasSort ? (int)$row['ordinamento'] : null,
         ];
     }
@@ -156,6 +170,8 @@ function fetchAlboFromTornei(mysqli $conn): array {
             'torneo_logo' => $row['torneo_img'],
             'vincitrice' => $row['vincitrice'] ?: '',
             'logo_vincitrice' => $row['logo_vincitrice'] ?: '',
+            'giornata_unica' => (!empty($row['data_inizio']) && $row['data_inizio'] !== '0000-00-00' && $row['data_inizio'] === $row['data_fine']) ? 1 : 0,
+            'data_evento' => (!empty($row['data_inizio']) && $row['data_inizio'] !== '0000-00-00' && $row['data_inizio'] === $row['data_fine']) ? $row['data_inizio'] : '',
         ];
     }
 
@@ -181,6 +197,8 @@ foreach ($raw as $item) {
             'anno' => $item['anno'] ?? '',
             'ordinamento' => $item['ordinamento'] ?? null,
             'filetorneo' => ($item['filetorneo'] ?? ''),
+            'giornata_unica' => (int)($item['giornata_unica'] ?? 0),
+            'data_evento' => $item['data_evento'] ?? '',
             'premi' => [],
         ];
     }

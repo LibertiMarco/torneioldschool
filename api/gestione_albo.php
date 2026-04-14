@@ -60,20 +60,73 @@ function handleUpload(string $field, ?string $existing = null): ?string {
     return '/img/scudetti/' . $filename;
 }
 
-function ensureOrdinamentoColumn(mysqli $conn, array &$errors): bool {
-    $check = $conn->query("SHOW COLUMNS FROM albo LIKE 'ordinamento'");
+function ensureAlboColumn(mysqli $conn, string $column, string $alterSql, array &$errors, string $verifyError, string $createError): bool {
+    $check = $conn->query("SHOW COLUMNS FROM albo LIKE '" . $conn->real_escape_string($column) . "'");
     if ($check && $check->num_rows > 0) {
         return true;
     }
     if (!$check) {
-        $errors[] = "Impossibile verificare la colonna di ordinamento.";
+        $errors[] = $verifyError;
         return false;
     }
-    if ($conn->query("ALTER TABLE albo ADD COLUMN ordinamento INT DEFAULT NULL")) {
+    if ($conn->query($alterSql)) {
         return true;
     }
-    $errors[] = "Non riesco ad aggiungere la colonna 'ordinamento' per l'ordinamento manuale.";
+    $errors[] = $createError;
     return false;
+}
+
+function ensureOrdinamentoColumn(mysqli $conn, array &$errors): bool {
+    return ensureAlboColumn(
+        $conn,
+        'ordinamento',
+        "ALTER TABLE albo ADD COLUMN ordinamento INT DEFAULT NULL",
+        $errors,
+        "Impossibile verificare la colonna di ordinamento.",
+        "Non riesco ad aggiungere la colonna 'ordinamento' per l'ordinamento manuale."
+    );
+}
+
+function ensureSingleDayColumns(mysqli $conn, array &$errors): bool {
+    $giornataOk = ensureAlboColumn(
+        $conn,
+        'giornata_unica',
+        "ALTER TABLE albo ADD COLUMN giornata_unica TINYINT(1) NOT NULL DEFAULT 0 AFTER fine_anno",
+        $errors,
+        "Impossibile verificare la colonna 'giornata_unica'.",
+        "Non riesco ad aggiungere la colonna 'giornata_unica' all'albo."
+    );
+    $dataOk = ensureAlboColumn(
+        $conn,
+        'data_evento',
+        "ALTER TABLE albo ADD COLUMN data_evento DATE DEFAULT NULL AFTER giornata_unica",
+        $errors,
+        "Impossibile verificare la colonna 'data_evento'.",
+        "Non riesco ad aggiungere la colonna 'data_evento' all'albo."
+    );
+    return $giornataOk && $dataOk;
+}
+
+function normalizeDateInput(?string $value): ?string {
+    $value = trim((string)$value);
+    if ($value === '') {
+        return null;
+    }
+    if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m)) {
+        return null;
+    }
+    $year = (int)$m[1];
+    $month = (int)$m[2];
+    $day = (int)$m[3];
+    if (!checkdate($month, $day, $year)) {
+        return null;
+    }
+    return sprintf('%04d-%02d-%02d', $year, $month, $day);
+}
+
+function monthYearFromDate(string $value): array {
+    [$year, $month] = array_map('intval', explode('-', $value));
+    return [$month, $year];
 }
 
 if (!$conn || $conn->connect_error) {
@@ -89,6 +142,7 @@ if (!$conn || $conn->connect_error) {
         $errors[] = "La tabella 'albo' non esiste. Creala prima di usare questa pagina.";
     } else {
         $orderColumnAvailable = ensureOrdinamentoColumn($conn, $errors);
+        ensureSingleDayColumns($conn, $errors);
     }
 
 if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -99,6 +153,8 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $inizio_anno = (int)($_POST['inizio_anno'] ?? 0);
         $fine_mese = (int)($_POST['fine_mese'] ?? 0);
         $fine_anno = (int)($_POST['fine_anno'] ?? 0);
+        $giornata_unica = isset($_POST['giornata_unica']) ? 1 : 0;
+        $data_evento = normalizeDateInput($_POST['data_evento'] ?? null);
         $id = (int)($_POST['id'] ?? 0);
 
         try {
@@ -106,17 +162,28 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($competizione === '' || $vincitrice === '') {
                     throw new Exception('Compila almeno competizione e vincitrice.');
                 }
+                if ($giornata_unica && !$data_evento) {
+                    throw new Exception('Per un torneo di una sola giornata devi inserire la data evento.');
+                }
                 $logo = handleUpload('vincitrice_logo_file', null);
                 $torneo_logo_path = $defaultTorneoLogo;
 
-                $stmt = $conn->prepare("INSERT INTO albo (competizione, premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url, inizio_mese, inizio_anno, fine_mese, fine_anno) VALUES (?,?,?,?,?,?,?,?,?,?)");
+                if ($giornata_unica && $data_evento) {
+                    [$inizio_mese, $inizio_anno] = monthYearFromDate($data_evento);
+                    $fine_mese = $inizio_mese;
+                    $fine_anno = $inizio_anno;
+                } elseif (!$giornata_unica) {
+                    $data_evento = null;
+                }
+
+                $stmt = $conn->prepare("INSERT INTO albo (competizione, premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url, inizio_mese, inizio_anno, fine_mese, fine_anno, giornata_unica, data_evento) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
                 $tabellone_url = '';
                 $im = $inizio_mese ?: null;
                 $ia = $inizio_anno ?: null;
                 $fm = $fine_mese ?: null;
                 $fa = $fine_anno ?: null;
                 $stmt->bind_param(
-                    "ssssssiiii",
+                    "ssssssiiiiss",
                     $competizione,
                     $premio,
                     $vincitrice,
@@ -126,7 +193,9 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $im,
                     $ia,
                     $fm,
-                    $fa
+                    $fa,
+                    $giornata_unica,
+                    $data_evento
                 );
                 $stmt->execute();
                 $stmt->close();
@@ -141,25 +210,42 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $currentInizioAnno = null;
                 $currentFineMese = null;
                 $currentFineAnno = null;
-                $fetch = $conn->prepare("SELECT vincitrice_logo, torneo_logo, inizio_mese, inizio_anno, fine_mese, fine_anno FROM albo WHERE id=?");
+                $currentGiornataUnica = 0;
+                $currentDataEvento = null;
+                $fetch = $conn->prepare("SELECT vincitrice_logo, torneo_logo, inizio_mese, inizio_anno, fine_mese, fine_anno, giornata_unica, data_evento FROM albo WHERE id=?");
                 $fetch->bind_param("i", $id);
                 $fetch->execute();
-                $fetch->bind_result($currentLogo, $currentTorneoLogo, $currentInizioMese, $currentInizioAnno, $currentFineMese, $currentFineAnno);
+                $fetch->bind_result($currentLogo, $currentTorneoLogo, $currentInizioMese, $currentInizioAnno, $currentFineMese, $currentFineAnno, $currentGiornataUnica, $currentDataEvento);
                 $fetch->fetch();
                 $fetch->close();
 
+                if ($giornata_unica && !$data_evento && (int)$currentGiornataUnica === 1) {
+                    $data_evento = normalizeDateInput($currentDataEvento);
+                }
+                if ($giornata_unica && !$data_evento) {
+                    throw new Exception('Per un torneo di una sola giornata devi inserire la data evento.');
+                }
                 $logo = handleUpload('vincitrice_logo_file', $currentLogo);
                 $torneo_logo_path = $currentTorneoLogo ?: $defaultTorneoLogo;
 
                 // Se i campi data restano vuoti, manteniamo i valori esistenti
-                $im2 = $inizio_mese > 0 ? $inizio_mese : ($currentInizioMese ?: null);
-                $ia2 = $inizio_anno > 0 ? $inizio_anno : ($currentInizioAnno ?: null);
-                $fm2 = $fine_mese > 0 ? $fine_mese : ($currentFineMese ?: null);
-                $fa2 = $fine_anno > 0 ? $fine_anno : ($currentFineAnno ?: null);
+                if ($giornata_unica && $data_evento) {
+                    [$singleMonth, $singleYear] = monthYearFromDate($data_evento);
+                    $im2 = $singleMonth;
+                    $ia2 = $singleYear;
+                    $fm2 = $singleMonth;
+                    $fa2 = $singleYear;
+                } else {
+                    $im2 = $inizio_mese > 0 ? $inizio_mese : ($currentInizioMese ?: null);
+                    $ia2 = $inizio_anno > 0 ? $inizio_anno : ($currentInizioAnno ?: null);
+                    $fm2 = $fine_mese > 0 ? $fine_mese : ($currentFineMese ?: null);
+                    $fa2 = $fine_anno > 0 ? $fine_anno : ($currentFineAnno ?: null);
+                    $data_evento = null;
+                }
 
-                $stmt = $conn->prepare("UPDATE albo SET competizione=?, premio=?, vincitrice=?, vincitrice_logo=?, torneo_logo=?, tabellone_url='', inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=? WHERE id=?");
+                $stmt = $conn->prepare("UPDATE albo SET competizione=?, premio=?, vincitrice=?, vincitrice_logo=?, torneo_logo=?, tabellone_url='', inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=?, giornata_unica=?, data_evento=? WHERE id=?");
                 $stmt->bind_param(
-                    "ssssiiiiii",
+                    "sssssiiiiisi",
                     $competizione,
                     $premio,
                     $vincitrice,
@@ -169,6 +255,8 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $ia2,
                     $fm2,
                     $fa2,
+                    $giornata_unica,
+                    $data_evento,
                     $id
                 );
                 $stmt->execute();
@@ -294,6 +382,9 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
     .form-grid label { font-weight: 700; color: #15293e; font-size: 0.95rem; display: flex; flex-direction: column; gap: 6px; }
     .form-grid input, .form-grid select { width: 100%; padding: 10px 12px; border: 1px solid #d7dce5; border-radius: 10px; background: #fff; }
+    .checkbox-field { justify-content: flex-end; }
+    .checkbox-field input[type="checkbox"] { width: auto; margin-right: 8px; }
+    .checkbox-inline { display: flex; align-items: center; gap: 8px; min-height: 42px; font-weight: 700; color: #15293e; }
     .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
     .btn-primary { background: linear-gradient(135deg, #15293e, #1f3f63); color: #fff; border: 1px solid #15293e; border-radius: 10px; padding: 11px 16px; cursor: pointer; font-weight: 800; box-shadow: 0 10px 22px rgba(21,41,62,0.22); transition: transform .15s, box-shadow .15s; }
     .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 14px 26px rgba(21,41,62,0.28); }
@@ -374,6 +465,19 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
               <input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp" onchange="this.parentElement.querySelector('.file-name').textContent = this.files?.[0]?.name || 'Nessun file selezionato';">
             </label>
           </div>
+          <div class="checkbox-field">
+            <label>
+              <span>Torneo di una sola giornata</span>
+              <span class="checkbox-inline">
+                <input type="checkbox" name="giornata_unica" id="create_giornata_unica" value="1">
+                Visualizza una data singola come per la Coppa d'Africa
+              </span>
+            </label>
+          </div>
+          <div>
+            <label>Data evento</label>
+            <input type="date" name="data_evento" id="create_data_evento" disabled>
+          </div>
           <div>
             <label>Inizio (mese)</label>
             <input type="number" name="inizio_mese" min="1" max="12" placeholder="1-12">
@@ -430,6 +534,14 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
               <input type="file" name="vincitrice_logo_file" accept="image/png,image/jpeg,image/webp" onchange="document.getElementById('upd_vincitrice_logo_name').textContent = this.files?.[0]?.name || (this.dataset.current || 'Nessun file selezionato');" data-current="">
             </label>
           </div>
+          <label class="checkbox-field">
+            Torneo di una sola giornata
+            <span class="checkbox-inline">
+              <input type="checkbox" name="giornata_unica" id="upd_giornata_unica" value="1">
+              Visualizza una data singola come per la Coppa d'Africa
+            </span>
+          </label>
+          <label>Data evento<input type="date" name="data_evento" id="upd_data_evento" disabled></label>
           <label>Inizio mese<input type="number" name="inizio_mese" id="upd_inizio_mese" min="1" max="12"></label>
           <label>Inizio anno<input type="number" name="inizio_anno" id="upd_inizio_anno" min="2000" max="2100"></label>
           <label>Fine mese<input type="number" name="fine_mese" id="upd_fine_mese" min="1" max="12"></label>
@@ -515,12 +627,16 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
       const selCompetizione = document.getElementById('selCompetizione');
       const selRecord = document.getElementById('selRecord');
       const formUpd = document.getElementById('formUpdate');
+      const createSingleDay = document.getElementById('create_giornata_unica');
+      const createEventDate = document.getElementById('create_data_evento');
       const normComp = (v) => (v || '').trim();
       const fields = {
         id: document.getElementById('upd_id'),
         competizione: document.getElementById('upd_competizione'),
         premio: document.getElementById('upd_premio'),
         vincitrice: document.getElementById('upd_vincitrice'),
+        giornata_unica: document.getElementById('upd_giornata_unica'),
+        data_evento: document.getElementById('upd_data_evento'),
         inizio_mese: document.getElementById('upd_inizio_mese'),
         inizio_anno: document.getElementById('upd_inizio_anno'),
         fine_mese: document.getElementById('upd_fine_mese'),
@@ -528,6 +644,19 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         vincitrice_logo: document.querySelector('input[name="vincitrice_logo_file"]'),
         vincitrice_logo_name: document.getElementById('upd_vincitrice_logo_name'),
       };
+
+      function bindSingleDayToggle(checkbox, dateInput) {
+        if (!checkbox || !dateInput) return;
+        const sync = () => {
+          dateInput.disabled = !checkbox.checked;
+          dateInput.required = checkbox.checked;
+          if (!checkbox.checked) {
+            dateInput.value = '';
+          }
+        };
+        checkbox.addEventListener('change', sync);
+        sync();
+      }
 
       function populateCompetizioni() {
         if (!selCompetizione) return;
@@ -551,6 +680,10 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
           fields.competizione.value = rec.competizione || '';
           fields.premio.value = rec.premio || '';
           fields.vincitrice.value = rec.vincitrice || '';
+          fields.giornata_unica.checked = Number(rec.giornata_unica || 0) === 1;
+          fields.data_evento.disabled = !fields.giornata_unica.checked;
+          fields.data_evento.required = fields.giornata_unica.checked;
+          fields.data_evento.value = rec.data_evento || '';
           fields.inizio_mese.value = rec.inizio_mese ?? '';
           fields.inizio_anno.value = rec.inizio_anno ?? '';
           fields.fine_mese.value = rec.fine_mese ?? '';
@@ -570,6 +703,8 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
       selRecord?.addEventListener('change', () => fillForm(selRecord.value));
 
       populateCompetizioni();
+      bindSingleDayToggle(createSingleDay, createEventDate);
+      bindSingleDayToggle(fields.giornata_unica, fields.data_evento);
 
       // Ordine competizioni per torneo (mobile friendly)
       const sortData = <?= json_encode($sortGroups, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;

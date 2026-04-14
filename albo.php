@@ -82,11 +82,17 @@ $pageSeo = [
       return '';
     }
 
+    function formatSingleDay(dateStr) {
+      if (!dateStr) return '';
+      const dt = new Date(dateStr);
+      if (isNaN(dt.getTime())) return '';
+      return dt.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
     function labelPeriodo(item) {
-      const nome = (item.competizione || '').toLowerCase();
-      if (nome.includes('all in one night')) {
-        if (nome.includes("coppa d'africa")) return '12 dic 2025';
-        if (nome.includes('mondiale')) return '06 Mar 2026';
+      const singleDayDate = item.data_evento || ((item.data_inizio && item.data_inizio === item.data_fine) ? item.data_inizio : '');
+      if (Number(item.giornata_unica || 0) === 1 || singleDayDate) {
+        return formatSingleDay(singleDayDate) || formatPeriodo(item.data_inizio, item.data_fine, item.anno);
       }
       return formatPeriodo(item.data_inizio, item.data_fine, item.anno);
     }
