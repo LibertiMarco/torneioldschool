@@ -1126,7 +1126,7 @@ async function caricaRosaSquadra(squadra) {
       const cognome = giocatore.cognome || "";
       const nomeCompleto = `${nome} ${cognome}`.trim() || "Giocatore";
       const ruolo = (giocatore.ruolo_squadra || giocatore.ruolo || "").toLowerCase().trim();
-      const isPortiere = ruolo === "portiere";
+      const isPortiere = /portiere|\bgk\b|^p$/i.test(ruolo);
       const isCaptain = String(giocatore.is_captain || giocatore.captain) === "1";
       const ruoloBadge = isPortiere ? ' <span class="role-badge gk-badge">GK</span>' : "";
       const captainBadge = isCaptain ? ' <span class="role-badge captain-badge">C</span>' : "";

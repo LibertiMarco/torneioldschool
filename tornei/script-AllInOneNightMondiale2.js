@@ -1,4 +1,4 @@
-﻿const TORNEO = "Coppadafrica"; // Nome base del torneo nel DB (fase girone)
+﻿const TORNEO = "AllInOneNightMondiale2"; // Nome base del torneo nel DB (fase girone)
 const GROUP_LABELS = ["A", "B"];
 const TEAMS_PER_GROUP = 4;
 const QUALIFIED_PER_GROUP = 2;

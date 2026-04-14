@@ -1103,8 +1103,8 @@ async function caricaRosaSquadra(squadra) {
       const card = document.createElement("div");
       card.classList.add("player-card");
 
-      const ruolo = (giocatore.ruolo || "").trim();
-      const isGK = /^portiere/i.test(ruolo) || /^GK$/i.test(ruolo);
+      const ruolo = (giocatore.ruolo_squadra || giocatore.ruolo || "").trim();
+      const isGK = /portiere|\bgk\b|^p$/i.test(ruolo);
       const isCaptain = Number(giocatore.is_captain || 0) === 1;
       const badges = [];
       if (isGK) badges.push('<span class="role-badge gk-badge">GK</span>');

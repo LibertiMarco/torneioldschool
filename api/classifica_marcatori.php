@@ -10,13 +10,53 @@ if ($torneo === '') {
     exit;
 }
 
-// Per Coppa d'Africa contiamo tutte le fasi. Per AllInOneNightMondiale includiamo anche la Coppa Gold.
-// Per gli altri tornei consideriamo solo la fase REGULAR (anche se fase vuota o \"GIRONE\").
+function get_torneo_config(mysqli $conn, string $torneo): array
+{
+    if ($torneo === '') {
+        return [];
+    }
+
+    $filenamePhp = $torneo . '.php';
+    $filenameHtml = $torneo . '.html';
+    $stmt = $conn->prepare("
+        SELECT config
+        FROM tornei
+        WHERE filetorneo IN (?, ?)
+        ORDER BY (filetorneo LIKE '%.php') DESC
+        LIMIT 1
+    ");
+    if (!$stmt) {
+        return [];
+    }
+
+    $stmt->bind_param('ss', $filenamePhp, $filenameHtml);
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return [];
+    }
+
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$row || empty($row['config'])) {
+        return [];
+    }
+
+    $decoded = json_decode((string)$row['config'], true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+// Per Coppa d'Africa contiamo tutte le fasi.
+// Per tutti i tornei a gironi includiamo anche la Coppa Gold.
+// Per gli altri tornei consideriamo solo la fase REGULAR (anche se fase vuota o "GIRONE").
 // Uso COALESCE per includere anche valori NULL di fase come regular, evitando di escludere partite registrate senza fase.
 $phaseExpr = "UPPER(CASE WHEN TRIM(COALESCE(p.fase, '')) IN ('', 'GIRONE') THEN 'REGULAR' ELSE TRIM(COALESCE(p.fase, '')) END)";
+$torneoConfig = get_torneo_config($conn, $torneo);
+$torneoFormat = strtolower(trim((string)($torneoConfig['formato'] ?? $torneoConfig['formula_torneo'] ?? '')));
+$isGironeTournament = ($torneoFormat === 'girone');
+
 if ($torneo === 'Coppadafrica') {
     $phaseClause = '';
-} elseif ($torneo === 'AllInOneNightMondiale') {
+} elseif ($isGironeTournament) {
     $phaseClause = "AND $phaseExpr IN ('REGULAR','GOLD')";
 } else {
     $phaseClause = "AND $phaseExpr = 'REGULAR'";

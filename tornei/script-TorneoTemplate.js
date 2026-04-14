@@ -1275,10 +1275,15 @@ async function caricaRosaSquadra(squadra) {
     data.forEach(giocatore => {
       const card = document.createElement("div");
       card.classList.add("player-card");
+      const nome = giocatore.nome || "";
+      const cognome = giocatore.cognome || "";
+      const nomeCompleto = `${nome} ${cognome}`.trim() || "Giocatore";
+      const ruolo = (giocatore.ruolo_squadra || giocatore.ruolo || "").toLowerCase().trim();
+      const ruoloBadge = /portiere|\bgk\b|^p$/i.test(ruolo) ? ' <span class="role-badge gk-badge">GK</span>' : "";
 
       card.innerHTML = `
         <div class="player-name-row">
-          <h4 class="player-name">${giocatore.nome} ${giocatore.cognome}</h4>
+          <h4 class="player-name">${nomeCompleto}${ruoloBadge}</h4>
         </div>
 
         <div class="player-team-row">
@@ -1289,7 +1294,7 @@ async function caricaRosaSquadra(squadra) {
         <div class="player-bottom">
           <div class="player-photo">
             <img src="${giocatore.foto || FALLBACK_AVATAR}" 
-                 alt="${giocatore.nome} ${giocatore.cognome}"
+                 alt="${nomeCompleto}"
                  onerror="this.onerror=null; this.src='${FALLBACK_AVATAR}';">
           </div>
 
