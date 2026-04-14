@@ -35,6 +35,28 @@ function normalizeDateValue(?string $date): string {
     return $date;
 }
 
+function alboItemSortTime(array $item): int {
+    $candidates = [
+        $item['created_at'] ?? '',
+        $item['data_evento'] ?? '',
+        $item['data_fine'] ?? '',
+        $item['data_inizio'] ?? '',
+    ];
+
+    foreach ($candidates as $candidate) {
+        $candidate = trim((string)$candidate);
+        if ($candidate === '' || $candidate === '0000-00-00') {
+            continue;
+        }
+        $ts = strtotime($candidate);
+        if ($ts !== false) {
+            return $ts;
+        }
+    }
+
+    return 0;
+}
+
 function fetchAlboCustom(mysqli $conn): array {
     $check = $conn->query("SHOW TABLES LIKE 'albo'");
     if (!$check || $check->num_rows === 0) {
@@ -92,6 +114,7 @@ function fetchAlboCustom(mysqli $conn): array {
             $tabUrl = '';
         }
         $rows[] = [
+            'record_id' => (int)$row['id'],
             'competizione' => $row['competizione'],
             'premio' => $row['premio'],
             'stato' => 'archivio',
@@ -104,6 +127,7 @@ function fetchAlboCustom(mysqli $conn): array {
             'logo_vincitrice' => $row['vincitrice_logo'],
             'giornata_unica' => (int)($row['giornata_unica'] ?? 0),
             'data_evento' => normalizeDateValue($row['data_evento'] ?? ''),
+            'created_at' => trim((string)($row['created_at'] ?? '')),
             'ordinamento' => $hasSort ? (int)$row['ordinamento'] : null,
         ];
     }
@@ -159,6 +183,7 @@ function fetchAlboFromTornei(mysqli $conn): array {
 
         $albo[] = [
             // Uniformiamo le chiavi con quelle usate dall'albo personalizzato
+            'record_id' => 0,
             'competizione' => $row['torneo'],
             'premio' => $row['categoria'],
             'categoria' => $row['categoria'],
@@ -172,6 +197,7 @@ function fetchAlboFromTornei(mysqli $conn): array {
             'logo_vincitrice' => $row['logo_vincitrice'] ?: '',
             'giornata_unica' => (!empty($row['data_inizio']) && $row['data_inizio'] !== '0000-00-00' && $row['data_inizio'] === $row['data_fine']) ? 1 : 0,
             'data_evento' => (!empty($row['data_inizio']) && $row['data_inizio'] !== '0000-00-00' && $row['data_inizio'] === $row['data_fine']) ? $row['data_inizio'] : '',
+            'created_at' => '',
         ];
     }
 
@@ -188,6 +214,8 @@ $grouped = [];
 foreach ($raw as $item) {
     $key = $item['competizione'] ?? ($item['torneo'] ?? 'Torneo');
     $competizione = $item['competizione'] ?? ($item['torneo'] ?? 'Torneo');
+    $itemSortTime = alboItemSortTime($item);
+    $itemRecordId = (int)($item['record_id'] ?? 0);
     if (!isset($grouped[$key])) {
         $grouped[$key] = [
             'competizione' => $competizione,
@@ -199,8 +227,21 @@ foreach ($raw as $item) {
             'filetorneo' => ($item['filetorneo'] ?? ''),
             'giornata_unica' => (int)($item['giornata_unica'] ?? 0),
             'data_evento' => $item['data_evento'] ?? '',
+            'latest_record_id' => $itemRecordId,
+            'latest_created_at' => trim((string)($item['created_at'] ?? '')),
+            'latest_sort_time' => $itemSortTime,
             'premi' => [],
         ];
+    } elseif (
+        $itemSortTime > ($grouped[$key]['latest_sort_time'] ?? 0) ||
+        (
+            $itemSortTime === ($grouped[$key]['latest_sort_time'] ?? 0) &&
+            $itemRecordId > (int)($grouped[$key]['latest_record_id'] ?? 0)
+        )
+    ) {
+        $grouped[$key]['latest_record_id'] = $itemRecordId;
+        $grouped[$key]['latest_created_at'] = trim((string)($item['created_at'] ?? ''));
+        $grouped[$key]['latest_sort_time'] = $itemSortTime;
     }
     $grouped[$key]['premi'][] = [
         'premio' => $item['premio'] ?? $item['categoria'] ?? 'Premio',

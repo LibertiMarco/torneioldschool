@@ -21,7 +21,8 @@ $pageSeo = [
     .albo-page h1 { margin: 0 0 8px; }
     .albo-filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0 12px; }
     .albo-filters label { font-weight: 700; color: #15293e; }
-    .albo-select {
+    .albo-select,
+    .albo-search {
       padding: 12px 14px;
       border: 1px solid #cfd6e3;
       border-radius: 999px;
@@ -32,8 +33,11 @@ $pageSeo = [
       box-shadow: 0 8px 18px rgba(21,41,62,0.08);
       transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
     }
-    .albo-select:hover { transform: translateY(-1px); border-color: #9fb2d4; box-shadow: 0 12px 24px rgba(21,41,62,0.12); }
-    .albo-select:focus { outline: none; border-color: #4f6fbf; box-shadow: 0 0 0 3px rgba(79,111,191,0.22); }
+    .albo-search { flex: 1 1 280px; }
+    .albo-select:hover,
+    .albo-search:hover { transform: translateY(-1px); border-color: #9fb2d4; box-shadow: 0 12px 24px rgba(21,41,62,0.12); }
+    .albo-select:focus,
+    .albo-search:focus { outline: none; border-color: #4f6fbf; box-shadow: 0 0 0 3px rgba(79,111,191,0.22); }
     .albo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
     .albo-card { background: #fff; border: 1px solid #e5e9f2; border-radius: 14px; padding: 16px; box-shadow: 0 10px 28px rgba(21,41,62,0.08); }
     .albo-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
@@ -56,8 +60,10 @@ $pageSeo = [
     <div class="albo-filters">
       <label for="filterCompetizione">Torneo</label>
       <select id="filterCompetizione" class="albo-select">
-        <option value="">Tutti i tornei</option>
+        <option value="__latest__">Ultimo inserito</option>
+        <option value="__all__">Tutti i tornei</option>
       </select>
+      <input id="filterSearch" class="albo-search" type="search" placeholder="Scrivi il nome del torneo" aria-label="Cerca per nome torneo" autocomplete="off">
     </div>
     <div id="alboGrid" class="albo-grid">
       <p>Caricamento...</p>
@@ -130,7 +136,40 @@ $pageSeo = [
 
     const grid = document.getElementById('alboGrid');
     const select = document.getElementById('filterCompetizione');
+    const searchInput = document.getElementById('filterSearch');
+    const FILTER_LATEST = '__latest__';
+    const FILTER_ALL = '__all__';
     let alboData = [];
+
+    function normalizeSearchValue(value) {
+      const raw = String(value || '').toLowerCase().trim();
+      if (typeof raw.normalize !== 'function') {
+        return raw;
+      }
+      return raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function isNewerItem(candidate, current) {
+      const candidateTime = Number(candidate?.latest_sort_time || 0);
+      const currentTime = Number(current?.latest_sort_time || 0);
+      if (candidateTime !== currentTime) {
+        return candidateTime > currentTime;
+      }
+      return Number(candidate?.latest_record_id || 0) > Number(current?.latest_record_id || 0);
+    }
+
+    function getLatestInsertedItems(items) {
+      if (!items.length) {
+        return [];
+      }
+      const latest = items.reduce((current, candidate) => {
+        if (!current || isNewerItem(candidate, current)) {
+          return candidate;
+        }
+        return current;
+      }, null);
+      return latest ? [latest] : [];
+    }
 
     function renderList(items) {
       if (!items.length) {
@@ -142,16 +181,25 @@ $pageSeo = [
 
     function populateSelect(items) {
       const unique = Array.from(new Set(items.map(i => i.competizione).filter(Boolean))).sort();
-      select.innerHTML = '<option value=\"\">Tutti i tornei</option>' + unique.map(name => `<option value=\"${name}\">${name}</option>`).join('');
+      select.innerHTML = '<option value=\"__latest__\">Ultimo inserito</option><option value=\"__all__\">Tutti i tornei</option>' + unique.map(name => `<option value=\"${name}\">${name}</option>`).join('');
     }
 
     function applyFilter() {
-      const val = select.value;
-      if (!val) {
-        renderList(alboData);
-      } else {
-        renderList(alboData.filter(i => i.competizione === val));
+      const selectedCompetizione = select.value;
+      const searchTerm = normalizeSearchValue(searchInput.value);
+      let filtered = [...alboData];
+
+      if (searchTerm) {
+        filtered = filtered.filter(item => normalizeSearchValue(item.competizione || '').includes(searchTerm));
+      } else if (selectedCompetizione === FILTER_LATEST) {
+        filtered = getLatestInsertedItems(filtered);
       }
+
+      if (selectedCompetizione !== FILTER_LATEST && selectedCompetizione !== FILTER_ALL) {
+        filtered = filtered.filter(item => item.competizione === selectedCompetizione);
+      }
+
+      renderList(filtered);
     }
 
     fetch('/api/albo_doro.php')
@@ -166,6 +214,7 @@ $pageSeo = [
       });
 
     select.addEventListener('change', applyFilter);
+    searchInput.addEventListener('input', applyFilter);
 
     document.addEventListener("DOMContentLoaded", () => {
       fetch("/includi/footer.html")
