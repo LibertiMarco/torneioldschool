@@ -231,7 +231,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
     .tornei-hero {
       position: relative;
       overflow: hidden;
-      margin-bottom: 18px;
+      margin-bottom: 26px;
       padding: clamp(24px, 4vw, 38px);
       border-radius: 30px;
       background:
@@ -330,7 +330,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
     .tornei-controls {
       position: relative;
       z-index: 2;
-      margin: -34px 0 22px;
+      margin: 0 0 22px;
     }
     .tornei-toolbar {
       display: grid;
@@ -772,7 +772,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
         grid-template-columns: 1fr;
       }
       .tornei-controls {
-        margin-top: 16px;
+        margin-top: 0;
       }
       .tornei-toolbar {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -835,6 +835,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       .torneo-link {
         display: grid;
         grid-template-columns: 108px minmax(0, 1fr);
+        column-gap: 14px;
         min-height: 144px;
       }
       .torneo-media {
@@ -890,6 +891,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       }
       .torneo-link {
         grid-template-columns: 96px minmax(0, 1fr);
+        column-gap: 12px;
       }
     }
   </style>
@@ -907,8 +909,8 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       <div class="tornei-hero-inner">
         <div>
           <span class="tornei-kicker">Archivio tornei Old School</span>
-          <h1>Tutti i tornei, ordinati meglio.</h1>
-          <p>Cerca in tempo reale, filtra per categoria e passa da in corso, programmati e terminati senza perderti in scroll infiniti, soprattutto da telefono.</p>
+          <h1>Tutti i tornei</h1>
+          <p>Cerca in tempo reale, filtra per categoria e passa da in corso, programmati e terminati.</p>
         </div>
         <div class="tornei-hero-stats">
           <div class="tornei-stat">
