@@ -60,8 +60,7 @@ $pageSeo = [
     <div class="albo-filters">
       <label for="filterCompetizione">Torneo</label>
       <select id="filterCompetizione" class="albo-select">
-        <option value="__latest__">Ultimo inserito</option>
-        <option value="__all__">Tutti i tornei</option>
+        <option value="">Caricamento tornei...</option>
       </select>
       <input id="filterSearch" class="albo-search" type="search" placeholder="Scrivi il nome del torneo" aria-label="Cerca per nome torneo" autocomplete="off">
     </div>
@@ -137,9 +136,8 @@ $pageSeo = [
     const grid = document.getElementById('alboGrid');
     const select = document.getElementById('filterCompetizione');
     const searchInput = document.getElementById('filterSearch');
-    const FILTER_LATEST = '__latest__';
-    const FILTER_ALL = '__all__';
     let alboData = [];
+    let hasManualSelection = false;
 
     function normalizeSearchValue(value) {
       const raw = String(value || '').toLowerCase().trim();
@@ -181,7 +179,19 @@ $pageSeo = [
 
     function populateSelect(items) {
       const unique = Array.from(new Set(items.map(i => i.competizione).filter(Boolean))).sort();
-      select.innerHTML = '<option value=\"__latest__\">Ultimo inserito</option><option value=\"__all__\">Tutti i tornei</option>' + unique.map(name => `<option value=\"${name}\">${name}</option>`).join('');
+      if (!unique.length) {
+        select.innerHTML = '<option value="">Nessun torneo disponibile</option>';
+        select.disabled = true;
+        return;
+      }
+
+      const latestItem = getLatestInsertedItems(items)[0] || null;
+      const defaultCompetizione = latestItem?.competizione || unique[0];
+
+      select.innerHTML = unique.map(name => `<option value="${name}">${name}</option>`).join('');
+      select.disabled = false;
+      select.value = defaultCompetizione;
+      hasManualSelection = false;
     }
 
     function applyFilter() {
@@ -191,11 +201,11 @@ $pageSeo = [
 
       if (searchTerm) {
         filtered = filtered.filter(item => normalizeSearchValue(item.competizione || '').includes(searchTerm));
-      } else if (selectedCompetizione === FILTER_LATEST) {
+      } else if (!hasManualSelection) {
         filtered = getLatestInsertedItems(filtered);
       }
 
-      if (selectedCompetizione !== FILTER_LATEST && selectedCompetizione !== FILTER_ALL) {
+      if (hasManualSelection && selectedCompetizione) {
         filtered = filtered.filter(item => item.competizione === selectedCompetizione);
       }
 
@@ -213,7 +223,10 @@ $pageSeo = [
         grid.innerHTML = '<p>Errore nel caricamento.</p>';
       });
 
-    select.addEventListener('change', applyFilter);
+    select.addEventListener('change', () => {
+      hasManualSelection = true;
+      applyFilter();
+    });
     searchInput.addEventListener('input', applyFilter);
 
     document.addEventListener("DOMContentLoaded", () => {
