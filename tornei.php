@@ -66,7 +66,14 @@ function renderTorneoCard(array $torneo): void {
   $nome = trim((string)($torneo['nome'] ?? ''));
   $categoria = trim((string)($torneo['categoria'] ?? ''));
   $img = trim((string)($torneo['img'] ?? ''));
-  $searchText = trim($nome . ' ' . $categoria . ' ' . $range);
+  $stato = strtolower(trim((string)($torneo['stato'] ?? '')));
+  $statoMap = [
+    'in corso' => ['label' => 'In corso', 'class' => 'incorso'],
+    'programmato' => ['label' => 'Programmato', 'class' => 'programmato'],
+    'terminato' => ['label' => 'Terminato', 'class' => 'terminato'],
+  ];
+  $statoInfo = $statoMap[$stato] ?? ['label' => 'Torneo', 'class' => 'default'];
+  $searchText = trim($nome . ' ' . $categoria . ' ' . $range . ' ' . $statoInfo['label']);
 
   if ($img === '') {
     $img = '/img/tornei/pallone.png';
@@ -78,21 +85,34 @@ function renderTorneoCard(array $torneo): void {
     data-category="<?= escapeHtml($categoria) ?>"
     data-search="<?= escapeHtml($searchText) ?>">
     <a class="torneo-link" href="<?= escapeHtml($link) ?>">
-      <img
-        src="<?= escapeHtml($img) ?>"
-        alt="<?= escapeHtml($nome) ?>"
-        loading="lazy"
-        decoding="async"
-        onerror="this.src='/img/tornei/pallone.png';">
-      <h3>
-        <?= escapeHtml($nome) ?>
-        <?php if ($categoria !== ''): ?>
-          <span class="categoria">(<?= escapeHtml($categoria) ?>)</span>
+      <div class="torneo-media">
+        <img
+          src="<?= escapeHtml($img) ?>"
+          alt="<?= escapeHtml($nome) ?>"
+          loading="lazy"
+          decoding="async"
+          onerror="this.src='/img/tornei/pallone.png';">
+        <span class="torneo-state-badge torneo-state-badge--<?= escapeHtml($statoInfo['class']) ?>">
+          <?= escapeHtml($statoInfo['label']) ?>
+        </span>
+      </div>
+      <div class="torneo-card-body">
+        <?php if ($categoria !== '' || $range !== ''): ?>
+          <div class="torneo-meta-row">
+            <?php if ($categoria !== ''): ?>
+              <span class="torneo-chip"><?= escapeHtml($categoria) ?></span>
+            <?php endif; ?>
+            <?php if ($range !== ''): ?>
+              <span class="torneo-period"><?= escapeHtml($range) ?></span>
+            <?php endif; ?>
+          </div>
         <?php endif; ?>
-      </h3>
-      <?php if ($range !== ''): ?>
-        <p><?= escapeHtml($range) ?></p>
-      <?php endif; ?>
+        <h3><?= escapeHtml($nome) ?></h3>
+        <div class="torneo-footer">
+          <span class="torneo-footer-copy">Scheda torneo, risultati e dettagli</span>
+          <span class="torneo-link-cta">Apri</span>
+        </div>
+      </div>
     </a>
   </article>
   <?php
@@ -177,6 +197,8 @@ $totaliTornei = [
   'programmati' => count($tornei['programmato']),
   'terminati' => count($tornei['terminato']),
 ];
+$totaleTornei = array_sum($totaliTornei);
+$totaleCategorie = count($categorieTornei);
 
 $baseUrl = seo_base_url();
 $torneiSeo = [
@@ -200,112 +222,335 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
   <link rel="stylesheet" href="<?= asset_url('/style.min.css') ?>">
 <style>
     .content {
-      margin-top: 30px;
-      padding-top: 10px;
+      max-width: 1180px;
+      margin: 22px auto 0;
+      padding: 14px 16px 0;
+      position: relative;
     }
 
+    .tornei-hero {
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 18px;
+      padding: clamp(24px, 4vw, 38px);
+      border-radius: 30px;
+      background:
+        radial-gradient(circle at top right, rgba(244, 188, 92, 0.22), transparent 32%),
+        linear-gradient(135deg, #102236 0%, #16314d 52%, #22547d 100%);
+      color: #fff;
+      box-shadow: 0 24px 60px rgba(16, 34, 54, 0.24);
+    }
+    .tornei-hero::before,
+    .tornei-hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      pointer-events: none;
+      opacity: 0.55;
+    }
+    .tornei-hero::before {
+      width: 280px;
+      height: 280px;
+      top: -120px;
+      right: -80px;
+      background: radial-gradient(circle, rgba(255,255,255,0.22), transparent 70%);
+    }
+    .tornei-hero::after {
+      width: 220px;
+      height: 220px;
+      bottom: -90px;
+      left: -60px;
+      background: radial-gradient(circle, rgba(244,188,92,0.24), transparent 68%);
+    }
+    .tornei-hero-inner {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.95fr);
+      gap: 26px;
+      align-items: end;
+    }
+    .tornei-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.1);
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .tornei-hero h1 {
+      margin: 16px 0 12px;
+      max-width: 12ch;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 0.98;
+      letter-spacing: -0.04em;
+      color: #fff;
+    }
+    .tornei-hero p {
+      max-width: 58ch;
+      margin: 0;
+      color: rgba(255,255,255,0.84);
+      font-size: 1rem;
+      line-height: 1.65;
+    }
+    .tornei-hero-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .tornei-stat {
+      padding: 16px 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.1);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+      backdrop-filter: blur(10px);
+    }
+    .tornei-stat-value {
+      display: block;
+      margin-bottom: 4px;
+      font-size: clamp(1.35rem, 2vw, 2rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #fff;
+    }
+    .tornei-stat-label {
+      display: block;
+      color: rgba(255,255,255,0.76);
+      font-size: 0.88rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .tornei-controls {
+      position: relative;
+      z-index: 2;
+      margin: -34px 0 22px;
+    }
     .tornei-toolbar {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.8fr) auto;
       gap: 14px;
       align-items: end;
-      margin: 18px 0 8px;
       padding: 18px;
-      background: #f5f8fc;
+      background: rgba(255,255,255,0.94);
       border: 1px solid #dce4f2;
-      border-radius: 18px;
-      box-shadow: 0 12px 28px rgba(21, 41, 62, 0.08);
+      border-radius: 24px;
+      box-shadow: 0 18px 44px rgba(21, 41, 62, 0.12);
+      backdrop-filter: blur(10px);
     }
     .tornei-field {
       display: flex;
       flex-direction: column;
       gap: 6px;
-      flex: 1 1 240px;
-      min-width: 220px;
+      min-width: 0;
     }
     .tornei-field label {
-      font-size: 0.92rem;
-      font-weight: 700;
+      font-size: 0.9rem;
+      font-weight: 800;
       color: #15293e;
     }
     .tornei-search,
     .tornei-select {
       width: 100%;
-      min-height: 46px;
-      padding: 0 14px;
-      border: 1px solid #cdd8e8;
-      border-radius: 12px;
-      background: #fff;
+      min-height: 50px;
+      padding: 0 16px;
+      border: 1px solid #cfd8e8;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
       color: #15293e;
       font-size: 0.98rem;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
       transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+    .tornei-search::placeholder {
+      color: #7f91aa;
     }
     .tornei-search:focus,
     .tornei-select:focus {
       outline: none;
       border-color: #4f6fbf;
-      box-shadow: 0 0 0 3px rgba(79, 111, 191, 0.18);
+      box-shadow: 0 0 0 4px rgba(79, 111, 191, 0.14);
+      transform: translateY(-1px);
     }
     .tornei-toolbar-actions {
       display: flex;
       align-items: center;
+      justify-content: flex-end;
       gap: 10px;
       flex-wrap: wrap;
     }
     .tornei-results {
-      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 50px;
+      padding: 0 16px;
+      border-radius: 999px;
+      border: 1px solid #dbe4f1;
+      background: #eef4fb;
       color: #41526a;
+      font-weight: 800;
       white-space: nowrap;
     }
     .tornei-reset {
-      min-height: 46px;
-      padding: 0 16px;
-      border: 1px solid #cdd8e8;
-      border-radius: 12px;
+      min-height: 50px;
+      padding: 0 18px;
+      border: 1px solid #d0daeb;
+      border-radius: 14px;
       background: #fff;
       color: #15293e;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
       transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
     .tornei-reset:hover:not(:disabled) {
       transform: translateY(-1px);
       border-color: #9fb2d4;
-      box-shadow: 0 10px 20px rgba(21, 41, 62, 0.08);
+      box-shadow: 0 10px 22px rgba(21, 41, 62, 0.08);
     }
     .tornei-reset:disabled {
       opacity: 0.5;
       cursor: default;
+      box-shadow: none;
     }
 
-    /* Card tornei: layout invariato, look piu' pulito */
+    .tornei-switch {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      width: 100%;
+      margin: 14px 0 0;
+      padding: 0;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+    .tornei-switch button {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 76px;
+      padding: 16px 18px;
+      border: 1px solid #dbe3f0;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.96);
+      color: #15293e;
+      cursor: pointer;
+      box-shadow: 0 14px 28px rgba(21, 41, 62, 0.08);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+    .tornei-switch button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 32px rgba(21, 41, 62, 0.1);
+    }
+    .tornei-switch button.active {
+      border-color: transparent;
+      background: linear-gradient(135deg, #15293e, #1f4a71);
+      color: #fff;
+      box-shadow: 0 20px 40px rgba(21, 41, 62, 0.2);
+    }
+    .tornei-tab-label {
+      display: block;
+      text-align: left;
+      font-size: 0.98rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .tornei-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(21, 41, 62, 0.08);
+      color: inherit;
+      font-size: 0.82rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .tornei-switch button.active .tornei-count {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .tornei-section {
+      display: none;
+      padding: clamp(18px, 2.5vw, 28px);
+      border-radius: 28px;
+      border: 1px solid #e1e8f3;
+      background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+      box-shadow: 0 20px 44px rgba(21, 41, 62, 0.08);
+    }
+    .tornei-section.active {
+      display: block;
+      animation: torneiSectionReveal 0.28s ease;
+    }
+    @keyframes torneiSectionReveal {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .tornei-section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .tornei-section h2 {
+      margin: 0;
+      color: #15293e;
+      font-size: clamp(1.45rem, 2.2vw, 2rem);
+      letter-spacing: -0.03em;
+    }
+    .tornei-section-meta {
+      margin: 0;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid #dae3f1;
+      background: #eef4fb;
+      color: #5b6b82;
+      font-weight: 800;
+      font-size: 0.92rem;
+    }
+
     .news-grid {
       display: grid;
-      gap: 20px;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 18px;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       width: 100%;
       margin: 0;
-      justify-content: start;
     }
     .news-grid article {
-      background: #fff;
-      border-radius: 14px;
+      width: 100%;
+      max-width: none;
+      border-radius: 24px;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      max-width: 280px;
-      margin: 0 auto;
-      border: 1px solid #e5e9f0;
-      box-shadow: 0 12px 28px rgba(15, 31, 51, 0.1);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      border: 1px solid #e2eaf4;
+      background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+      box-shadow: 0 16px 34px rgba(15, 31, 51, 0.08);
+      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
     }
     .news-grid article[hidden] {
       display: none !important;
     }
     .news-grid article:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 16px 36px rgba(15, 31, 51, 0.14);
+      transform: translateY(-4px);
+      border-color: #c8d5e7;
+      box-shadow: 0 22px 40px rgba(15, 31, 51, 0.12);
     }
     .torneo-link {
       display: flex;
@@ -314,148 +559,185 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       text-decoration: none;
       color: inherit;
     }
-    .news-grid article img {
+    .torneo-media {
+      position: relative;
+      aspect-ratio: 16 / 10;
+      overflow: hidden;
+      background: linear-gradient(135deg, #16314d, #22547d);
+    }
+    .torneo-media::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0;
+      height: 60%;
+      background: linear-gradient(180deg, rgba(0,0,0,0), rgba(7, 21, 34, 0.55));
+      pointer-events: none;
+    }
+    .torneo-media img {
       width: 100%;
-      height: 160px; /* grandezza immagine invariata */
+      height: 100%;
       object-fit: cover;
-      background: linear-gradient(135deg, #15293e, #1f3f63);
+      transition: transform 0.38s ease;
     }
-    .news-grid article h3 {
-      min-height: 45px;
-      padding: 10px 12px 0;
-      font-size: 18px;
-      color: #15293e;
-      margin: 0;
+    .news-grid article:hover .torneo-media img {
+      transform: scale(1.04);
     }
-    .news-grid article .categoria {
-      font-size: 0.9rem;
-      color: #5b6b82;
-      font-weight: 600;
-    }
-    .news-grid article p {
-      padding: 0 12px 14px;
-      margin-top: auto;
-      color: #4c5b71;
-      font-weight: 600;
-    }
-    .tornei-switch {
-      display: inline-flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 20px 0 10px;
-      padding: 6px;
-      background: #e9edf4;
-      border-radius: 999px;
-      border: 1px solid #d7deea;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
-    }
-    .tornei-switch button {
-      border: none;
-      background: transparent;
-      padding: 10px 16px;
-      border-radius: 999px;
-      font-weight: 700;
-      color: #15293e;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .tornei-switch button.active {
-      background: linear-gradient(135deg, #15293e, #1f3f63);
-      color: #fff;
-      box-shadow: 0 8px 20px rgba(21, 41, 62, 0.18);
-    }
-    .tornei-count {
+    .torneo-state-badge {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      z-index: 1;
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      min-width: 28px;
-      padding: 2px 8px;
-      margin-left: 8px;
+      gap: 6px;
+      padding: 7px 12px;
       border-radius: 999px;
-      background: rgba(21, 41, 62, 0.08);
-      color: inherit;
-      font-size: 0.86rem;
-      line-height: 1.2;
+      border: 1px solid rgba(255,255,255,0.18);
+      color: #fff;
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      backdrop-filter: blur(10px);
+      background: rgba(7, 21, 34, 0.28);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.14);
     }
-    .tornei-switch button.active .tornei-count {
-      background: rgba(255, 255, 255, 0.2);
+    .torneo-state-badge--incorso {
+      background: rgba(20, 128, 96, 0.72);
     }
-    .tornei-section {
-      display: none;
+    .torneo-state-badge--programmato {
+      background: rgba(31, 74, 113, 0.72);
     }
-    .tornei-section.active {
-      display: block;
+    .torneo-state-badge--terminato {
+      background: rgba(45, 56, 72, 0.72);
     }
-    .tornei-section-head {
+    .torneo-card-body {
       display: flex;
-      align-items: baseline;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 170px;
+      padding: 16px 18px 18px;
+    }
+    .torneo-meta-row {
+      display: flex;
+      align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
     }
-    .tornei-section-meta {
+    .torneo-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #edf4ff;
+      color: #1f4f86;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+    }
+    .torneo-period {
+      color: #5e7087;
+      font-size: 0.84rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .news-grid article h3 {
+      min-height: 0;
       margin: 0;
-      color: #5b6b82;
+      padding: 0;
+      color: #15293e;
+      font-size: 1.14rem;
+      line-height: 1.22;
+      letter-spacing: -0.02em;
+    }
+    .torneo-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: auto;
+    }
+    .torneo-footer-copy {
+      color: #5a6c84;
+      font-size: 0.92rem;
       font-weight: 700;
-      font-size: 0.96rem;
+      line-height: 1.4;
+    }
+    .torneo-link-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #15293e;
+      font-size: 0.92rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .torneo-link-cta::after {
+      content: "->";
+      font-size: 0.88rem;
     }
     .tornei-empty {
-      margin: 18px 0 0;
+      margin: 22px 0 0;
+      padding: 18px 20px;
+      border: 1px dashed #cdd9ea;
+      border-radius: 18px;
+      background: #f7f9fc;
       color: #5b6b82;
-      font-weight: 700;
+      font-weight: 800;
     }
     .tornei-actions {
       display: flex;
       justify-content: center;
-      margin-top: 18px;
+      margin-top: 22px;
     }
     .tornei-more {
-      min-height: 44px;
-      padding: 0 18px;
-      border: 1px solid #15293e;
+      min-height: 48px;
+      padding: 0 20px;
+      border: 1px solid #d0d9e8;
       border-radius: 999px;
       background: #fff;
       color: #15293e;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
+      box-shadow: 0 12px 24px rgba(21, 41, 62, 0.08);
       transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
     }
     .tornei-more:hover {
       transform: translateY(-1px);
-      box-shadow: 0 10px 20px rgba(21, 41, 62, 0.1);
+      box-shadow: 0 16px 28px rgba(21, 41, 62, 0.1);
       background: #f7f9fc;
     }
     .tornei-more[hidden] {
       display: none;
     }
 
-    /* CTA accesso non bloccante */
     .cta-accesso {
-      margin: 32px auto 60px;
-      max-width: 860px;
-      padding: 0 12px;
+      margin: 34px auto 70px;
+      padding: 0 4px;
     }
     .cta-accesso .box {
-      background: #f5f8fc;
-      border: 1px solid #dce4f2;
-      border-radius: 16px;
-      padding: 22px 24px;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      box-shadow: 0 10px 28px rgba(21,41,62,0.08);
+      gap: 16px;
+      padding: 24px 26px;
+      border-radius: 26px;
+      border: 1px solid #dfe7f4;
+      background: linear-gradient(135deg, #ffffff 0%, #f4f8fd 100%);
+      box-shadow: 0 18px 40px rgba(21,41,62,0.08);
     }
     .cta-accesso h2 {
       margin: 0;
       color: #15293e;
-      font-size: 1.35rem;
+      font-size: 1.38rem;
+      letter-spacing: -0.02em;
     }
     .cta-accesso p {
       margin: 6px 0 0;
       color: #41526a;
-      font-weight: 600;
+      font-weight: 700;
+      line-height: 1.55;
     }
     .cta-accesso .cta-actions {
       display: flex;
@@ -466,56 +748,148 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 10px 16px;
-      border-radius: 12px;
-      font-weight: 700;
+      min-height: 48px;
+      padding: 0 18px;
+      border-radius: 14px;
       text-decoration: none;
       border: 1px solid #15293e;
       color: #fff;
-      background: linear-gradient(135deg, #15293e, #1f3f63);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      background: linear-gradient(135deg, #15293e, #1f4a71);
+      font-weight: 800;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
     }
     .cta-accesso .btn:hover {
       transform: translateY(-1px);
-      box-shadow: 0 10px 20px rgba(21,41,62,0.16);
+      box-shadow: 0 12px 22px rgba(21,41,62,0.16);
     }
     .cta-accesso .btn.ghost {
       background: transparent;
       color: #15293e;
     }
 
-    /* Mobile */
-    @media (max-width: 768px) {
+    @media (max-width: 960px) {
+      .tornei-hero-inner {
+        grid-template-columns: 1fr;
+      }
+      .tornei-controls {
+        margin-top: 16px;
+      }
       .tornei-toolbar {
-        padding: 16px;
-      }
-      .tornei-field,
-      .tornei-toolbar-actions {
-        flex-basis: 100%;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
       .tornei-toolbar-actions {
+        grid-column: 1 / -1;
         justify-content: space-between;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .content {
+        margin-top: 16px;
+        padding: 12px 12px 0;
+      }
+      .tornei-hero {
+        border-radius: 24px;
+        padding: 22px 18px;
+      }
+      .tornei-hero h1 {
+        max-width: none;
+      }
+      .tornei-hero-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .tornei-toolbar {
+        grid-template-columns: 1fr;
+        padding: 16px;
+        border-radius: 22px;
+      }
+      .tornei-toolbar-actions {
+        justify-content: flex-start;
+      }
+      .tornei-results {
+        order: -1;
+        width: 100%;
+        white-space: normal;
+      }
+      .tornei-reset {
+        width: 100%;
+      }
+      .tornei-switch {
+        grid-template-columns: 1fr;
+      }
+      .tornei-switch button {
+        min-height: 0;
+        padding: 14px 16px;
+      }
+      .tornei-section {
+        padding: 18px;
+        border-radius: 24px;
       }
       .news-grid {
         grid-template-columns: 1fr;
-        gap: 20px;
-        justify-items: center;
+        gap: 14px;
       }
       .news-grid article {
-        width: 95%;
-        max-width: 500px;
-        border-radius: 14px;
+        border-radius: 20px;
       }
-      .news-grid article img {
-        height: 200px; /* dimensione immagine mobile invariata */
+      .torneo-link {
+        display: grid;
+        grid-template-columns: 108px minmax(0, 1fr);
+        min-height: 144px;
+      }
+      .torneo-media {
+        aspect-ratio: auto;
+        height: 100%;
+      }
+      .torneo-state-badge {
+        top: 10px;
+        left: 10px;
+        font-size: 0.72rem;
+        padding: 6px 10px;
+      }
+      .torneo-card-body {
+        min-height: 0;
+        gap: 10px;
+        padding: 14px 14px 14px 0;
+      }
+      .torneo-meta-row {
+        align-items: flex-start;
+      }
+      .torneo-period {
+        white-space: normal;
       }
       .news-grid article h3 {
-        font-size: 20px;
-        padding: 12px 14px 6px;
+        font-size: 1rem;
       }
-      .news-grid article p {
-        font-size: 16px;
-        padding: 0 14px 14px;
+      .torneo-footer {
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+      .torneo-footer-copy {
+        width: 100%;
+        font-size: 0.86rem;
+      }
+      .cta-accesso .box {
+        padding: 20px;
+        border-radius: 22px;
+      }
+      .cta-accesso .cta-actions {
+        width: 100%;
+      }
+      .cta-accesso .btn {
+        flex: 1 1 100%;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .tornei-hero-stats {
+        grid-template-columns: 1fr 1fr;
+      }
+      .tornei-stat {
+        padding: 14px;
+      }
+      .torneo-link {
+        grid-template-columns: 96px minmax(0, 1fr);
       }
     }
   </style>
@@ -529,47 +903,77 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
   <!-- CONTENUTO PRINCIPALE -->
   <div class="content">
 
-    <div class="tornei-toolbar" aria-label="Strumenti di ricerca tornei">
-      <div class="tornei-field">
-        <label for="torneiSearch">Cerca torneo</label>
-        <input
-          id="torneiSearch"
-          class="tornei-search"
-          type="search"
-          placeholder="Nome torneo o categoria"
-          autocomplete="off">
+    <section class="tornei-hero" aria-label="Panoramica tornei">
+      <div class="tornei-hero-inner">
+        <div>
+          <span class="tornei-kicker">Archivio tornei Old School</span>
+          <h1>Tutti i tornei, ordinati meglio.</h1>
+          <p>Cerca in tempo reale, filtra per categoria e passa da in corso, programmati e terminati senza perderti in scroll infiniti, soprattutto da telefono.</p>
+        </div>
+        <div class="tornei-hero-stats">
+          <div class="tornei-stat">
+            <span class="tornei-stat-value"><?= $totaleTornei ?></span>
+            <span class="tornei-stat-label">Tornei totali</span>
+          </div>
+          <div class="tornei-stat">
+            <span class="tornei-stat-value"><?= $totaliTornei['incorso'] ?></span>
+            <span class="tornei-stat-label">Attivi in questo momento</span>
+          </div>
+          <div class="tornei-stat">
+            <span class="tornei-stat-value"><?= $totaliTornei['programmati'] ?></span>
+            <span class="tornei-stat-label">Gia programmati</span>
+          </div>
+          <div class="tornei-stat">
+            <span class="tornei-stat-value"><?= $totaleCategorie ?></span>
+            <span class="tornei-stat-label">Categorie disponibili</span>
+          </div>
+        </div>
       </div>
-      <div class="tornei-field">
-        <label for="torneiCategoria">Categoria</label>
-        <select id="torneiCategoria" class="tornei-select">
-          <option value="">Tutte le categorie</option>
-          <?php foreach ($categorieTornei as $categoria): ?>
-            <option value="<?= escapeHtml($categoria) ?>"><?= escapeHtml($categoria) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-      <div class="tornei-toolbar-actions">
-        <button type="button" class="tornei-reset" id="torneiReset">Azzera filtri</button>
-        <span class="tornei-results" id="torneiResults">Totale tornei: <?= $totaliTornei['incorso'] + $totaliTornei['programmati'] + $totaliTornei['terminati'] ?></span>
-      </div>
-    </div>
+    </section>
 
-    <div class="tornei-switch" aria-label="Filtra tornei">
-      <button type="button" class="active" data-target="incorso">
-        Tornei in corso
-        <span class="tornei-count" data-tab-count-for="incorso"><?= $totaliTornei['incorso'] ?></span>
-      </button>
-      <button type="button" data-target="programmati">
-        Tornei programmati
-        <span class="tornei-count" data-tab-count-for="programmati"><?= $totaliTornei['programmati'] ?></span>
-      </button>
-      <button type="button" data-target="terminati">
-        Tornei terminati
-        <span class="tornei-count" data-tab-count-for="terminati"><?= $totaliTornei['terminati'] ?></span>
-      </button>
+    <div class="tornei-controls">
+      <div class="tornei-toolbar" aria-label="Strumenti di ricerca tornei">
+        <div class="tornei-field">
+          <label for="torneiSearch">Cerca torneo</label>
+          <input
+            id="torneiSearch"
+            class="tornei-search"
+            type="search"
+            placeholder="Nome torneo o categoria"
+            autocomplete="off">
+        </div>
+        <div class="tornei-field">
+          <label for="torneiCategoria">Categoria</label>
+          <select id="torneiCategoria" class="tornei-select">
+            <option value="">Tutte le categorie</option>
+            <?php foreach ($categorieTornei as $categoria): ?>
+              <option value="<?= escapeHtml($categoria) ?>"><?= escapeHtml($categoria) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="tornei-toolbar-actions">
+          <button type="button" class="tornei-reset" id="torneiReset">Azzera filtri</button>
+          <span class="tornei-results" id="torneiResults" role="status" aria-live="polite">Totale tornei: <?= $totaleTornei ?></span>
+        </div>
+      </div>
+
+      <div class="tornei-switch" aria-label="Filtra tornei">
+        <button type="button" class="active" data-target="incorso">
+          <span class="tornei-tab-label">Tornei in corso</span>
+          <span class="tornei-count" data-tab-count-for="incorso"><?= $totaliTornei['incorso'] ?></span>
+        </button>
+        <button type="button" data-target="programmati">
+          <span class="tornei-tab-label">Tornei programmati</span>
+          <span class="tornei-count" data-tab-count-for="programmati"><?= $totaliTornei['programmati'] ?></span>
+        </button>
+        <button type="button" data-target="terminati">
+          <span class="tornei-tab-label">Tornei terminati</span>
+          <span class="tornei-count" data-tab-count-for="terminati"><?= $totaliTornei['terminati'] ?></span>
+        </button>
+      </div>
     </div>
     <!-- TORNEI IN CORSO -->
-    <section class="home-news tornei-section active" id="tornei-incorso" data-section-key="incorso" data-page-size="0" style="margin-top:20px;">
+    <section class="home-news tornei-section active" id="tornei-incorso" data-section-key="incorso" data-page-size="0" style="margin-top:14px;">
       <div class="tornei-section-head">
         <h2>Tornei in corso</h2>
         <p class="tornei-section-meta"><span data-section-count-for="incorso"><?= $totaliTornei['incorso'] ?></span> visibili</p>
@@ -589,7 +993,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
     </section>
 
     <!-- TORNEI PROGRAMMATI -->
-    <section class="home-news tornei-section" id="tornei-programmati" data-section-key="programmati" data-page-size="0" style="margin-top:20px;">
+    <section class="home-news tornei-section" id="tornei-programmati" data-section-key="programmati" data-page-size="0" style="margin-top:14px;">
       <div class="tornei-section-head">
         <h2>Tornei programmati</h2>
         <p class="tornei-section-meta"><span data-section-count-for="programmati"><?= $totaliTornei['programmati'] ?></span> visibili</p>
@@ -609,7 +1013,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
     </section>
 
     <!-- TORNEI TERMINATI -->
-    <section class="home-news tornei-section" id="tornei-terminati" data-section-key="terminati" data-page-size="12" style="margin-top:20px; margin-bottom:80px;">
+    <section class="home-news tornei-section" id="tornei-terminati" data-section-key="terminati" data-page-size="12" style="margin-top:14px; margin-bottom:80px;">
       <div class="tornei-section-head">
         <h2>Tornei terminati</h2>
         <p class="tornei-section-meta"><span data-section-count-for="terminati"><?= $totaliTornei['terminati'] ?></span> visibili</p>
