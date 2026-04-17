@@ -22,61 +22,7 @@ function h(string $value): string {
 function fetch_player_team_stats(mysqli $conn, int $giocatoreId, array $team): array {
     $teamName = trim((string)($team['nome'] ?? ''));
     $torneoSlug = trim((string)($team['torneo'] ?? ''));
-    if ($giocatoreId <= 0 || $teamName === '' || $torneoSlug === '') {
-        return [
-            'presenze' => 0,
-            'reti' => 0,
-            'assist' => 0,
-            'gialli' => 0,
-            'rossi' => 0,
-            'media_voti' => null,
-        ];
-    }
-
-    $phaseClause = torneo_stats_team_phase_clause($conn, $torneoSlug, 'p.fase');
-    $sql = "
-        SELECT
-            COALESCE(SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END), 0) AS presenze,
-            COALESCE(SUM(pg.goal), 0) AS reti,
-            COALESCE(SUM(pg.assist), 0) AS assist,
-            COALESCE(SUM(pg.cartellino_giallo), 0) AS gialli,
-            COALESCE(SUM(pg.cartellino_rosso), 0) AS rossi,
-            SUM(CASE WHEN pg.voto IS NOT NULL THEN pg.voto ELSE 0 END) AS somma_voti,
-            SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
-        FROM partita_giocatore pg
-        JOIN partite p ON p.id = pg.partita_id
-        WHERE pg.giocatore_id = ?
-          AND p.giocata = 1
-          AND p.torneo = ?
-          AND (p.squadra_casa = ? OR p.squadra_ospite = ?)
-          $phaseClause
-    ";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        return [
-            'presenze' => 0,
-            'reti' => 0,
-            'assist' => 0,
-            'gialli' => 0,
-            'rossi' => 0,
-            'media_voti' => null,
-        ];
-    }
-
-    $stmt->bind_param('isss', $giocatoreId, $torneoSlug, $teamName, $teamName);
-    $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc() ?: [];
-    $stmt->close();
-
-    $numVoti = (int)($row['num_voti'] ?? 0);
-    return [
-        'presenze' => (int)($row['presenze'] ?? 0),
-        'reti' => (int)($row['reti'] ?? 0),
-        'assist' => (int)($row['assist'] ?? 0),
-        'gialli' => (int)($row['gialli'] ?? 0),
-        'rossi' => (int)($row['rossi'] ?? 0),
-        'media_voti' => $numVoti > 0 ? round(((float)($row['somma_voti'] ?? 0)) / $numVoti, 2) : null,
-    ];
+    return torneo_stats_fetch_player_team_totals($conn, $giocatoreId, $torneoSlug, $teamName);
 }
 
 // Carica il giocatore associato all'account
