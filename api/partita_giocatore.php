@@ -1,5 +1,6 @@
 ﻿<?php
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 require_once __DIR__ . '/crud/partita.php';
 header('Content-Type: application/json; charset=utf-8');
 
@@ -96,7 +97,7 @@ function aggiornaGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squadraId
     $nome = $t['nome'];
     $torneo = $t['torneo'];
 
-    // Considera solo le partite di Regular Season per le statistiche di squadra/torneo
+    $phaseFilter = torneo_stats_team_phase_clause($conn, (string)$torneo, 'p.fase');
     $q = $conn->prepare("SELECT 
         COUNT(*) AS presenze,
         COALESCE(SUM(pg.goal),0) AS goal,
@@ -110,7 +111,7 @@ function aggiornaGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squadraId
         WHERE pg.giocatore_id = ?
           AND p.torneo = ?
           AND (p.squadra_casa = ? OR p.squadra_ospite = ?)
-          AND UPPER(CASE WHEN TRIM(p.fase) IN ('', 'GIRONE') THEN 'REGULAR' ELSE TRIM(p.fase) END) = 'REGULAR'");
+          $phaseFilter");
     $q->bind_param("isss", $giocatoreId, $torneo, $nome, $nome);
     $q->execute();
     $r = $q->get_result()->fetch_assoc() ?: [];
@@ -145,20 +146,10 @@ function squadraPerPartitaGiocatore(mysqli $conn, int $partitaId, int $giocatore
     return $res['squadra_id'] ?? null;
 }
 
-function fasePartita(mysqli $conn, int $partitaId): string {
-    $q = $conn->prepare("SELECT UPPER(CASE WHEN TRIM(fase) IN ('', 'GIRONE') THEN 'REGULAR' ELSE TRIM(fase) END) AS fase FROM partite WHERE id=?");
-    $q->bind_param("i", $partitaId);
-    $q->execute();
-    $r = $q->get_result()->fetch_assoc();
-    return $r['fase'] ?? 'REGULAR';
-}
-
 function ricalcolaStatistiche(mysqli $conn, int $partitaId, int $giocatoreId): void {
     aggiornaGiocatoreGlobale($conn, $giocatoreId);
-    $fase = fasePartita($conn, $partitaId);
     $squadraId = squadraPerPartitaGiocatore($conn, $partitaId, $giocatoreId);
-    // aggiorna le stats per squadra/torneo solo in Regular Season
-    if ($squadraId && $fase === 'REGULAR') {
+    if ($squadraId) {
       aggiornaGiocatoreSquadra($conn, $giocatoreId, $squadraId);
     }
 }

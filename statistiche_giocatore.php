@@ -7,6 +7,7 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 require_once __DIR__ . '/includi/db.php';
+require_once __DIR__ . '/includi/torneo_phase_rules.php';
 require_once __DIR__ . '/includi/seo.php';
 
 $userId = (int)$_SESSION['user_id'];
@@ -16,6 +17,66 @@ header('Content-Type: text/html; charset=utf-8');
 
 function h(string $value): string {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+}
+
+function fetch_player_team_stats(mysqli $conn, int $giocatoreId, array $team): array {
+    $teamName = trim((string)($team['nome'] ?? ''));
+    $torneoSlug = trim((string)($team['torneo'] ?? ''));
+    if ($giocatoreId <= 0 || $teamName === '' || $torneoSlug === '') {
+        return [
+            'presenze' => 0,
+            'reti' => 0,
+            'assist' => 0,
+            'gialli' => 0,
+            'rossi' => 0,
+            'media_voti' => null,
+        ];
+    }
+
+    $phaseClause = torneo_stats_team_phase_clause($conn, $torneoSlug, 'p.fase');
+    $sql = "
+        SELECT
+            COALESCE(SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END), 0) AS presenze,
+            COALESCE(SUM(pg.goal), 0) AS reti,
+            COALESCE(SUM(pg.assist), 0) AS assist,
+            COALESCE(SUM(pg.cartellino_giallo), 0) AS gialli,
+            COALESCE(SUM(pg.cartellino_rosso), 0) AS rossi,
+            SUM(CASE WHEN pg.voto IS NOT NULL THEN pg.voto ELSE 0 END) AS somma_voti,
+            SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
+        FROM partita_giocatore pg
+        JOIN partite p ON p.id = pg.partita_id
+        WHERE pg.giocatore_id = ?
+          AND p.giocata = 1
+          AND p.torneo = ?
+          AND (p.squadra_casa = ? OR p.squadra_ospite = ?)
+          $phaseClause
+    ";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return [
+            'presenze' => 0,
+            'reti' => 0,
+            'assist' => 0,
+            'gialli' => 0,
+            'rossi' => 0,
+            'media_voti' => null,
+        ];
+    }
+
+    $stmt->bind_param('isss', $giocatoreId, $torneoSlug, $teamName, $teamName);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc() ?: [];
+    $stmt->close();
+
+    $numVoti = (int)($row['num_voti'] ?? 0);
+    return [
+        'presenze' => (int)($row['presenze'] ?? 0),
+        'reti' => (int)($row['reti'] ?? 0),
+        'assist' => (int)($row['assist'] ?? 0),
+        'gialli' => (int)($row['gialli'] ?? 0),
+        'rossi' => (int)($row['rossi'] ?? 0),
+        'media_voti' => $numVoti > 0 ? round(((float)($row['somma_voti'] ?? 0)) / $numVoti, 2) : null,
+    ];
 }
 
 // Carica il giocatore associato all'account
@@ -39,7 +100,7 @@ $squadre = [];
 if ($giocatore) {
     $stmt = $conn->prepare("
         SELECT s.id, s.nome, s.torneo, s.logo,
-               sg.presenze, sg.reti, sg.assist, sg.gialli, sg.rossi, sg.media_voti, sg.is_captain,
+               sg.is_captain,
                t.nome AS torneo_nome
         FROM squadre_giocatori sg
         JOIN squadre s ON s.id = sg.squadra_id
@@ -52,7 +113,7 @@ if ($giocatore) {
         if ($stmt->execute()) {
             $res = $stmt->get_result();
             while ($row = $res->fetch_assoc()) {
-                $squadre[] = $row;
+                $squadre[] = array_merge($row, fetch_player_team_stats($conn, (int)$giocatore['id'], $row));
             }
         }
         $stmt->close();

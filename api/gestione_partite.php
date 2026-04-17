@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includi/admin_guard.php';
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 
 $errore = '';
 $successo = '';
@@ -384,8 +385,7 @@ function aggiornaStatsGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squa
   $teamInfo->close();
   if (!$team) return;
 
-  $isCoppaAfrica = strtoupper($team['torneo'] ?? '') === 'COPPADAFRICA';
-  $phaseFilter = $isCoppaAfrica ? "" : "AND UPPER(CASE WHEN TRIM(p.fase) IN ('', 'GIRONE') THEN 'REGULAR' ELSE TRIM(p.fase) END) = 'REGULAR'";
+  $phaseFilter = torneo_stats_team_phase_clause($conn, (string)($team['torneo'] ?? ''), 'p.fase');
 
   $sql = "
     SELECT 
