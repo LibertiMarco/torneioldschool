@@ -7174,3 +7174,23 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
     border-radius: 11px;
   }
 }
+
+/* Titoli hero delle pagine torneo: neutralizza il nowrap globale di .titolo
+   e consente il wrap su schermi stretti. */
+.torneo-title .titolo {
+  display: block;
+  max-width: 100%;
+  margin-bottom: 0 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  line-height: 1.15 !important;
+  letter-spacing: 0.6px !important;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .torneo-title .titolo {
+    font-size: clamp(18px, 7vw, 26px) !important;
+  }
+}

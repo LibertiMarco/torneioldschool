@@ -14,7 +14,7 @@ $normalizeTorneoText = static function ($value): string {
 
 $torneoSlug = isset($torneoSlug) ? $normalizeTorneoText((string)$torneoSlug) : 'TEMPLATE_SLUG';
 $torneoName = isset($torneoName) ? $normalizeTorneoText((string)$torneoName) : 'Torneo Template';
-$assetVersion = isset($assetVersion) ? (string)$assetVersion : '20260325b';
+$assetVersion = isset($assetVersion) ? (string)$assetVersion : '20260421a';
 $torneoConfigFallback = (isset($torneoConfigFallback) && is_array($torneoConfigFallback)) ? $torneoConfigFallback : [];
 $torneoRulesMarkup = isset($torneoRulesMarkup) ? (string)$torneoRulesMarkup : '';
 

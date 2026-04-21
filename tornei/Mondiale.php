@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../includi/security.php';
-$assetVersion = '20260325b';
+$assetVersion = '20260421a';
 ?>
 <!DOCTYPE html>
 <html lang="it">
