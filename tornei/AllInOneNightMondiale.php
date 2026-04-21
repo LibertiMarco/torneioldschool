@@ -66,6 +66,8 @@ $torneoSeo = [
       line-height: 1.15;
       word-break: break-word;
       hyphens: auto;
+      min-width: 0;
+      flex: 1 1 auto;
     }
     .fav-toggle {
       border: 1px solid #15293e;
@@ -238,8 +240,19 @@ $torneoSeo = [
         align-items: center;
       }
       .torneo-title {
+        min-width: 0;
+        width: 100%;
         flex: 1 1 100%;
         max-width: 100%;
+        height: auto;
+        flex-direction: column;
+      }
+      .torneo-title h1 {
+        width: 100%;
+      }
+      .torneo-title .fav-toggle {
+        width: 100%;
+        max-width: 260px;
       }
     }
   </style>

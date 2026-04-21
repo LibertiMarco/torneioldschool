@@ -228,6 +228,8 @@ if (!empty($torneoConfig['regole_html'])) {
       justify-content: center;
       height: 80px;
       gap: 12px;
+      flex: 1 1 240px;
+      max-width: 560px;
     }
     .torneo-title .fav-toggle {
       align-self: center;
@@ -236,6 +238,12 @@ if (!empty($torneoConfig['regole_html'])) {
     .torneo-title h1 {
       margin: 0;
       text-align: center;
+      font-size: clamp(20px, 5vw, 30px);
+      line-height: 1.15;
+      word-break: break-word;
+      hyphens: auto;
+      min-width: 0;
+      flex: 1 1 auto;
     }
     .fav-toggle {
       border: 1px solid #15293e;
@@ -387,6 +395,21 @@ if (!empty($torneoConfig['regole_html'])) {
     @media (max-width: 600px) {
       .torneo-hero {
         flex-wrap: wrap;
+      }
+      .torneo-title {
+        min-width: 0;
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        flex: 1 1 100%;
+        flex-direction: column;
+      }
+      .torneo-title h1 {
+        width: 100%;
+      }
+      .torneo-title .fav-toggle {
+        width: 100%;
+        max-width: 260px;
       }
     }
   </style>
