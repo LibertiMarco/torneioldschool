@@ -133,6 +133,83 @@ if (!function_exists('torneo_stats_get_format')) {
     }
 }
 
+if (!function_exists('torneo_stats_get_girone_tournaments')) {
+    function torneo_stats_get_girone_tournaments(mysqli $conn): array
+    {
+        static $cache = null;
+
+        if ($cache !== null) {
+            return $cache;
+        }
+
+        $cache = [];
+        $queries = [];
+
+        if (torneo_stats_table_has_column($conn, 'squadre', 'torneo')) {
+            $queries[] = "SELECT DISTINCT torneo FROM squadre WHERE torneo <> ''";
+        }
+        if (torneo_stats_table_has_column($conn, 'partite', 'torneo')) {
+            $queries[] = "SELECT DISTINCT torneo FROM partite WHERE torneo <> ''";
+        }
+
+        if (empty($queries)) {
+            return $cache;
+        }
+
+        $res = $conn->query(implode(' UNION ', $queries));
+        if (!$res) {
+            return $cache;
+        }
+
+        $tournaments = [];
+        while ($row = $res->fetch_assoc()) {
+            $torneo = trim((string)($row['torneo'] ?? ''));
+            if ($torneo !== '') {
+                $tournaments[$torneo] = true;
+            }
+        }
+        $res->free();
+
+        foreach (array_keys($tournaments) as $torneo) {
+            if (torneo_stats_get_format($conn, $torneo) === 'girone') {
+                $cache[] = $torneo;
+            }
+        }
+
+        sort($cache, SORT_NATURAL | SORT_FLAG_CASE);
+        return $cache;
+    }
+}
+
+if (!function_exists('torneo_stats_global_media_includes_tournament')) {
+    function torneo_stats_global_media_includes_tournament(mysqli $conn, string $torneo): bool
+    {
+        return torneo_stats_get_format($conn, $torneo) !== 'girone';
+    }
+}
+
+if (!function_exists('torneo_stats_global_media_tournament_condition')) {
+    function torneo_stats_global_media_tournament_condition(mysqli $conn, string $tournamentColumn = 'p.torneo'): string
+    {
+        $tournamentColumn = trim($tournamentColumn);
+        if ($tournamentColumn === '') {
+            $tournamentColumn = 'p.torneo';
+        }
+
+        $excluded = torneo_stats_get_girone_tournaments($conn);
+        if (empty($excluded)) {
+            return '1=1';
+        }
+
+        $quoted = array_map(
+            static fn(string $torneo): string => "'" . $conn->real_escape_string($torneo) . "'",
+            $excluded
+        );
+
+        return $tournamentColumn . ' NOT IN (' . implode(', ', $quoted) . ')';
+    }
+}
+
 if (!function_exists('torneo_stats_normalized_phase_expr')) {
     function torneo_stats_normalized_phase_expr(string $phaseColumn = 'p.fase'): string
     {
@@ -236,6 +313,7 @@ if (!function_exists('torneo_stats_rebuild_all_player_aggregates')) {
             'giocatori_globali' => 0,
             'associazioni_squadra' => 0,
         ];
+        $globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($conn, 'p.torneo');
 
         $sqlGlobal = "
             UPDATE giocatori g
@@ -247,8 +325,8 @@ if (!function_exists('torneo_stats_rebuild_all_player_aggregates')) {
                     SUM(pg.cartellino_giallo) AS gialli,
                     SUM(pg.cartellino_rosso) AS rossi,
                     SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END) AS presenze,
-                    SUM(CASE WHEN pg.voto IS NOT NULL THEN pg.voto ELSE 0 END) AS somma_voti,
-                    SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
+                    SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN pg.voto ELSE 0 END) AS somma_voti,
+                    SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN 1 ELSE 0 END) AS num_voti
                 FROM partita_giocatore pg
                 JOIN partite p ON p.id = pg.partita_id
                 WHERE p.giocata = 1

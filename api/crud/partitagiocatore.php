@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../../includi/db.php';
+require_once __DIR__ . '/../../includi/torneo_phase_rules.php';
 
 class partitagiocatore {
 
@@ -166,10 +167,12 @@ class partitagiocatore {
        RICALCOLA MEDIA VOTO
     ========================================================== */
     private function ricalcolaMediaVoto($giocatore_id) {
+        $globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($this->conn, 'p.torneo');
         $sql = "
-            SELECT AVG(voto) AS media
-            FROM partita_giocatore
-            WHERE giocatore_id = ? AND voto IS NOT NULL
+            SELECT AVG(CASE WHEN $globalMediaTournamentCondition THEN pg.voto ELSE NULL END) AS media
+            FROM partita_giocatore pg
+            JOIN partite p ON p.id = pg.partita_id
+            WHERE pg.giocatore_id = ? AND pg.voto IS NOT NULL
         ";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $giocatore_id);

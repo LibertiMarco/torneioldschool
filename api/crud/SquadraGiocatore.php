@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../../includi/torneo_phase_rules.php';
+
 class SquadraGiocatore {
     private $conn;
     private $table = "squadre_giocatori";
@@ -160,20 +162,22 @@ class SquadraGiocatore {
     }
 
     private function aggiornaTotaliGiocatore($giocatoreId) {
+        $globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($this->conn, 's.torneo');
         $sql = "
             UPDATE giocatori g
             LEFT JOIN (
                 SELECT 
-                    giocatore_id,
-                    SUM(presenze) AS sum_presenze,
-                    SUM(reti) AS sum_reti,
-                    SUM(assist) AS sum_assist,
-                    SUM(gialli) AS sum_gialli,
-                    SUM(rossi) AS sum_rossi,
-                    SUM(CASE WHEN media_voti IS NOT NULL THEN media_voti ELSE 0 END) AS somma_media,
-                    SUM(CASE WHEN media_voti IS NOT NULL THEN 1 ELSE 0 END) AS count_media
-                FROM {$this->table}
-                WHERE giocatore_id = ?
+                    sg.giocatore_id,
+                    SUM(sg.presenze) AS sum_presenze,
+                    SUM(sg.reti) AS sum_reti,
+                    SUM(sg.assist) AS sum_assist,
+                    SUM(sg.gialli) AS sum_gialli,
+                    SUM(sg.rossi) AS sum_rossi,
+                    SUM(CASE WHEN sg.media_voti IS NOT NULL AND $globalMediaTournamentCondition THEN sg.media_voti ELSE 0 END) AS somma_media,
+                    SUM(CASE WHEN sg.media_voti IS NOT NULL AND $globalMediaTournamentCondition THEN 1 ELSE 0 END) AS count_media
+                FROM {$this->table} sg
+                JOIN squadre s ON s.id = sg.squadra_id
+                WHERE sg.giocatore_id = ?
             ) agg ON agg.giocatore_id = g.id
             SET 
                 g.presenze = COALESCE(agg.sum_presenze, 0),

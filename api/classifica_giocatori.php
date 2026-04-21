@@ -2,6 +2,7 @@
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 
 if (!$conn || $conn->connect_error) {
     http_response_code(500);
@@ -10,6 +11,7 @@ if (!$conn || $conn->connect_error) {
 }
 
 $conn->set_charset('utf8mb4');
+$globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($conn, 'p.torneo');
 
 $defaultFoto = '/img/giocatori/unknown.jpg';
 $latestSquadPhotoSubquery = "
@@ -79,8 +81,8 @@ $aggregateSubquery = "
         SUM(pg.goal) AS gol,
         SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END) AS presenze,
         CASE 
-            WHEN SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) > 0
-                THEN ROUND(SUM(CASE WHEN pg.voto IS NOT NULL THEN pg.voto ELSE 0 END) / SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END), 2)
+            WHEN SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN 1 ELSE 0 END) > 0
+                THEN ROUND(SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN pg.voto ELSE 0 END) / SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN 1 ELSE 0 END), 2)
             ELSE NULL
         END AS media_voti
     FROM partita_giocatore pg

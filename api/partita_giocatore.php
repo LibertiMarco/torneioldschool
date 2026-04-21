@@ -61,15 +61,18 @@ if ($azione === 'list') {
 }
 
 function aggiornaGiocatoreGlobale(mysqli $conn, int $giocatoreId): void {
+    $globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($conn, 'p.torneo');
     $q = $conn->prepare("SELECT 
         COUNT(*) AS presenze,
-        COALESCE(SUM(goal),0) AS goal,
-        COALESCE(SUM(assist),0) AS assist,
-        COALESCE(SUM(cartellino_giallo),0) AS gialli,
-        COALESCE(SUM(cartellino_rosso),0) AS rossi,
-        SUM(CASE WHEN voto IS NOT NULL THEN voto ELSE 0 END) AS somma_voti,
-        SUM(CASE WHEN voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
-        FROM partita_giocatore WHERE giocatore_id=?");
+        COALESCE(SUM(pg.goal),0) AS goal,
+        COALESCE(SUM(pg.assist),0) AS assist,
+        COALESCE(SUM(pg.cartellino_giallo),0) AS gialli,
+        COALESCE(SUM(pg.cartellino_rosso),0) AS rossi,
+        SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN pg.voto ELSE 0 END) AS somma_voti,
+        SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN 1 ELSE 0 END) AS num_voti
+        FROM partita_giocatore pg
+        JOIN partite p ON p.id = pg.partita_id
+        WHERE pg.giocatore_id=?");
     $q->bind_param("i", $giocatoreId);
     $q->execute();
     $r = $q->get_result()->fetch_assoc() ?: [];
