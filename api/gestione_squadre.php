@@ -364,6 +364,8 @@ if ($resSquadre = $squadra->getAll()) {
     .admin-alert.success { background: #e8f6ef; color: #065f46; border: 1px solid #34d399; }
     .admin-alert.error { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
     .search-input { padding: 8px 10px; border-radius: 10px; border: 1px solid #d5dbe4; min-width: 220px; }
+    .search-input.full-width { width: 100%; min-width: 0; margin-bottom: 8px; }
+    .search-feedback { display: block; margin-top: 6px; color: #5f6b7b; }
     .admin-table-squadre { width: 100%; border-collapse: collapse; margin-top: 12px; }
     .admin-table-squadre th, .admin-table-squadre td { padding: 12px; border-bottom: 1px solid #eef2ff; text-align: left; }
     .admin-table-squadre th { background: #f8fafc; font-size: 0.9rem; color: #15293e; cursor: pointer; }
@@ -455,7 +457,15 @@ if ($resSquadre = $squadra->getAll()) {
           </div>
           <div class="form-group">
             <label>Riutilizza scudetto esistente (opzionale)</label>
-            <select name="logo_esistente">
+            <input
+              type="text"
+              id="logo_esistente_search"
+              class="search-input full-width"
+              placeholder="Cerca squadra o torneo..."
+              autocomplete="off"
+            >
+            <small id="logo_esistente_feedback" class="search-feedback hidden">Nessuna squadra trovata con questo filtro.</small>
+            <select name="logo_esistente" id="logo_esistente">
               <option value="">-- Nessuno, caricherà un nuovo scudetto --</option>
               <?php foreach ($squadreList as $row): ?>
                 <?php if (!empty($row['logo'])): ?>
@@ -726,6 +736,82 @@ if ($resSquadre = $squadra->getAll()) {
         }
       }
 
+      function normalizeSearchText(value) {
+        var text = String(value || '').toLowerCase();
+        if (typeof text.normalize === 'function') {
+          text = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+        return text.trim();
+      }
+
+      function initLogoReuseSearch() {
+        var searchInput = document.getElementById('logo_esistente_search');
+        var select = document.getElementById('logo_esistente');
+        var feedback = document.getElementById('logo_esistente_feedback');
+        if (!searchInput || !select) return;
+
+        var options = Array.prototype.slice.call(select.options).map(function(option, index) {
+          return {
+            value: option.value,
+            text: option.textContent || '',
+            isPlaceholder: index === 0
+          };
+        });
+
+        if (options.length <= 1) {
+          searchInput.disabled = true;
+          searchInput.placeholder = 'Nessun scudetto disponibile da riutilizzare';
+          if (feedback) feedback.classList.add('hidden');
+          return;
+        }
+
+        function renderOptions() {
+          var query = normalizeSearchText(searchInput.value);
+          var selectedValue = select.value;
+          var fragment = document.createDocumentFragment();
+          var hasMatches = false;
+
+          options.forEach(function(item) {
+            if (item.isPlaceholder) {
+              var placeholderOption = document.createElement('option');
+              placeholderOption.value = item.value;
+              placeholderOption.textContent = item.text;
+              fragment.appendChild(placeholderOption);
+              return;
+            }
+
+            if (query && normalizeSearchText(item.text).indexOf(query) === -1) {
+              return;
+            }
+
+            var option = document.createElement('option');
+            option.value = item.value;
+            option.textContent = item.text;
+            fragment.appendChild(option);
+            hasMatches = true;
+          });
+
+          select.innerHTML = '';
+          select.appendChild(fragment);
+
+          if (selectedValue) {
+            var selectedStillVisible = Array.prototype.some.call(select.options, function(option) {
+              return option.value === selectedValue;
+            });
+            select.value = selectedStillVisible ? selectedValue : '';
+          } else {
+            select.value = '';
+          }
+
+          if (feedback) {
+            feedback.classList.toggle('hidden', !query || hasMatches);
+          }
+        }
+
+        searchInput.addEventListener('input', renderOptions);
+        renderOptions();
+      }
+
       function initCreateGironeLoader() {
         var createTorneo = document.getElementById('crea_torneo');
         var createGironeGroup = document.getElementById('crea_girone_group');
@@ -923,6 +1009,7 @@ if ($resSquadre = $squadra->getAll()) {
         initTabs();
         initFileButtons();
         initFiltroElenco();
+        initLogoReuseSearch();
         initCreateGironeLoader();
         initModificaLoader();
         initFooter();
