@@ -258,9 +258,23 @@ if (!function_exists('totocalcio_is_result_available')) {
 if (!function_exists('totocalcio_is_match_open')) {
     function totocalcio_is_match_open(array $match): bool
     {
-        return !empty($match['visibile'])
-            && !empty($match['competizione_attiva'])
-            && (int)($match['giocata'] ?? 0) !== 1;
+        if (empty($match['visibile']) || empty($match['competizione_attiva']) || (int)($match['giocata'] ?? 0) === 1) {
+            return false;
+        }
+
+        $matchDate = trim((string)($match['data_partita'] ?? ''));
+        if ($matchDate === '') {
+            return true;
+        }
+
+        $timezone = new DateTimeZone('Europe/Rome');
+        $cutoffDateTime = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $matchDate . ' 20:00:00', $timezone);
+        if (!$cutoffDateTime instanceof DateTimeImmutable) {
+            return true;
+        }
+
+        $now = new DateTimeImmutable('now', $timezone);
+        return $now < $cutoffDateTime;
     }
 }
 

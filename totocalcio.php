@@ -35,6 +35,7 @@ $antepostTeams = [];
 $antepostPredictions = [];
 $antepostTournament = '';
 $supportsAntepost = false;
+$savedPredictionsCount = 0;
 $competitions = [];
 $selectedCompetition = null;
 $csrfKey = 'totocalcio_predictions';
@@ -255,6 +256,11 @@ if ($conn instanceof mysqli) {
             if ($supportsAntepost) {
                 $antepostPredictions = totocalcio_fetch_user_antepost_predictions($conn, $selectedCompetitionId, $userId);
             }
+            foreach ($matches as $matchRow) {
+                if (!empty($matchRow['user_segno'])) {
+                    $savedPredictionsCount++;
+                }
+            }
         }
     }
 }
@@ -305,6 +311,7 @@ $seo = [
       box-shadow: 0 18px 36px rgba(15, 31, 51, 0.08);
     }
     .hero-card { padding: 28px; margin-bottom: 18px; }
+    .hero-card--compact { padding: 22px 24px 18px; }
     .panel-card { padding: 22px; }
     .eyebrow {
       display: inline-block;
@@ -368,6 +375,10 @@ $seo = [
       gap: 10px;
       margin-top: 16px;
     }
+    .competition-switcher.compact {
+      gap: 8px;
+      margin-top: 12px;
+    }
     .competition-pill {
       display: inline-flex;
       align-items: center;
@@ -384,6 +395,10 @@ $seo = [
       background: #15293e;
       color: #fff;
       border-color: #15293e;
+    }
+    .competition-switcher.compact .competition-pill {
+      padding: 8px 12px;
+      font-size: 0.92rem;
     }
     .competition-pill small { font-size: 0.78rem; opacity: 0.82; }
     .competition-overview {
@@ -566,6 +581,11 @@ $seo = [
       .stats-grid { grid-template-columns: 1fr; }
       .prediction-form { grid-template-columns: 1fr; }
       .antepost-grid { grid-template-columns: 1fr; }
+      .hero-card--compact { padding: 18px 18px 14px; }
+      .competition-switcher.compact .competition-pill {
+        width: 100%;
+        justify-content: space-between;
+      }
       .match-card__top, .competition-entry__top { flex-direction: column; }
       .leader-table { display: block; overflow-x: auto; white-space: nowrap; }
       .prediction-matrix__user { min-width: 180px; }
@@ -583,7 +603,7 @@ $seo = [
 
 <main class="totocalcio-page">
   <section class="hero-grid">
-    <article class="hero-card">
+    <article class="hero-card <?= $selectedCompetition ? 'hero-card--compact' : '' ?>">
       <span class="eyebrow">Pronostici</span>
       <h1><?= h($selectedCompetition ? $selectedCompetitionName : 'Totocalcio') ?></h1>
 
@@ -609,16 +629,23 @@ $seo = [
         <?php endif; ?>
 
         <?php if ($selectedCompetition && !empty($competitions)): ?>
-          <div class="competition-switcher">
+          <div class="competition-switcher <?= $selectedCompetition ? 'compact' : '' ?>">
             <?php foreach ($competitions as $competition): ?>
               <?php
                 $competitionSlug = (string)($competition['slug'] ?? '');
                 $isActiveCompetition = $selectedCompetition && (int)$selectedCompetition['id'] === (int)$competition['id'];
               ?>
-              <a class="competition-pill <?= $isActiveCompetition ? 'active' : '' ?>" href="<?= h(totocalcio_page_competition_url($competitionSlug)) ?>">
-                <span><?= h($competition['nome']) ?></span>
-                <small><?= !empty($competition['accesso_pubblico']) ? 'Pubblica' : 'Riservata' ?></small>
-              </a>
+              <?php if ($isActiveCompetition): ?>
+                <span class="competition-pill active">
+                  <span><?= h($competition['nome']) ?></span>
+                  <small><?= !empty($competition['accesso_pubblico']) ? 'Pubblica' : 'Riservata' ?></small>
+                </span>
+              <?php else: ?>
+                <a class="competition-pill" href="<?= h(totocalcio_page_competition_url($competitionSlug)) ?>">
+                  <span><?= h($competition['nome']) ?></span>
+                  <small><?= !empty($competition['accesso_pubblico']) ? 'Pubblica' : 'Riservata' ?></small>
+                </a>
+              <?php endif; ?>
             <?php endforeach; ?>
           </div>
         <?php endif; ?>
@@ -636,6 +663,10 @@ $seo = [
           <span><?= $selectedCompetition ? 'Partite pubblicate' : 'Competizioni accessibili' ?></span>
         </div>
         <?php if ($selectedCompetition): ?>
+          <div class="stat-box">
+            <strong><?= $savedPredictionsCount ?></strong>
+            <span>Partite inserite</span>
+          </div>
           <div class="stat-box">
             <strong><?= $myRow ? (int)$myRow['punti_totali'] : 0 ?></strong>
             <span>Punti nella competizione</span>
