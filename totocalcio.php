@@ -40,6 +40,7 @@ $antepostIsOpen = true;
 $antepostFirstMatchStart = null;
 $savedPredictionsCount = 0;
 $matchesByGiornata = [];
+$antepostRows = [];
 $competitions = [];
 $selectedCompetition = null;
 $csrfKey = 'totocalcio_predictions';
@@ -127,6 +128,7 @@ function totocalcio_page_group_matches_by_giornata(array $matches): array
 
         if (!isset($groups[$groupKey])) {
             $groups[$groupKey] = [
+                'key' => $groupKey,
                 'label' => $hasGiornata ? 'Giornata ' . (int)$giornata : 'Partite senza giornata',
                 'matches' => [],
             ];
@@ -313,6 +315,15 @@ foreach ($leaderboard as $index => $row) {
     }
 }
 
+if ($supportsAntepost && !empty($antepostPredictionMatrix)) {
+    foreach ($leaderboard as $row) {
+        $rowUserId = (int)($row['id'] ?? 0);
+        if (!empty($antepostPredictionMatrix[$rowUserId])) {
+            $antepostRows[] = $row;
+        }
+    }
+}
+
 $selectedCompetitionSlug = (string)($selectedCompetition['slug'] ?? '');
 $selectedCompetitionName = (string)($selectedCompetition['nome'] ?? 'Totocalcio');
 $pageTitle = $selectedCompetitionSlug !== '' ? 'Totocalcio - ' . $selectedCompetitionName : 'Totocalcio';
@@ -334,8 +345,8 @@ $seo = [
   <?php render_seo_tags($seo); ?>
   <link rel="stylesheet" href="/style.min.css">
   <style>
-    body { background: #f4f6fb; }
-    .totocalcio-page { max-width: 1180px; margin: 0 auto; padding: 110px 20px 60px; }
+    body { background: #f4f6fb; overflow-x: hidden; }
+    .totocalcio-page { max-width: 1180px; margin: 0 auto; padding: 110px 20px 60px; overflow-x: hidden; }
     .hero-card, .panel-card {
       background: #ffffff;
       border: 1px solid #e2e8f0;
@@ -558,6 +569,10 @@ $seo = [
     }
     .tab-section { min-width: 0; }
     .tab-section > .panel-card { margin-top: 0; min-width: 0; overflow: hidden; }
+    .prediction-picker {
+      margin-bottom: 16px;
+      max-width: 320px;
+    }
     .prediction-group { margin-top: 18px; }
     .prediction-group:first-child { margin-top: 0; }
     .prediction-group__title {
@@ -565,12 +580,16 @@ $seo = [
       color: #15293e;
       font-size: 1rem;
     }
+    .prediction-view-panel { display: none; }
+    .prediction-view-panel.active { display: block; }
     .prediction-matrix-wrap {
+      width: 100%;
       overflow-x: auto;
       max-width: 100%;
       border: 1px solid #dce4ef;
       border-radius: 16px;
       background: #fff;
+      overscroll-behavior-x: contain;
     }
     .prediction-matrix {
       width: max-content;
@@ -625,12 +644,14 @@ $seo = [
       font-weight: 800;
     }
     .antepost-table-wrap {
+      width: 100%;
       overflow-x: auto;
       max-width: 100%;
       margin-top: 18px;
       border: 1px solid #dce4ef;
       border-radius: 16px;
       background: #fff;
+      overscroll-behavior-x: contain;
     }
     .antepost-table {
       width: 100%;
@@ -660,6 +681,7 @@ $seo = [
       .antepost-grid { grid-template-columns: 1fr; }
       .hero-card--compact { padding: 18px 18px 14px; }
       .totocalcio-tabs { gap: 8px; }
+      .prediction-picker { max-width: 100%; }
       .competition-switcher.compact .competition-pill {
         width: 100%;
         justify-content: space-between;
@@ -982,60 +1004,121 @@ $seo = [
       <div class="panel-card">
         <span class="eyebrow">Pronostici</span>
         <h2>Tabella completa delle scelte</h2>
-        <p style="margin: 0 0 16px;">Le scelte sono divise per giornata: in ogni tabella trovi i partecipanti sulle righe e le partite di quella giornata sulle colonne.</p>
+        <p style="margin: 0 0 16px;">Scegli dalla picklist quale vista aprire: antepost di tutti oppure una singola giornata con tutti i pronostici salvati su quelle partite.</p>
 
-        <?php if (empty($matches)): ?>
-          <p class="empty-state">Non ci sono ancora partite visibili da mostrare nella tabella.</p>
-        <?php elseif (empty($leaderboard)): ?>
+        <?php if (empty($leaderboard)): ?>
           <p class="empty-state">Non ci sono ancora partecipanti da mostrare nella tabella.</p>
+        <?php elseif (empty($matchesByGiornata) && !$supportsAntepost): ?>
+          <p class="empty-state">Non ci sono ancora partite visibili da mostrare nella tabella.</p>
         <?php else: ?>
-          <?php foreach ($matchesByGiornata as $group): ?>
-            <?php $groupMatches = $group['matches'] ?? []; ?>
-            <?php if (empty($groupMatches)): continue; endif; ?>
-            <div class="prediction-group">
-              <h3 class="prediction-group__title"><?= h($group['label'] ?? 'Giornata') ?></h3>
-              <div class="prediction-matrix-wrap">
-                <table class="prediction-matrix">
-                  <thead>
-                    <tr>
-                      <th class="prediction-matrix__user">Partecipante</th>
-                      <?php foreach ($groupMatches as $match): ?>
-                        <th class="prediction-matrix__match">
-                          <strong><?= h($match['squadra_casa']) ?> vs <?= h($match['squadra_trasferta']) ?></strong>
-                          <span class="prediction-matrix__meta"><?= h(totocalcio_page_datetime_label($match['data_partita'] ?? null, $match['ora_partita'] ?? null)) ?></span>
-                          <span class="prediction-matrix__meta">Ufficiale: <?= h(totocalcio_page_match_result_label($match)) ?></span>
-                        </th>
-                      <?php endforeach; ?>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <?php foreach ($leaderboard as $row): ?>
-                      <?php
-                        $rowUserId = (int)($row['id'] ?? 0);
-                        $userPredictions = $predictionMatrix[$rowUserId] ?? [];
-                      ?>
+          <?php
+            $predictionPickerDefaultId = !empty($matchesByGiornata)
+                ? (string)($matchesByGiornata[0]['key'] ?? 'giornata-1')
+                : ($supportsAntepost ? 'antepost' : '');
+          ?>
+
+          <label class="field prediction-picker">
+            Seleziona vista
+            <select id="predictionViewPicker">
+              <?php if ($supportsAntepost): ?>
+                <option value="antepost">Antepost</option>
+              <?php endif; ?>
+              <?php foreach ($matchesByGiornata as $group): ?>
+                <option value="<?= h((string)($group['key'] ?? 'giornata')) ?>" <?= ((string)($group['key'] ?? '') === $predictionPickerDefaultId) ? 'selected' : '' ?>>
+                  <?= h($group['label'] ?? 'Giornata') ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+
+          <?php if ($supportsAntepost): ?>
+            <div class="prediction-view-panel <?= $predictionPickerDefaultId === 'antepost' ? 'active' : '' ?>" data-prediction-view="antepost">
+              <h3 class="prediction-group__title">Antepost</h3>
+              <div class="antepost-table-wrap" style="margin-top: 0;">
+                <?php if (empty($antepostRows)): ?>
+                  <div style="padding: 16px; color: #64748b;">Nessun partecipante ha ancora salvato gli antepost.</div>
+                <?php else: ?>
+                  <table class="antepost-table">
+                    <thead>
                       <tr>
-                        <td class="prediction-matrix__user">
-                          <strong><?= h($row['display_name']) ?><?= $rowUserId === $userId ? ' (tu)' : '' ?></strong>
-                          <span><?= (int)($row['punti_totali'] ?? 0) ?> punti | <?= (int)($row['risultati_esatti'] ?? 0) ?> esatti</span>
-                        </td>
-                        <?php foreach ($groupMatches as $match): ?>
-                          <?php $cellPrediction = $userPredictions[(int)($match['id'] ?? 0)] ?? null; ?>
-                          <td>
-                            <?php if (is_array($cellPrediction)): ?>
-                              <div class="prediction-matrix__cell">
-                                <strong><?= h($cellPrediction['segno'] ?? '') ?></strong>
-                                <span><?= (int)($cellPrediction['gol_casa_previsti'] ?? 0) ?> - <?= (int)($cellPrediction['gol_trasferta_previsti'] ?? 0) ?></span>
-                              </div>
-                            <?php else: ?>
-                              <div class="prediction-matrix__cell empty">-</div>
-                            <?php endif; ?>
-                          </td>
+                        <th>Partecipante</th>
+                        <?php foreach ($antepostCategories as $categoryLabel): ?>
+                          <th><?= h($categoryLabel) ?></th>
                         <?php endforeach; ?>
                       </tr>
-                    <?php endforeach; ?>
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      <?php foreach ($antepostRows as $row): ?>
+                        <?php
+                          $rowUserId = (int)($row['id'] ?? 0);
+                          $rowAntepost = $antepostPredictionMatrix[$rowUserId] ?? [];
+                        ?>
+                        <tr>
+                          <td><strong><?= h($row['display_name']) ?><?= $rowUserId === $userId ? ' (tu)' : '' ?></strong></td>
+                          <?php foreach ($antepostCategories as $categoryKey => $categoryLabel): ?>
+                            <td><?= h($rowAntepost[$categoryKey] ?? '-') ?></td>
+                          <?php endforeach; ?>
+                        </tr>
+                      <?php endforeach; ?>
+                    </tbody>
+                  </table>
+                <?php endif; ?>
+              </div>
+            </div>
+          <?php endif; ?>
+
+          <?php foreach ($matchesByGiornata as $group): ?>
+            <?php
+              $groupMatches = $group['matches'] ?? [];
+              $groupKey = (string)($group['key'] ?? '');
+            ?>
+            <?php if ($groupKey === '' || empty($groupMatches)): continue; endif; ?>
+            <div class="prediction-view-panel <?= $groupKey === $predictionPickerDefaultId ? 'active' : '' ?>" data-prediction-view="<?= h($groupKey) ?>">
+              <div class="prediction-group">
+                <h3 class="prediction-group__title"><?= h($group['label'] ?? 'Giornata') ?></h3>
+                <div class="prediction-matrix-wrap">
+                  <table class="prediction-matrix">
+                    <thead>
+                      <tr>
+                        <th class="prediction-matrix__user">Partecipante</th>
+                        <?php foreach ($groupMatches as $match): ?>
+                          <th class="prediction-matrix__match">
+                            <strong><?= h($match['squadra_casa']) ?> vs <?= h($match['squadra_trasferta']) ?></strong>
+                            <span class="prediction-matrix__meta"><?= h(totocalcio_page_datetime_label($match['data_partita'] ?? null, $match['ora_partita'] ?? null)) ?></span>
+                            <span class="prediction-matrix__meta">Ufficiale: <?= h(totocalcio_page_match_result_label($match)) ?></span>
+                          </th>
+                        <?php endforeach; ?>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <?php foreach ($leaderboard as $row): ?>
+                        <?php
+                          $rowUserId = (int)($row['id'] ?? 0);
+                          $userPredictions = $predictionMatrix[$rowUserId] ?? [];
+                        ?>
+                        <tr>
+                          <td class="prediction-matrix__user">
+                            <strong><?= h($row['display_name']) ?><?= $rowUserId === $userId ? ' (tu)' : '' ?></strong>
+                            <span><?= (int)($row['punti_totali'] ?? 0) ?> punti | <?= (int)($row['risultati_esatti'] ?? 0) ?> esatti</span>
+                          </td>
+                          <?php foreach ($groupMatches as $match): ?>
+                            <?php $cellPrediction = $userPredictions[(int)($match['id'] ?? 0)] ?? null; ?>
+                            <td>
+                              <?php if (is_array($cellPrediction)): ?>
+                                <div class="prediction-matrix__cell">
+                                  <strong><?= h($cellPrediction['segno'] ?? '') ?></strong>
+                                  <span><?= (int)($cellPrediction['gol_casa_previsti'] ?? 0) ?> - <?= (int)($cellPrediction['gol_trasferta_previsti'] ?? 0) ?></span>
+                                </div>
+                              <?php else: ?>
+                                <div class="prediction-matrix__cell empty">-</div>
+                              <?php endif; ?>
+                            </td>
+                          <?php endforeach; ?>
+                        </tr>
+                      <?php endforeach; ?>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           <?php endforeach; ?>
@@ -1111,16 +1194,6 @@ $seo = [
               <div class="warning-card" style="margin-top: 0;">Puoi visualizzare gli antepost, ma per salvarli devi avere il Totocalcio attivo oppure un accesso assegnato alla competizione.</div>
             <?php endif; ?>
 
-            <?php
-              $antepostRows = [];
-              foreach ($leaderboard as $row) {
-                  $rowUserId = (int)($row['id'] ?? 0);
-                  if (!empty($antepostPredictionMatrix[$rowUserId])) {
-                      $antepostRows[] = $row;
-                  }
-              }
-            ?>
-
             <div class="antepost-table-wrap">
               <?php if (empty($antepostRows)): ?>
                 <div style="padding: 16px; color: #64748b;">Nessun partecipante ha ancora salvato gli antepost.</div>
@@ -1190,6 +1263,22 @@ document.addEventListener('DOMContentLoaded', () => {
       activateTab(defaultButton.dataset.tab || '');
     }
   });
+
+  const predictionViewPicker = document.getElementById('predictionViewPicker');
+  const predictionViewPanels = Array.from(document.querySelectorAll('.prediction-view-panel[data-prediction-view]'));
+  if (predictionViewPicker && predictionViewPanels.length > 0) {
+    const activatePredictionView = (viewId) => {
+      predictionViewPanels.forEach((panel) => {
+        panel.classList.toggle('active', panel.dataset.predictionView === viewId);
+      });
+    };
+
+    predictionViewPicker.addEventListener('change', () => {
+      activatePredictionView(predictionViewPicker.value);
+    });
+
+    activatePredictionView(predictionViewPicker.value);
+  }
 
   const footer = document.getElementById('footer-container');
   if (!footer) return;
