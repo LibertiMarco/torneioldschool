@@ -1225,7 +1225,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="Sporting S.Antonio, Napoli">Sporting S.Antonio, Napoli</option>
             <option value="La Boutique del Calcio, Napoli">La Boutique del Calcio, Napoli</option>
             <option value="Gioventu' Partenope">Gioventu' Partenope, Melito di Napoli</option>
-            <option value="Euronics Tufano Training Center, Napoli">Complesso Kennedy, Napoli</option>
+            <option value="Complesso Kennedy, Napoli">Complesso Kennedy, Napoli</option>
             <option value="Campo Centrale del Parco Corto Maltese, Napoli">Campo Centrale del Parco Corto Maltese, Napoli</option>
           </select>
         </div>
@@ -1361,7 +1361,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="Sporting S.Antonio, Napoli">Sporting S.Antonio, Napoli</option>
             <option value="La Boutique del Calcio, Napoli">La Boutique del Calcio, Napoli</option>
             <option value="Gioventu' Partenope">Gioventu' Partenope, Melito di Napoli</option>
-            <option value="Euronics Tufano Training Center, Napoli">Complesso Kennedy, Napoli</option>
+            <option value="Complesso Kennedy, Napoli">Complesso Kennedy, Napoli</option>
             <option value="Campo Centrale del Parco Corto Maltese, Napoli">Campo Centrale del Parco Corto Maltese, Napoli</option>
           </select>
         </div>
