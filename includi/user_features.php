@@ -186,6 +186,15 @@ if (!function_exists('user_can_access_feature')) {
         }
 
         $flags = load_user_feature_flags($conn, $userId);
-        return user_feature_enabled($flags, $featureKey);
+        if (user_feature_enabled($flags, $featureKey)) {
+            return true;
+        }
+
+        if ($featureKey === 'totocalcio') {
+            require_once __DIR__ . '/totocalcio.php';
+            return totocalcio_user_has_any_explicit_access($conn, $userId, $role);
+        }
+
+        return false;
     }
 }

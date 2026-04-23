@@ -10,6 +10,8 @@ $candidateMatches = [];
 $leaderboard = [];
 $competitions = [];
 $selectedCompetition = null;
+$accessAccounts = [];
+$selectedCompetitionAccessUserIds = [];
 $csrfKey = 'admin_totocalcio';
 
 function h($value): string
@@ -103,11 +105,12 @@ if ($conn instanceof mysqli) {
                 $slug = trim((string)($_POST['competition_slug'] ?? ''));
                 $order = max(0, (int)($_POST['competition_order'] ?? count($competitions)));
                 $active = !empty($_POST['competition_active']);
+                $publicAccess = !empty($_POST['competition_public_access']);
 
                 if ($name === '') {
                     $errors[] = 'Inserisci il nome della competizione.';
                 } else {
-                    $createdCompetition = totocalcio_create_competition($conn, $name, $slug, $order, $active);
+                    $createdCompetition = totocalcio_create_competition($conn, $name, $slug, $order, $active, $publicAccess);
                     if ($createdCompetition === null) {
                         $errors[] = 'Impossibile creare la competizione.';
                     } else {
@@ -121,13 +124,26 @@ if ($conn instanceof mysqli) {
                 $slug = trim((string)($_POST['competition_slug'] ?? ''));
                 $order = max(0, (int)($_POST['competition_order'] ?? 0));
                 $active = !empty($_POST['competition_active']);
+                $publicAccess = !empty($_POST['competition_public_access']);
 
                 if ($competitionId <= 0 || $name === '') {
                     $errors[] = 'Competizione non valida.';
-                } elseif (!totocalcio_update_competition($conn, $competitionId, $name, $slug, $order, $active)) {
+                } elseif (!totocalcio_update_competition($conn, $competitionId, $name, $slug, $order, $active, $publicAccess)) {
                     $errors[] = 'Aggiornamento competizione non riuscito.';
                 } else {
                     $messages[] = 'Competizione aggiornata.';
+                    $updatedCompetitionId = $competitionId;
+                }
+            } elseif ($action === 'save_competition_access') {
+                $competitionId = (int)($_POST['competition_id'] ?? 0);
+                $allowedUsers = $_POST['competition_access_users'] ?? [];
+
+                if ($competitionId <= 0) {
+                    $errors[] = 'Competizione non valida.';
+                } elseif (!totocalcio_replace_competition_access($conn, $competitionId, is_array($allowedUsers) ? $allowedUsers : [])) {
+                    $errors[] = 'Aggiornamento accessi non riuscito.';
+                } else {
+                    $messages[] = 'Accessi competizione aggiornati.';
                     $updatedCompetitionId = $competitionId;
                 }
             } elseif ($action === 'add_match') {
@@ -188,7 +204,10 @@ if ($conn instanceof mysqli) {
             $matches = totocalcio_fetch_matches($conn, false, 0, $selectedCompetitionId);
             $candidateMatches = totocalcio_fetch_candidate_matches($conn, $selectedCompetitionId);
             $leaderboard = totocalcio_fetch_leaderboard($conn, $selectedCompetitionId);
+            $selectedCompetitionAccessUserIds = totocalcio_fetch_competition_granted_user_ids($conn, $selectedCompetitionId);
         }
+
+        $accessAccounts = totocalcio_fetch_access_accounts($conn);
     }
 }
 
@@ -257,6 +276,19 @@ foreach ($matches as $match) {
     .helper-text { color: #64748b; font-size: 0.93rem; }
     .toggle-row { display: flex; align-items: center; gap: 10px; color: #15293e; font-weight: 700; }
     .toggle-row input { width: 18px; height: 18px; }
+    .access-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+    .access-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      border: 1px solid #dce4ef;
+      border-radius: 12px;
+      padding: 14px;
+      background: #f8fafc;
+    }
+    .access-option input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; flex: 0 0 auto; }
+    .access-option strong { display: block; color: #15293e; margin-bottom: 4px; }
+    .access-option span { display: block; color: #5c6572; font-size: 0.92rem; line-height: 1.45; }
     .competition-list { display: grid; gap: 14px; }
     .competition-card { border: 1px solid #dce4ef; border-radius: 16px; padding: 16px; background: #f8fafc; }
     .competition-card__head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
@@ -349,7 +381,7 @@ foreach ($matches as $match) {
       <article class="panel-card">
         <span class="helper-pill">Nuova competizione</span>
         <h2>Crea una nuova competizione</h2>
-        <p style="margin: 0 0 16px;">Se non inserisci lo slug, viene generato automaticamente dal nome. La competizione storica resta disponibile come default.</p>
+        <p style="margin: 0 0 16px;">Se non inserisci lo slug, viene generato automaticamente dal nome. La competizione storica resta disponibile come default. Puoi scegliere se renderla pubblica oppure lasciarla accessibile solo agli account che abiliti manualmente.</p>
 
         <form method="POST" autocomplete="off">
           <?= csrf_field($csrfKey) ?>
@@ -377,6 +409,10 @@ foreach ($matches as $match) {
               <input type="checkbox" name="competition_active" value="1" checked>
               <span>Competizione visibile</span>
             </label>
+            <label class="toggle-row">
+              <input type="checkbox" name="competition_public_access" value="1" checked>
+              <span>Accesso pubblico</span>
+            </label>
             <button class="btn-primary" type="submit">Crea competizione</button>
           </div>
         </form>
@@ -388,6 +424,8 @@ foreach ($matches as $match) {
           <h3><?= h($selectedCompetition['nome']) ?></h3>
           <p class="meta-line">Slug: <code><?= h($selectedCompetition['slug']) ?></code></p>
           <p class="meta-line">Visibile sul sito: <?= !empty($selectedCompetition['attiva']) ? 'si' : 'no' ?></p>
+          <p class="meta-line">Accesso pubblico: <?= !empty($selectedCompetition['accesso_pubblico']) ? 'si' : 'no, solo utenti autorizzati' ?></p>
+          <p class="meta-line">Utenti autorizzati: <?= count($selectedCompetitionAccessUserIds) ?></p>
           <p class="meta-line">Link pubblico: <a href="<?= h(admin_totocalcio_public_url((string)$selectedCompetition['slug'])) ?>"><?= h(admin_totocalcio_public_url((string)$selectedCompetition['slug'])) ?></a></p>
         <?php else: ?>
           <p style="margin: 0; color: #64748b;">Seleziona o crea una competizione.</p>
@@ -398,6 +436,7 @@ foreach ($matches as $match) {
           <li>Risultato esatto: <strong>+3 punti</strong>.</li>
           <li>Una partita reale puo comparire in piu competizioni diverse.</li>
           <li>I risultati ufficiali restano sempre quelli del calendario.</li>
+          <li>Se l accesso non e pubblico, entrano solo admin, sysadmin e utenti autorizzati.</li>
         </ul>
       </aside>
     </section>
@@ -417,11 +456,14 @@ foreach ($matches as $match) {
                 <div>
                   <h3><?= h($competition['nome']) ?></h3>
                   <p class="meta-line">Slug: <code><?= h($competition['slug']) ?></code></p>
-                  <p class="meta-line">Partite: <?= (int)($competition['total_matches'] ?? 0) ?> | Attive: <?= (int)($competition['active_matches'] ?? 0) ?> | Pronostici: <?= (int)($competition['total_predictions'] ?? 0) ?></p>
+                  <p class="meta-line">Partite: <?= (int)($competition['total_matches'] ?? 0) ?> | Attive: <?= (int)($competition['active_matches'] ?? 0) ?> | Pronostici: <?= (int)($competition['total_predictions'] ?? 0) ?> | Accessi assegnati: <?= (int)($competition['granted_users'] ?? 0) ?></p>
                 </div>
                 <div class="switcher-row" style="margin-top: 0;">
                   <span class="status-pill <?= !empty($competition['attiva']) ? 'ok' : 'muted' ?>">
                     <?= !empty($competition['attiva']) ? 'Visibile' : 'Nascosta' ?>
+                  </span>
+                  <span class="status-pill <?= !empty($competition['accesso_pubblico']) ? 'info' : 'warn' ?>">
+                    <?= !empty($competition['accesso_pubblico']) ? 'Pubblica' : 'Riservata' ?>
                   </span>
                   <a class="competition-pill" href="<?= h(admin_totocalcio_competition_url((string)$competition['slug'])) ?>">Apri</a>
                 </div>
@@ -454,12 +496,62 @@ foreach ($matches as $match) {
                     <input type="checkbox" name="competition_active" value="1" <?= !empty($competition['attiva']) ? 'checked' : '' ?>>
                     <span>Competizione visibile</span>
                   </label>
+                  <label class="toggle-row">
+                    <input type="checkbox" name="competition_public_access" value="1" <?= !empty($competition['accesso_pubblico']) ? 'checked' : '' ?>>
+                    <span>Accesso pubblico</span>
+                  </label>
                   <button class="btn-primary" type="submit">Salva competizione</button>
                 </div>
               </form>
             </article>
           <?php endforeach; ?>
         </div>
+      <?php endif; ?>
+    </section>
+
+    <section class="panel-card">
+      <span class="helper-pill">Accessi</span>
+      <h2>Utenti autorizzati alla competizione</h2>
+      <?php if (!$selectedCompetition): ?>
+        <p style="margin: 0; color: #64748b;">Seleziona una competizione per configurare gli accessi.</p>
+      <?php else: ?>
+        <p style="margin: 0 0 16px;">Se <strong><?= h($selectedCompetition['nome']) ?></strong> e pubblica, tutti gli utenti abilitati al Totocalcio la vedono. Se la rendi riservata, qui scegli manualmente chi puo accedervi anche senza visibilita pubblica.</p>
+
+        <form method="POST" autocomplete="off">
+          <?= csrf_field($csrfKey) ?>
+          <input type="hidden" name="action" value="save_competition_access">
+          <input type="hidden" name="competition_id" value="<?= (int)($selectedCompetition['id'] ?? 0) ?>">
+
+          <?php if (empty($accessAccounts)): ?>
+            <p style="margin: 0; color: #64748b;">Non ci sono account disponibili.</p>
+          <?php else: ?>
+            <div class="access-grid">
+              <?php foreach ($accessAccounts as $account): ?>
+                <?php
+                  $accountId = (int)($account['id'] ?? 0);
+                  $isGranted = in_array($accountId, $selectedCompetitionAccessUserIds, true);
+                  $hasTotocalcioMenu = !empty(($account['feature_flags'] ?? [])['totocalcio']);
+                  $isAdminRole = user_has_admin_access((string)($account['ruolo'] ?? 'user'));
+                ?>
+                <label class="access-option">
+                  <input type="checkbox" name="competition_access_users[]" value="<?= $accountId ?>" <?= $isGranted ? 'checked' : '' ?>>
+                  <span>
+                    <strong><?= h($account['display_name'] ?? ($account['email'] ?? 'Account')) ?></strong>
+                    <span><?= h($account['email'] ?? '') ?><?php if (!empty($account['ruolo'])): ?> | ruolo: <?= h($account['ruolo']) ?><?php endif; ?></span>
+                    <span>
+                      <?= $isAdminRole ? 'Accesso gia garantito dal ruolo admin/sysadmin.' : ($hasTotocalcioMenu ? 'Ha gia il Totocalcio nel menu.' : 'Ricevera accesso solo a questa competizione.') ?>
+                    </span>
+                  </span>
+                </label>
+              <?php endforeach; ?>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn-primary" type="submit">Salva accessi</button>
+              <span class="helper-text">Gli utenti selezionati potranno vedere la competizione anche se non pubblica. Admin e sysadmin non hanno bisogno di essere selezionati.</span>
+            </div>
+          <?php endif; ?>
+        </form>
       <?php endif; ?>
     </section>
 
@@ -519,6 +611,7 @@ foreach ($matches as $match) {
           <li>La stessa partita reale puo essere riutilizzata in un altra competizione.</li>
           <li>Se il risultato ufficiale cambia nel calendario, il Totocalcio si riallinea.</li>
           <li>Nascondere una competizione la esclude anche dalla classifica pubblica.</li>
+          <li>Una competizione riservata compare solo agli utenti a cui assegni l accesso.</li>
         </ul>
       </aside>
     </section>
@@ -595,10 +688,10 @@ foreach ($matches as $match) {
       <?php if (!$selectedCompetition): ?>
         <p style="margin: 0; color: #64748b;">Nessuna competizione selezionata.</p>
       <?php else: ?>
-        <p style="margin: 0 0 16px;">Classifica di <strong><?= h($selectedCompetition['nome']) ?></strong>, ordinata per punti, risultati esatti ed esiti corretti. Sono inclusi solo gli account con flag Totocalcio attivo.</p>
+        <p style="margin: 0 0 16px;">Classifica di <strong><?= h($selectedCompetition['nome']) ?></strong>, ordinata per punti, risultati esatti ed esiti corretti. Sono inclusi gli account con flag Totocalcio attivo oppure con accesso assegnato alla competizione.</p>
 
         <?php if (empty($leaderboard)): ?>
-          <p style="margin: 0; color: #64748b;">Nessun account abilitato al Totocalcio.</p>
+          <p style="margin: 0; color: #64748b;">Nessun account abilitato o autorizzato per questa competizione.</p>
         <?php else: ?>
           <table class="leader-table">
             <thead>

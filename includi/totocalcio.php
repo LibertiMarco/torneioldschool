@@ -371,6 +371,7 @@ if (!function_exists('totocalcio_ensure_tables')) {
                 nome VARCHAR(150) NOT NULL,
                 slug VARCHAR(180) NOT NULL,
                 attiva TINYINT(1) NOT NULL DEFAULT 1,
+                accesso_pubblico TINYINT(1) NOT NULL DEFAULT 1,
                 ordine INT NOT NULL DEFAULT 0,
                 creato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 aggiornato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -405,6 +406,16 @@ if (!function_exists('totocalcio_ensure_tables')) {
                 CONSTRAINT fk_totocalcio_pronostico_partita FOREIGN KEY (partita_id) REFERENCES totocalcio_partite(id) ON DELETE CASCADE,
                 CONSTRAINT fk_totocalcio_pronostico_utente FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS totocalcio_competizioni_accessi (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                competizione_id INT UNSIGNED NOT NULL,
+                utente_id INT UNSIGNED NOT NULL,
+                creato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_totocalcio_competizione_utente (competizione_id, utente_id),
+                KEY idx_totocalcio_accesso_utente (utente_id),
+                CONSTRAINT fk_totocalcio_accesso_competizione FOREIGN KEY (competizione_id) REFERENCES totocalcio_competizioni(id) ON DELETE CASCADE,
+                CONSTRAINT fk_totocalcio_accesso_utente FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         ];
 
         foreach ($queries as $query) {
@@ -420,6 +431,17 @@ if (!function_exists('totocalcio_ensure_tables')) {
             error_log('totocalcio: impossibile creare o recuperare la competizione di default');
             $ready = false;
             return false;
+        }
+
+        if (!totocalcio_table_has_column($conn, 'totocalcio_competizioni', 'accesso_pubblico')) {
+            if ($conn->query(
+                "ALTER TABLE totocalcio_competizioni
+                 ADD COLUMN accesso_pubblico TINYINT(1) NOT NULL DEFAULT 1 AFTER attiva"
+            ) !== true) {
+                error_log('totocalcio: impossibile aggiungere accesso_pubblico - ' . $conn->error);
+                $ready = false;
+                return false;
+            }
         }
 
         $competitionColumn = totocalcio_table_column_definition($conn, 'totocalcio_partite', 'competizione_id');
@@ -529,12 +551,14 @@ if (!function_exists('totocalcio_fetch_competitions')) {
                     tc.nome,
                     tc.slug,
                     tc.attiva,
+                    tc.accesso_pubblico,
                     tc.ordine,
                     tc.creato_il,
                     tc.aggiornato_il,
                     COALESCE(ms.total_matches, 0) AS total_matches,
                     COALESCE(ms.active_matches, 0) AS active_matches,
-                    COALESCE(ps.total_predictions, 0) AS total_predictions
+                    COALESCE(ps.total_predictions, 0) AS total_predictions,
+                    COALESCE(ga.granted_users, 0) AS granted_users
                 FROM totocalcio_competizioni tc
                 LEFT JOIN (
                     SELECT
@@ -552,7 +576,14 @@ if (!function_exists('totocalcio_fetch_competitions')) {
                     INNER JOIN totocalcio_partite tp
                         ON tp.id = pr.partita_id
                     GROUP BY tp.competizione_id
-                ) ps ON ps.competizione_id = tc.id";
+                ) ps ON ps.competizione_id = tc.id
+                LEFT JOIN (
+                    SELECT
+                        competizione_id,
+                        COUNT(*) AS granted_users
+                    FROM totocalcio_competizioni_accessi
+                    GROUP BY competizione_id
+                ) ga ON ga.competizione_id = tc.id";
 
         if ($onlyActive) {
             $sql .= " WHERE tc.attiva = 1";
@@ -569,10 +600,12 @@ if (!function_exists('totocalcio_fetch_competitions')) {
         while ($row = $result->fetch_assoc()) {
             $row['id'] = (int)($row['id'] ?? 0);
             $row['attiva'] = (int)($row['attiva'] ?? 0);
+            $row['accesso_pubblico'] = (int)($row['accesso_pubblico'] ?? 1);
             $row['ordine'] = (int)($row['ordine'] ?? 0);
             $row['total_matches'] = (int)($row['total_matches'] ?? 0);
             $row['active_matches'] = (int)($row['active_matches'] ?? 0);
             $row['total_predictions'] = (int)($row['total_predictions'] ?? 0);
+            $row['granted_users'] = (int)($row['granted_users'] ?? 0);
             $rows[] = $row;
         }
         $result->close();
@@ -594,6 +627,7 @@ if (!function_exists('totocalcio_fetch_competition_by_slug')) {
                     nome,
                     slug,
                     attiva,
+                    accesso_pubblico,
                     ordine,
                     creato_il,
                     aggiornato_il
@@ -637,6 +671,7 @@ if (!function_exists('totocalcio_fetch_competition_by_id')) {
                 nome,
                 slug,
                 attiva,
+                accesso_pubblico,
                 ordine,
                 creato_il,
                 aggiornato_il
@@ -674,6 +709,7 @@ if (!function_exists('totocalcio_fetch_default_competition')) {
                     nome,
                     slug,
                     attiva,
+                    accesso_pubblico,
                     ordine,
                     creato_il,
                     aggiornato_il
@@ -722,7 +758,8 @@ if (!function_exists('totocalcio_create_competition')) {
         string $name,
         string $slugSource = '',
         int $order = 0,
-        bool $active = true
+        bool $active = true,
+        bool $publicAccess = true
     ): ?array {
         $name = trim($name);
         if ($name === '' || !totocalcio_ensure_tables($conn)) {
@@ -731,17 +768,18 @@ if (!function_exists('totocalcio_create_competition')) {
 
         $finalSlug = totocalcio_generate_unique_competition_slug($conn, $slugSource !== '' ? $slugSource : $name);
         $activeValue = $active ? 1 : 0;
+        $publicValue = $publicAccess ? 1 : 0;
 
         $stmt = $conn->prepare(
-            "INSERT INTO totocalcio_competizioni (nome, slug, attiva, ordine)
-             VALUES (?, ?, ?, ?)"
+            "INSERT INTO totocalcio_competizioni (nome, slug, attiva, accesso_pubblico, ordine)
+             VALUES (?, ?, ?, ?, ?)"
         );
 
         if (!$stmt) {
             return null;
         }
 
-        $stmt->bind_param('ssii', $name, $finalSlug, $activeValue, $order);
+        $stmt->bind_param('ssiii', $name, $finalSlug, $activeValue, $publicValue, $order);
         $saved = $stmt->execute();
         $newId = $saved ? (int)$stmt->insert_id : 0;
         $stmt->close();
@@ -761,7 +799,8 @@ if (!function_exists('totocalcio_update_competition')) {
         string $name,
         string $slugSource = '',
         int $order = 0,
-        bool $active = true
+        bool $active = true,
+        bool $publicAccess = true
     ): bool {
         $name = trim($name);
         if ($competitionId <= 0 || $name === '' || !totocalcio_ensure_tables($conn)) {
@@ -775,10 +814,11 @@ if (!function_exists('totocalcio_update_competition')) {
         $baseSlug = trim($slugSource) !== '' ? $slugSource : $name;
         $finalSlug = totocalcio_generate_unique_competition_slug($conn, $baseSlug, $competitionId);
         $activeValue = $active ? 1 : 0;
+        $publicValue = $publicAccess ? 1 : 0;
 
         $stmt = $conn->prepare(
             "UPDATE totocalcio_competizioni
-             SET nome = ?, slug = ?, attiva = ?, ordine = ?
+             SET nome = ?, slug = ?, attiva = ?, accesso_pubblico = ?, ordine = ?
              WHERE id = ?"
         );
 
@@ -786,11 +826,222 @@ if (!function_exists('totocalcio_update_competition')) {
             return false;
         }
 
-        $stmt->bind_param('ssiii', $name, $finalSlug, $activeValue, $order, $competitionId);
+        $stmt->bind_param('ssiiii', $name, $finalSlug, $activeValue, $publicValue, $order, $competitionId);
         $saved = $stmt->execute();
         $stmt->close();
 
         return $saved;
+    }
+}
+
+if (!function_exists('totocalcio_fetch_user_granted_competition_ids')) {
+    function totocalcio_fetch_user_granted_competition_ids(mysqli $conn, int $userId): array
+    {
+        if ($userId <= 0 || !totocalcio_ensure_tables($conn)) {
+            return [];
+        }
+
+        $stmt = $conn->prepare(
+            "SELECT competizione_id
+             FROM totocalcio_competizioni_accessi
+             WHERE utente_id = ?"
+        );
+
+        if (!$stmt) {
+            return [];
+        }
+
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $ids = [];
+
+        if ($result instanceof mysqli_result) {
+            while ($row = $result->fetch_assoc()) {
+                $ids[] = (int)($row['competizione_id'] ?? 0);
+            }
+            $result->close();
+        }
+
+        $stmt->close();
+
+        return array_values(array_unique(array_filter($ids)));
+    }
+}
+
+if (!function_exists('totocalcio_fetch_competition_granted_user_ids')) {
+    function totocalcio_fetch_competition_granted_user_ids(mysqli $conn, int $competitionId): array
+    {
+        if ($competitionId <= 0 || !totocalcio_ensure_tables($conn)) {
+            return [];
+        }
+
+        $stmt = $conn->prepare(
+            "SELECT utente_id
+             FROM totocalcio_competizioni_accessi
+             WHERE competizione_id = ?"
+        );
+
+        if (!$stmt) {
+            return [];
+        }
+
+        $stmt->bind_param('i', $competitionId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $ids = [];
+
+        if ($result instanceof mysqli_result) {
+            while ($row = $result->fetch_assoc()) {
+                $ids[] = (int)($row['utente_id'] ?? 0);
+            }
+            $result->close();
+        }
+
+        $stmt->close();
+
+        return array_values(array_unique(array_filter($ids)));
+    }
+}
+
+if (!function_exists('totocalcio_replace_competition_access')) {
+    function totocalcio_replace_competition_access(mysqli $conn, int $competitionId, array $userIds): bool
+    {
+        if ($competitionId <= 0 || !totocalcio_ensure_tables($conn)) {
+            return false;
+        }
+
+        if (!totocalcio_fetch_competition_by_id($conn, $competitionId)) {
+            return false;
+        }
+
+        $normalizedUserIds = [];
+        foreach ($userIds as $userId) {
+            $userId = (int)$userId;
+            if ($userId > 0) {
+                $normalizedUserIds[] = $userId;
+            }
+        }
+        $normalizedUserIds = array_values(array_unique($normalizedUserIds));
+
+        if (!$conn->begin_transaction()) {
+            return false;
+        }
+
+        try {
+            $stmtDelete = $conn->prepare(
+                "DELETE FROM totocalcio_competizioni_accessi
+                 WHERE competizione_id = ?"
+            );
+
+            if (!$stmtDelete) {
+                throw new RuntimeException('delete access prepare failed');
+            }
+
+            $stmtDelete->bind_param('i', $competitionId);
+            if (!$stmtDelete->execute()) {
+                $stmtDelete->close();
+                throw new RuntimeException('delete access execute failed');
+            }
+            $stmtDelete->close();
+
+            if (!empty($normalizedUserIds)) {
+                $stmtInsert = $conn->prepare(
+                    "INSERT INTO totocalcio_competizioni_accessi (competizione_id, utente_id)
+                     VALUES (?, ?)"
+                );
+
+                if (!$stmtInsert) {
+                    throw new RuntimeException('insert access prepare failed');
+                }
+
+                foreach ($normalizedUserIds as $userId) {
+                    $stmtInsert->bind_param('ii', $competitionId, $userId);
+                    if (!$stmtInsert->execute()) {
+                        $stmtInsert->close();
+                        throw new RuntimeException('insert access execute failed');
+                    }
+                }
+
+                $stmtInsert->close();
+            }
+
+            $conn->commit();
+            return true;
+        } catch (Throwable $e) {
+            $conn->rollback();
+            error_log('totocalcio: impossibile aggiornare accessi competizione - ' . $e->getMessage());
+            return false;
+        }
+    }
+}
+
+if (!function_exists('totocalcio_fetch_access_accounts')) {
+    function totocalcio_fetch_access_accounts(mysqli $conn): array
+    {
+        if (!totocalcio_ensure_tables($conn)) {
+            return [];
+        }
+
+        $result = $conn->query(
+            "SELECT id, nome, cognome, email, ruolo, feature_flags
+             FROM utenti
+             ORDER BY
+                CASE ruolo
+                    WHEN 'sysadmin' THEN 0
+                    WHEN 'admin' THEN 1
+                    ELSE 2
+                END,
+                cognome ASC,
+                nome ASC,
+                email ASC"
+        );
+
+        if (!($result instanceof mysqli_result)) {
+            return [];
+        }
+
+        $rows = [];
+        while ($row = $result->fetch_assoc()) {
+            $row['id'] = (int)($row['id'] ?? 0);
+            $row['feature_flags'] = normalize_user_feature_flags($row['feature_flags'] ?? null);
+            $row['display_name'] = totocalcio_user_name($row);
+            $rows[] = $row;
+        }
+        $result->close();
+
+        return $rows;
+    }
+}
+
+if (!function_exists('totocalcio_user_can_access_competition')) {
+    function totocalcio_user_can_access_competition(array $competition, bool $hasAdminAccess, bool $hasGlobalFeature, array $grantedCompetitionIds = []): bool
+    {
+        if ($hasAdminAccess) {
+            return true;
+        }
+
+        $competitionId = (int)($competition['id'] ?? 0);
+        if ($competitionId <= 0 || empty($competition['attiva'])) {
+            return false;
+        }
+
+        if (in_array($competitionId, $grantedCompetitionIds, true)) {
+            return true;
+        }
+
+        return !empty($competition['accesso_pubblico']) && $hasGlobalFeature;
+    }
+}
+
+if (!function_exists('totocalcio_user_has_any_explicit_access')) {
+    function totocalcio_user_has_any_explicit_access(mysqli $conn, int $userId, string $role = 'user'): bool
+    {
+        if (user_has_admin_access($role)) {
+            return true;
+        }
+
+        return !empty(totocalcio_fetch_user_granted_competition_ids($conn, $userId));
     }
 }
 
@@ -1179,6 +1430,10 @@ if (!function_exists('totocalcio_fetch_leaderboard')) {
             return [];
         }
 
+        $grantedUserIds = $competitionId > 0
+            ? totocalcio_fetch_competition_granted_user_ids($conn, $competitionId)
+            : [];
+
         $competitionFilterToken = '__TOTOCALCIO_COMP_FILTER__';
         $competitionFilterSql = $competitionId > 0
             ? ' AND tp.competizione_id = ?'
@@ -1306,7 +1561,9 @@ if (!function_exists('totocalcio_fetch_leaderboard')) {
         $rows = [];
         while ($row = $result->fetch_assoc()) {
             $flags = normalize_user_feature_flags($row['feature_flags'] ?? null);
-            if (empty($flags['totocalcio'])) {
+            $userId = (int)($row['id'] ?? 0);
+            $hasExplicitAccess = $competitionId > 0 && in_array($userId, $grantedUserIds, true);
+            if (empty($flags['totocalcio']) && !$hasExplicitAccess) {
                 continue;
             }
 

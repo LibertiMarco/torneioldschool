@@ -110,7 +110,7 @@ if (!empty($sessionAvatar)) {
                       <?php endif; ?>
 
                       <?php foreach ($featureDefinitions as $featureKey => $featureConfig): ?>
-                          <?php $isFeatureVisible = $hasAdminAccess || user_feature_enabled($userFeatureFlags, $featureKey); ?>
+                          <?php $isFeatureVisible = $hasAdminAccess || user_can_access_feature($conn, (int)$_SESSION['user_id'], (string)$sessionRole, $featureKey); ?>
                           <?php if ($isFeatureVisible): ?>
                               <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path($featureConfig['path'])) ?>">
                                   <span><?= htmlspecialchars($featureConfig['menu_label']) ?></span>
