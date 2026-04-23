@@ -602,7 +602,6 @@ $seo = [
           <p>Usa i pulsanti qui sotto per passare da classifica generale, scelte della settimana e tabella completa dei pronostici di tutti i partecipanti.<?php if ($supportsAntepost): ?> In piu trovi il tab antepost con le scelte su Regular Season, Coppa Gold, Coppa Silver e squadra capocannoniere.<?php endif; ?></p>
         <?php else: ?>
           <p>Qui trovi l elenco delle competizioni Totocalcio a cui puoi accedere. Scegline una per aprire schedina, pronostici e classifica dedicata.</p>
-          <p>Ogni competizione mantiene partite e classifica separate. Il menu Totocalcio ora ti porta sempre prima a questa lista.</p>
         <?php endif; ?>
 
         <?php if (!$canParticipate): ?>
