@@ -345,8 +345,30 @@ $seo = [
   <?php render_seo_tags($seo); ?>
   <link rel="stylesheet" href="/style.min.css">
   <style>
-    body { background: #f4f6fb; overflow-x: hidden; }
-    .totocalcio-page { max-width: 1180px; margin: 0 auto; padding: 110px 20px 60px; overflow-x: hidden; }
+    body {
+      background: #f4f6fb;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .totocalcio-page {
+      flex: 1 0 auto;
+      width: 100%;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 110px 20px 60px;
+      overflow-x: hidden;
+    }
+    #footer-container {
+      width: 100%;
+      margin-top: auto;
+      flex-shrink: 0;
+    }
+    #footer-container .site-footer {
+      position: static !important;
+      width: 100%;
+    }
     .hero-card, .panel-card {
       background: #ffffff;
       border: 1px solid #e2e8f0;
