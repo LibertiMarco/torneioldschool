@@ -1423,6 +1423,66 @@ if (!function_exists('totocalcio_save_prediction')) {
     }
 }
 
+if (!function_exists('totocalcio_fetch_prediction_matrix')) {
+    function totocalcio_fetch_prediction_matrix(mysqli $conn, int $competitionId): array
+    {
+        if ($competitionId <= 0 || !totocalcio_ensure_tables($conn)) {
+            return [];
+        }
+
+        $stmt = $conn->prepare(
+            "SELECT
+                pr.utente_id,
+                pr.partita_id,
+                pr.segno,
+                pr.gol_casa_previsti,
+                pr.gol_trasferta_previsti,
+                pr.creato_il,
+                pr.aggiornato_il
+             FROM totocalcio_pronostici pr
+             INNER JOIN totocalcio_partite tp
+                ON tp.id = pr.partita_id
+             INNER JOIN totocalcio_competizioni tc
+                ON tc.id = tp.competizione_id
+             WHERE tp.competizione_id = ?
+               AND tp.attiva = 1
+               AND tc.attiva = 1"
+        );
+
+        if (!$stmt) {
+            return [];
+        }
+
+        $stmt->bind_param('i', $competitionId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $matrix = [];
+
+        if ($result instanceof mysqli_result) {
+            while ($row = $result->fetch_assoc()) {
+                $userId = (int)($row['utente_id'] ?? 0);
+                $matchId = (int)($row['partita_id'] ?? 0);
+                if ($userId <= 0 || $matchId <= 0) {
+                    continue;
+                }
+
+                $matrix[$userId][$matchId] = [
+                    'segno' => (string)($row['segno'] ?? ''),
+                    'gol_casa_previsti' => isset($row['gol_casa_previsti']) ? (int)$row['gol_casa_previsti'] : null,
+                    'gol_trasferta_previsti' => isset($row['gol_trasferta_previsti']) ? (int)$row['gol_trasferta_previsti'] : null,
+                    'creato_il' => $row['creato_il'] ?? null,
+                    'aggiornato_il' => $row['aggiornato_il'] ?? null,
+                ];
+            }
+            $result->close();
+        }
+
+        $stmt->close();
+
+        return $matrix;
+    }
+}
+
 if (!function_exists('totocalcio_fetch_leaderboard')) {
     function totocalcio_fetch_leaderboard(mysqli $conn, int $competitionId = 0): array
     {

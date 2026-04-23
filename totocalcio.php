@@ -26,6 +26,7 @@ $messages = [];
 $errors = [];
 $matches = [];
 $leaderboard = [];
+$predictionMatrix = [];
 $competitions = [];
 $selectedCompetition = null;
 $csrfKey = 'totocalcio_predictions';
@@ -91,6 +92,15 @@ function totocalcio_page_find_competition(array $competitions, string $slug): ?a
     }
 
     return $competitions[0] ?? null;
+}
+
+function totocalcio_page_match_result_label(array $match): string
+{
+    if (!totocalcio_is_result_available($match)) {
+        return 'Risultato in attesa';
+    }
+
+    return (int)($match['gol_casa_reale'] ?? 0) . ' - ' . (int)($match['gol_trasferta_reale'] ?? 0);
 }
 
 if ($conn instanceof mysqli) {
@@ -175,6 +185,7 @@ if ($conn instanceof mysqli) {
         if ($selectedCompetitionId > 0) {
             $matches = totocalcio_fetch_matches($conn, true, $userId, $selectedCompetitionId);
             $leaderboard = totocalcio_fetch_leaderboard($conn, $selectedCompetitionId);
+            $predictionMatrix = totocalcio_fetch_prediction_matrix($conn, $selectedCompetitionId);
         }
     }
 }
@@ -377,6 +388,66 @@ $seo = [
     .leader-table th, .leader-table td { padding: 12px 10px; border-bottom: 1px solid #e5eaf0; text-align: left; }
     .leader-table th { background: #f8fafc; color: #15293e; }
     .leader-table td:last-child, .leader-table th:last-child { text-align: right; }
+    .totocalcio-tabs { margin-bottom: 18px; }
+    .tab-section > .panel-card { margin-top: 0; }
+    .prediction-matrix-wrap {
+      overflow-x: auto;
+      border: 1px solid #dce4ef;
+      border-radius: 16px;
+      background: #fff;
+    }
+    .prediction-matrix {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    .prediction-matrix th, .prediction-matrix td {
+      min-width: 170px;
+      padding: 12px 10px;
+      border-right: 1px solid #e5eaf0;
+      border-bottom: 1px solid #e5eaf0;
+      vertical-align: top;
+      background: #fff;
+    }
+    .prediction-matrix th:last-child, .prediction-matrix td:last-child { border-right: 0; }
+    .prediction-matrix tbody tr:last-child td { border-bottom: 0; }
+    .prediction-matrix thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #f8fafc;
+      color: #15293e;
+      text-align: left;
+    }
+    .prediction-matrix__user {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      min-width: 220px;
+      background: #f8fafc;
+    }
+    .prediction-matrix thead .prediction-matrix__user { z-index: 3; }
+    .prediction-matrix__match strong,
+    .prediction-matrix__user strong,
+    .prediction-matrix__cell strong {
+      display: block;
+      color: #15293e;
+    }
+    .prediction-matrix__meta,
+    .prediction-matrix__user span,
+    .prediction-matrix__cell span {
+      display: block;
+      margin-top: 4px;
+      color: #64748b;
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+    .prediction-matrix__cell.empty {
+      text-align: center;
+      color: #94a3b8;
+      font-weight: 800;
+    }
     .empty-state { margin: 0; color: #64748b; }
     @media (max-width: 980px) {
       .hero-grid, .section-grid { grid-template-columns: 1fr; }
@@ -387,6 +458,8 @@ $seo = [
       .prediction-form { grid-template-columns: 1fr; }
       .match-card__top, .competition-entry__top { flex-direction: column; }
       .leader-table { display: block; overflow-x: auto; white-space: nowrap; }
+      .prediction-matrix__user { min-width: 180px; }
+      .prediction-matrix th, .prediction-matrix td { min-width: 150px; }
     }
   </style>
 </head>
@@ -403,6 +476,7 @@ $seo = [
         <?php if ($selectedCompetition): ?>
           <p>Scegli il segno <strong>1</strong>, <strong>X</strong> o <strong>2</strong>, inserisci anche il risultato esatto e salva il tuo pronostico per ogni partita pubblicata per la competizione selezionata.</p>
           <p>Regole punteggio: <strong>+1</strong> per l esito corretto, <strong>+3</strong> per il risultato esatto. Se prendi il risultato esatto fai <strong>4 punti totali</strong> sulla partita.</p>
+          <p>Usa i pulsanti qui sotto per passare da classifica generale, scelte della settimana e tabella completa dei pronostici di tutti i partecipanti.</p>
         <?php else: ?>
           <p>Qui trovi l elenco delle competizioni Totocalcio a cui puoi accedere. Scegline una per aprire schedina, pronostici e classifica dedicata.</p>
           <p>Ogni competizione mantiene partite e classifica separate. Il menu Totocalcio ora ti porta sempre prima a questa lista.</p>
@@ -504,167 +578,261 @@ $seo = [
       <?php endif; ?>
     </section>
   <?php else: ?>
-  <section class="section-grid">
-    <div class="panel-card">
-      <span class="eyebrow">Schedina</span>
-      <h2>Partite del Totocalcio</h2>
-      <p style="margin: 0 0 16px;">Ogni pronostico resta modificabile finche la partita e aperta. Quando la partita viene segnata come giocata nel calendario ufficiale, qui vedrai automaticamente risultato e punti ottenuti. Se il risultato ufficiale cambia dopo, i punti vengono ricalcolati sui nuovi gol.</p>
+    <nav class="tabs totocalcio-tabs" data-tab-group="totocalcio">
+      <button class="tab-button active" type="button" data-tab="totocalcio-classifica">Classifica</button>
+      <button class="tab-button" type="button" data-tab="totocalcio-scelte">Scelte settimana</button>
+      <button class="tab-button" type="button" data-tab="totocalcio-tabella">Tabella pronostici</button>
+    </nav>
 
-      <?php if (empty($competitions)): ?>
-        <p class="empty-state">Non ci sono competizioni Totocalcio attive in questo momento.</p>
-      <?php elseif (empty($matches)): ?>
-        <p class="empty-state">Non ci sono ancora partite selezionate per questa competizione.</p>
-      <?php else: ?>
-        <div class="match-list">
-          <?php foreach ($matches as $match): ?>
-            <?php
-              $prediction = null;
-              if (!empty($match['user_segno'])) {
-                  $prediction = [
-                      'segno' => $match['user_segno'],
-                      'gol_casa_previsti' => $match['user_gol_casa_previsti'],
-                      'gol_trasferta_previsti' => $match['user_gol_trasferta_previsti'],
-                  ];
-              }
-              $evaluation = totocalcio_evaluate_prediction($match, $prediction);
-              $isOpen = totocalcio_is_match_open($match);
-              $officialResult = totocalcio_is_result_available($match)
-                  ? (int)$match['gol_casa_reale'] . ' - ' . (int)$match['gol_trasferta_reale']
-                  : 'In attesa';
-            ?>
-            <article class="match-card">
-              <div class="match-card__top">
-                <div>
-                  <h3 class="match-card__title"><?= h($match['squadra_casa']) ?> vs <?= h($match['squadra_trasferta']) ?></h3>
-                  <p class="meta-line">Data partita: <?= h(totocalcio_page_datetime_label($match['data_partita'] ?? null, $match['ora_partita'] ?? null)) ?></p>
-                  <p class="meta-line">Risultato ufficiale: <?= h($officialResult) ?> | Pronostici inviati: <?= (int)($match['total_predictions'] ?? 0) ?></p>
-                </div>
+    <section id="totocalcio-classifica" class="tab-section active" data-tab-group="totocalcio">
+      <div class="panel-card">
+        <span class="eyebrow">Classifica</span>
+        <h2>Classifica generale</h2>
+        <p style="margin: 0 0 12px;">La classifica e riferita alla competizione selezionata. Sono inclusi gli account con flag Totocalcio attivo oppure con accesso assegnato alla competizione. Ordinamento: punti, risultati esatti, esiti corretti.</p>
 
-                <div class="pill-row">
-                  <span class="status-pill <?= $isOpen ? 'warn' : 'muted' ?>">
-                    <?= $isOpen ? 'Pronostici aperti' : 'Pronostici chiusi' ?>
-                  </span>
-                  <span class="status-pill <?= $evaluation['risultato_esatto'] ? 'ok' : 'muted' ?>">
-                    <?= $evaluation['risultato_esatto'] ? 'Risultato esatto preso' : 'Risultato esatto non assegnato' ?>
-                  </span>
-                </div>
-              </div>
+        <ul class="rule-list" style="margin-bottom: 18px;">
+          <li>Esito corretto: +1 punto.</li>
+          <li>Risultato esatto: +3 punti bonus.</li>
+          <li>Totale massimo per partita: 4 punti.</li>
+        </ul>
 
-              <?php if ($prediction !== null): ?>
-                <div class="saved-prediction">
-                  Il tuo pronostico: <strong><?= h($prediction['segno']) ?></strong> con risultato esatto <strong><?= (int)$prediction['gol_casa_previsti'] ?> - <?= (int)$prediction['gol_trasferta_previsti'] ?></strong>.
-                </div>
-              <?php endif; ?>
-
-              <?php if ($evaluation['is_scored']): ?>
-                <div class="scored-box <?= $evaluation['punti_totali'] > 0 ? 'ok' : 'muted' ?>">
-                  Punti assegnati: <strong><?= (int)$evaluation['punti_totali'] ?></strong>
-                  <?php if ($evaluation['esito_corretto']): ?>
-                    | esito corretto +1
-                  <?php endif; ?>
-                  <?php if ($evaluation['risultato_esatto']): ?>
-                    | risultato esatto +3
-                  <?php endif; ?>
-                </div>
-              <?php elseif (totocalcio_is_result_available($match) && $prediction === null): ?>
-                <div class="scored-box muted">Nessun pronostico inviato per questa partita.</div>
-              <?php endif; ?>
-
-              <?php if ($canParticipate && $isOpen): ?>
-                <form method="POST" style="margin-top: 14px;">
-                  <?= csrf_field($csrfKey) ?>
-                  <input type="hidden" name="action" value="save_prediction">
-                  <input type="hidden" name="match_id" value="<?= (int)$match['id'] ?>">
-                  <div class="prediction-form">
-                    <label class="field">
-                      Segno
-                      <span class="sign-options">
-                        <?php foreach (['1', 'X', '2'] as $signOption): ?>
-                          <label class="sign-option">
-                            <input type="radio" name="segno" value="<?= $signOption ?>" <?= ($prediction['segno'] ?? '') === $signOption ? 'checked' : '' ?> required>
-                            <span><?= $signOption ?></span>
-                          </label>
-                        <?php endforeach; ?>
-                      </span>
-                    </label>
-
-                    <label class="field">
-                      Gol casa previsti
-                      <input type="number" name="gol_casa_previsti" min="0" max="99" step="1" value="<?= $prediction !== null ? (int)$prediction['gol_casa_previsti'] : '' ?>" required>
-                    </label>
-
-                    <label class="field">
-                      Gol trasferta previsti
-                      <input type="number" name="gol_trasferta_previsti" min="0" max="99" step="1" value="<?= $prediction !== null ? (int)$prediction['gol_trasferta_previsti'] : '' ?>" required>
-                    </label>
-                  </div>
-                  <div class="match-actions" style="margin-top: 14px;">
-                    <button class="btn-primary" type="submit"><?= $prediction !== null ? 'Aggiorna pronostico' : 'Salva pronostico' ?></button>
-                  </div>
-                </form>
-              <?php elseif (!$canParticipate): ?>
-                <div class="warning-card">Partecipazione disabilitata per questo account.</div>
-              <?php else: ?>
-                <div class="scored-box muted" style="margin-top: 14px;">I pronostici per questa partita non sono piu modificabili.</div>
-              <?php endif; ?>
-            </article>
-          <?php endforeach; ?>
-        </div>
-      <?php endif; ?>
-    </div>
-
-    <div class="panel-card">
-      <span class="eyebrow">Classifica</span>
-      <h2>Classifica Totocalcio</h2>
-      <p style="margin: 0 0 12px;">La classifica e riferita alla competizione selezionata. Sono inclusi gli account con flag Totocalcio attivo oppure con accesso assegnato alla competizione. Ordinamento: punti, risultati esatti, esiti corretti.</p>
-
-      <ul class="rule-list" style="margin-bottom: 18px;">
-        <li>Esito corretto: +1 punto.</li>
-        <li>Risultato esatto: +3 punti bonus.</li>
-        <li>Totale massimo per partita: 4 punti.</li>
-      </ul>
-
-      <?php if (empty($competitions)): ?>
-        <p class="empty-state">Ancora nessuna competizione attiva.</p>
-      <?php elseif (empty($leaderboard)): ?>
-        <p class="empty-state">Ancora nessun partecipante abilitato.</p>
-      <?php else: ?>
-        <table class="leader-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Utente</th>
-              <th>Esiti</th>
-              <th>Esatti</th>
-              <th>Punti</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php foreach ($leaderboard as $index => $row): ?>
+        <?php if (empty($competitions)): ?>
+          <p class="empty-state">Ancora nessuna competizione attiva.</p>
+        <?php elseif (empty($leaderboard)): ?>
+          <p class="empty-state">Ancora nessun partecipante abilitato.</p>
+        <?php else: ?>
+          <table class="leader-table">
+            <thead>
               <tr>
-                <td><?= $index + 1 ?></td>
-                <td>
-                  <strong><?= h($row['display_name']) ?></strong>
-                  <?php if ((int)$row['id'] === $userId): ?>
-                    <span style="color:#64748b;">(tu)</span>
-                  <?php endif; ?>
-                </td>
-                <td><?= (int)$row['esiti_corretti'] ?></td>
-                <td><?= (int)$row['risultati_esatti'] ?></td>
-                <td><strong><?= (int)$row['punti_totali'] ?></strong></td>
+                <th>#</th>
+                <th>Utente</th>
+                <th>Esiti</th>
+                <th>Esatti</th>
+                <th>Punti</th>
               </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($leaderboard as $index => $row): ?>
+                <tr>
+                  <td><?= $index + 1 ?></td>
+                  <td>
+                    <strong><?= h($row['display_name']) ?></strong>
+                    <?php if ((int)$row['id'] === $userId): ?>
+                      <span style="color:#64748b;">(tu)</span>
+                    <?php endif; ?>
+                  </td>
+                  <td><?= (int)$row['esiti_corretti'] ?></td>
+                  <td><?= (int)$row['risultati_esatti'] ?></td>
+                  <td><strong><?= (int)$row['punti_totali'] ?></strong></td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        <?php endif; ?>
+      </div>
+    </section>
+
+    <section id="totocalcio-scelte" class="tab-section" data-tab-group="totocalcio">
+      <div class="panel-card">
+        <span class="eyebrow">Schedina</span>
+        <h2>Scelte della settimana</h2>
+        <p style="margin: 0 0 16px;">Ogni pronostico resta modificabile finche la partita e aperta. Quando la partita viene segnata come giocata nel calendario ufficiale, qui vedrai automaticamente risultato e punti ottenuti. Se il risultato ufficiale cambia dopo, i punti vengono ricalcolati sui nuovi gol.</p>
+
+        <?php if (empty($competitions)): ?>
+          <p class="empty-state">Non ci sono competizioni Totocalcio attive in questo momento.</p>
+        <?php elseif (empty($matches)): ?>
+          <p class="empty-state">Non ci sono ancora partite selezionate per questa competizione.</p>
+        <?php else: ?>
+          <div class="match-list">
+            <?php foreach ($matches as $match): ?>
+              <?php
+                $prediction = null;
+                if (!empty($match['user_segno'])) {
+                    $prediction = [
+                        'segno' => $match['user_segno'],
+                        'gol_casa_previsti' => $match['user_gol_casa_previsti'],
+                        'gol_trasferta_previsti' => $match['user_gol_trasferta_previsti'],
+                    ];
+                }
+                $evaluation = totocalcio_evaluate_prediction($match, $prediction);
+                $isOpen = totocalcio_is_match_open($match);
+                $officialResult = totocalcio_page_match_result_label($match);
+              ?>
+              <article class="match-card">
+                <div class="match-card__top">
+                  <div>
+                    <h3 class="match-card__title"><?= h($match['squadra_casa']) ?> vs <?= h($match['squadra_trasferta']) ?></h3>
+                    <p class="meta-line">Data partita: <?= h(totocalcio_page_datetime_label($match['data_partita'] ?? null, $match['ora_partita'] ?? null)) ?></p>
+                    <p class="meta-line">Risultato ufficiale: <?= h($officialResult) ?> | Pronostici inviati: <?= (int)($match['total_predictions'] ?? 0) ?></p>
+                  </div>
+
+                  <div class="pill-row">
+                    <span class="status-pill <?= $isOpen ? 'warn' : 'muted' ?>">
+                      <?= $isOpen ? 'Pronostici aperti' : 'Pronostici chiusi' ?>
+                    </span>
+                    <span class="status-pill <?= $evaluation['risultato_esatto'] ? 'ok' : 'muted' ?>">
+                      <?= $evaluation['risultato_esatto'] ? 'Risultato esatto preso' : 'Risultato esatto non assegnato' ?>
+                    </span>
+                  </div>
+                </div>
+
+                <?php if ($prediction !== null): ?>
+                  <div class="saved-prediction">
+                    Il tuo pronostico: <strong><?= h($prediction['segno']) ?></strong> con risultato esatto <strong><?= (int)$prediction['gol_casa_previsti'] ?> - <?= (int)$prediction['gol_trasferta_previsti'] ?></strong>.
+                  </div>
+                <?php endif; ?>
+
+                <?php if ($evaluation['is_scored']): ?>
+                  <div class="scored-box <?= $evaluation['punti_totali'] > 0 ? 'ok' : 'muted' ?>">
+                    Punti assegnati: <strong><?= (int)$evaluation['punti_totali'] ?></strong>
+                    <?php if ($evaluation['esito_corretto']): ?>
+                      | esito corretto +1
+                    <?php endif; ?>
+                    <?php if ($evaluation['risultato_esatto']): ?>
+                      | risultato esatto +3
+                    <?php endif; ?>
+                  </div>
+                <?php elseif (totocalcio_is_result_available($match) && $prediction === null): ?>
+                  <div class="scored-box muted">Nessun pronostico inviato per questa partita.</div>
+                <?php endif; ?>
+
+                <?php if ($canParticipate && $isOpen): ?>
+                  <form method="POST" style="margin-top: 14px;">
+                    <?= csrf_field($csrfKey) ?>
+                    <input type="hidden" name="action" value="save_prediction">
+                    <input type="hidden" name="match_id" value="<?= (int)$match['id'] ?>">
+                    <div class="prediction-form">
+                      <label class="field">
+                        Segno
+                        <span class="sign-options">
+                          <?php foreach (['1', 'X', '2'] as $signOption): ?>
+                            <label class="sign-option">
+                              <input type="radio" name="segno" value="<?= $signOption ?>" <?= ($prediction['segno'] ?? '') === $signOption ? 'checked' : '' ?> required>
+                              <span><?= $signOption ?></span>
+                            </label>
+                          <?php endforeach; ?>
+                        </span>
+                      </label>
+
+                      <label class="field">
+                        Gol casa previsti
+                        <input type="number" name="gol_casa_previsti" min="0" max="99" step="1" value="<?= $prediction !== null ? (int)$prediction['gol_casa_previsti'] : '' ?>" required>
+                      </label>
+
+                      <label class="field">
+                        Gol trasferta previsti
+                        <input type="number" name="gol_trasferta_previsti" min="0" max="99" step="1" value="<?= $prediction !== null ? (int)$prediction['gol_trasferta_previsti'] : '' ?>" required>
+                      </label>
+                    </div>
+                    <div class="match-actions" style="margin-top: 14px;">
+                      <button class="btn-primary" type="submit"><?= $prediction !== null ? 'Aggiorna pronostico' : 'Salva pronostico' ?></button>
+                    </div>
+                  </form>
+                <?php elseif (!$canParticipate): ?>
+                  <div class="warning-card">Partecipazione disabilitata per questo account.</div>
+                <?php else: ?>
+                  <div class="scored-box muted" style="margin-top: 14px;">I pronostici per questa partita non sono piu modificabili.</div>
+                <?php endif; ?>
+              </article>
             <?php endforeach; ?>
-          </tbody>
-        </table>
-      <?php endif; ?>
-    </div>
-  </section>
+          </div>
+        <?php endif; ?>
+      </div>
+    </section>
+
+    <section id="totocalcio-tabella" class="tab-section" data-tab-group="totocalcio">
+      <div class="panel-card">
+        <span class="eyebrow">Pronostici</span>
+        <h2>Tabella completa delle scelte</h2>
+        <p style="margin: 0 0 16px;">Per ogni partecipante vedi in un colpo solo il segno scelto e il risultato esatto previsto su ogni partita pubblicata della competizione.</p>
+
+        <?php if (empty($matches)): ?>
+          <p class="empty-state">Non ci sono ancora partite visibili da mostrare nella tabella.</p>
+        <?php elseif (empty($leaderboard)): ?>
+          <p class="empty-state">Non ci sono ancora partecipanti da mostrare nella tabella.</p>
+        <?php else: ?>
+          <div class="prediction-matrix-wrap">
+            <table class="prediction-matrix">
+              <thead>
+                <tr>
+                  <th class="prediction-matrix__user">Partecipante</th>
+                  <?php foreach ($matches as $match): ?>
+                    <th class="prediction-matrix__match">
+                      <strong><?= h($match['squadra_casa']) ?> vs <?= h($match['squadra_trasferta']) ?></strong>
+                      <span class="prediction-matrix__meta"><?= h(totocalcio_page_datetime_label($match['data_partita'] ?? null, $match['ora_partita'] ?? null)) ?></span>
+                      <span class="prediction-matrix__meta">Ufficiale: <?= h(totocalcio_page_match_result_label($match)) ?></span>
+                    </th>
+                  <?php endforeach; ?>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($leaderboard as $row): ?>
+                  <?php
+                    $rowUserId = (int)($row['id'] ?? 0);
+                    $userPredictions = $predictionMatrix[$rowUserId] ?? [];
+                  ?>
+                  <tr>
+                    <td class="prediction-matrix__user">
+                      <strong><?= h($row['display_name']) ?><?= $rowUserId === $userId ? ' (tu)' : '' ?></strong>
+                      <span><?= (int)($row['punti_totali'] ?? 0) ?> punti | <?= (int)($row['risultati_esatti'] ?? 0) ?> esatti</span>
+                    </td>
+                    <?php foreach ($matches as $match): ?>
+                      <?php $cellPrediction = $userPredictions[(int)($match['id'] ?? 0)] ?? null; ?>
+                      <td>
+                        <?php if (is_array($cellPrediction)): ?>
+                          <div class="prediction-matrix__cell">
+                            <strong><?= h($cellPrediction['segno'] ?? '') ?></strong>
+                            <span><?= (int)($cellPrediction['gol_casa_previsti'] ?? 0) ?> - <?= (int)($cellPrediction['gol_trasferta_previsti'] ?? 0) ?></span>
+                          </div>
+                        <?php else: ?>
+                          <div class="prediction-matrix__cell empty">-</div>
+                        <?php endif; ?>
+                      </td>
+                    <?php endforeach; ?>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php endif; ?>
+      </div>
+    </section>
   <?php endif; ?>
 </main>
 
 <div id="footer-container"></div>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.tabs[data-tab-group]').forEach((tabNav) => {
+    const groupName = tabNav.getAttribute('data-tab-group');
+    const buttons = Array.from(tabNav.querySelectorAll('.tab-button[data-tab]'));
+    const sections = Array.from(document.querySelectorAll(`.tab-section[data-tab-group="${groupName}"]`));
+    if (!groupName || buttons.length === 0 || sections.length === 0) {
+      return;
+    }
+
+    const activateTab = (tabId) => {
+      buttons.forEach((button) => {
+        const isActive = button.dataset.tab === tabId;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+
+      sections.forEach((section) => {
+        section.classList.toggle('active', section.id === tabId);
+      });
+    };
+
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => activateTab(button.dataset.tab || ''));
+    });
+
+    const defaultButton = buttons.find((button) => button.classList.contains('active')) || buttons[0];
+    if (defaultButton) {
+      activateTab(defaultButton.dataset.tab || '');
+    }
+  });
+
   const footer = document.getElementById('footer-container');
   if (!footer) return;
   fetch('/includi/footer.html')
