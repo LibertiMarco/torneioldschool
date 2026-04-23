@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS notifiche_commenti;
 DROP TABLE IF EXISTS blog_media;
 DROP TABLE IF EXISTS blog_commenti;
 DROP TABLE IF EXISTS blog_post;
+DROP TABLE IF EXISTS totocalcio_antepost_pronostici;
 DROP TABLE IF EXISTS totocalcio_pronostici;
 DROP TABLE IF EXISTS totocalcio_partite;
 DROP TABLE IF EXISTS totocalcio_competizioni_accessi;
@@ -57,6 +58,10 @@ CREATE TABLE IF NOT EXISTS totocalcio_competizioni (
     slug VARCHAR(180) NOT NULL,
     attiva TINYINT(1) NOT NULL DEFAULT 1,
     accesso_pubblico TINYINT(1) NOT NULL DEFAULT 1,
+    punti_esito_pareggio TINYINT UNSIGNED NOT NULL DEFAULT 1,
+    bonus_risultato_esatto SMALLINT UNSIGNED NOT NULL DEFAULT 3,
+    antepost_attivo TINYINT(1) NOT NULL DEFAULT 0,
+    torneo_riferimento VARCHAR(255) DEFAULT NULL,
     ordine INT NOT NULL DEFAULT 0,
     creato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     aggiornato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -103,6 +108,20 @@ CREATE TABLE IF NOT EXISTS totocalcio_competizioni_accessi (
     KEY idx_totocalcio_accesso_utente (utente_id),
     CONSTRAINT fk_totocalcio_accesso_competizione FOREIGN KEY (competizione_id) REFERENCES totocalcio_competizioni(id) ON DELETE CASCADE,
     CONSTRAINT fk_totocalcio_accesso_utente FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS totocalcio_antepost_pronostici (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    competizione_id INT UNSIGNED NOT NULL,
+    utente_id INT UNSIGNED NOT NULL,
+    categoria ENUM('winner_regular_season','winner_coppa_gold','winner_coppa_silver','top_scorer_team') NOT NULL,
+    scelta VARCHAR(255) NOT NULL,
+    creato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    aggiornato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_totocalcio_antepost_competizione_utente_categoria (competizione_id, utente_id, categoria),
+    KEY idx_totocalcio_antepost_utente (utente_id),
+    CONSTRAINT fk_totocalcio_antepost_competizione FOREIGN KEY (competizione_id) REFERENCES totocalcio_competizioni(id) ON DELETE CASCADE,
+    CONSTRAINT fk_totocalcio_antepost_utente FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Albo d'oro (api/albo_doro.php, api/gestione_albo.php)

@@ -215,6 +215,10 @@ $visibleMatches = 0;
 $openMatches = 0;
 $playedMatches = 0;
 $totalPredictions = 0;
+$selectedCompetitionDrawPoints = $selectedCompetition ? totocalcio_competition_draw_points($selectedCompetition) : 1;
+$selectedCompetitionExactBonus = $selectedCompetition ? totocalcio_competition_exact_bonus($selectedCompetition) : 3;
+$selectedCompetitionMaxPoints = max(1, $selectedCompetitionDrawPoints) + $selectedCompetitionExactBonus;
+$selectedCompetitionAntepostEnabled = $selectedCompetition ? totocalcio_competition_has_antepost($selectedCompetition) : false;
 
 foreach ($matches as $match) {
     if (!empty($match['visibile'])) {
@@ -425,6 +429,8 @@ foreach ($matches as $match) {
           <p class="meta-line">Slug: <code><?= h($selectedCompetition['slug']) ?></code></p>
           <p class="meta-line">Visibile sul sito: <?= !empty($selectedCompetition['attiva']) ? 'si' : 'no' ?></p>
           <p class="meta-line">Accesso pubblico: <?= !empty($selectedCompetition['accesso_pubblico']) ? 'si' : 'no, solo utenti autorizzati' ?></p>
+          <p class="meta-line">Pareggio corretto: <?= $selectedCompetitionDrawPoints ?> punti | Bonus risultato esatto: <?= $selectedCompetitionExactBonus ?> punti | Totale massimo partita: <?= $selectedCompetitionMaxPoints ?></p>
+          <p class="meta-line">Antepost disponibili: <?= $selectedCompetitionAntepostEnabled ? 'si' : 'no' ?></p>
           <p class="meta-line">Utenti autorizzati: <?= count($selectedCompetitionAccessUserIds) ?></p>
           <p class="meta-line">Link pubblico: <a href="<?= h(admin_totocalcio_public_url((string)$selectedCompetition['slug'])) ?>"><?= h(admin_totocalcio_public_url((string)$selectedCompetition['slug'])) ?></a></p>
         <?php else: ?>
@@ -433,10 +439,17 @@ foreach ($matches as $match) {
 
         <ul class="score-rule" style="margin-top: 16px;">
           <li>Esito corretto: <strong>+1 punto</strong>.</li>
-          <li>Risultato esatto: <strong>+3 punti</strong>.</li>
+          <?php if ($selectedCompetitionDrawPoints > 1): ?>
+            <li>Pareggio corretto: <strong>+<?= $selectedCompetitionDrawPoints ?> punti</strong>.</li>
+          <?php endif; ?>
+          <li>Risultato esatto: <strong>+<?= $selectedCompetitionExactBonus ?> punti</strong>.</li>
+          <li>Totale massimo per partita: <strong><?= $selectedCompetitionMaxPoints ?> punti</strong>.</li>
           <li>Una partita reale puo comparire in piu competizioni diverse.</li>
           <li>I risultati ufficiali restano sempre quelli del calendario.</li>
           <li>Se l accesso non e pubblico, entrano solo admin, sysadmin e utenti autorizzati.</li>
+          <?php if ($selectedCompetitionAntepostEnabled): ?>
+            <li>La pagina pubblica mostra anche il tab Antepost con scelte per Regular Season, Coppa Gold, Coppa Silver e squadra capocannoniere.</li>
+          <?php endif; ?>
         </ul>
       </aside>
     </section>

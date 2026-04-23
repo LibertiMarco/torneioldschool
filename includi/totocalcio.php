@@ -16,6 +16,20 @@ if (!function_exists('totocalcio_default_competition_slug')) {
     }
 }
 
+if (!function_exists('totocalcio_default_exact_bonus_points')) {
+    function totocalcio_default_exact_bonus_points(): int
+    {
+        return 6;
+    }
+}
+
+if (!function_exists('totocalcio_default_draw_outcome_points')) {
+    function totocalcio_default_draw_outcome_points(): int
+    {
+        return 3;
+    }
+}
+
 if (!function_exists('totocalcio_slugify')) {
     function totocalcio_slugify(string $value): string
     {
@@ -87,6 +101,148 @@ if (!function_exists('totocalcio_compute_sign')) {
     }
 }
 
+if (!function_exists('totocalcio_antepost_categories')) {
+    function totocalcio_antepost_categories(): array
+    {
+        return [
+            'winner_regular_season' => 'Vincente Regular Season',
+            'winner_coppa_gold' => 'Vincente Coppa Gold',
+            'winner_coppa_silver' => 'Vincente Coppa Silver',
+            'top_scorer_team' => 'Squadra Capocannoniere',
+        ];
+    }
+}
+
+if (!function_exists('totocalcio_competition_value')) {
+    function totocalcio_competition_value(array $row, string ...$keys)
+    {
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $row) && $row[$key] !== null) {
+                return $row[$key];
+            }
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('totocalcio_competition_is_default')) {
+    function totocalcio_competition_is_default(array $competition): bool
+    {
+        $slug = trim((string)totocalcio_competition_value($competition, 'slug', 'competizione_slug'));
+        if ($slug !== '' && $slug === totocalcio_default_competition_slug()) {
+            return true;
+        }
+
+        $name = trim((string)totocalcio_competition_value($competition, 'nome', 'competizione_nome'));
+        return $name !== '' && strcasecmp($name, totocalcio_default_competition_name()) === 0;
+    }
+}
+
+if (!function_exists('totocalcio_competition_exact_bonus')) {
+    function totocalcio_competition_exact_bonus(array $competition): int
+    {
+        $configured = (int)(totocalcio_competition_value($competition, 'bonus_risultato_esatto') ?? 0);
+        if ($configured > 0) {
+            return $configured;
+        }
+
+        return totocalcio_competition_is_default($competition)
+            ? totocalcio_default_exact_bonus_points()
+            : 3;
+    }
+}
+
+if (!function_exists('totocalcio_competition_draw_points')) {
+    function totocalcio_competition_draw_points(array $competition): int
+    {
+        $configured = (int)(totocalcio_competition_value($competition, 'punti_esito_pareggio') ?? 0);
+        if ($configured > 0) {
+            return $configured;
+        }
+
+        return totocalcio_competition_is_default($competition)
+            ? totocalcio_default_draw_outcome_points()
+            : 1;
+    }
+}
+
+if (!function_exists('totocalcio_competition_outcome_points')) {
+    function totocalcio_competition_outcome_points(array $competition, string $sign): int
+    {
+        return $sign === 'X'
+            ? totocalcio_competition_draw_points($competition)
+            : 1;
+    }
+}
+
+if (!function_exists('totocalcio_competition_has_antepost')) {
+    function totocalcio_competition_has_antepost(array $competition): bool
+    {
+        $configured = totocalcio_competition_value($competition, 'antepost_attivo');
+        if ($configured !== null) {
+            return !empty($configured);
+        }
+
+        return totocalcio_competition_is_default($competition);
+    }
+}
+
+if (!function_exists('totocalcio_competition_tournament_candidates')) {
+    function totocalcio_competition_tournament_candidates(array $competition): array
+    {
+        $candidates = [];
+
+        $pushCandidate = static function (string $value) use (&$candidates): void {
+            $value = trim($value);
+            if ($value === '') {
+                return;
+            }
+
+            foreach ($candidates as $existing) {
+                if (strcasecmp($existing, $value) === 0) {
+                    return;
+                }
+            }
+
+            $candidates[] = $value;
+        };
+
+        $referenceTournament = trim((string)totocalcio_competition_value($competition, 'torneo_riferimento', 'torneo'));
+        if ($referenceTournament !== '') {
+            $pushCandidate($referenceTournament);
+            $pushCandidate(str_replace(' ', '', $referenceTournament));
+        }
+
+        $competitionName = trim((string)totocalcio_competition_value($competition, 'nome', 'competizione_nome'));
+        if ($competitionName !== '') {
+            $cleanName = preg_replace('/^totocalcio\s+/i', '', $competitionName) ?? $competitionName;
+            $cleanName = trim($cleanName);
+
+            if ($cleanName !== '') {
+                $pushCandidate($cleanName);
+                $pushCandidate(str_replace(' ', '', $cleanName));
+
+                if (preg_match('/^(.+?)\s+fascia\s+[a-z0-9]+$/i', $cleanName, $matches)) {
+                    $baseName = trim((string)($matches[1] ?? ''));
+                    if ($baseName !== '') {
+                        $pushCandidate($baseName);
+                        $pushCandidate(str_replace(' ', '', $baseName));
+                    }
+                }
+            }
+        }
+
+        if (totocalcio_competition_is_default($competition)) {
+            $pushCandidate('Mondiale Fascia B');
+            $pushCandidate('MondialeFasciaB');
+            $pushCandidate('Mondiale');
+        }
+
+        return $candidates;
+    }
+}
+
 if (!function_exists('totocalcio_is_result_available')) {
     function totocalcio_is_result_available(array $match): bool
     {
@@ -132,9 +288,10 @@ if (!function_exists('totocalcio_evaluate_prediction')) {
         $predSign = (string)$prediction['segno'];
 
         $exact = $predHome === $realHome && $predAway === $realAway;
-        $outcome = $predSign === totocalcio_compute_sign($realHome, $realAway);
-        $pointsOutcome = $outcome ? 1 : 0;
-        $pointsExact = $exact ? 3 : 0;
+        $realSign = totocalcio_compute_sign($realHome, $realAway);
+        $outcome = $predSign === $realSign;
+        $pointsOutcome = $outcome ? totocalcio_competition_outcome_points($match, $realSign) : 0;
+        $pointsExact = $exact ? totocalcio_competition_exact_bonus($match) : 0;
 
         return [
             'has_prediction' => true,
@@ -372,6 +529,10 @@ if (!function_exists('totocalcio_ensure_tables')) {
                 slug VARCHAR(180) NOT NULL,
                 attiva TINYINT(1) NOT NULL DEFAULT 1,
                 accesso_pubblico TINYINT(1) NOT NULL DEFAULT 1,
+                punti_esito_pareggio TINYINT UNSIGNED NOT NULL DEFAULT 1,
+                bonus_risultato_esatto SMALLINT UNSIGNED NOT NULL DEFAULT 3,
+                antepost_attivo TINYINT(1) NOT NULL DEFAULT 0,
+                torneo_riferimento VARCHAR(255) DEFAULT NULL,
                 ordine INT NOT NULL DEFAULT 0,
                 creato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 aggiornato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -416,6 +577,19 @@ if (!function_exists('totocalcio_ensure_tables')) {
                 CONSTRAINT fk_totocalcio_accesso_competizione FOREIGN KEY (competizione_id) REFERENCES totocalcio_competizioni(id) ON DELETE CASCADE,
                 CONSTRAINT fk_totocalcio_accesso_utente FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+            "CREATE TABLE IF NOT EXISTS totocalcio_antepost_pronostici (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                competizione_id INT UNSIGNED NOT NULL,
+                utente_id INT UNSIGNED NOT NULL,
+                categoria ENUM('winner_regular_season','winner_coppa_gold','winner_coppa_silver','top_scorer_team') NOT NULL,
+                scelta VARCHAR(255) NOT NULL,
+                creato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                aggiornato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_totocalcio_antepost_competizione_utente_categoria (competizione_id, utente_id, categoria),
+                KEY idx_totocalcio_antepost_utente (utente_id),
+                CONSTRAINT fk_totocalcio_antepost_competizione FOREIGN KEY (competizione_id) REFERENCES totocalcio_competizioni(id) ON DELETE CASCADE,
+                CONSTRAINT fk_totocalcio_antepost_utente FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         ];
 
         foreach ($queries as $query) {
@@ -442,6 +616,64 @@ if (!function_exists('totocalcio_ensure_tables')) {
                 $ready = false;
                 return false;
             }
+        }
+
+        if (!totocalcio_table_has_column($conn, 'totocalcio_competizioni', 'punti_esito_pareggio')) {
+            if ($conn->query(
+                "ALTER TABLE totocalcio_competizioni
+                 ADD COLUMN punti_esito_pareggio TINYINT UNSIGNED NOT NULL DEFAULT 1 AFTER accesso_pubblico"
+            ) !== true) {
+                error_log('totocalcio: impossibile aggiungere punti_esito_pareggio - ' . $conn->error);
+                $ready = false;
+                return false;
+            }
+        }
+
+        if (!totocalcio_table_has_column($conn, 'totocalcio_competizioni', 'bonus_risultato_esatto')) {
+            if ($conn->query(
+                "ALTER TABLE totocalcio_competizioni
+                 ADD COLUMN bonus_risultato_esatto SMALLINT UNSIGNED NOT NULL DEFAULT 3 AFTER punti_esito_pareggio"
+            ) !== true) {
+                error_log('totocalcio: impossibile aggiungere bonus_risultato_esatto - ' . $conn->error);
+                $ready = false;
+                return false;
+            }
+        }
+
+        if (!totocalcio_table_has_column($conn, 'totocalcio_competizioni', 'antepost_attivo')) {
+            if ($conn->query(
+                "ALTER TABLE totocalcio_competizioni
+                 ADD COLUMN antepost_attivo TINYINT(1) NOT NULL DEFAULT 0 AFTER bonus_risultato_esatto"
+            ) !== true) {
+                error_log('totocalcio: impossibile aggiungere antepost_attivo - ' . $conn->error);
+                $ready = false;
+                return false;
+            }
+        }
+
+        if (!totocalcio_table_has_column($conn, 'totocalcio_competizioni', 'torneo_riferimento')) {
+            if ($conn->query(
+                "ALTER TABLE totocalcio_competizioni
+                 ADD COLUMN torneo_riferimento VARCHAR(255) DEFAULT NULL AFTER antepost_attivo"
+            ) !== true) {
+                error_log('totocalcio: impossibile aggiungere torneo_riferimento - ' . $conn->error);
+                $ready = false;
+                return false;
+            }
+        }
+
+        $defaultBonusPoints = totocalcio_default_exact_bonus_points();
+        $defaultDrawPoints = totocalcio_default_draw_outcome_points();
+        if ($conn->query(
+            "UPDATE totocalcio_competizioni
+             SET punti_esito_pareggio = {$defaultDrawPoints},
+                 bonus_risultato_esatto = {$defaultBonusPoints},
+                 antepost_attivo = 1
+             WHERE id = {$defaultCompetitionId}"
+        ) !== true) {
+            error_log('totocalcio: impossibile aggiornare la competizione di default - ' . $conn->error);
+            $ready = false;
+            return false;
         }
 
         $competitionColumn = totocalcio_table_column_definition($conn, 'totocalcio_partite', 'competizione_id');
@@ -552,6 +784,10 @@ if (!function_exists('totocalcio_fetch_competitions')) {
                     tc.slug,
                     tc.attiva,
                     tc.accesso_pubblico,
+                    tc.punti_esito_pareggio,
+                    tc.bonus_risultato_esatto,
+                    tc.antepost_attivo,
+                    tc.torneo_riferimento,
                     tc.ordine,
                     tc.creato_il,
                     tc.aggiornato_il,
@@ -601,6 +837,9 @@ if (!function_exists('totocalcio_fetch_competitions')) {
             $row['id'] = (int)($row['id'] ?? 0);
             $row['attiva'] = (int)($row['attiva'] ?? 0);
             $row['accesso_pubblico'] = (int)($row['accesso_pubblico'] ?? 1);
+            $row['punti_esito_pareggio'] = (int)($row['punti_esito_pareggio'] ?? totocalcio_competition_draw_points($row));
+            $row['bonus_risultato_esatto'] = (int)($row['bonus_risultato_esatto'] ?? totocalcio_competition_exact_bonus($row));
+            $row['antepost_attivo'] = (int)($row['antepost_attivo'] ?? (totocalcio_competition_has_antepost($row) ? 1 : 0));
             $row['ordine'] = (int)($row['ordine'] ?? 0);
             $row['total_matches'] = (int)($row['total_matches'] ?? 0);
             $row['active_matches'] = (int)($row['active_matches'] ?? 0);
@@ -628,6 +867,10 @@ if (!function_exists('totocalcio_fetch_competition_by_slug')) {
                     slug,
                     attiva,
                     accesso_pubblico,
+                    punti_esito_pareggio,
+                    bonus_risultato_esatto,
+                    antepost_attivo,
+                    torneo_riferimento,
                     ordine,
                     creato_il,
                     aggiornato_il
@@ -672,6 +915,10 @@ if (!function_exists('totocalcio_fetch_competition_by_id')) {
                 slug,
                 attiva,
                 accesso_pubblico,
+                punti_esito_pareggio,
+                bonus_risultato_esatto,
+                antepost_attivo,
+                torneo_riferimento,
                 ordine,
                 creato_il,
                 aggiornato_il
@@ -710,6 +957,10 @@ if (!function_exists('totocalcio_fetch_default_competition')) {
                     slug,
                     attiva,
                     accesso_pubblico,
+                    punti_esito_pareggio,
+                    bonus_risultato_esatto,
+                    antepost_attivo,
+                    torneo_riferimento,
                     ordine,
                     creato_il,
                     aggiornato_il
@@ -1014,6 +1265,301 @@ if (!function_exists('totocalcio_fetch_access_accounts')) {
     }
 }
 
+if (!function_exists('totocalcio_resolve_competition_tournament')) {
+    function totocalcio_resolve_competition_tournament(mysqli $conn, array $competition): string
+    {
+        if (!totocalcio_ensure_tables($conn)) {
+            return '';
+        }
+
+        $competitionId = (int)(totocalcio_competition_value($competition, 'id', 'competizione_id') ?? 0);
+        $candidates = totocalcio_competition_tournament_candidates($competition);
+
+        if ($competitionId > 0) {
+            $stmt = $conn->prepare(
+                "SELECT p.torneo, COUNT(*) AS total_matches
+                 FROM totocalcio_partite tp
+                 INNER JOIN partite p
+                    ON p.id = tp.partita_id
+                 WHERE tp.competizione_id = ?
+                 GROUP BY p.torneo
+                 ORDER BY total_matches DESC, p.torneo ASC"
+            );
+
+            if ($stmt) {
+                $stmt->bind_param('i', $competitionId);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $matchTournaments = [];
+
+                if ($result instanceof mysqli_result) {
+                    while ($row = $result->fetch_assoc()) {
+                        $tournament = trim((string)($row['torneo'] ?? ''));
+                        if ($tournament !== '') {
+                            $matchTournaments[] = $tournament;
+                        }
+                    }
+                    $result->close();
+                }
+
+                $stmt->close();
+
+                foreach ($matchTournaments as $tournament) {
+                    array_unshift($candidates, $tournament);
+                }
+            }
+        }
+
+        $orderedCandidates = [];
+        foreach ($candidates as $candidate) {
+            $candidate = trim((string)$candidate);
+            if ($candidate === '') {
+                continue;
+            }
+
+            $alreadyAdded = false;
+            foreach ($orderedCandidates as $existingCandidate) {
+                if (strcasecmp($existingCandidate, $candidate) === 0) {
+                    $alreadyAdded = true;
+                    break;
+                }
+            }
+
+            if (!$alreadyAdded) {
+                $orderedCandidates[] = $candidate;
+            }
+        }
+
+        foreach ($orderedCandidates as $candidate) {
+            $stmt = $conn->prepare(
+                "SELECT torneo
+                 FROM squadre
+                 WHERE torneo = ?
+                 LIMIT 1"
+            );
+
+            if (!$stmt) {
+                continue;
+            }
+
+            $stmt->bind_param('s', $candidate);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result ? $result->fetch_assoc() : null;
+            if ($result instanceof mysqli_result) {
+                $result->close();
+            }
+            $stmt->close();
+
+            if ($row && !empty($row['torneo'])) {
+                return (string)$row['torneo'];
+            }
+        }
+
+        return $orderedCandidates[0] ?? '';
+    }
+}
+
+if (!function_exists('totocalcio_fetch_antepost_teams')) {
+    function totocalcio_fetch_antepost_teams(mysqli $conn, array $competition): array
+    {
+        if (!totocalcio_ensure_tables($conn) || !totocalcio_competition_has_antepost($competition)) {
+            return [];
+        }
+
+        $competitionId = (int)(totocalcio_competition_value($competition, 'id', 'competizione_id') ?? 0);
+        $resolvedTournament = totocalcio_resolve_competition_tournament($conn, $competition);
+        $rows = [];
+
+        if ($resolvedTournament !== '') {
+            $stmt = $conn->prepare(
+                "SELECT nome, girone, logo, torneo
+                 FROM squadre
+                 WHERE torneo = ?
+                 ORDER BY nome ASC"
+            );
+
+            if ($stmt) {
+                $stmt->bind_param('s', $resolvedTournament);
+                $stmt->execute();
+                $result = $stmt->get_result();
+
+                if ($result instanceof mysqli_result) {
+                    while ($row = $result->fetch_assoc()) {
+                        $rows[] = $row;
+                    }
+                    $result->close();
+                }
+
+                $stmt->close();
+            }
+        }
+
+        if (!empty($rows) || $competitionId <= 0) {
+            return $rows;
+        }
+
+        $stmt = $conn->prepare(
+            "SELECT team_name
+             FROM (
+                SELECT p.squadra_casa AS team_name
+                FROM totocalcio_partite tp
+                INNER JOIN partite p
+                    ON p.id = tp.partita_id
+                WHERE tp.competizione_id = ?
+
+                UNION
+
+                SELECT p.squadra_ospite AS team_name
+                FROM totocalcio_partite tp
+                INNER JOIN partite p
+                    ON p.id = tp.partita_id
+                WHERE tp.competizione_id = ?
+             ) teams
+             ORDER BY team_name ASC"
+        );
+
+        if (!$stmt) {
+            return [];
+        }
+
+        $stmt->bind_param('ii', $competitionId, $competitionId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $fallbackRows = [];
+
+        if ($result instanceof mysqli_result) {
+            while ($row = $result->fetch_assoc()) {
+                $teamName = trim((string)($row['team_name'] ?? ''));
+                if ($teamName === '') {
+                    continue;
+                }
+
+                $fallbackRows[] = [
+                    'nome' => $teamName,
+                    'girone' => null,
+                    'logo' => null,
+                    'torneo' => $resolvedTournament,
+                ];
+            }
+            $result->close();
+        }
+
+        $stmt->close();
+
+        return $fallbackRows;
+    }
+}
+
+if (!function_exists('totocalcio_fetch_user_antepost_predictions')) {
+    function totocalcio_fetch_user_antepost_predictions(mysqli $conn, int $competitionId, int $userId): array
+    {
+        if ($competitionId <= 0 || $userId <= 0 || !totocalcio_ensure_tables($conn)) {
+            return [];
+        }
+
+        $stmt = $conn->prepare(
+            "SELECT categoria, scelta
+             FROM totocalcio_antepost_pronostici
+             WHERE competizione_id = ?
+               AND utente_id = ?"
+        );
+
+        if (!$stmt) {
+            return [];
+        }
+
+        $stmt->bind_param('ii', $competitionId, $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $rows = [];
+
+        if ($result instanceof mysqli_result) {
+            while ($row = $result->fetch_assoc()) {
+                $category = (string)($row['categoria'] ?? '');
+                if ($category === '') {
+                    continue;
+                }
+                $rows[$category] = (string)($row['scelta'] ?? '');
+            }
+            $result->close();
+        }
+
+        $stmt->close();
+
+        return $rows;
+    }
+}
+
+if (!function_exists('totocalcio_save_antepost_predictions')) {
+    function totocalcio_save_antepost_predictions(mysqli $conn, int $competitionId, int $userId, array $choices): bool
+    {
+        if ($competitionId <= 0 || $userId <= 0 || !totocalcio_ensure_tables($conn)) {
+            return false;
+        }
+
+        $allowedCategories = array_keys(totocalcio_antepost_categories());
+        $normalizedChoices = [];
+        foreach ($allowedCategories as $category) {
+            $value = trim((string)($choices[$category] ?? ''));
+            if ($value === '') {
+                continue;
+            }
+            $normalizedChoices[$category] = $value;
+        }
+
+        if (!$conn->begin_transaction()) {
+            return false;
+        }
+
+        $deleteStmt = $conn->prepare(
+            "DELETE FROM totocalcio_antepost_pronostici
+             WHERE competizione_id = ?
+               AND utente_id = ?"
+        );
+
+        if (!$deleteStmt) {
+            $conn->rollback();
+            return false;
+        }
+
+        $deleteStmt->bind_param('ii', $competitionId, $userId);
+        $deleted = $deleteStmt->execute();
+        $deleteStmt->close();
+
+        if (!$deleted) {
+            $conn->rollback();
+            return false;
+        }
+
+        if (!empty($normalizedChoices)) {
+            $insertStmt = $conn->prepare(
+                "INSERT INTO totocalcio_antepost_pronostici
+                    (competizione_id, utente_id, categoria, scelta)
+                 VALUES (?, ?, ?, ?)"
+            );
+
+            if (!$insertStmt) {
+                $conn->rollback();
+                return false;
+            }
+
+            foreach ($normalizedChoices as $category => $choice) {
+                $insertStmt->bind_param('iiss', $competitionId, $userId, $category, $choice);
+                if (!$insertStmt->execute()) {
+                    $insertStmt->close();
+                    $conn->rollback();
+                    return false;
+                }
+            }
+
+            $insertStmt->close();
+        }
+
+        return $conn->commit();
+    }
+}
+
 if (!function_exists('totocalcio_user_can_access_competition')) {
     function totocalcio_user_can_access_competition(array $competition, bool $hasAdminAccess, bool $hasGlobalFeature, array $grantedCompetitionIds = []): bool
     {
@@ -1058,6 +1604,10 @@ if (!function_exists('totocalcio_fetch_match_by_id')) {
                     tc.nome AS competizione_nome,
                     tc.slug AS competizione_slug,
                     tc.attiva AS competizione_attiva,
+                    tc.punti_esito_pareggio,
+                    tc.bonus_risultato_esatto,
+                    tc.antepost_attivo,
+                    tc.torneo_riferimento,
                     tp.partita_id,
                     tp.ordine,
                     tp.attiva AS visibile,
@@ -1143,6 +1693,10 @@ if (!function_exists('totocalcio_fetch_matches')) {
                     tc.nome AS competizione_nome,
                     tc.slug AS competizione_slug,
                     tc.attiva AS competizione_attiva,
+                    tc.punti_esito_pareggio,
+                    tc.bonus_risultato_esatto,
+                    tc.antepost_attivo,
+                    tc.torneo_riferimento,
                     tp.partita_id,
                     tp.ordine,
                     tp.attiva AS visibile,
@@ -1526,7 +2080,11 @@ if (!function_exists('totocalcio_fetch_leaderboard')) {
                                     OR (p.gol_casa = p.gol_ospite AND pr.segno = 'X')
                                     OR (p.gol_casa < p.gol_ospite AND pr.segno = '2')
                                  ){$competitionFilterToken}
-                                THEN 1
+                                THEN CASE
+                                    WHEN p.gol_casa = p.gol_ospite
+                                        THEN COALESCE(tc.punti_esito_pareggio, 1)
+                                    ELSE 1
+                                END
                                 ELSE 0
                             END
                         ) AS punti_esito,
@@ -1539,7 +2097,7 @@ if (!function_exists('totocalcio_fetch_leaderboard')) {
                                  AND p.gol_ospite IS NOT NULL
                                  AND pr.gol_casa_previsti = p.gol_casa
                                  AND pr.gol_trasferta_previsti = p.gol_ospite{$competitionFilterToken}
-                                THEN 3
+                                THEN COALESCE(tc.bonus_risultato_esatto, 3)
                                 ELSE 0
                             END
                         ) AS punti_risultato,

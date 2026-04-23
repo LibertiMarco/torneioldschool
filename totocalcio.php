@@ -27,6 +27,14 @@ $errors = [];
 $matches = [];
 $leaderboard = [];
 $predictionMatrix = [];
+$drawOutcomePoints = 1;
+$exactBonusPoints = 3;
+$maxPointsPerMatch = 4;
+$antepostCategories = totocalcio_antepost_categories();
+$antepostTeams = [];
+$antepostPredictions = [];
+$antepostTournament = '';
+$supportsAntepost = false;
 $competitions = [];
 $selectedCompetition = null;
 $csrfKey = 'totocalcio_predictions';
@@ -137,6 +145,18 @@ if ($conn instanceof mysqli) {
                 $selectedCompetitionId = (int)($selectedCompetition['id'] ?? 0);
                 $hasSelectedCompetitionGrant = in_array($selectedCompetitionId, $grantedCompetitionIds, true);
                 $canParticipate = $hasTotocalcioFlag || $hasSelectedCompetitionGrant;
+                $drawOutcomePoints = totocalcio_competition_draw_points($selectedCompetition);
+                $exactBonusPoints = totocalcio_competition_exact_bonus($selectedCompetition);
+                $maxPointsPerMatch = max(1, $drawOutcomePoints) + $exactBonusPoints;
+                $supportsAntepost = totocalcio_competition_has_antepost($selectedCompetition);
+
+                if ($supportsAntepost) {
+                    $antepostTournament = totocalcio_resolve_competition_tournament($conn, $selectedCompetition);
+                    $antepostTeams = totocalcio_fetch_antepost_teams($conn, $selectedCompetition);
+                    if (!empty($antepostTeams)) {
+                        $antepostTournament = trim((string)($antepostTeams[0]['torneo'] ?? $antepostTournament));
+                    }
+                }
             }
         }
 
@@ -149,7 +169,53 @@ if ($conn instanceof mysqli) {
                 csrf_require($csrfKey);
 
                 $action = (string)($_POST['action'] ?? '');
-                if ($action === 'save_prediction') {
+                if ($action === 'save_antepost') {
+                    if (!$supportsAntepost) {
+                        $errors[] = 'Gli antepost non sono disponibili per questa competizione.';
+                    } elseif (empty($antepostTeams)) {
+                        $errors[] = 'Non ci sono squadre disponibili per gli antepost di questa competizione.';
+                    } else {
+                        $submittedChoices = $_POST['antepost_choices'] ?? [];
+                        $submittedChoices = is_array($submittedChoices) ? $submittedChoices : [];
+                        $allowedTeamNames = [];
+                        foreach ($antepostTeams as $team) {
+                            $teamName = trim((string)($team['nome'] ?? ''));
+                            if ($teamName !== '') {
+                                $allowedTeamNames[] = $teamName;
+                            }
+                        }
+
+                        $normalizedChoices = [];
+                        foreach ($antepostCategories as $categoryKey => $categoryLabel) {
+                            $selectedTeam = trim((string)($submittedChoices[$categoryKey] ?? ''));
+                            if ($selectedTeam === '') {
+                                $errors[] = 'Seleziona una squadra per "' . $categoryLabel . '".';
+                                continue;
+                            }
+
+                            $matchedTeam = null;
+                            foreach ($allowedTeamNames as $allowedTeam) {
+                                if (strcasecmp($allowedTeam, $selectedTeam) === 0) {
+                                    $matchedTeam = $allowedTeam;
+                                    break;
+                                }
+                            }
+
+                            if ($matchedTeam === null) {
+                                $errors[] = 'La squadra scelta per "' . $categoryLabel . '" non e valida.';
+                                continue;
+                            }
+
+                            $normalizedChoices[$categoryKey] = $matchedTeam;
+                        }
+
+                        if (empty($errors) && !totocalcio_save_antepost_predictions($conn, $selectedCompetitionId, $userId, $normalizedChoices)) {
+                            $errors[] = 'Impossibile salvare gli antepost. Riprova.';
+                        } elseif (empty($errors)) {
+                            $messages[] = 'Antepost salvati correttamente.';
+                        }
+                    }
+                } elseif ($action === 'save_prediction') {
                     $matchId = (int)($_POST['match_id'] ?? 0);
                     $sign = (string)($_POST['segno'] ?? '');
                     $predHome = totocalcio_page_parse_score($_POST['gol_casa_previsti'] ?? '', 'Gol casa previsti', $errors);
@@ -186,6 +252,9 @@ if ($conn instanceof mysqli) {
             $matches = totocalcio_fetch_matches($conn, true, $userId, $selectedCompetitionId);
             $leaderboard = totocalcio_fetch_leaderboard($conn, $selectedCompetitionId);
             $predictionMatrix = totocalcio_fetch_prediction_matrix($conn, $selectedCompetitionId);
+            if ($supportsAntepost) {
+                $antepostPredictions = totocalcio_fetch_user_antepost_predictions($conn, $selectedCompetitionId, $userId);
+            }
         }
     }
 }
@@ -354,12 +423,36 @@ $seo = [
     .status-pill.muted { background: #e2e8f0; color: #334155; }
     .prediction-form { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: end; }
     .field { display: flex; flex-direction: column; gap: 8px; color: #15293e; font-weight: 700; }
-    .field input[type="number"] {
+    .field input[type="number"],
+    .field select {
       width: 100%;
       padding: 11px 12px;
       border: 1px solid #d7dce5;
       border-radius: 10px;
       background: #fff;
+    }
+    .antepost-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .antepost-summary {
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border: 1px solid #dce4ef;
+      border-radius: 14px;
+      background: #f8fafc;
+    }
+    .antepost-summary strong,
+    .antepost-summary span { display: block; }
+    .antepost-summary span { margin-top: 5px; color: #64748b; font-size: 0.92rem; line-height: 1.45; }
+    .antepost-tournament {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #e8edf5;
+      color: #15293e;
+      font-weight: 800;
+      font-size: 0.84rem;
     }
     .sign-options { display: flex; gap: 10px; flex-wrap: wrap; }
     .sign-option {
@@ -456,6 +549,7 @@ $seo = [
     @media (max-width: 720px) {
       .stats-grid { grid-template-columns: 1fr; }
       .prediction-form { grid-template-columns: 1fr; }
+      .antepost-grid { grid-template-columns: 1fr; }
       .match-card__top, .competition-entry__top { flex-direction: column; }
       .leader-table { display: block; overflow-x: auto; white-space: nowrap; }
       .prediction-matrix__user { min-width: 180px; }
@@ -475,8 +569,16 @@ $seo = [
       <?php if ($canAccess): ?>
         <?php if ($selectedCompetition): ?>
           <p>Scegli il segno <strong>1</strong>, <strong>X</strong> o <strong>2</strong>, inserisci anche il risultato esatto e salva il tuo pronostico per ogni partita pubblicata per la competizione selezionata.</p>
-          <p>Regole punteggio: <strong>+1</strong> per l esito corretto, <strong>+3</strong> per il risultato esatto. Se prendi il risultato esatto fai <strong>4 punti totali</strong> sulla partita.</p>
-          <p>Usa i pulsanti qui sotto per passare da classifica generale, scelte della settimana e tabella completa dei pronostici di tutti i partecipanti.</p>
+          <p>
+            Regole punteggio:
+            <?php if ($drawOutcomePoints > 1): ?>
+              <strong>+1</strong> per l esito corretto, ma se indovini un pareggio fai <strong>+<?= $drawOutcomePoints ?></strong> sull esito <strong>X</strong>;
+            <?php else: ?>
+              <strong>+1</strong> per l esito corretto;
+            <?php endif; ?>
+            il risultato esatto vale <strong>+<?= $exactBonusPoints ?></strong>. Il massimo per partita e <strong><?= $maxPointsPerMatch ?> punti</strong>.
+          </p>
+          <p>Usa i pulsanti qui sotto per passare da classifica generale, scelte della settimana e tabella completa dei pronostici di tutti i partecipanti.<?php if ($supportsAntepost): ?> In piu trovi il tab antepost con le scelte su Regular Season, Coppa Gold, Coppa Silver e squadra capocannoniere.<?php endif; ?></p>
         <?php else: ?>
           <p>Qui trovi l elenco delle competizioni Totocalcio a cui puoi accedere. Scegline una per aprire schedina, pronostici e classifica dedicata.</p>
           <p>Ogni competizione mantiene partite e classifica separate. Il menu Totocalcio ora ti porta sempre prima a questa lista.</p>
@@ -582,6 +684,9 @@ $seo = [
       <button class="tab-button active" type="button" data-tab="totocalcio-classifica">Classifica</button>
       <button class="tab-button" type="button" data-tab="totocalcio-scelte">Scelte settimana</button>
       <button class="tab-button" type="button" data-tab="totocalcio-tabella">Tabella pronostici</button>
+      <?php if ($supportsAntepost): ?>
+        <button class="tab-button" type="button" data-tab="totocalcio-antepost">Antepost</button>
+      <?php endif; ?>
     </nav>
 
     <section id="totocalcio-classifica" class="tab-section active" data-tab-group="totocalcio">
@@ -592,8 +697,11 @@ $seo = [
 
         <ul class="rule-list" style="margin-bottom: 18px;">
           <li>Esito corretto: +1 punto.</li>
-          <li>Risultato esatto: +3 punti bonus.</li>
-          <li>Totale massimo per partita: 4 punti.</li>
+          <?php if ($drawOutcomePoints > 1): ?>
+            <li>Pareggio corretto: +<?= $drawOutcomePoints ?> punti.</li>
+          <?php endif; ?>
+          <li>Risultato esatto: +<?= $exactBonusPoints ?> punti bonus.</li>
+          <li>Totale massimo per partita: <?= $maxPointsPerMatch ?> punti.</li>
         </ul>
 
         <?php if (empty($competitions)): ?>
@@ -686,10 +794,10 @@ $seo = [
                   <div class="scored-box <?= $evaluation['punti_totali'] > 0 ? 'ok' : 'muted' ?>">
                     Punti assegnati: <strong><?= (int)$evaluation['punti_totali'] ?></strong>
                     <?php if ($evaluation['esito_corretto']): ?>
-                      | esito corretto +1
+                      | esito corretto +<?= (int)($evaluation['punti_esito'] ?? 0) ?>
                     <?php endif; ?>
                     <?php if ($evaluation['risultato_esatto']): ?>
-                      | risultato esatto +3
+                      | risultato esatto +<?= $exactBonusPoints ?>
                     <?php endif; ?>
                   </div>
                 <?php elseif (totocalcio_is_result_available($match) && $prediction === null): ?>
@@ -797,6 +905,66 @@ $seo = [
         <?php endif; ?>
       </div>
     </section>
+
+    <?php if ($supportsAntepost): ?>
+      <section id="totocalcio-antepost" class="tab-section" data-tab-group="totocalcio">
+        <div class="panel-card">
+          <span class="eyebrow">Antepost</span>
+          <h2>Scelte antepost</h2>
+          <p style="margin: 0 0 16px;">Qui puoi indicare le tue scelte fisse per l esito finale della competizione: vincente Regular Season, vincente Coppa Gold, vincente Coppa Silver e squadra capocannoniere.</p>
+
+          <?php if ($antepostTournament !== ''): ?>
+            <div class="antepost-tournament">Torneo collegato: <?= h($antepostTournament) ?></div>
+          <?php endif; ?>
+
+          <?php if (empty($antepostTeams)): ?>
+            <div class="warning-card" style="margin-top: 0;">Non riesco ancora a trovare l elenco squadre collegato a questa competizione. Verifica il torneo di riferimento e riprova.</div>
+          <?php else: ?>
+            <?php if (!empty($antepostPredictions)): ?>
+              <div class="antepost-summary">
+                <?php foreach ($antepostCategories as $categoryKey => $categoryLabel): ?>
+                  <?php if (!empty($antepostPredictions[$categoryKey])): ?>
+                    <strong><?= h($categoryLabel) ?></strong>
+                    <span><?= h($antepostPredictions[$categoryKey]) ?></span>
+                  <?php endif; ?>
+                <?php endforeach; ?>
+              </div>
+            <?php endif; ?>
+
+            <?php if ($canParticipate): ?>
+              <form method="POST">
+                <?= csrf_field($csrfKey) ?>
+                <input type="hidden" name="action" value="save_antepost">
+
+                <div class="antepost-grid">
+                  <?php foreach ($antepostCategories as $categoryKey => $categoryLabel): ?>
+                    <label class="field">
+                      <?= h($categoryLabel) ?>
+                      <select name="antepost_choices[<?= h($categoryKey) ?>]" required>
+                        <option value="">-- scegli una squadra --</option>
+                        <?php foreach ($antepostTeams as $team): ?>
+                          <?php $teamName = trim((string)($team['nome'] ?? '')); ?>
+                          <?php if ($teamName === '') { continue; } ?>
+                          <option value="<?= h($teamName) ?>" <?= ($antepostPredictions[$categoryKey] ?? '') === $teamName ? 'selected' : '' ?>>
+                            <?= h($teamName) ?><?= !empty($team['girone']) ? ' | Girone ' . h($team['girone']) : '' ?>
+                          </option>
+                        <?php endforeach; ?>
+                      </select>
+                    </label>
+                  <?php endforeach; ?>
+                </div>
+
+                <div class="match-actions" style="margin-top: 18px;">
+                  <button class="btn-primary" type="submit">Salva antepost</button>
+                </div>
+              </form>
+            <?php else: ?>
+              <div class="warning-card" style="margin-top: 0;">Puoi visualizzare gli antepost, ma per salvarli devi avere il Totocalcio attivo oppure un accesso assegnato alla competizione.</div>
+            <?php endif; ?>
+          <?php endif; ?>
+        </div>
+      </section>
+    <?php endif; ?>
   <?php endif; ?>
 </main>
 
