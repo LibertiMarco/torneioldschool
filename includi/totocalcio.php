@@ -1505,6 +1505,117 @@ if (!function_exists('totocalcio_fetch_user_antepost_predictions')) {
     }
 }
 
+if (!function_exists('totocalcio_fetch_competition_antepost_predictions')) {
+    function totocalcio_fetch_competition_antepost_predictions(mysqli $conn, int $competitionId): array
+    {
+        if ($competitionId <= 0 || !totocalcio_ensure_tables($conn)) {
+            return [];
+        }
+
+        $stmt = $conn->prepare(
+            "SELECT utente_id, categoria, scelta
+             FROM totocalcio_antepost_pronostici
+             WHERE competizione_id = ?
+             ORDER BY utente_id ASC, categoria ASC"
+        );
+
+        if (!$stmt) {
+            return [];
+        }
+
+        $stmt->bind_param('i', $competitionId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $matrix = [];
+
+        if ($result instanceof mysqli_result) {
+            while ($row = $result->fetch_assoc()) {
+                $userId = (int)($row['utente_id'] ?? 0);
+                $category = (string)($row['categoria'] ?? '');
+                if ($userId <= 0 || $category === '') {
+                    continue;
+                }
+
+                $matrix[$userId][$category] = (string)($row['scelta'] ?? '');
+            }
+            $result->close();
+        }
+
+        $stmt->close();
+
+        return $matrix;
+    }
+}
+
+if (!function_exists('totocalcio_fetch_first_match_start')) {
+    function totocalcio_fetch_first_match_start(mysqli $conn, int $competitionId): ?DateTimeImmutable
+    {
+        if ($competitionId <= 0 || !totocalcio_ensure_tables($conn)) {
+            return null;
+        }
+
+        $stmt = $conn->prepare(
+            "SELECT p.data_partita, p.ora_partita
+             FROM totocalcio_partite tp
+             INNER JOIN totocalcio_competizioni tc
+                ON tc.id = tp.competizione_id
+             INNER JOIN partite p
+                ON p.id = tp.partita_id
+             WHERE tp.competizione_id = ?
+               AND tp.attiva = 1
+               AND tc.attiva = 1
+             ORDER BY
+                CASE WHEN p.data_partita IS NULL THEN 1 ELSE 0 END ASC,
+                p.data_partita ASC,
+                CASE WHEN p.ora_partita IS NULL THEN 1 ELSE 0 END ASC,
+                p.ora_partita ASC,
+                tp.ordine ASC,
+                tp.id ASC
+             LIMIT 1"
+        );
+
+        if (!$stmt) {
+            return null;
+        }
+
+        $stmt->bind_param('i', $competitionId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result ? $result->fetch_assoc() : null;
+        if ($result instanceof mysqli_result) {
+            $result->close();
+        }
+        $stmt->close();
+
+        if (!$row || empty($row['data_partita'])) {
+            return null;
+        }
+
+        $timeValue = trim((string)($row['ora_partita'] ?? ''));
+        if ($timeValue === '') {
+            $timeValue = '00:00:00';
+        }
+
+        $timezone = new DateTimeZone('Europe/Rome');
+        $dateTime = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $row['data_partita'] . ' ' . $timeValue, $timezone);
+
+        return $dateTime instanceof DateTimeImmutable ? $dateTime : null;
+    }
+}
+
+if (!function_exists('totocalcio_antepost_is_open')) {
+    function totocalcio_antepost_is_open(mysqli $conn, int $competitionId): bool
+    {
+        $firstMatchStart = totocalcio_fetch_first_match_start($conn, $competitionId);
+        if (!$firstMatchStart instanceof DateTimeImmutable) {
+            return true;
+        }
+
+        $now = new DateTimeImmutable('now', new DateTimeZone('Europe/Rome'));
+        return $now < $firstMatchStart;
+    }
+}
+
 if (!function_exists('totocalcio_save_antepost_predictions')) {
     function totocalcio_save_antepost_predictions(mysqli $conn, int $competitionId, int $userId, array $choices): bool
     {

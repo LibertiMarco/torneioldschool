@@ -33,9 +33,13 @@ $maxPointsPerMatch = 4;
 $antepostCategories = totocalcio_antepost_categories();
 $antepostTeams = [];
 $antepostPredictions = [];
+$antepostPredictionMatrix = [];
 $antepostTournament = '';
 $supportsAntepost = false;
+$antepostIsOpen = true;
+$antepostFirstMatchStart = null;
 $savedPredictionsCount = 0;
+$matchesByGiornata = [];
 $competitions = [];
 $selectedCompetition = null;
 $csrfKey = 'totocalcio_predictions';
@@ -112,6 +116,28 @@ function totocalcio_page_match_result_label(array $match): string
     return (int)($match['gol_casa_reale'] ?? 0) . ' - ' . (int)($match['gol_trasferta_reale'] ?? 0);
 }
 
+function totocalcio_page_group_matches_by_giornata(array $matches): array
+{
+    $groups = [];
+
+    foreach ($matches as $match) {
+        $giornata = $match['giornata'] ?? null;
+        $hasGiornata = $giornata !== null && $giornata !== '';
+        $groupKey = $hasGiornata ? 'giornata-' . (int)$giornata : 'senza-giornata';
+
+        if (!isset($groups[$groupKey])) {
+            $groups[$groupKey] = [
+                'label' => $hasGiornata ? 'Giornata ' . (int)$giornata : 'Partite senza giornata',
+                'matches' => [],
+            ];
+        }
+
+        $groups[$groupKey]['matches'][] = $match;
+    }
+
+    return array_values($groups);
+}
+
 if ($conn instanceof mysqli) {
     $conn->set_charset('utf8mb4');
 
@@ -154,6 +180,8 @@ if ($conn instanceof mysqli) {
                 if ($supportsAntepost) {
                     $antepostTournament = totocalcio_resolve_competition_tournament($conn, $selectedCompetition);
                     $antepostTeams = totocalcio_fetch_antepost_teams($conn, $selectedCompetition);
+                    $antepostFirstMatchStart = totocalcio_fetch_first_match_start($conn, $selectedCompetitionId);
+                    $antepostIsOpen = totocalcio_antepost_is_open($conn, $selectedCompetitionId);
                     if (!empty($antepostTeams)) {
                         $antepostTournament = trim((string)($antepostTeams[0]['torneo'] ?? $antepostTournament));
                     }
@@ -173,6 +201,8 @@ if ($conn instanceof mysqli) {
                 if ($action === 'save_antepost') {
                     if (!$supportsAntepost) {
                         $errors[] = 'Gli antepost non sono disponibili per questa competizione.';
+                    } elseif (!$antepostIsOpen) {
+                        $errors[] = 'Gli antepost sono bloccati: la prima partita della competizione e gia iniziata.';
                     } elseif (empty($antepostTeams)) {
                         $errors[] = 'Non ci sono squadre disponibili per gli antepost di questa competizione.';
                     } else {
@@ -251,10 +281,12 @@ if ($conn instanceof mysqli) {
 
         if ($selectedCompetitionId > 0) {
             $matches = totocalcio_fetch_matches($conn, true, $userId, $selectedCompetitionId);
+            $matchesByGiornata = totocalcio_page_group_matches_by_giornata($matches);
             $leaderboard = totocalcio_fetch_leaderboard($conn, $selectedCompetitionId);
             $predictionMatrix = totocalcio_fetch_prediction_matrix($conn, $selectedCompetitionId);
             if ($supportsAntepost) {
                 $antepostPredictions = totocalcio_fetch_user_antepost_predictions($conn, $selectedCompetitionId, $userId);
+                $antepostPredictionMatrix = totocalcio_fetch_competition_antepost_predictions($conn, $selectedCompetitionId);
             }
             foreach ($matches as $matchRow) {
                 if (!empty($matchRow['user_segno'])) {
@@ -328,6 +360,7 @@ $seo = [
     .hero-card h1 { margin: 0 0 10px; color: #15293e; font-size: 2.1rem; }
     .hero-card p { margin: 0 0 10px; color: #4c5b71; line-height: 1.6; }
     .hero-grid { display: grid; grid-template-columns: 1.25fr 0.95fr; gap: 18px; margin-bottom: 20px; }
+    .hero-grid > * { min-width: 0; }
     .stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
     .stat-box {
       border-radius: 16px;
@@ -512,10 +545,29 @@ $seo = [
     .leader-table th, .leader-table td { padding: 12px 10px; border-bottom: 1px solid #e5eaf0; text-align: left; }
     .leader-table th { background: #f8fafc; color: #15293e; }
     .leader-table td:last-child, .leader-table th:last-child { text-align: right; }
-    .totocalcio-tabs { margin-bottom: 18px; }
-    .tab-section > .panel-card { margin-top: 0; }
+    .totocalcio-tabs {
+      margin-bottom: 18px;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .totocalcio-tabs .tab-button {
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+    .tab-section { min-width: 0; }
+    .tab-section > .panel-card { margin-top: 0; min-width: 0; overflow: hidden; }
+    .prediction-group { margin-top: 18px; }
+    .prediction-group:first-child { margin-top: 0; }
+    .prediction-group__title {
+      margin: 0 0 10px;
+      color: #15293e;
+      font-size: 1rem;
+    }
     .prediction-matrix-wrap {
       overflow-x: auto;
+      max-width: 100%;
       border: 1px solid #dce4ef;
       border-radius: 16px;
       background: #fff;
@@ -572,6 +624,31 @@ $seo = [
       color: #94a3b8;
       font-weight: 800;
     }
+    .antepost-table-wrap {
+      overflow-x: auto;
+      max-width: 100%;
+      margin-top: 18px;
+      border: 1px solid #dce4ef;
+      border-radius: 16px;
+      background: #fff;
+    }
+    .antepost-table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+    }
+    .antepost-table th,
+    .antepost-table td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #e5eaf0;
+      text-align: left;
+      vertical-align: top;
+    }
+    .antepost-table th {
+      background: #f8fafc;
+      color: #15293e;
+    }
+    .antepost-table tbody tr:last-child td { border-bottom: 0; }
     .empty-state { margin: 0; color: #64748b; }
     @media (max-width: 980px) {
       .hero-grid, .section-grid { grid-template-columns: 1fr; }
@@ -582,6 +659,7 @@ $seo = [
       .prediction-form { grid-template-columns: 1fr; }
       .antepost-grid { grid-template-columns: 1fr; }
       .hero-card--compact { padding: 18px 18px 14px; }
+      .totocalcio-tabs { gap: 8px; }
       .competition-switcher.compact .competition-pill {
         width: 100%;
         justify-content: space-between;
@@ -904,56 +982,63 @@ $seo = [
       <div class="panel-card">
         <span class="eyebrow">Pronostici</span>
         <h2>Tabella completa delle scelte</h2>
-        <p style="margin: 0 0 16px;">Per ogni partecipante vedi in un colpo solo il segno scelto e il risultato esatto previsto su ogni partita pubblicata della competizione.</p>
+        <p style="margin: 0 0 16px;">Le scelte sono divise per giornata: in ogni tabella trovi i partecipanti sulle righe e le partite di quella giornata sulle colonne.</p>
 
         <?php if (empty($matches)): ?>
           <p class="empty-state">Non ci sono ancora partite visibili da mostrare nella tabella.</p>
         <?php elseif (empty($leaderboard)): ?>
           <p class="empty-state">Non ci sono ancora partecipanti da mostrare nella tabella.</p>
         <?php else: ?>
-          <div class="prediction-matrix-wrap">
-            <table class="prediction-matrix">
-              <thead>
-                <tr>
-                  <th class="prediction-matrix__user">Partecipante</th>
-                  <?php foreach ($matches as $match): ?>
-                    <th class="prediction-matrix__match">
-                      <strong><?= h($match['squadra_casa']) ?> vs <?= h($match['squadra_trasferta']) ?></strong>
-                      <span class="prediction-matrix__meta"><?= h(totocalcio_page_datetime_label($match['data_partita'] ?? null, $match['ora_partita'] ?? null)) ?></span>
-                      <span class="prediction-matrix__meta">Ufficiale: <?= h(totocalcio_page_match_result_label($match)) ?></span>
-                    </th>
-                  <?php endforeach; ?>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($leaderboard as $row): ?>
-                  <?php
-                    $rowUserId = (int)($row['id'] ?? 0);
-                    $userPredictions = $predictionMatrix[$rowUserId] ?? [];
-                  ?>
-                  <tr>
-                    <td class="prediction-matrix__user">
-                      <strong><?= h($row['display_name']) ?><?= $rowUserId === $userId ? ' (tu)' : '' ?></strong>
-                      <span><?= (int)($row['punti_totali'] ?? 0) ?> punti | <?= (int)($row['risultati_esatti'] ?? 0) ?> esatti</span>
-                    </td>
-                    <?php foreach ($matches as $match): ?>
-                      <?php $cellPrediction = $userPredictions[(int)($match['id'] ?? 0)] ?? null; ?>
-                      <td>
-                        <?php if (is_array($cellPrediction)): ?>
-                          <div class="prediction-matrix__cell">
-                            <strong><?= h($cellPrediction['segno'] ?? '') ?></strong>
-                            <span><?= (int)($cellPrediction['gol_casa_previsti'] ?? 0) ?> - <?= (int)($cellPrediction['gol_trasferta_previsti'] ?? 0) ?></span>
-                          </div>
-                        <?php else: ?>
-                          <div class="prediction-matrix__cell empty">-</div>
-                        <?php endif; ?>
-                      </td>
+          <?php foreach ($matchesByGiornata as $group): ?>
+            <?php $groupMatches = $group['matches'] ?? []; ?>
+            <?php if (empty($groupMatches)): continue; endif; ?>
+            <div class="prediction-group">
+              <h3 class="prediction-group__title"><?= h($group['label'] ?? 'Giornata') ?></h3>
+              <div class="prediction-matrix-wrap">
+                <table class="prediction-matrix">
+                  <thead>
+                    <tr>
+                      <th class="prediction-matrix__user">Partecipante</th>
+                      <?php foreach ($groupMatches as $match): ?>
+                        <th class="prediction-matrix__match">
+                          <strong><?= h($match['squadra_casa']) ?> vs <?= h($match['squadra_trasferta']) ?></strong>
+                          <span class="prediction-matrix__meta"><?= h(totocalcio_page_datetime_label($match['data_partita'] ?? null, $match['ora_partita'] ?? null)) ?></span>
+                          <span class="prediction-matrix__meta">Ufficiale: <?= h(totocalcio_page_match_result_label($match)) ?></span>
+                        </th>
+                      <?php endforeach; ?>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php foreach ($leaderboard as $row): ?>
+                      <?php
+                        $rowUserId = (int)($row['id'] ?? 0);
+                        $userPredictions = $predictionMatrix[$rowUserId] ?? [];
+                      ?>
+                      <tr>
+                        <td class="prediction-matrix__user">
+                          <strong><?= h($row['display_name']) ?><?= $rowUserId === $userId ? ' (tu)' : '' ?></strong>
+                          <span><?= (int)($row['punti_totali'] ?? 0) ?> punti | <?= (int)($row['risultati_esatti'] ?? 0) ?> esatti</span>
+                        </td>
+                        <?php foreach ($groupMatches as $match): ?>
+                          <?php $cellPrediction = $userPredictions[(int)($match['id'] ?? 0)] ?? null; ?>
+                          <td>
+                            <?php if (is_array($cellPrediction)): ?>
+                              <div class="prediction-matrix__cell">
+                                <strong><?= h($cellPrediction['segno'] ?? '') ?></strong>
+                                <span><?= (int)($cellPrediction['gol_casa_previsti'] ?? 0) ?> - <?= (int)($cellPrediction['gol_trasferta_previsti'] ?? 0) ?></span>
+                              </div>
+                            <?php else: ?>
+                              <div class="prediction-matrix__cell empty">-</div>
+                            <?php endif; ?>
+                          </td>
+                        <?php endforeach; ?>
+                      </tr>
                     <?php endforeach; ?>
-                  </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          <?php endforeach; ?>
         <?php endif; ?>
       </div>
     </section>
@@ -972,6 +1057,16 @@ $seo = [
           <?php if (empty($antepostTeams)): ?>
             <div class="warning-card" style="margin-top: 0;">Non riesco ancora a trovare l elenco squadre collegato a questa competizione. Verifica il torneo di riferimento e riprova.</div>
           <?php else: ?>
+            <?php if ($antepostFirstMatchStart instanceof DateTimeImmutable): ?>
+              <div class="warning-card" style="margin-top: 0; margin-bottom: 14px;">
+                <?php if ($antepostIsOpen): ?>
+                  Gli antepost sono modificabili fino all inizio della prima partita della competizione: <strong><?= h($antepostFirstMatchStart->format('d/m/Y H:i')) ?></strong>.
+                <?php else: ?>
+                  Gli antepost sono bloccati dall inizio della prima partita della competizione: <strong><?= h($antepostFirstMatchStart->format('d/m/Y H:i')) ?></strong>.
+                <?php endif; ?>
+              </div>
+            <?php endif; ?>
+
             <?php if (!empty($antepostPredictions)): ?>
               <div class="antepost-summary">
                 <?php foreach ($antepostCategories as $categoryKey => $categoryLabel): ?>
@@ -983,7 +1078,7 @@ $seo = [
               </div>
             <?php endif; ?>
 
-            <?php if ($canParticipate): ?>
+            <?php if ($canParticipate && $antepostIsOpen): ?>
               <form method="POST">
                 <?= csrf_field($csrfKey) ?>
                 <input type="hidden" name="action" value="save_antepost">
@@ -1010,9 +1105,52 @@ $seo = [
                   <button class="btn-primary" type="submit">Salva antepost</button>
                 </div>
               </form>
+            <?php elseif ($canParticipate): ?>
+              <div class="warning-card" style="margin-top: 0;">Le scelte antepost non sono piu modificabili perche la prima partita della competizione e gia iniziata.</div>
             <?php else: ?>
               <div class="warning-card" style="margin-top: 0;">Puoi visualizzare gli antepost, ma per salvarli devi avere il Totocalcio attivo oppure un accesso assegnato alla competizione.</div>
             <?php endif; ?>
+
+            <?php
+              $antepostRows = [];
+              foreach ($leaderboard as $row) {
+                  $rowUserId = (int)($row['id'] ?? 0);
+                  if (!empty($antepostPredictionMatrix[$rowUserId])) {
+                      $antepostRows[] = $row;
+                  }
+              }
+            ?>
+
+            <div class="antepost-table-wrap">
+              <?php if (empty($antepostRows)): ?>
+                <div style="padding: 16px; color: #64748b;">Nessun partecipante ha ancora salvato gli antepost.</div>
+              <?php else: ?>
+                <table class="antepost-table">
+                  <thead>
+                    <tr>
+                      <th>Partecipante</th>
+                      <?php foreach ($antepostCategories as $categoryLabel): ?>
+                        <th><?= h($categoryLabel) ?></th>
+                      <?php endforeach; ?>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php foreach ($antepostRows as $row): ?>
+                      <?php
+                        $rowUserId = (int)($row['id'] ?? 0);
+                        $rowAntepost = $antepostPredictionMatrix[$rowUserId] ?? [];
+                      ?>
+                      <tr>
+                        <td><strong><?= h($row['display_name']) ?><?= $rowUserId === $userId ? ' (tu)' : '' ?></strong></td>
+                        <?php foreach ($antepostCategories as $categoryKey => $categoryLabel): ?>
+                          <td><?= h($rowAntepost[$categoryKey] ?? '-') ?></td>
+                        <?php endforeach; ?>
+                      </tr>
+                    <?php endforeach; ?>
+                  </tbody>
+                </table>
+              <?php endif; ?>
+            </div>
           <?php endif; ?>
         </div>
       </section>
