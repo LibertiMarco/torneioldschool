@@ -359,11 +359,12 @@ $lista = $utente->getAll();
             <select id="crea_ruolo" name="ruolo" required>
               <option value="user">Utente</option>
               <option value="admin">Amministratore</option>
+              <option value="sysadmin">Sysadmin</option>
             </select>
 
             <div class="feature-flags-box">
               <h3>Funzioni nascoste</h3>
-              <p>Attiva qui le voci speciali che devono comparire nel menu utente. Gli admin le vedono sempre.</p>
+              <p>Attiva qui le voci speciali che devono comparire nel menu utente. Admin e sysadmin le vedono sempre.</p>
               <?php foreach ($featureDefinitions as $featureKey => $featureConfig): ?>
                 <label class="feature-flag-option">
                   <input type="checkbox" name="feature_flags[]" value="<?= htmlspecialchars($featureKey) ?>">
@@ -401,11 +402,12 @@ $lista = $utente->getAll();
           <select name="ruolo" id="mod_ruolo" required>
             <option value="user">Utente</option>
             <option value="admin">Amministratore</option>
+            <option value="sysadmin">Sysadmin</option>
           </select>
         </div>
         <div class="feature-flags-box">
           <h3>Funzioni nascoste</h3>
-          <p>Le voci attive compariranno nel menu del singolo utente; per gli admin resteranno sempre visibili.</p>
+          <p>Le voci attive compariranno nel menu del singolo utente; per admin e sysadmin resteranno sempre visibili.</p>
           <?php foreach ($featureDefinitions as $featureKey => $featureConfig): ?>
             <label class="feature-flag-option">
               <input type="checkbox" name="feature_flags[]" value="<?= htmlspecialchars($featureKey) ?>">

@@ -14,9 +14,11 @@ require_once __DIR__ . '/includi/totocalcio.php';
 
 $userId = (int)$_SESSION['user_id'];
 $userRole = (string)($_SESSION['ruolo'] ?? 'user');
+$isSysadmin = $userRole === 'sysadmin';
+$hasAdminAccess = user_has_admin_access($userRole);
 $userFlags = load_user_feature_flags($conn, $userId);
 $hasTotocalcioFlag = user_feature_enabled($userFlags, 'totocalcio');
-$canAccess = $userRole === 'admin' || $hasTotocalcioFlag;
+$canAccess = $hasAdminAccess || $hasTotocalcioFlag;
 $canParticipate = $hasTotocalcioFlag;
 $messages = [];
 $errors = [];
@@ -100,12 +102,17 @@ if ($conn instanceof mysqli) {
         $errors[] = 'Il Totocalcio non e disponibile in questo momento.';
     } else {
         $requestedCompetitionSlug = trim((string)($_GET['competizione'] ?? ''));
-        $competitions = totocalcio_fetch_competitions($conn, true);
-        $selectedCompetition = totocalcio_page_find_competition($competitions, $requestedCompetitionSlug);
-        $selectedCompetitionId = (int)($selectedCompetition['id'] ?? 0);
+        $competitions = totocalcio_fetch_competitions($conn, !$isSysadmin);
+        $selectedCompetitionId = 0;
 
-        if ($requestedCompetitionSlug !== '' && $selectedCompetition && (string)$selectedCompetition['slug'] !== $requestedCompetitionSlug) {
-            $errors[] = 'La competizione richiesta non e disponibile.';
+        if ($requestedCompetitionSlug !== '') {
+            $selectedCompetition = totocalcio_page_find_competition($competitions, $requestedCompetitionSlug);
+            if (!$selectedCompetition || (string)$selectedCompetition['slug'] !== $requestedCompetitionSlug) {
+                $selectedCompetition = null;
+                $errors[] = 'La competizione richiesta non e disponibile.';
+            } else {
+                $selectedCompetitionId = (int)($selectedCompetition['id'] ?? 0);
+            }
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
@@ -155,6 +162,12 @@ if ($conn instanceof mysqli) {
             $leaderboard = totocalcio_fetch_leaderboard($conn, $selectedCompetitionId);
         }
     }
+}
+
+$accessibleCompetitionCount = count($competitions);
+$accessibleMatchCount = 0;
+foreach ($competitions as $competition) {
+    $accessibleMatchCount += (int)($competition['total_matches'] ?? 0);
 }
 
 $myRank = null;
@@ -258,6 +271,32 @@ $seo = [
       border-color: #15293e;
     }
     .competition-pill small { font-size: 0.78rem; opacity: 0.82; }
+    .competition-overview {
+      display: grid;
+      gap: 14px;
+    }
+    .competition-entry {
+      border: 1px solid #dce4ef;
+      border-radius: 16px;
+      padding: 18px;
+      background: #f8fafc;
+    }
+    .competition-entry__top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .competition-entry__title { margin: 0 0 6px; color: #15293e; font-size: 1.1rem; }
+    .competition-entry__meta { margin: 0; color: #64748b; font-size: 0.94rem; }
+    .competition-entry__actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
     .section-grid { display: grid; grid-template-columns: 1.35fr 0.95fr; gap: 18px; align-items: start; }
     .panel-card h2, .panel-card h3 { margin: 0 0 12px; color: #15293e; }
     .panel-card p { color: #4c5b71; line-height: 1.55; }
@@ -327,7 +366,7 @@ $seo = [
     @media (max-width: 720px) {
       .stats-grid { grid-template-columns: 1fr; }
       .prediction-form { grid-template-columns: 1fr; }
-      .match-card__top { flex-direction: column; }
+      .match-card__top, .competition-entry__top { flex-direction: column; }
       .leader-table { display: block; overflow-x: auto; white-space: nowrap; }
     }
   </style>
@@ -339,17 +378,22 @@ $seo = [
   <section class="hero-grid">
     <article class="hero-card">
       <span class="eyebrow">Pronostici</span>
-      <h1><?= h($selectedCompetitionName) ?></h1>
+      <h1><?= h($selectedCompetition ? $selectedCompetitionName : 'Totocalcio') ?></h1>
 
       <?php if ($canAccess): ?>
-        <p>Scegli il segno <strong>1</strong>, <strong>X</strong> o <strong>2</strong>, inserisci anche il risultato esatto e salva il tuo pronostico per ogni partita pubblicata per la competizione selezionata.</p>
-        <p>Regole punteggio: <strong>+1</strong> per l esito corretto, <strong>+3</strong> per il risultato esatto. Se prendi il risultato esatto fai <strong>4 punti totali</strong> sulla partita.</p>
-
-        <?php if (!$canParticipate): ?>
-          <div class="warning-card">Il tuo account puo entrare qui solo perche sei admin, ma per partecipare devi avere il flag Totocalcio attivo.</div>
+        <?php if ($selectedCompetition): ?>
+          <p>Scegli il segno <strong>1</strong>, <strong>X</strong> o <strong>2</strong>, inserisci anche il risultato esatto e salva il tuo pronostico per ogni partita pubblicata per la competizione selezionata.</p>
+          <p>Regole punteggio: <strong>+1</strong> per l esito corretto, <strong>+3</strong> per il risultato esatto. Se prendi il risultato esatto fai <strong>4 punti totali</strong> sulla partita.</p>
+        <?php else: ?>
+          <p>Qui trovi l elenco delle competizioni Totocalcio a cui puoi accedere. Scegline una per aprire schedina, pronostici e classifica dedicata.</p>
+          <p>Ogni competizione mantiene partite e classifica separate. Il menu Totocalcio ora ti porta sempre prima a questa lista.</p>
         <?php endif; ?>
 
-        <?php if (!empty($competitions)): ?>
+        <?php if (!$canParticipate): ?>
+          <div class="warning-card">Il tuo account puo entrare qui solo perche hai privilegi di amministrazione, ma per partecipare devi avere il flag Totocalcio attivo.</div>
+        <?php endif; ?>
+
+        <?php if ($selectedCompetition && !empty($competitions)): ?>
           <div class="competition-switcher">
             <?php foreach ($competitions as $competition): ?>
               <?php
@@ -373,16 +417,16 @@ $seo = [
       <h3>Riepilogo rapido</h3>
       <div class="stats-grid">
         <div class="stat-box">
-          <strong><?= (int)count($matches) ?></strong>
-          <span>Partite pubblicate</span>
+          <strong><?= $selectedCompetition ? (int)count($matches) : $accessibleCompetitionCount ?></strong>
+          <span><?= $selectedCompetition ? 'Partite pubblicate' : 'Competizioni accessibili' ?></span>
         </div>
         <div class="stat-box">
-          <strong><?= $myRow ? (int)$myRow['punti_totali'] : 0 ?></strong>
-          <span>Punti nella competizione</span>
+          <strong><?= $selectedCompetition ? ($myRow ? (int)$myRow['punti_totali'] : 0) : $accessibleMatchCount ?></strong>
+          <span><?= $selectedCompetition ? 'Punti nella competizione' : 'Partite totali visibili' ?></span>
         </div>
         <div class="stat-box">
-          <strong><?= $myRank ?? '-' ?></strong>
-          <span>Posizione in classifica</span>
+          <strong><?= $selectedCompetition ? ($myRank ?? '-') : ($canParticipate ? 'SI' : 'NO') ?></strong>
+          <span><?= $selectedCompetition ? 'Posizione in classifica' : 'Pronostici abilitati' ?></span>
         </div>
       </div>
     </aside>
@@ -395,6 +439,45 @@ $seo = [
     <div class="msg err"><?= h($error) ?></div>
   <?php endforeach; ?>
 
+  <?php if ($selectedCompetition === null): ?>
+    <section class="panel-card">
+      <span class="eyebrow">Competizioni</span>
+      <h2>Lista Totocalcio accessibili</h2>
+      <p style="margin: 0 0 16px;">Seleziona una competizione per entrare nella sua area dedicata.<?php if ($isSysadmin): ?> Come sysadmin vedi anche le competizioni non pubbliche.<?php endif; ?></p>
+
+      <?php if (empty($competitions)): ?>
+        <p class="empty-state">Non hai competizioni Totocalcio disponibili in questo momento.</p>
+      <?php else: ?>
+        <div class="competition-overview">
+          <?php foreach ($competitions as $competition): ?>
+            <?php
+              $competitionSlug = (string)($competition['slug'] ?? '');
+              $competitionIsActive = !empty($competition['attiva']);
+            ?>
+            <article class="competition-entry">
+              <div class="competition-entry__top">
+                <div>
+                  <h3 class="competition-entry__title"><?= h($competition['nome']) ?></h3>
+                  <p class="competition-entry__meta">Partite: <?= (int)($competition['total_matches'] ?? 0) ?> | Partite attive: <?= (int)($competition['active_matches'] ?? 0) ?> | Pronostici salvati: <?= (int)($competition['total_predictions'] ?? 0) ?></p>
+                </div>
+
+                <div class="pill-row">
+                  <span class="status-pill <?= $competitionIsActive ? 'ok' : 'muted' ?>">
+                    <?= $competitionIsActive ? 'Pubblica' : 'Nascosta' ?>
+                  </span>
+                </div>
+              </div>
+
+              <div class="competition-entry__actions">
+                <a class="btn-primary" href="<?= h(totocalcio_page_competition_url($competitionSlug)) ?>">Apri competizione</a>
+                <span class="helper-text">URL: <code>/totocalcio.php?competizione=<?= h($competitionSlug) ?></code></span>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </section>
+  <?php else: ?>
   <section class="section-grid">
     <div class="panel-card">
       <span class="eyebrow">Schedina</span>
@@ -550,6 +633,7 @@ $seo = [
       <?php endif; ?>
     </div>
   </section>
+  <?php endif; ?>
 </main>
 
 <div id="footer-container"></div>

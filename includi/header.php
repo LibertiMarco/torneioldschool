@@ -6,6 +6,7 @@ $isLoggedIn = isset($_SESSION['user_id']);
 $userFeatureFlags = normalize_user_feature_flags([]);
 $featureDefinitions = user_feature_definitions();
 $sessionRole = $_SESSION['ruolo'] ?? 'user';
+$hasAdminAccess = user_has_admin_access((string)$sessionRole);
 
 $hasPlayerProfile = false;
 if ($isLoggedIn) {
@@ -109,7 +110,7 @@ if (!empty($sessionAvatar)) {
                       <?php endif; ?>
 
                       <?php foreach ($featureDefinitions as $featureKey => $featureConfig): ?>
-                          <?php $isFeatureVisible = $sessionRole === 'admin' || user_feature_enabled($userFeatureFlags, $featureKey); ?>
+                          <?php $isFeatureVisible = $hasAdminAccess || user_feature_enabled($userFeatureFlags, $featureKey); ?>
                           <?php if ($isFeatureVisible): ?>
                               <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path($featureConfig['path'])) ?>">
                                   <span><?= htmlspecialchars($featureConfig['menu_label']) ?></span>
@@ -117,7 +118,7 @@ if (!empty($sessionAvatar)) {
                           <?php endif; ?>
                       <?php endforeach; ?>
 
-                      <?php if ($sessionRole === 'admin'): ?>
+                      <?php if ($hasAdminAccess): ?>
                           <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/admin_dashboard.php')) ?>">
                               <span>Gestione Sito</span>
                           </a>

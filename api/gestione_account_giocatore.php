@@ -213,7 +213,7 @@ if (!$conn || $conn->connect_error) {
   <main class="admin-wrapper">
     <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
     <h1>Associa account a giocatore</h1>
-    <p>Solo gli admin possono collegare un profilo utente a un giocatore del database.</p>
+    <p>Solo admin e sysadmin possono collegare un profilo utente a un giocatore del database.</p>
 
     <?php foreach ($messages as $m): ?>
       <div class="msg ok"><?= h($m) ?></div>

@@ -166,6 +166,13 @@ if (!function_exists('user_feature_enabled')) {
     }
 }
 
+if (!function_exists('user_has_admin_access')) {
+    function user_has_admin_access(string $role): bool
+    {
+        return in_array(trim($role), ['admin', 'sysadmin'], true);
+    }
+}
+
 if (!function_exists('user_can_access_feature')) {
     function user_can_access_feature(mysqli $conn, int $userId, string $role, string $featureKey): bool
     {
@@ -174,7 +181,7 @@ if (!function_exists('user_can_access_feature')) {
             return false;
         }
 
-        if ($role === 'admin') {
+        if (user_has_admin_access($role)) {
             return true;
         }
 

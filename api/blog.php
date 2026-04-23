@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/user_features.php';
 header('Content-Type: application/json; charset=utf-8');
 
 $azione = $_GET['azione'] ?? '';
@@ -128,7 +129,7 @@ if ($azione === 'articolo' && isset($_GET['id'])) {
 if ($azione === 'commenti' && isset($_GET['id'])) {
     $postId = (int)$_GET['id'];
     $currentUserId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
-    $isAdmin = isset($_SESSION['ruolo']) && $_SESSION['ruolo'] === 'admin';
+    $isAdmin = user_has_admin_access((string)($_SESSION['ruolo'] ?? ''));
 
     $stmt = $conn->prepare(
         "SELECT c.id,
@@ -209,7 +210,7 @@ if ($azione === 'commenti_elimina' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $check->close();
 
     $currentUserId = (int)$_SESSION['user_id'];
-    $isAdmin = isset($_SESSION['ruolo']) && $_SESSION['ruolo'] === 'admin';
+    $isAdmin = user_has_admin_access((string)($_SESSION['ruolo'] ?? ''));
     if (!$isAdmin && $ownerId !== $currentUserId) {
         json_response(['error' => 'Non hai i permessi per eliminare questo commento.'], 403);
     }

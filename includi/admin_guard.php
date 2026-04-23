@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/security.php';
+require_once __DIR__ . '/user_features.php';
 
 $currentPath = $_SERVER['REQUEST_URI'] ?? '/admin_dashboard.php';
 
@@ -10,8 +11,8 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Solo admin
-if (($_SESSION['ruolo'] ?? '') !== 'admin') {
+// Solo admin o sysadmin
+if (!user_has_admin_access((string)($_SESSION['ruolo'] ?? ''))) {
     header('Location: ' . login_with_base_path('/index.php'));
     exit;
 }

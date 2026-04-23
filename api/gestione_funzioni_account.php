@@ -116,7 +116,7 @@ if ($conn instanceof mysqli) {
   <main class="admin-wrapper">
     <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
     <h1 class="admin-title">Funzioni account</h1>
-    <p style="margin: 0 0 18px; color: #475569;">Abilita o disabilita piu funzioni per ogni account. Gli admin vedono comunque sempre tutte le funzioni nascoste.</p>
+    <p style="margin: 0 0 18px; color: #475569;">Abilita o disabilita piu funzioni per ogni account. Admin e sysadmin vedono comunque sempre tutte le funzioni nascoste.</p>
 
     <?php foreach ($messages as $message): ?>
       <div class="msg ok"><?= h($message) ?></div>
