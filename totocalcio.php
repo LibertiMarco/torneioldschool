@@ -671,6 +671,74 @@ $seo = [
     }
     .antepost-table tbody tr:last-child td { border-bottom: 0; }
     .empty-state { margin: 0; color: #64748b; }
+    #footer-container {
+      width: 100%;
+      max-width: 100%;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+    #footer-container .site-footer {
+      margin-top: 0;
+      padding: 26px 16px 14px;
+    }
+    #footer-container .site-footer br {
+      display: none;
+    }
+    #footer-container .footer-sponsor {
+      padding: 18px 16px;
+      border-bottom-width: 1px;
+    }
+    #footer-container .footer-sponsor h3 {
+      margin-bottom: 10px;
+      font-size: 1.05rem;
+    }
+    #footer-container .sponsor-logos {
+      gap: 16px;
+      margin-bottom: 10px;
+    }
+    #footer-container .sponsor-logos img {
+      max-width: 112px;
+      height: auto;
+    }
+    #footer-container .become-sponsor a {
+      padding: 8px 16px;
+      font-size: 0.92rem;
+    }
+    #footer-container .footer-content {
+      gap: 18px;
+      margin-bottom: 12px;
+    }
+    #footer-container .footer-logo img {
+      width: 58px;
+      height: 58px;
+      margin-bottom: 6px;
+    }
+    #footer-container .footer-links {
+      gap: 6px 10px;
+    }
+    #footer-container .footer-links a {
+      margin: 0 4px;
+      font-size: 0.9rem;
+    }
+    #footer-container .footer-socials {
+      gap: 8px;
+    }
+    #footer-container .footer-socials img {
+      width: 24px;
+      height: 24px;
+      margin: 0;
+    }
+    #footer-container .social-badge {
+      top: -6px;
+      right: -8px;
+      min-width: 24px;
+      padding: 1px 6px;
+      font-size: 10px;
+    }
+    #footer-container .footer-bottom {
+      margin-top: 6px;
+      padding-top: 8px;
+    }
     @media (max-width: 980px) {
       .hero-grid, .section-grid { grid-template-columns: 1fr; }
       .match-actions { justify-content: flex-start; }
@@ -695,6 +763,26 @@ $seo = [
       .status-panel .stat-box { padding: 12px 10px; }
       .status-panel .stat-box strong { font-size: 1.2rem; }
       .status-panel .stat-box span { font-size: 0.78rem; }
+      #footer-container {
+        margin-top: 16px;
+      }
+      #footer-container .site-footer {
+        padding: 22px 12px 12px;
+      }
+      #footer-container .footer-sponsor {
+        padding: 16px 12px;
+      }
+      #footer-container .footer-content {
+        gap: 14px;
+        margin-bottom: 10px;
+      }
+      #footer-container .footer-logo img {
+        width: 52px;
+        height: 52px;
+      }
+      #footer-container .footer-links a {
+        font-size: 0.86rem;
+      }
     }
   </style>
 </head>
