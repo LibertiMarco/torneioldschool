@@ -281,6 +281,22 @@ foreach ($matches as $match) {
     .toggle-row { display: flex; align-items: center; gap: 10px; color: #15293e; font-weight: 700; }
     .toggle-row input { width: 18px; height: 18px; }
     .access-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+    .access-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .access-toolbar .field {
+      flex: 1 1 320px;
+    }
+    .access-search-count {
+      color: #64748b;
+      font-size: 0.92rem;
+      font-weight: 700;
+      padding-bottom: 11px;
+    }
     .access-option {
       display: flex;
       align-items: flex-start;
@@ -293,6 +309,7 @@ foreach ($matches as $match) {
     .access-option input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; flex: 0 0 auto; }
     .access-option strong { display: block; color: #15293e; margin-bottom: 4px; }
     .access-option span { display: block; color: #5c6572; font-size: 0.92rem; line-height: 1.45; }
+    .access-option.is-hidden { display: none; }
     .competition-list { display: grid; gap: 14px; }
     .competition-card { border: 1px solid #dce4ef; border-radius: 16px; padding: 16px; background: #f8fafc; }
     .competition-card__head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
@@ -538,6 +555,14 @@ foreach ($matches as $match) {
           <?php if (empty($accessAccounts)): ?>
             <p style="margin: 0; color: #64748b;">Non ci sono account disponibili.</p>
           <?php else: ?>
+            <div class="access-toolbar">
+              <label class="field">
+                Cerca utente
+                <input type="search" id="competitionAccessSearch" placeholder="Nome, cognome, email o ruolo">
+              </label>
+              <span class="access-search-count" id="competitionAccessSearchCount"><?= count($accessAccounts) ?> utenti visibili</span>
+            </div>
+
             <div class="access-grid">
               <?php foreach ($accessAccounts as $account): ?>
                 <?php
@@ -643,13 +668,14 @@ foreach ($matches as $match) {
               $officialResult = totocalcio_is_result_available($match)
                   ? (int)$match['gol_casa_reale'] . ' - ' . (int)$match['gol_trasferta_reale']
                   : 'Non ancora disponibile';
+              $predictionCutoff = totocalcio_match_cutoff_datetime($match);
             ?>
             <article class="match-card">
               <div class="match-card__top">
                 <div>
                   <h3 class="match-card__title"><?= h($match['squadra_casa']) ?> vs <?= h($match['squadra_trasferta']) ?></h3>
                   <p class="meta-line">Calendario: <?= h(admin_totocalcio_match_label($match)) ?></p>
-                  <p class="meta-line">Campo: <?= h($match['campo'] ?? 'Da definire') ?> | Pronostici ricevuti: <?= (int)($match['total_predictions'] ?? 0) ?> | Risultato ufficiale: <?= h($officialResult) ?></p>
+                  <p class="meta-line">Campo: <?= h($match['campo'] ?? 'Da definire') ?> | Chiusura pronostici: <?= h($predictionCutoff ? $predictionCutoff->format('d/m/Y H:i') : 'Da definire') ?> | Pronostici ricevuti: <?= (int)($match['total_predictions'] ?? 0) ?> | Risultato ufficiale: <?= h($officialResult) ?></p>
                 </div>
 
                 <div class="switcher-row" style="margin-top: 0;">
@@ -738,6 +764,33 @@ foreach ($matches as $match) {
   <div id="footer-container"></div>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      const accessSearchInput = document.getElementById('competitionAccessSearch');
+      const accessSearchCount = document.getElementById('competitionAccessSearchCount');
+      const accessOptions = Array.from(document.querySelectorAll('.access-grid .access-option'));
+
+      if (accessSearchInput && accessOptions.length > 0) {
+        const applyAccessFilter = () => {
+          const query = accessSearchInput.value.trim().toLowerCase();
+          let visibleCount = 0;
+
+          accessOptions.forEach((option) => {
+            const haystack = option.textContent.toLowerCase();
+            const isVisible = query === '' || haystack.includes(query);
+            option.classList.toggle('is-hidden', !isVisible);
+            if (isVisible) {
+              visibleCount++;
+            }
+          });
+
+          if (accessSearchCount) {
+            accessSearchCount.textContent = visibleCount + (visibleCount === 1 ? ' utente visibile' : ' utenti visibili');
+          }
+        };
+
+        accessSearchInput.addEventListener('input', applyAccessFilter);
+        applyAccessFilter();
+      }
+
       const footer = document.getElementById('footer-container');
       if (!footer) return;
 

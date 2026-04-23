@@ -255,6 +255,31 @@ if (!function_exists('totocalcio_is_result_available')) {
     }
 }
 
+if (!function_exists('totocalcio_match_cutoff_datetime')) {
+    function totocalcio_match_cutoff_datetime(array $match): ?DateTimeImmutable
+    {
+        $matchDate = trim((string)($match['data_partita'] ?? ''));
+        if ($matchDate === '') {
+            return null;
+        }
+
+        $timeValue = trim((string)($match['ora_partita'] ?? ''));
+        if ($timeValue === '') {
+            $timeValue = '20:00:00';
+        } elseif (preg_match('/^\d{2}:\d{2}$/', $timeValue)) {
+            $timeValue .= ':00';
+        }
+
+        $timezone = new DateTimeZone('Europe/Rome');
+        $matchDateTime = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $matchDate . ' ' . $timeValue, $timezone);
+        if (!$matchDateTime instanceof DateTimeImmutable) {
+            return null;
+        }
+
+        return $matchDateTime->modify('-5 minutes');
+    }
+}
+
 if (!function_exists('totocalcio_is_match_open')) {
     function totocalcio_is_match_open(array $match): bool
     {
@@ -262,18 +287,12 @@ if (!function_exists('totocalcio_is_match_open')) {
             return false;
         }
 
-        $matchDate = trim((string)($match['data_partita'] ?? ''));
-        if ($matchDate === '') {
-            return true;
-        }
-
-        $timezone = new DateTimeZone('Europe/Rome');
-        $cutoffDateTime = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $matchDate . ' 20:00:00', $timezone);
+        $cutoffDateTime = totocalcio_match_cutoff_datetime($match);
         if (!$cutoffDateTime instanceof DateTimeImmutable) {
             return true;
         }
 
-        $now = new DateTimeImmutable('now', $timezone);
+        $now = new DateTimeImmutable('now', new DateTimeZone('Europe/Rome'));
         return $now < $cutoffDateTime;
     }
 }

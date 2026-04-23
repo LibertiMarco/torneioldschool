@@ -918,7 +918,7 @@ $seo = [
       <div class="panel-card">
         <span class="eyebrow">Schedina</span>
         <h2>Scelte della settimana</h2>
-        <p style="margin: 0 0 16px;">Ogni pronostico resta modificabile finche la partita e aperta. Quando la partita viene segnata come giocata nel calendario ufficiale, qui vedrai automaticamente risultato e punti ottenuti. Se il risultato ufficiale cambia dopo, i punti vengono ricalcolati sui nuovi gol.</p>
+        <p style="margin: 0 0 16px;">Ogni pronostico resta modificabile fino a 5 minuti prima dell orario della partita. Quando la partita viene segnata come giocata nel calendario ufficiale, qui vedrai automaticamente risultato e punti ottenuti. Se il risultato ufficiale cambia dopo, i punti vengono ricalcolati sui nuovi gol.</p>
 
         <?php if (empty($competitions)): ?>
           <p class="empty-state">Non ci sono competizioni Totocalcio attive in questo momento.</p>
@@ -938,6 +938,7 @@ $seo = [
                 }
                 $evaluation = totocalcio_evaluate_prediction($match, $prediction);
                 $isOpen = totocalcio_is_match_open($match);
+                $predictionCutoff = totocalcio_match_cutoff_datetime($match);
                 $officialResult = totocalcio_page_match_result_label($match);
               ?>
               <article class="match-card">
@@ -945,6 +946,7 @@ $seo = [
                   <div>
                     <h3 class="match-card__title"><?= h($match['squadra_casa']) ?> vs <?= h($match['squadra_trasferta']) ?></h3>
                     <p class="meta-line">Data partita: <?= h(totocalcio_page_datetime_label($match['data_partita'] ?? null, $match['ora_partita'] ?? null)) ?></p>
+                    <p class="meta-line">Chiusura pronostici: <?= h($predictionCutoff ? $predictionCutoff->format('d/m/Y H:i') : 'Da definire') ?></p>
                     <p class="meta-line">Risultato ufficiale: <?= h($officialResult) ?> | Pronostici inviati: <?= (int)($match['total_predictions'] ?? 0) ?></p>
                   </div>
 
