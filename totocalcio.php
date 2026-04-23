@@ -330,6 +330,26 @@ $seo = [
     }
     .stat-box strong { display: block; font-size: 1.75rem; line-height: 1; margin-bottom: 8px; }
     .stat-box span { color: rgba(255,255,255,0.82); font-size: 0.94rem; }
+    .status-panel { padding: 18px; }
+    .status-panel .eyebrow { margin-bottom: 8px; }
+    .status-panel h3 { margin-bottom: 10px; }
+    .status-panel .stats-grid {
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .status-panel .stat-box {
+      padding: 14px 12px;
+      border-radius: 14px;
+    }
+    .status-panel .stat-box strong {
+      font-size: 1.4rem;
+      margin-bottom: 5px;
+    }
+    .status-panel .stat-box span {
+      font-size: 0.82rem;
+      line-height: 1.3;
+    }
     .msg { padding: 12px 14px; border-radius: 12px; margin-bottom: 12px; font-weight: 700; }
     .msg.ok { background: #e8f6ef; color: #065f46; border: 1px solid #34d399; }
     .msg.err { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
@@ -550,6 +570,11 @@ $seo = [
       .leader-table { display: block; overflow-x: auto; white-space: nowrap; }
       .prediction-matrix__user { min-width: 180px; }
       .prediction-matrix th, .prediction-matrix td { min-width: 150px; }
+      .status-panel { padding: 16px; }
+      .status-panel .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .status-panel .stat-box { padding: 12px 10px; }
+      .status-panel .stat-box strong { font-size: 1.2rem; }
+      .status-panel .stat-box span { font-size: 0.78rem; }
     }
   </style>
 </head>
@@ -603,7 +628,7 @@ $seo = [
       <?php endif; ?>
     </article>
 
-    <aside class="panel-card">
+    <aside class="panel-card status-panel">
       <span class="eyebrow">Il tuo stato</span>
       <h3>Riepilogo rapido</h3>
       <div class="stats-grid">
@@ -670,7 +695,6 @@ $seo = [
 
               <div class="competition-entry__actions">
                 <a class="btn-primary" href="<?= h(totocalcio_page_competition_url($competitionSlug)) ?>">Apri competizione</a>
-                <span class="helper-text">URL: <code>/totocalcio.php?competizione=<?= h($competitionSlug) ?></code></span>
               </div>
             </article>
           <?php endforeach; ?>
