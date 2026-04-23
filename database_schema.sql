@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS blog_commenti;
 DROP TABLE IF EXISTS blog_post;
 DROP TABLE IF EXISTS totocalcio_pronostici;
 DROP TABLE IF EXISTS totocalcio_partite;
+DROP TABLE IF EXISTS totocalcio_competizioni;
 DROP TABLE IF EXISTS partita_giocatore;
 DROP TABLE IF EXISTS squadre_giocatori;
 DROP TABLE IF EXISTS partite;
@@ -49,15 +50,30 @@ CREATE TABLE IF NOT EXISTS utenti (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Totocalcio (totocalcio.php, api/gestione_totocalcio.php)
+CREATE TABLE IF NOT EXISTS totocalcio_competizioni (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(150) NOT NULL,
+    slug VARCHAR(180) NOT NULL,
+    attiva TINYINT(1) NOT NULL DEFAULT 1,
+    ordine INT NOT NULL DEFAULT 0,
+    creato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    aggiornato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_totocalcio_competizione_slug (slug),
+    KEY idx_totocalcio_competizioni_attive (attiva, ordine)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS totocalcio_partite (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    competizione_id INT UNSIGNED NOT NULL,
     partita_id INT UNSIGNED NOT NULL,
     ordine INT NOT NULL DEFAULT 0,
     attiva TINYINT(1) NOT NULL DEFAULT 1,
     creato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     aggiornato_il DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_totocalcio_partita_reale (partita_id),
-    KEY idx_totocalcio_attiva_ordine (attiva, ordine),
+    UNIQUE KEY uq_totocalcio_partita_reale (competizione_id, partita_id),
+    KEY idx_totocalcio_competizione_attiva_ordine (competizione_id, attiva, ordine),
+    KEY idx_totocalcio_partita (partita_id),
+    CONSTRAINT fk_totocalcio_partita_competizione FOREIGN KEY (competizione_id) REFERENCES totocalcio_competizioni(id) ON DELETE CASCADE,
     CONSTRAINT fk_totocalcio_match_partita FOREIGN KEY (partita_id) REFERENCES partite(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

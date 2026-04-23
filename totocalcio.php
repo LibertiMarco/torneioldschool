@@ -22,6 +22,8 @@ $messages = [];
 $errors = [];
 $matches = [];
 $leaderboard = [];
+$competitions = [];
+$selectedCompetition = null;
 $csrfKey = 'totocalcio_predictions';
 
 if (!$canAccess) {
@@ -75,55 +77,84 @@ function totocalcio_page_parse_score($value, string $label, array &$errors): ?in
     return $score;
 }
 
+function totocalcio_page_competition_url(string $slug): string
+{
+    return '/totocalcio.php?competizione=' . rawurlencode($slug);
+}
+
+function totocalcio_page_find_competition(array $competitions, string $slug): ?array
+{
+    foreach ($competitions as $competition) {
+        if ((string)($competition['slug'] ?? '') === $slug) {
+            return $competition;
+        }
+    }
+
+    return $competitions[0] ?? null;
+}
+
 if ($conn instanceof mysqli) {
     $conn->set_charset('utf8mb4');
 
     if (!totocalcio_ensure_tables($conn)) {
         $errors[] = 'Il Totocalcio non e disponibile in questo momento.';
-    }
+    } else {
+        $requestedCompetitionSlug = trim((string)($_GET['competizione'] ?? ''));
+        $competitions = totocalcio_fetch_competitions($conn, true);
+        $selectedCompetition = totocalcio_page_find_competition($competitions, $requestedCompetitionSlug);
+        $selectedCompetitionId = (int)($selectedCompetition['id'] ?? 0);
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
-        if (!$canParticipate) {
-            $errors[] = 'Questo account puo visualizzare la pagina ma non partecipare al Totocalcio.';
-        } else {
-            csrf_require($csrfKey);
+        if ($requestedCompetitionSlug !== '' && $selectedCompetition && (string)$selectedCompetition['slug'] !== $requestedCompetitionSlug) {
+            $errors[] = 'La competizione richiesta non e disponibile.';
+        }
 
-            $action = (string)($_POST['action'] ?? '');
-            if ($action === 'save_prediction') {
-                $matchId = (int)($_POST['match_id'] ?? 0);
-                $sign = (string)($_POST['segno'] ?? '');
-                $predHome = totocalcio_page_parse_score($_POST['gol_casa_previsti'] ?? '', 'Gol casa previsti', $errors);
-                $predAway = totocalcio_page_parse_score($_POST['gol_trasferta_previsti'] ?? '', 'Gol trasferta previsti', $errors);
-                $match = totocalcio_fetch_match_by_id($conn, $matchId);
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
+            if (!$canParticipate) {
+                $errors[] = 'Questo account puo visualizzare la pagina ma non partecipare al Totocalcio.';
+            } elseif ($selectedCompetitionId <= 0) {
+                $errors[] = 'Nessuna competizione disponibile per salvare il pronostico.';
+            } else {
+                csrf_require($csrfKey);
 
-                if (!in_array($sign, ['1', 'X', '2'], true)) {
-                    $errors[] = 'Seleziona uno tra 1, X e 2.';
-                }
+                $action = (string)($_POST['action'] ?? '');
+                if ($action === 'save_prediction') {
+                    $matchId = (int)($_POST['match_id'] ?? 0);
+                    $sign = (string)($_POST['segno'] ?? '');
+                    $predHome = totocalcio_page_parse_score($_POST['gol_casa_previsti'] ?? '', 'Gol casa previsti', $errors);
+                    $predAway = totocalcio_page_parse_score($_POST['gol_trasferta_previsti'] ?? '', 'Gol trasferta previsti', $errors);
+                    $match = totocalcio_fetch_match_by_id($conn, $matchId, $selectedCompetitionId);
 
-                if (!$match || empty($match['visibile'])) {
-                    $errors[] = 'La partita selezionata non e disponibile.';
-                } elseif (!totocalcio_is_match_open($match)) {
-                    $errors[] = 'I pronostici per questa partita sono chiusi.';
-                }
-
-                if ($predHome !== null && $predAway !== null) {
-                    $computedSign = totocalcio_compute_sign($predHome, $predAway);
-                    if ($sign !== '' && $sign !== $computedSign) {
-                        $errors[] = 'Il segno selezionato deve essere coerente con il risultato esatto inserito.';
+                    if (!in_array($sign, ['1', 'X', '2'], true)) {
+                        $errors[] = 'Seleziona uno tra 1, X e 2.';
                     }
-                }
 
-                if (empty($errors) && !totocalcio_save_prediction($conn, $matchId, $userId, $sign, $predHome, $predAway)) {
-                    $errors[] = 'Impossibile salvare il pronostico. Riprova.';
-                } elseif (empty($errors)) {
-                    $messages[] = 'Pronostico salvato correttamente.';
+                    if (!$match || empty($match['visibile']) || empty($match['competizione_attiva'])) {
+                        $errors[] = 'La partita selezionata non e disponibile.';
+                    } elseif (!totocalcio_is_match_open($match)) {
+                        $errors[] = 'I pronostici per questa partita sono chiusi.';
+                    }
+
+                    if ($predHome !== null && $predAway !== null) {
+                        $computedSign = totocalcio_compute_sign($predHome, $predAway);
+                        if ($sign !== '' && $sign !== $computedSign) {
+                            $errors[] = 'Il segno selezionato deve essere coerente con il risultato esatto inserito.';
+                        }
+                    }
+
+                    if (empty($errors) && !totocalcio_save_prediction($conn, $matchId, $userId, $sign, $predHome, $predAway)) {
+                        $errors[] = 'Impossibile salvare il pronostico. Riprova.';
+                    } elseif (empty($errors)) {
+                        $messages[] = 'Pronostico salvato correttamente.';
+                    }
                 }
             }
         }
-    }
 
-    $matches = totocalcio_fetch_matches($conn, true, $userId);
-    $leaderboard = totocalcio_fetch_leaderboard($conn);
+        if ($selectedCompetitionId > 0) {
+            $matches = totocalcio_fetch_matches($conn, true, $userId, $selectedCompetitionId);
+            $leaderboard = totocalcio_fetch_leaderboard($conn, $selectedCompetitionId);
+        }
+    }
 }
 
 $myRank = null;
@@ -136,12 +167,16 @@ foreach ($leaderboard as $index => $row) {
     }
 }
 
+$selectedCompetitionSlug = (string)($selectedCompetition['slug'] ?? '');
+$selectedCompetitionName = (string)($selectedCompetition['nome'] ?? 'Totocalcio');
+$pageTitle = $selectedCompetitionSlug !== '' ? 'Totocalcio - ' . $selectedCompetitionName : 'Totocalcio';
 $baseUrl = seo_base_url();
+$canonicalPath = '/totocalcio.php' . ($selectedCompetitionSlug !== '' ? '?competizione=' . rawurlencode($selectedCompetitionSlug) : '');
 $seo = [
-    'title' => 'Totocalcio',
-    'description' => 'Pronostici Totocalcio con esito, risultato esatto e classifica punti.',
-    'url' => $baseUrl . '/totocalcio.php',
-    'canonical' => $baseUrl . '/totocalcio.php',
+    'title' => $pageTitle,
+    'description' => 'Pronostici Totocalcio con esito, risultato esatto e classifica punti per competizione.',
+    'url' => $baseUrl . $canonicalPath,
+    'canonical' => $baseUrl . $canonicalPath,
 ];
 ?>
 <!DOCTYPE html>
@@ -199,6 +234,30 @@ $seo = [
       color: #9a3412;
       font-weight: 600;
     }
+    .competition-switcher {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .competition-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      color: #1e293b;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .competition-pill.active {
+      background: #15293e;
+      color: #fff;
+      border-color: #15293e;
+    }
+    .competition-pill small { font-size: 0.78rem; opacity: 0.82; }
     .section-grid { display: grid; grid-template-columns: 1.35fr 0.95fr; gap: 18px; align-items: start; }
     .panel-card h2, .panel-card h3 { margin: 0 0 12px; color: #15293e; }
     .panel-card p { color: #4c5b71; line-height: 1.55; }
@@ -280,14 +339,29 @@ $seo = [
   <section class="hero-grid">
     <article class="hero-card">
       <span class="eyebrow">Pronostici</span>
-      <h1>Totocalcio</h1>
+      <h1><?= h($selectedCompetitionName) ?></h1>
 
       <?php if ($canAccess): ?>
-        <p>Scegli il segno <strong>1</strong>, <strong>X</strong> o <strong>2</strong>, inserisci anche il risultato esatto e salva il tuo pronostico per ogni partita pubblicata dall admin.</p>
+        <p>Scegli il segno <strong>1</strong>, <strong>X</strong> o <strong>2</strong>, inserisci anche il risultato esatto e salva il tuo pronostico per ogni partita pubblicata per la competizione selezionata.</p>
         <p>Regole punteggio: <strong>+1</strong> per l esito corretto, <strong>+3</strong> per il risultato esatto. Se prendi il risultato esatto fai <strong>4 punti totali</strong> sulla partita.</p>
 
         <?php if (!$canParticipate): ?>
           <div class="warning-card">Il tuo account puo entrare qui solo perche sei admin, ma per partecipare devi avere il flag Totocalcio attivo.</div>
+        <?php endif; ?>
+
+        <?php if (!empty($competitions)): ?>
+          <div class="competition-switcher">
+            <?php foreach ($competitions as $competition): ?>
+              <?php
+                $competitionSlug = (string)($competition['slug'] ?? '');
+                $isActiveCompetition = $selectedCompetition && (int)$selectedCompetition['id'] === (int)$competition['id'];
+              ?>
+              <a class="competition-pill <?= $isActiveCompetition ? 'active' : '' ?>" href="<?= h(totocalcio_page_competition_url($competitionSlug)) ?>">
+                <span><?= h($competition['nome']) ?></span>
+                <small><?= (int)($competition['total_matches'] ?? 0) ?> partite</small>
+              </a>
+            <?php endforeach; ?>
+          </div>
         <?php endif; ?>
       <?php else: ?>
         <p>Non hai i permessi per accedere a questa sezione.</p>
@@ -304,7 +378,7 @@ $seo = [
         </div>
         <div class="stat-box">
           <strong><?= $myRow ? (int)$myRow['punti_totali'] : 0 ?></strong>
-          <span>Punti totali</span>
+          <span>Punti nella competizione</span>
         </div>
         <div class="stat-box">
           <strong><?= $myRank ?? '-' ?></strong>
@@ -327,8 +401,10 @@ $seo = [
       <h2>Partite del Totocalcio</h2>
       <p style="margin: 0 0 16px;">Ogni pronostico resta modificabile finche la partita e aperta. Quando la partita viene segnata come giocata nel calendario ufficiale, qui vedrai automaticamente risultato e punti ottenuti. Se il risultato ufficiale cambia dopo, i punti vengono ricalcolati sui nuovi gol.</p>
 
-      <?php if (empty($matches)): ?>
-        <p class="empty-state">Non ci sono ancora partite selezionate dall admin.</p>
+      <?php if (empty($competitions)): ?>
+        <p class="empty-state">Non ci sono competizioni Totocalcio attive in questo momento.</p>
+      <?php elseif (empty($matches)): ?>
+        <p class="empty-state">Non ci sono ancora partite selezionate per questa competizione.</p>
       <?php else: ?>
         <div class="match-list">
           <?php foreach ($matches as $match): ?>
@@ -431,7 +507,7 @@ $seo = [
     <div class="panel-card">
       <span class="eyebrow">Classifica</span>
       <h2>Classifica Totocalcio</h2>
-      <p style="margin: 0 0 12px;">Sono inclusi solo gli account con flag Totocalcio attivo. Ordinamento: punti, risultati esatti, esiti corretti.</p>
+      <p style="margin: 0 0 12px;">La classifica e riferita alla competizione selezionata. Sono inclusi solo gli account con flag Totocalcio attivo. Ordinamento: punti, risultati esatti, esiti corretti.</p>
 
       <ul class="rule-list" style="margin-bottom: 18px;">
         <li>Esito corretto: +1 punto.</li>
@@ -439,7 +515,9 @@ $seo = [
         <li>Totale massimo per partita: 4 punti.</li>
       </ul>
 
-      <?php if (empty($leaderboard)): ?>
+      <?php if (empty($competitions)): ?>
+        <p class="empty-state">Ancora nessuna competizione attiva.</p>
+      <?php elseif (empty($leaderboard)): ?>
         <p class="empty-state">Ancora nessun partecipante abilitato.</p>
       <?php else: ?>
         <table class="leader-table">

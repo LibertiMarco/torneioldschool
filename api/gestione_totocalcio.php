@@ -8,6 +8,8 @@ $errors = [];
 $matches = [];
 $candidateMatches = [];
 $leaderboard = [];
+$competitions = [];
+$selectedCompetition = null;
 $csrfKey = 'admin_totocalcio';
 
 function h($value): string
@@ -24,7 +26,6 @@ function admin_totocalcio_datetime_label(?string $date, ?string $time = null): s
         return 'Data non impostata';
     }
 
-    $format = $time !== '' ? 'Y-m-d H:i:s' : 'Y-m-d';
     $value = $time !== '' ? $date . ' ' . $time : $date;
     $timestamp = strtotime($value);
     if (!$timestamp) {
@@ -59,57 +60,136 @@ function admin_totocalcio_match_label(array $match): string
     return trim($label . ' | ' . $teams . ' | ' . $when, ' |');
 }
 
+function admin_totocalcio_competition_url(string $slug): string
+{
+    return '/api/gestione_totocalcio.php?competizione=' . rawurlencode($slug);
+}
+
+function admin_totocalcio_public_url(string $slug): string
+{
+    return '/totocalcio.php?competizione=' . rawurlencode($slug);
+}
+
+function admin_totocalcio_find_competition(array $competitions, string $slug): ?array
+{
+    foreach ($competitions as $competition) {
+        if ((string)($competition['slug'] ?? '') === $slug) {
+            return $competition;
+        }
+    }
+
+    return $competitions[0] ?? null;
+}
+
 if ($conn instanceof mysqli) {
     $conn->set_charset('utf8mb4');
 
     if (!totocalcio_ensure_tables($conn)) {
         $errors[] = 'Impossibile inizializzare il database del Totocalcio.';
-    }
+    } else {
+        $requestedCompetitionSlug = trim((string)($_GET['competizione'] ?? ''));
+        $competitions = totocalcio_fetch_competitions($conn, false);
+        $selectedCompetition = admin_totocalcio_find_competition($competitions, $requestedCompetitionSlug);
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
-        csrf_require($csrfKey);
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            csrf_require($csrfKey);
 
-        $action = (string)($_POST['action'] ?? '');
+            $action = (string)($_POST['action'] ?? '');
+            $selectedCompetitionId = (int)($selectedCompetition['id'] ?? 0);
+            $updatedCompetitionId = 0;
 
-        if ($action === 'add_match') {
-            $partitaId = (int)($_POST['partita_id'] ?? 0);
-            $ordine = max(0, (int)($_POST['ordine'] ?? 0));
+            if ($action === 'create_competition') {
+                $name = trim((string)($_POST['competition_name'] ?? ''));
+                $slug = trim((string)($_POST['competition_slug'] ?? ''));
+                $order = max(0, (int)($_POST['competition_order'] ?? count($competitions)));
+                $active = !empty($_POST['competition_active']);
 
-            if ($partitaId <= 0) {
-                $errors[] = 'Seleziona una partita dal calendario.';
-            } elseif (totocalcio_add_match($conn, $partitaId, $ordine)) {
-                $messages[] = 'Partita aggiunta al Totocalcio.';
-            } else {
-                $errors[] = 'Impossibile aggiungere la partita. Verifica che non sia gia selezionata o gia giocata.';
+                if ($name === '') {
+                    $errors[] = 'Inserisci il nome della competizione.';
+                } else {
+                    $createdCompetition = totocalcio_create_competition($conn, $name, $slug, $order, $active);
+                    if ($createdCompetition === null) {
+                        $errors[] = 'Impossibile creare la competizione.';
+                    } else {
+                        $messages[] = 'Competizione creata correttamente.';
+                        $requestedCompetitionSlug = (string)$createdCompetition['slug'];
+                    }
+                }
+            } elseif ($action === 'save_competition') {
+                $competitionId = (int)($_POST['competition_id'] ?? 0);
+                $name = trim((string)($_POST['competition_name'] ?? ''));
+                $slug = trim((string)($_POST['competition_slug'] ?? ''));
+                $order = max(0, (int)($_POST['competition_order'] ?? 0));
+                $active = !empty($_POST['competition_active']);
+
+                if ($competitionId <= 0 || $name === '') {
+                    $errors[] = 'Competizione non valida.';
+                } elseif (!totocalcio_update_competition($conn, $competitionId, $name, $slug, $order, $active)) {
+                    $errors[] = 'Aggiornamento competizione non riuscito.';
+                } else {
+                    $messages[] = 'Competizione aggiornata.';
+                    $updatedCompetitionId = $competitionId;
+                }
+            } elseif ($action === 'add_match') {
+                $partitaId = (int)($_POST['partita_id'] ?? 0);
+                $ordine = max(0, (int)($_POST['ordine'] ?? 0));
+
+                if ($selectedCompetitionId <= 0) {
+                    $errors[] = 'Seleziona prima una competizione.';
+                } elseif ($partitaId <= 0) {
+                    $errors[] = 'Seleziona una partita dal calendario.';
+                } elseif (totocalcio_add_match($conn, $selectedCompetitionId, $partitaId, $ordine)) {
+                    $messages[] = 'Partita aggiunta al Totocalcio.';
+                } else {
+                    $errors[] = 'Impossibile aggiungere la partita. Verifica che non sia gia selezionata nella competizione corrente o gia giocata.';
+                }
+            } elseif ($action === 'save_match') {
+                $selectionId = (int)($_POST['match_id'] ?? 0);
+                $ordine = max(0, (int)($_POST['ordine'] ?? 0));
+                $attiva = !empty($_POST['visibile']);
+                $match = totocalcio_fetch_match_by_id($conn, $selectionId, $selectedCompetitionId);
+
+                if (!$match) {
+                    $errors[] = 'Partita Totocalcio non valida per la competizione selezionata.';
+                } elseif (totocalcio_update_match($conn, $selectionId, $ordine, $attiva)) {
+                    $messages[] = 'Configurazione Totocalcio aggiornata.';
+                } else {
+                    $errors[] = 'Aggiornamento non riuscito.';
+                }
+            } elseif ($action === 'delete_match') {
+                $selectionId = (int)($_POST['match_id'] ?? 0);
+                $match = totocalcio_fetch_match_by_id($conn, $selectionId, $selectedCompetitionId);
+
+                if (!$match) {
+                    $errors[] = 'Partita Totocalcio non valida per la competizione selezionata.';
+                } elseif (totocalcio_delete_match($conn, $selectionId)) {
+                    $messages[] = 'Partita rimossa dal Totocalcio.';
+                } else {
+                    $errors[] = 'Eliminazione non riuscita.';
+                }
             }
-        } elseif ($action === 'save_match') {
-            $selectionId = (int)($_POST['match_id'] ?? 0);
-            $ordine = max(0, (int)($_POST['ordine'] ?? 0));
-            $attiva = !empty($_POST['visibile']);
 
-            if ($selectionId <= 0) {
-                $errors[] = 'Partita Totocalcio non valida.';
-            } elseif (totocalcio_update_match($conn, $selectionId, $ordine, $attiva)) {
-                $messages[] = 'Configurazione Totocalcio aggiornata.';
-            } else {
-                $errors[] = 'Aggiornamento non riuscito.';
-            }
-        } elseif ($action === 'delete_match') {
-            $selectionId = (int)($_POST['match_id'] ?? 0);
+            $competitions = totocalcio_fetch_competitions($conn, false);
 
-            if ($selectionId <= 0) {
-                $errors[] = 'Partita Totocalcio non valida.';
-            } elseif (totocalcio_delete_match($conn, $selectionId)) {
-                $messages[] = 'Partita rimossa dal Totocalcio.';
-            } else {
-                $errors[] = 'Eliminazione non riuscita.';
+            if ($updatedCompetitionId > 0) {
+                foreach ($competitions as $competition) {
+                    if ((int)($competition['id'] ?? 0) === $updatedCompetitionId) {
+                        $requestedCompetitionSlug = (string)($competition['slug'] ?? $requestedCompetitionSlug);
+                        break;
+                    }
+                }
             }
+
+            $selectedCompetition = admin_totocalcio_find_competition($competitions, $requestedCompetitionSlug);
+        }
+
+        $selectedCompetitionId = (int)($selectedCompetition['id'] ?? 0);
+        if ($selectedCompetitionId > 0) {
+            $matches = totocalcio_fetch_matches($conn, false, 0, $selectedCompetitionId);
+            $candidateMatches = totocalcio_fetch_candidate_matches($conn, $selectedCompetitionId);
+            $leaderboard = totocalcio_fetch_leaderboard($conn, $selectedCompetitionId);
         }
     }
-
-    $matches = totocalcio_fetch_matches($conn, false);
-    $candidateMatches = totocalcio_fetch_candidate_matches($conn);
-    $leaderboard = totocalcio_fetch_leaderboard($conn);
 }
 
 $visibleMatches = 0;
@@ -142,74 +222,68 @@ foreach ($matches as $match) {
   <link rel="apple-touch-icon" href="/img/logo_old_school.png">
   <style>
     body { display: flex; flex-direction: column; min-height: 100vh; background: #f6f8fb; }
-    main.admin-wrapper { max-width: 1200px; margin: 0 auto; padding: 36px 16px 70px; flex: 1 0 auto; }
+    main.admin-wrapper { max-width: 1280px; margin: 0 auto; padding: 36px 16px 70px; flex: 1 0 auto; }
     .panel-card { background: #fff; border: 1px solid #e5eaf0; border-radius: 16px; padding: 22px; box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08); margin-bottom: 20px; }
     .panel-card h2, .panel-card h3 { margin: 0 0 12px; color: #15293e; }
     .panel-card p { color: #4c5b71; line-height: 1.55; }
     .msg { padding: 12px 14px; border-radius: 12px; margin-bottom: 12px; font-weight: 700; }
     .msg.ok { background: #e8f6ef; color: #065f46; border: 1px solid #34d399; }
     .msg.err { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .helper-pill { display: inline-flex; align-items: center; padding: 7px 12px; border-radius: 999px; background: #e8edf5; color: #15293e; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 20px; }
     .stat-box { background: linear-gradient(135deg, #15293e 0%, #23415f 100%); color: #fff; border-radius: 16px; padding: 18px; }
     .stat-box strong { display: block; font-size: 1.8rem; line-height: 1; margin-bottom: 8px; }
     .stat-box span { color: rgba(255,255,255,0.82); font-size: 0.95rem; }
-    .hint-grid { display: grid; grid-template-columns: 1.2fr 0.95fr; gap: 18px; }
-    .helper-pill { display: inline-flex; align-items: center; padding: 7px 12px; border-radius: 999px; background: #e8edf5; color: #15293e; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
-    .form-grid { display: grid; grid-template-columns: 1.6fr 0.6fr; gap: 14px; }
-    .form-grid--compact { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .field { display: flex; flex-direction: column; gap: 8px; color: #15293e; font-weight: 700; }
+    .hero-grid { display: grid; grid-template-columns: 1.15fr 0.95fr; gap: 18px; margin-bottom: 20px; }
+    .switcher-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .competition-pill { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff; color: #1e293b; font-weight: 700; text-decoration: none; }
+    .competition-pill.active { background: #15293e; border-color: #15293e; color: #fff; }
+    .competition-pill small { font-size: 0.78rem; opacity: 0.8; }
+    .dual-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 18px; }
+    .field, .field-inline { display: flex; flex-direction: column; gap: 8px; color: #15293e; font-weight: 700; }
+    .field input[type="text"],
+    .field input[type="number"],
     .field select,
-    .field input[type="number"] {
+    .field-inline input[type="text"],
+    .field-inline input[type="number"] {
       width: 100%;
       padding: 11px 12px;
       border: 1px solid #d7dce5;
       border-radius: 10px;
       background: #fff;
     }
-    .field-toggle {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding-top: 32px;
-      color: #15293e;
-      font-weight: 700;
-    }
-    .field-toggle input { width: 18px; height: 18px; }
-    .form-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 18px; }
+    .field-grid { display: grid; grid-template-columns: 1.1fr 1fr 140px; gap: 12px; }
+    .form-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
     .helper-text { color: #64748b; font-size: 0.93rem; }
+    .toggle-row { display: flex; align-items: center; gap: 10px; color: #15293e; font-weight: 700; }
+    .toggle-row input { width: 18px; height: 18px; }
+    .competition-list { display: grid; gap: 14px; }
+    .competition-card { border: 1px solid #dce4ef; border-radius: 16px; padding: 16px; background: #f8fafc; }
+    .competition-card__head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+    .competition-card__head h3 { margin: 0; }
+    .meta-line { margin: 6px 0 0; color: #64748b; font-size: 0.93rem; }
+    .status-pill { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; font-size: 0.82rem; font-weight: 800; }
+    .status-pill.ok { background: #dcfce7; color: #166534; }
+    .status-pill.warn { background: #fef3c7; color: #92400e; }
+    .status-pill.info { background: #dbeafe; color: #1d4ed8; }
+    .status-pill.muted { background: #e2e8f0; color: #334155; }
     .match-list { display: grid; gap: 16px; }
     .match-card { border: 1px solid #dce4ef; border-radius: 16px; padding: 18px; background: #f8fafc; }
     .match-card__top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
     .match-card__title { margin: 0; color: #15293e; font-size: 1.15rem; }
-    .meta-line { margin: 6px 0 0; color: #64748b; font-size: 0.93rem; }
-    .pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
-    .status-pill { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; font-size: 0.82rem; font-weight: 800; }
-    .status-pill.ok { background: #dcfce7; color: #166534; }
-    .status-pill.warn { background: #fef3c7; color: #92400e; }
-    .status-pill.muted { background: #e2e8f0; color: #334155; }
-    .status-pill.info { background: #dbeafe; color: #1d4ed8; }
+    .match-form-grid { display: grid; grid-template-columns: 140px auto; gap: 12px; align-items: end; }
     .leader-table { width: 100%; border-collapse: collapse; }
     .leader-table th, .leader-table td { padding: 12px 10px; border-bottom: 1px solid #e5eaf0; text-align: left; vertical-align: top; }
     .leader-table th { background: #f8fafc; color: #15293e; }
     .leader-table td:last-child, .leader-table th:last-child { text-align: right; }
     .score-rule { margin: 0; padding-left: 18px; color: #475569; line-height: 1.7; }
-    .btn-danger {
-      border: 1px solid #ef4444;
-      background: #fff;
-      color: #b91c1c;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-weight: 700;
-      cursor: pointer;
-    }
+    .btn-danger { border: 1px solid #ef4444; background: #fff; color: #b91c1c; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; }
     .btn-danger:hover { background: #fef2f2; }
-    @media (max-width: 900px) {
-      .hint-grid { grid-template-columns: 1fr; }
-      .form-grid, .form-grid--compact { grid-template-columns: 1fr; }
-      .field-toggle { padding-top: 0; }
+    @media (max-width: 980px) {
+      .hero-grid, .dual-grid, .field-grid, .match-form-grid { grid-template-columns: 1fr; }
     }
-    @media (max-width: 640px) {
-      .match-card__top { flex-direction: column; }
+    @media (max-width: 720px) {
+      .competition-card__head, .match-card__top { flex-direction: column; }
       .leader-table { display: block; overflow-x: auto; white-space: nowrap; }
     }
   </style>
@@ -220,7 +294,7 @@ foreach ($matches as $match) {
   <main class="admin-wrapper">
     <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
     <h1 class="admin-title">Gestione Totocalcio</h1>
-    <p style="margin: 0 0 18px; color: #475569;">Le partite del Totocalcio vengono scelte dal calendario gia presente nel sito. Dopo che una partita e stata segnata come giocata, ogni modifica successiva del risultato ufficiale in <a href="/api/gestione_partite.php">Calendario &amp; Risultati</a> aggiorna automaticamente punteggi e classifica del Totocalcio.</p>
+    <p style="margin: 0 0 18px; color: #475569;">Il Totocalcio ora puo ospitare piu competizioni. Quella storica esistente viene mantenuta come <strong><?= h(totocalcio_default_competition_name()) ?></strong>. Per ogni competizione scegli partite dal calendario ufficiale, mentre risultati e classifica continuano ad aggiornarsi automaticamente dalla tabella <code>partite</code>.</p>
 
     <?php foreach ($messages as $message): ?>
       <div class="msg ok"><?= h($message) ?></div>
@@ -229,10 +303,33 @@ foreach ($matches as $match) {
       <div class="msg err"><?= h($error) ?></div>
     <?php endforeach; ?>
 
+    <section class="panel-card">
+      <span class="helper-pill">Competizioni</span>
+      <h2>Selettore competizione</h2>
+      <p style="margin: 0;">Lavora su una competizione alla volta. Le partite e la classifica sotto vengono filtrate in base alla competizione selezionata.</p>
+
+      <?php if (empty($competitions)): ?>
+        <p style="margin: 16px 0 0; color: #64748b;">Nessuna competizione disponibile.</p>
+      <?php else: ?>
+        <div class="switcher-row">
+          <?php foreach ($competitions as $competition): ?>
+            <?php
+              $competitionSlug = (string)($competition['slug'] ?? '');
+              $isActiveCompetition = $selectedCompetition && (int)$selectedCompetition['id'] === (int)$competition['id'];
+            ?>
+            <a class="competition-pill <?= $isActiveCompetition ? 'active' : '' ?>" href="<?= h(admin_totocalcio_competition_url($competitionSlug)) ?>">
+              <span><?= h($competition['nome']) ?></span>
+              <small><?= (int)($competition['total_matches'] ?? 0) ?> partite</small>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </section>
+
     <section class="stats-grid">
       <article class="stat-box">
         <strong><?= (int)count($matches) ?></strong>
-        <span>Partite selezionate</span>
+        <span>Partite nella competizione</span>
       </article>
       <article class="stat-box">
         <strong><?= $openMatches ?></strong>
@@ -240,7 +337,7 @@ foreach ($matches as $match) {
       </article>
       <article class="stat-box">
         <strong><?= $playedMatches ?></strong>
-        <span>Partite gia valorizzate</span>
+        <span>Partite gia giocate</span>
       </article>
       <article class="stat-box">
         <strong><?= $totalPredictions ?></strong>
@@ -248,66 +345,191 @@ foreach ($matches as $match) {
       </article>
     </section>
 
-    <section class="hint-grid">
+    <section class="hero-grid">
       <article class="panel-card">
-        <span class="helper-pill">Selezione</span>
-        <h2>Aggiungi dal calendario esistente</h2>
-        <p style="margin: 0 0 16px;">Qui puoi scegliere solo partite reali ancora non giocate. Il Totocalcio non gestisce un risultato separato: prende sempre quello ufficiale dalla tabella <code>partite</code>.</p>
+        <span class="helper-pill">Nuova competizione</span>
+        <h2>Crea una nuova competizione</h2>
+        <p style="margin: 0 0 16px;">Se non inserisci lo slug, viene generato automaticamente dal nome. La competizione storica resta disponibile come default.</p>
 
         <form method="POST" autocomplete="off">
           <?= csrf_field($csrfKey) ?>
-          <input type="hidden" name="action" value="add_match">
+          <input type="hidden" name="action" value="create_competition">
 
-          <div class="form-grid">
+          <div class="field-grid">
             <label class="field">
-              Partita disponibile
-              <select name="partita_id" required <?= empty($candidateMatches) ? 'disabled' : '' ?>>
-                <option value="">-- scegli una partita non ancora giocata --</option>
-                <?php foreach ($candidateMatches as $candidate): ?>
-                  <option value="<?= (int)$candidate['id'] ?>"><?= h(admin_totocalcio_match_label($candidate)) ?></option>
-                <?php endforeach; ?>
-              </select>
+              Nome competizione
+              <input type="text" name="competition_name" maxlength="150" placeholder="Es. Totocalcio Champions League" required>
+            </label>
+
+            <label class="field">
+              Slug URL
+              <input type="text" name="competition_slug" maxlength="180" placeholder="opzionale">
             </label>
 
             <label class="field">
               Ordine
-              <input type="number" name="ordine" value="<?= count($matches) ?>" min="0" step="1">
+              <input type="number" name="competition_order" min="0" step="1" value="<?= count($competitions) ?>">
             </label>
           </div>
 
           <div class="form-actions">
-            <button class="btn-primary" type="submit" <?= empty($candidateMatches) ? 'disabled' : '' ?>>Aggiungi al Totocalcio</button>
-            <span class="helper-text">
-              <?php if (empty($candidateMatches)): ?>
-                Non ci sono nuove partite non giocate da aggiungere.
-              <?php else: ?>
-                Le partite selezionate compariranno subito in <a href="/totocalcio.php">/totocalcio.php</a>.
-              <?php endif; ?>
-            </span>
+            <label class="toggle-row">
+              <input type="checkbox" name="competition_active" value="1" checked>
+              <span>Competizione visibile</span>
+            </label>
+            <button class="btn-primary" type="submit">Crea competizione</button>
           </div>
         </form>
       </article>
 
       <aside class="panel-card">
+        <span class="helper-pill">Competizione attiva</span>
+        <?php if ($selectedCompetition): ?>
+          <h3><?= h($selectedCompetition['nome']) ?></h3>
+          <p class="meta-line">Slug: <code><?= h($selectedCompetition['slug']) ?></code></p>
+          <p class="meta-line">Visibile sul sito: <?= !empty($selectedCompetition['attiva']) ? 'si' : 'no' ?></p>
+          <p class="meta-line">Link pubblico: <a href="<?= h(admin_totocalcio_public_url((string)$selectedCompetition['slug'])) ?>"><?= h(admin_totocalcio_public_url((string)$selectedCompetition['slug'])) ?></a></p>
+        <?php else: ?>
+          <p style="margin: 0; color: #64748b;">Seleziona o crea una competizione.</p>
+        <?php endif; ?>
+
+        <ul class="score-rule" style="margin-top: 16px;">
+          <li>Esito corretto: <strong>+1 punto</strong>.</li>
+          <li>Risultato esatto: <strong>+3 punti</strong>.</li>
+          <li>Una partita reale puo comparire in piu competizioni diverse.</li>
+          <li>I risultati ufficiali restano sempre quelli del calendario.</li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="panel-card">
+      <span class="helper-pill">Elenco</span>
+      <h2>Configurazione competizioni</h2>
+      <p style="margin: 0 0 16px;">Puoi rinominare, riordinare o nascondere una competizione. Lo slug viene reso univoco automaticamente se necessario.</p>
+
+      <?php if (empty($competitions)): ?>
+        <p style="margin: 0; color: #64748b;">Nessuna competizione presente.</p>
+      <?php else: ?>
+        <div class="competition-list">
+          <?php foreach ($competitions as $competition): ?>
+            <article class="competition-card">
+              <div class="competition-card__head">
+                <div>
+                  <h3><?= h($competition['nome']) ?></h3>
+                  <p class="meta-line">Slug: <code><?= h($competition['slug']) ?></code></p>
+                  <p class="meta-line">Partite: <?= (int)($competition['total_matches'] ?? 0) ?> | Attive: <?= (int)($competition['active_matches'] ?? 0) ?> | Pronostici: <?= (int)($competition['total_predictions'] ?? 0) ?></p>
+                </div>
+                <div class="switcher-row" style="margin-top: 0;">
+                  <span class="status-pill <?= !empty($competition['attiva']) ? 'ok' : 'muted' ?>">
+                    <?= !empty($competition['attiva']) ? 'Visibile' : 'Nascosta' ?>
+                  </span>
+                  <a class="competition-pill" href="<?= h(admin_totocalcio_competition_url((string)$competition['slug'])) ?>">Apri</a>
+                </div>
+              </div>
+
+              <form method="POST" autocomplete="off">
+                <?= csrf_field($csrfKey) ?>
+                <input type="hidden" name="action" value="save_competition">
+                <input type="hidden" name="competition_id" value="<?= (int)$competition['id'] ?>">
+
+                <div class="field-grid">
+                  <label class="field">
+                    Nome
+                    <input type="text" name="competition_name" maxlength="150" value="<?= h($competition['nome']) ?>" required>
+                  </label>
+
+                  <label class="field">
+                    Slug
+                    <input type="text" name="competition_slug" maxlength="180" value="<?= h($competition['slug']) ?>">
+                  </label>
+
+                  <label class="field">
+                    Ordine
+                    <input type="number" name="competition_order" min="0" step="1" value="<?= (int)($competition['ordine'] ?? 0) ?>">
+                  </label>
+                </div>
+
+                <div class="form-actions">
+                  <label class="toggle-row">
+                    <input type="checkbox" name="competition_active" value="1" <?= !empty($competition['attiva']) ? 'checked' : '' ?>>
+                    <span>Competizione visibile</span>
+                  </label>
+                  <button class="btn-primary" type="submit">Salva competizione</button>
+                </div>
+              </form>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </section>
+
+    <section class="dual-grid">
+      <article class="panel-card">
+        <span class="helper-pill">Selezione</span>
+        <h2>Aggiungi partite alla competizione</h2>
+        <?php if ($selectedCompetition): ?>
+          <p style="margin: 0 0 16px;">Le partite vengono aggiunte a <strong><?= h($selectedCompetition['nome']) ?></strong>. Qui puoi scegliere solo partite reali ancora non giocate e non gia presenti nella competizione corrente.</p>
+
+          <form method="POST" autocomplete="off">
+            <?= csrf_field($csrfKey) ?>
+            <input type="hidden" name="action" value="add_match">
+
+            <div class="field-grid">
+              <label class="field">
+                Partita disponibile
+                <select name="partita_id" required <?= empty($candidateMatches) ? 'disabled' : '' ?>>
+                  <option value="">-- scegli una partita non ancora giocata --</option>
+                  <?php foreach ($candidateMatches as $candidate): ?>
+                    <option value="<?= (int)$candidate['id'] ?>"><?= h(admin_totocalcio_match_label($candidate)) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </label>
+
+              <label class="field">
+                Ordine
+                <input type="number" name="ordine" min="0" step="1" value="<?= count($matches) ?>">
+              </label>
+
+              <div class="field">
+                <span>&nbsp;</span>
+                <button class="btn-primary" type="submit" <?= empty($candidateMatches) ? 'disabled' : '' ?>>Aggiungi</button>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <span class="helper-text">
+                <?php if (empty($candidateMatches)): ?>
+                  Nessuna nuova partita disponibile per questa competizione.
+                <?php else: ?>
+                  Le partite appariranno subito in <a href="<?= h(admin_totocalcio_public_url((string)$selectedCompetition['slug'])) ?>">questa pagina pubblica</a>.
+                <?php endif; ?>
+              </span>
+            </div>
+          </form>
+        <?php else: ?>
+          <p style="margin: 0; color: #64748b;">Non c e una competizione selezionata.</p>
+        <?php endif; ?>
+      </article>
+
+      <aside class="panel-card">
         <span class="helper-pill">Regole</span>
-        <h3>Come funziona ora</h3>
+        <h3>Promemoria</h3>
         <ul class="score-rule">
-          <li>Selezione da partite esistenti non ancora giocate.</li>
-          <li>Nessun risultato manuale nel Totocalcio.</li>
-          <li>Quando una partita reale diventa giocata, il Totocalcio legge automaticamente esito e risultato.</li>
-          <li>Se il risultato ufficiale viene modificato dopo, il Totocalcio ricalcola tutto sui nuovi gol.</li>
-          <li>Esito corretto: <strong>+1 punto</strong>. Risultato esatto: <strong>+3 punti</strong>.</li>
+          <li>Ogni competizione ha la sua schedina e la sua classifica.</li>
+          <li>La stessa partita reale puo essere riutilizzata in un altra competizione.</li>
+          <li>Se il risultato ufficiale cambia nel calendario, il Totocalcio si riallinea.</li>
+          <li>Nascondere una competizione la esclude anche dalla classifica pubblica.</li>
         </ul>
       </aside>
     </section>
 
     <section class="panel-card">
       <span class="helper-pill">Lista attuale</span>
-      <h2>Partite collegate al Totocalcio</h2>
-      <p style="margin: 0 0 16px;">Puoi cambiare ordine, disattivare temporaneamente una partita o rimuoverla. Il risultato mostrato sotto arriva sempre dal calendario ufficiale.</p>
-
-      <?php if (empty($matches)): ?>
-        <p style="margin: 0; color: #64748b;">Non hai ancora selezionato partite per il Totocalcio.</p>
+      <h2>Partite della competizione selezionata</h2>
+      <?php if (!$selectedCompetition): ?>
+        <p style="margin: 0; color: #64748b;">Nessuna competizione selezionata.</p>
+      <?php elseif (empty($matches)): ?>
+        <p style="margin: 0; color: #64748b;">Non hai ancora selezionato partite per questa competizione.</p>
       <?php else: ?>
         <div class="match-list">
           <?php foreach ($matches as $match): ?>
@@ -324,12 +546,12 @@ foreach ($matches as $match) {
                   <p class="meta-line">Campo: <?= h($match['campo'] ?? 'Da definire') ?> | Pronostici ricevuti: <?= (int)($match['total_predictions'] ?? 0) ?> | Risultato ufficiale: <?= h($officialResult) ?></p>
                 </div>
 
-                <div class="pill-row">
+                <div class="switcher-row" style="margin-top: 0;">
                   <span class="status-pill <?= !empty($match['visibile']) ? 'ok' : 'muted' ?>">
                     <?= !empty($match['visibile']) ? 'Attiva' : 'Disattivata' ?>
                   </span>
                   <span class="status-pill <?= totocalcio_is_match_open($match) ? 'warn' : 'info' ?>">
-                    <?= totocalcio_is_match_open($match) ? 'Non giocata' : 'Giocata / chiusa' ?>
+                    <?= totocalcio_is_match_open($match) ? 'Pronostici aperti' : 'Giocata / chiusa' ?>
                   </span>
                 </div>
               </div>
@@ -339,20 +561,19 @@ foreach ($matches as $match) {
                 <input type="hidden" name="action" value="save_match">
                 <input type="hidden" name="match_id" value="<?= (int)$match['id'] ?>">
 
-                <div class="form-grid form-grid--compact">
+                <div class="match-form-grid">
                   <label class="field">
                     Ordine
                     <input type="number" name="ordine" min="0" step="1" value="<?= (int)($match['ordine'] ?? 0) ?>">
                   </label>
 
-                  <label class="field-toggle">
-                    <input type="checkbox" name="visibile" value="1" <?= !empty($match['visibile']) ? 'checked' : '' ?>>
-                    <span>Mostra in Totocalcio</span>
-                  </label>
-                </div>
-
-                <div class="form-actions">
-                  <button class="btn-primary" type="submit">Salva configurazione</button>
+                  <div class="form-actions" style="margin-top: 0;">
+                    <label class="toggle-row">
+                      <input type="checkbox" name="visibile" value="1" <?= !empty($match['visibile']) ? 'checked' : '' ?>>
+                      <span>Mostra in Totocalcio</span>
+                    </label>
+                    <button class="btn-primary" type="submit">Salva configurazione</button>
+                  </div>
                 </div>
               </form>
 
@@ -360,7 +581,7 @@ foreach ($matches as $match) {
                 <?= csrf_field($csrfKey) ?>
                 <input type="hidden" name="action" value="delete_match">
                 <input type="hidden" name="match_id" value="<?= (int)$match['id'] ?>">
-                <button type="submit" class="btn-danger">Rimuovi dal Totocalcio</button>
+                <button type="submit" class="btn-danger">Rimuovi dalla competizione</button>
               </form>
             </article>
           <?php endforeach; ?>
@@ -370,36 +591,40 @@ foreach ($matches as $match) {
 
     <section class="panel-card">
       <span class="helper-pill">Classifica</span>
-      <h2>Anteprima classifica Totocalcio</h2>
-      <p style="margin: 0 0 16px;">Classifica ordinata per punti, poi risultati esatti, poi esiti corretti. Sono inclusi solo gli account con flag Totocalcio attivo.</p>
-
-      <?php if (empty($leaderboard)): ?>
-        <p style="margin: 0; color: #64748b;">Nessun account abilitato al Totocalcio.</p>
+      <h2>Anteprima classifica</h2>
+      <?php if (!$selectedCompetition): ?>
+        <p style="margin: 0; color: #64748b;">Nessuna competizione selezionata.</p>
       <?php else: ?>
-        <table class="leader-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Utente</th>
-              <th>Esiti corretti</th>
-              <th>Risultati esatti</th>
-              <th>Pronostici valutati</th>
-              <th>Punti</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php foreach ($leaderboard as $index => $row): ?>
+        <p style="margin: 0 0 16px;">Classifica di <strong><?= h($selectedCompetition['nome']) ?></strong>, ordinata per punti, risultati esatti ed esiti corretti. Sono inclusi solo gli account con flag Totocalcio attivo.</p>
+
+        <?php if (empty($leaderboard)): ?>
+          <p style="margin: 0; color: #64748b;">Nessun account abilitato al Totocalcio.</p>
+        <?php else: ?>
+          <table class="leader-table">
+            <thead>
               <tr>
-                <td><?= $index + 1 ?></td>
-                <td><?= h($row['display_name']) ?></td>
-                <td><?= (int)$row['esiti_corretti'] ?></td>
-                <td><?= (int)$row['risultati_esatti'] ?></td>
-                <td><?= (int)$row['pronostici_valutati'] ?></td>
-                <td><strong><?= (int)$row['punti_totali'] ?></strong></td>
+                <th>#</th>
+                <th>Utente</th>
+                <th>Esiti corretti</th>
+                <th>Risultati esatti</th>
+                <th>Pronostici valutati</th>
+                <th>Punti</th>
               </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              <?php foreach ($leaderboard as $index => $row): ?>
+                <tr>
+                  <td><?= $index + 1 ?></td>
+                  <td><?= h($row['display_name']) ?></td>
+                  <td><?= (int)$row['esiti_corretti'] ?></td>
+                  <td><?= (int)$row['risultati_esatti'] ?></td>
+                  <td><?= (int)$row['pronostici_valutati'] ?></td>
+                  <td><strong><?= (int)$row['punti_totali'] ?></strong></td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        <?php endif; ?>
       <?php endif; ?>
     </section>
   </main>
