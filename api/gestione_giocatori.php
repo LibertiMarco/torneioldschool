@@ -4,10 +4,12 @@ require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/crud/giocatore.php';
 require_once __DIR__ . '/crud/Squadra.php';
 require_once __DIR__ . '/crud/SquadraGiocatore.php';
+require_once __DIR__ . '/crud/torneo.php';
 require_once __DIR__ . '/../includi/image_optimizer.php';
 $giocatore = new Giocatore();
 $squadraModel = new Squadra();
 $pivot = new SquadraGiocatore();
+$torneoModel = new torneo();
 $adminCsrf = csrf_get_token('admin_giocatori');
 $csrfWarning = false;
 
@@ -235,6 +237,15 @@ function salvaFotoAssociazione($nome, $cognome, $fieldName, $fotoEsistente = nul
     return '/img/giocatori/' . $filename;
 }
 
+function normalizeTorneoSlugValue($value): string {
+    $value = trim((string)$value);
+    if ($value === '') {
+        return '';
+    }
+
+    return preg_replace('/\.(php|html)$/i', '', $value);
+}
+
 $tornei = [];
 $torneiResult = $squadraModel->getTornei();
 if ($torneiResult) {
@@ -245,6 +256,33 @@ if ($torneiResult) {
     } elseif (is_array($torneiResult)) {
         $tornei = $torneiResult;
     }
+}
+
+$torneiAssociazioni = $tornei;
+$torneiStatusBySlug = [];
+$torneiCatalogoResult = $torneoModel->getAll();
+if ($torneiCatalogoResult instanceof mysqli_result) {
+    while ($row = $torneiCatalogoResult->fetch_assoc()) {
+        $slug = normalizeTorneoSlugValue($row['filetorneo'] ?? '');
+        if ($slug === '') {
+            continue;
+        }
+        $torneiStatusBySlug[$slug] = strtolower(trim((string)($row['stato'] ?? '')));
+    }
+}
+
+if (!empty($torneiStatusBySlug)) {
+    $torneiAssociazioni = array_values(array_filter(
+        $tornei,
+        static function (array $torneoVal) use ($torneiStatusBySlug): bool {
+            $slug = normalizeTorneoSlugValue($torneoVal['id'] ?? $torneoVal['torneo'] ?? $torneoVal['nome'] ?? '');
+            if ($slug === '') {
+                return false;
+            }
+
+            return ($torneiStatusBySlug[$slug] ?? '') !== 'terminato';
+        }
+    ));
 }
 
 // --- CREA ---
@@ -823,7 +861,7 @@ $giocatoriJson = htmlspecialchars(
           <label>Seleziona Torneo</label>
           <select id="assocTorneo" required>
               <option value="">-- Seleziona un torneo --</option>
-              <?php foreach ($tornei as $torneoVal): ?>
+              <?php foreach ($torneiAssociazioni as $torneoVal): ?>
               <?php
                   $val = htmlspecialchars($torneoVal['id'] ?? $torneoVal['torneo'] ?? $torneoVal['nome'] ?? '');
                   $label = htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo');
@@ -894,7 +932,7 @@ $giocatoriJson = htmlspecialchars(
           <label>Seleziona Torneo</label>
           <select id="modAssocTorneo" required>
               <option value="">-- Seleziona un torneo --</option>
-              <?php foreach ($tornei as $torneoVal): ?>
+              <?php foreach ($torneiAssociazioni as $torneoVal): ?>
               <?php
                   $val = htmlspecialchars($torneoVal['id'] ?? $torneoVal['torneo'] ?? $torneoVal['nome'] ?? '');
                   $label = htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo');
@@ -999,7 +1037,7 @@ $giocatoriJson = htmlspecialchars(
           <label>Seleziona Torneo</label>
           <select id="remTorneo" required>
               <option value="">-- Seleziona un torneo --</option>
-              <?php foreach ($tornei as $torneoVal): ?>
+              <?php foreach ($torneiAssociazioni as $torneoVal): ?>
               <?php
                   $val = htmlspecialchars($torneoVal['id'] ?? $torneoVal['torneo'] ?? $torneoVal['nome'] ?? '');
                   $label = htmlspecialchars($torneoVal['nome'] ?? $torneoVal['torneo'] ?? 'Torneo');

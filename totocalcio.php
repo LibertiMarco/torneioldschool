@@ -264,10 +264,6 @@ if (!$canAccess) {
 }
 
 $accessibleCompetitionCount = count($competitions);
-$accessibleMatchCount = 0;
-foreach ($competitions as $competition) {
-    $accessibleMatchCount += (int)($competition['total_matches'] ?? 0);
-}
 
 $myRank = null;
 $myRow = null;
@@ -615,10 +611,12 @@ $seo = [
           <strong><?= $selectedCompetition ? (int)count($matches) : $accessibleCompetitionCount ?></strong>
           <span><?= $selectedCompetition ? 'Partite pubblicate' : 'Competizioni accessibili' ?></span>
         </div>
-        <div class="stat-box">
-          <strong><?= $selectedCompetition ? ($myRow ? (int)$myRow['punti_totali'] : 0) : $accessibleMatchCount ?></strong>
-          <span><?= $selectedCompetition ? 'Punti nella competizione' : 'Partite totali visibili' ?></span>
-        </div>
+        <?php if ($selectedCompetition): ?>
+          <div class="stat-box">
+            <strong><?= $myRow ? (int)$myRow['punti_totali'] : 0 ?></strong>
+            <span>Punti nella competizione</span>
+          </div>
+        <?php endif; ?>
         <div class="stat-box">
           <strong><?= $selectedCompetition ? ($myRank ?? '-') : ($canParticipate ? 'SI' : 'NO') ?></strong>
           <span><?= $selectedCompetition ? 'Posizione in classifica' : 'Pronostici abilitati' ?></span>
