@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../includi/security.php';
+require_once __DIR__ . '/../includi/require_login.php';
 
 // Template base per creare un nuovo torneo:
 // 1) Duplica questo file e rinominalo (es. NuovoTorneo.php)

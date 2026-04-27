@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../includi/security.php';
+require_once __DIR__ . '/../includi/require_login.php';
 require_once __DIR__ . '/../includi/seo.php';
 
 $assetVersion = '20260421a';
@@ -524,4 +524,3 @@ $torneoSeo = [
 
 </body>
 </html>
-

@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../includi/security.php';
+require_once __DIR__ . '/../includi/require_login.php';
 $assetVersion = '20260421a';
 ?>
 <!DOCTYPE html>
