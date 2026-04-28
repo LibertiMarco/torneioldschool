@@ -107,6 +107,17 @@ function ensureSingleDayColumns(mysqli $conn, array &$errors): bool {
     return $giornataOk && $dataOk;
 }
 
+function ensureTournamentLinkColumn(mysqli $conn, array &$errors): bool {
+    return ensureAlboColumn(
+        $conn,
+        'link_torneo',
+        "ALTER TABLE albo ADD COLUMN link_torneo VARCHAR(255) DEFAULT NULL AFTER tabellone_url",
+        $errors,
+        "Impossibile verificare la colonna 'link_torneo'.",
+        "Non riesco ad aggiungere la colonna 'link_torneo' all'albo."
+    );
+}
+
 function normalizeDateInput(?string $value): ?string {
     $value = trim((string)$value);
     if ($value === '') {
@@ -122,6 +133,26 @@ function normalizeDateInput(?string $value): ?string {
         return null;
     }
     return sprintf('%04d-%02d-%02d', $year, $month, $day);
+}
+
+function normalizeTournamentLinkInput(?string $value): string {
+    $value = trim((string)$value);
+    if ($value === '') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $value)) {
+        return $value;
+    }
+    if (preg_match('#^/[A-Za-z0-9/_\\-.?=&%#]+$#', $value)) {
+        return $value;
+    }
+
+    $relative = ltrim($value, '/');
+    if ($relative !== '' && preg_match('#^[A-Za-z0-9/_\\-.?=&%#]+$#', $relative)) {
+        return '/' . $relative;
+    }
+
+    throw new Exception("Il link torneo non e' valido. Usa un URL http/https o un percorso del sito.");
 }
 
 function monthYearFromDate(string $value): array {
@@ -143,12 +174,14 @@ if (!$conn || $conn->connect_error) {
     } else {
         $orderColumnAvailable = ensureOrdinamentoColumn($conn, $errors);
         ensureSingleDayColumns($conn, $errors);
+        ensureTournamentLinkColumn($conn, $errors);
     }
 
 if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $competizione = trim($_POST['competizione'] ?? '');
         $premio = strtoupper(trim($_POST['premio'] ?? 'VINCENTE'));
         $vincitrice = trim($_POST['vincitrice'] ?? '');
+        $linkTorneoInput = $_POST['link_torneo'] ?? '';
         $inizio_mese = (int)($_POST['inizio_mese'] ?? 0);
         $inizio_anno = (int)($_POST['inizio_anno'] ?? 0);
         $fine_mese = (int)($_POST['fine_mese'] ?? 0);
@@ -159,6 +192,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             if ($azione === 'create') {
+                $link_torneo = normalizeTournamentLinkInput($linkTorneoInput);
                 if ($competizione === '' || $vincitrice === '') {
                     throw new Exception('Compila almeno competizione e vincitrice.');
                 }
@@ -176,20 +210,21 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $data_evento = null;
                 }
 
-                $stmt = $conn->prepare("INSERT INTO albo (competizione, premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url, inizio_mese, inizio_anno, fine_mese, fine_anno, giornata_unica, data_evento) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+                $stmt = $conn->prepare("INSERT INTO albo (competizione, premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url, link_torneo, inizio_mese, inizio_anno, fine_mese, fine_anno, giornata_unica, data_evento) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
                 $tabellone_url = '';
                 $im = $inizio_mese ?: null;
                 $ia = $inizio_anno ?: null;
                 $fm = $fine_mese ?: null;
                 $fa = $fine_anno ?: null;
                 $stmt->bind_param(
-                    "ssssssiiiiss",
+                    "sssssssiiiiis",
                     $competizione,
                     $premio,
                     $vincitrice,
                     $logo,
                     $torneo_logo_path,
                     $tabellone_url,
+                    $link_torneo,
                     $im,
                     $ia,
                     $fm,
@@ -201,6 +236,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->close();
                 $messages[] = "Record inserito correttamente.";
             } elseif ($azione === 'update' && $id > 0) {
+                $link_torneo = normalizeTournamentLinkInput($linkTorneoInput);
                 if ($competizione === '' || $vincitrice === '') {
                     throw new Exception('Compila almeno competizione e vincitrice.');
                 }
@@ -243,14 +279,15 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $data_evento = null;
                 }
 
-                $stmt = $conn->prepare("UPDATE albo SET competizione=?, premio=?, vincitrice=?, vincitrice_logo=?, torneo_logo=?, tabellone_url='', inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=?, giornata_unica=?, data_evento=? WHERE id=?");
+                $stmt = $conn->prepare("UPDATE albo SET competizione=?, premio=?, vincitrice=?, vincitrice_logo=?, torneo_logo=?, tabellone_url='', link_torneo=?, inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=?, giornata_unica=?, data_evento=? WHERE id=?");
                 $stmt->bind_param(
-                    "sssssiiiiisi",
+                    "ssssssiiiiisi",
                     $competizione,
                     $premio,
                     $vincitrice,
                     $logo,
                     $torneo_logo_path,
+                    $link_torneo,
                     $im2,
                     $ia2,
                     $fm2,
@@ -457,6 +494,10 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
             <label>Vincitrice*</label>
             <input type="text" name="vincitrice" required>
           </div>
+          <div>
+            <label>Link torneo</label>
+            <input type="text" name="link_torneo" placeholder="/tornei/nome.php oppure https://...">
+          </div>
           <div class="file-input">
             <label>Logo vincitrice (upload)</label>
             <label class="file-label">
@@ -527,6 +568,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
           <label>Competizione<input type="text" name="competizione" id="upd_competizione" required></label>
           <label>Premio<input type="text" name="premio" id="upd_premio" style="text-transform: uppercase;"></label>
           <label>Vincitrice<input type="text" name="vincitrice" id="upd_vincitrice" required></label>
+          <label>Link torneo<input type="text" name="link_torneo" id="upd_link_torneo" placeholder="/tornei/nome.php oppure https://..."></label>
           <div class="file-input">
             <label class="file-label">
               <span class="file-btn">Logo vincitrice</span>
@@ -635,6 +677,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         competizione: document.getElementById('upd_competizione'),
         premio: document.getElementById('upd_premio'),
         vincitrice: document.getElementById('upd_vincitrice'),
+        link_torneo: document.getElementById('upd_link_torneo'),
         giornata_unica: document.getElementById('upd_giornata_unica'),
         data_evento: document.getElementById('upd_data_evento'),
         inizio_mese: document.getElementById('upd_inizio_mese'),
@@ -680,6 +723,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
           fields.competizione.value = rec.competizione || '';
           fields.premio.value = rec.premio || '';
           fields.vincitrice.value = rec.vincitrice || '';
+          fields.link_torneo.value = rec.link_torneo || '';
           fields.giornata_unica.checked = Number(rec.giornata_unica || 0) === 1;
           fields.data_evento.disabled = !fields.giornata_unica.checked;
           fields.data_evento.required = fields.giornata_unica.checked;

@@ -35,6 +35,43 @@ function normalizeDateValue(?string $date): string {
     return $date;
 }
 
+function normalizeTournamentLink(?string $value): string {
+    $value = trim((string)$value);
+    if ($value === '' || $value === '0') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $value)) {
+        return $value;
+    }
+    if (preg_match('#^/[A-Za-z0-9/_\\-.?=&%#]+$#', $value)) {
+        return $value;
+    }
+
+    $relative = ltrim($value, '/');
+    if ($relative !== '' && preg_match('#^[A-Za-z0-9/_\\-.?=&%#]+$#', $relative)) {
+        return '/' . $relative;
+    }
+
+    return '';
+}
+
+function resolveFileTorneoLink(?string $value): string {
+    $value = trim((string)$value);
+    if ($value === '' || $value === '0') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $value)) {
+        return $value;
+    }
+    $value = ltrim($value, '/');
+    $slug = preg_replace('/\.(html?|php)$/i', '', $value);
+    $slug = preg_replace('/[^A-Za-z0-9_-]/', '', $slug);
+    if ($slug === '') {
+        return '';
+    }
+    return '/tornei/' . $slug . '.php';
+}
+
 function alboItemSortTime(array $item): int {
     $candidates = [
         $item['created_at'] ?? '',
@@ -68,6 +105,7 @@ function fetchAlboCustom(mysqli $conn): array {
     $premioCol = isset($cols['premio']) ? 'premio' : (isset($cols['categoria']) ? 'categoria' : "''");
     $torneoLogoCol = isset($cols['torneo_logo']) ? 'torneo_logo' : "''";
     $tabelloneCol = isset($cols['tabellone_url']) ? 'tabellone_url' : "''";
+    $linkTorneoCol = isset($cols['link_torneo']) ? 'link_torneo' : "''";
     $vincitriceLogoCol = isset($cols['vincitrice_logo']) ? 'vincitrice_logo' : "''";
     $inizioMeseCol = isset($cols['inizio_mese']) ? 'inizio_mese' : 'NULL';
     $inizioAnnoCol = isset($cols['inizio_anno']) ? 'inizio_anno' : 'NULL';
@@ -88,6 +126,7 @@ function fetchAlboCustom(mysqli $conn): array {
                {$vincitriceLogoCol} AS vincitrice_logo,
                {$torneoLogoCol} AS torneo_logo,
                {$tabelloneCol} AS tabellone_url,
+               {$linkTorneoCol} AS link_torneo,
                {$inizioMeseCol} AS inizio_mese,
                {$inizioAnnoCol} AS inizio_anno,
                {$fineMeseCol} AS fine_mese,
@@ -122,6 +161,7 @@ function fetchAlboCustom(mysqli $conn): array {
             'data_fine' => dateFromParts((int)$row['fine_mese'], (int)$row['fine_anno']),
             'anno' => $anno,
             'filetorneo' => $tabUrl,
+            'link_torneo' => normalizeTournamentLink($row['link_torneo'] ?? ''),
             'torneo_logo' => $row['torneo_logo'],
             'vincitrice' => $row['vincitrice'],
             'logo_vincitrice' => $row['vincitrice_logo'],
@@ -192,6 +232,7 @@ function fetchAlboFromTornei(mysqli $conn): array {
             'data_fine' => $row['data_fine'] ?: '',
             'anno' => $anno,
             'filetorneo' => $tabUrl,
+            'link_torneo' => resolveFileTorneoLink($tabUrl),
             'torneo_logo' => $row['torneo_img'],
             'vincitrice' => $row['vincitrice'] ?: '',
             'logo_vincitrice' => $row['logo_vincitrice'] ?: '',
@@ -225,6 +266,7 @@ foreach ($raw as $item) {
             'anno' => $item['anno'] ?? '',
             'ordinamento' => $item['ordinamento'] ?? null,
             'filetorneo' => ($item['filetorneo'] ?? ''),
+            'link_torneo' => ($item['link_torneo'] ?? ''),
             'giornata_unica' => (int)($item['giornata_unica'] ?? 0),
             'data_evento' => $item['data_evento'] ?? '',
             'latest_record_id' => $itemRecordId,
@@ -242,6 +284,12 @@ foreach ($raw as $item) {
         $grouped[$key]['latest_record_id'] = $itemRecordId;
         $grouped[$key]['latest_created_at'] = trim((string)($item['created_at'] ?? ''));
         $grouped[$key]['latest_sort_time'] = $itemSortTime;
+        if (!empty($item['link_torneo'])) {
+            $grouped[$key]['link_torneo'] = $item['link_torneo'];
+        }
+    }
+    if (($grouped[$key]['link_torneo'] ?? '') === '' && !empty($item['link_torneo'])) {
+        $grouped[$key]['link_torneo'] = $item['link_torneo'];
     }
     $grouped[$key]['premi'][] = [
         'premio' => $item['premio'] ?? $item['categoria'] ?? 'Premio',

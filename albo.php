@@ -51,6 +51,9 @@ $pageSeo = [
     .albo-premio-body { display: flex; align-items: center; gap: 14px; justify-content: flex-start; }
     .albo-premio img { width: 78px; height: 78px; border-radius: 16px; object-fit: cover; background: #fff; border: 1px solid #dfe4ed; }
     .albo-premio .vic { font-weight: 800; color: #0f172a; font-size: 1.02rem; }
+    .albo-actions { margin-top: 14px; display: flex; }
+    .albo-link { display: inline-flex; align-items: center; justify-content: center; padding: 11px 15px; border-radius: 10px; background: linear-gradient(135deg, #15293e, #1f3f63); color: #fff; font-weight: 800; text-decoration: none; box-shadow: 0 10px 22px rgba(21,41,62,0.22); transition: transform 0.15s ease, box-shadow 0.15s ease; }
+    .albo-link:hover { transform: translateY(-1px); box-shadow: 0 14px 26px rgba(21,41,62,0.28); }
   </style>
 </head>
 <body>
@@ -106,6 +109,7 @@ $pageSeo = [
       const periodo = labelPeriodo(item);
       const logoTorneo = item.torneo_logo || '/img/logo_old_school.png';
       const nomeTorneo = item.competizione || 'Torneo';
+      const linkTorneo = item.link_torneo || '';
       const premi = (item.premi || []).map(p => `
         <div class="albo-premio">
           <div class="albo-premio-title">${p.premio || ''}</div>
@@ -129,6 +133,7 @@ $pageSeo = [
           <div class="albo-premi">
             ${premi}
           </div>
+          ${linkTorneo ? `<div class="albo-actions"><a class="albo-link" href="${linkTorneo}">Vai al torneo</a></div>` : ''}
         </article>
       `;
     }
