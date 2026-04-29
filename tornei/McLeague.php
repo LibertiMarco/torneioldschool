@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includi/require_login.php';
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
 $torneoSlug = 'McLeague';
 $torneoName = 'Mc League';
-$assetVersion = '20260421a';
+$assetVersion = '20260429a';
 
 require_once __DIR__ . '/../includi/db.php';
 $torneoConfig = [];
@@ -358,6 +358,17 @@ if (!empty($torneoConfig['regole_html'])) {
       font-weight: 800;
       background: #d9dee8 !important;
       color: #15293e !important;
+    }
+    .gironi-grid tr.eliminated-row td:first-child,
+    #tableClassifica tr.eliminated-row td:first-child {
+      font-weight: 800;
+      background: #f8d7da !important;
+      color: #8b1e2d !important;
+    }
+    .legenda-coppe .box.elim-box {
+      background: #f8d7da;
+      color: #8b1e2d;
+      border: 1px solid #ef9aa5;
     }
     .gironi-grid tr.placeholder-row td {
       background: #f8fafc;
