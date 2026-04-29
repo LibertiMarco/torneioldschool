@@ -11,6 +11,19 @@
 
 RewriteEngine On
 
+<IfModule php_module>
+  php_value upload_max_filesize 30M
+  php_value post_max_size 128M
+  php_value max_execution_time 300
+  php_value max_input_time 300
+</IfModule>
+<IfModule mod_php.c>
+  php_value upload_max_filesize 30M
+  php_value post_max_size 128M
+  php_value max_execution_time 300
+  php_value max_input_time 300
+</IfModule>
+
 # Forza HTTPS (eccetto ambienti locali)
 RewriteCond %{HTTPS} !=on
 RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1|::1)$ [NC]

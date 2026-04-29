@@ -37,14 +37,32 @@ function blog_preview_text(string $text, int $length = 160): string
     if ($lenFn($clean) <= $length) {
         return $clean;
     }
-    return rtrim($substrFn($clean, 0, $length - 3)) . '...';
+    $preview = rtrim($substrFn($clean, 0, $length - 3)) . '...';
+    if (substr_count($preview, '**') % 2 !== 0) {
+        $lastBold = strrpos($preview, '**');
+        if ($lastBold !== false) {
+            $preview = substr_replace($preview, '', $lastBold, 2);
+        }
+    }
+    if (substr_count($preview, '==') % 2 !== 0) {
+        $lastHighlight = strrpos($preview, '==');
+        if ($lastHighlight !== false) {
+            $preview = substr_replace($preview, '', $lastHighlight, 2);
+        }
+    }
+    return $preview;
 }
 
 function blog_render_preview_html(?string $text, string $fallback = ''): string
 {
     $preview = blog_preview_text($text ?: $fallback);
     $escaped = blog_escape($preview);
-    return preg_replace('/==(.+?)==/', '<strong>$1</strong>', $escaped) ?: $escaped;
+    $formatted = preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $escaped);
+    if ($formatted === null) {
+        $formatted = $escaped;
+    }
+    $formatted = preg_replace('/==(.+?)==/', '<strong>$1</strong>', $formatted);
+    return $formatted === null ? $escaped : $formatted;
 }
 
 function blog_permalink(?string $title): string

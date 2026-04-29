@@ -13,7 +13,7 @@ $contenuto = '';
 $mediaDir = __DIR__ . '/../img/blog_media/';
 $allowedImages = ['jpg', 'jpeg', 'png', 'webp'];
 $allowedVideos = ['mp4', 'webm', 'ogg'];
-$maxUploadBytes = 20 * 1024 * 1024; // 20MB massimo accettato per file multimediali
+$maxUploadBytes = 30 * 1024 * 1024; // 30MB massimo accettato per file multimediali
 
 function ini_bytes(string $value): int {
   $value = trim($value);
@@ -60,7 +60,7 @@ function saveMediaFile(array $file, string $uploadDir, array $allowedImages, arr
   $tipo = detectMediaType($file['name'] ?? '', $allowedImages, $allowedVideos);
   if (!$tipo) { $errore = 'Formato non supportato. Carica immagini JPG/PNG/WEBP o video MP4/WEBM/OGG.'; return null; }
   if ($tipo === 'image' && ($file['size'] ?? 0) > $maxUploadBytes) {
-    $errore = 'Immagine troppo pesante. Limite 20MB prima della compressione.';
+    $errore = 'Immagine troppo pesante. Limite 30MB prima della compressione.';
     return null;
   }
   if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true)) { $errore = 'Impossibile creare la cartella per i media.'; return null; }
@@ -338,6 +338,18 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
     .helper-text { color: #586274; font-size: 0.9rem; margin-top: -6px; margin-bottom: 10px; }
     .upload-remove { border: 1px solid #d5dbe4; background: #fff; color: #1c2a3a; border-radius: 10px; padding: 8px 12px; cursor: pointer; font-weight: 700; }
     .upload-remove:hover { border-color: #1f3f63; color: #1f3f63; }
+    .sections-list { display: flex; flex-direction: column; gap: 14px; }
+    .section-block { border: 1px solid #dbe4f0; border-radius: 14px; padding: 14px; background: linear-gradient(180deg, #fbfdff 0%, #f4f8fc 100%); }
+    .section-row { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+    .section-subtitle { flex: 1; }
+    .section-editor-shell { border: 1px solid #d5dbe4; border-radius: 12px; background: #fff; overflow: hidden; }
+    .section-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #f7f9fc; border-bottom: 1px solid #e4e9f2; }
+    .editor-tool-btn { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #cfd8e3; border-radius: 10px; background: #fff; color: #15293e; cursor: pointer; font-size: 1rem; font-weight: 800; }
+    .editor-tool-btn:hover { border-color: #1f3f63; color: #1f3f63; }
+    .editor-tool-btn strong { font-size: 1.05rem; }
+    .section-body-editor { min-height: 220px; padding: 14px 16px; outline: none; white-space: pre-wrap; line-height: 1.6; position: relative; }
+    .section-body-editor:focus { box-shadow: inset 0 0 0 2px rgba(31,63,99,0.16); }
+    .section-body-editor[data-empty="true"]::before { content: attr(data-placeholder); color: #98a2b3; position: absolute; top: 14px; left: 16px; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -375,7 +387,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <div class="sections-builder">
           <div class="sections-header">
             <label>Struttura contenuto (sottotitolo + paragrafo)</label>
-            <p class="helper-text">Aggiungi quante sezioni vuoi: ogni blocco verra' unito automaticamente nel contenuto dell'articolo. Puoi evidenziare parole racchiudendole tra <code>==cosi==</code>.</p>
+            <p class="helper-text">Aggiungi quante sezioni vuoi: ogni blocco verra' unito automaticamente nel contenuto dell'articolo. Seleziona una parola e usa il pulsante <strong>B</strong> per lasciarla in grassetto.</p>
           </div>
           <div class="sections-list" id="sectionsCreate" data-sections="create"></div>
           <button type="button" class="btn-secondary-modern" data-add-section="create">Aggiungi sezione</button>
@@ -430,7 +442,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <div class="sections-builder">
           <div class="sections-header">
             <label>Struttura contenuto (sottotitolo + paragrafo)</label>
-            <p class="helper-text">Modifica o aggiungi blocchi di testo; verranno uniti nel contenuto dell'articolo. Evidenzia con <code>==testo==</code>.</p>
+            <p class="helper-text">Modifica o aggiungi blocchi di testo; verranno uniti nel contenuto dell'articolo. Il grassetto inserito dal pulsante <strong>B</strong> viene mantenuto anche al salvataggio.</p>
           </div>
           <div class="sections-list" id="sectionsMod" data-sections="mod"></div>
           <button type="button" class="btn-secondary-modern" data-add-section="mod">Aggiungi sezione</button>
@@ -516,6 +528,114 @@ function ensureSectionContainer(scope) {
   return container;
 }
 
+function escapeHtml(value = '') {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function storageTextToEditorHtml(text = '') {
+  const escaped = escapeHtml(String(text || '').replace(/\r\n?/g, '\n'));
+  return escaped
+    .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/==([\s\S]+?)==/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
+function editorNodeToStorage(node) {
+  if (!node) return '';
+  if (node.nodeType === Node.TEXT_NODE) {
+    return (node.textContent || '').replace(/\u00a0/g, ' ');
+  }
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return '';
+  }
+  const tag = node.tagName.toLowerCase();
+  if (tag === 'br') {
+    return '\n';
+  }
+  const inner = Array.from(node.childNodes).map(editorNodeToStorage).join('');
+  if (tag === 'strong' || tag === 'b') {
+    return inner
+      .split('\n')
+      .map(part => part ? `**${part}**` : '')
+      .join('\n');
+  }
+  if (['div', 'p', 'li'].includes(tag)) {
+    return inner + '\n';
+  }
+  return inner;
+}
+
+function editorToStorageText(editor) {
+  const raw = Array.from(editor?.childNodes || []).map(editorNodeToStorage).join('');
+  return raw
+    .replace(/\r\n?/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function editorPlainText(editor) {
+  return (editor?.textContent || '').replace(/\u00a0/g, ' ').trim();
+}
+
+function syncEditorEmptyState(editor) {
+  if (!editor) return;
+  editor.dataset.empty = editorPlainText(editor) === '' ? 'true' : 'false';
+}
+
+function selectionInsideEditor(editor) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return false;
+  const range = selection.getRangeAt(0);
+  return editor.contains(range.startContainer) && editor.contains(range.endContainer);
+}
+
+function placeCaretAtEnd(editor) {
+  if (!editor) return;
+  const range = document.createRange();
+  range.selectNodeContents(editor);
+  range.collapse(false);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+}
+
+function attachRichEditor(editor, boldButton) {
+  if (!editor) return;
+  syncEditorEmptyState(editor);
+  editor.addEventListener('input', () => syncEditorEmptyState(editor));
+  editor.addEventListener('blur', () => syncEditorEmptyState(editor));
+  editor.addEventListener('paste', event => {
+    event.preventDefault();
+    const text = event.clipboardData?.getData('text/plain') || '';
+    document.execCommand('insertText', false, text);
+    syncEditorEmptyState(editor);
+  });
+  editor.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
+      event.preventDefault();
+      document.execCommand('bold', false, null);
+      syncEditorEmptyState(editor);
+    }
+  });
+  if (!boldButton) return;
+  boldButton.addEventListener('mousedown', event => event.preventDefault());
+  boldButton.addEventListener('click', () => {
+    if (!selectionInsideEditor(editor)) {
+      editor.focus();
+      placeCaretAtEnd(editor);
+    } else {
+      editor.focus();
+    }
+    document.execCommand('bold', false, null);
+    syncEditorEmptyState(editor);
+  });
+}
+
 function createSectionElement(scope, data = {}) {
   const wrapper = document.createElement('div');
   wrapper.className = 'section-block';
@@ -525,12 +645,19 @@ function createSectionElement(scope, data = {}) {
       <input type="text" class="section-subtitle" placeholder="Sottotitolo (opzionale)" value="">
       <button type="button" class="upload-remove" data-remove-section aria-label="Rimuovi sezione">&times;</button>
     </div>
-    <textarea class="section-body" placeholder="Paragrafo"></textarea>
+    <div class="section-editor-shell">
+      <div class="section-toolbar">
+        <button type="button" class="editor-tool-btn" data-editor-bold aria-label="Grassetto" title="Grassetto (Ctrl+B)"><strong>B</strong></button>
+      </div>
+      <div class="section-body-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Paragrafo"></div>
+    </div>
   `;
   const subtitleInput = wrapper.querySelector('.section-subtitle');
-  const bodyArea = wrapper.querySelector('.section-body');
+  const bodyArea = wrapper.querySelector('.section-body-editor');
+  const boldButton = wrapper.querySelector('[data-editor-bold]');
   if (subtitleInput) subtitleInput.value = data.subtitle || '';
-  if (bodyArea) bodyArea.value = data.body || '';
+  if (bodyArea) bodyArea.innerHTML = storageTextToEditorHtml(data.body || '');
+  attachRichEditor(bodyArea, boldButton);
   const removeBtn = wrapper.querySelector('[data-remove-section]');
   removeBtn.addEventListener('click', () => {
     const container = wrapper.parentElement;
@@ -538,7 +665,11 @@ function createSectionElement(scope, data = {}) {
     const blocks = container.querySelectorAll('[data-section-block]');
     if (blocks.length <= 1) {
       wrapper.querySelector('.section-subtitle').value = '';
-      wrapper.querySelector('.section-body').value = '';
+      const editor = wrapper.querySelector('.section-body-editor');
+      if (editor) {
+        editor.innerHTML = '';
+        syncEditorEmptyState(editor);
+      }
       return;
     }
     wrapper.remove();
@@ -565,9 +696,10 @@ function parseContentToSections(text = '') {
 
   lines.forEach(line => {
     const heading = line.trim().match(/^#{1,2}\s+(.*)$/);
-    if (heading) {
+    const legacyHeading = line.trim().match(/^==(.+)==$/);
+    if (heading || legacyHeading) {
       pushCurrent();
-      current.subtitle = heading[1] || '';
+      current.subtitle = (heading?.[1] || legacyHeading?.[1] || '').trim();
     } else {
       current.body.push(line);
     }
@@ -594,7 +726,7 @@ function sectionsToContent(scope) {
   const blocks = [];
   container.querySelectorAll('[data-section-block]').forEach(block => {
     const subtitle = block.querySelector('.section-subtitle')?.value.trim() || '';
-    const body = block.querySelector('.section-body')?.value.trim() || '';
+    const body = editorToStorageText(block.querySelector('.section-body-editor'));
     if (!subtitle && !body) return;
     let chunk = '';
     if (subtitle) chunk += `==${subtitle}==\n\n`;

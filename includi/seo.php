@@ -44,6 +44,8 @@ if (!function_exists('seo_base_url')) {
     function seo_trim(string $text, int $length = 160): string
     {
         $clean = trim(strip_tags($text));
+        $clean = preg_replace('/\*\*(.+?)\*\*/s', '$1', $clean) ?? $clean;
+        $clean = preg_replace('/==(.+?)==/s', '$1', $clean) ?? $clean;
         $lenFn = function_exists('mb_strlen') ? 'mb_strlen' : 'strlen';
         $substrFn = function_exists('mb_substr') ? 'mb_substr' : 'substr';
         if ($lenFn($clean) > $length) {
