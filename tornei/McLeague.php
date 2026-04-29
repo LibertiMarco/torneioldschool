@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includi/require_login.php';
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
 $torneoSlug = 'McLeague';
 $torneoName = 'Mc League';
-$assetVersion = '20260429a';
+$assetVersion = '20260429b';
 
 require_once __DIR__ . '/../includi/db.php';
 $torneoConfig = [];
@@ -35,6 +35,13 @@ try {
 } catch (Throwable $e) {
     // ignora eventuali errori di lettura config
 }
+
+// Formula fissa McLeague:
+// 1-4 Coppa Gold, 5-6 Coppa Silver, 7 eliminata.
+$torneoConfig['totale_squadre'] = 7;
+$torneoConfig['campionato_squadre'] = 7;
+$torneoConfig['qualificati_gold'] = 4;
+$torneoConfig['qualificati_silver'] = 2;
 
 if (!function_exists('renderRegoleMarkupFromText')) {
     function decorateRegoleInline(string $text): string {
