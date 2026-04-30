@@ -947,7 +947,7 @@ async function caricaPlayoff(tipoCoppa) {
   }
 }
 
-// override con template playoff uguale a Champions (placeholder se mancano partite)
+// override con template playoff Saudi League (placeholder se mancano partite)
 async function caricaPlayoff(tipoCoppa) {
   const faseParam = (tipoCoppa || "gold").toUpperCase(); // GOLD / SILVER
   const container = document.getElementById("playoffContainer");
@@ -1019,7 +1019,12 @@ async function caricaPlayoff(tipoCoppa) {
       [6, 11], [7, 10], [8, 9],
     ].map(([a, b], idx) => baseMatch(`${a}\u00B0 in classifica`, `${b}\u00B0 in classifica`, `Ottavo ${idx + 1}`));
 
-    const defaultQuarti = []; // quarti da popolare quando disponibili
+    const defaultQuarti = [
+      baseMatch("1\u00B0 in classifica", "Vincente 8\u00B0/9\u00B0 in classifica", "Quarto 1"),
+      baseMatch("2\u00B0 in classifica", "Vincente 7\u00B0/10\u00B0 in classifica", "Quarto 2"),
+      baseMatch("Vincente 3\u00B0/14\u00B0 in classifica", "Vincente 5\u00B0/12\u00B0 in classifica", "Quarto 3"),
+      baseMatch("Vincente 4\u00B0/13\u00B0 in classifica", "Vincente 6\u00B0/11\u00B0 in classifica", "Quarto 4"),
+    ];
 
     const defaultSemifinaliGold = [
       baseMatch("Vincente Quarto 1", "Vincente Quarto 4"),
