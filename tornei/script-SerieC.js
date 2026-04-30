@@ -1,4 +1,5 @@
 ﻿const TORNEO = "SerieC"; // Nome base del torneo nel DB (fase girone)
+const GOLD_POSITIONS_PER_GROUP = 8;
 const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
 const teamLogos = {};
 const favState = { tournaments: new Set(), teams: new Set() };
@@ -309,6 +310,7 @@ async function caricaClassifica(torneoSlug = TORNEO) {
       torneoInfo,
       orderRows: orderClassificaRows,
       resolveLogoPath,
+      goldPerGroupOverride: GOLD_POSITIONS_PER_GROUP,
       fallbackGoldSpots: 16,
       fallbackSilverSpots: Math.max(data.length - 16, 0)
     });

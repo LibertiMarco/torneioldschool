@@ -158,13 +158,17 @@
     const silverTotal = hasSilver
       ? Math.max(0, toNumber(config.qualificati_silver, 0))
       : silverFallback;
+    const requestedGoldPerGroup = toNumber(options.goldPerGroupOverride, NaN);
+    const goldPerGroup = Number.isFinite(requestedGoldPerGroup)
+      ? Math.min(teamsPerGroup, Math.max(0, requestedGoldPerGroup))
+      : (labels.length ? Math.floor(goldTotal / labels.length) : 0);
 
     return {
       labels,
       teamsPerGroup,
       goldTotal,
       silverTotal,
-      goldPerGroup: labels.length ? Math.floor(goldTotal / labels.length) : 0,
+      goldPerGroup,
       silverPerGroup: labels.length ? Math.floor(silverTotal / labels.length) : 0
     };
   }
