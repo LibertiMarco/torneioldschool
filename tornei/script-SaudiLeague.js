@@ -1027,10 +1027,10 @@ async function caricaPlayoff(tipoCoppa) {
     ];
 
     const defaultSemifinaliGold = [
-      baseMatch("Vincente Quarto 1", "Vincente Quarto 4"),
-      baseMatch("Vincente Quarto 2", "Vincente Quarto 3"),
+      baseMatch("Vincente 1\u00B0/8\u00B0/9\u00B0 in classifica", "Vincente 4\u00B0/13\u00B0/6\u00B0/11\u00B0 in classifica", "Semifinale 1"),
+      baseMatch("Vincente 2\u00B0/7\u00B0/10\u00B0 in classifica", "Vincente 3\u00B0/14\u00B0/5\u00B0/12\u00B0 in classifica", "Semifinale 2"),
     ];
-    const defaultFinaleGold = [baseMatch("Vincente Semifinale 1", "Vincente Semifinale 2")];
+    const defaultFinaleGold = [baseMatch("Semifinale 1", "Semifinale 2", "Finale")];
 
     const defaultSemifinaliSilver = [
       baseMatch("15\u00B0 in classifica", "18\u00B0 in classifica", "Semifinale 1"),
