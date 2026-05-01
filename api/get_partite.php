@@ -15,7 +15,7 @@ try {
   $torneo = $_GET['torneo'] ?? '';
   $fase = strtoupper($_GET['fase'] ?? '');
   $idPartita = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-  $fasiAmmesse = ['REGULAR','GOLD','SILVER'];
+  $fasiAmmesse = ['REGULAR','GOLD','SILVER','BRONZO'];
   if(!$torneo && $idPartita <= 0){ respondError("Parametro 'torneo' mancante.", 400); }
 
   // Se non arriva il torneo ma arriva l'id, recuperalo dalla partita

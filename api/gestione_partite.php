@@ -9,6 +9,7 @@ $successo = '';
 $torneiDisponibili = [];
 $squadrePerTorneo = [];
 $fasiAmmesse = ['REGULAR', 'GOLD', 'SILVER'];
+$fasiAmmesseConBronzo = ['REGULAR', 'GOLD', 'SILVER', 'BRONZO'];
 $maxGiornateRegular = 10;
 $roundMap = [
   'TRENTADUESIMI' => 6,
@@ -68,6 +69,10 @@ function sanitize_leg(?string $v): ?string {
   $allowed = ['ANDATA','RITORNO','UNICA'];
   if (!$val) return null;
   return in_array($val, $allowed, true) ? $val : null;
+}
+
+function torneo_supporta_bronzo(string $torneo): bool {
+  return strcasecmp(trim($torneo), 'MondialeFasciaB') === 0;
 }
 
 function round_to_giornata(?string $roundLabel, array $map): ?int {
@@ -600,7 +605,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   if ($azione === 'crea') {
     $torneo = sanitize_text($_POST['torneo'] ?? '');
-    $fase = sanitize_fase($_POST['fase'] ?? '', $fasiAmmesse);
+    $fase = sanitize_fase($_POST['fase'] ?? '', $fasiAmmesseConBronzo);
     $casa = sanitize_text($_POST['squadra_casa'] ?? '');
     $ospite = sanitize_text($_POST['squadra_ospite'] ?? '');
     $data = sanitize_text($_POST['data_partita'] ?? '');
@@ -609,7 +614,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $roundSelezionato = sanitize_text($_POST['round_eliminazione'] ?? '');
     $giornata = sanitize_int($_POST['giornata'] ?? '');
     $faseRound = $fase !== 'REGULAR' ? strtoupper($roundSelezionato) : null;
-    $faseRound = ($faseRound && in_array($faseRound, ['OTTAVI','QUARTI','SEMIFINALE','FINALE'], true)) ? $faseRound : null;
+    $faseRound = ($faseRound && in_array($faseRound, ['TRENTADUESIMI','SEDICESIMI','OTTAVI','QUARTI','SEMIFINALE','FINALE'], true)) ? $faseRound : null;
     $faseLegInput = $fase !== 'REGULAR' ? sanitize_leg($_POST['fase_leg'] ?? '') : null;
     $faseLeg = $fase !== 'REGULAR'
       ? ($faseLegInput ?: ($faseRound === 'SEMIFINALE' ? 'ANDATA' : 'UNICA'))
@@ -626,6 +631,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($fase !== 'REGULAR' && $roundSelezionato === '')) {
       $errore = 'Compila tutti i campi obbligatori.';
+    } elseif ($fase === 'BRONZO' && !torneo_supporta_bronzo($torneo)) {
+      $errore = 'La fase BRONZO è disponibile solo per Mondiale Fascia B.';
     } elseif ($casa === $ospite) {
       $errore = 'Le due squadre non possono coincidere.';
     } elseif ($fase !== 'REGULAR' && !$faseLeg) {
@@ -736,7 +743,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($azione === 'modifica') {
     $id = (int)($_POST['partita_id'] ?? 0);
     $torneo = sanitize_text($_POST['torneo_mod'] ?? '');
-    $fase = sanitize_fase($_POST['fase_mod'] ?? '', $fasiAmmesse);
+    $fase = sanitize_fase($_POST['fase_mod'] ?? '', $fasiAmmesseConBronzo);
     $casa = sanitize_text($_POST['squadra_casa_mod'] ?? '');
     $ospite = sanitize_text($_POST['squadra_ospite_mod'] ?? '');
     $data = sanitize_text($_POST['data_partita_mod'] ?? '');
@@ -774,6 +781,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($id <= 0 || $torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($fase !== 'REGULAR' && $roundSelezionato === '')) {
       $errore = 'Seleziona una partita e compila i campi obbligatori.';
+    } elseif ($fase === 'BRONZO' && !torneo_supporta_bronzo($torneo)) {
+      $errore = 'La fase BRONZO è disponibile solo per Mondiale Fascia B.';
     } elseif ($casa === $ospite) {
       $errore = 'Le due squadre non possono coincidere.';
     } elseif ($fase !== 'REGULAR' && !$faseLeg) {
@@ -1606,6 +1615,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
   };
   const roundLabelFromGiornata = Object.fromEntries(Object.entries(roundLabelMap).map(([k,v]) => [String(v), k]));
   const roundLabelByKey = roundLabelFromGiornata;
+  const basePhaseOptions = <?php echo json_encode($fasiAmmesse, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+  const bronzeEnabledTournaments = new Set(['MondialeFasciaB']);
 
   // Tabs
   const tabButtons = document.querySelectorAll('.tab-buttons button');
@@ -1633,6 +1644,33 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (selectedValue) select.value = selectedValue;
   };
 
+  const getPhaseOptionsForTournament = (torneoSlug = '') => {
+    if (bronzeEnabledTournaments.has(torneoSlug)) {
+      return [...basePhaseOptions, 'BRONZO'];
+    }
+    return [...basePhaseOptions];
+  };
+
+  const syncPhaseSelectOptions = (selectEl, torneoSlug = '', placeholder = '') => {
+    if (!selectEl) return;
+    const currentValue = (selectEl.value || '').toUpperCase();
+    const options = getPhaseOptionsForTournament(torneoSlug);
+    selectEl.innerHTML = '';
+    if (placeholder) {
+      selectEl.add(new Option(placeholder, ''));
+    }
+    options.forEach(phase => {
+      selectEl.add(new Option(phase, phase));
+    });
+    if (currentValue && options.includes(currentValue)) {
+      selectEl.value = currentValue;
+    } else if (placeholder) {
+      selectEl.value = '';
+    } else if (options.length) {
+      selectEl.value = options[0];
+    }
+  };
+
   const enforceDifferentTeams = (idA, idB) => {
     const a = document.getElementById(idA);
     const b = document.getElementById(idB);
@@ -1654,6 +1692,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
   const giornataCrea = document.getElementById('giornataCrea');
   const roundCrea = document.getElementById('roundCrea');
   const faseLegCrea = document.getElementById('faseLegCrea');
+  syncPhaseSelectOptions(faseCrea, torneoCrea?.value || '');
 
   const getGiornataTarget = () => {
     const faseVal = (faseCrea?.value || '').toUpperCase();
@@ -1717,7 +1756,10 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
   };
 
   if (torneoCrea) {
-    torneoCrea.addEventListener('change', populateSquadreFiltrate);
+    torneoCrea.addEventListener('change', () => {
+      syncPhaseSelectOptions(faseCrea, torneoCrea.value || '');
+      populateSquadreFiltrate();
+    });
   }
   if (faseCrea) {
     faseCrea.addEventListener('change', populateSquadreFiltrate);
@@ -1739,6 +1781,29 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
   }
   // inizializza filtrando appena caricata la pagina
   populateSquadreFiltrate();
+
+  [
+    { torneoId: 'selTorneoMod', faseId: 'selFaseMod', placeholder: '-- Seleziona fase --' },
+    { torneoId: 'torneo_mod', faseId: 'fase_mod' },
+    { torneoId: 'selTorneoGioc', faseId: 'selFaseGioc', placeholder: '-- Seleziona fase --' },
+    { torneoId: 'selTorneoLink', faseId: 'selFaseLink', placeholder: '-- Seleziona fase --' },
+    { torneoId: 'selTorneoElim', faseId: 'selFaseElim', placeholder: '-- Seleziona fase --' }
+  ].forEach(({ torneoId, faseId, placeholder = '' }) => {
+    const torneoSelect = document.getElementById(torneoId);
+    const faseSelect = document.getElementById(faseId);
+    syncPhaseSelectOptions(faseSelect, torneoSelect?.value || '', placeholder);
+    torneoSelect?.addEventListener('change', () => {
+      syncPhaseSelectOptions(faseSelect, torneoSelect.value || '', placeholder);
+    });
+  });
+
+  const torneoModFormSelect = document.getElementById('torneo_mod');
+  torneoModFormSelect?.addEventListener('change', () => {
+    const torneoVal = torneoModFormSelect.value || '';
+    syncPhaseSelectOptions(document.getElementById('fase_mod'), torneoVal);
+    populateSquadre(torneoVal, 'squadra_casa_mod');
+    populateSquadre(torneoVal, 'squadra_ospite_mod');
+  });
 
   const renderFormMessage = (formId, type, text) => {
     const form = document.getElementById(formId);
@@ -1853,6 +1918,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         torneoMod.add(opt);
       }
       torneoMod.value = partita.torneo;
+      syncPhaseSelectOptions(document.getElementById('fase_mod'), partita.torneo || '');
       populateSquadre(partita.torneo, 'squadra_casa_mod', partita.squadra_casa);
       populateSquadre(partita.torneo, 'squadra_ospite_mod', partita.squadra_ospite);
     }

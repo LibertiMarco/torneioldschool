@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includi/require_login.php';
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
 $torneoSlug = 'MondialeFasciaB';
 $torneoName = 'Mondiale Fascia B';
-$assetVersion = '20260421a';
+$assetVersion = '20260501b';
 
 require_once __DIR__ . '/../includi/db.php';
 $torneoConfig = [];
@@ -45,11 +45,14 @@ if (!function_exists('renderRegoleMarkupFromText')) {
             '__COPPA_GOLD_END__' => '</span>',
             '__COPPA_SILVER_START__' => '<span class="silver">',
             '__COPPA_SILVER_END__' => '</span>',
+            '__COPPA_BRONZO_START__' => '<span class="bronze">',
+            '__COPPA_BRONZO_END__' => '</span>',
         ];
 
         $text = str_replace('Trofeo Regular Season', '__TROFEO_RS_START__Trofeo Regular Season__TROFEO_RS_END__', $text);
         $text = str_replace('Coppa Gold', '__COPPA_GOLD_START__Coppa Gold__COPPA_GOLD_END__', $text);
         $text = str_replace('Coppa Silver', '__COPPA_SILVER_START__Coppa Silver__COPPA_SILVER_END__', $text);
+        $text = str_replace('Coppa Bronzo', '__COPPA_BRONZO_START__Coppa Bronzo__COPPA_BRONZO_END__', $text);
 
         return strtr(htmlspecialchars(trim($text), ENT_QUOTES, 'UTF-8'), $placeholders);
     }
@@ -173,6 +176,9 @@ $qualificatiSilver = array_key_exists('qualificati_silver', $torneoConfig)
     : null;
 $showGoldCup = $qualificatiGold === null ? true : $qualificatiGold > 0;
 $showSilverCup = $qualificatiSilver === null ? true : $qualificatiSilver > 0;
+$showGoldCup = true;
+$showSilverCup = true;
+$showBronzeCup = true;
 
 if (!empty($torneoConfig['regole_html'])) {
     $regoleMarkup = renderRegoleMarkupFromText((string)$torneoConfig['regole_html']);
@@ -359,6 +365,20 @@ if (!empty($torneoConfig['regole_html'])) {
       background: #d9dee8 !important;
       color: #15293e !important;
     }
+    .gironi-grid tr.bronze-row td:first-child,
+    #tableClassifica tr.bronze-row td:first-child {
+      font-weight: 800;
+      background: #c98a4a !important;
+      color: #15293e !important;
+    }
+    .legenda-coppe .bronze-box {
+      background: linear-gradient(135deg, #d59a56, #b8742b);
+      color: #fff;
+    }
+    .bronze {
+      color: #b8742b;
+      font-weight: 700;
+    }
     .gironi-grid tr.placeholder-row td {
       background: #f8fafc;
       color: #7b8798;
@@ -447,6 +467,9 @@ if (!empty($torneoConfig['regole_html'])) {
             <?php if ($showSilverCup): ?>
               <option value="silver">COPPA SILVER</option>
             <?php endif; ?>
+            <?php if ($showBronzeCup): ?>
+              <option value="bronze">COPPA BRONZO</option>
+            <?php endif; ?>
           </select>
         </div>
       </div>
@@ -493,6 +516,9 @@ if (!empty($torneoConfig['regole_html'])) {
             <?php endif; ?>
             <?php if ($showSilverCup): ?>
               <option value="SILVER">Silver</option>
+            <?php endif; ?>
+            <?php if ($showBronzeCup): ?>
+              <option value="BRONZO">Bronzo</option>
             <?php endif; ?>
           </select>
         </div>
