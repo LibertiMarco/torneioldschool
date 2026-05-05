@@ -48,23 +48,32 @@ try {
   }
   $logoStmt->close();
 
-  $query = "SELECT * FROM partite WHERE torneo=?";
+  $query = "SELECT 
+      p.*,
+      EXISTS(
+        SELECT 1
+        FROM partita_giocatore pg
+        WHERE pg.partita_id = p.id
+        LIMIT 1
+      ) AS ha_statistiche_giocatori
+    FROM partite p
+    WHERE p.torneo=?";
   $types = "s";
   $params = [$torneo];
   if ($idPartita > 0) {
-    $query .= " AND id=?";
+    $query .= " AND p.id=?";
     $types .= "i";
     $params[] = $idPartita;
   }
   if ($fase && in_array($fase, $fasiAmmesse, true)) {
-    $query .= " AND fase=?";
+    $query .= " AND p.fase=?";
     $types .= "s";
     $params[] = $fase;
   }
   $query .= " ORDER BY 
-    CASE WHEN fase = 'REGULAR' THEN COALESCE(giornata, 0) ELSE 999 END,
-    data_partita ASC,
-    ora_partita ASC";
+    CASE WHEN p.fase = 'REGULAR' THEN COALESCE(p.giornata, 0) ELSE 999 END,
+    p.data_partita ASC,
+    p.ora_partita ASC";
 
   $st = $conn->prepare($query);
   if (!$st) {
@@ -100,7 +109,8 @@ try {
       "arbitro"=>$row['arbitro'] ?? '',
       "link_youtube"=>$row['link_youtube'] ?? null,
       "link_instagram"=>$row['link_instagram'] ?? null,
-      "giocata"=>$row['giocata'] ?? 0
+      "giocata"=>$row['giocata'] ?? 0,
+      "ha_statistiche_giocatori"=> isset($row['ha_statistiche_giocatori']) ? (int)$row['ha_statistiche_giocatori'] : 0
     ];
 
     $lista[] = $record;

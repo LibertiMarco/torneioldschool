@@ -1,4 +1,4 @@
-﻿const TORNEO = "SaudiLeague"; // Nome base del torneo nel DB (fase girone)
+const TORNEO = "SaudiLeague"; // Nome base del torneo nel DB (fase girone)
 const GOLD_QUARTI_SPOTS = 2;        // prime 2 ai quarti di Coppa Gold
 const GOLD_OTTAVI_SPOTS = 12;       // posizioni 3-14 agli ottavi di Coppa Gold
 const SILVER_SPOTS = 4;             // ultime 4 in Coppa Silver (stile Champions)
@@ -740,10 +740,12 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         const hasScore = partita.gol_casa !== null && partita.gol_ospite !== null;
         const giocata = String(partita.giocata) === "1";
         const mostraRisultato = giocata && hasScore;
+        const hasPlayerStats = Number(partita.ha_statistiche_giocatori || 0) === 1;
+        const canOpenMatchStats = mostraRisultato && hasPlayerStats;
         const aiRigori = mostraRisultato && Number(partita.decisa_rigori || 0) === 1;
         const hasPenalties = aiRigori && partita.rigori_casa !== null && partita.rigori_casa !== undefined && partita.rigori_ospite !== null && partita.rigori_ospite !== undefined;
 
-        if (mostraRisultato) {
+        if (canOpenMatchStats) {
           partitaDiv.style.cursor = "pointer";
           partitaDiv.onclick = () => {
             window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${TORNEO}`;
@@ -1107,6 +1109,8 @@ async function caricaPlayoff(tipoCoppa) {
           const hasScore = partita.gol_casa !== null && partita.gol_ospite !== null;
           const giocata = (Number(partita.giocata) === 1);
           const mostraRisultato = giocata && hasScore;
+          const hasPlayerStats = Number(partita.ha_statistiche_giocatori || 0) === 1;
+          const canOpenMatchStats = mostraRisultato && hasPlayerStats;
           const aiRigori = mostraRisultato && Number(partita.decisa_rigori || 0) === 1;
           const hasPenalties = aiRigori && partita.rigori_casa !== null && partita.rigori_casa !== undefined && partita.rigori_ospite !== null && partita.rigori_ospite !== undefined;
           const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
@@ -1137,7 +1141,7 @@ async function caricaPlayoff(tipoCoppa) {
               <span>${partita.campo || 'Campo da definire'}</span>
             </div>
           `;
-          if (mostraRisultato) {
+          if (canOpenMatchStats) {
             body.addEventListener("click", () => {
               window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${encodeURIComponent(TORNEO)}`;
             });

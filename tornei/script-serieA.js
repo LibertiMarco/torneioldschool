@@ -1,4 +1,4 @@
-﻿const TORNEO = "SerieA"; // Nome base del torneo nel DB (fase girone)
+const TORNEO = "SerieA"; // Nome base del torneo nel DB (fase girone)
 const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
 const teamLogos = {};
 const favState = { tournaments: new Set(), teams: new Set() };
@@ -730,10 +730,12 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         const hasScore = partita.gol_casa !== null && partita.gol_ospite !== null;
         const giocata = String(partita.giocata) === "1";
         const mostraRisultato = giocata && hasScore;
+        const hasPlayerStats = Number(partita.ha_statistiche_giocatori || 0) === 1;
+        const canOpenMatchStats = mostraRisultato && hasPlayerStats;
         const aiRigori = mostraRisultato && Number(partita.decisa_rigori || 0) === 1;
         const hasPenalties = aiRigori && partita.rigori_casa !== null && partita.rigori_casa !== undefined && partita.rigori_ospite !== null && partita.rigori_ospite !== undefined;
 
-        if (mostraRisultato) {
+        if (canOpenMatchStats) {
           partitaDiv.style.cursor = "pointer";
           partitaDiv.onclick = () => {
             window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${TORNEO}`;
@@ -942,6 +944,8 @@ async function caricaPlayoff(tipoCoppa) {
           const hasScore = partita.gol_casa !== null && partita.gol_ospite !== null;
           const giocata = (Number(partita.giocata) === 1);
           const mostraRisultato = giocata && hasScore;
+          const hasPlayerStats = Number(partita.ha_statistiche_giocatori || 0) === 1;
+          const canOpenMatchStats = mostraRisultato && hasPlayerStats;
           const aiRigori = mostraRisultato && Number(partita.decisa_rigori || 0) === 1;
           const hasPenalties = aiRigori && partita.rigori_casa !== null && partita.rigori_casa !== undefined && partita.rigori_ospite !== null && partita.rigori_ospite !== undefined;
           const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
@@ -972,7 +976,7 @@ async function caricaPlayoff(tipoCoppa) {
               <span>${partita.campo || 'Campo da definire'}</span>
             </div>
           `;
-          if (mostraRisultato) {
+          if (canOpenMatchStats) {
             body.addEventListener("click", () => {
               window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${encodeURIComponent(TORNEO)}`;
             });
