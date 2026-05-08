@@ -4,12 +4,12 @@ require_once __DIR__ . '/../includi/require_login.php';
 // Template base per creare un nuovo torneo:
 // 1) Duplica questo file e rinominalo (es. NuovoTorneo.php)
 // 2) Imposta $torneoSlug e $torneoName qui sotto
-// 3) Duplica anche script-TorneoTemplate.js rinominandolo in script-NuovoTorneo.js
+// 3) Duplica anche script-Bundesliga.js rinominandolo in script-NuovoTorneo.js
 // 4) Nel nuovo JS sostituisci TORNEO con lo stesso slug usato nel DB/API
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
-$torneoSlug = 'TEMPLATE_SLUG';
-$torneoName = 'Torneo Template';
-$assetVersion = '20260421a';
+$torneoSlug = 'Bundesliga';
+$torneoName = 'Bundesliga';
+$assetVersion = '20260508a';
 
 require_once __DIR__ . '/../includi/db.php';
 $torneoConfig = [];
@@ -35,6 +35,12 @@ try {
 } catch (Throwable $e) {
     // ignora eventuali errori di lettura config
 }
+
+$torneoConfig = array_replace($torneoConfig, [
+    'qualificati_gold' => 8,
+    'qualificati_silver' => 4,
+    'qualificati_bronzo' => 2,
+]);
 
 if (!function_exists('renderRegoleMarkupFromText')) {
     function decorateRegoleInline(string $text): string {
@@ -690,8 +696,7 @@ if (!empty($torneoConfig['regole_html'])) {
     window.__TEMPLATE_TORNEO_SLUG__ = <?= json_encode($torneoSlug) ?>;
     window.__TORNEO_CONFIG__ = <?= json_encode($torneoConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
   </script>
-  <script src="script-TorneoTemplate.js?v=<?= $assetVersion ?>"></script>
+  <script src="script-Bundesliga.js?v=<?= $assetVersion ?>"></script>
 
 </body>
 </html>
-

@@ -8,7 +8,7 @@ $errore = '';
 $successo = '';
 $torneiDisponibili = [];
 $squadrePerTorneo = [];
-$fasiAmmesse = ['REGULAR', 'GOLD', 'SILVER'];
+$fasiAmmesse = ['REGULAR', 'GOLD', 'SILVER', 'BRONZO'];
 $fasiAmmesseConBronzo = ['REGULAR', 'GOLD', 'SILVER', 'BRONZO'];
 $maxGiornateRegular = 10;
 $roundMap = [
@@ -69,10 +69,6 @@ function sanitize_leg(?string $v): ?string {
   $allowed = ['ANDATA','RITORNO','UNICA'];
   if (!$val) return null;
   return in_array($val, $allowed, true) ? $val : null;
-}
-
-function torneo_supporta_bronzo(string $torneo): bool {
-  return strcasecmp(trim($torneo), 'MondialeFasciaB') === 0;
 }
 
 function round_to_giornata(?string $roundLabel, array $map): ?int {
@@ -631,8 +627,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($fase !== 'REGULAR' && $roundSelezionato === '')) {
       $errore = 'Compila tutti i campi obbligatori.';
-    } elseif ($fase === 'BRONZO' && !torneo_supporta_bronzo($torneo)) {
-      $errore = 'La fase BRONZO è disponibile solo per Mondiale Fascia B.';
     } elseif ($casa === $ospite) {
       $errore = 'Le due squadre non possono coincidere.';
     } elseif ($fase !== 'REGULAR' && !$faseLeg) {
@@ -781,8 +775,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($id <= 0 || $torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($fase !== 'REGULAR' && $roundSelezionato === '')) {
       $errore = 'Seleziona una partita e compila i campi obbligatori.';
-    } elseif ($fase === 'BRONZO' && !torneo_supporta_bronzo($torneo)) {
-      $errore = 'La fase BRONZO è disponibile solo per Mondiale Fascia B.';
     } elseif ($casa === $ospite) {
       $errore = 'Le due squadre non possono coincidere.';
     } elseif ($fase !== 'REGULAR' && !$faseLeg) {
@@ -1615,8 +1607,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
   };
   const roundLabelFromGiornata = Object.fromEntries(Object.entries(roundLabelMap).map(([k,v]) => [String(v), k]));
   const roundLabelByKey = roundLabelFromGiornata;
-  const basePhaseOptions = <?php echo json_encode($fasiAmmesse, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
-  const bronzeEnabledTournaments = new Set(['MondialeFasciaB']);
+  const basePhaseOptions = <?php echo json_encode($fasiAmmesseConBronzo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
 
   // Tabs
   const tabButtons = document.querySelectorAll('.tab-buttons button');
@@ -1645,9 +1636,6 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
   };
 
   const getPhaseOptionsForTournament = (torneoSlug = '') => {
-    if (bronzeEnabledTournaments.has(torneoSlug)) {
-      return [...basePhaseOptions, 'BRONZO'];
-    }
     return [...basePhaseOptions];
   };
 

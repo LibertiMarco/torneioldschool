@@ -307,7 +307,7 @@ function ensureTeamMatchesModal() {
     <div id="teamMatchesCard" role="dialog" aria-modal="true">
       <div id="teamMatchesHeader">
         <h3>Partite squadra</h3>
-        <button id="teamMatchesClose" aria-label="Chiudi">×</button>
+        <button id="teamMatchesClose" aria-label="Chiudi">Ã—</button>
       </div>
       <ul id="teamMatchesList"></ul>
       <div id="teamMatchesEmpty" style="display:none;"></div>
@@ -353,14 +353,14 @@ async function mostraPartiteSquadra(squadra) {
       const casa = p.squadra_casa === squadra;
       const avversario = casa ? p.squadra_ospite : p.squadra_casa;
       const score = (p.gol_casa === null || p.gol_casa === undefined || p.gol_ospite === null || p.gol_ospite === undefined)
-        ? "—"
+        ? "â€”"
         : `${p.gol_casa} - ${p.gol_ospite}`;
       const esito = esitoLabel(p, squadra);
       const li = document.createElement("li");
       li.innerHTML = `
         <div>
           <span class="match-vs">${casa ? "Casa" : "Trasferta"} vs ${avversario}</span>
-          <span class="match-meta">${formattaDataOra(p.data_partita, p.ora_partita)} · ${p.campo || "Campo da definire"}</span>
+          <span class="match-meta">${formattaDataOra(p.data_partita, p.ora_partita)} Â· ${p.campo || "Campo da definire"}</span>
         </div>
         <div class="score ${esito.cls}" title="Esito">${score} ${esito.label !== "ND" ? "(" + esito.label + ")" : ""}</div>
       `;
@@ -816,12 +816,23 @@ const roundLabelByKey = {
   "KO": "Fase eliminazione"
 };
 
-function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], selected = "") {
+function getDefaultCalendarRound(faseSelezionata, giornateDisponibili = [], giornateConPartiteDaGiocare = []) {
+  const fase = (faseSelezionata || "").toUpperCase();
+  const available = giornateDisponibili.map(String).sort((a, b) => Number(a) - Number(b));
+  const pendingSet = new Set(giornateConPartiteDaGiocare.map(String));
+  const preferred = available.filter(g => pendingSet.has(g));
+  const source = preferred.length ? preferred : available;
+  if (!source.length) return "";
+  return fase === "REGULAR" ? source[0] : source[source.length - 1];
+}
+
+function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], giornateConPartiteDaGiocare = [], selected = "") {
   const wrapper = document.getElementById("wrapperGiornataSelect");
   const select = document.getElementById("giornataSelect");
   const label = wrapper ? wrapper.querySelector("label[for='giornataSelect']") : null;
   if (!select) return;
   const isRegular = (faseSelezionata || "").toUpperCase() === "REGULAR";
+  const fallback = getDefaultCalendarRound(faseSelezionata, giornateDisponibili, giornateConPartiteDaGiocare);
 
   if (wrapper) wrapper.style.display = "flex";
   if (label) label.textContent = isRegular ? "Giornata:" : "Turno:";
@@ -831,16 +842,18 @@ function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], selecte
     giornateDisponibili.forEach(g => {
       select.add(new Option(`Giornata ${g}`, g));
     });
-    const latest = giornateDisponibili.reduce((max, g) => (max === null || Number(g) > Number(max) ? g : max), null);
-    const fallback = latest !== null ? latest : "";
-    select.value = String(selected || fallback);
+    const target = selected ? String(selected) : fallback;
+    if (target && Array.from(select.options).some(opt => opt.value === target)) {
+      select.value = target;
+    } else if (fallback) {
+      select.value = fallback;
+    }
     return;
   }
 
   const disponibili = new Set(giornateDisponibili.map(String));
   const orderedRounds = ["1", "2", "3", "4"];
   let firstVal = "";
-  const latestAvailable = giornateDisponibili.reduce((max, g) => (max === null || Number(g) > Number(max) ? g : max), null);
 
   orderedRounds.forEach(g => {
     if (disponibili.has(g)) {
@@ -857,8 +870,14 @@ function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], selecte
     });
   }
 
-  const target = selected ? String(selected) : (latestAvailable !== null ? String(latestAvailable) : firstVal);
-  if (target) select.value = target;
+  const target = selected ? String(selected) : fallback;
+  if (target && Array.from(select.options).some(opt => opt.value === target)) {
+    select.value = target;
+  } else if (fallback) {
+    select.value = fallback;
+  } else if (firstVal) {
+    select.value = firstVal;
+  }
 }
 
 async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REGULAR") {
@@ -887,8 +906,11 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
 
     const giornataSelect = document.getElementById("giornataSelect");
     const giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
+    const giornateConPartiteDaGiocare = giornateDisponibili.filter(g =>
+      (dataFiltrata[g] || []).some(partita => Number(partita.giocata) !== 1)
+    );
 
-    updateGiornataFilter(fase, giornateDisponibili, giornataSelezionata);
+    updateGiornataFilter(fase, giornateDisponibili, giornateConPartiteDaGiocare, giornataSelezionata);
 
     const selectedRound = giornataSelect ? String(giornataSelect.value || "") : "";
     const giornateDaMostrare = selectedRound ? [selectedRound] : giornateDisponibili;

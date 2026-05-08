@@ -2821,6 +2821,13 @@ body {
   border-radius: 4px 0 0 4px;
 }
 
+#tableClassifica tr.bronze-row td:first-child {
+  background-color: #CD7F32; /* bronzo */
+  color: #000;
+  font-weight: 700;
+  border-radius: 4px 0 0 4px;
+}
+
 /* ======== LEGENDA COPPE ======== */
 .legenda-coppe {
   display: flex;
@@ -2857,6 +2864,11 @@ body {
 
 .silver-box {
   background-color: #C0C0C0;
+}
+
+.bronze-box {
+  background-color: #CD7F32;
+  color: #fff;
 }
 
 /* Ottimizzazione visiva su schermi piccoli */

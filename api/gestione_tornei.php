@@ -61,6 +61,7 @@ function buildTorneoConfigFromRequest(array $src): array {
         'totale_squadre'     => intOrZero($src['totale_squadre'] ?? 0),
         'qualificati_gold'   => intOrZero($src['qualificati_gold'] ?? 0),
         'qualificati_silver' => intOrZero($src['qualificati_silver'] ?? 0),
+        'qualificati_bronzo' => intOrZero($src['qualificati_bronzo'] ?? 0),
         'eliminate'          => intOrZero($src['eliminate'] ?? 0),
         'regole_html'        => cleanUtf8Text($src['regole_html'] ?? ''),
     ];
@@ -80,6 +81,7 @@ function buildTorneoConfigFromRequest(array $src): array {
 
     if ($config['formato'] === 'campionato' && $config['fase_finale'] === 'gold') {
         $config['qualificati_silver'] = 0;
+        $config['qualificati_bronzo'] = 0;
     }
 
     return $config;
@@ -778,10 +780,14 @@ if ($lista instanceof mysqli_result) {
                             <label>Qualificate in Coppa Silver</label>
                             <input type="number" name="qualificati_silver" id="qualificati_silver" min="0" step="1" inputmode="numeric" placeholder="Es. 8">
                         </div>
-                        <div class="form-group half">
-                            <label>Eliminate dopo gironi/regular</label>
-                            <input type="number" name="eliminate" id="eliminate" min="0" step="1" inputmode="numeric" placeholder="Es. 0">
+                        <div class="form-group half" data-role="qualificati-bronzo-group">
+                            <label>Qualificate in Coppa Bronzo</label>
+                            <input type="number" name="qualificati_bronzo" id="qualificati_bronzo" min="0" step="1" inputmode="numeric" placeholder="Es. 2">
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Eliminate dopo gironi/regular</label>
+                        <input type="number" name="eliminate" id="eliminate" min="0" step="1" inputmode="numeric" placeholder="Es. 0">
                     </div>
                 </div>
 
@@ -909,10 +915,14 @@ if ($lista instanceof mysqli_result) {
                             <label>Qualificate in Coppa Silver</label>
                             <input type="number" name="qualificati_silver" id="mod_qualificati_silver" min="0" step="1" inputmode="numeric" placeholder="Es. 8">
                         </div>
-                        <div class="form-group half">
-                            <label>Eliminate dopo gironi/regular</label>
-                            <input type="number" name="eliminate" id="mod_eliminate" min="0" step="1" inputmode="numeric" placeholder="Es. 0">
+                        <div class="form-group half" data-role="qualificati-bronzo-group">
+                            <label>Qualificate in Coppa Bronzo</label>
+                            <input type="number" name="qualificati_bronzo" id="mod_qualificati_bronzo" min="0" step="1" inputmode="numeric" placeholder="Es. 2">
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Eliminate dopo gironi/regular</label>
+                        <input type="number" name="eliminate" id="mod_eliminate" min="0" step="1" inputmode="numeric" placeholder="Es. 0">
                     </div>
                 </div>
 
@@ -1070,7 +1080,9 @@ if ($lista instanceof mysqli_result) {
                 const totaleInput = formEl.querySelector('input[name="totale_squadre"]');
                 const goldInput = formEl.querySelector('input[name="qualificati_gold"]');
                 const silverInput = formEl.querySelector('input[name="qualificati_silver"]');
+                const bronzeInput = formEl.querySelector('input[name="qualificati_bronzo"]');
                 const silverGroup = formEl.querySelector('[data-role="qualificati-silver-group"]');
+                const bronzeGroup = formEl.querySelector('[data-role="qualificati-bronzo-group"]');
                 const eliminateInput = formEl.querySelector('input[name="eliminate"]');
                 const regoleInput = formEl.querySelector('textarea[name="regole_html"]');
                 const resetRegoleBtn = formEl.querySelector('[data-action="reset-regole"]');
@@ -1106,7 +1118,7 @@ if ($lista instanceof mysqli_result) {
                 function getFinaleOptions(formula) {
                     if (formula === 'campionato') {
                         return [
-                            { value: 'coppe', label: 'Coppa Gold e Silver' },
+                            { value: 'coppe', label: 'Coppe finali' },
                             { value: 'gold', label: 'Coppa Gold' }
                         ];
                     }
@@ -1114,7 +1126,7 @@ if ($lista instanceof mysqli_result) {
                     if (formula === 'girone') {
                         return [
                             { value: 'eliminazione_diretta', label: 'Eliminazione diretta' },
-                            { value: 'coppe', label: 'Coppa Gold e Silver' }
+                            { value: 'coppe', label: 'Coppe finali' }
                         ];
                     }
 
@@ -1192,9 +1204,9 @@ if ($lista instanceof mysqli_result) {
                 function toggleQualifiche(show) {
                     if (!qualificheBox) return;
                     qualificheBox.classList.toggle('hidden', !show);
-                    setDisabled([totaleInput, goldInput, silverInput, eliminateInput], !show);
+                    setDisabled([totaleInput, goldInput, silverInput, bronzeInput, eliminateInput], !show);
                     if (!show) {
-                        [totaleInput, goldInput, silverInput, eliminateInput].forEach(el => {
+                        [totaleInput, goldInput, silverInput, bronzeInput, eliminateInput].forEach(el => {
                             if (el) {
                                 el.value = '';
                                 el.dataset.auto = '';
@@ -1203,32 +1215,48 @@ if ($lista instanceof mysqli_result) {
                     }
                 }
 
-                function toggleSilverField(show) {
-                    if (silverGroup) {
-                        silverGroup.classList.toggle('hidden', !show);
+                function toggleQualifiedCupField(inputEl, groupEl, show) {
+                    if (groupEl) {
+                        groupEl.classList.toggle('hidden', !show);
                     }
-                    if (!silverInput) return;
+                    if (!inputEl) return;
 
                     if (show) {
-                        silverInput.disabled = false;
-                        const prevValue = silverInput.dataset.prevValue || '';
-                        if ((silverInput.value === '' || silverInput.value === '0') && prevValue !== '') {
-                            silverInput.value = prevValue;
+                        inputEl.disabled = false;
+                        const prevValue = inputEl.dataset.prevValue || '';
+                        if ((inputEl.value === '' || inputEl.value === '0') && prevValue !== '') {
+                            inputEl.value = prevValue;
                         }
                         return;
                     }
 
-                    if (!silverInput.disabled) {
-                        silverInput.dataset.prevValue = silverInput.value;
+                    if (!inputEl.disabled) {
+                        inputEl.dataset.prevValue = inputEl.value;
                     }
-                    silverInput.value = '0';
-                    silverInput.disabled = true;
+                    inputEl.value = '0';
+                    inputEl.disabled = true;
+                }
+
+                function toggleSilverField(show) {
+                    toggleQualifiedCupField(silverInput, silverGroup, show);
+                }
+
+                function toggleBronzeField(show) {
+                    toggleQualifiedCupField(bronzeInput, bronzeGroup, show);
+                }
+
+                function getEffectiveQualifiedValue(inputEl) {
+                    if (!inputEl || inputEl.disabled) return 0;
+                    const value = parseInt(inputEl.value || '0', 10);
+                    return Number.isFinite(value) ? value : 0;
                 }
 
                 function getEffectiveSilverValue() {
-                    if (!silverInput || silverInput.disabled) return 0;
-                    const silver = parseInt(silverInput.value || '0', 10);
-                    return Number.isFinite(silver) ? silver : 0;
+                    return getEffectiveQualifiedValue(silverInput);
+                }
+
+                function getEffectiveBronzeValue() {
+                    return getEffectiveQualifiedValue(bronzeInput);
                 }
 
                 function updateTotale() {
@@ -1259,8 +1287,9 @@ if ($lista instanceof mysqli_result) {
                     const tot = parseInt(totaleInput?.value || '0', 10);
                     const gold = parseInt(goldInput?.value || '0', 10);
                     const silver = getEffectiveSilverValue();
+                    const bronze = getEffectiveBronzeValue();
                     if (!tot) return;
-                    const computed = Math.max(0, tot - gold - silver);
+                    const computed = Math.max(0, tot - gold - silver - bronze);
                     if (force || !eliminateInput.value || eliminateInput.dataset.auto === '1') {
                         eliminateInput.value = computed;
                         eliminateInput.dataset.auto = '1';
@@ -1278,6 +1307,65 @@ if ($lista instanceof mysqli_result) {
                     return 0;
                 }
 
+                function buildCampionatoCoppeSection(gold, silver, bronze, finaleValue) {
+                    const goldLabel = gold > 0 ? String(gold) : 'X';
+                    const lines = [
+                        `Fase 2 - Coppe: Le squadre classificate dal 1 al ${goldLabel} posto accedono alla Coppa Gold.`
+                    ];
+
+                    if (finaleValue === 'gold') {
+                        lines.push('La Coppa Gold prevede una premiazione con trofeo per la vincitrice.');
+                        return lines.join('\n');
+                    }
+
+                    const silverStart = gold + 1;
+                    const silverEnd = gold + silver;
+                    const bronzeStart = gold + silver + 1;
+                    const bronzeEnd = gold + silver + bronze;
+
+                    if (silver > 0) {
+                        lines.push(`Le squadre classificate dal ${silverStart} al ${silverEnd} posto accedono alla Coppa Silver.`);
+                    }
+                    if (bronze > 0) {
+                        lines.push(`Le squadre classificate dal ${bronzeStart} al ${bronzeEnd} posto accedono alla Coppa Bronzo.`);
+                    }
+
+                    const enabledCupCount = 1 + (silver > 0 ? 1 : 0) + (bronze > 0 ? 1 : 0);
+                    lines.push(
+                        enabledCupCount > 1
+                            ? 'Le coppe configurate prevedono una premiazione con trofeo per la vincitrice.'
+                            : 'La Coppa Gold prevede una premiazione con trofeo per la vincitrice.'
+                    );
+                    return lines.join('\n');
+                }
+
+                function buildGironeCoppeSection(goldPerGirone, silverPerGirone, bronzePerGirone, finaleValue) {
+                    const goldLabel = goldPerGirone > 0 ? String(goldPerGirone) : 'X';
+
+                    if (finaleValue !== 'coppe') {
+                        return `Fase 2 - Eliminazione diretta: Le prime ${goldLabel} squadre di ogni girone accedono alla fase finale a eliminazione diretta.\nLa fase finale prevede una premiazione con trofeo per la vincitrice.`;
+                    }
+
+                    const lines = [
+                        `Fase 2 - Coppe: Le prime ${goldLabel} squadre di ogni girone accedono alla Coppa Gold.`
+                    ];
+
+                    if (silverPerGirone > 0) {
+                        lines.push(`Le successive ${silverPerGirone} squadre di ogni girone accedono alla Coppa Silver.`);
+                    }
+                    if (bronzePerGirone > 0) {
+                        lines.push(`Le successive ${bronzePerGirone} squadre di ogni girone accedono alla Coppa Bronzo.`);
+                    }
+
+                    const enabledCupCount = 1 + (silverPerGirone > 0 ? 1 : 0) + (bronzePerGirone > 0 ? 1 : 0);
+                    lines.push(
+                        enabledCupCount > 1
+                            ? 'Le coppe configurate prevedono una premiazione con trofeo per la vincitrice.'
+                            : 'La Coppa Gold prevede una premiazione con trofeo per la vincitrice.'
+                    );
+                    return lines.join('\n');
+                }
+
                 function buildDefaultRegole() {
                     if (getTipoValue() !== 'campionato') {
                         return '';
@@ -1286,18 +1374,14 @@ if ($lista instanceof mysqli_result) {
                     const teamCount = resolveTeamCount();
                     const gold = parseInt(goldInput?.value || '0', 10);
                     const silver = getEffectiveSilverValue();
+                    const bronze = getEffectiveBronzeValue();
                     const finaleValue = finaleSelect?.value || 'coppe';
                     const teamLabel = teamCount > 0 ? String(teamCount) : 'X';
-                    const goldLabel = gold > 0 ? String(gold) : 'X';
-                    const silverStartLabel = gold > 0 ? String(gold + 1) : 'X';
-                    const silverEndLabel = gold > 0 && silver > 0 ? String(gold + silver) : 'X';
 
                     const sections = [
                         `Struttura del campionato: Il torneo è composto da ${teamLabel} squadre e si sviluppa in due fasi principali.`,
                         `Fase 1 - Regular Season: Le ${teamLabel} squadre partecipano a una Regular Season di X giornate.\nLa squadra prima in classifica al termine del girone riceve il Trofeo Regular Season.`,
-                        finaleValue === 'gold'
-                            ? `Fase 2 - Coppe: Le squadre classificate dal 1° all'${goldLabel}° posto accedono alla Coppa Gold.\nLa Coppa Gold prevede una premiazione con trofeo per la vincitrice.`
-                            : `Fase 2 - Coppe: Le squadre classificate dal 1° all'${goldLabel}° posto accedono alla Coppa Gold.\nLe squadre classificate dal ${silverStartLabel}° al ${silverEndLabel}° posto accedono alla Coppa Silver.\nEntrambe le coppe prevedono una premiazione con trofeo per la vincitrice.`,
+                        buildCampionatoCoppeSection(gold, silver, bronze, finaleValue),
                         `Premi finali: Dopo la finale di Coppa Gold verranno assegnati i seguenti riconoscimenti:\nMiglior Giocatore\nMiglior Portiere\nMiglior Difensore\nMiglior Attaccante`,
                         `Regole di gioco: Ogni partita dura 2 tempi da 25 minuti.\nOgni squadra ha 1 chiamata VAR disponibile per partita.`,
                         `Calendario: Le partite si disputano principalmente il mercoledi e il giovedi.\nIl calendario della settimana successiva viene pubblicato ogni giovedi o venerdi.`
@@ -1313,19 +1397,15 @@ if ($lista instanceof mysqli_result) {
                     const perGirone = parseInt(squadrePerGironeInput?.value || '0', 10);
                     const gold = parseInt(goldInput?.value || '0', 10);
                     const silver = getEffectiveSilverValue();
+                    const bronze = getEffectiveBronzeValue();
                     const finaleValue = finaleSelect?.value || 'coppe';
                     const teamLabel = teamCount > 0 ? String(teamCount) : 'X';
-                    const goldLabel = gold > 0 ? String(gold) : 'X';
 
                     if (formula === 'campionato') {
-                        const silverStartLabel = gold > 0 ? String(gold + 1) : 'X';
-                        const silverEndLabel = gold > 0 && silver > 0 ? String(gold + silver) : 'X';
                         return [
                             `Struttura del campionato: Il torneo e composto da ${teamLabel} squadre e si sviluppa in due fasi principali.`,
                             `Fase 1 - Regular Season: Le ${teamLabel} squadre partecipano a una Regular Season di X giornate.\nLa squadra prima in classifica al termine del girone riceve il Trofeo Regular Season.`,
-                            finaleValue === 'gold'
-                                ? `Fase 2 - Coppe: Le squadre classificate dal 1 al ${goldLabel} posto accedono alla Coppa Gold.\nLa Coppa Gold prevede una premiazione con trofeo per la vincitrice.`
-                                : `Fase 2 - Coppe: Le squadre classificate dal 1 al ${goldLabel} posto accedono alla Coppa Gold.\nLe squadre classificate dal ${silverStartLabel} al ${silverEndLabel} posto accedono alla Coppa Silver.\nEntrambe le coppe prevedono una premiazione con trofeo per la vincitrice.`,
+                            buildCampionatoCoppeSection(gold, silver, bronze, finaleValue),
                             `Premi finali: Dopo la finale di Coppa Gold verranno assegnati i seguenti riconoscimenti:\nMiglior Giocatore\nMiglior Portiere\nMiglior Difensore\nMiglior Attaccante`,
                             `Regole di gioco: Ogni partita dura 2 tempi da 25 minuti.\nOgni squadra ha 1 chiamata VAR disponibile per partita.`,
                             `Calendario: Le partite si disputano principalmente il mercoledi e il giovedi.\nIl calendario della settimana successiva viene pubblicato ogni giovedi o venerdi.`
@@ -1337,14 +1417,11 @@ if ($lista instanceof mysqli_result) {
                         const perGironeLabel = perGirone > 0 ? String(perGirone) : 'X';
                         const goldPerGirone = gironi > 0 && gold > 0 ? Math.floor(gold / gironi) : 0;
                         const silverPerGirone = gironi > 0 && silver > 0 ? Math.floor(silver / gironi) : 0;
-                        const goldPerGironeLabel = goldPerGirone > 0 ? String(goldPerGirone) : 'X';
-                        const silverPerGironeLabel = silverPerGirone > 0 ? String(silverPerGirone) : 'X';
+                        const bronzePerGirone = gironi > 0 && bronze > 0 ? Math.floor(bronze / gironi) : 0;
                         return [
                             `Struttura del torneo: Il torneo e composto da ${teamLabel} squadre suddivise in ${gironiLabel} gironi da ${perGironeLabel} squadre.`,
                             `Fase 1 - Gironi: Le squadre disputano la Regular Season all'interno del proprio girone.`,
-                            finaleValue === 'coppe'
-                                ? `Fase 2 - Coppe: Le prime ${goldPerGironeLabel} squadre di ogni girone accedono alla Coppa Gold.\nLe successive ${silverPerGironeLabel} squadre di ogni girone accedono alla Coppa Silver.\nEntrambe le coppe prevedono una premiazione con trofeo per la vincitrice.`
-                                : `Fase 2 - Eliminazione diretta: Le prime ${goldPerGironeLabel} squadre di ogni girone accedono alla fase finale a eliminazione diretta.\nLa fase finale prevede una premiazione con trofeo per la vincitrice.`,
+                            buildGironeCoppeSection(goldPerGirone, silverPerGirone, bronzePerGirone, finaleValue),
                             `Premi finali: Dopo la finale di Coppa Gold verranno assegnati i seguenti riconoscimenti:\nMiglior Giocatore\nMiglior Portiere\nMiglior Difensore\nMiglior Attaccante`,
                             `Regole di gioco: Ogni partita dura 2 tempi da 25 minuti.\nOgni squadra ha 1 chiamata VAR disponibile per partita.`,
                             `Calendario: Le partite si disputano principalmente il mercoledi e il giovedi.\nIl calendario della settimana successiva viene pubblicato ogni giovedi o venerdi.`
@@ -1377,8 +1454,9 @@ if ($lista instanceof mysqli_result) {
                 function syncFaseDependents() {
                     const formula = getTipoValue();
                     const finaleValue = finaleSelect?.value || '';
-                    const showSilver = formula !== 'eliminazione' && finaleValue === 'coppe';
-                    toggleSilverField(showSilver);
+                    const showSecondaryCups = formula !== 'eliminazione' && finaleValue === 'coppe';
+                    toggleSilverField(showSecondaryCups);
+                    toggleBronzeField(showSecondaryCups);
                     updateEliminate(false);
                     syncRegole(false);
                 }
@@ -1421,7 +1499,7 @@ if ($lista instanceof mysqli_result) {
                     });
                 });
 
-                [totaleInput, goldInput, silverInput].forEach(el => {
+                [totaleInput, goldInput, silverInput, bronzeInput].forEach(el => {
                     if (!el) return;
                     el.addEventListener('input', () => {
                         if (el === totaleInput) {
@@ -1460,6 +1538,10 @@ if ($lista instanceof mysqli_result) {
                         silverInput.value = cfg.qualificati_silver ?? '';
                         silverInput.dataset.prevValue = cfg.qualificati_silver ?? '';
                     }
+                    if (bronzeInput) {
+                        bronzeInput.value = cfg.qualificati_bronzo ?? '';
+                        bronzeInput.dataset.prevValue = cfg.qualificati_bronzo ?? '';
+                    }
                     if (eliminateInput) {
                         eliminateInput.value = cfg.eliminate ?? '';
                         eliminateInput.dataset.auto = '';
@@ -1495,6 +1577,11 @@ if ($lista instanceof mysqli_result) {
                         silverInput.value = '';
                         silverInput.dataset.prevValue = '';
                         silverInput.disabled = false;
+                    }
+                    if (bronzeInput) {
+                        bronzeInput.value = '';
+                        bronzeInput.dataset.prevValue = '';
+                        bronzeInput.disabled = false;
                     }
                     if (eliminateInput) {
                         eliminateInput.value = '';
@@ -1537,6 +1624,7 @@ const configInputs = {
     totale: document.getElementById('mod_totale_squadre'),
     gold: document.getElementById('mod_qualificati_gold'),
     silver: document.getElementById('mod_qualificati_silver'),
+    bronze: document.getElementById('mod_qualificati_bronzo'),
     eliminate: document.getElementById('mod_eliminate')
 };
 const formulaTorneoMod = document.getElementById('mod_formula_torneo');
@@ -1747,10 +1835,10 @@ selectTorneo.addEventListener('change', async (e) => {
                     const options = formulaValue === 'girone'
                         ? [
                             { value: 'eliminazione_diretta', label: 'Eliminazione diretta' },
-                            { value: 'coppe', label: 'Coppa Gold e Silver' }
+                            { value: 'coppe', label: 'Coppe finali' }
                         ]
                         : [
-                            { value: 'coppe', label: 'Coppa Gold e Silver' },
+                            { value: 'coppe', label: 'Coppe finali' },
                             { value: 'gold', label: 'Coppa Gold' }
                         ];
                     const finaleValue = formulaValue === 'girone'
@@ -1770,6 +1858,7 @@ selectTorneo.addEventListener('change', async (e) => {
                 if (configInputs.totale && cfg.totale_squadre) configInputs.totale.value = cfg.totale_squadre;
                 if (configInputs.gold && cfg.qualificati_gold !== undefined) configInputs.gold.value = cfg.qualificati_gold;
                 if (configInputs.silver && cfg.qualificati_silver !== undefined) configInputs.silver.value = cfg.qualificati_silver;
+                if (configInputs.bronze && cfg.qualificati_bronzo !== undefined) configInputs.bronze.value = cfg.qualificati_bronzo;
                 if (configInputs.eliminate && cfg.eliminate !== undefined) configInputs.eliminate.value = cfg.eliminate;
             }
 

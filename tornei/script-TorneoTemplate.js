@@ -5,6 +5,8 @@ const CONFIG = window.__TORNEO_CONFIG__ || {};
 const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
 const DEFAULT_TEAM_COUNT = 18;
 const DEFAULT_GOLD = 16;
+const DEFAULT_SILVER = 2;
+const DEFAULT_BRONZE = 0;
 
 function toNumber(value, fallback = 0) {
   const n = Number(value);
@@ -27,17 +29,61 @@ const FORMATO_TORNEO = String(CONFIG.formato || CONFIG.formula_torneo || "").tri
 const GROUP_COUNT = Math.max(0, toNumber(CONFIG.numero_gironi, 0));
 const TEAMS_PER_GROUP = Math.max(0, toNumber(CONFIG.squadre_per_girone, 0));
 const rawGold = Object.prototype.hasOwnProperty.call(CONFIG, "qualificati_gold") ? toNumber(CONFIG.qualificati_gold, 0) : NaN;
-const GOLD_SPOTS = Number.isFinite(rawGold) ? Math.max(0, rawGold) : DEFAULT_GOLD;
+const GOLD_SPOTS = Number.isFinite(rawGold) ? Math.min(TEAM_COUNT, Math.max(0, rawGold)) : Math.min(TEAM_COUNT, DEFAULT_GOLD);
+const remainingAfterGold = Math.max(TEAM_COUNT - GOLD_SPOTS, 0);
 const rawSilver = Object.prototype.hasOwnProperty.call(CONFIG, "qualificati_silver") ? toNumber(CONFIG.qualificati_silver, 0) : NaN;
-const SILVER_SPOTS = Number.isFinite(rawSilver) ? Math.max(0, rawSilver) : Math.max(TEAM_COUNT - GOLD_SPOTS, 0);
+const SILVER_SPOTS = Number.isFinite(rawSilver)
+  ? Math.min(remainingAfterGold, Math.max(0, rawSilver))
+  : Math.min(remainingAfterGold, DEFAULT_SILVER);
+const remainingAfterSilver = Math.max(TEAM_COUNT - GOLD_SPOTS - SILVER_SPOTS, 0);
+const rawBronze = Object.prototype.hasOwnProperty.call(CONFIG, "qualificati_bronzo") ? toNumber(CONFIG.qualificati_bronzo, 0) : NaN;
+const BRONZE_SPOTS = Number.isFinite(rawBronze)
+  ? Math.min(remainingAfterSilver, Math.max(0, rawBronze))
+  : Math.min(remainingAfterSilver, DEFAULT_BRONZE);
 const USE_GROUP_TABLES = GROUP_COUNT > 0 && TEAMS_PER_GROUP > 0 && FORMATO_TORNEO !== "campionato" && FORMATO_TORNEO !== "eliminazione";
 const GOLD_PER_GROUP = USE_GROUP_TABLES && GROUP_COUNT > 0 ? Math.floor(GOLD_SPOTS / GROUP_COUNT) : 0;
 const SILVER_PER_GROUP = USE_GROUP_TABLES && GROUP_COUNT > 0 ? Math.floor(SILVER_SPOTS / GROUP_COUNT) : 0;
-const USE_COPPE = GOLD_SPOTS > 0 || SILVER_SPOTS > 0;
+const BRONZE_PER_GROUP = USE_GROUP_TABLES && GROUP_COUNT > 0 ? Math.floor(BRONZE_SPOTS / GROUP_COUNT) : 0;
+const USE_COPPE = GOLD_SPOTS > 0 || SILVER_SPOTS > 0 || BRONZE_SPOTS > 0;
+const CUP_LABELS = {
+  gold: "COPPA GOLD",
+  silver: "COPPA SILVER",
+  bronze: "COPPA BRONZO"
+};
 const teamLogos = {};
 const favState = { tournaments: new Set(), teams: new Set() };
 let currentRosaTeam = "";
 let partiteCache = null;
+
+function buildCupRanges(definitions = []) {
+  let start = 1;
+  return definitions.reduce((ranges, definition) => {
+    const spots = Math.max(0, toNumber(definition?.spots, 0));
+    if (spots <= 0) return ranges;
+    const end = start + spots - 1;
+    ranges.push({
+      key: definition.key,
+      label: CUP_LABELS[definition.key] || String(definition.key || "").toUpperCase(),
+      start,
+      end,
+      spots
+    });
+    start = end + 1;
+    return ranges;
+  }, []);
+}
+
+const SINGLE_CUP_RANGES = buildCupRanges([
+  { key: "gold", spots: GOLD_SPOTS },
+  { key: "silver", spots: SILVER_SPOTS },
+  { key: "bronze", spots: BRONZE_SPOTS }
+]);
+
+const GROUP_CUP_RANGES = buildCupRanges([
+  { key: "gold", spots: GOLD_PER_GROUP },
+  { key: "silver", spots: SILVER_PER_GROUP },
+  { key: "bronze", spots: BRONZE_PER_GROUP }
+]);
 
 function indexToLetters(index) {
   let n = Number(index);
@@ -64,6 +110,31 @@ function normalizeGironeValue(value = "") {
 
 function normalizeTeamLookupName(value = "") {
   return String(value || "").trim().toLowerCase();
+}
+
+function getCupClassByPosition(position, ranges = SINGLE_CUP_RANGES) {
+  const range = ranges.find(entry => position >= entry.start && position <= entry.end);
+  return range ? `${range.key}-row` : "";
+}
+
+function formatCupRange(start, end) {
+  return start === end ? `${start}` : `${start}-${end}`;
+}
+
+function getCupPhaseParam(cupKey = "gold") {
+  return cupKey === "bronze" ? "BRONZO" : String(cupKey || "gold").toUpperCase();
+}
+
+function getCupLabel(cupKey = "gold") {
+  return CUP_LABELS[cupKey] || String(cupKey || "gold").toUpperCase();
+}
+
+function buildCupLegendText(range, grouped = false) {
+  if (grouped) {
+    const prefix = range.start === 1 ? "Prime" : "Successive";
+    return `${prefix} ${range.spots} di ogni girone: ${range.label}`;
+  }
+  return `${formatCupRange(range.start, range.end)}: ${range.label}`;
 }
 
 async function loadSquadreGironi(torneoSlug = TORNEO) {
@@ -282,7 +353,7 @@ function ensureTeamMatchesModal() {
     <div id="teamMatchesCard" role="dialog" aria-modal="true">
       <div id="teamMatchesHeader">
         <h3>Partite squadra</h3>
-        <button id="teamMatchesClose" aria-label="Chiudi">×</button>
+        <button id="teamMatchesClose" aria-label="Chiudi">Ã—</button>
       </div>
       <ul id="teamMatchesList"></ul>
       <div id="teamMatchesEmpty" style="display:none;"></div>
@@ -328,14 +399,14 @@ async function mostraPartiteSquadra(squadra) {
       const casa = p.squadra_casa === squadra;
       const avversario = casa ? p.squadra_ospite : p.squadra_casa;
       const score = (p.gol_casa === null || p.gol_casa === undefined || p.gol_ospite === null || p.gol_ospite === undefined)
-        ? "—"
+        ? "â€”"
         : `${p.gol_casa} - ${p.gol_ospite}`;
       const esito = esitoLabel(p, squadra);
       const li = document.createElement("li");
       li.innerHTML = `
         <div>
           <span class="match-vs">${casa ? "Casa" : "Trasferta"} vs ${avversario}</span>
-          <span class="match-meta">${formattaDataOra(p.data_partita, p.ora_partita)} · ${p.campo || "Campo da definire"}</span>
+          <span class="match-meta">${formattaDataOra(p.data_partita, p.ora_partita)} Â· ${p.campo || "Campo da definire"}</span>
         </div>
         <div class="score ${esito.cls}" title="Esito">${score} ${esito.label !== "ND" ? "(" + esito.label + ")" : ""}</div>
       `;
@@ -451,13 +522,10 @@ function ordinaGruppoPariPunti(gruppo, h2hMap) {
   return gruppo.slice().sort(diffComparator);
 }
 
-function createClassificaRow(team, posizione, goldThreshold = 0, silverThreshold = null) {
+function createClassificaRow(team, posizione, cupRanges = SINGLE_CUP_RANGES) {
   const tr = document.createElement("tr");
-  if (goldThreshold > 0 && posizione <= goldThreshold) {
-    tr.classList.add("gold-row");
-  } else if (silverThreshold !== null && silverThreshold > 0 && posizione <= silverThreshold) {
-    tr.classList.add("silver-row");
-  }
+  const cupClass = getCupClassByPosition(posizione, cupRanges);
+  if (cupClass) tr.classList.add(cupClass);
 
   const logoPath = resolveLogoPath(team.nome, team.logo);
   tr.innerHTML = `
@@ -578,16 +646,8 @@ function renderSingleClassifica(orderedTeams) {
     gironiGrid.classList.remove("is-active");
   }
 
-  const useGold = GOLD_SPOTS > 0;
-  const useSilver = SILVER_SPOTS > 0;
-  const silverThreshold = useSilver ? Math.max(0, orderedTeams.length - SILVER_SPOTS) : null;
-
   orderedTeams.forEach((team, idx) => {
-    let threshold = null;
-    if (useSilver && silverThreshold !== null && idx + 1 > silverThreshold) {
-      threshold = orderedTeams.length;
-    }
-    tbody.appendChild(createClassificaRow(team, idx + 1, useGold ? GOLD_SPOTS : 0, threshold));
+    tbody.appendChild(createClassificaRow(team, idx + 1, SINGLE_CUP_RANGES));
   });
 
   bindClassificaTeamCells(table);
@@ -640,10 +700,7 @@ function renderGroupedClassifica(classifica, partiteGiocate = []) {
 
     const tbodyGroup = wrap.querySelector("tbody");
     group.teams.forEach((team, idx) => {
-      const posizione = idx + 1;
-      const goldThreshold = GOLD_PER_GROUP > 0 ? GOLD_PER_GROUP : 0;
-      const silverThreshold = SILVER_PER_GROUP > 0 ? GOLD_PER_GROUP + SILVER_PER_GROUP : null;
-      tbodyGroup.appendChild(createClassificaRow(team, posizione, goldThreshold, silverThreshold));
+      tbodyGroup.appendChild(createClassificaRow(team, idx + 1, GROUP_CUP_RANGES));
     });
 
     for (let idx = group.teams.length; idx < TEAMS_PER_GROUP; idx++) {
@@ -672,15 +729,11 @@ function mostraClassifica(classifica, partiteGiocate = []) {
   if (USE_COPPE && (!faseSelect || faseSelect.value === "girone")) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
-    const goldText = USE_GROUP_TABLES && GOLD_PER_GROUP > 0
-      ? `Prime ${GOLD_PER_GROUP} di ogni girone: COPPA GOLD`
-      : "COPPA GOLD";
-    const silverText = USE_GROUP_TABLES && SILVER_PER_GROUP > 0
-      ? `Successive ${SILVER_PER_GROUP} di ogni girone: COPPA SILVER`
-      : "COPPA SILVER";
-    const goldBox = GOLD_SPOTS > 0 ? `<div class="box gold-box">${goldText}</div>` : "";
-    const silverBox = SILVER_SPOTS > 0 ? `<div class="box silver-box">${silverText}</div>` : "";
-    legenda.innerHTML = `${goldBox}${silverBox}` || `<div class="box">Coppe non configurate</div>`;
+    const legendRanges = USE_GROUP_TABLES ? GROUP_CUP_RANGES : SINGLE_CUP_RANGES;
+    const legendBoxes = legendRanges
+      .map(range => `<div class="box ${range.key}-box">${buildCupLegendText(range, USE_GROUP_TABLES)}</div>`)
+      .join("");
+    legenda.innerHTML = legendBoxes || `<div class="box">Coppe non configurate</div>`;
 
     const wrapper = document.getElementById("classificaWrapper");
     if (wrapper) wrapper.after(legenda);
@@ -806,12 +859,23 @@ const roundLabelByKey = {
   "KO": "Fase eliminazione"
 };
 
-function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], selected = "") {
+function getDefaultCalendarRound(faseSelezionata, giornateDisponibili = [], giornateConPartiteDaGiocare = []) {
+  const fase = (faseSelezionata || "").toUpperCase();
+  const available = giornateDisponibili.map(String).sort((a, b) => Number(a) - Number(b));
+  const pendingSet = new Set(giornateConPartiteDaGiocare.map(String));
+  const preferred = available.filter(g => pendingSet.has(g));
+  const source = preferred.length ? preferred : available;
+  if (!source.length) return "";
+  return fase === "REGULAR" ? source[0] : source[source.length - 1];
+}
+
+function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], giornateConPartiteDaGiocare = [], selected = "") {
   const wrapper = document.getElementById("wrapperGiornataSelect");
   const select = document.getElementById("giornataSelect");
   const label = wrapper ? wrapper.querySelector("label[for='giornataSelect']") : null;
   if (!select) return;
   const isRegular = (faseSelezionata || "").toUpperCase() === "REGULAR";
+  const fallback = getDefaultCalendarRound(faseSelezionata, giornateDisponibili, giornateConPartiteDaGiocare);
 
   if (wrapper) wrapper.style.display = "flex";
   if (label) label.textContent = isRegular ? "Giornata:" : "Turno:";
@@ -821,16 +885,18 @@ function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], selecte
     giornateDisponibili.forEach(g => {
       select.add(new Option(`Giornata ${g}`, g));
     });
-    const latest = giornateDisponibili.reduce((max, g) => (max === null || Number(g) > Number(max) ? g : max), null);
-    const fallback = latest !== null ? latest : "";
-    select.value = String(selected || fallback);
+    const target = selected ? String(selected) : fallback;
+    if (target && Array.from(select.options).some(opt => opt.value === target)) {
+      select.value = target;
+    } else if (fallback) {
+      select.value = fallback;
+    }
     return;
   }
 
   const disponibili = new Set(giornateDisponibili.map(String));
   const orderedRounds = ["1", "2", "3", "4"];
   let firstVal = "";
-  const latestAvailable = giornateDisponibili.reduce((max, g) => (max === null || Number(g) > Number(max) ? g : max), null);
 
   orderedRounds.forEach(g => {
     if (disponibili.has(g)) {
@@ -847,8 +913,14 @@ function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], selecte
     });
   }
 
-  const target = selected ? String(selected) : (latestAvailable !== null ? String(latestAvailable) : firstVal);
-  if (target) select.value = target;
+  const target = selected ? String(selected) : fallback;
+  if (target && Array.from(select.options).some(opt => opt.value === target)) {
+    select.value = target;
+  } else if (fallback) {
+    select.value = fallback;
+  } else if (firstVal) {
+    select.value = firstVal;
+  }
 }
 
 async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REGULAR") {
@@ -877,8 +949,11 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
 
     const giornataSelect = document.getElementById("giornataSelect");
     const giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
+    const giornateConPartiteDaGiocare = giornateDisponibili.filter(g =>
+      (dataFiltrata[g] || []).some(partita => Number(partita.giocata) !== 1)
+    );
 
-    updateGiornataFilter(fase, giornateDisponibili, giornataSelezionata);
+    updateGiornataFilter(fase, giornateDisponibili, giornateConPartiteDaGiocare, giornataSelezionata);
 
     const selectedRound = giornataSelect ? String(giornataSelect.value || "") : "";
     const giornateDaMostrare = selectedRound ? [selectedRound] : giornateDisponibili;
@@ -1005,7 +1080,8 @@ calendarioSection.appendChild(giornataDiv);
 
 // ====================== PLAYOFF STILE CALENDARIO ======================
 async function caricaPlayoff(tipoCoppa) {
-  const faseParam = (tipoCoppa || "gold").toUpperCase();
+  const cupKey = String(tipoCoppa || "gold").toLowerCase();
+  const faseParam = getCupPhaseParam(cupKey);
   const container = document.getElementById("playoffContainer");
 
   (function ensureBracketStyles() {
@@ -1037,7 +1113,7 @@ async function caricaPlayoff(tipoCoppa) {
   })();
 
   container.innerHTML = `
-    <h3 class="bracket-titolo">Playoff ${tipoCoppa === "gold" ? "COPPA GOLD" : "COPPA SILVER"}</h3>
+    <h3 class="bracket-titolo">Playoff ${getCupLabel(cupKey)}</h3>
     <div class="phase-filter" id="playoffPhaseFilters"></div>
     <div class="bracket-wrapper" id="fasiPlayoff"></div>
   `;
@@ -1437,8 +1513,8 @@ document.addEventListener("DOMContentLoaded", () => {
       classificaWrapper.style.display = "none";
       playoffContainer.style.display = "block";
 
-      if (!coppaSelect.value) {
-        coppaSelect.value = "gold";
+      if (!coppaSelect.value && coppaSelect.options.length) {
+        coppaSelect.value = coppaSelect.options[0].value;
       }
 
       caricaPlayoff(coppaSelect.value);
