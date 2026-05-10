@@ -77,6 +77,15 @@ function round_to_giornata(?string $roundLabel, array $map): ?int {
   return $map[$key] ?? null;
 }
 
+function round_supports_two_legs(?string $roundLabel): bool {
+  if ($roundLabel === null) return false;
+  return in_array(
+    strtoupper(trim($roundLabel)),
+    ['TRENTADUESIMI', 'SEDICESIMI', 'OTTAVI', 'QUARTI', 'SEMIFINALE'],
+    true
+  );
+}
+
 function giornata_to_roundLabel(?int $giornata, array $map): ?string {
   if ($giornata === null) return null;
   $flip = array_flip($map);
@@ -579,10 +588,11 @@ function squadraHaGiaPartita(
       strcasecmp($row['squadra_casa'], $ospite) === 0 && strcasecmp($row['squadra_ospite'], $casa) === 0
     );
 
-    // consenti andata/ritorno in semifinale con coppia identica ma leg diverso
-    $isSemiTarget = $targetRound === 'SEMIFINALE';
-    $isSemiRow = $rowRound === 'SEMIFINALE';
-    if ($isSemiTarget && $isSemiRow && $samePair && $targetLeg && $rowLeg) {
+    // consenti andata/ritorno sullo stesso accoppiamento per i turni a doppia sfida
+    $isTwoLegTarget = round_supports_two_legs($targetRound);
+    $isTwoLegRow = round_supports_two_legs($rowRound);
+    $hasLegPair = in_array($targetLeg, ['ANDATA', 'RITORNO'], true) && in_array($rowLeg, ['ANDATA', 'RITORNO'], true);
+    if ($isTwoLegTarget && $isTwoLegRow && $targetRound === $rowRound && $samePair && $hasLegPair) {
       if ($rowLeg !== $targetLeg) {
         continue;
       }
@@ -613,7 +623,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $faseRound = ($faseRound && in_array($faseRound, ['TRENTADUESIMI','SEDICESIMI','OTTAVI','QUARTI','SEMIFINALE','FINALE'], true)) ? $faseRound : null;
     $faseLegInput = $fase !== 'REGULAR' ? sanitize_leg($_POST['fase_leg'] ?? '') : null;
     $faseLeg = $fase !== 'REGULAR'
-      ? ($faseLegInput ?: ($faseRound === 'SEMIFINALE' ? 'ANDATA' : 'UNICA'))
+      ? ($faseLegInput ?: (round_supports_two_legs($faseRound) ? 'ANDATA' : 'UNICA'))
       : null;
     $giocata = 0; // sempre non giocata alla creazione
     $gol_casa = sanitize_int($_POST['gol_casa'] ?? '0');
@@ -669,8 +679,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           );
           if ($stmt->execute()) {
             $successo = 'Partita creata correttamente.';
-            // crea automaticamente il ritorno per le semifinali andata con dati da definire
-            if ($faseRound === 'SEMIFINALE' && strtoupper($faseLeg) === 'ANDATA') {
+            // crea automaticamente il ritorno per i turni a doppia sfida impostati come andata
+            if (round_supports_two_legs($faseRound) && strtoupper($faseLeg) === 'ANDATA') {
               if (!squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $ospite, $casa, null, $faseRound, 'RITORNO')) {
                 $stmtR = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, decisa_rigori, rigori_casa, rigori_ospite, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
                 if ($stmtR) {
@@ -748,7 +758,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $faseRound = $fase !== 'REGULAR' ? strtoupper($roundSelezionato) : null;
     $faseLegInput = $fase !== 'REGULAR' ? sanitize_leg($_POST['fase_leg_mod'] ?? '') : null;
     $faseLeg = $fase !== 'REGULAR'
-      ? ($faseLegInput ?: ($faseRound === 'SEMIFINALE' ? 'ANDATA' : 'UNICA'))
+      ? ($faseLegInput ?: (round_supports_two_legs($faseRound) ? 'ANDATA' : 'UNICA'))
       : null;
     // usa il flag inviato dal form; non forziamo piï¿½ true di default
     $giocata = isset($_POST['giocata_mod']) && $_POST['giocata_mod'] === '1' ? 1 : 0;
@@ -1605,6 +1615,8 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     'SEMIFINALE': 2,
     'FINALE': 1,
   };
+  const twoLegRounds = new Set(['TRENTADUESIMI', 'SEDICESIMI', 'OTTAVI', 'QUARTI', 'SEMIFINALE']);
+  const isTwoLegRound = (roundVal) => twoLegRounds.has((roundVal || '').toUpperCase());
   const roundLabelFromGiornata = Object.fromEntries(Object.entries(roundLabelMap).map(([k,v]) => [String(v), k]));
   const roundLabelByKey = roundLabelFromGiornata;
   const basePhaseOptions = <?php echo json_encode($fasiAmmesseConBronzo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
@@ -1698,7 +1710,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     const giornataVal = getGiornataTarget();
     const legVal = (document.getElementById('faseLegCrea')?.value || '').toUpperCase();
     const roundVal = (roundCrea?.value || '').toUpperCase();
-    const isSemiReturn = faseVal !== 'REGULAR' && roundVal === 'SEMIFINALE' && legVal === 'RITORNO';
+    const isReturnMatch = faseVal !== 'REGULAR' && isTwoLegRound(roundVal) && legVal === 'RITORNO';
     const casaSel = document.getElementById('squadraCasaCrea');
     const ospSel = document.getElementById('squadraOspiteCrea');
     const resetSelect = (sel, placeholder) => {
@@ -1713,7 +1725,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     const lista = squadreMap[torneoVal] || [];
     const occupate = new Set();
-    const semiAllowed = new Set();
+    const returnAllowed = new Set();
     const matches = partiteData.filter(p =>
       p.torneo === torneoVal &&
       (p.fase || 'REGULAR').toUpperCase() === faseVal &&
@@ -1723,14 +1735,14 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
       const leg = (p.fase_leg || '').toUpperCase();
       const roundDb = (p.fase_round || '').toUpperCase();
       const teams = [p.squadra_casa, p.squadra_ospite];
-      const allowReturn = isSemiReturn && roundDb === 'SEMIFINALE' && leg === 'ANDATA';
+      const allowReturn = isReturnMatch && roundDb === roundVal && leg === 'ANDATA';
       if (allowReturn) {
-        teams.forEach(t => semiAllowed.add(t));
+        teams.forEach(t => returnAllowed.add(t));
         return;
       }
       teams.forEach(t => occupate.add(t));
     });
-    const disponibili = lista.filter(nome => !occupate.has(nome) || semiAllowed.has(nome));
+    const disponibili = lista.filter(nome => !occupate.has(nome) || returnAllowed.has(nome));
     const fill = (sel) => {
       if (!sel) return;
       sel.disabled = false;
@@ -1828,13 +1840,11 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
       if (isRegular) roundSelect.value = '';
     }
     const roundVal = (roundSelect?.value || '').toUpperCase();
-    const isLegRound = !isRegular && ['OTTAVI','QUARTI','SEMIFINALE'].includes(roundVal);
+    const isLegRound = !isRegular && isTwoLegRound(roundVal);
 
     if (legWrap) legWrap.classList.toggle('hidden', !isLegRound);
     if (legSelect) {
       if (!isLegRound) {
-        legSelect.value = 'UNICA';
-      } else if (roundVal !== 'SEMIFINALE' && legSelect.value === 'RITORNO') {
         legSelect.value = 'UNICA';
       }
     }
@@ -1928,7 +1938,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
       let legVal = (partita.fase_leg || '').toUpperCase();
       const roundVal = (roundSel?.value || '').toUpperCase();
       if (!legVal && !isModRegular) {
-        legVal = roundVal === 'SEMIFINALE' ? 'ANDATA' : 'UNICA';
+        legVal = isTwoLegRound(roundVal) ? 'ANDATA' : 'UNICA';
       }
       legModSelect.value = legVal || 'UNICA';
     }
