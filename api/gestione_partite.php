@@ -6,8 +6,10 @@ require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 
 $errore = '';
 $successo = '';
+$azione = $_POST['azione'] ?? '';
 $torneiDisponibili = [];
 $squadrePerTorneo = [];
+$campiPartita = [];
 $fasiAmmesse = ['REGULAR', 'GOLD', 'SILVER', 'BRONZO'];
 $fasiAmmesseConBronzo = ['REGULAR', 'GOLD', 'SILVER', 'BRONZO'];
 $maxGiornateRegular = 10;
@@ -71,6 +73,115 @@ function sanitize_leg(?string $v): ?string {
   return in_array($val, $allowed, true) ? $val : null;
 }
 
+function default_match_fields(): array {
+  return [
+    'Sporting Club San Francesco, Napoli',
+    'Centro Sportivo La Paratina, Napoli',
+    'Paratina (campo sopra)',
+    'Paratina (campo giu)',
+    'Sporting S.Antonio, Napoli',
+    'La Boutique del Calcio, Napoli',
+    "Gioventu' Partenope",
+    'Complesso Kennedy, Napoli',
+    'Campo Centrale del Parco Corto Maltese, Napoli',
+  ];
+}
+
+function ensure_match_fields_table(mysqli $conn): void {
+  $conn->query("
+    CREATE TABLE IF NOT EXISTS campi_partite (
+      id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      nome VARCHAR(255) NOT NULL,
+      sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_campi_partite_nome (nome),
+      KEY idx_campi_partite_order (sort_order, nome)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  ");
+
+  $countRes = $conn->query("SELECT COUNT(*) AS totale FROM campi_partite");
+  $totale = 0;
+  if ($countRes) {
+    $row = $countRes->fetch_assoc();
+    $totale = (int)($row['totale'] ?? 0);
+  }
+  if ($totale > 0) {
+    return;
+  }
+
+  $valori = default_match_fields();
+  $resCampiEsistenti = $conn->query("
+    SELECT DISTINCT campo
+    FROM partite
+    WHERE campo IS NOT NULL AND TRIM(campo) <> ''
+    ORDER BY campo ASC
+  ");
+  if ($resCampiEsistenti) {
+    while ($row = $resCampiEsistenti->fetch_assoc()) {
+      $nome = trim((string)($row['campo'] ?? ''));
+      if ($nome === '' || in_array($nome, $valori, true)) {
+        continue;
+      }
+      $valori[] = $nome;
+    }
+  }
+
+  $stmt = $conn->prepare("INSERT INTO campi_partite (nome, sort_order) VALUES (?, ?)");
+  if (!$stmt) {
+    return;
+  }
+
+  foreach ($valori as $idx => $nome) {
+    $sortOrder = $idx + 1;
+    $stmt->bind_param('si', $nome, $sortOrder);
+    $stmt->execute();
+  }
+  $stmt->close();
+}
+
+function get_match_fields(mysqli $conn): array {
+  $items = [];
+  $res = $conn->query("
+    SELECT cp.id, cp.nome, cp.sort_order, COUNT(p.id) AS uso_totale
+    FROM campi_partite cp
+    LEFT JOIN partite p ON p.campo = cp.nome
+    GROUP BY cp.id, cp.nome, cp.sort_order
+    ORDER BY cp.sort_order ASC, cp.nome ASC
+  ");
+  if ($res) {
+    while ($row = $res->fetch_assoc()) {
+      $items[] = $row;
+    }
+  }
+  return $items;
+}
+
+function render_match_field_options(array $campi, string $selected = ''): string {
+  $html = '<option value="">-- Seleziona campo --</option>';
+  $selectedFound = false;
+
+  foreach ($campi as $campo) {
+    $nome = trim((string)($campo['nome'] ?? ''));
+    if ($nome === '') {
+      continue;
+    }
+    $isSelected = $selected !== '' && strcmp($selected, $nome) === 0;
+    if ($isSelected) {
+      $selectedFound = true;
+    }
+    $escaped = htmlspecialchars($nome, ENT_QUOTES, 'UTF-8');
+    $html .= '<option value="' . $escaped . '"' . ($isSelected ? ' selected' : '') . '>' . $escaped . '</option>';
+  }
+
+  if ($selected !== '' && !$selectedFound) {
+    $escapedSelected = htmlspecialchars($selected, ENT_QUOTES, 'UTF-8');
+    $html .= '<option value="' . $escapedSelected . '" selected>' . $escapedSelected . ' (storico)</option>';
+  }
+
+  return $html;
+}
+
 function round_to_giornata(?string $roundLabel, array $map): ?int {
   if ($roundLabel === null) return null;
   $key = strtoupper(trim($roundLabel));
@@ -98,6 +209,7 @@ ensure_follow_table($conn);
 ensure_partite_notifica_flag($conn);
 ensure_partite_unique_index($conn);
 ensure_rigori_columns($conn);
+ensure_match_fields_table($conn);
 
 // ==== NOTIFICHE ====
 function ensure_notifiche_table(mysqli $conn): void {
@@ -607,8 +719,6 @@ function squadraHaGiaPartita(
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $azione = $_POST['azione'] ?? '';
-
   if ($azione === 'crea') {
     $torneo = sanitize_text($_POST['torneo'] ?? '');
     $fase = sanitize_fase($_POST['fase'] ?? '', $fasiAmmesseConBronzo);
@@ -999,6 +1109,147 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
     }
   }
+
+  if ($azione === 'crea_campo') {
+    $campoNome = sanitize_text($_POST['campo_nome'] ?? '');
+
+    if ($campoNome === '') {
+      $errore = 'Inserisci il nome del campo da aggiungere.';
+    } else {
+      $maxOrderRes = $conn->query("SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM campi_partite");
+      $nextOrder = 1;
+      if ($maxOrderRes) {
+        $maxOrderRow = $maxOrderRes->fetch_assoc();
+        $nextOrder = ((int)($maxOrderRow['max_order'] ?? 0)) + 1;
+      }
+
+      $stmt = $conn->prepare("INSERT INTO campi_partite (nome, sort_order) VALUES (?, ?)");
+      if ($stmt) {
+        $stmt->bind_param('si', $campoNome, $nextOrder);
+        if ($stmt->execute()) {
+          $successo = 'Campo aggiunto correttamente alla picklist.';
+        } else {
+          $errore = (int)$stmt->errno === 1062
+            ? 'Questo campo esiste già nella picklist.'
+            : 'Inserimento del campo non riuscito.';
+        }
+        $stmt->close();
+      } else {
+        $errore = 'Errore interno durante la creazione del campo.';
+      }
+    }
+  }
+
+  if ($azione === 'modifica_campo') {
+    $campoId = (int)($_POST['campo_id'] ?? 0);
+    $campoNome = sanitize_text($_POST['campo_nome'] ?? '');
+
+    if ($campoId <= 0 || $campoNome === '') {
+      $errore = 'Seleziona un campo valido e inserisci il nuovo nome.';
+    } else {
+      $campoEsistente = null;
+      $sel = $conn->prepare("SELECT nome FROM campi_partite WHERE id = ? LIMIT 1");
+      if ($sel) {
+        $sel->bind_param('i', $campoId);
+        if ($sel->execute()) {
+          $campoEsistente = $sel->get_result()->fetch_assoc();
+        }
+        $sel->close();
+      }
+
+      if (!$campoEsistente) {
+        $errore = 'Campo non trovato.';
+      } else {
+        $nomePrecedente = trim((string)($campoEsistente['nome'] ?? ''));
+        $txStarted = $conn->begin_transaction();
+        $operazioneOk = true;
+
+        $updCampo = $conn->prepare("UPDATE campi_partite SET nome = ? WHERE id = ?");
+        if ($updCampo) {
+          $updCampo->bind_param('si', $campoNome, $campoId);
+          $operazioneOk = $updCampo->execute();
+          if (!$operazioneOk && (int)$updCampo->errno === 1062) {
+            $errore = 'Esiste già un altro campo con questo nome.';
+          }
+          $updCampo->close();
+        } else {
+          $operazioneOk = false;
+          $errore = 'Errore interno durante l\'aggiornamento del campo.';
+        }
+
+        if ($operazioneOk && $nomePrecedente !== '' && strcmp($nomePrecedente, $campoNome) !== 0) {
+          $updPartite = $conn->prepare("UPDATE partite SET campo = ? WHERE campo = ?");
+          if ($updPartite) {
+            $updPartite->bind_param('ss', $campoNome, $nomePrecedente);
+            $operazioneOk = $updPartite->execute();
+            $updPartite->close();
+          } else {
+            $operazioneOk = false;
+            $errore = 'Errore interno durante l\'aggiornamento delle partite collegate.';
+          }
+        }
+
+        if ($operazioneOk) {
+          if ($txStarted !== false) {
+            $conn->commit();
+          }
+          $successo = 'Campo aggiornato correttamente.';
+        } else {
+          if ($txStarted !== false) {
+            $conn->rollback();
+          }
+          if ($errore === '') {
+            $errore = 'Aggiornamento del campo non riuscito.';
+          }
+        }
+      }
+    }
+  }
+
+  if ($azione === 'elimina_campo') {
+    $campoId = (int)($_POST['campo_id'] ?? 0);
+
+    if ($campoId <= 0) {
+      $errore = 'Seleziona un campo valido da eliminare.';
+    } else {
+      $campoInfo = null;
+      $sel = $conn->prepare("
+        SELECT cp.nome, COUNT(p.id) AS uso_totale
+        FROM campi_partite cp
+        LEFT JOIN partite p ON p.campo = cp.nome
+        WHERE cp.id = ?
+        GROUP BY cp.id, cp.nome
+        LIMIT 1
+      ");
+      if ($sel) {
+        $sel->bind_param('i', $campoId);
+        if ($sel->execute()) {
+          $campoInfo = $sel->get_result()->fetch_assoc();
+        }
+        $sel->close();
+      }
+
+      if (!$campoInfo) {
+        $errore = 'Campo non trovato.';
+      } else {
+        $del = $conn->prepare("DELETE FROM campi_partite WHERE id = ?");
+        if ($del) {
+          $del->bind_param('i', $campoId);
+          if ($del->execute()) {
+            $usoTotale = (int)($campoInfo['uso_totale'] ?? 0);
+            $successo = $usoTotale > 0
+              ? 'Campo eliminato dalla picklist. Le partite già salvate che lo usano non sono state modificate.'
+              : 'Campo eliminato correttamente dalla picklist.';
+          } else {
+            $errore = 'Eliminazione del campo non riuscita.';
+          }
+          $del->close();
+        } else {
+          $errore = 'Errore interno durante l\'eliminazione del campo.';
+        }
+      }
+    }
+  }
 }
 
 // AJAX helper: se la richiesta chiede JSON, rispondiamo senza ricaricare tutta la pagina
@@ -1010,6 +1261,7 @@ $isAjax = (
 $partite = [];
 $partiteNonGiocate = [];
 $partiteGiocate = [];
+$campiPartita = get_match_fields($conn);
 $res = $conn->query("SELECT id, torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, decisa_rigori, rigori_casa, rigori_ospite, giornata, giocata, arbitro, link_youtube, link_instagram, created_at FROM partite ORDER BY data_partita DESC, ora_partita DESC, id DESC");
 if ($res) {
   while ($row = $res->fetch_assoc()) {
@@ -1028,11 +1280,21 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     'success' => $errore === '' && $successo !== '',
     'error' => $errore,
     'message' => $successo,
+    'campi' => $campiPartita,
     'partite' => $partite,
     'partite_non_giocate' => $partiteNonGiocate,
     'partite_giocate' => $partiteGiocate,
   ]);
   exit;
+}
+
+$tabAttiva = 'crea';
+if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
+  $tabAttiva = 'modifica';
+} elseif ($azione === 'elimina') {
+  $tabAttiva = 'elimina';
+} elseif (in_array($azione, ['crea_campo', 'modifica_campo', 'elimina_campo'], true)) {
+  $tabAttiva = 'campi';
 }
 ?>
 <!DOCTYPE html>
@@ -1135,6 +1397,17 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     .form-message { margin-top: 10px; padding: 10px 12px; border-radius: 10px; font-weight: 600; }
     .form-message.success { background: #e6f6ec; border: 1px solid #3ba776; color: #1f6a44; }
     .form-message.error { background: #fdecec; border: 1px solid #d72638; color: #8f1a27; }
+    .section-note { margin: -4px 0 16px; color: #5b6b7d; }
+    .field-manager-list { display: flex; flex-direction: column; gap: 12px; }
+    .field-row-form { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: end; padding: 14px; border: 1px solid #e5eaf0; border-radius: 12px; background: #f8fbff; }
+    .field-row-form > div { min-width: 0; }
+    .field-row-form input[type="text"] { width: 100%; }
+    .field-row-meta { display: block; margin-top: 8px; color: #6a788c; font-size: 0.92rem; }
+    .empty-state { color: #6a788c; }
+    @media (max-width: 767px) {
+      .field-row-form { grid-template-columns: 1fr; }
+      .field-row-form button { width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -1146,13 +1419,14 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     <h1 class="admin-title">Gestione Partite</h1>
 
     <div class="tab-buttons">
-      <button type="button" data-tab="crea" class="active">Crea</button>
-      <button type="button" data-tab="modifica">Modifica</button>
-      <button type="button" data-tab="elimina">Elimina</button>
+      <button type="button" data-tab="crea" class="<?= $tabAttiva === 'crea' ? 'active' : '' ?>">Crea</button>
+      <button type="button" data-tab="modifica" class="<?= $tabAttiva === 'modifica' ? 'active' : '' ?>">Modifica</button>
+      <button type="button" data-tab="elimina" class="<?= $tabAttiva === 'elimina' ? 'active' : '' ?>">Elimina</button>
+      <button type="button" data-tab="campi" class="<?= $tabAttiva === 'campi' ? 'active' : '' ?>">Campi</button>
     </div>
 
     <!-- CREA -->
-    <section class="tab-section active" data-tab="crea">
+    <section class="tab-section <?= $tabAttiva === 'crea' ? 'active' : '' ?>" data-tab="crea">
       <div class="form-card">
         <h3>Crea partita</h3>
         <form class="admin-form inline" method="POST" id="formCrea">
@@ -1228,16 +1502,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         <div>
           <label class="required-label">Campo</label>
           <select name="campo" required>
-            <option value="">-- Seleziona campo --</option>
-            <option value="Sporting Club San Francesco, Napoli">Sporting Club San Francesco, Napoli</option>
-            <option value="Centro Sportivo La Paratina, Napoli">Centro Sportivo La Paratina, Napoli</option>
-            <option value="Paratina (campo sopra)">Paratina (campo sopra)</option>
-            <option value="Paratina (campo giu)">Paratina (campo giu)</option>
-            <option value="Sporting S.Antonio, Napoli">Sporting S.Antonio, Napoli</option>
-            <option value="La Boutique del Calcio, Napoli">La Boutique del Calcio, Napoli</option>
-            <option value="Gioventu' Partenope">Gioventu' Partenope, Melito di Napoli</option>
-            <option value="Complesso Kennedy, Napoli">Complesso Kennedy, Napoli</option>
-            <option value="Campo Centrale del Parco Corto Maltese, Napoli">Campo Centrale del Parco Corto Maltese, Napoli</option>
+            <?= render_match_field_options($campiPartita) ?>
           </select>
         </div>
         <div>
@@ -1261,7 +1526,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <!-- Sezione statistiche spostata su pagina dedicata -->
     <!-- MODIFICA -->
-    <section class="tab-section" data-tab="modifica">
+    <section class="tab-section <?= $tabAttiva === 'modifica' ? 'active' : '' ?>" data-tab="modifica">
       <div class="form-card">
         <h3>Modifica partita</h3>
         <form class="admin-form inline" method="POST" id="formModifica">
@@ -1364,16 +1629,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
         <div>
           <label class="required-label">Campo</label>
           <select name="campo_mod" id="campo_mod" required>
-            <option value="">-- Seleziona campo --</option>
-            <option value="Sporting Club San Francesco, Napoli">Sporting Club San Francesco, Napoli</option>
-            <option value="Centro Sportivo La Paratina, Napoli">Centro Sportivo La Paratina, Napoli</option>
-            <option value="Paratina (campo sopra)">Paratina (campo sopra)</option>
-            <option value="Paratina (campo giu)">Paratina (campo giu)</option>
-            <option value="Sporting S.Antonio, Napoli">Sporting S.Antonio, Napoli</option>
-            <option value="La Boutique del Calcio, Napoli">La Boutique del Calcio, Napoli</option>
-            <option value="Gioventu' Partenope">Gioventu' Partenope, Melito di Napoli</option>
-            <option value="Complesso Kennedy, Napoli">Complesso Kennedy, Napoli</option>
-            <option value="Campo Centrale del Parco Corto Maltese, Napoli">Campo Centrale del Parco Corto Maltese, Napoli</option>
+            <?= render_match_field_options($campiPartita) ?>
           </select>
         </div>
         <div>
@@ -1529,7 +1785,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     </section>
 
     <!-- ELIMINA -->
-    <section class="tab-section" data-tab="elimina">
+    <section class="tab-section <?= $tabAttiva === 'elimina' ? 'active' : '' ?>" data-tab="elimina">
       <div class="form-card">
         <h3>Elimina partita</h3>
         <form method="POST" class="admin-form" id="formElimina">
@@ -1572,6 +1828,65 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
           <div class="form-message error"><?= htmlspecialchars($errore) ?></div>
         <?php endif; ?>
         </form>
+      </div>
+    </section>
+
+    <section class="tab-section <?= $tabAttiva === 'campi' ? 'active' : '' ?>" data-tab="campi">
+      <div class="form-card">
+        <h3>Gestione campi</h3>
+        <p class="section-note">Qui gestisci i valori disponibili nella picklist "Campo" usata quando crei o modifichi una partita.</p>
+        <form class="admin-form inline" method="POST" id="formCampoCrea">
+          <input type="hidden" name="azione" value="crea_campo">
+          <div class="full">
+            <label class="required-label">Nuovo campo</label>
+            <input type="text" name="campo_nome" maxlength="255" placeholder="Es. Centro Sportivo..." required>
+          </div>
+          <div class="full">
+            <button type="submit" class="btn-primary">Aggiungi campo</button>
+          </div>
+        </form>
+        <?php if (($successo && in_array($azione, ['crea_campo', 'modifica_campo', 'elimina_campo'], true))): ?>
+          <div class="form-message success"><?= htmlspecialchars($successo) ?></div>
+        <?php elseif (($errore && in_array($azione, ['crea_campo', 'modifica_campo', 'elimina_campo'], true))): ?>
+          <div class="form-message error"><?= htmlspecialchars($errore) ?></div>
+        <?php endif; ?>
+      </div>
+
+      <div class="form-card">
+        <h3>Campi disponibili</h3>
+        <?php if (empty($campiPartita)): ?>
+          <p class="empty-state">Nessun campo disponibile.</p>
+        <?php else: ?>
+          <div class="field-manager-list">
+            <?php foreach ($campiPartita as $campoItem): ?>
+              <form method="POST" class="field-row-form">
+                <input type="hidden" name="campo_id" value="<?= (int)($campoItem['id'] ?? 0) ?>">
+                <div>
+                  <label class="required-label">Nome campo</label>
+                  <input
+                    type="text"
+                    name="campo_nome"
+                    maxlength="255"
+                    value="<?= htmlspecialchars((string)($campoItem['nome'] ?? '')) ?>"
+                    required
+                  >
+                  <small class="field-row-meta">
+                    Usato in <?= (int)($campoItem['uso_totale'] ?? 0) ?> partite.
+                    L'eliminazione lo rimuove solo dalla picklist e non modifica le partite già salvate.
+                  </small>
+                </div>
+                <button type="submit" name="azione" value="modifica_campo" class="btn-secondary-modern">Salva</button>
+                <button
+                  type="submit"
+                  name="azione"
+                  value="elimina_campo"
+                  class="btn-danger modern-danger"
+                  onclick="return confirm('Eliminare questo campo dalla picklist? Le partite già salvate non verranno modificate.');"
+                >Elimina</button>
+              </form>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
       </div>
     </section>
 
@@ -1881,6 +2196,20 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
   });
 
   const fillField = (id, val) => { const el = document.getElementById(id); if (el) { if (el.type === 'checkbox') { el.checked = !!val; } else { el.value = val ?? ''; } } };
+  const setSelectValueAllowMissing = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const nextValue = val ?? '';
+    if (nextValue === '') {
+      el.value = '';
+      return;
+    }
+    const hasOption = Array.from(el.options || []).some(opt => opt.value === nextValue);
+    if (!hasOption) {
+      el.add(new Option(`${nextValue} (storico)`, nextValue));
+    }
+    el.value = nextValue;
+  };
 
   const clearModificaFields = () => {
     const ids = [
@@ -1953,7 +2282,7 @@ if ($isAjax && $_SERVER['REQUEST_METHOD'] === 'POST') {
     toggleRigoriGroup('decisa_rigori_mod', 'rigoriFieldsMod');
     fillField('data_partita_mod', partita.data_partita);
     fillField('ora_partita_mod', partita.ora_partita);
-    fillField('campo_mod', partita.campo);
+    setSelectValueAllowMissing('campo_mod', partita.campo);
     fillField('arbitro_mod', partita.arbitro || '');
     // in modifica flag giocata sempre settato a true
     fillField('giocata_mod', true);
