@@ -1,4 +1,6 @@
 const TORNEO = "PrimeraDivision"; // Nome base del torneo nel DB (fase girone)
+const GOLD_SPOTS = 8;
+const SILVER_SPOTS = 4;
 const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
 const teamLogos = {};
 const favState = { tournaments: new Set(), teams: new Set() };
@@ -309,8 +311,8 @@ async function caricaClassifica(torneoSlug = TORNEO) {
       torneoInfo,
       orderRows: orderClassificaRows,
       resolveLogoPath,
-      fallbackGoldSpots: 16,
-      fallbackSilverSpots: Math.max(data.length - 16, 0)
+      fallbackGoldSpots: GOLD_SPOTS,
+      fallbackSilverSpots: SILVER_SPOTS
     });
 
     if (groupedSetup) {
@@ -458,12 +460,15 @@ function mostraClassifica(classifica, partiteGiocate = []) {
     orderedTeams.push(...ordinati);
   });
 
+  const teamCount = orderedTeams.length;
+
   orderedTeams.forEach((team, i) => {
     const tr = document.createElement("tr");
+    const posizione = i + 1;
 
-    if (i + 1 <= 16) {
+    if (posizione <= GOLD_SPOTS) {
       tr.classList.add("gold-row");
-    } else {
+    } else if (posizione > teamCount - SILVER_SPOTS) {
       tr.classList.add("silver-row");
     }
 
@@ -500,9 +505,10 @@ function mostraClassifica(classifica, partiteGiocate = []) {
   if (!faseSelect || faseSelect.value === "girone") {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
+    const silverStart = Math.max(1, teamCount - SILVER_SPOTS + 1);
     legenda.innerHTML = `
-      <div class="box gold-box">ðŸ† COPPA GOLD</div>
-      <div class="box silver-box">ðŸ¥ˆ COPPA SILVER</div>
+      <div class="box gold-box">Prime ${GOLD_SPOTS}: Coppa Gold</div>
+      <div class="box silver-box">Ultime ${SILVER_SPOTS}: Coppa Silver (posizioni ${silverStart}-${teamCount})</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
@@ -1019,7 +1025,6 @@ async function caricaPlayoff(tipoCoppa) {
       const phases =
         tipoCoppa.toLowerCase() === "gold"
           ? [
-              { label: "Ottavi", val: "4" },
               { label: "Quarti", val: "3" },
               { label: "Semifinali", val: "2" },
               { label: "Finale", val: "1" },
@@ -1049,7 +1054,7 @@ async function caricaPlayoff(tipoCoppa) {
     const renderPlayoff = () => {
       if (!fasiContainer) return;
       fasiContainer.innerHTML = "";
-      const ordineGiornate = [4, 3, 2, 1]; // Ottavi -> Quarti -> Semi -> Finale
+      const ordineGiornate = tipoCoppa.toLowerCase() === "gold" ? [3, 2, 1] : [2, 1];
 
       ordineGiornate.forEach(g => {
         if (currentPhase && String(g) !== currentPhase) return;
