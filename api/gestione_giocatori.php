@@ -1269,6 +1269,10 @@ const assocFormEdit = document.querySelector(".assoc-form-edit");
 const assocFormRemove = document.querySelector(".assoc-form-remove");
 const removeAssocButtons = document.querySelectorAll(".btn-remove-assoc");
 const ASSOC_OP_KEY = "tos_assoc_op";
+const ADD_ASSOC_STATE_KEYS = {
+    torneo: "tos_add_assoc_torneo",
+    squadra: "tos_add_assoc_squadra",
+};
 const MOD_ASSOC_STATE_KEYS = {
     torneo: "tos_mod_assoc_torneo",
     squadra: "tos_mod_assoc_squadra",
@@ -1527,17 +1531,53 @@ function saveAssocOperation(val) {
 }
 
 function restoreAssocOperation(forced) {
-    let stored = "";
-    try {
-        stored = localStorage.getItem(ASSOC_OP_KEY) || "";
-    } catch (err) {
-        stored = "";
-    }
-    const op = (forced || stored || "aggiungi");
+    const op = (forced || "aggiungi").trim() || "aggiungi";
     if (assocOperationSelect) {
         assocOperationSelect.value = op;
     }
     return op;
+}
+
+function saveAddAssocState(torneoVal, squadraVal) {
+    try {
+        if (torneoVal !== undefined) localStorage.setItem(ADD_ASSOC_STATE_KEYS.torneo, torneoVal || "");
+        if (squadraVal !== undefined) localStorage.setItem(ADD_ASSOC_STATE_KEYS.squadra, squadraVal || "");
+    } catch (err) {
+        console.warn("Impossibile salvare stato creazione associazione:", err);
+    }
+}
+
+async function restoreAddAssocState() {
+    if (!assocTorneo || !assocSquadra) return;
+
+    let savedTorneo = "";
+    let savedSquadra = "";
+    try {
+        savedTorneo = localStorage.getItem(ADD_ASSOC_STATE_KEYS.torneo) || "";
+        savedSquadra = localStorage.getItem(ADD_ASSOC_STATE_KEYS.squadra) || "";
+    } catch (err) {
+        return;
+    }
+
+    if (!savedTorneo) return;
+
+    const torneoExists = Array.from(assocTorneo.options || []).some(o => o.value === savedTorneo);
+    if (!torneoExists) {
+        saveAddAssocState("", "");
+        return;
+    }
+
+    assocTorneo.value = savedTorneo;
+    const squadre = await loadSquadre(assocSquadra, savedTorneo);
+
+    if (savedSquadra && Array.isArray(squadre) && squadre.some(s => String(s.id) === String(savedSquadra))) {
+        assocSquadra.value = savedSquadra;
+    } else if (savedSquadra) {
+        saveAddAssocState(savedTorneo, "");
+    }
+
+    if (assocGiocatoreSearch) assocGiocatoreSearch.value = "";
+    await aggiornaGiocatoriDisponibiliPerAssociazione();
 }
 
 function saveModAssocState(torneoVal, squadraVal, giocatoreVal) {
@@ -1552,6 +1592,11 @@ function saveModAssocState(torneoVal, squadraVal, giocatoreVal) {
 
 async function restoreModAssocState(forcedOp = "") {
     if (!modAssocTorneo || !modAssocSquadra || !modAssocGiocatore) return;
+    const forced = (forcedOp || "").trim();
+    if (forced !== "modifica") {
+        return;
+    }
+
     let savedTorneo = "";
     let savedSquadra = "";
     let savedGiocatore = "";
@@ -1564,11 +1609,6 @@ async function restoreModAssocState(forcedOp = "") {
     }
 
     if (!savedTorneo) return;
-
-    const forced = (forcedOp || "").trim();
-    if (forced && forced !== "modifica") {
-        return; // richiesto esplicitamente di rimanere su altra operazione
-    }
 
     // Se il torneo salvato non esiste piu', puliamo lo stato
     const torneoExists = Array.from(modAssocTorneo.options || []).some(o => o.value === savedTorneo);
@@ -1771,13 +1811,10 @@ if (removeAssocModal) {
 
 assocTorneo?.addEventListener("change", async () => {
     if (assocGiocatoreSearch) assocGiocatoreSearch.value = "";
+    saveAddAssocState(assocTorneo.value, "");
     await loadSquadre(assocSquadra, assocTorneo.value);
     await aggiornaGiocatoriDisponibiliPerAssociazione();
 });
-if (assocTorneo?.value) {
-    if (assocGiocatoreSearch) assocGiocatoreSearch.value = "";
-    loadSquadre(assocSquadra, assocTorneo.value).then(() => aggiornaGiocatoriDisponibiliPerAssociazione());
-}
 
 remTorneo?.addEventListener("change", async () => {
     await loadSquadre(remSquadra, remTorneo.value);
@@ -1815,6 +1852,7 @@ modAssocGiocatore?.addEventListener("change", () => {
 
 assocSquadra?.addEventListener("change", () => {
     if (assocGiocatoreSearch) assocGiocatoreSearch.value = "";
+    saveAddAssocState(assocTorneo?.value || "", assocSquadra.value);
     aggiornaGiocatoriDisponibiliPerAssociazione();
 });
 assocGiocatore?.addEventListener("change", () => updateCaptainAvailability());
@@ -1829,16 +1867,37 @@ function mostraFormAssoc(val) {
     if (val === 'rimuovi' && assocFormRemove) assocFormRemove.classList.remove('hidden');
 }
 
+function showDefaultAssocCreation() {
+    if (assocOperationSelect) {
+        assocOperationSelect.value = "aggiungi";
+    }
+    mostraFormAssoc("aggiungi");
+    restoreAddAssocState();
+}
+
 const initialAssocOp = restoreAssocOperation(assocOpParam);
-mostraFormAssoc(initialAssocOp || 'aggiungi');
+if (initialAssocOp === 'aggiungi') {
+    showDefaultAssocCreation();
+} else {
+    mostraFormAssoc(initialAssocOp);
+}
 if (initialAssocOp) {
     saveAssocOperation(initialAssocOp);
 }
 assocOperationSelect?.addEventListener('change', e => {
     mostraFormAssoc(e.target.value);
     saveAssocOperation(e.target.value);
+    if (e.target.value === 'aggiungi') {
+        restoreAddAssocState();
+    }
 });
 restoreModAssocState(assocOpParam);
+
+document.getElementById("azione")?.addEventListener("change", e => {
+    if (e.target.value === "associazioni") {
+        showDefaultAssocCreation();
+    }
+});
 
 selectGiocatore?.addEventListener("change", async e => {
     const id = e.target.value;
