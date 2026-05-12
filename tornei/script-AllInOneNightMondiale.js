@@ -461,6 +461,16 @@ const roundLabelByKey = {
   "KO": "Fase eliminazione"
 };
 
+function getDefaultCalendarRound(faseSelezionata, giornateDisponibili = [], giornateConPartiteDaGiocare = []) {
+  const fase = (faseSelezionata || "").toUpperCase();
+  const available = giornateDisponibili.map(String).sort((a, b) => Number(a) - Number(b));
+  const pendingSet = new Set(giornateConPartiteDaGiocare.map(String));
+  const preferred = available.filter(g => pendingSet.has(g));
+  const source = preferred.length ? preferred : available;
+  if (!source.length) return "";
+  return fase === "REGULAR" || fase === "GIRONI" ? source[0] : source[source.length - 1];
+}
+
 async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REGULAR") {
   try {
     const faseKey = (faseSelezionata || "REGULAR").toUpperCase();
@@ -490,7 +500,11 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
     const giornataSelect = document.getElementById("giornataSelect");
     const wrapperGiornata = document.getElementById("wrapperGiornataSelect");
     let giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
+    const giornateConPartiteDaGiocare = giornateDisponibili.filter(g =>
+      (dataFiltrata[g] || []).some(partita => Number(partita.giocata) !== 1)
+    );
     const previousTurn = giornataSelect ? giornataSelect.value : "";
+    const fallbackRound = getDefaultCalendarRound(faseKey, giornateDisponibili, giornateConPartiteDaGiocare);
 
     // mostra la select anche nei gironi (rinominata "Turno")
     if (wrapperGiornata) {
@@ -507,9 +521,11 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
           opt.textContent = `Turno ${g}`;
           giornataSelect.appendChild(opt);
         });
-        if (previousTurn) {
-          const hasPrev = Array.from(giornataSelect.options).some(opt => opt.value === previousTurn);
-          if (hasPrev) giornataSelect.value = previousTurn;
+        const target = previousTurn && Array.from(giornataSelect.options).some(opt => opt.value === previousTurn)
+          ? previousTurn
+          : fallbackRound;
+        if (target) {
+          giornataSelect.value = target;
         }
       } else {
         // mostra solo semifinali (2) e finale (1)
@@ -523,8 +539,11 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
           opt.textContent = g === "1" ? "Finale" : g === "2" ? "Semifinali" : `Fase ${g}`;
           giornataSelect.appendChild(opt);
         });
-        if (previousTurn && giornateDisponibili.includes(previousTurn)) {
-          giornataSelect.value = previousTurn;
+        const target = previousTurn && giornateDisponibili.includes(previousTurn)
+          ? previousTurn
+          : fallbackRound;
+        if (target && giornateDisponibili.includes(target)) {
+          giornataSelect.value = target;
         }
       }
     }

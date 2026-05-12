@@ -844,23 +844,81 @@ const roundLabelByKey = {
   "KO": "Fase eliminazione"
 };
 
-function getDefaultCalendarRound(faseSelezionata, giornateDisponibili = [], giornateConPartiteDaGiocare = []) {
+function isMatchPending(partita) {
+  const giocata = Number(partita?.giocata) === 1;
+  const hasScore = partita?.gol_casa !== null && partita?.gol_casa !== undefined
+    && partita?.gol_ospite !== null && partita?.gol_ospite !== undefined;
+  return !(giocata && hasScore);
+}
+
+function getMatchDateValue(partita) {
+  const rawDate = String(partita?.data_partita || "").trim();
+  if (!rawDate) return null;
+  const rawTime = String(partita?.ora_partita || "").trim();
+  const normalizedTime = rawTime ? (rawTime.length === 5 ? `${rawTime}:00` : rawTime) : "23:59:59";
+  const parsed = new Date(`${rawDate}T${normalizedTime}`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.getTime();
+}
+
+function getOrderedRoundFallback(faseSelezionata, rounds = []) {
   const fase = (faseSelezionata || "").toUpperCase();
-  const available = giornateDisponibili.map(String).sort((a, b) => Number(a) - Number(b));
-  const pendingSet = new Set(giornateConPartiteDaGiocare.map(String));
-  const preferred = available.filter(g => pendingSet.has(g));
-  const source = preferred.length ? preferred : available;
+  const source = rounds.map(String).sort((a, b) => Number(a) - Number(b));
   if (!source.length) return "";
   return fase === "REGULAR" ? source[0] : source[source.length - 1];
 }
 
-function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], giornateConPartiteDaGiocare = [], selected = "") {
+function getDefaultCalendarRound(faseSelezionata, giornateDisponibili = [], giornateConPartiteDaGiocare = [], partitePerGiornata = {}) {
+  const available = giornateDisponibili.map(String).sort((a, b) => Number(a) - Number(b));
+  const pendingSet = new Set(giornateConPartiteDaGiocare.map(String));
+  const pendingRounds = available.filter(g => pendingSet.has(g));
+  const roundsToInspect = pendingRounds.length ? pendingRounds : available;
+  if (!roundsToInspect.length) return "";
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayTs = todayStart.getTime();
+
+  const candidates = roundsToInspect.map(round => {
+    const pendingMatches = (partitePerGiornata[round] || []).filter(isMatchPending);
+    const timestamps = pendingMatches
+      .map(getMatchDateValue)
+      .filter(value => value !== null)
+      .sort((a, b) => a - b);
+
+    if (!timestamps.length) {
+      return null;
+    }
+
+    return {
+      round,
+      nextUpcoming: timestamps.find(value => value >= todayTs) ?? null,
+      latestKnown: timestamps[timestamps.length - 1]
+    };
+  }).filter(Boolean);
+
+  if (candidates.length) {
+    const upcoming = candidates
+      .filter(candidate => candidate.nextUpcoming !== null)
+      .sort((a, b) => a.nextUpcoming - b.nextUpcoming || Number(a.round) - Number(b.round));
+
+    if (upcoming.length) {
+      return upcoming[0].round;
+    }
+
+    candidates.sort((a, b) => b.latestKnown - a.latestKnown || Number(b.round) - Number(a.round));
+    return candidates[0].round;
+  }
+
+  return getOrderedRoundFallback(faseSelezionata, roundsToInspect);
+}
+
+function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], giornateConPartiteDaGiocare = [], selected = "", partitePerGiornata = {}) {
   const wrapper = document.getElementById("wrapperGiornataSelect");
   const select = document.getElementById("giornataSelect");
   const label = wrapper ? wrapper.querySelector("label[for='giornataSelect']") : null;
   if (!select) return;
   const isRegular = (faseSelezionata || "").toUpperCase() === "REGULAR";
-  const fallback = getDefaultCalendarRound(faseSelezionata, giornateDisponibili, giornateConPartiteDaGiocare);
+  const fallback = getDefaultCalendarRound(faseSelezionata, giornateDisponibili, giornateConPartiteDaGiocare, partitePerGiornata);
 
   if (wrapper) wrapper.style.display = "flex";
   if (label) label.textContent = isRegular ? "Giornata:" : "Turno:";
@@ -935,10 +993,10 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
     const giornataSelect = document.getElementById("giornataSelect");
     const giornateDisponibili = Object.keys(dataFiltrata).sort((a, b) => a - b);
     const giornateConPartiteDaGiocare = giornateDisponibili.filter(g =>
-      (dataFiltrata[g] || []).some(partita => Number(partita.giocata) !== 1)
+      (dataFiltrata[g] || []).some(partita => isMatchPending(partita))
     );
 
-    updateGiornataFilter(fase, giornateDisponibili, giornateConPartiteDaGiocare, giornataSelezionata);
+    updateGiornataFilter(fase, giornateDisponibili, giornateConPartiteDaGiocare, giornataSelezionata, dataFiltrata);
 
     const selectedRound = giornataSelect ? String(giornataSelect.value || "") : "";
     const giornateDaMostrare = selectedRound ? [selectedRound] : giornateDisponibili;

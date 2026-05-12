@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includi/require_login.php';
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
 $torneoSlug = 'McLeague';
 $torneoName = 'Mc League';
-$assetVersion = '20260429b';
+$assetVersion = '20260512a';
 
 require_once __DIR__ . '/../includi/db.php';
 $torneoConfig = [];
