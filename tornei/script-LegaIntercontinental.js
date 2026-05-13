@@ -353,7 +353,7 @@ function ensureTeamMatchesModal() {
     <div id="teamMatchesCard" role="dialog" aria-modal="true">
       <div id="teamMatchesHeader">
         <h3>Partite squadra</h3>
-        <button id="teamMatchesClose" aria-label="Chiudi">Ã—</button>
+        <button id="teamMatchesClose" aria-label="Chiudi">&times;</button>
       </div>
       <ul id="teamMatchesList"></ul>
       <div id="teamMatchesEmpty" style="display:none;"></div>
@@ -406,7 +406,7 @@ async function mostraPartiteSquadra(squadra) {
       li.innerHTML = `
         <div>
           <span class="match-vs">${casa ? "Casa" : "Trasferta"} vs ${avversario}</span>
-          <span class="match-meta">${formattaDataOra(p.data_partita, p.ora_partita)} Â· ${p.campo || "Campo da definire"}</span>
+          <span class="match-meta">${formattaDataOra(p.data_partita, p.ora_partita)} &middot; ${p.campo || "Campo da definire"}</span>
         </div>
         <div class="score ${esito.cls}" title="Esito">${score} ${esito.label !== "ND" ? "(" + esito.label + ")" : ""}</div>
       `;
