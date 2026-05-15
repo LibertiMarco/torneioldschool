@@ -6,6 +6,58 @@ require_once __DIR__ . '/includi/fanta_old_school.php';
 
 header('X-Robots-Tag: noindex, nofollow', true);
 
+$recaptchaSiteKey = getenv('RECAPTCHA_SITE_KEY') ?: '';
+$recaptchaSecretKey = getenv('RECAPTCHA_SECRET_KEY') ?: '';
+
+if (!function_exists('fanta_old_school_verify_recaptcha')) {
+    function fanta_old_school_verify_recaptcha(
+        string $secret,
+        string $token,
+        string $ip = '',
+        string $expectedAction = '',
+        float $minScore = 0.0
+    ): bool {
+        if (trim($secret) === '' || trim($token) === '') {
+            return false;
+        }
+
+        $payload = http_build_query([
+            'secret' => $secret,
+            'response' => $token,
+            'remoteip' => $ip,
+        ]);
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+                'content' => $payload,
+                'timeout' => 5,
+            ],
+        ]);
+
+        $result = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, $context);
+        if ($result === false) {
+            return false;
+        }
+
+        $data = json_decode($result, true);
+        if (!is_array($data) || empty($data['success'])) {
+            return false;
+        }
+
+        if ($expectedAction !== '' && isset($data['action']) && $data['action'] !== $expectedAction) {
+            return false;
+        }
+
+        if ($minScore > 0 && isset($data['score']) && $data['score'] < $minScore) {
+            return false;
+        }
+
+        return true;
+    }
+}
+
 $publicPath = login_with_base_path('/fantaoldschool');
 $baseUrl = rtrim(seo_base_url(), '/');
 $pageUrl = $baseUrl . $publicPath;
@@ -31,8 +83,8 @@ $formValues = [
 
 unset($_SESSION['fanta_old_school_flash']);
 
-$pageTitle = $isInviteLanding && $referrer
-    ? 'Fanta Old School - Invito di ' . $referrerLabel
+$pageTitle = $isInviteLanding
+    ? 'Fanta Old School - Accesso alla lega'
     : 'Fanta Old School - Tornei Old School';
 $seo = [
     'title' => $pageTitle,
@@ -47,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_fanta_old_scho
     $formValues['email_leghe_fc'] = strtolower(trim((string)($_POST['email_leghe_fc'] ?? '')));
 
     if (!$isInviteLanding || !$referrer) {
-        $errorMessage = 'Referral non valido o non piu disponibile.';
+        $errorMessage = 'Link non valido o non piu disponibile.';
     } elseif (!csrf_is_valid($_POST['_csrf'] ?? '', 'fanta_old_school_public_form')) {
         $errorMessage = 'Sessione scaduta. Ricarica la pagina e riprova.';
     } elseif (honeypot_triggered('company_website')) {
@@ -55,8 +107,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_fanta_old_scho
     } elseif (!rate_limit_allow('fanta_old_school_public_form', 4, 900)) {
         $wait = rate_limit_retry_after('fanta_old_school_public_form', 900);
         $errorMessage = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
-    } elseif (!captcha_is_valid('fanta_old_school_public_form', $_POST['captcha_answer'] ?? null)) {
-        $errorMessage = 'Risposta antispam non valida. Riprova.';
+    } elseif ($recaptchaSecretKey === '' || $recaptchaSiteKey === '') {
+        $errorMessage = 'Servizio non disponibile: reCAPTCHA non configurato.';
+    } elseif (!fanta_old_school_verify_recaptcha($recaptchaSecretKey, $_POST['g-recaptcha-response'] ?? '', $_SERVER['REMOTE_ADDR'] ?? '')) {
+        $errorMessage = 'Verifica reCAPTCHA non valida. Riprova.';
     } elseif ($formValues['nome'] === '' || $formValues['cognome'] === '' || $formValues['email_leghe_fc'] === '') {
         $errorMessage = 'Compila tutti i campi richiesti.';
     } elseif (!filter_var($formValues['email_leghe_fc'], FILTER_VALIDATE_EMAIL)) {
@@ -76,17 +130,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_fanta_old_scho
         if (($saveResult['status'] ?? '') === 'created') {
             $_SESSION['fanta_old_school_flash'] = [
                 'type' => 'success',
-                'message' => 'Richiesta inviata. Ti contatteremo partendo dal referral di ' . $referrerLabel . '.',
+                'message' => 'Richiesta inviata. Entro 24h riceverai la mail per accedere alla lega.',
             ];
             header('Location: ' . $publicPath . '?ref=' . rawurlencode($normalizedReferralCode));
             exit;
         }
 
         if (($saveResult['status'] ?? '') === 'duplicate') {
-            $owner = trim((string)(($saveResult['lead']['referral_label'] ?? '') ?: $referrerLabel));
             $_SESSION['fanta_old_school_flash'] = [
                 'type' => 'info',
-                'message' => 'Questa email Leghe FC risulta gia registrata' . ($owner !== '' ? ' tramite ' . $owner : '') . '.',
+                'message' => 'Questa email Leghe FC risulta gia registrata.',
             ];
             header('Location: ' . $publicPath . '?ref=' . rawurlencode($normalizedReferralCode));
             exit;
@@ -96,7 +149,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_fanta_old_scho
     }
 }
 
-$captchaQuestion = $isInviteLanding && $referrer ? captcha_generate('fanta_old_school_public_form') : '';
 $leadCount = count($currentUserLeads);
 $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?? '') : '';
 ?>
@@ -117,7 +169,7 @@ $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?
     .fos-page {
       max-width: 1120px;
       margin: 0 auto;
-      padding: 34px 18px 70px;
+      padding: 58px 18px 70px;
     }
     .fos-hero {
       background: linear-gradient(135deg, #10243c 0%, #18385d 52%, #0f6d57 100%);
@@ -310,6 +362,17 @@ $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?
       font-size: 0.93rem;
       line-height: 1.55;
     }
+    .recaptcha-box {
+      margin: 2px 0 6px;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      transform-origin: left top;
+    }
+    .recaptcha-box .g-recaptcha {
+      transform: scale(1);
+      transform-origin: left top;
+    }
     .fos-hidden {
       position: absolute;
       left: -9999px;
@@ -360,7 +423,7 @@ $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?
     }
     @media (max-width: 720px) {
       .fos-page {
-        padding: 20px 14px 56px;
+        padding: 42px 14px 56px;
       }
       .fos-hero {
         padding: 26px 20px;
@@ -377,6 +440,11 @@ $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?
         flex-basis: auto;
       }
     }
+    @media (max-width: 640px) {
+      .recaptcha-box .g-recaptcha {
+        transform: scale(0.9);
+      }
+    }
   </style>
 </head>
 <body>
@@ -385,9 +453,9 @@ $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?
 <main class="fos-page">
   <section class="fos-hero">
     <?php if ($isInviteLanding && $referrer): ?>
-      <div class="fos-eyebrow">Invito Fanta Old School</div>
-      <h1><?= htmlspecialchars($referrerLabel) ?> ti ha invitato.</h1>
-      <p>Compila il form con nome, cognome ed email Leghe FC. Il sistema salva automaticamente il referral del link che hai aperto.</p>
+      <div class="fos-eyebrow">Accesso alla lega</div>
+      <h1>Compila il form.</h1>
+      <p>Entro 24h riceverai la mail per accedere alla lega.</p>
     <?php elseif ($isLoggedIn): ?>
       <div class="fos-eyebrow">Area personale</div>
       <h1>Fanta Old School</h1>
@@ -412,9 +480,9 @@ $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?
   <?php if ($isInviteLanding): ?>
     <div class="fos-grid">
       <section class="fos-card">
-        <h2>Invito ricevuto</h2>
+        <h2>Compila il form</h2>
         <?php if ($referrer): ?>
-          <p>Stai completando una richiesta associata al referral di <strong><?= htmlspecialchars($referrerLabel) ?></strong>.</p>
+          <p>Inserisci i tuoi dati. Entro 24h riceverai la mail per accedere alla lega.</p>
           <form class="fos-form" method="POST" action="<?= htmlspecialchars($publicPath . '?ref=' . rawurlencode($normalizedReferralCode)) ?>" autocomplete="off">
             <?= csrf_field('fanta_old_school_public_form') ?>
             <input type="text" name="company_website" class="fos-hidden" tabindex="-1" autocomplete="off">
@@ -430,11 +498,10 @@ $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?
               <label for="fos_email_leghe_fc">Email Leghe FC</label>
               <input type="email" id="fos_email_leghe_fc" name="email_leghe_fc" maxlength="190" value="<?= htmlspecialchars($formValues['email_leghe_fc']) ?>" required>
             </div>
-            <div class="fos-field">
-              <label for="fos_captcha">Verifica antispam: quanto fa <?= htmlspecialchars($captchaQuestion) ?>?</label>
-              <input type="text" inputmode="numeric" id="fos_captcha" name="captcha_answer" required>
+            <div class="recaptcha-box">
+              <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($recaptchaSiteKey) ?>"></div>
             </div>
-            <p class="fos-form-note">I dati vengono registrati nella nuova area Fanta Old School e collegati all'utente che ti ha invitato. Per dettagli privacy consulta la <a href="<?= htmlspecialchars(login_with_base_path('/privacy.php')) ?>">Privacy Policy</a>.</p>
+            <p class="fos-form-note">I dati vengono registrati per gestire l'accesso alla lega. Per dettagli privacy consulta la <a href="<?= htmlspecialchars(login_with_base_path('/privacy.php')) ?>">Privacy Policy</a>.</p>
             <button type="submit" class="fos-btn primary" name="submit_fanta_old_school" value="1">Invia richiesta</button>
           </form>
         <?php else: ?>
@@ -447,10 +514,9 @@ $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?
       </section>
 
       <aside class="fos-card">
-        <h3>Come funziona</h3>
-        <p>1. L'utente condivide il proprio link personale.</p>
-        <p>2. Tu compili il form con l'email usata su Leghe FC.</p>
-        <p>3. Gli admin vedono subito chi ti ha invitato e possono gestire le adesioni dal pannello amministratore.</p>
+        <h3>Info utili</h3>
+        <p>Usa l'email corretta del tuo account Leghe FC per evitare ritardi nell'accesso.</p>
+        <p>Dopo l'invio controlla anche la cartella spam entro le prossime 24 ore.</p>
       </aside>
     </div>
   <?php elseif ($isLoggedIn): ?>
@@ -568,5 +634,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
+<?php if ($isInviteLanding && $referrer): ?>
+<script>
+  (function () {
+    const existing = document.querySelector('.g-recaptcha');
+    if (!existing) return;
+    const s = document.createElement('script');
+    s.src = 'https://www.google.com/recaptcha/api.js';
+    s.async = true;
+    s.defer = true;
+    document.head.appendChild(s);
+  })();
+</script>
+<?php endif; ?>
 </body>
 </html>
