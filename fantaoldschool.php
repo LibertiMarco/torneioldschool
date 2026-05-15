@@ -169,7 +169,7 @@ $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?
     .fos-page {
       max-width: 1120px;
       margin: 0 auto;
-      padding: 58px 18px 70px;
+      padding: 92px 18px 70px;
     }
     .fos-hero {
       background: linear-gradient(135deg, #10243c 0%, #18385d 52%, #0f6d57 100%);
@@ -423,7 +423,7 @@ $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?
     }
     @media (max-width: 720px) {
       .fos-page {
-        padding: 42px 14px 56px;
+        padding: 78px 14px 56px;
       }
       .fos-hero {
         padding: 26px 20px;
