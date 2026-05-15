@@ -329,7 +329,7 @@ async function mostraPartiteSquadra(squadra) {
       const casa = p.squadra_casa === squadra;
       const avversario = casa ? p.squadra_ospite : p.squadra_casa;
       const score = (p.gol_casa === null || p.gol_casa === undefined || p.gol_ospite === null || p.gol_ospite === undefined)
-        ? "â€”"
+        ? "\u2014"
         : `${p.gol_casa} - ${p.gol_ospite}`;
       const esito = esitoLabel(p, squadra);
       const li = document.createElement("li");

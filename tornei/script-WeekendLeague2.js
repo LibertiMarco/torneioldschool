@@ -249,7 +249,7 @@ async function mostraPartiteSquadra(squadra) {
       const casa = p.squadra_casa === squadra;
       const avversario = casa ? p.squadra_ospite : p.squadra_casa;
       const score = (p.gol_casa === null || p.gol_casa === undefined || p.gol_ospite === null || p.gol_ospite === undefined)
-        ? "â€”"
+        ? "\u2014"
         : `${p.gol_casa} - ${p.gol_ospite}`;
       const esito = esitoLabel(p, squadra);
       const li = document.createElement("li");
@@ -504,7 +504,7 @@ function mostraClassifica(classifica, partiteGiocate = []) {
   const faseSelect = document.getElementById("faseSelect");
   const legendaEsistente = document.querySelector(".legenda-coppe");
 
-  // rimuove eventuale legenda giÃ  presente
+  // rimuove eventuale legenda gia presente
   if (legendaEsistente) legendaEsistente.remove();
 
   // crea legenda solo se siamo in fase girone
@@ -925,7 +925,7 @@ async function caricaPlayoff(tipoCoppa) {
     const fasiContainer = document.getElementById("fasiPlayoff");
     fasiContainer.innerHTML = "";
 
-    // ordina e mostra solo giornate 1â€“4
+    // ordina e mostra solo giornate 1-4
     const giornate = Object.keys(data)
       .map(g => parseInt(g))
       .filter(g => g >= 1 && g <= 4)
@@ -1053,11 +1053,11 @@ async function caricaPlayoff(tipoCoppa) {
 
     const getDefaultMatches = (giornata) => {
       if (faseParam === "GOLD") {
-        if (giornata === 3) return [makeStub("3Â° CLASS", "6Â° CLASS"), makeStub("4Â° CLASS", "5Â° CLASS")];
-        if (giornata === 2) return [makeStub("1Â° CLASS", "Vincente (3 vs 6)"), makeStub("2Â° CLASS", "Vincente (4 vs 5)")];
+        if (giornata === 3) return [makeStub("3\u00B0 CLASS", "6\u00B0 CLASS"), makeStub("4\u00B0 CLASS", "5\u00B0 CLASS")];
+        if (giornata === 2) return [makeStub("1\u00B0 CLASS", "Vincente (3 vs 6)"), makeStub("2\u00B0 CLASS", "Vincente (4 vs 5)")];
         if (giornata === 1) return [makeStub("Vincente Semi 1", "Vincente Semi 2")];
       } else {
-        if (giornata === 2) return [makeStub("7Â° CLASS", "10Â° CLASS"), makeStub("8Â° CLASS", "9Â° CLASS")];
+        if (giornata === 2) return [makeStub("7\u00B0 CLASS", "10\u00B0 CLASS"), makeStub("8\u00B0 CLASS", "9\u00B0 CLASS")];
         if (giornata === 1) return [makeStub("Vincente Semi 1", "Vincente Semi 2")];
       }
       return [];
@@ -1267,10 +1267,10 @@ async function caricaSquadrePerRosa() {
     const select = document.getElementById("selectSquadra");
     select.innerHTML = ""; // Pulisce eventuali opzioni precedenti
 
-    // 1ï¸âƒ£ Ordina le squadre in ordine alfabetico (A â†’ Z)
+    // 1. Ordina le squadre in ordine alfabetico (A -> Z)
     squadre.sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }));
 
-    // 2ï¸âƒ£ Popola la select e imposta la prima come selezionata
+    // 2. Popola la select e imposta la prima come selezionata
     squadre.forEach((sq, index) => {
       if (sq.logo) {
         teamLogos[sq.nome] = sq.logo;
@@ -1282,12 +1282,12 @@ async function caricaSquadrePerRosa() {
       select.appendChild(opt);
     });
 
-    // 3ï¸âƒ£ Mostra subito la rosa della prima squadra
+    // 3. Mostra subito la rosa della prima squadra
     if (squadre.length > 0) {
       caricaRosaSquadra(squadre[0].nome);
     }
 
-    // 4ï¸âƒ£ Evento cambio squadra
+    // 4. Evento cambio squadra
     select.addEventListener("change", () => {
       const squadra = select.value;
       if (squadra) caricaRosaSquadra(squadra);
@@ -1505,7 +1505,7 @@ document.addEventListener("DOMContentLoaded", () => {
       classificaWrapper.style.display = "none";
       playoffContainer.style.display = "block";
 
-      // se non Ã¨ selezionata nessuna coppa ancora, default gold
+      // se non e selezionata nessuna coppa ancora, default gold
       if (!coppaSelect.value) {
         coppaSelect.value = "gold";
       }

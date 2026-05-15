@@ -55,7 +55,7 @@ function updateFavTournamentButton() {
   if (!btn) return;
   const isFav = favState.tournaments.has(TORNEO);
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "â˜… Torneo seguito" : "â˜† Segui torneo";
+  btn.textContent = isFav ? "\u2605 Torneo seguito" : "\u2606 Segui torneo";
 }
 
 function updateFavTeamButton(squadra, btnEl) {
@@ -63,7 +63,7 @@ function updateFavTeamButton(squadra, btnEl) {
   if (!btn || !squadra) return;
   const isFav = favState.teams.has(teamKey(squadra));
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "â˜…" : "â˜†";
+  btn.textContent = isFav ? "\u2605" : "\u2606";
   btn.setAttribute("aria-label", isFav ? "Smetti di seguire la squadra" : "Segui la squadra");
 }
 
@@ -251,7 +251,7 @@ async function mostraPartiteSquadra(squadra) {
       const casa = p.squadra_casa === squadra;
       const avversario = casa ? p.squadra_ospite : p.squadra_casa;
       const score = (p.gol_casa === null || p.gol_casa === undefined || p.gol_ospite === null || p.gol_ospite === undefined)
-        ? "â€”"
+        ? "\u2014"
         : `${p.gol_casa} - ${p.gol_ospite}`;
       const esito = esitoLabel(p, squadra);
       const li = document.createElement("li");

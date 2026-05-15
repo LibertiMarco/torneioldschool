@@ -48,7 +48,7 @@ function updateFavTournamentButton() {
   if (!btn) return;
   const isFav = favState.tournaments.has(TORNEO);
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "★ Torneo seguito" : "☆ Segui torneo";
+  btn.textContent = isFav ? "\u2605 Torneo seguito" : "\u2606 Segui torneo";
 }
 
 async function toggleTournamentFollow(btn) {
@@ -195,7 +195,7 @@ async function mostraPartiteSquadra(squadra) {
       const casa = p.squadra_casa === squadra;
       const avversario = casa ? p.squadra_ospite : p.squadra_casa;
       const score = (p.gol_casa === null || p.gol_casa === undefined || p.gol_ospite === null || p.gol_ospite === undefined)
-        ? "—"
+        ? "\u2014"
         : `${p.gol_casa} - ${p.gol_ospite}`;
       const esito = esitoLabel(p, squadra);
       const li = document.createElement("li");
@@ -906,10 +906,10 @@ async function caricaSquadrePerRosa() {
     const select = document.getElementById("selectSquadra");
     select.innerHTML = ""; // Pulisce eventuali opzioni precedenti
 
-    // 1ï¸âƒ£ Ordina le squadre in ordine alfabetico (A â†’ Z)
+    // 1. Ordina le squadre in ordine alfabetico (A -> Z)
     squadre.sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }));
 
-    // 2ï¸âƒ£ Popola la select e imposta la prima come selezionata
+    // 2. Popola la select e imposta la prima come selezionata
     squadre.forEach((sq, index) => {
       if (sq.logo) {
         teamLogos[sq.nome] = sq.logo;
@@ -921,12 +921,12 @@ async function caricaSquadrePerRosa() {
       select.appendChild(opt);
     });
 
-    // 3ï¸âƒ£ Mostra subito la rosa della prima squadra
+    // 3. Mostra subito la rosa della prima squadra
     if (squadre.length > 0) {
       caricaRosaSquadra(squadre[0].nome);
     }
 
-    // 4ï¸âƒ£ Evento cambio squadra
+    // 4. Evento cambio squadra
     select.addEventListener("change", () => {
       const squadra = select.value;
       if (squadra) caricaRosaSquadra(squadra);

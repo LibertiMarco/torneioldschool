@@ -195,7 +195,7 @@ $assetVersion = '20260421a';
 
       <!-- PLAYOFF / BRACKET -->
       <div id="playoffContainer" style="display:none;">
-        <!-- verrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  popolato via JS -->
+        <!-- verra popolato via JS -->
       </div>
 
     </section>

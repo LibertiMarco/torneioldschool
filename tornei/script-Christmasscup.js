@@ -163,7 +163,7 @@ async function mostraPartiteSquadra(squadra) {
       const casa = p.squadra_casa === squadra;
       const avversario = casa ? p.squadra_ospite : p.squadra_casa;
       const score = (p.gol_casa === null || p.gol_casa === undefined || p.gol_ospite === null || p.gol_ospite === undefined)
-        ? "—"
+        ? "\u2014"
         : `${p.gol_casa} - ${p.gol_ospite}`;
       const esito = esitoLabel(p, squadra);
       const li = document.createElement("li");
@@ -826,7 +826,7 @@ async function caricaSquadrePerRosa() {
     const select = document.getElementById("selectSquadra");
     select.innerHTML = ""; // Pulisce eventuali opzioni precedenti
 
-    // 1️⃣ Ordina le squadre in ordine alfabetico (A → Z)
+    // 1. Ordina le squadre in ordine alfabetico (A -> Z)
     squadre.sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }));
 
     // 2️⃣ Popola la select e imposta la prima come selezionata

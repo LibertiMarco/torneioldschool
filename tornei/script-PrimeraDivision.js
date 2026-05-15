@@ -51,7 +51,7 @@ function updateFavTournamentButton() {
   if (!btn) return;
   const isFav = favState.tournaments.has(TORNEO);
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "â˜… Torneo seguito" : "â˜† Segui torneo";
+  btn.textContent = isFav ? "\u2605 Torneo seguito" : "\u2606 Segui torneo";
 }
 
 function updateFavTeamButton(squadra, btnEl) {
@@ -59,7 +59,7 @@ function updateFavTeamButton(squadra, btnEl) {
   if (!btn || !squadra) return;
   const isFav = favState.teams.has(teamKey(squadra));
   btn.classList.toggle("is-fav", isFav);
-  btn.textContent = isFav ? "â˜…" : "â˜†";
+  btn.textContent = isFav ? "\u2605" : "\u2606";
   btn.setAttribute("aria-label", isFav ? "Smetti di seguire la squadra" : "Segui la squadra");
 }
 
@@ -247,7 +247,7 @@ async function mostraPartiteSquadra(squadra) {
       const casa = p.squadra_casa === squadra;
       const avversario = casa ? p.squadra_ospite : p.squadra_casa;
       const score = (p.gol_casa === null || p.gol_casa === undefined || p.gol_ospite === null || p.gol_ospite === undefined)
-        ? "â€”"
+        ? "\u2014"
         : `${p.gol_casa} - ${p.gol_ospite}`;
       const esito = esitoLabel(p, squadra);
       const li = document.createElement("li");
@@ -498,7 +498,7 @@ function mostraClassifica(classifica, partiteGiocate = []) {
   const faseSelect = document.getElementById("faseSelect");
   const legendaEsistente = document.querySelector(".legenda-coppe");
 
-  // rimuove eventuale legenda giÃ  presente
+  // rimuove eventuale legenda gia presente
   if (legendaEsistente) legendaEsistente.remove();
 
   // crea legenda solo se siamo in fase girone
@@ -884,7 +884,7 @@ async function caricaPlayoff(tipoCoppa) {
     const fasiContainer = document.getElementById("fasiPlayoff");
     fasiContainer.innerHTML = "";
 
-    // ordina e mostra solo giornate 1â€“4
+    // ordina e mostra solo giornate 1-4
     const giornate = Object.keys(data)
       .map(g => parseInt(g))
       .filter(g => g >= 1 && g <= 4)
@@ -1194,10 +1194,10 @@ async function caricaSquadrePerRosa() {
     const select = document.getElementById("selectSquadra");
     select.innerHTML = ""; // Pulisce eventuali opzioni precedenti
 
-    // 1ï¸âƒ£ Ordina le squadre in ordine alfabetico (A â†’ Z)
+    // 1. Ordina le squadre in ordine alfabetico (A -> Z)
     squadre.sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }));
 
-    // 2ï¸âƒ£ Popola la select e imposta la prima come selezionata
+    // 2. Popola la select e imposta la prima come selezionata
     squadre.forEach((sq, index) => {
       if (sq.logo) {
         teamLogos[sq.nome] = sq.logo;
@@ -1209,12 +1209,12 @@ async function caricaSquadrePerRosa() {
       select.appendChild(opt);
     });
 
-    // 3ï¸âƒ£ Mostra subito la rosa della prima squadra
+    // 3. Mostra subito la rosa della prima squadra
     if (squadre.length > 0) {
       caricaRosaSquadra(squadre[0].nome);
     }
 
-    // 4ï¸âƒ£ Evento cambio squadra
+    // 4. Evento cambio squadra
     select.addEventListener("change", () => {
       const squadra = select.value;
       if (squadra) caricaRosaSquadra(squadra);
@@ -1244,7 +1244,7 @@ async function caricaRosaSquadra(squadra) {
   header.innerHTML = `
       <img src="${squadraLogo}" alt="${squadra}" class="team-logo-large">
       <h3>${squadra}</h3>
-      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn" aria-label="Segui la squadra">â˜†</button>
+      <button type="button" class="fav-toggle fav-toggle--small fav-team-btn" aria-label="Segui la squadra">&#9734;</button>
     `;
     const favBtn = header.querySelector(".fav-team-btn");
     if (favBtn) {
@@ -1432,7 +1432,7 @@ document.addEventListener("DOMContentLoaded", () => {
       classificaWrapper.style.display = "none";
       playoffContainer.style.display = "block";
 
-      // se non Ã¨ selezionata nessuna coppa ancora, default gold
+      // se non e selezionata nessuna coppa ancora, default gold
       if (!coppaSelect.value) {
         coppaSelect.value = "gold";
       }
