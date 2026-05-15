@@ -184,6 +184,7 @@ if (!function_exists('fanta_old_school_ensure_leads_table')) {
             nome VARCHAR(100) NOT NULL,
             cognome VARCHAR(100) NOT NULL,
             email_leghe_fc VARCHAR(190) NOT NULL,
+            mail_inviata_il DATETIME DEFAULT NULL,
             ip_address VARCHAR(45) DEFAULT NULL,
             user_agent VARCHAR(255) DEFAULT NULL,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -204,11 +205,41 @@ if (!function_exists('fanta_old_school_ensure_leads_table')) {
     }
 }
 
+if (!function_exists('fanta_old_school_ensure_leads_mail_sent_column')) {
+    function fanta_old_school_ensure_leads_mail_sent_column(mysqli $conn): bool
+    {
+        static $checked = false;
+        static $ready = false;
+
+        if ($checked) {
+            return $ready;
+        }
+
+        $checked = true;
+
+        if (!fanta_old_school_column_exists($conn, 'fanta_old_school_leads', 'mail_inviata_il')) {
+            $added = $conn->query(
+                "ALTER TABLE fanta_old_school_leads
+                 ADD COLUMN mail_inviata_il DATETIME DEFAULT NULL AFTER email_leghe_fc"
+            );
+            if ($added !== true) {
+                error_log('fanta_old_school: impossibile aggiungere la colonna mail_inviata_il - ' . $conn->error);
+                $ready = false;
+                return false;
+            }
+        }
+
+        $ready = true;
+        return true;
+    }
+}
+
 if (!function_exists('fanta_old_school_ensure_schema')) {
     function fanta_old_school_ensure_schema(mysqli $conn): bool
     {
         return fanta_old_school_ensure_referral_code_column($conn)
-            && fanta_old_school_ensure_leads_table($conn);
+            && fanta_old_school_ensure_leads_table($conn)
+            && fanta_old_school_ensure_leads_mail_sent_column($conn);
     }
 }
 
@@ -406,7 +437,7 @@ if (!function_exists('fanta_old_school_find_lead_by_email')) {
         }
 
         $stmt = $conn->prepare(
-            "SELECT id, utente_referral_id, referral_code, referral_label, nome, cognome, email_leghe_fc, created_at
+            "SELECT id, utente_referral_id, referral_code, referral_label, nome, cognome, email_leghe_fc, mail_inviata_il, created_at
              FROM fanta_old_school_leads
              WHERE email_leghe_fc = ?
              LIMIT 1"
@@ -416,6 +447,36 @@ if (!function_exists('fanta_old_school_find_lead_by_email')) {
         }
 
         $stmt->bind_param('s', $emailLegheFc);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result ? $result->fetch_assoc() : null;
+        if ($result instanceof mysqli_result) {
+            $result->close();
+        }
+        $stmt->close();
+
+        return $row ?: null;
+    }
+}
+
+if (!function_exists('fanta_old_school_fetch_lead_by_id')) {
+    function fanta_old_school_fetch_lead_by_id(mysqli $conn, int $leadId): ?array
+    {
+        if ($leadId <= 0 || !fanta_old_school_ensure_schema($conn)) {
+            return null;
+        }
+
+        $stmt = $conn->prepare(
+            "SELECT id, utente_referral_id, referral_code, referral_label, nome, cognome, email_leghe_fc, mail_inviata_il, created_at
+             FROM fanta_old_school_leads
+             WHERE id = ?
+             LIMIT 1"
+        );
+        if (!$stmt) {
+            return null;
+        }
+
+        $stmt->bind_param('i', $leadId);
         $stmt->execute();
         $result = $stmt->get_result();
         $row = $result ? $result->fetch_assoc() : null;
@@ -517,7 +578,7 @@ if (!function_exists('fanta_old_school_fetch_user_leads')) {
         }
 
         $stmt = $conn->prepare(
-            "SELECT id, nome, cognome, email_leghe_fc, created_at
+            "SELECT id, nome, cognome, email_leghe_fc, mail_inviata_il, created_at
              FROM fanta_old_school_leads
              WHERE utente_referral_id = ?
              ORDER BY created_at DESC, id DESC"
@@ -539,8 +600,41 @@ if (!function_exists('fanta_old_school_fetch_user_leads')) {
     }
 }
 
+if (!function_exists('fanta_old_school_mark_mail_sent')) {
+    function fanta_old_school_mark_mail_sent(mysqli $conn, int $leadId, bool $sent = true): bool
+    {
+        if ($leadId <= 0 || !fanta_old_school_ensure_schema($conn)) {
+            return false;
+        }
+
+        if ($sent) {
+            $stmt = $conn->prepare(
+                "UPDATE fanta_old_school_leads
+                 SET mail_inviata_il = NOW()
+                 WHERE id = ?"
+            );
+        } else {
+            $stmt = $conn->prepare(
+                "UPDATE fanta_old_school_leads
+                 SET mail_inviata_il = NULL
+                 WHERE id = ?"
+            );
+        }
+
+        if (!$stmt) {
+            return false;
+        }
+
+        $stmt->bind_param('i', $leadId);
+        $updated = $stmt->execute();
+        $stmt->close();
+
+        return $updated;
+    }
+}
+
 if (!function_exists('fanta_old_school_fetch_admin_overview')) {
-    function fanta_old_school_fetch_admin_overview(mysqli $conn): array
+    function fanta_old_school_fetch_admin_overview(mysqli $conn, bool $onlyWithInvites = false): array
     {
         if (!fanta_old_school_ensure_schema($conn)) {
             return [];
@@ -574,7 +668,7 @@ if (!function_exists('fanta_old_school_fetch_admin_overview')) {
         }
 
         $leadResult = $conn->query(
-            "SELECT id, utente_referral_id, referral_code, referral_label, nome, cognome, email_leghe_fc, created_at
+            "SELECT id, utente_referral_id, referral_code, referral_label, nome, cognome, email_leghe_fc, mail_inviata_il, created_at
              FROM fanta_old_school_leads
              ORDER BY created_at DESC, id DESC"
         );
@@ -592,6 +686,12 @@ if (!function_exists('fanta_old_school_fetch_admin_overview')) {
         }
 
         $rows = array_values($users);
+        if ($onlyWithInvites) {
+            $rows = array_values(array_filter($rows, static function (array $row): bool {
+                return (int)($row['lead_count'] ?? 0) > 0;
+            }));
+        }
+
         usort($rows, static function (array $left, array $right): int {
             $countCompare = (int)($right['lead_count'] ?? 0) <=> (int)($left['lead_count'] ?? 0);
             if ($countCompare !== 0) {
@@ -600,6 +700,51 @@ if (!function_exists('fanta_old_school_fetch_admin_overview')) {
 
             return strcasecmp((string)($left['label'] ?? ''), (string)($right['label'] ?? ''));
         });
+
+        return $rows;
+    }
+}
+
+if (!function_exists('fanta_old_school_fetch_form_records')) {
+    function fanta_old_school_fetch_form_records(mysqli $conn): array
+    {
+        if (!fanta_old_school_ensure_schema($conn)) {
+            return [];
+        }
+
+        $query = "SELECT
+                l.id,
+                l.utente_referral_id,
+                l.referral_code,
+                l.referral_label,
+                l.nome,
+                l.cognome,
+                l.email_leghe_fc,
+                l.mail_inviata_il,
+                l.created_at,
+                u.nome AS referrer_nome,
+                u.cognome AS referrer_cognome,
+                u.email AS referrer_email
+            FROM fanta_old_school_leads l
+            LEFT JOIN utenti u ON u.id = l.utente_referral_id
+            ORDER BY l.created_at DESC, l.id DESC";
+
+        $result = $conn->query($query);
+        if (!$result instanceof mysqli_result) {
+            return [];
+        }
+
+        $rows = [];
+        while ($row = $result->fetch_assoc()) {
+            $referrerLabel = trim((string)($row['referrer_nome'] ?? '') . ' ' . (string)($row['referrer_cognome'] ?? ''));
+            if ($referrerLabel === '') {
+                $referrerLabel = trim((string)($row['referrer_email'] ?? ''));
+            }
+
+            $row['referrer_label'] = $referrerLabel !== '' ? $referrerLabel : (string)($row['referral_label'] ?? '');
+            $rows[] = $row;
+        }
+        $result->close();
 
         return $rows;
     }
