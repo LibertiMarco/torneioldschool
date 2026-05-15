@@ -309,6 +309,12 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
         color: #4c5b71;
         line-height: 1.5;
       }
+      .referral-user-card a,
+      .record-card a,
+      .referral-table a {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
       .meta-stack {
         display: flex;
         flex-direction: column;
@@ -802,6 +808,8 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
       document.addEventListener("DOMContentLoaded", () => {
         const tabButtons = document.querySelectorAll(".admin-tab-btn");
         const panels = document.querySelectorAll(".admin-tab-panel");
+        const fosButtons = document.querySelectorAll(".fos-admin-btn");
+        const fosPanels = document.querySelectorAll(".fos-admin-panel");
 
         tabButtons.forEach(button => {
           button.addEventListener("click", () => {
@@ -828,6 +836,39 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
                 nextUrl.searchParams.set("tab", "fanta-old-school");
               } else {
                 nextUrl.searchParams.delete("tab");
+                nextUrl.searchParams.delete("fos_view");
+              }
+              window.history.replaceState({}, "", nextUrl.toString());
+            } catch (err) {}
+          });
+        });
+
+        fosButtons.forEach(button => {
+          button.addEventListener("click", () => {
+            const targetId = button.getAttribute("data-fos-target");
+            if (!targetId) return;
+
+            fosButtons.forEach(btn => {
+              btn.classList.remove("is-active");
+              btn.setAttribute("aria-selected", "false");
+            });
+            fosPanels.forEach(panel => panel.classList.remove("is-active"));
+
+            button.classList.add("is-active");
+            button.setAttribute("aria-selected", "true");
+
+            const targetPanel = document.getElementById(targetId);
+            if (targetPanel) {
+              targetPanel.classList.add("is-active");
+            }
+
+            try {
+              const nextUrl = new URL(window.location.href);
+              nextUrl.searchParams.set("tab", "fanta-old-school");
+              if (targetId === "fosRecordsPanel") {
+                nextUrl.searchParams.set("fos_view", "records");
+              } else {
+                nextUrl.searchParams.delete("fos_view");
               }
               window.history.replaceState({}, "", nextUrl.toString());
             } catch (err) {}

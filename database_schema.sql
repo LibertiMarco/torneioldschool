@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS fanta_old_school_leads (
     nome VARCHAR(100) NOT NULL,
     cognome VARCHAR(100) NOT NULL,
     email_leghe_fc VARCHAR(190) NOT NULL,
+    mail_inviata_il DATETIME DEFAULT NULL,
     ip_address VARCHAR(45) DEFAULT NULL,
     user_agent VARCHAR(255) DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
