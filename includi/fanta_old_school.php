@@ -562,6 +562,9 @@ if (!function_exists('fanta_old_school_create_lead')) {
             return ['status' => 'error', 'message' => 'Errore durante il salvataggio della richiesta.'];
         }
 
+        $inviteeName = trim($nome . ' ' . $cognome);
+        fanta_old_school_notify_referrer($conn, $userId, $inviteeName);
+
         return [
             'status' => 'created',
             'message' => 'Richiesta salvata con successo.',
@@ -597,6 +600,48 @@ if (!function_exists('fanta_old_school_fetch_user_leads')) {
         $stmt->close();
 
         return is_array($rows) ? $rows : [];
+    }
+}
+
+if (!function_exists('fanta_old_school_notify_referrer')) {
+    function fanta_old_school_notify_referrer(mysqli $conn, int $userId, string $inviteeName): void
+    {
+        if ($userId <= 0) {
+            return;
+        }
+
+        require_once __DIR__ . '/push_notifications.php';
+        if (!function_exists('tos_push_store_notifications_for_users')) {
+            return;
+        }
+
+        $inviteeName = trim($inviteeName);
+        if ($inviteeName === '') {
+            $inviteeName = 'Qualcuno';
+        }
+
+        $link = function_exists('login_with_base_path')
+            ? login_with_base_path('/fantaoldschool')
+            : '/fantaoldschool';
+
+        $title = 'Nuovo invito Fanta Old School';
+        $text = $inviteeName . ' ha usato il tuo link Fanta Old School.';
+
+        tos_push_store_notifications_for_users(
+            $conn,
+            [$userId],
+            'fanta_old_school_referral',
+            $title,
+            $text,
+            $link,
+            [
+                'tag' => 'fanta-old-school-referral-' . $userId,
+                'data' => [
+                    'type' => 'fanta_old_school_referral',
+                    'url' => $link,
+                ],
+            ]
+        );
     }
 }
 

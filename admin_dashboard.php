@@ -383,6 +383,47 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
       .record-table td.action-cell {
         white-space: nowrap;
       }
+      .referral-link-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .referral-link-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 12px;
+        border-radius: 10px;
+        font-weight: 800;
+        text-decoration: none;
+        border: 1px solid #d6e0ea;
+        background: #eef4fb;
+        color: #15293e;
+        cursor: pointer;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+      }
+      .referral-link-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 18px rgba(15, 31, 51, 0.1);
+        background: #e6eef8;
+      }
+      .referral-link-btn.primary {
+        background: #15293e;
+        border-color: #15293e;
+        color: #fff;
+      }
+      .referral-link-btn.primary:hover {
+        background: #10243a;
+      }
+      .referral-link-preview {
+        display: block;
+        margin-top: 8px;
+        font-size: 0.85rem;
+        color: #64748b;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
       @media (max-width: 768px) {
         .admin-dashboard {
           align-items: stretch;
@@ -622,7 +663,11 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
                       </td>
                       <td>
                         <?php if ($referralCode !== ''): ?>
-                          <a href="<?= htmlspecialchars($referralLink) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($referralLink) ?></a>
+                          <div class="referral-link-actions">
+                            <a class="referral-link-btn primary" href="<?= htmlspecialchars($referralLink) ?>" target="_blank" rel="noopener">Apri link</a>
+                            <button type="button" class="referral-link-btn" data-copy-link="<?= htmlspecialchars($referralLink) ?>">Copia</button>
+                          </div>
+                          <span class="referral-link-preview">/fantaoldschool?ref=<?= htmlspecialchars($referralCode) ?></span>
                         <?php else: ?>
                           <span class="referral-empty">non disponibile</span>
                         <?php endif; ?>
@@ -667,7 +712,11 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
                       <span class="meta-chip"><?= $leadCount ?> invitati</span>
                       <?php if ($referralCode !== ''): ?>
                         <span class="meta-chip"><?= htmlspecialchars($referralCode) ?></span>
-                        <a href="<?= htmlspecialchars($referralLink) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($referralLink) ?></a>
+                        <div class="referral-link-actions">
+                          <a class="referral-link-btn primary" href="<?= htmlspecialchars($referralLink) ?>" target="_blank" rel="noopener">Apri link</a>
+                          <button type="button" class="referral-link-btn" data-copy-link="<?= htmlspecialchars($referralLink) ?>">Copia</button>
+                        </div>
+                        <span class="referral-link-preview">/fantaoldschool?ref=<?= htmlspecialchars($referralCode) ?></span>
                       <?php endif; ?>
                     </div>
                     <div class="referral-lead-list" style="margin-top:12px;">
@@ -872,6 +921,34 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
               }
               window.history.replaceState({}, "", nextUrl.toString());
             } catch (err) {}
+          });
+        });
+
+        document.querySelectorAll("[data-copy-link]").forEach(button => {
+          button.addEventListener("click", async () => {
+            const link = button.getAttribute("data-copy-link");
+            if (!link) return;
+
+            const originalLabel = button.textContent;
+
+            try {
+              await navigator.clipboard.writeText(link);
+              button.textContent = "Copiato";
+            } catch (err) {
+              const temp = document.createElement("input");
+              temp.type = "text";
+              temp.value = link;
+              document.body.appendChild(temp);
+              temp.focus();
+              temp.select();
+              document.execCommand("copy");
+              document.body.removeChild(temp);
+              button.textContent = "Copiato";
+            }
+
+            window.setTimeout(() => {
+              button.textContent = originalLabel;
+            }, 1600);
           });
         });
 
