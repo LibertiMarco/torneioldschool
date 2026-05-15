@@ -32,6 +32,7 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # Rende dinamici robots.txt e sitemap.xml senza rompere i percorsi standard
 RewriteRule ^robots\.txt$ robots.php [L]
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
+RewriteRule ^fantaoldschool/?$ fantaoldschool.php [L,QSA]
 
 # Pagine torneo: instrada i vecchi percorsi .html verso i nuovi file .php protetti
 RewriteRule ^tornei/(.+)\.html$ /tornei/$1.php [L,QSA,NC]

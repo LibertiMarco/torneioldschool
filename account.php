@@ -594,6 +594,78 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
       font-size: 0.9rem;
       margin: 6px 0 0;
     }
+    .push-panel {
+      margin-top: 18px;
+      padding: 16px;
+      border: 1px solid #dbe4f0;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #f8fbff 0%, #f1f6fd 100%);
+    }
+    .push-panel h3 {
+      margin: 0 0 8px;
+      font-size: 1.08rem;
+      color: #0f172a;
+    }
+    .push-panel p {
+      margin: 0;
+      color: #334155;
+    }
+    .push-status {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid #dbe4f0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .push-status strong {
+      color: #0f172a;
+    }
+    .push-status-message {
+      font-size: 0.94rem;
+      color: #475569;
+    }
+    .push-status-message[data-tone="success"] {
+      color: #0f8755;
+    }
+    .push-status-message[data-tone="error"] {
+      color: #b91c1c;
+    }
+    .push-actions {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .push-btn {
+      border: none;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 0.96rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+    }
+    .push-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+    .push-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
+      transform: none;
+    }
+    .push-btn.primary {
+      color: #fff;
+      background: linear-gradient(120deg, #15293e, #1f3d60);
+      box-shadow: 0 14px 28px rgba(15, 23, 42, 0.16);
+    }
+    .push-btn.secondary {
+      color: #15293e;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+    }
     .save-btn {
       margin-top: 10px;
       background: linear-gradient(120deg, #15293e, #1f3d60);
@@ -763,6 +835,27 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
         </div>
         <button type="submit" class="save-btn">Salva modifiche</button>
       </form>
+
+      <section class="push-panel" id="pushSettingsPanel" data-ready="0">
+        <h3>Notifiche push sul telefono</h3>
+        <p>Puoi ricevere le notifiche del sito direttamente sul telefono per risultati finali e risposte ai commenti.</p>
+        <div class="push-status">
+          <strong id="pushDeviceStatus">Verifica supporto notifiche in corso...</strong>
+          <span class="push-status-message" id="pushStatusMessage" data-tone="neutral"></span>
+          <span class="consent-hint" id="pushSupportHint">Caricamento stato dispositivo...</span>
+        </div>
+        <div class="push-actions">
+          <button type="button" class="push-btn primary" id="pushToggleBtn">Attiva su questo dispositivo</button>
+          <button type="button" class="push-btn secondary" id="pushTestBtn">Invia test</button>
+        </div>
+      </section>
+
+      <div class="player-photo-card">
+        <div class="eyebrow" style="margin-bottom:6px;">Fanta Old School</div>
+        <h2 style="margin:0 0 10px;">Referral personale</h2>
+        <p style="margin:0 0 12px;color:#475569;">Apri la tua area dedicata per copiare il link personale <code>fantaoldschool?ref=...</code> e controllare chi ha compilato il form dal tuo invito.</p>
+        <a class="file-btn" href="<?= htmlspecialchars(login_with_base_path('/fantaoldschool')) ?>">Apri Fanta Old School</a>
+      </div>
 
       <?php if ($giocatoreAssociato): ?>
       <div class="player-photo-card">
@@ -953,5 +1046,6 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
       }
     });
   </script>
+  <script src="<?= asset_url('/includi/push-settings.js', '20260515') ?>" defer></script>
 </body>
 </html>

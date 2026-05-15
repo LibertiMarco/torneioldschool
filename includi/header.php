@@ -103,6 +103,10 @@ if (!empty($sessionAvatar)) {
                           <span>Il mio account</span>
                       </a>
 
+                      <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/fantaoldschool')) ?>">
+                          <span>Fanta Old School</span>
+                      </a>
+
                       <?php if ($hasPlayerProfile): ?>
                           <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/statistiche_giocatore.php')) ?>">
                               <span>Statistiche giocatore</span>

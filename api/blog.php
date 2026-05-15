@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/push_notifications.php';
 require_once __DIR__ . '/../includi/user_features.php';
 header('Content-Type: application/json; charset=utf-8');
 
@@ -299,6 +300,17 @@ if ($azione === 'commenti_salva' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $notifStmt->bind_param('iii', $parentOwnerId, $newCommentId, $postId);
                 $notifStmt->execute();
             }
+
+            tos_push_send_to_users(
+                $conn,
+                [$parentOwnerId],
+                tos_push_build_payload(
+                    'Qualcuno ha risposto al tuo commento...',
+                    'Apri l\'articolo per leggere la risposta.',
+                    '/articolo.php?id=' . $postId,
+                    ['tag' => 'comment-reply-' . $postId]
+                )
+            );
         }
 
         json_response(['success' => true, 'message' => 'Commento pubblicato con successo.']);

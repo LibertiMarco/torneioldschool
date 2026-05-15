@@ -73,8 +73,12 @@ if (!function_exists('seo_base_url')) {
         echo '<meta name="description" content="' . seo_clean($description) . '">' . "\n";
         echo '<meta name="robots" content="max-image-preview:large">' . "\n";
         echo '<link rel="canonical" href="' . seo_clean($canonical) . '">' . "\n";
+        echo '<link rel="manifest" href="' . seo_clean($base . '/manifest.webmanifest') . '">' . "\n";
         echo '<link rel="icon" type="image/png" href="' . seo_clean($icon) . '">' . "\n";
         echo '<link rel="apple-touch-icon" href="' . seo_clean($appleIcon) . '">' . "\n";
+        echo '<meta name="theme-color" content="#15293e">' . "\n";
+        echo '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n";
+        echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">' . "\n";
 
         echo '<meta property="og:type" content="' . seo_clean($type) . '">' . "\n";
         echo '<meta property="og:title" content="' . seo_clean($title) . '">' . "\n";

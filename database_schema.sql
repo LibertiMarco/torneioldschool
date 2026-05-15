@@ -8,6 +8,7 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS notifiche_commenti;
+DROP TABLE IF EXISTS push_subscriptions;
 DROP TABLE IF EXISTS blog_media;
 DROP TABLE IF EXISTS blog_commenti;
 DROP TABLE IF EXISTS blog_post;
@@ -16,6 +17,7 @@ DROP TABLE IF EXISTS totocalcio_pronostici;
 DROP TABLE IF EXISTS totocalcio_partite;
 DROP TABLE IF EXISTS totocalcio_competizioni_accessi;
 DROP TABLE IF EXISTS totocalcio_competizioni;
+DROP TABLE IF EXISTS fanta_old_school_leads;
 DROP TABLE IF EXISTS partita_giocatore;
 DROP TABLE IF EXISTS squadre_giocatori;
 DROP TABLE IF EXISTS partite;
@@ -32,6 +34,7 @@ CREATE TABLE IF NOT EXISTS utenti (
     nome VARCHAR(100) NOT NULL DEFAULT '',
     cognome VARCHAR(100) NOT NULL DEFAULT '',
     username VARCHAR(100) DEFAULT NULL,
+    fanta_referral_code VARCHAR(120) DEFAULT NULL,
     email VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
     ruolo ENUM('user','admin','sysadmin') NOT NULL DEFAULT 'user',
@@ -46,9 +49,29 @@ CREATE TABLE IF NOT EXISTS utenti (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_utenti_email (email),
     UNIQUE KEY uq_utenti_username (username),
+    UNIQUE KEY uq_utenti_fanta_referral_code (fanta_referral_code),
     UNIQUE KEY uq_remember_selector (remember_selector),
     KEY idx_utenti_token_verifica (token_verifica),
     KEY idx_remember_expires_at (remember_expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Fanta Old School referral (fantaoldschool.php, admin_dashboard.php)
+CREATE TABLE IF NOT EXISTS fanta_old_school_leads (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    utente_referral_id INT UNSIGNED DEFAULT NULL,
+    referral_code VARCHAR(120) NOT NULL,
+    referral_label VARCHAR(190) NOT NULL,
+    nome VARCHAR(100) NOT NULL,
+    cognome VARCHAR(100) NOT NULL,
+    email_leghe_fc VARCHAR(190) NOT NULL,
+    ip_address VARCHAR(45) DEFAULT NULL,
+    user_agent VARCHAR(255) DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_fanta_old_school_email (email_leghe_fc),
+    KEY idx_fanta_old_school_referral_user (utente_referral_id),
+    KEY idx_fanta_old_school_referral_code (referral_code),
+    KEY idx_fanta_old_school_created_at (created_at),
+    CONSTRAINT fk_fanta_old_school_referral_user FOREIGN KEY (utente_referral_id) REFERENCES utenti(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Totocalcio (totocalcio.php, api/gestione_totocalcio.php)
@@ -328,6 +351,26 @@ CREATE TABLE IF NOT EXISTS notifiche_commenti (
     CONSTRAINT fk_notifica_utente FOREIGN KEY (utente_id) REFERENCES utenti(id) ON DELETE CASCADE,
     CONSTRAINT fk_notifica_commento FOREIGN KEY (commento_id) REFERENCES blog_commenti(id) ON DELETE CASCADE,
     CONSTRAINT fk_notifica_post FOREIGN KEY (post_id) REFERENCES blog_post(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    endpoint TEXT NOT NULL,
+    endpoint_hash CHAR(64) NOT NULL,
+    p256dh VARCHAR(255) NOT NULL,
+    auth VARCHAR(255) NOT NULL,
+    content_encoding VARCHAR(32) NOT NULL DEFAULT 'aes128gcm',
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    user_agent VARCHAR(255) DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_success_at DATETIME DEFAULT NULL,
+    last_failure_at DATETIME DEFAULT NULL,
+    last_error TEXT DEFAULT NULL,
+    UNIQUE KEY uq_push_endpoint_hash (endpoint_hash),
+    KEY idx_push_user_active (user_id, active),
+    CONSTRAINT fk_push_subscription_user FOREIGN KEY (user_id) REFERENCES utenti(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

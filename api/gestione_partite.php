@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includi/admin_guard.php';
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/push_notifications.php';
 require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 
 $errore = '';
@@ -594,16 +595,15 @@ function ricalcolaGiocatoriPartita(mysqli $conn, array $giocatoriIds, array $par
 }
 
 function push_notifica_users(mysqli $conn, array $userIds, string $tipo, string $titolo, string $testo, string $link = ''): void {
-  if (empty($userIds)) return;
-  ensure_notifiche_table($conn);
-  $stmt = $conn->prepare("INSERT INTO notifiche (utente_id, tipo, titolo, testo, link) VALUES (?, ?, ?, ?, ?)");
-  if (!$stmt) return;
-  foreach ($userIds as $uid) {
-    $uid = (int)$uid;
-    $stmt->bind_param('issss', $uid, $tipo, $titolo, $testo, $link);
-    $stmt->execute();
-  }
-  $stmt->close();
+  tos_push_store_notifications_for_users(
+    $conn,
+    $userIds,
+    $tipo,
+    $titolo,
+    $testo,
+    $link,
+    ['tag' => 'match-' . preg_replace('/[^a-z0-9_-]/i', '-', $tipo)]
+  );
 }
 
 function inviaNotificaEsito(mysqli $conn, int $partitaId, ?array $info = null): void {

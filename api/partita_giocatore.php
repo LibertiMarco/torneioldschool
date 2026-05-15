@@ -1,5 +1,6 @@
 ﻿<?php
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/push_notifications.php';
 require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 require_once __DIR__ . '/crud/partita.php';
 header('Content-Type: application/json; charset=utf-8');
@@ -294,16 +295,15 @@ function ensure_partite_notifica_flag(mysqli $conn): void {
 }
 
 function push_notifica_users(mysqli $conn, array $userIds, string $tipo, string $titolo, string $testo, string $link = ''): void {
-    if (empty($userIds)) return;
-    ensure_notifiche_table($conn);
-    $stmt = $conn->prepare("INSERT INTO notifiche (utente_id, tipo, titolo, testo, link) VALUES (?, ?, ?, ?, ?)");
-    if (!$stmt) return;
-    foreach ($userIds as $uid) {
-        $uid = (int)$uid;
-        $stmt->bind_param('issss', $uid, $tipo, $titolo, $testo, $link);
-        $stmt->execute();
-    }
-    $stmt->close();
+    tos_push_store_notifications_for_users(
+        $conn,
+        $userIds,
+        $tipo,
+        $titolo,
+        $testo,
+        $link,
+        ['tag' => 'match-' . preg_replace('/[^a-z0-9_-]/i', '-', $tipo)]
+    );
 }
 
 function get_followers_torneo(mysqli $conn, string $torneo): array {
@@ -548,7 +548,7 @@ if ($azione === 'edit') {
       ricalcolaStatistiche($conn, (int)$rPrev['partita_id'], (int)$rPrev['giocatore_id']);
       $infoClassifica = aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
       aggiornaClassificaDaInfo($infoClassifica);
-      maybeNotificaFinale($conn, $infoClassifica);
+      inviaNotificaEsito($conn, (int)$rPrev['partita_id'], $infoClassifica);
     }
     exit;
 }
@@ -573,7 +573,7 @@ if ($azione === 'delete') {
       ricalcolaStatistiche($conn, (int)$rPrev['partita_id'], (int)$rPrev['giocatore_id']);
       $infoClassifica = aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
       aggiornaClassificaDaInfo($infoClassifica);
-      maybeNotificaFinale($conn, $infoClassifica);
+      inviaNotificaEsito($conn, (int)$rPrev['partita_id'], $infoClassifica);
     }
 
     echo json_encode(["success" => true, "message" => "Statistica eliminata"]);
