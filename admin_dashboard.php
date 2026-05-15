@@ -42,6 +42,8 @@ foreach ($referralOverview as $row) {
         gap: 12px;
         flex-wrap: wrap;
         margin: 22px 0 18px;
+        width: 100%;
+        max-width: 1000px;
       }
       .admin-tab-btn {
         border: 1px solid #d6e0ea;
@@ -63,6 +65,9 @@ foreach ($referralOverview as $row) {
       }
       .admin-tab-panel {
         display: none;
+        width: 100%;
+        max-width: 1000px;
+        min-width: 0;
       }
       .admin-tab-panel.is-active {
         display: block;
@@ -72,6 +77,7 @@ foreach ($referralOverview as $row) {
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 16px;
         margin-bottom: 18px;
+        width: 100%;
       }
       .referral-summary-card {
         background: linear-gradient(180deg, #f8fbff 0%, #eef5fb 100%);
@@ -94,6 +100,7 @@ foreach ($referralOverview as $row) {
       .referral-table-card {
         padding: 0;
         overflow: hidden;
+        width: 100%;
       }
       .referral-table-head {
         padding: 22px 24px 10px;
@@ -108,6 +115,8 @@ foreach ($referralOverview as $row) {
       }
       .referral-table-wrap {
         overflow-x: auto;
+        max-width: 100%;
+        -webkit-overflow-scrolling: touch;
         padding: 0 24px 24px;
       }
       .referral-table {
@@ -167,6 +176,38 @@ foreach ($referralOverview as $row) {
       .referral-empty {
         color: #64748b;
         font-weight: 600;
+      }
+      @media (max-width: 768px) {
+        .admin-dashboard {
+          align-items: stretch;
+          padding: 84px 14px 72px;
+        }
+        .admin-tab-nav {
+          gap: 8px;
+          margin: 18px 0 16px;
+        }
+        .admin-tab-btn {
+          flex: 1 1 calc(50% - 4px);
+          width: 100%;
+          text-align: center;
+          padding: 10px 12px;
+          font-size: 0.94rem;
+        }
+        .referral-summary-grid {
+          grid-template-columns: 1fr;
+        }
+        .referral-table-head {
+          padding: 18px 16px 10px;
+        }
+        .referral-table-wrap {
+          padding: 0 16px 18px;
+        }
+        .referral-table {
+          min-width: 700px;
+        }
+        .referral-lead-list {
+          min-width: 220px;
+        }
       }
     </style>
 </head>
