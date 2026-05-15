@@ -44,6 +44,15 @@ if (!empty($excludedTournaments)) {
     $typesExcluded = str_repeat('s', count($excludedTournaments));
 }
 
+$whereExcludedTeams = '';
+$paramsExcludedTeams = [];
+$typesExcludedTeams = '';
+if (!empty($excludedTournaments)) {
+    $whereExcludedTeams = ' AND s.torneo NOT IN (' . implode(',', array_fill(0, count($excludedTournaments), '?')) . ')';
+    $paramsExcludedTeams = $excludedTournaments;
+    $typesExcludedTeams = str_repeat('s', count($excludedTournaments));
+}
+
 $latestSquadPhotoSubquery = "
     SELECT sg2.foto
     FROM squadre_giocatori sg2
@@ -113,6 +122,63 @@ $player = [
         'assist' => (int)$playerRow['assist_totali'],
     ],
 ];
+
+$sqlTeams = "
+    SELECT
+        s.id AS squadra_id,
+        s.nome AS squadra,
+        s.logo,
+        s.torneo,
+        COALESCE(t.nome, s.torneo) AS torneo_nome,
+        sg.ruolo AS ruolo_squadra,
+        COALESCE(sg.presenze, 0) AS presenze,
+        COALESCE(sg.reti, 0) AS gol,
+        COALESCE(sg.assist, 0) AS assist,
+        COALESCE(sg.gialli, 0) AS gialli,
+        COALESCE(sg.rossi, 0) AS rossi,
+        sg.media_voti,
+        COALESCE(sg.is_captain, 0) AS is_captain
+    FROM squadre_giocatori sg
+    JOIN squadre s ON s.id = sg.squadra_id
+    LEFT JOIN tornei t ON (t.filetorneo = s.torneo OR t.filetorneo = CONCAT(s.torneo, '.php') OR t.nome = s.torneo)
+    WHERE sg.giocatore_id = ?{$whereExcludedTeams}
+    ORDER BY s.torneo ASC, s.nome ASC, sg.id ASC
+";
+
+$paramsTeams = array_merge([$giocatoreId], $paramsExcludedTeams);
+$typesTeams = 'i' . $typesExcludedTeams;
+
+$stmt = $conn->prepare($sqlTeams);
+if (!$stmt) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Errore interno (squadre)']);
+    exit;
+}
+$stmt->bind_param($typesTeams, ...$paramsTeams);
+$stmt->execute();
+$resTeams = $stmt->get_result();
+
+$teams = [];
+if ($resTeams) {
+    while ($row = $resTeams->fetch_assoc()) {
+        $teams[] = [
+            'squadra_id' => (int)$row['squadra_id'],
+            'squadra' => $row['squadra'],
+            'logo' => $row['logo'],
+            'torneo' => $row['torneo'],
+            'torneo_nome' => $row['torneo_nome'] ?? $row['torneo'],
+            'ruolo' => $row['ruolo_squadra'],
+            'presenze' => (int)$row['presenze'],
+            'gol' => (int)$row['gol'],
+            'assist' => (int)$row['assist'],
+            'gialli' => (int)$row['gialli'],
+            'rossi' => (int)$row['rossi'],
+            'media_voti' => $row['media_voti'] !== null ? (float)$row['media_voti'] : null,
+            'is_captain' => (int)$row['is_captain'] === 1,
+        ];
+    }
+}
+$stmt->close();
 
 // Partite rilevanti (gol o presenze)
 $whereStat = $tipo === 'presenze' ? 'pg.presenza = 1' : 'pg.goal > 0';
@@ -200,6 +266,7 @@ $stmt->close();
 
 echo json_encode([
     'player' => $player,
+    'teams' => $teams,
     'matches' => $matches,
     'tipo' => $tipo,
     'filters' => [

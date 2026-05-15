@@ -58,6 +58,15 @@ $seo = [
         .toggle-group { display: flex; gap: 8px; flex-wrap: wrap; }
         .toggle-btn { border: 1px solid #d5dbe4; background: #fff; color: #1b2c3f; padding: 10px 14px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s ease; }
         .toggle-btn.active { background: linear-gradient(135deg, #15293e, #1f3f63); color: #fff; border-color: #1f3f63; box-shadow: 0 10px 20px rgba(21,41,62,0.22); }
+        .team-history-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
+        .team-history-card { border: 1px solid #e3e8f0; border-radius: 14px; padding: 14px; background: linear-gradient(180deg, #ffffff, #f8fbff); box-shadow: 0 10px 24px rgba(12,24,38,0.08); }
+        .team-history-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .team-history-logo { width: 46px; height: 46px; object-fit: cover; border-radius: 50%; background: #f4f6fb; border: 1px solid #e2e8f0; flex-shrink: 0; }
+        .team-history-name { margin: 0; font-size: 1.05rem; color: #15293e; font-weight: 800; }
+        .team-history-tournament { margin: 4px 0 0; color: #5c6a7c; font-weight: 700; font-size: 0.92rem; }
+        .team-history-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        .team-history-chip { background: #15293e; color: #fff; border-radius: 999px; padding: 6px 10px; font-size: 0.85rem; font-weight: 700; }
+        .team-history-chip--muted { background: #eef2f8; color: #1b2c3f; }
         .match-list { display: grid; gap: 12px; margin-top: 12px; }
         .match-card { display: block; text-decoration: none; color: inherit; border: 1px solid #e3e8f0; border-radius: 12px; padding: 12px; box-shadow: 0 10px 24px rgba(12,24,38,0.1); background: #fff; transition: transform 0.16s ease, box-shadow 0.16s ease; }
         .match-card:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(12,24,38,0.16); }
@@ -95,6 +104,13 @@ $seo = [
     </section>
 
     <section class="section-card">
+        <h2>Squadre del giocatore</h2>
+        <div id="teamList" class="team-history-list">
+            <div class="loader">Caricamento squadre...</div>
+        </div>
+    </section>
+
+    <section class="section-card">
         <div style="display:flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap;">
             <h2 style="margin:0;">Partite del giocatore</h2>
             <div class="toggle-group">
@@ -116,6 +132,7 @@ const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000
 const TEAM_FALLBACK = '/img/logo_old_school.png';
 
 const heroEl = document.getElementById('playerHero');
+const teamListEl = document.getElementById('teamList');
 const matchListEl = document.getElementById('matchList');
 const toggleButtons = document.querySelectorAll('.toggle-btn');
 
@@ -138,6 +155,11 @@ function formatDate(dateStr, timeStr) {
     const timePart = timeStr ? timeStr.slice(0,5) : '';
     if (!datePart) return '';
     return timePart ? `${datePart} · ${timePart}` : datePart;
+}
+
+function formatDecimal(value, digits = 2) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number.toFixed(digits) : '';
 }
 
 function formatStage(match) {
@@ -188,6 +210,44 @@ function renderPlayer(player) {
             </div>
         </div>
     `;
+}
+
+function renderTeams(teams) {
+    if (!Array.isArray(teams) || teams.length === 0) {
+        teamListEl.innerHTML = '<p class="muted">Nessuna squadra trovata per questo giocatore.</p>';
+        return;
+    }
+
+    teamListEl.innerHTML = teams.map(team => {
+        const logo = escapeHTML(team.logo || TEAM_FALLBACK);
+        const nomeSquadra = escapeHTML(team.squadra || 'Squadra');
+        const torneo = escapeHTML(team.torneo_nome || team.torneo || '');
+        const ruolo = team.ruolo ? `<span class="team-history-chip team-history-chip--muted">${escapeHTML(team.ruolo)}</span>` : '';
+        const capitano = team.is_captain ? '<span class="team-history-chip team-history-chip--muted">Capitano</span>' : '';
+        const mediaVoto = team.media_voti !== null && team.media_voti !== undefined
+            ? `<span class="team-history-chip">Media voto: ${formatDecimal(team.media_voti)}</span>`
+            : '';
+
+        return `
+            <article class="team-history-card">
+                <div class="team-history-head">
+                    <img class="team-history-logo" src="${logo}" alt="${nomeSquadra}" onerror="this.onerror=null; this.src='${TEAM_FALLBACK}';">
+                    <div>
+                        <h3 class="team-history-name">${nomeSquadra}</h3>
+                        ${torneo ? `<p class="team-history-tournament">${torneo}</p>` : ''}
+                    </div>
+                </div>
+                <div class="team-history-chips">
+                    ${ruolo}
+                    ${capitano}
+                    <span class="team-history-chip">Presenze: ${team.presenze ?? 0}</span>
+                    <span class="team-history-chip">Gol: ${team.gol ?? 0}</span>
+                    <span class="team-history-chip">Assist: ${team.assist ?? 0}</span>
+                    ${mediaVoto}
+                </div>
+            </article>
+        `;
+    }).join('');
 }
 
 function renderMatches(matches) {
@@ -242,6 +302,7 @@ function renderMatches(matches) {
 }
 
 async function loadData() {
+    teamListEl.innerHTML = '<div class="loader">Caricamento squadre...</div>';
     matchListEl.innerHTML = '<div class="loader">Caricamento partite...</div>';
     heroEl.innerHTML = '<div class="loader">Caricamento giocatore...</div>';
 
@@ -250,10 +311,12 @@ async function loadData() {
         const data = await response.json();
         if (data.error) {
             heroEl.innerHTML = `<div class="error-box">${escapeHTML(data.error)}</div>`;
+            teamListEl.innerHTML = `<div class="error-box">${escapeHTML(data.error)}</div>`;
             matchListEl.innerHTML = '';
             return;
         }
         renderPlayer(data.player);
+        renderTeams(data.teams);
         renderMatches(data.matches);
         updateToggle(data.tipo);
         const url = new URL(window.location.href);
@@ -261,6 +324,7 @@ async function loadData() {
         window.history.replaceState({}, '', url.toString());
     } catch (err) {
         heroEl.innerHTML = '<div class="error-box">Errore nel caricamento del giocatore.</div>';
+        teamListEl.innerHTML = '<div class="error-box">Errore nel recupero delle squadre.</div>';
         matchListEl.innerHTML = '<div class="error-box">Errore nel recupero delle partite.</div>';
     }
 }
