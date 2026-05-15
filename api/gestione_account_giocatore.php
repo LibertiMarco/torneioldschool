@@ -11,6 +11,8 @@ $associazioni = [];
 $csrfKey = 'assoc_account_giocatore';
 $csrfToken = csrf_get_token($csrfKey);
 $columnReady = false;
+$selectedUtenteId = (int)($_POST['utente_id'] ?? 0);
+$selectedGiocatoreId = (int)($_POST['giocatore_id'] ?? 0);
 
 function h($value) {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
@@ -195,7 +197,11 @@ if (!$conn || $conn->connect_error) {
     .panel-card { background: #fff; border: 1px solid #e5eaf0; border-radius: 14px; padding: 18px; box-shadow: 0 12px 30px rgba(0,0,0,0.06); margin-bottom: 20px; }
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
     .form-grid label { font-weight: 700; color: #15293e; display: flex; flex-direction: column; gap: 6px; }
+    .field-stack { display: flex; flex-direction: column; gap: 8px; }
+    .search-field,
     .form-grid select { padding: 10px 12px; border: 1px solid #d7dce5; border-radius: 10px; background: #fff; }
+    .search-field:focus,
+    .form-grid select:focus { outline: none; border-color: #15293e; box-shadow: 0 0 0 3px rgba(21, 41, 62, 0.12); }
     .msg { padding: 10px 12px; border-radius: 10px; margin-bottom: 10px; font-weight: 700; }
     .msg.ok { background: #e8f6ef; color: #065f46; border: 1px solid #34d399; }
     .msg.err { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
@@ -233,23 +239,49 @@ if (!$conn || $conn->connect_error) {
           <?= csrf_field($csrfKey) ?>
           <input type="hidden" name="azione" value="associa">
           <label>Account da associare
-            <select name="utente_id" required <?= empty($utentiDisponibili) ? 'disabled' : '' ?>>
-              <option value="">-- scegli un account --</option>
-              <?php foreach ($utentiDisponibili as $u): ?>
-                <option value="<?= (int)$u['id'] ?>"><?= h(trim(($u['cognome'] ?? '') . ' ' . ($u['nome'] ?? ''))) ?> - <?= h($u['email'] ?? '') ?></option>
-              <?php endforeach; ?>
-            </select>
+            <span class="field-stack">
+              <input
+                type="search"
+                class="search-field"
+                data-search-target="utenteSelect"
+                data-empty-label="Nessun account trovato"
+                placeholder="Cerca per nome o email"
+                autocomplete="off"
+                <?= empty($utentiDisponibili) ? 'disabled' : '' ?>
+              >
+              <select id="utenteSelect" name="utente_id" required <?= empty($utentiDisponibili) ? 'disabled' : '' ?>>
+                <option value="">-- scegli un account --</option>
+                <?php foreach ($utentiDisponibili as $u): ?>
+                  <option value="<?= (int)$u['id'] ?>" <?= (int)$u['id'] === $selectedUtenteId ? 'selected' : '' ?>>
+                    <?= h(trim(($u['cognome'] ?? '') . ' ' . ($u['nome'] ?? ''))) ?> - <?= h($u['email'] ?? '') ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </span>
             <?php if (empty($utentiDisponibili)): ?>
               <span class="small-note">Nessun account libero: tutti gli account risultano giÃ  associati a un giocatore.</span>
             <?php endif; ?>
           </label>
           <label>Giocatore
-            <select name="giocatore_id" required <?= empty($giocatoriDisponibili) ? 'disabled' : '' ?>>
-              <option value="">-- scegli un giocatore --</option>
-              <?php foreach ($giocatoriDisponibili as $g): ?>
-                <option value="<?= (int)$g['id'] ?>"><?= h(trim(($g['cognome'] ?? '') . ' ' . ($g['nome'] ?? ''))) ?><?= $g['ruolo'] ? ' - ' . h($g['ruolo']) : '' ?></option>
-              <?php endforeach; ?>
-            </select>
+            <span class="field-stack">
+              <input
+                type="search"
+                class="search-field"
+                data-search-target="giocatoreSelect"
+                data-empty-label="Nessun giocatore trovato"
+                placeholder="Cerca per nome o ruolo"
+                autocomplete="off"
+                <?= empty($giocatoriDisponibili) ? 'disabled' : '' ?>
+              >
+              <select id="giocatoreSelect" name="giocatore_id" required <?= empty($giocatoriDisponibili) ? 'disabled' : '' ?>>
+                <option value="">-- scegli un giocatore --</option>
+                <?php foreach ($giocatoriDisponibili as $g): ?>
+                  <option value="<?= (int)$g['id'] ?>" <?= (int)$g['id'] === $selectedGiocatoreId ? 'selected' : '' ?>>
+                    <?= h(trim(($g['cognome'] ?? '') . ' ' . ($g['nome'] ?? ''))) ?><?= $g['ruolo'] ? ' - ' . h($g['ruolo']) : '' ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </span>
             <?php if (empty($giocatoriDisponibili)): ?>
               <span class="small-note">Non ci sono giocatori liberi da associare.</span>
             <?php endif; ?>
@@ -305,6 +337,74 @@ if (!$conn || $conn->connect_error) {
   <div id="footer-container"></div>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
+      const normalizeSearchValue = (value) => {
+        return String(value || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .trim();
+      };
+
+      const setupSearchableSelect = (input) => {
+        const targetId = input.dataset.searchTarget;
+        const select = document.getElementById(targetId);
+        if (!select) return;
+
+        const initialOptions = Array.from(select.options).map((option) => ({
+          value: option.value,
+          label: option.textContent,
+          disabled: option.disabled
+        }));
+        const placeholderOption = initialOptions.find((option) => option.value === "") || null;
+        const searchableOptions = initialOptions.filter((option) => option.value !== "");
+        const emptyLabel = input.dataset.emptyLabel || "Nessun risultato";
+
+        const renderOptions = () => {
+          const query = normalizeSearchValue(input.value);
+          const currentValue = select.value;
+          const filteredOptions = query
+            ? searchableOptions.filter((option) => normalizeSearchValue(option.label).includes(query))
+            : searchableOptions;
+
+          select.innerHTML = "";
+
+          if (placeholderOption) {
+            const optionEl = document.createElement("option");
+            optionEl.value = placeholderOption.value;
+            optionEl.textContent = placeholderOption.label;
+            select.appendChild(optionEl);
+          }
+
+          if (!filteredOptions.length) {
+            const emptyOption = document.createElement("option");
+            emptyOption.value = "";
+            emptyOption.textContent = emptyLabel;
+            emptyOption.disabled = true;
+            emptyOption.selected = true;
+            select.appendChild(emptyOption);
+            return;
+          }
+
+          filteredOptions.forEach((option) => {
+            const optionEl = document.createElement("option");
+            optionEl.value = option.value;
+            optionEl.textContent = option.label;
+            optionEl.disabled = option.disabled;
+            optionEl.selected = option.value === currentValue;
+            select.appendChild(optionEl);
+          });
+
+          if (!filteredOptions.some((option) => option.value === currentValue)) {
+            select.value = "";
+          }
+        };
+
+        input.addEventListener("input", renderOptions);
+        input.addEventListener("search", renderOptions);
+      };
+
+      document.querySelectorAll("[data-search-target]").forEach(setupSearchableSelect);
+
       fetch("/includi/footer.html")
         .then(r => r.text())
         .then(html => {
