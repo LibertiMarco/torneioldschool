@@ -138,8 +138,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_fanta_old_scho
 
         if (($saveResult['status'] ?? '') === 'duplicate') {
             $_SESSION['fanta_old_school_flash'] = [
-                'type' => 'info',
-                'message' => 'Questa email Leghe FC risulta gia registrata.',
+                'type' => 'error',
+                'message' => 'Richiesta di registrazione con questa mail gia eseguita.',
             ];
             header('Location: ' . $publicPath . '?ref=' . rawurlencode($normalizedReferralCode));
             exit;

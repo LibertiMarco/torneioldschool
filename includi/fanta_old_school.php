@@ -436,6 +436,11 @@ if (!function_exists('fanta_old_school_find_lead_by_email')) {
             return null;
         }
 
+        $emailLegheFc = strtolower(trim($emailLegheFc));
+        if ($emailLegheFc === '') {
+            return null;
+        }
+
         $stmt = $conn->prepare(
             "SELECT id, utente_referral_id, referral_code, referral_label, nome, cognome, email_leghe_fc, mail_inviata_il, created_at
              FROM fanta_old_school_leads
@@ -501,7 +506,7 @@ if (!function_exists('fanta_old_school_create_lead')) {
         $referralLabel = fanta_old_school_truncate((string)($payload['referral_label'] ?? ''), 190);
         $nome = fanta_old_school_truncate((string)($payload['nome'] ?? ''), 100);
         $cognome = fanta_old_school_truncate((string)($payload['cognome'] ?? ''), 100);
-        $emailLegheFc = trim((string)($payload['email_leghe_fc'] ?? ''));
+        $emailLegheFc = strtolower(trim((string)($payload['email_leghe_fc'] ?? '')));
         $ipAddress = fanta_old_school_truncate((string)($payload['ip_address'] ?? ''), 45);
         $userAgent = fanta_old_school_truncate((string)($payload['user_agent'] ?? ''), 255);
 
@@ -517,7 +522,7 @@ if (!function_exists('fanta_old_school_create_lead')) {
         if ($existing) {
             return [
                 'status' => 'duplicate',
-                'message' => 'Questa email Leghe FC risulta gia registrata.',
+                'message' => 'Richiesta di registrazione con questa mail gia eseguita.',
                 'lead' => $existing,
             ];
         }
@@ -554,7 +559,7 @@ if (!function_exists('fanta_old_school_create_lead')) {
                 $duplicate = fanta_old_school_find_lead_by_email($conn, $emailLegheFc);
                 return [
                     'status' => 'duplicate',
-                    'message' => 'Questa email Leghe FC risulta gia registrata.',
+                    'message' => 'Richiesta di registrazione con questa mail gia eseguita.',
                     'lead' => $duplicate,
                 ];
             }
