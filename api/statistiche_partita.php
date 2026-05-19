@@ -27,6 +27,24 @@ if (!$partita_id) {
 <link rel="apple-touch-icon" href="/img/logo_old_school.png">
 
 <style>
+:root {
+    --stats-admin-header-space: 72px;
+}
+
+body.stats-admin-page {
+    min-height: auto;
+    display: block;
+}
+
+body.stats-admin-page .admin-wrapper {
+    min-height: calc(100dvh - var(--stats-admin-header-space));
+}
+
+@supports not (height: 100dvh) {
+    body.stats-admin-page .admin-wrapper {
+        min-height: calc(100vh - var(--stats-admin-header-space));
+    }
+}
 
 /* === HEADER PAGINA === */
 .page-header {
@@ -321,10 +339,16 @@ if (!$partita_id) {
     }
 }
 
+@media (max-width: 768px) {
+    :root {
+        --stats-admin-header-space: 68px;
+    }
+}
+
 </style>
 </head>
 
-<body>
+<body class="admin-page stats-admin-page">
 
 <?php include __DIR__ . '/../includi/header.php'; ?>
 
