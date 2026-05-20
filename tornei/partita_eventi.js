@@ -116,10 +116,10 @@ function getPlayerMetaBadges(player = {}) {
     const badges = [];
 
     if (/portiere|\bgk\b|^p$/i.test(ruolo)) {
-        badges.push('<span class="evento-role-badge">Portiere</span>');
+        badges.push('<span class="evento-role-badge">GK</span>');
     }
     if (Number(player.is_captain || player.captain || 0) === 1) {
-        badges.push('<span class="evento-role-badge captain">Capitano</span>');
+        badges.push('<span class="evento-role-badge captain">C</span>');
     }
 
     return badges.join("");

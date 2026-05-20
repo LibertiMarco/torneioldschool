@@ -573,8 +573,8 @@ function isGoalkeeperRole(ruolo) {
 
 function playerMetaLabels(player = {}) {
   const labels = [];
-  if (isGoalkeeperRole(player.ruolo)) labels.push("Portiere");
-  if (String(player.is_captain || player.captain || 0) === "1") labels.push("Capitano");
+  if (isGoalkeeperRole(player.ruolo)) labels.push("GK");
+  if (String(player.is_captain || player.captain || 0) === "1") labels.push("C");
   return labels;
 }
 
@@ -593,7 +593,7 @@ function renderPlayerName(player = {}) {
   if (!meta.length) return playerBaseName(player);
 
   const badges = meta.map(label => {
-    const cls = label === "Capitano" ? "player-meta-badge captain" : "player-meta-badge";
+    const cls = label === "C" ? "player-meta-badge captain" : "player-meta-badge";
     return `<span class="${cls}">${label}</span>`;
   }).join("");
 
