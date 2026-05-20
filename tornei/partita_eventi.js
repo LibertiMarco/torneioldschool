@@ -315,16 +315,14 @@ async function caricaEventiGiocatori() {
                 const hasVoto = g.voto !== null && g.voto !== undefined;
                 const voto = hasVoto ? `<span class="voto voto-pill">${formatVoto(g.voto)}</span>` : "";
                 const iconsMarkup = icons ? `<span class="icons-after-name">${icons}</span>` : "";
-                const dettagli = voto || iconsMarkup || autogolBadge
-                  ? `<div class="evento-dettagli">${voto}${autogolBadge}${iconsMarkup}</div>`
+                const playerMetaMarkup = playerMeta ? `<span class="evento-player-meta">${playerMeta}</span>` : "";
+                const dettagli = playerMetaMarkup || voto || iconsMarkup || autogolBadge
+                  ? `<div class="evento-dettagli">${playerMetaMarkup}${voto}${autogolBadge}${iconsMarkup}</div>`
                   : "";
 
                 return `
                   <div class="evento-mini-row">
-                    <div class="evento-nome">
-                      <span>${abbrev}</span>
-                      ${playerMeta ? `<span class="evento-player-meta">${playerMeta}</span>` : ""}
-                    </div>
+                    <div class="evento-nome"><span>${abbrev}</span></div>
                     ${dettagli}
                   </div>
                 `;
