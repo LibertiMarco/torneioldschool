@@ -333,6 +333,32 @@ body.stats-admin-page .admin-wrapper {
     outline-offset: 3px;
 }
 
+.player-inline-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.player-meta-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #e7eef8;
+    color: #1f3d5a;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.player-meta-badge.captain {
+    background: #fdebed;
+    color: #a11c35;
+}
+
 @media (max-width: 640px) {
     .last-stat-card {
         align-items: flex-start;
@@ -537,6 +563,43 @@ const API = "/api/partita_giocatore.php";
 let currentStats = [];
 let pendingDelete = null;
 
+function playerBaseName(player = {}) {
+  return `${player.cognome || ""} ${player.nome || ""}`.trim();
+}
+
+function isGoalkeeperRole(ruolo) {
+  return /portiere|\bgk\b|^p$/i.test(String(ruolo || "").trim());
+}
+
+function playerMetaLabels(player = {}) {
+  const labels = [];
+  if (isGoalkeeperRole(player.ruolo)) labels.push("Portiere");
+  if (String(player.is_captain || player.captain || 0) === "1") labels.push("Capitano");
+  return labels;
+}
+
+function formatPlayerLabel(player = {}, includeTeam = false) {
+  const parts = [playerBaseName(player)];
+  if (includeTeam && player.squadra) parts.push(`(${player.squadra})`);
+
+  const meta = playerMetaLabels(player);
+  if (meta.length) parts.push(`- ${meta.join(" • ")}`);
+
+  return parts.filter(Boolean).join(" ");
+}
+
+function renderPlayerName(player = {}) {
+  const meta = playerMetaLabels(player);
+  if (!meta.length) return playerBaseName(player);
+
+  const badges = meta.map(label => {
+    const cls = label === "Capitano" ? "player-meta-badge captain" : "player-meta-badge";
+    return `<span class="${cls}">${label}</span>`;
+  }).join("");
+
+  return `${playerBaseName(player)}<span class="player-inline-meta">${badges}</span>`;
+}
+
 /* Popup elegante */
 function showMsg(msg, type="success"){
     const box = document.getElementById("msgBox");
@@ -589,7 +652,7 @@ async function loadPlayers(){
 
   sel.innerHTML = `<option value="">-- Seleziona giocatore --</option>`;
   list.forEach(g => {
-    sel.innerHTML += `<option value="${g.id}">${g.cognome} ${g.nome} (${g.squadra})</option>`;
+    sel.innerHTML += `<option value="${g.id}">${formatPlayerLabel(g, true)}</option>`;
   });
 }
 
@@ -607,7 +670,7 @@ async function loadStats(){
     const previous = editSel.value;
     editSel.innerHTML = `<option value="">-- Seleziona giocatore --</option>`;
     currentStats.forEach(s => {
-      editSel.innerHTML += `<option value="${s.id}">${s.cognome} ${s.nome} (${s.squadra})</option>`;
+      editSel.innerHTML += `<option value="${s.id}">${formatPlayerLabel(s, true)}</option>`;
     });
     if (previous && currentStats.some(s => String(s.id) === String(previous))) {
       editSel.value = previous;
@@ -624,7 +687,7 @@ async function loadStats(){
     currentStats.forEach(s => {
       TD.innerHTML += `
         <tr>
-          <td>${s.cognome} ${s.nome}</td>
+          <td>${renderPlayerName(s)}</td>
           <td>${s.squadra}</td>
           <td>${s.goal}</td>
           <td>${s.assist}</td>
@@ -712,7 +775,7 @@ tableDelete?.addEventListener("click", async e => {
 
   pendingDelete = currentStats.find(s => String(s.id) === String(id)) || null;
   if (pendingDelete && deleteStatText) {
-    deleteStatText.textContent = `Eliminare ${pendingDelete.cognome} ${pendingDelete.nome}?`;
+    deleteStatText.textContent = `Eliminare ${formatPlayerLabel(pendingDelete)}?`;
   }
   modalDel?.classList.add("active");
 });

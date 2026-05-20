@@ -34,6 +34,8 @@ if ($azione === 'list') {
                 g.nome,
                 g.cognome,
                 s.nome AS squadra,
+                sg.ruolo,
+                COALESCE(sg.is_captain, 0) AS is_captain,
                 pg.goal,
                 pg.autogol,
                 pg.assist,
@@ -442,7 +444,7 @@ if ($azione === 'list_giocatori') {
     if (!$p) { echo json_encode([]); exit; }
 
     // Giocatori delle due squadre, esclusi quelli giÃ  inseriti per questa partita
-    $sql = "SELECT DISTINCT g.id, g.nome, g.cognome, s.nome AS squadra
+    $sql = "SELECT DISTINCT g.id, g.nome, g.cognome, s.nome AS squadra, sg.ruolo, COALESCE(sg.is_captain, 0) AS is_captain
             FROM squadre s
             JOIN squadre_giocatori sg ON sg.squadra_id = s.id
             JOIN giocatori g ON g.id = sg.giocatore_id

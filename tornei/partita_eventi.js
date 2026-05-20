@@ -78,6 +78,53 @@ function ensureAutogolStyle() {
     document.head.appendChild(style);
 }
 
+function ensurePlayerMetaStyle() {
+    if (document.getElementById("player-meta-style")) return;
+    const style = document.createElement("style");
+    style.id = "player-meta-style";
+    style.textContent = `
+      .evento-player-meta {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .evento-role-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.12);
+        color: #f2f6ff;
+        border: 1px solid rgba(255,255,255,0.16);
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: 0.2px;
+      }
+      .evento-role-badge.captain {
+        background: rgba(216, 0, 0, 0.18);
+        border-color: rgba(216, 0, 0, 0.3);
+        color: #ffd9df;
+      }
+    `;
+    document.head.appendChild(style);
+}
+
+function getPlayerMetaBadges(player = {}) {
+    const ruolo = String(player.ruolo_squadra || player.ruolo || "").trim();
+    const badges = [];
+
+    if (/portiere|\bgk\b|^p$/i.test(ruolo)) {
+        badges.push('<span class="evento-role-badge">Portiere</span>');
+    }
+    if (Number(player.is_captain || player.captain || 0) === 1) {
+        badges.push('<span class="evento-role-badge captain">Capitano</span>');
+    }
+
+    return badges.join("");
+}
+
 // ====================== START ======================
 document.addEventListener("DOMContentLoaded", async () => {
     if (!ID_PARTITA || !TORNEO) {
@@ -87,6 +134,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     ensureAutogolStyle();
+    ensurePlayerMetaStyle();
     await caricaPartita();
     await caricaEventiGiocatori();
 });
@@ -209,7 +257,9 @@ async function caricaEventiGiocatori() {
                 gialli: (+e.cartellino_giallo || 0),
                 rossi: (+e.cartellino_rosso || 0),
                 voto: e.voto,
-                squadra: e.squadra
+                squadra: e.squadra,
+                ruolo: e.ruolo,
+                is_captain: e.is_captain
             };
 
             if (rec.squadra === home) byTeam[home].push(rec);
@@ -254,6 +304,7 @@ async function caricaEventiGiocatori() {
 
             return filtered.map(g => {
                 const abbrev = `${g.cognome} ${g.nome.charAt(0).toUpperCase()}.`;
+                const playerMeta = getPlayerMetaBadges(g);
                 const icons = [
                   ...(new Array(g.goal || 0)).fill(ICONS.goal),
                   ...(new Array(g.autogol || 0)).fill(ICONS.autogol),
@@ -270,7 +321,10 @@ async function caricaEventiGiocatori() {
 
                 return `
                   <div class="evento-mini-row">
-                    <div class="evento-nome">${abbrev}</div>
+                    <div class="evento-nome">
+                      <span>${abbrev}</span>
+                      ${playerMeta ? `<span class="evento-player-meta">${playerMeta}</span>` : ""}
+                    </div>
                     ${dettagli}
                   </div>
                 `;
