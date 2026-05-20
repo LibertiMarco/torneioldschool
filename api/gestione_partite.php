@@ -718,6 +718,64 @@ function squadraHaGiaPartita(
   return false;
 }
 
+function partitaRegularGiaInseritaInAltraGiornata(
+  mysqli $conn,
+  string $torneo,
+  string $fase,
+  int $giornata,
+  string $casa,
+  string $ospite,
+  ?int $excludeId = null
+): bool {
+  if (strcasecmp(trim($fase), 'REGULAR') !== 0) {
+    return false;
+  }
+
+  if (strcasecmp(trim($torneo), 'McLeague') === 0) {
+    return false;
+  }
+
+  if ($giornata <= 0 || $casa === '' || $ospite === '') {
+    return false;
+  }
+
+  $sql = "
+    SELECT id
+    FROM partite
+    WHERE torneo = ?
+      AND UPPER(TRIM(COALESCE(fase, ''))) IN ('', 'REGULAR', 'GIRONE')
+      AND giornata <> ?
+      AND (
+        (squadra_casa = ? AND squadra_ospite = ?)
+        OR
+        (squadra_casa = ? AND squadra_ospite = ?)
+      )
+  ";
+  $types = 'sissss';
+  $params = [$torneo, $giornata, $casa, $ospite, $ospite, $casa];
+
+  if ($excludeId !== null) {
+    $sql .= " AND id <> ?";
+    $types .= 'i';
+    $params[] = $excludeId;
+  }
+
+  $sql .= " LIMIT 1";
+
+  $stmt = $conn->prepare($sql);
+  if (!$stmt) {
+    return false;
+  }
+
+  $stmt->bind_param($types, ...$params);
+  $stmt->execute();
+  $res = $stmt->get_result();
+  $found = $res && $res->num_rows > 0;
+  $stmt->close();
+
+  return $found;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($azione === 'crea') {
     $torneo = sanitize_text($_POST['torneo'] ?? '');
@@ -758,6 +816,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       // controllo: una squadra non può avere due partite nella stessa giornata della stessa fase
       if (squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, null, $faseRound, $faseLeg)) {
         $errore = 'Una delle squadre ha già una partita in questa giornata per questa fase.';
+      } elseif (partitaRegularGiaInseritaInAltraGiornata($conn, $torneo, $fase, $giornata, $casa, $ospite)) {
+        $errore = 'Questa partita è già stata inserita in un\'altra giornata della fase REGULAR.';
       }
 
       if (!empty($errore)) {
@@ -905,56 +965,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
       if (squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, $id, $faseRound, $faseLeg)) {
         $errore = 'Una delle squadre ha già una partita in questa giornata per questa fase.';
+      } elseif (partitaRegularGiaInseritaInAltraGiornata($conn, $torneo, $fase, $giornata, $casa, $ospite, $id)) {
+        $errore = 'Questa partita è già stata inserita in un\'altra giornata della fase REGULAR.';
       }
-      $stmt = $conn->prepare("UPDATE partite SET torneo=?, fase=?, fase_round=?, fase_leg=?, squadra_casa=?, squadra_ospite=?, gol_casa=?, gol_ospite=?, data_partita=?, ora_partita=?, campo=?, decisa_rigori=?, rigori_casa=?, rigori_ospite=?, giornata=?, giocata=?, arbitro=?, link_youtube=?, link_instagram=? WHERE id=?");
-      if ($stmt) {
-        $stmt->bind_param(
-          'ssssssiisssiiiiisssi',
-          $torneo,
-          $fase,
-          $faseRound,
-          $faseLeg,
-          $casa,
-          $ospite,
-          $gol_casa,
-          $gol_ospite,
-          $data,
-          $ora,
-          $campo,
-          $decisa_rigori,
-          $rigori_casa,
-          $rigori_ospite,
-          $giornata,
-          $giocata,
-          $arbitro,
-          $link_youtube,
-          $link_instagram,
-          $id
-        );
-        if ($stmt->execute()) {
-          $successo = 'Partita aggiornata correttamente.';
-          $haAttivatoGiocata = ($giocata === 1 && (int)$giocataPrecedente !== 1);
-          $haDisattivatoGiocata = ($giocata === 0 && (int)$giocataPrecedente === 1);
-          // Ricalcolo sempre la classifica se la partita e' (o era) segnata come giocata
-          // per riflettere eventuali modifiche a gol/squadre senza dover premere "ricalcola".
-          if ($giocata === 1 || (int)$giocataPrecedente === 1) {
-            ricostruisci_classifica_da_partite($conn, $torneo);
-          }
-          inviaNotificaEsito($conn, $id, [
-            'partita_id' => $id,
-            'torneo' => $torneo,
-            'fase' => $fase,
-            'squadra_casa' => $casa,
-            'squadra_ospite' => $ospite,
-            'gol_casa' => $gol_casa,
-            'gol_ospite' => $gol_ospite,
-          ]);
-        } else {
-          $errore = 'Aggiornamento non riuscito.';
-        }
-        $stmt->close();
+      if (!empty($errore)) {
+        // non procedere oltre
       } else {
-        $errore = 'Errore interno durante l\'aggiornamento.';
+        $stmt = $conn->prepare("UPDATE partite SET torneo=?, fase=?, fase_round=?, fase_leg=?, squadra_casa=?, squadra_ospite=?, gol_casa=?, gol_ospite=?, data_partita=?, ora_partita=?, campo=?, decisa_rigori=?, rigori_casa=?, rigori_ospite=?, giornata=?, giocata=?, arbitro=?, link_youtube=?, link_instagram=? WHERE id=?");
+        if ($stmt) {
+          $stmt->bind_param(
+            'ssssssiisssiiiiisssi',
+            $torneo,
+            $fase,
+            $faseRound,
+            $faseLeg,
+            $casa,
+            $ospite,
+            $gol_casa,
+            $gol_ospite,
+            $data,
+            $ora,
+            $campo,
+            $decisa_rigori,
+            $rigori_casa,
+            $rigori_ospite,
+            $giornata,
+            $giocata,
+            $arbitro,
+            $link_youtube,
+            $link_instagram,
+            $id
+          );
+          if ($stmt->execute()) {
+            $successo = 'Partita aggiornata correttamente.';
+            $haAttivatoGiocata = ($giocata === 1 && (int)$giocataPrecedente !== 1);
+            $haDisattivatoGiocata = ($giocata === 0 && (int)$giocataPrecedente === 1);
+            // Ricalcolo sempre la classifica se la partita e' (o era) segnata come giocata
+            // per riflettere eventuali modifiche a gol/squadre senza dover premere "ricalcola".
+            if ($giocata === 1 || (int)$giocataPrecedente === 1) {
+              ricostruisci_classifica_da_partite($conn, $torneo);
+            }
+            inviaNotificaEsito($conn, $id, [
+              'partita_id' => $id,
+              'torneo' => $torneo,
+              'fase' => $fase,
+              'squadra_casa' => $casa,
+              'squadra_ospite' => $ospite,
+              'gol_casa' => $gol_casa,
+              'gol_ospite' => $gol_ospite,
+            ]);
+          } else {
+            $errore = 'Aggiornamento non riuscito.';
+          }
+          $stmt->close();
+        } else {
+          $errore = 'Errore interno durante l\'aggiornamento.';
+        }
       }
     }
   }
