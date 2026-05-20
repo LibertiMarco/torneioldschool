@@ -583,12 +583,87 @@ const ID = <?php echo $partita_id; ?>;
 const API = "/api/partita_giocatore.php";
 let currentStats = [];
 let pendingDelete = null;
+const KEYBOARD_VIEWPORT_DELTA = 140;
+let keyboardWasOpen = false;
+let viewportRecoveryTimer = null;
+let lastVisualViewportHeight = 0;
 
 window.addEventListener("pageshow", (event) => {
   if (event.persisted) {
     window.location.reload();
   }
 });
+
+function getVisualViewportHeight() {
+  return Math.round(window.visualViewport?.height || window.innerHeight || 0);
+}
+
+function keyboardSeemsOpen() {
+  if (!window.visualViewport) return false;
+  return (window.innerHeight - window.visualViewport.height) > KEYBOARD_VIEWPORT_DELTA;
+}
+
+function getMaxScrollY() {
+  const doc = document.documentElement;
+  const body = document.body;
+  const scrollHeight = Math.max(
+    doc?.scrollHeight || 0,
+    body?.scrollHeight || 0,
+    doc?.offsetHeight || 0,
+    body?.offsetHeight || 0
+  );
+  return Math.max(0, scrollHeight - window.innerHeight);
+}
+
+function clampScrollAfterKeyboard() {
+  const nextY = Math.min(window.scrollY, getMaxScrollY());
+  window.scrollTo(0, nextY);
+}
+
+function scheduleViewportRecovery(delay = 0) {
+  if (viewportRecoveryTimer) {
+    window.clearTimeout(viewportRecoveryTimer);
+  }
+
+  viewportRecoveryTimer = window.setTimeout(() => {
+    requestAnimationFrame(() => {
+      clampScrollAfterKeyboard();
+      requestAnimationFrame(clampScrollAfterKeyboard);
+      window.setTimeout(clampScrollAfterKeyboard, 120);
+      window.setTimeout(clampScrollAfterKeyboard, 280);
+    });
+  }, delay);
+}
+
+function dismissKeyboardAndRecover() {
+  if (document.activeElement && typeof document.activeElement.blur === "function") {
+    document.activeElement.blur();
+  }
+  scheduleViewportRecovery(keyboardSeemsOpen() ? 120 : 0);
+}
+
+document.querySelectorAll("#formAdd button[type='submit'], #formEdit button[type='submit']").forEach((button) => {
+  button.addEventListener("pointerdown", dismissKeyboardAndRecover);
+  button.addEventListener("touchstart", dismissKeyboardAndRecover, { passive: true });
+});
+
+if (window.visualViewport) {
+  lastVisualViewportHeight = getVisualViewportHeight();
+  keyboardWasOpen = keyboardSeemsOpen();
+
+  window.visualViewport.addEventListener("resize", () => {
+    const nextHeight = getVisualViewportHeight();
+    const grewAfterKeyboard = nextHeight > (lastVisualViewportHeight + 80);
+    const keyboardOpenNow = keyboardSeemsOpen();
+
+    if (keyboardWasOpen && grewAfterKeyboard && !keyboardOpenNow) {
+      scheduleViewportRecovery(50);
+    }
+
+    keyboardWasOpen = keyboardOpenNow;
+    lastVisualViewportHeight = nextHeight;
+  });
+}
 
 function playerBaseName(player = {}) {
   return `${player.cognome || ""} ${player.nome || ""}`.trim();
@@ -731,9 +806,7 @@ async function loadStats(){
 /* Aggiunta */
 document.getElementById("formAdd").addEventListener("submit", async e => {
   e.preventDefault();
-  if (document.activeElement && typeof document.activeElement.blur === "function") {
-    document.activeElement.blur();
-  }
+  dismissKeyboardAndRecover();
   const fd = new FormData(e.target);
   fd.append("azione","add");
   fd.set("cartellino_giallo", e.target.cartellino_giallo?.checked ? 1 : 0);
@@ -754,6 +827,7 @@ document.getElementById("formAdd").addEventListener("submit", async e => {
       e.target.reset();
       await loadStats();
       await loadPlayers();
+      scheduleViewportRecovery(60);
   }
 });
 
@@ -776,9 +850,7 @@ document.getElementById("edit_giocatore_sel")?.addEventListener("change", popula
 /* Salva modifica */
 document.getElementById("formEdit").addEventListener("submit", async e => {
   e.preventDefault();
-  if (document.activeElement && typeof document.activeElement.blur === "function") {
-    document.activeElement.blur();
-  }
+  dismissKeyboardAndRecover();
 
   const fd = new FormData(e.target);
   fd.append("azione","edit");
@@ -792,6 +864,7 @@ document.getElementById("formEdit").addEventListener("submit", async e => {
   if(out.success){
       showMsg("Modifica salvata!", "success");
       await loadStats();
+      scheduleViewportRecovery(60);
   }
 });
 
