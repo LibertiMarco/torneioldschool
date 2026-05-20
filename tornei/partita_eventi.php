@@ -3,9 +3,16 @@ require_once __DIR__ . '/../includi/require_login.php';
 require_once __DIR__ . '/../includi/seo.php';
 require_once __DIR__ . '/../includi/db.php';
 
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: Mon, 01 Jan 1990 00:00:00 GMT');
+
 $matchId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $torneo = trim($_GET['torneo'] ?? '');
 $baseUrl = seo_base_url();
+$styleVersion = (string)(@filemtime(__DIR__ . '/../style.css') ?: time());
+$headerInteractionsVersion = (string)(@filemtime(__DIR__ . '/../includi/header-interactions.js') ?: time());
+$pageScriptVersion = (string)(@filemtime(__DIR__ . '/partita_eventi.js') ?: time());
 
 $matchUrl = $baseUrl . '/tornei/partita_eventi.php';
 if ($matchId > 0) {
@@ -126,7 +133,7 @@ if ($matchId > 0) {
   <?php render_jsonld($matchBreadcrumbs); ?>
   <?php render_jsonld($eventSchema); ?>
   <!-- stesso CSS della pagina principale -->
-  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="../style.css?v=<?= htmlspecialchars($styleVersion, ENT_QUOTES, 'UTF-8') ?>" />
   <link rel="icon" type="image/png" href="/img/logo_old_school.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Oswald:wght@500&display=swap" rel="stylesheet">
 </head>
@@ -157,7 +164,7 @@ if ($matchId > 0) {
   <div id="footer-container"></div>
 
   <!-- SCRIPT: HEADER -->
-  <script src="/includi/header-interactions.js"></script>
+  <script src="/includi/header-interactions.js?v=<?= htmlspecialchars($headerInteractionsVersion, ENT_QUOTES, 'UTF-8') ?>"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       fetch("/includi/header.php")
@@ -179,7 +186,7 @@ if ($matchId > 0) {
   </script>
 
   <!-- SCRIPT: PAGINA -->
-  <script src="partita_eventi.js"></script>
+  <script src="partita_eventi.js?v=<?= htmlspecialchars($pageScriptVersion, ENT_QUOTES, 'UTF-8') ?>"></script>
 </body>
 </html>
 
