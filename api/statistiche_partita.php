@@ -2,10 +2,16 @@
 require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/../includi/db.php';
 
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 $partita_id = isset($_GET['partitaid']) ? (int)$_GET['partitaid'] : 0;
 if (!$partita_id) {
   die("ID partita mancante.");
 }
+
+$assetVersion = '20260520b';
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -22,7 +28,7 @@ if (!$partita_id) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Statistiche Partita</title>
-<link rel="stylesheet" href="/style.min.css?v=20251126">
+<link rel="stylesheet" href="/style.min.css?v=<?php echo urlencode($assetVersion); ?>">
 <link rel="icon" type="image/png" href="/img/logo_old_school.png">
 <link rel="apple-touch-icon" href="/img/logo_old_school.png">
 
@@ -31,19 +37,30 @@ if (!$partita_id) {
     --stats-admin-header-space: 72px;
 }
 
+html {
+    background: #f8f9fb;
+}
+
 body.stats-admin-page {
     min-height: auto;
     display: block;
+    background: #f8f9fb !important;
+    overflow-x: hidden;
+}
+
+body.stats-admin-page .header-spacer {
+    height: var(--stats-admin-header-space);
 }
 
 body.stats-admin-page .admin-wrapper {
-    min-height: calc(100dvh - var(--stats-admin-header-space));
+    min-height: 0;
+    padding: 30px 20px calc(48px + env(safe-area-inset-bottom));
+    background: #f8f9fb;
 }
 
-@supports not (height: 100dvh) {
-    body.stats-admin-page .admin-wrapper {
-        min-height: calc(100vh - var(--stats-admin-header-space));
-    }
+body.stats-admin-page .admin-container {
+    max-width: 1100px;
+    margin: 0 auto;
 }
 
 /* === HEADER PAGINA === */
@@ -369,6 +386,10 @@ body.stats-admin-page .admin-wrapper {
     :root {
         --stats-admin-header-space: 68px;
     }
+
+    body.stats-admin-page .admin-wrapper {
+        padding: 18px 10px calc(26px + env(safe-area-inset-bottom));
+    }
 }
 
 </style>
@@ -563,6 +584,12 @@ const API = "/api/partita_giocatore.php";
 let currentStats = [];
 let pendingDelete = null;
 
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
 function playerBaseName(player = {}) {
   return `${player.cognome || ""} ${player.nome || ""}`.trim();
 }
@@ -704,6 +731,9 @@ async function loadStats(){
 /* Aggiunta */
 document.getElementById("formAdd").addEventListener("submit", async e => {
   e.preventDefault();
+  if (document.activeElement && typeof document.activeElement.blur === "function") {
+    document.activeElement.blur();
+  }
   const fd = new FormData(e.target);
   fd.append("azione","add");
   fd.set("cartellino_giallo", e.target.cartellino_giallo?.checked ? 1 : 0);
@@ -746,6 +776,9 @@ document.getElementById("edit_giocatore_sel")?.addEventListener("change", popula
 /* Salva modifica */
 document.getElementById("formEdit").addEventListener("submit", async e => {
   e.preventDefault();
+  if (document.activeElement && typeof document.activeElement.blur === "function") {
+    document.activeElement.blur();
+  }
 
   const fd = new FormData(e.target);
   fd.append("azione","edit");
