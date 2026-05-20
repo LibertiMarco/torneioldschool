@@ -275,7 +275,6 @@ if (!function_exists('torneo_stats_fetch_player_team_totals')) {
             FROM partita_giocatore pg
             JOIN partite p ON p.id = pg.partita_id
             WHERE pg.giocatore_id = ?
-              AND p.giocata = 1
               AND p.torneo = ?
               AND (p.squadra_casa = ? OR p.squadra_ospite = ?)
               $phaseClause
@@ -329,7 +328,6 @@ if (!function_exists('torneo_stats_rebuild_all_player_aggregates')) {
                     SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN 1 ELSE 0 END) AS num_voti
                 FROM partita_giocatore pg
                 JOIN partite p ON p.id = pg.partita_id
-                WHERE p.giocata = 1
                 GROUP BY pg.giocatore_id
             ) agg ON agg.giocatore_id = g.id
             SET

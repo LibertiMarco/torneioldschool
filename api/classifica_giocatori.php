@@ -87,7 +87,7 @@ $aggregateSubquery = "
         END AS media_voti
     FROM partita_giocatore pg
     JOIN partite p ON p.id = pg.partita_id
-    WHERE p.giocata = 1 AND p.torneo NOT IN ($excludedPlaceholder)
+    WHERE p.torneo NOT IN ($excludedPlaceholder)
     GROUP BY pg.giocatore_id
 ";
 

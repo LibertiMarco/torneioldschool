@@ -3,6 +3,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 // --- CONNESSIONE DATABASE TRAMITE FILE ESTERNO ---
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 
 
 $torneo=$_GET['torneo']??''; $squadra=$_GET['squadra']??'';
@@ -28,5 +29,15 @@ $sql = "
     ORDER BY g.cognome, g.nome
 ";
 $st=$conn->prepare($sql); $st->bind_param("ss",$torneo,$squadra); $st->execute(); $res=$st->get_result();
-$out=[]; while($r=$res->fetch_assoc()) $out[]=$r;
+$out=[];
+while($r=$res->fetch_assoc()) {
+    $liveStats = torneo_stats_fetch_player_team_totals($conn, (int)($r['id'] ?? 0), $torneo, $squadra);
+    $r['presenze'] = (int)($liveStats['presenze'] ?? 0);
+    $r['reti'] = (int)($liveStats['reti'] ?? 0);
+    $r['assist'] = (int)($liveStats['assist'] ?? 0);
+    $r['gialli'] = (int)($liveStats['gialli'] ?? 0);
+    $r['rossi'] = (int)($liveStats['rossi'] ?? 0);
+    $r['media_voti'] = $liveStats['media_voti'] ?? null;
+    $out[] = $r;
+}
 echo json_encode($out, JSON_UNESCAPED_UNICODE);

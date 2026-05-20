@@ -83,7 +83,7 @@ $sqlPlayer = "
         COALESCE(SUM(CASE WHEN p.id IS NOT NULL THEN pg.assist ELSE 0 END), 0) AS assist_totali
     FROM giocatori g
     LEFT JOIN partita_giocatore pg ON pg.giocatore_id = g.id
-    LEFT JOIN partite p ON p.id = pg.partita_id AND p.giocata = 1{$whereExcluded}
+    LEFT JOIN partite p ON p.id = pg.partita_id{$whereExcluded}
     WHERE g.id = ?
     GROUP BY g.id
     LIMIT 1
@@ -213,7 +213,7 @@ $sqlMatches = "
     LEFT JOIN tornei t ON (t.filetorneo = p.torneo OR t.filetorneo = CONCAT(p.torneo, '.php') OR t.nome = p.torneo)
     LEFT JOIN squadre sc ON sc.nome = p.squadra_casa AND sc.torneo = p.torneo
     LEFT JOIN squadre so ON so.nome = p.squadra_ospite AND so.torneo = p.torneo
-    WHERE pg.giocatore_id = ? AND p.giocata = 1{$whereExcluded} AND {$whereStat}
+    WHERE pg.giocatore_id = ?{$whereExcluded} AND {$whereStat}
     ORDER BY p.data_partita DESC, p.ora_partita DESC, pg.partita_id DESC
     LIMIT ?
 ";

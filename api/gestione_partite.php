@@ -1662,7 +1662,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
         </div>
         <div>
           <label>Giocata</label>
-          <input type="checkbox" name="giocata_mod" id="giocata_mod" value="1" checked>
+          <input type="checkbox" name="giocata_mod" id="giocata_mod" value="1">
         </div>
         <div>
           <label>Link YouTube</label>
@@ -2284,8 +2284,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     fillField('ora_partita_mod', partita.ora_partita);
     setSelectValueAllowMissing('campo_mod', partita.campo);
     fillField('arbitro_mod', partita.arbitro || '');
-    // in modifica flag giocata sempre settato a true
-    fillField('giocata_mod', true);
+    fillField('giocata_mod', Number(partita.giocata || 0) === 1);
     fillField('link_youtube_mod', partita.link_youtube);
     fillField('link_instagram_mod', partita.link_instagram);
   };
