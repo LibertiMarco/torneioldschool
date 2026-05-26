@@ -291,12 +291,6 @@ $assetVersion = '20260421a';
       </ul>
     </div>
 
-    <div class="regola">
-      <h3>Calendario</h3>
-      <ul>
-        <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedi o venerdi</strong>.</li>
-      </ul>
-    </div>
   </div>
   <br><br><br><br>
 </section>

@@ -297,7 +297,6 @@ $assetVersion = '20260430c';
       <h3>Calendario</h3>
       <ul>
         <li>Le partite si disputano principalmente <strong>il martedi, il mercoledi e il giovedi</strong>.</li>
-        <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedi o venerdi</strong>.</li>
       </ul>
     </div>
   </div>

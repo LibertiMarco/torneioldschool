@@ -1384,7 +1384,7 @@ if ($lista instanceof mysqli_result) {
                         buildCampionatoCoppeSection(gold, silver, bronze, finaleValue),
                         `Premi finali: Dopo la finale di Coppa Gold verranno assegnati i seguenti riconoscimenti:\nMiglior Giocatore\nMiglior Portiere\nMiglior Difensore\nMiglior Attaccante`,
                         `Regole di gioco: Ogni partita dura 2 tempi da 25 minuti.\nOgni squadra ha 1 chiamata VAR disponibile per partita.`,
-                        `Calendario: Le partite si disputano principalmente il mercoledi e il giovedi.\nIl calendario della settimana successiva viene pubblicato ogni giovedi o venerdi.`
+                        `Calendario: Le partite si disputano principalmente il mercoledi e il giovedi.`
                     ];
 
                     return sections.join('\n\n');
@@ -1408,7 +1408,7 @@ if ($lista instanceof mysqli_result) {
                             buildCampionatoCoppeSection(gold, silver, bronze, finaleValue),
                             `Premi finali: Dopo la finale di Coppa Gold verranno assegnati i seguenti riconoscimenti:\nMiglior Giocatore\nMiglior Portiere\nMiglior Difensore\nMiglior Attaccante`,
                             `Regole di gioco: Ogni partita dura 2 tempi da 25 minuti.\nOgni squadra ha 1 chiamata VAR disponibile per partita.`,
-                            `Calendario: Le partite si disputano principalmente il mercoledi e il giovedi.\nIl calendario della settimana successiva viene pubblicato ogni giovedi o venerdi.`
+                            `Calendario: Le partite si disputano principalmente il mercoledi e il giovedi.`
                         ].join('\n\n');
                     }
 
@@ -1424,7 +1424,7 @@ if ($lista instanceof mysqli_result) {
                             buildGironeCoppeSection(goldPerGirone, silverPerGirone, bronzePerGirone, finaleValue),
                             `Premi finali: Dopo la finale di Coppa Gold verranno assegnati i seguenti riconoscimenti:\nMiglior Giocatore\nMiglior Portiere\nMiglior Difensore\nMiglior Attaccante`,
                             `Regole di gioco: Ogni partita dura 2 tempi da 25 minuti.\nOgni squadra ha 1 chiamata VAR disponibile per partita.`,
-                            `Calendario: Le partite si disputano principalmente il mercoledi e il giovedi.\nIl calendario della settimana successiva viene pubblicato ogni giovedi o venerdi.`
+                            `Calendario: Le partite si disputano principalmente il mercoledi e il giovedi.`
                         ].join('\n\n');
                     }
 

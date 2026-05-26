@@ -36,6 +36,30 @@ try {
     // ignora eventuali errori di lettura config
 }
 
+$totaleSquadreMondialeFasciaA = max(
+    0,
+    (int)($torneoConfig['totale_squadre'] ?? 0),
+    (int)($torneoConfig['campionato_squadre'] ?? 0)
+);
+$torneoConfig['qualificati_silver'] = 4;
+if ($totaleSquadreMondialeFasciaA > 0) {
+    $torneoConfig['qualificati_gold'] = max(0, $totaleSquadreMondialeFasciaA - 4);
+}
+if (!empty($torneoConfig['regole_html'])) {
+    if ($totaleSquadreMondialeFasciaA > 0) {
+        $torneoConfig['regole_html'] = preg_replace(
+            '/^Fase 2 - Coppe:\s*Le squadre classificate dal 1 al \d+ posto accedono alla Coppa Gold\./imu',
+            'Fase 2 - Coppe: Le squadre classificate dal 1 al ' . max(0, $totaleSquadreMondialeFasciaA - 4) . ' posto accedono alla Coppa Gold.',
+            (string)$torneoConfig['regole_html']
+        );
+    }
+    $torneoConfig['regole_html'] = preg_replace(
+        '/^Le squadre classificate dal \d+ al \d+ posto accedono alla Coppa Silver\.\s*$/imu',
+        'Le ultime 4 squadre classificate accedono alla Coppa Silver.',
+        (string)$torneoConfig['regole_html']
+    );
+}
+
 if (!function_exists('renderRegoleMarkupFromText')) {
     function decorateRegoleInline(string $text): string {
         $placeholders = [
@@ -55,6 +79,13 @@ if (!function_exists('renderRegoleMarkupFromText')) {
     }
 
     function renderRegoleMarkupFromText(string $text): string {
+        $text = str_replace("\r\n", "\n", $text);
+        $text = preg_replace('/^\s*Il calendario\b.*pubblicat[^\n]*\n?/imu', '', $text);
+        $text = preg_replace(
+            '/^Le squadre classificate dal \d+ al \d+ posto accedono alla Coppa Silver\.\s*$/imu',
+            'Le ultime 4 squadre classificate accedono alla Coppa Silver.',
+            $text
+        );
         $blocks = preg_split("/\n\s*\n/u", trim($text));
         $markup = '';
 

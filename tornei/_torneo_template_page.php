@@ -64,6 +64,8 @@ if (!function_exists('renderRegoleMarkupFromText')) {
     }
 
     function renderRegoleMarkupFromText(string $text): string {
+        $text = str_replace("\r\n", "\n", $text);
+        $text = preg_replace('/^\s*Il calendario\b.*pubblicat[^\n]*\n?/imu', '', $text);
         $blocks = preg_split("/\n\s*\n/u", trim($text));
         $markup = '';
 

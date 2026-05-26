@@ -289,7 +289,6 @@ $assetVersion = '20260421a';
       <h3>Calendario</h3>
       <ul>
         <li>Si gioca principalmente <strong>di venerdi</strong>.</li>
-        <li>Il <strong>calendario della settimana successiva</strong> viene pubblicato ogni <strong>giovedi o venerdi</strong>.</li>
       </ul>
     </div>
   </div>
