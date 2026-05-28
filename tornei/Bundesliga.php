@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includi/require_login.php';
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
 $torneoSlug = 'Bundesliga';
 $torneoName = 'Bundesliga';
-$assetVersion = '20260508a';
+$assetVersion = '20260528a';
 
 require_once __DIR__ . '/../includi/db.php';
 $torneoConfig = [];
@@ -374,7 +374,8 @@ if (!empty($torneoConfig['regole_html'])) {
       background: #d9dee8 !important;
       color: #15293e !important;
     }
-    .gironi-grid tr.bronze-row td:first-child {
+    .gironi-grid tr.bronze-row td:first-child,
+    #tableClassifica tr.bronze-row td:first-child {
       font-weight: 800;
       background: #c98a4a !important;
       color: #15293e !important;

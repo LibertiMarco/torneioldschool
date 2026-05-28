@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includi/require_login.php';
 require_once __DIR__ . '/../includi/seo.php';
 
-$assetVersion = '20260421a';
+$assetVersion = '20260528a';
 $baseUrl = seo_base_url();
 $torneoSeo = [
   'title' => "Coppa d'Africa - Tornei Old School",

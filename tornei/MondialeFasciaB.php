@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includi/require_login.php';
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
 $torneoSlug = 'MondialeFasciaB';
 $torneoName = 'Mondiale Fascia B';
-$assetVersion = '20260501b';
+$assetVersion = '20260528a';
 
 require_once __DIR__ . '/../includi/db.php';
 $torneoConfig = [];

@@ -14,7 +14,7 @@ $normalizeTorneoText = static function ($value): string {
 
 $torneoSlug = isset($torneoSlug) ? $normalizeTorneoText((string)$torneoSlug) : 'TEMPLATE_SLUG';
 $torneoName = isset($torneoName) ? $normalizeTorneoText((string)$torneoName) : 'Torneo Template';
-$assetVersion = isset($assetVersion) ? (string)$assetVersion : '20260421a';
+$assetVersion = isset($assetVersion) ? (string)$assetVersion : '20260528a';
 $torneoConfigFallback = (isset($torneoConfigFallback) && is_array($torneoConfigFallback)) ? $torneoConfigFallback : [];
 $torneoRulesMarkup = isset($torneoRulesMarkup) ? (string)$torneoRulesMarkup : '';
 
@@ -379,7 +379,8 @@ if (!empty($torneoConfig['regole_html'])) {
       background: #d9dee8 !important;
       color: #15293e !important;
     }
-    .gironi-grid tr.bronze-row td:first-child {
+    .gironi-grid tr.bronze-row td:first-child,
+    #tableClassifica tr.bronze-row td:first-child {
       font-weight: 800;
       background: #c98a4a !important;
       color: #15293e !important;

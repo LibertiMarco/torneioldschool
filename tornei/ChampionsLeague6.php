@@ -4,11 +4,11 @@ require_once __DIR__ . '/../includi/require_login.php';
 // Template base per creare un nuovo torneo:
 // 1) Duplica questo file e rinominalo (es. NuovoTorneo.php)
 // 2) Imposta $torneoSlug e $torneoName qui sotto
-// 3) Duplica anche script-TorneoTemplate.js rinominandolo in script-NuovoTorneo.js
+// 3) Duplica anche script-ChampionsLeague6.js rinominandolo in script-NuovoTorneo.js
 // 4) Nel nuovo JS sostituisci TORNEO con lo stesso slug usato nel DB/API
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
-$torneoSlug = 'TEMPLATE_SLUG';
-$torneoName = 'Torneo Template';
+$torneoSlug = 'ChampionsLeague6';
+$torneoName = 'Champions League';
 $assetVersion = '20260528a';
 
 require_once __DIR__ . '/../includi/db.php';
@@ -693,8 +693,7 @@ if (!empty($torneoConfig['regole_html'])) {
     window.__TEMPLATE_TORNEO_SLUG__ = <?= json_encode($torneoSlug) ?>;
     window.__TORNEO_CONFIG__ = <?= json_encode($torneoConfig, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
   </script>
-  <script src="script-TorneoTemplate.js?v=<?= $assetVersion ?>"></script>
+  <script src="script-ChampionsLeague6.js?v=<?= $assetVersion ?>"></script>
 
 </body>
 </html>
-
