@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includi/require_login.php';
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
 $torneoSlug = 'Formula1';
 $torneoName = 'Formula 1';
-$assetVersion = '20260528a';
+$assetVersion = '20260529a';
 
 require_once __DIR__ . '/../includi/db.php';
 $torneoConfig = [];
@@ -34,6 +34,86 @@ try {
     }
 } catch (Throwable $e) {
     // ignora eventuali errori di lettura config
+}
+
+function buildFormula1SpareggioPairingsText(int $spots): string
+{
+    $pairings = [];
+    $maxSeed = max(0, $spots);
+    for ($seed = 1; $seed <= intdiv($maxSeed, 2); $seed++) {
+        $pairings[] = $seed . ' vs ' . ($maxSeed - $seed + 1);
+    }
+
+    return implode(', ', $pairings);
+}
+
+function buildFormula1SpareggioBlock(int $spots): string
+{
+    $pairings = buildFormula1SpareggioPairingsText($spots);
+
+    return implode("\n", [
+        'Fase 2 - Spareggio: A fine Regular Season le prime ' . $spots . ' squadre disputano uno spareggio con accoppiamenti ' . $pairings . '.',
+        'Le vincenti accedono ai quarti di Coppa Gold.',
+        'Le perdenti accedono ai quarti di Coppa Silver.',
+    ]);
+}
+
+function normalizeFormula1RegoleText(string $text, int $spareggioSpots): string
+{
+    $blocks = preg_split("/\n\s*\n/u", trim(str_replace("\r\n", "\n", $text)));
+    $replacementBlock = buildFormula1SpareggioBlock($spareggioSpots);
+    $normalizedBlocks = [];
+    $spareggioInjected = false;
+
+    foreach ($blocks as $block) {
+        $block = trim((string)$block);
+        if ($block === '') {
+            continue;
+        }
+
+        if (preg_match('/^\s*Fase\s*2\s*-\s*(?:Coppe|Playoff|Spareggio)\s*:/iu', $block)) {
+            $normalizedBlocks[] = $replacementBlock;
+            $spareggioInjected = true;
+            continue;
+        }
+
+        if (preg_match('/Coppa Gold|Coppa Silver/iu', $block)
+            && preg_match('/classificat|qualificat/iu', $block)
+        ) {
+            continue;
+        }
+
+        $normalizedBlocks[] = $block;
+    }
+
+    if (!$spareggioInjected) {
+        $normalizedBlocks[] = $replacementBlock;
+    }
+
+    return implode("\n\n", $normalizedBlocks);
+}
+
+$totaleSquadreFormula1 = max(
+    0,
+    (int)($torneoConfig['totale_squadre'] ?? 0),
+    (int)($torneoConfig['campionato_squadre'] ?? 0)
+);
+$spareggioQualificatiFormula1 = $totaleSquadreFormula1 > 0
+    ? min(16, $totaleSquadreFormula1)
+    : 16;
+$torneoConfig['spareggio_qualificati'] = $spareggioQualificatiFormula1;
+$torneoConfig['qualificati_gold'] = intdiv($spareggioQualificatiFormula1, 2);
+$torneoConfig['qualificati_silver'] = intdiv($spareggioQualificatiFormula1, 2);
+if (!empty($torneoConfig['regole_html'])) {
+    $torneoConfig['regole_html'] = normalizeFormula1RegoleText(
+        (string)$torneoConfig['regole_html'],
+        $spareggioQualificatiFormula1
+    );
+} else {
+    $torneoConfig['regole_html'] = implode("\n\n", [
+        'Fase 1 - Regular Season: Tutte le squadre disputano la Regular Season. La squadra prima in classifica al termine del girone riceve il Trofeo Regular Season.',
+        buildFormula1SpareggioBlock($spareggioQualificatiFormula1),
+    ]);
 }
 
 if (!function_exists('renderRegoleMarkupFromText')) {
@@ -356,10 +436,21 @@ if (!empty($torneoConfig['regole_html'])) {
       background: #ffd700 !important;
       color: #15293e !important;
     }
+    #tableClassifica tr.playoff-row td:first-child,
+    .gironi-grid tr.playoff-row td:first-child {
+      font-weight: 800;
+      background: #15293e !important;
+      color: #fff !important;
+    }
     .gironi-grid tr.silver-row td:first-child {
       font-weight: 800;
       background: #d9dee8 !important;
       color: #15293e !important;
+    }
+    .legenda-coppe .playoff-box {
+      background: #15293e;
+      color: #fff;
+      border-color: #15293e;
     }
     .gironi-grid tr.placeholder-row td {
       background: #f8fafc;

@@ -4,7 +4,6 @@ const TORNEO = window.__TEMPLATE_TORNEO_SLUG__ || "TEMPLATE_SLUG"; // Nome base 
 const CONFIG = window.__TORNEO_CONFIG__ || {};
 const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='16' fill='%2315293e'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E%3F%3C/text%3E%3C/svg%3E";
 const DEFAULT_TEAM_COUNT = 18;
-const DEFAULT_GOLD = 16;
 
 function toNumber(value, fallback = 0) {
   const n = Number(value);
@@ -26,14 +25,23 @@ const TEAM_COUNT = configTeamCount > 0 ? configTeamCount : DEFAULT_TEAM_COUNT;
 const FORMATO_TORNEO = String(CONFIG.formato || CONFIG.formula_torneo || "").trim().toLowerCase();
 const GROUP_COUNT = Math.max(0, toNumber(CONFIG.numero_gironi, 0));
 const TEAMS_PER_GROUP = Math.max(0, toNumber(CONFIG.squadre_per_girone, 0));
+const rawSpareggio = toNumber(CONFIG.spareggio_qualificati, 0);
+const DEFAULT_SPAREGGIO_SPOTS = 16;
+const SPAREGGIO_SPOTS = Math.max(
+  0,
+  Math.min(TEAM_COUNT, rawSpareggio > 0 ? rawSpareggio : DEFAULT_SPAREGGIO_SPOTS)
+);
+const DEFAULT_GOLD = SPAREGGIO_SPOTS > 0 ? Math.floor(SPAREGGIO_SPOTS / 2) : 8;
+const DEFAULT_SILVER = SPAREGGIO_SPOTS > 0 ? Math.floor(SPAREGGIO_SPOTS / 2) : Math.max(TEAM_COUNT - DEFAULT_GOLD, 0);
 const rawGold = Object.prototype.hasOwnProperty.call(CONFIG, "qualificati_gold") ? toNumber(CONFIG.qualificati_gold, 0) : NaN;
 const GOLD_SPOTS = Number.isFinite(rawGold) ? Math.max(0, rawGold) : DEFAULT_GOLD;
 const rawSilver = Object.prototype.hasOwnProperty.call(CONFIG, "qualificati_silver") ? toNumber(CONFIG.qualificati_silver, 0) : NaN;
-const SILVER_SPOTS = Number.isFinite(rawSilver) ? Math.max(0, rawSilver) : Math.max(TEAM_COUNT - GOLD_SPOTS, 0);
+const SILVER_SPOTS = Number.isFinite(rawSilver) ? Math.max(0, rawSilver) : DEFAULT_SILVER;
 const USE_GROUP_TABLES = GROUP_COUNT > 0 && TEAMS_PER_GROUP > 0 && FORMATO_TORNEO !== "campionato" && FORMATO_TORNEO !== "eliminazione";
 const GOLD_PER_GROUP = USE_GROUP_TABLES && GROUP_COUNT > 0 ? Math.floor(GOLD_SPOTS / GROUP_COUNT) : 0;
 const SILVER_PER_GROUP = USE_GROUP_TABLES && GROUP_COUNT > 0 ? Math.floor(SILVER_SPOTS / GROUP_COUNT) : 0;
 const USE_COPPE = GOLD_SPOTS > 0 || SILVER_SPOTS > 0;
+const USE_SPAREGGIO_SEEDING = SPAREGGIO_SPOTS >= 2;
 const teamLogos = {};
 const favState = { tournaments: new Set(), teams: new Set() };
 let currentRosaTeam = "";
@@ -453,7 +461,9 @@ function ordinaGruppoPariPunti(gruppo, h2hMap) {
 
 function createClassificaRow(team, posizione, goldThreshold = 0, silverThreshold = null) {
   const tr = document.createElement("tr");
-  if (goldThreshold > 0 && posizione <= goldThreshold) {
+  if (USE_SPAREGGIO_SEEDING && posizione <= SPAREGGIO_SPOTS) {
+    tr.classList.add("playoff-row");
+  } else if (goldThreshold > 0 && posizione <= goldThreshold) {
     tr.classList.add("gold-row");
   } else if (silverThreshold !== null && silverThreshold > 0 && posizione <= silverThreshold) {
     tr.classList.add("silver-row");
@@ -578,8 +588,8 @@ function renderSingleClassifica(orderedTeams) {
     gironiGrid.classList.remove("is-active");
   }
 
-  const useGold = GOLD_SPOTS > 0;
-  const useSilver = SILVER_SPOTS > 0;
+  const useGold = !USE_SPAREGGIO_SEEDING && GOLD_SPOTS > 0;
+  const useSilver = !USE_SPAREGGIO_SEEDING && SILVER_SPOTS > 0;
   const silverThreshold = useSilver ? Math.max(0, orderedTeams.length - SILVER_SPOTS) : null;
 
   orderedTeams.forEach((team, idx) => {
@@ -657,6 +667,15 @@ function renderGroupedClassifica(classifica, partiteGiocate = []) {
   bindClassificaTeamCells(gironiGrid);
 }
 
+function buildSpareggioPairingsText(spots = SPAREGGIO_SPOTS) {
+  const maxSeed = Math.max(0, Number(spots) || 0);
+  const pairings = [];
+  for (let seed = 1; seed <= Math.floor(maxSeed / 2); seed += 1) {
+    pairings.push(`${seed} vs ${maxSeed - seed + 1}`);
+  }
+  return pairings.join(", ");
+}
+
 function mostraClassifica(classifica, partiteGiocate = []) {
   const orderedTeams = orderClassificaRows(classifica, partiteGiocate);
   if (USE_GROUP_TABLES) {
@@ -672,15 +691,22 @@ function mostraClassifica(classifica, partiteGiocate = []) {
   if (USE_COPPE && (!faseSelect || faseSelect.value === "girone")) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
-    const goldText = USE_GROUP_TABLES && GOLD_PER_GROUP > 0
-      ? `Prime ${GOLD_PER_GROUP} di ogni girone: COPPA GOLD`
-      : "COPPA GOLD";
-    const silverText = USE_GROUP_TABLES && SILVER_PER_GROUP > 0
-      ? `Successive ${SILVER_PER_GROUP} di ogni girone: COPPA SILVER`
-      : "COPPA SILVER";
-    const goldBox = GOLD_SPOTS > 0 ? `<div class="box gold-box">${goldText}</div>` : "";
-    const silverBox = SILVER_SPOTS > 0 ? `<div class="box silver-box">${silverText}</div>` : "";
-    legenda.innerHTML = `${goldBox}${silverBox}` || `<div class="box">Coppe non configurate</div>`;
+    if (USE_SPAREGGIO_SEEDING) {
+      const spareggioBox = `<div class="box playoff-box">Spareggio post Regular Season: ${buildSpareggioPairingsText()}</div>`;
+      const goldBox = GOLD_SPOTS > 0 ? `<div class="box gold-box">Vincenti spareggio: quarti di COPPA GOLD</div>` : "";
+      const silverBox = SILVER_SPOTS > 0 ? `<div class="box silver-box">Perdenti spareggio: quarti di COPPA SILVER</div>` : "";
+      legenda.innerHTML = `${spareggioBox}${goldBox}${silverBox}`;
+    } else {
+      const goldText = USE_GROUP_TABLES && GOLD_PER_GROUP > 0
+        ? `Prime ${GOLD_PER_GROUP} di ogni girone: COPPA GOLD`
+        : "COPPA GOLD";
+      const silverText = USE_GROUP_TABLES && SILVER_PER_GROUP > 0
+        ? `Successive ${SILVER_PER_GROUP} di ogni girone: COPPA SILVER`
+        : "COPPA SILVER";
+      const goldBox = GOLD_SPOTS > 0 ? `<div class="box gold-box">${goldText}</div>` : "";
+      const silverBox = SILVER_SPOTS > 0 ? `<div class="box silver-box">${silverText}</div>` : "";
+      legenda.innerHTML = `${goldBox}${silverBox}` || `<div class="box">Coppe non configurate</div>`;
+    }
 
     const wrapper = document.getElementById("classificaWrapper");
     if (wrapper) wrapper.after(legenda);
