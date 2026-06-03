@@ -478,6 +478,9 @@
   }
 
   function syncConsentWithServer(consent) {
+    if (!isUserAuthenticated()) {
+      return;
+    }
     try {
       fetch('/api/consensi.php', {
         method: 'POST',
@@ -513,7 +516,7 @@
   }
 
   function applyConsent(consent) {
-    const trackingAllowed = consent ? !!consent.tracking : true;
+    const trackingAllowed = !!(consent && consent.tracking);
     if (trackingAllowed) {
       Tracking.enable();
       GoogleAnalytics.enable();

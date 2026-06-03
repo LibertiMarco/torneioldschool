@@ -4,12 +4,31 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includi/env_loader.php';
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: public, max-age=300, stale-while-revalidate=21600');
 
 function json_response(array $data, int $status = 200): void
 {
     http_response_code($status);
     echo json_encode($data);
     exit;
+}
+
+function ensure_parent_dir(string $path): void
+{
+    $dir = dirname($path);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0775, true);
+    }
+}
+
+function read_json_file(string $path): ?array
+{
+    if (!file_exists($path)) {
+        return null;
+    }
+
+    $decoded = json_decode((string)file_get_contents($path), true);
+    return is_array($decoded) ? $decoded : null;
 }
 
 function social_result(?int $count, ?string $error = null): array
@@ -58,7 +77,7 @@ function apply_fallback(array $result, ?string $fallback): array
 
 function fetch_json(string $url, array $options = []): array
 {
-    $timeout = isset($options['timeout']) ? (int)$options['timeout'] : 10;
+    $timeout = isset($options['timeout']) ? (int)$options['timeout'] : 4;
     $headers = $options['headers'] ?? [];
     $method = strtoupper($options['method'] ?? 'GET');
     $body = $options['body'] ?? null;
@@ -68,7 +87,7 @@ function fetch_json(string $url, array $options = []): array
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_TIMEOUT => $timeout,
-        CURLOPT_CONNECTTIMEOUT => $timeout,
+        CURLOPT_CONNECTTIMEOUT => max(2, min($timeout, 3)),
     ];
 
     if ($method === 'POST') {
@@ -255,10 +274,7 @@ function tiktok_token_cache_file(): string
 function tiktok_write_cache(array $data): void
 {
     $cacheFile = tiktok_token_cache_file();
-    $cacheDir = dirname($cacheFile);
-    if (!is_dir($cacheDir)) {
-        @mkdir($cacheDir, 0775, true);
-    }
+    ensure_parent_dir($cacheFile);
     @file_put_contents($cacheFile, json_encode($data, JSON_UNESCAPED_SLASHES));
 }
 
@@ -312,8 +328,8 @@ function tiktok_resolve_token(array $cfg): array
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => $postData,
                 CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
-                CURLOPT_TIMEOUT => 15,
-                CURLOPT_CONNECTTIMEOUT => 10,
+                CURLOPT_TIMEOUT => 8,
+                CURLOPT_CONNECTTIMEOUT => 4,
             ]);
             $raw = curl_exec($ch);
             $status = curl_getinfo($ch, CURLINFO_HTTP_CODE) ?: 0;
@@ -413,6 +429,90 @@ function fetch_tiktok(array $cfg): array
     return social_result($count !== null ? $count : null, $count === null ? 'follower_count non disponibile' : null);
 }
 
+function finalize_cached_counts(array $counts, array $config): array
+{
+    return [
+        'instagram' => apply_fallback(
+            $counts['instagram'] ?? social_result(null, 'Cache mancante'),
+            $config['FALLBACK_INSTAGRAM']
+        ),
+        'facebook' => apply_fallback(
+            $counts['facebook'] ?? social_result(null, 'Cache mancante'),
+            $config['FALLBACK_FACEBOOK']
+        ),
+        'tiktok' => apply_fallback(
+            $counts['tiktok'] ?? social_result(null, 'Cache mancante'),
+            $config['FALLBACK_TIKTOK']
+        ),
+        'youtube' => apply_fallback(
+            $counts['youtube'] ?? social_result(null, 'Cache mancante'),
+            $config['FALLBACK_YOUTUBE']
+        ),
+    ];
+}
+
+function serve_cached_payload(array $cached, array $config, bool $stale = false): void
+{
+    json_response([
+        'cached' => true,
+        'stale' => $stale,
+        'updated_at' => $cached['updated_at'] ?? time(),
+        'counts' => finalize_cached_counts($cached['counts'] ?? [], $config),
+    ]);
+}
+
+function fallback_only_payload(array $config): array
+{
+    return [
+        'instagram' => apply_fallback(social_result(null, 'Cache in aggiornamento'), $config['FALLBACK_INSTAGRAM']),
+        'facebook' => apply_fallback(social_result(null, 'Cache in aggiornamento'), $config['FALLBACK_FACEBOOK']),
+        'youtube' => apply_fallback(social_result(null, 'Cache in aggiornamento'), $config['FALLBACK_YOUTUBE']),
+        'tiktok' => apply_fallback(social_result(null, 'Cache in aggiornamento'), $config['FALLBACK_TIKTOK']),
+    ];
+}
+
+function build_payload(array $config): array
+{
+    return [
+        'cached' => false,
+        'updated_at' => time(),
+        'counts' => [
+            'instagram' => apply_fallback(
+                fetch_instagram($config),
+                $config['FALLBACK_INSTAGRAM']
+            ),
+            'facebook' => apply_fallback(
+                fetch_facebook($config),
+                $config['FALLBACK_FACEBOOK']
+            ),
+            'youtube' => apply_fallback(
+                fetch_youtube($config),
+                $config['FALLBACK_YOUTUBE']
+            ),
+            'tiktok' => apply_fallback(
+                fetch_tiktok($config),
+                $config['FALLBACK_TIKTOK']
+            ),
+        ],
+    ];
+}
+
+function merge_with_cached_counts(array $freshPayload, ?array $cachedPayload): array
+{
+    if (!is_array($cachedPayload) || !isset($cachedPayload['counts']) || !is_array($cachedPayload['counts'])) {
+        return $freshPayload;
+    }
+
+    foreach ($freshPayload['counts'] as $key => $result) {
+        $cachedResult = $cachedPayload['counts'][$key] ?? null;
+        if (($result['count'] ?? null) === null && is_array($cachedResult) && ($cachedResult['count'] ?? null) !== null) {
+            $freshPayload['counts'][$key]['count'] = (int)$cachedResult['count'];
+        }
+    }
+
+    return $freshPayload;
+}
+
 $config = [
     'META_PAGE_TOKEN' => getenv('META_PAGE_TOKEN') ?: '',
     'META_PAGE_ID' => getenv('META_PAGE_ID') ?: '',
@@ -431,68 +531,52 @@ $config = [
 ];
 
 $cacheFile = __DIR__ . '/../cache/social_followers.json';
-$cacheTtl = 15 * 60; // 15 minuti
+$lockFile = __DIR__ . '/../cache/social_followers.lock';
+$cacheTtl = 6 * 60 * 60; // 6 ore
+$staleCacheTtl = 7 * 24 * 60 * 60; // 7 giorni
 $force = isset($_GET['force']) && $_GET['force'] === '1';
+$cachedPayload = read_json_file($cacheFile);
+$cacheAge = file_exists($cacheFile) ? max(0, time() - (int)filemtime($cacheFile)) : null;
 
-if (!$force && file_exists($cacheFile)) {
-    $age = time() - filemtime($cacheFile);
-    if ($age < $cacheTtl) {
-        $cached = json_decode((string)file_get_contents($cacheFile), true);
-        if (is_array($cached)) {
-            if (isset($cached['counts']) && is_array($cached['counts'])) {
-                $cached['counts']['instagram'] = apply_fallback(
-                    $cached['counts']['instagram'] ?? social_result(null, 'Cache mancante'),
-                    $config['FALLBACK_INSTAGRAM']
-                );
-                $cached['counts']['facebook'] = apply_fallback(
-                    $cached['counts']['facebook'] ?? social_result(null, 'Cache mancante'),
-                    $config['FALLBACK_FACEBOOK']
-                );
-                $cached['counts']['tiktok'] = apply_fallback(
-                    $cached['counts']['tiktok'] ?? social_result(null, 'Cache mancante'),
-                    $config['FALLBACK_TIKTOK']
-                );
-                $cached['counts']['youtube'] = apply_fallback(
-                    $cached['counts']['youtube'] ?? social_result(null, 'Cache mancante'),
-                    $config['FALLBACK_YOUTUBE']
-                );
-            }
-            json_response([
-                'cached' => true,
-                'updated_at' => $cached['updated_at'] ?? filemtime($cacheFile),
-                'counts' => $cached['counts'] ?? [],
-            ]);
-        }
+if (!$force && is_array($cachedPayload) && $cacheAge !== null && $cacheAge < $cacheTtl) {
+    serve_cached_payload($cachedPayload, $config);
+}
+
+ensure_parent_dir($lockFile);
+$lockHandle = @fopen($lockFile, 'c+');
+$hasLock = $lockHandle && @flock($lockHandle, LOCK_EX | LOCK_NB);
+
+if (!$hasLock) {
+    if (!$force && is_array($cachedPayload) && $cacheAge !== null && $cacheAge < $staleCacheTtl) {
+        serve_cached_payload($cachedPayload, $config, true);
+    }
+
+    json_response([
+        'cached' => false,
+        'refreshing' => true,
+        'updated_at' => time(),
+        'counts' => fallback_only_payload($config),
+    ]);
+}
+
+try {
+    clearstatcache(true, $cacheFile);
+    $cachedPayload = read_json_file($cacheFile);
+    $cacheAge = file_exists($cacheFile) ? max(0, time() - (int)filemtime($cacheFile)) : null;
+
+    if (!$force && is_array($cachedPayload) && $cacheAge !== null && $cacheAge < $cacheTtl) {
+        serve_cached_payload($cachedPayload, $config);
+    }
+
+    $payload = merge_with_cached_counts(build_payload($config), $cachedPayload);
+    ensure_parent_dir($cacheFile);
+    @file_put_contents($cacheFile, json_encode($payload, JSON_UNESCAPED_SLASHES));
+    json_response($payload);
+} finally {
+    if ($hasLock && $lockHandle) {
+        @flock($lockHandle, LOCK_UN);
+    }
+    if ($lockHandle) {
+        @fclose($lockHandle);
     }
 }
-
-$payload = [
-    'cached' => false,
-    'updated_at' => time(),
-    'counts' => [
-        'instagram' => apply_fallback(
-            fetch_instagram($config),
-            $config['FALLBACK_INSTAGRAM']
-        ),
-        'facebook' => apply_fallback(
-            fetch_facebook($config),
-            $config['FALLBACK_FACEBOOK']
-        ),
-        'youtube' => apply_fallback(
-            fetch_youtube($config),
-            $config['FALLBACK_YOUTUBE']
-        ),
-        'tiktok' => apply_fallback(
-            fetch_tiktok($config),
-            $config['FALLBACK_TIKTOK']
-        ),
-    ],
-];
-
-$cacheDir = dirname($cacheFile);
-if (!is_dir($cacheDir)) {
-    @mkdir($cacheDir, 0775, true);
-}
-@file_put_contents($cacheFile, json_encode($payload, JSON_UNESCAPED_SLASHES));
-
-json_response($payload);

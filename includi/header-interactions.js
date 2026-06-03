@@ -6,6 +6,8 @@
   window.__HEADER_INTERACTIONS_INITIALIZED__ = true;
 
   const headerStates = new Map();
+  const SOCIAL_CACHE_KEY = "tosSocialCountsCache";
+  const SOCIAL_CACHE_TTL_MS = 60 * 60 * 1000;
   let globalListenersReady = false;
 
   function updateBadgeDisplay(badgeEl, unread) {
@@ -316,9 +318,8 @@
   }
 
   function startNotifBadgePolling(state) {
-    if (!state || state.badgePollId || !state.notifBadge) return;
+    if (!state || !state.notifBadge) return;
     fetchBadgeCount(state);
-    state.badgePollId = window.setInterval(() => fetchBadgeCount(state), 60000);
   }
 
   function loadNotifications(state) {
@@ -412,12 +413,52 @@
     });
   }
 
+  function readSocialCache() {
+    try {
+      const raw = sessionStorage.getItem(SOCIAL_CACHE_KEY);
+      if (!raw) {
+        return null;
+      }
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object" || !parsed.counts || typeof parsed.counts !== "object") {
+        return null;
+      }
+      const ts = Number(parsed.ts) || 0;
+      if (ts <= 0 || (Date.now() - ts) > SOCIAL_CACHE_TTL_MS) {
+        return null;
+      }
+      return parsed.counts;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function writeSocialCache(counts) {
+    try {
+      sessionStorage.setItem(SOCIAL_CACHE_KEY, JSON.stringify({
+        ts: Date.now(),
+        counts: counts || {},
+      }));
+    } catch (err) {
+      // ignore storage failures
+    }
+  }
+
   function fetchSocialCounts() {
+    const cachedCounts = readSocialCache();
+    if (cachedCounts) {
+      socialState.requested = true;
+      renderSocialCounts(cachedCounts);
+      return;
+    }
+
     socialState.requested = true;
     fetch("/api/social_followers.php", { credentials: "same-origin" })
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((payload) => {
-        renderSocialCounts((payload && payload.counts) || {});
+        const counts = (payload && payload.counts) || {};
+        writeSocialCache(counts);
+        renderSocialCounts(counts);
       })
       .catch(() => {
         renderSocialCounts({});
