@@ -15,7 +15,7 @@ try {
   $torneo = $_GET['torneo'] ?? '';
   $fase = strtoupper($_GET['fase'] ?? '');
   $idPartita = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-  $fasiAmmesse = ['REGULAR','GOLD','SILVER','BRONZO'];
+  $fasiAmmesse = ['REGULAR','SPAREGGIO','GOLD','SILVER','BRONZO'];
   if(!$torneo && $idPartita <= 0){ respondError("Parametro 'torneo' mancante.", 400); }
 
   // Se non arriva il torneo ma arriva l'id, recuperalo dalla partita
@@ -71,7 +71,7 @@ try {
     $params[] = $fase;
   }
   $query .= " ORDER BY 
-    CASE WHEN p.fase = 'REGULAR' THEN COALESCE(p.giornata, 0) ELSE 999 END,
+    CASE WHEN p.fase IN ('REGULAR', 'SPAREGGIO') THEN COALESCE(p.giornata, 0) ELSE 999 END,
     p.data_partita ASC,
     p.ora_partita ASC";
 

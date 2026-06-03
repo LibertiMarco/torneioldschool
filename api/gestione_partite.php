@@ -13,6 +13,7 @@ $squadrePerTorneo = [];
 $campiPartita = [];
 $fasiAmmesse = ['REGULAR', 'GOLD', 'SILVER', 'BRONZO'];
 $fasiAmmesseConBronzo = ['REGULAR', 'GOLD', 'SILVER', 'BRONZO'];
+$fasiAmmesseConSpareggio = ['REGULAR', 'SPAREGGIO', 'GOLD', 'SILVER', 'BRONZO'];
 $maxGiornateRegular = 10;
 $roundMap = [
   'TRENTADUESIMI' => 6,
@@ -65,6 +66,15 @@ function sanitize_int(?string $v): int {
 function sanitize_fase(?string $v, array $allowed): string {
   $val = strtoupper(trim((string)$v));
   return in_array($val, $allowed, true) ? $val : 'REGULAR';
+}
+
+function is_spareggio_phase(?string $fase): bool {
+  return strtoupper(trim((string)$fase)) === 'SPAREGGIO';
+}
+
+function phase_uses_round(?string $fase): bool {
+  $normalized = strtoupper(trim((string)$fase));
+  return $normalized !== '' && $normalized !== 'REGULAR' && $normalized !== 'SPAREGGIO';
 }
 
 function sanitize_leg(?string $v): ?string {
@@ -779,7 +789,7 @@ function partitaRegularGiaInseritaInAltraGiornata(
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($azione === 'crea') {
     $torneo = sanitize_text($_POST['torneo'] ?? '');
-    $fase = sanitize_fase($_POST['fase'] ?? '', $fasiAmmesseConBronzo);
+    $fase = sanitize_fase($_POST['fase'] ?? '', $fasiAmmesseConSpareggio);
     $casa = sanitize_text($_POST['squadra_casa'] ?? '');
     $ospite = sanitize_text($_POST['squadra_ospite'] ?? '');
     $data = sanitize_text($_POST['data_partita'] ?? '');
@@ -787,12 +797,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $campo = sanitize_text($_POST['campo'] ?? '');
     $roundSelezionato = sanitize_text($_POST['round_eliminazione'] ?? '');
     $giornata = sanitize_int($_POST['giornata'] ?? '');
-    $faseRound = $fase !== 'REGULAR' ? strtoupper($roundSelezionato) : null;
+    $faseUsesRound = phase_uses_round($fase);
+    $isSpareggio = is_spareggio_phase($fase);
+    $faseRound = $faseUsesRound ? strtoupper($roundSelezionato) : null;
     $faseRound = ($faseRound && in_array($faseRound, ['TRENTADUESIMI','SEDICESIMI','OTTAVI','QUARTI','SEMIFINALE','FINALE'], true)) ? $faseRound : null;
-    $faseLegInput = $fase !== 'REGULAR' ? sanitize_leg($_POST['fase_leg'] ?? '') : null;
-    $faseLeg = $fase !== 'REGULAR'
+    $faseLegInput = $faseUsesRound ? sanitize_leg($_POST['fase_leg'] ?? '') : null;
+    $faseLeg = $faseUsesRound
       ? ($faseLegInput ?: (round_supports_two_legs($faseRound) ? 'ANDATA' : 'UNICA'))
-      : null;
+      : ($isSpareggio ? 'UNICA' : null);
     $giocata = 0; // sempre non giocata alla creazione
     $gol_casa = sanitize_int($_POST['gol_casa'] ?? '0');
     $gol_ospite = sanitize_int($_POST['gol_ospite'] ?? '0');
@@ -803,15 +815,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rigori_casa = $decisa_rigori ? sanitize_int($_POST['rigori_casa'] ?? '') : null;
     $rigori_ospite = $decisa_rigori ? sanitize_int($_POST['rigori_ospite'] ?? '') : null;
 
-    if ($torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($fase !== 'REGULAR' && $roundSelezionato === '')) {
+    if ($isSpareggio) {
+      $giornata = 1;
+    }
+
+    if ($torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($faseUsesRound && $roundSelezionato === '')) {
       $errore = 'Compila tutti i campi obbligatori.';
     } elseif ($casa === $ospite) {
       $errore = 'Le due squadre non possono coincidere.';
-    } elseif ($fase !== 'REGULAR' && !$faseLeg) {
+    } elseif ($faseUsesRound && !$faseLeg) {
       $errore = 'Seleziona il tipo di gara (andata/ritorno/unica).';
     } else {
-      if ($fase !== 'REGULAR') {
+      if ($faseUsesRound) {
         $giornata = round_to_giornata($roundSelezionato, $roundMap) ?? 0;
+      } elseif ($isSpareggio) {
+        $giornata = 1;
       }
       // controllo: una squadra non può avere due partite nella stessa giornata della stessa fase
       if (squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, null, $faseRound, $faseLeg)) {
@@ -917,7 +935,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($azione === 'modifica') {
     $id = (int)($_POST['partita_id'] ?? 0);
     $torneo = sanitize_text($_POST['torneo_mod'] ?? '');
-    $fase = sanitize_fase($_POST['fase_mod'] ?? '', $fasiAmmesseConBronzo);
+    $fase = sanitize_fase($_POST['fase_mod'] ?? '', $fasiAmmesseConSpareggio);
     $casa = sanitize_text($_POST['squadra_casa_mod'] ?? '');
     $ospite = sanitize_text($_POST['squadra_ospite_mod'] ?? '');
     $data = sanitize_text($_POST['data_partita_mod'] ?? '');
@@ -925,11 +943,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $campo = sanitize_text($_POST['campo_mod'] ?? '');
     $roundSelezionato = sanitize_text($_POST['round_eliminazione_mod'] ?? '');
     $giornata = sanitize_int($_POST['giornata_mod'] ?? '');
-    $faseRound = $fase !== 'REGULAR' ? strtoupper($roundSelezionato) : null;
-    $faseLegInput = $fase !== 'REGULAR' ? sanitize_leg($_POST['fase_leg_mod'] ?? '') : null;
-    $faseLeg = $fase !== 'REGULAR'
+    $faseUsesRound = phase_uses_round($fase);
+    $isSpareggio = is_spareggio_phase($fase);
+    $faseRound = $faseUsesRound ? strtoupper($roundSelezionato) : null;
+    $faseLegInput = $faseUsesRound ? sanitize_leg($_POST['fase_leg_mod'] ?? '') : null;
+    $faseLeg = $faseUsesRound
       ? ($faseLegInput ?: (round_supports_two_legs($faseRound) ? 'ANDATA' : 'UNICA'))
-      : null;
+      : ($isSpareggio ? 'UNICA' : null);
     // usa il flag inviato dal form; non forziamo piï¿½ true di default
     $giocata = isset($_POST['giocata_mod']) && $_POST['giocata_mod'] === '1' ? 1 : 0;
     $gol_casa = sanitize_int($_POST['gol_casa_mod'] ?? '0');
@@ -953,15 +973,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
     }
 
-    if ($id <= 0 || $torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($fase !== 'REGULAR' && $roundSelezionato === '')) {
+    if ($isSpareggio) {
+      $giornata = 1;
+    }
+
+    if ($id <= 0 || $torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($faseUsesRound && $roundSelezionato === '')) {
       $errore = 'Seleziona una partita e compila i campi obbligatori.';
     } elseif ($casa === $ospite) {
       $errore = 'Le due squadre non possono coincidere.';
-    } elseif ($fase !== 'REGULAR' && !$faseLeg) {
+    } elseif ($faseUsesRound && !$faseLeg) {
       $errore = 'Seleziona il tipo di gara (andata/ritorno/unica).';
     } else {
-      if ($fase !== 'REGULAR') {
+      if ($faseUsesRound) {
         $giornata = round_to_giornata($roundSelezionato, $roundMap) ?? 0;
+      } elseif ($isSpareggio) {
+        $giornata = 1;
       }
       if (squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, $id, $faseRound, $faseLeg)) {
         $errore = 'Una delle squadre ha già una partita in questa giornata per questa fase.';
@@ -2001,6 +2027,14 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   const roundLabelFromGiornata = Object.fromEntries(Object.entries(roundLabelMap).map(([k,v]) => [String(v), k]));
   const roundLabelByKey = roundLabelFromGiornata;
   const basePhaseOptions = <?php echo json_encode($fasiAmmesseConBronzo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+  const isFormula1Tournament = (torneoSlug = '') => String(torneoSlug || '').trim().toLowerCase() === 'formula1';
+  const isRegularPhase = (phase = '') => String(phase || '').trim().toUpperCase() === 'REGULAR';
+  const isSpareggioPhase = (phase = '') => String(phase || '').trim().toUpperCase() === 'SPAREGGIO';
+  const isRoundBasedPhase = (phase = '') => !isRegularPhase(phase) && !isSpareggioPhase(phase);
+  const getSpareggioSlotLabel = (slotValue) => {
+    const normalized = String(slotValue ?? '').trim();
+    return normalized === '' || normalized === '1' ? 'Spareggio' : `Spareggio ${normalized}`;
+  };
 
   // Tabs
   const tabButtons = document.querySelectorAll('.tab-buttons button');
@@ -2029,7 +2063,11 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   };
 
   const getPhaseOptionsForTournament = (torneoSlug = '') => {
-    return [...basePhaseOptions];
+    const options = [...basePhaseOptions];
+    if (isFormula1Tournament(torneoSlug) && !options.includes('SPAREGGIO')) {
+      options.splice(1, 0, 'SPAREGGIO');
+    }
+    return options;
   };
 
   const syncPhaseSelectOptions = (selectEl, torneoSlug = '', placeholder = '') => {
@@ -2077,9 +2115,12 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
 
   const getGiornataTarget = () => {
     const faseVal = (faseCrea?.value || '').toUpperCase();
-    if (faseVal === 'REGULAR') {
+    if (isRegularPhase(faseVal)) {
       const g = parseInt(giornataCrea?.value || '', 10);
       return isNaN(g) ? null : g;
+    }
+    if (isSpareggioPhase(faseVal)) {
+      return 1;
     }
     const lbl = roundCrea?.value || '';
     return roundLabelMap[lbl] ? roundLabelMap[lbl] : null;
@@ -2203,13 +2244,16 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   enforceDifferentTeams('squadraCasaCrea', 'squadraOspiteCrea');
 
   function toggleRoundGiornata(faseSelect, giornataWrapId, roundWrapId, legWrapId = '', legSelectId = '') {
-    const isRegular = (faseSelect.value || '').toUpperCase() === 'REGULAR';
+    const phaseVal = (faseSelect?.value || '').toUpperCase();
+    const isRegular = isRegularPhase(phaseVal);
+    const isSpareggio = isSpareggioPhase(phaseVal);
+    const isRoundPhase = isRoundBasedPhase(phaseVal);
     const giornataWrap = document.getElementById(giornataWrapId);
     const roundWrap = document.getElementById(roundWrapId);
     const legWrap = legWrapId ? document.getElementById(legWrapId) : null;
     const legSelect = legSelectId ? document.getElementById(legSelectId) : null;
     if (giornataWrap) giornataWrap.classList.toggle('hidden', !isRegular);
-    if (roundWrap) roundWrap.classList.toggle('hidden', isRegular);
+    if (roundWrap) roundWrap.classList.toggle('hidden', !isRoundPhase);
     const giornataField = giornataWrap ? giornataWrap.querySelector('input, select') : null;
     const roundSelect = roundWrap ? roundWrap.querySelector('select') : null;
     if (giornataField) {
@@ -2217,11 +2261,11 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
       if (!isRegular) giornataField.value = '';
     }
     if (roundSelect) {
-      roundSelect.required = !isRegular;
-      if (isRegular) roundSelect.value = '';
+      roundSelect.required = isRoundPhase;
+      if (!isRoundPhase) roundSelect.value = '';
     }
     const roundVal = (roundSelect?.value || '').toUpperCase();
-    const isLegRound = !isRegular && isTwoLegRound(roundVal);
+    const isLegRound = isRoundPhase && isTwoLegRound(roundVal);
 
     if (legWrap) legWrap.classList.toggle('hidden', !isLegRound);
     if (legSelect) {
@@ -2320,19 +2364,22 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     const roundSel = document.getElementById('round_eliminazione_mod');
     const giornataInput = document.getElementById('giornata_mod');
     const legModSelect = document.getElementById('faseLegMod');
-    const isModRegular = (partita.fase || '').toUpperCase() === 'REGULAR';
-    if (partita.fase && !isModRegular) {
+    const isModRegular = isRegularPhase(partita.fase || '');
+    const isModSpareggio = isSpareggioPhase(partita.fase || '');
+    if (partita.fase && isRoundBasedPhase(partita.fase || '')) {
       const lbl = roundLabelFromGiornata[String(partita.giornata)] || '';
       if (roundSel) roundSel.value = lbl;
       if (giornataInput) giornataInput.value = '';
     } else {
       if (roundSel) roundSel.value = '';
-      fillField('giornata_mod', partita.giornata);
+      fillField('giornata_mod', isModSpareggio ? '' : partita.giornata);
     }
     if (legModSelect) {
       let legVal = (partita.fase_leg || '').toUpperCase();
       const roundVal = (roundSel?.value || '').toUpperCase();
-      if (!legVal && !isModRegular) {
+      if (isModSpareggio) {
+        legVal = 'UNICA';
+      } else if (!legVal && !isModRegular) {
         legVal = isTwoLegRound(roundVal) ? 'ANDATA' : 'UNICA';
       }
       legModSelect.value = legVal || 'UNICA';
@@ -2383,8 +2430,10 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
       uniche.forEach(g => {
         const opt = document.createElement('option');
         opt.value = g;
-        if (faseVal === 'REGULAR') {
+        if (isRegularPhase(faseVal)) {
           opt.textContent = `Giornata ${g}`;
+        } else if (isSpareggioPhase(faseVal)) {
+          opt.textContent = getSpareggioSlotLabel(g);
         } else {
           opt.textContent = roundLabelByKey[String(g)] || 'Turno';
         }

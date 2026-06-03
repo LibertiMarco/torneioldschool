@@ -6,7 +6,7 @@ require_once __DIR__ . '/../includi/db.php';
 
 $torneo = $_GET['torneo'] ?? '';
 $fase = strtoupper($_GET['fase'] ?? '');
-$fasiAmmesse = ['REGULAR','GOLD','SILVER'];
+$fasiAmmesse = ['REGULAR','SPAREGGIO','GOLD','SILVER'];
 if(!$torneo){ echo json_encode(['error'=>"Parametro 'torneo' mancante"]); exit; }
 
 $sql="SELECT id, giornata, data_partita, ora_partita, squadra_casa, squadra_ospite, gol_casa, gol_ospite, giocata, fase, fase_round, fase_leg
@@ -20,7 +20,7 @@ if ($fase && in_array($fase, $fasiAmmesse, true)) {
 }
 $sql .= " ORDER BY 
     CASE 
-        WHEN fase = 'REGULAR' THEN COALESCE(giornata, 0)
+        WHEN fase IN ('REGULAR', 'SPAREGGIO') THEN COALESCE(giornata, 0)
         WHEN fase_round = 'OTTAVI' THEN 1
         WHEN fase_round = 'QUARTI' THEN 2
         WHEN fase_round = 'SEMIFINALE' THEN 3
@@ -40,7 +40,9 @@ $roundMap = [
 $out=[];
 while($r=$res->fetch_assoc()){
     $g=$r['giornata'];
-    if ($r['fase'] !== 'REGULAR') {
+    if (($r['fase'] ?? '') === 'SPAREGGIO') {
+        $g = $r['giornata'] !== null ? (int)$r['giornata'] : 1;
+    } elseif ($r['fase'] !== 'REGULAR') {
         $round = strtoupper($r['fase_round'] ?? '');
         $g = $roundMap[$round] ?? $round ?: 'KO';
     }

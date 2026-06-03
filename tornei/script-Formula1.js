@@ -42,6 +42,7 @@ const GOLD_PER_GROUP = USE_GROUP_TABLES && GROUP_COUNT > 0 ? Math.floor(GOLD_SPO
 const SILVER_PER_GROUP = USE_GROUP_TABLES && GROUP_COUNT > 0 ? Math.floor(SILVER_SPOTS / GROUP_COUNT) : 0;
 const USE_COPPE = GOLD_SPOTS > 0 || SILVER_SPOTS > 0;
 const USE_SPAREGGIO_SEEDING = SPAREGGIO_SPOTS >= 2;
+const PHASE_SPAREGGIO = "SPAREGGIO";
 const teamLogos = {};
 const favState = { tournaments: new Set(), teams: new Set() };
 let currentRosaTeam = "";
@@ -839,7 +840,10 @@ function getDefaultCalendarRound(faseSelezionata, giornateDisponibili = [], gior
   const preferred = available.filter(g => pendingSet.has(g));
   const source = preferred.length ? preferred : available;
   if (!source.length) return "";
-  return fase === "REGULAR" ? source[0] : source[source.length - 1];
+  if (fase === "REGULAR" || fase === PHASE_SPAREGGIO) {
+    return source[0];
+  }
+  return source[source.length - 1];
 }
 
 function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], giornateConPartiteDaGiocare = [], selected = "") {
@@ -847,16 +851,35 @@ function updateGiornataFilter(faseSelezionata, giornateDisponibili = [], giornat
   const select = document.getElementById("giornataSelect");
   const label = wrapper ? wrapper.querySelector("label[for='giornataSelect']") : null;
   if (!select) return;
-  const isRegular = (faseSelezionata || "").toUpperCase() === "REGULAR";
+  const fase = (faseSelezionata || "").toUpperCase();
+  const isRegular = fase === "REGULAR";
+  const isSpareggio = fase === PHASE_SPAREGGIO;
   const fallback = getDefaultCalendarRound(faseSelezionata, giornateDisponibili, giornateConPartiteDaGiocare);
 
   if (wrapper) wrapper.style.display = "flex";
-  if (label) label.textContent = isRegular ? "Giornata:" : "Turno:";
+  if (label) {
+    label.textContent = isRegular ? "Giornata:" : (isSpareggio ? "Spareggi:" : "Turno:");
+  }
 
   select.innerHTML = "";
   if (isRegular) {
     giornateDisponibili.forEach(g => {
       select.add(new Option(`Giornata ${g}`, g));
+    });
+    const target = selected ? String(selected) : fallback;
+    if (target && Array.from(select.options).some(opt => opt.value === target)) {
+      select.value = target;
+    } else if (fallback) {
+      select.value = fallback;
+    }
+    return;
+  }
+
+  if (isSpareggio) {
+    giornateDisponibili.forEach(g => {
+      const key = String(g);
+      const optionLabel = key === "1" ? "Spareggi" : `Spareggi ${key}`;
+      select.add(new Option(optionLabel, key));
     });
     const target = selected ? String(selected) : fallback;
     if (target && Array.from(select.options).some(opt => opt.value === target)) {
@@ -938,6 +961,8 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       const titolo = document.createElement("h3");
       if ((faseSelezionata || "").toUpperCase() === "REGULAR") {
         titolo.textContent = `Giornata ${numGiornata}`;
+      } else if ((faseSelezionata || "").toUpperCase() === PHASE_SPAREGGIO) {
+        titolo.textContent = String(numGiornata) === "1" ? "Spareggi" : `Spareggi ${numGiornata}`;
       } else {
         const labelRound = roundLabelByKey[String(numGiornata)] || "Fase eliminazione";
         titolo.textContent = labelRound;
@@ -945,7 +970,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       giornataDiv.appendChild(titolo);
 
             const partiteGiornata = dataFiltrata[numGiornata] || [];
-      const isSemifinale = fase !== "REGULAR" && String(numGiornata) === "2";
+      const isSemifinale = fase !== "REGULAR" && fase !== PHASE_SPAREGGIO && String(numGiornata) === "2";
 
       const renderPartita = (container, partita) => {
         const partitaDiv = document.createElement("div");
@@ -1048,6 +1073,123 @@ calendarioSection.appendChild(giornataDiv);
     });
   } catch (err) {
     console.error("Errore nel caricamento del calendario:", err);
+  }
+}
+
+async function caricaSpareggio() {
+  const container = document.getElementById("playoffContainer");
+  if (!container) return;
+
+  container.innerHTML = `
+    <h3 class="bracket-titolo">Spareggi</h3>
+    <div id="spareggioContent"></div>
+  `;
+
+  try {
+    const res = await fetch(`/api/get_partite.php?torneo=${encodeURIComponent(TORNEO)}&fase=${PHASE_SPAREGGIO}`);
+    const data = await res.json();
+
+    if (data.error) {
+      container.innerHTML += `<p>Errore nel caricamento delle partite spareggio.</p>`;
+      return;
+    }
+
+    const content = document.getElementById("spareggioContent");
+    const giornate = Object.keys(data || {}).sort((a, b) => Number(a) - Number(b));
+    if (!content) return;
+
+    if (!giornate.length) {
+      content.innerHTML = `<p>Nessuna partita di spareggio disponibile.</p>`;
+      return;
+    }
+
+    giornate.forEach(giornataKey => {
+      const giornataDiv = document.createElement("div");
+      giornataDiv.className = "giornata";
+
+      const title = document.createElement("h3");
+      title.textContent = String(giornataKey) === "1" ? "Spareggi" : `Spareggi ${giornataKey}`;
+      giornataDiv.appendChild(title);
+
+      const partite = (data[giornataKey] || []).slice().sort((a, b) =>
+        (a.data_partita || "").localeCompare(b.data_partita || "") ||
+        (a.ora_partita || "").localeCompare(b.ora_partita || "")
+      );
+
+      partite.forEach(partita => {
+        const partitaDiv = document.createElement("div");
+        partitaDiv.classList.add("match-card");
+
+        const hasScore = partita.gol_casa !== null && partita.gol_ospite !== null;
+        const giocata = String(partita.giocata) === "1";
+        const mostraRisultato = giocata && hasScore;
+        const hasPlayerStats = Number(partita.ha_statistiche_giocatori || 0) === 1;
+        const canOpenMatchStats = mostraRisultato && hasPlayerStats;
+        const aiRigori = mostraRisultato && Number(partita.decisa_rigori || 0) === 1;
+        const hasPenalties = aiRigori && partita.rigori_casa !== null && partita.rigori_casa !== undefined && partita.rigori_ospite !== null && partita.rigori_ospite !== undefined;
+
+        if (canOpenMatchStats) {
+          partitaDiv.style.cursor = "pointer";
+          partitaDiv.onclick = () => {
+            window.location.href = `partita_eventi.php?id=${partita.id}&torneo=${TORNEO}`;
+          };
+        } else {
+          partitaDiv.style.cursor = "default";
+        }
+
+        const dataStr = formattaData(partita.data_partita);
+        const stadio = partita.campo || "Campo da definire";
+        const logoCasa = resolveLogoPath(partita.squadra_casa, partita.logo_casa);
+        const logoOspite = resolveLogoPath(partita.squadra_ospite, partita.logo_ospite);
+        const showOra = dataStr !== "Data da definire" && partita.ora_partita;
+
+        partitaDiv.innerHTML = `
+          <div class="match-header">
+            <span>
+              ${stadio}
+              ${
+                stadio && stadio !== "Campo da definire"
+                  ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stadio)}"
+                        target="_blank"
+                        class="maps-link">&#128205;</a>`
+                  : ""
+              }
+            </span>
+            <span>${dataStr}${showOra ? " - " + partita.ora_partita.slice(0, 5) : ""}</span>
+          </div>
+
+          <div class="match-body">
+            <div class="team home">
+              <img src="${logoCasa}" alt="${partita.squadra_casa}" class="team-logo">
+              <span class="team-name">${partita.squadra_casa}</span>
+            </div>
+
+            <div class="match-center">
+              ${
+                mostraRisultato
+                  ? `<span class="score">${partita.gol_casa}</span>
+                     <span class="dash-cal">-</span>
+                     <span class="score">${partita.gol_ospite}</span>`
+                  : `<span class="vs">VS</span>`
+              }
+            </div>
+
+            <div class="team away">
+              <img src="${logoOspite}" alt="${partita.squadra_ospite}" class="team-logo">
+              <span class="team-name">${partita.squadra_ospite}</span>
+            </div>
+          </div>
+          ${hasPenalties ? `<div class="match-penalties">d.c.r. ${partita.rigori_casa}-${partita.rigori_ospite}</div>` : ""}
+        `;
+
+        giornataDiv.appendChild(partitaDiv);
+      });
+
+      content.appendChild(giornataDiv);
+    });
+  } catch (err) {
+    console.error("Errore nel caricamento spareggio:", err);
+    container.innerHTML += `<p>Errore nel caricamento delle partite spareggio.</p>`;
   }
 }
 
@@ -1493,6 +1635,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       caricaPlayoff(coppaSelect.value);
+    } else if (faseSelect.value === "spareggio") {
+      removeCoppeLegend();
+      classificaWrapper.style.display = "none";
+      playoffContainer.style.display = "block";
+      caricaSpareggio();
 
     } else {
       playoffContainer.style.display = "none";

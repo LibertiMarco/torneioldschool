@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/../includi/require_login.php';
 
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 // Template base per creare un nuovo torneo:
 // 1) Duplica questo file e rinominalo (es. NuovoTorneo.php)
 // 2) Imposta $torneoSlug e $torneoName qui sotto
@@ -9,7 +13,7 @@ require_once __DIR__ . '/../includi/require_login.php';
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
 $torneoSlug = 'Formula1';
 $torneoName = 'Formula 1';
-$assetVersion = '20260529a';
+$assetVersion = '20260603a';
 
 require_once __DIR__ . '/../includi/db.php';
 $torneoConfig = [];
@@ -530,6 +534,7 @@ if (!empty($torneoConfig['regole_html'])) {
         <div class="filtro-fase-selects">
           <select id="faseSelect">
             <option value="girone" selected>REGULAR SEASON</option>
+            <option value="spareggio">SPAREGGI</option>
             <option value="eliminazione">ELIMINAZIONE DIRETTA</option>
           </select>
 
@@ -581,6 +586,7 @@ if (!empty($torneoConfig['regole_html'])) {
           <label for="faseCalendario">Fase:</label>
           <select id="faseCalendario">
             <option value="REGULAR" selected>Regular</option>
+            <option value="SPAREGGIO">Spareggi</option>
             <?php if ($showGoldCup): ?>
               <option value="GOLD">Gold</option>
             <?php endif; ?>

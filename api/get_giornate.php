@@ -6,7 +6,8 @@ require_once __DIR__ . '/../includi/db.php';
 
 $torneo = $_GET['torneo'] ?? '';
 $fase = strtoupper($_GET['fase'] ?? '');
-$fasiAmmesse = ['REGULAR','GOLD','SILVER','BRONZO'];
+$fasiAmmesse = ['REGULAR','SPAREGGIO','GOLD','SILVER','BRONZO'];
+$fasiConRound = ['GOLD','SILVER','BRONZO'];
 
 if(!$torneo){
     echo json_encode(["error" => "Parametro 'torneo' mancante."], JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT);
@@ -15,7 +16,7 @@ if(!$torneo){
 
 $colonna = "giornata";
 $order = "giornata ASC";
-if ($fase && in_array($fase, $fasiAmmesse, true) && $fase !== 'REGULAR') {
+if ($fase && in_array($fase, $fasiConRound, true)) {
     $colonna = "fase_round";
     $order = "FIELD(fase_round, 'TRENTADUESIMI','SEDICESIMI','OTTAVI','QUARTI','SEMIFINALE','FINALE')";
 }

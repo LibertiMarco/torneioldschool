@@ -7,14 +7,15 @@ require_once __DIR__ . '/../includi/db.php';
 $torneo   = $_GET['torneo']   ?? '';
 $giornataParam = $_GET['giornata'] ?? '';
 $fase     = strtoupper($_GET['fase'] ?? '');
-$fasiAmmesse = ['REGULAR','GOLD','SILVER'];
+$fasiAmmesse = ['REGULAR','SPAREGGIO','GOLD','SILVER'];
+$fasiConRound = ['GOLD','SILVER'];
 
 if(!$torneo){
     echo json_encode(["error" => "Parametro 'torneo' mancante."], JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT);
     exit;
 }
 
-$usaRound = $fase && in_array($fase, $fasiAmmesse, true) && $fase !== 'REGULAR';
+$usaRound = $fase && in_array($fase, $fasiConRound, true);
 $types = "s";
 $params = [$torneo];
 $condizione = "";
