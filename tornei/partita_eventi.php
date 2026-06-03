@@ -141,7 +141,7 @@ if ($matchId > 0) {
 <body>
 
   <!-- HEADER -->
-  <div id="header-container"></div>
+  <?php include __DIR__ . '/../includi/header.php'; ?>
 
   <!-- CONTENUTO -->
   <main class="content" style="margin-top:24px; padding-top:18px;">
@@ -161,29 +161,7 @@ if ($matchId > 0) {
   </main>
 
   <!-- FOOTER -->
-  <div id="footer-container"></div>
-
-  <!-- SCRIPT: HEADER -->
-  <script src="/includi/header-interactions.js?v=<?= htmlspecialchars($headerInteractionsVersion, ENT_QUOTES, 'UTF-8') ?>"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      fetch("/includi/header.php")
-        .then(r => r.text())
-                .then(html => {
-          document.getElementById("header-container").innerHTML = html;
-          initHeaderInteractions();
-        })
-        .catch(e => console.error("Errore header:", e));
-    });
-  </script>
-
-  <!-- SCRIPT: FOOTER -->
-  <script>
-    fetch("/includi/footer.html")
-      .then(r => r.text())
-      .then(html => { document.getElementById("footer-container").innerHTML = html; })
-      .catch(e => console.error("Errore footer:", e));
-  </script>
+  <div id="footer-container"><?php include __DIR__ . '/../includi/footer.html'; ?></div>
 
   <!-- SCRIPT: PAGINA -->
   <script src="partita_eventi.js?v=<?= htmlspecialchars($pageScriptVersion, ENT_QUOTES, 'UTF-8') ?>"></script>
