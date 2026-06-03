@@ -1,9 +1,11 @@
 <?php
 header("Content-Type: application/json; charset=UTF-8");
+header('Cache-Control: public, max-age=30, stale-while-revalidate=300');
 // Evita che warning/notices sporchino il JSON
 ini_set('display_errors', '0');
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/api_cache.php';
 
 function respondError(string $msg, int $code = 500): void {
   http_response_code($code);
@@ -31,6 +33,17 @@ try {
       $tmp->close();
     }
     if (!$torneo) { respondError("Torneo non trovato per la partita indicata.", 404); }
+  }
+
+  $cacheKey = tos_api_cache_build_key('get_partite', [
+    'torneo' => $torneo,
+    'fase' => $fase,
+    'id' => $idPartita,
+  ]);
+  $cachedPayload = tos_api_cache_read($cacheKey, 30);
+  if ($cachedPayload !== null) {
+    echo $cachedPayload;
+    exit;
   }
 
   $logoMap = [];
@@ -123,11 +136,23 @@ try {
   }
 
   if ($idPartita > 0) {
-    echo json_encode($lista, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT);
+    $payload = json_encode($lista, JSON_UNESCAPED_UNICODE);
+    if ($payload !== false) {
+      tos_api_cache_write($cacheKey, $payload);
+      echo $payload;
+    } else {
+      echo json_encode($lista, JSON_UNESCAPED_UNICODE);
+    }
     exit;
   }
 
-  echo json_encode($giornate, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT);
+  $payload = json_encode($giornate, JSON_UNESCAPED_UNICODE);
+  if ($payload !== false) {
+    tos_api_cache_write($cacheKey, $payload);
+    echo $payload;
+  } else {
+    echo json_encode($giornate, JSON_UNESCAPED_UNICODE);
+  }
 } catch (Throwable $e) {
   respondError("Errore interno: " . $e->getMessage());
 }

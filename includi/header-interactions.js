@@ -6,6 +6,8 @@
   window.__HEADER_INTERACTIONS_INITIALIZED__ = true;
 
   const headerStates = new Map();
+  const NOTIF_CACHE_KEY = "tosNotificationBadge";
+  const NOTIF_CACHE_TTL_MS = 5 * 60 * 1000;
   const SOCIAL_CACHE_KEY = "tosSocialCountsCache";
   const SOCIAL_CACHE_TTL_MS = 60 * 60 * 1000;
   let globalListenersReady = false;
@@ -15,6 +17,38 @@
     const count = Math.max(0, Number.isFinite(unread) ? unread : 0);
     badgeEl.textContent = count;
     badgeEl.style.display = count > 0 ? "inline-flex" : "none";
+  }
+
+  function readNotifCache() {
+    try {
+      const raw = sessionStorage.getItem(NOTIF_CACHE_KEY);
+      if (!raw) {
+        return null;
+      }
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") {
+        return null;
+      }
+      const ts = Number(parsed.ts) || 0;
+      const unread = Number(parsed.unread);
+      if (!Number.isFinite(unread) || ts <= 0 || (Date.now() - ts) > NOTIF_CACHE_TTL_MS) {
+        return null;
+      }
+      return unread;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function writeNotifCache(unread) {
+    try {
+      sessionStorage.setItem(NOTIF_CACHE_KEY, JSON.stringify({
+        ts: Date.now(),
+        unread: Math.max(0, Number.isFinite(unread) ? unread : 0),
+      }));
+    } catch (err) {
+      // ignore storage failures
+    }
   }
 
   function closeMenus(header, state) {
@@ -230,6 +264,7 @@
                   const current = parseInt(badge.textContent || "0", 10) || 0;
                   const nextVal = Math.max(0, current - (notif.read ? 0 : 1));
                   updateBadgeDisplay(badge, nextVal);
+                  writeNotifCache(nextVal);
                 }
               }
             })
@@ -306,12 +341,18 @@
 
   function fetchBadgeCount(state) {
     if (!state || state.badgeLoading || !state.notifBadge) return;
+    const cachedUnread = readNotifCache();
+    if (cachedUnread !== null) {
+      updateBadgeDisplay(state.notifBadge, cachedUnread);
+      return;
+    }
     state.badgeLoading = true;
-    fetch("/api/notifications.php", { credentials: "include" })
+    fetch("/api/notifications.php?badge_only=1", { credentials: "include" })
       .then((res) => res.ok ? res.json() : Promise.reject(res))
       .then((data) => {
         const unread = (data && typeof data.unread === "number") ? data.unread : 0;
         updateBadgeDisplay(state.notifBadge, unread);
+        writeNotifCache(unread);
       })
       .catch(() => {})
       .finally(() => { state.badgeLoading = false; });
@@ -332,6 +373,7 @@
       .then((res) => res.ok ? res.json() : Promise.reject(res))
       .then((data) => {
         renderNotifications(state, data || {}, true);
+        writeNotifCache(0);
       })
       .catch(() => {
         if (state.notifMenu) {

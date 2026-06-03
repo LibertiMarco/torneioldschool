@@ -132,7 +132,7 @@ $assetVersion = '20260528a';
 <body>
 
   <!-- HEADER -->
-  <div id="header-container"></div>
+  <?php include __DIR__ . '/../includi/header.php'; ?>
 
   <!-- CONTENUTO PRINCIPALE -->
   <main class="content">
@@ -314,10 +314,9 @@ $assetVersion = '20260528a';
     </section>
 
   <!-- FOOTER -->
-  <div id="footer-container"></div>
+  <div id="footer-container"><?php include __DIR__ . '/../includi/footer.html'; ?></div>
 
   <!-- SCRIPT: HEADER -->
-  <script src="/includi/header-interactions.js?v=<?= $assetVersion ?>"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
 
@@ -338,119 +337,7 @@ $assetVersion = '20260528a';
           }
         });
       }
-
-      // ====== HEADER DINAMICO ======
-      fetch("/includi/header.php?v=<?= $assetVersion ?>")
-        .then(response => response.text())
-        .then(data => {
-          document.getElementById("header-container").innerHTML = data;
-          initHeaderInteractions();
-
-          // Fallback: se il toggle mobile non risponde, aggancia manualmente i listener
-          const headerEl = document.querySelector(".site-header");
-          if (headerEl) {
-            const mobileBtn = headerEl.querySelector("#mobileMenuBtn");
-            const mainNav = headerEl.querySelector("#mainNav");
-            const userBtn = headerEl.querySelector("#userBtn");
-            const userMenu = headerEl.querySelector("#userMenu");
-            let fallbackBound = false;
-
-            const applyDisplay = (open) => {
-              if (!mainNav) return;
-              mainNav.classList.toggle("open", open);
-              if (window.matchMedia("(max-width: 768px)").matches) {
-                mainNav.style.display = open ? "flex" : "none";
-              } else {
-                mainNav.style.display = "";
-              }
-            };
-
-            const toggleWorks = (() => {
-              if (!mobileBtn || !mainNav) return false;
-              const wasOpen = mainNav.classList.contains("open");
-              mobileBtn.click();
-              const changed = mainNav.classList.contains("open");
-              if (changed !== wasOpen) {
-                mainNav.classList.toggle("open");
-                return true;
-              }
-              return false;
-            })();
-
-            if (!toggleWorks && mobileBtn && mainNav && !fallbackBound) {
-              fallbackBound = true;
-
-              const closeMenus = () => {
-                applyDisplay(false);
-                if (userMenu) userMenu.classList.remove("open");
-              };
-
-              mobileBtn.addEventListener("click", (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const isOpen = !mainNav.classList.contains("open");
-                applyDisplay(isOpen);
-                if (isOpen && userMenu) userMenu.classList.remove("open");
-              });
-
-              if (userBtn && userMenu) {
-                userBtn.addEventListener("click", (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const isOpen = userMenu.classList.toggle("open");
-                  if (isOpen) applyDisplay(false);
-                });
-              }
-
-              document.addEventListener("click", (e) => {
-                if (!headerEl.contains(e.target)) closeMenus();
-              });
-
-              window.addEventListener("resize", () => {
-                if (window.innerWidth > 768) closeMenus();
-              });
-            }
-          }
-
-          if (headerEl) {
-            window.addEventListener("scroll", () => {
-              if (window.scrollY > 50) headerEl.classList.add("scrolled");
-              else headerEl.classList.remove("scrolled");
-            });
-          }
-
-          const dropdown = document.querySelector(".dropdown");
-          const btn = dropdown?.querySelector(".dropbtn");
-          const menu = dropdown?.querySelector(".dropdown-content");
-
-          if (btn && menu) {
-            btn.addEventListener("click", (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              dropdown.classList.toggle("open");
-              menu.style.display = dropdown.classList.contains("open") ? "block" : "none";
-            });
-
-            document.addEventListener("click", (e) => {
-              if (!dropdown.contains(e.target)) {
-                dropdown.classList.remove("open");
-                menu.style.display = "none";
-              }
-            });
-          }
-        })
-        .catch(error => console.error("Errore nel caricamento dell'header:", error));
-    });
-  </script>
-
-  <!-- SCRIPT: FOOTER -->
-  <script>
-    fetch("/includi/footer.html?v=<?= $assetVersion ?>")
-      .then(response => response.text())
-      .then(data => {
-        document.getElementById("footer-container").innerHTML = data;
-      })
-      .catch(error => console.error("Errore nel caricamento del footer:", error));
+});
   </script>
 
   <!-- SCRIPT: SERIE A -->

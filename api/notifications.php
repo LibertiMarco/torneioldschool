@@ -17,6 +17,7 @@ $userId = (int)$_SESSION['user_id'];
 $notifications = [];
 $unreadCount = 0;
 $markRead = isset($_GET['mark_read']) && $_GET['mark_read'] === '1';
+$badgeOnly = isset($_GET['badge_only']) && $_GET['badge_only'] === '1';
 
 // Elimina una singola notifica (generica o commento)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
@@ -47,6 +48,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
     echo json_encode([
         'success' => $deleted > 0,
         'deleted' => $deleted,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ($badgeOnly && !$markRead) {
+    $countStmt = $conn->prepare("SELECT COUNT(*) AS unread_count FROM notifiche WHERE utente_id = ? AND letto = 0");
+    if ($countStmt) {
+        $countStmt->bind_param('i', $userId);
+        if ($countStmt->execute()) {
+            $countStmt->bind_result($countGeneric);
+            if ($countStmt->fetch()) {
+                $unreadCount += (int)$countGeneric;
+            }
+        }
+        $countStmt->close();
+    }
+
+    $countCommentStmt = $conn->prepare("SELECT COUNT(*) AS unread_count FROM notifiche_commenti WHERE utente_id = ? AND letto = 0");
+    if ($countCommentStmt) {
+        $countCommentStmt->bind_param('i', $userId);
+        if ($countCommentStmt->execute()) {
+            $countCommentStmt->bind_result($countComments);
+            if ($countCommentStmt->fetch()) {
+                $unreadCount += (int)$countComments;
+            }
+        }
+        $countCommentStmt->close();
+    }
+
+    echo json_encode([
+        'unread' => $unreadCount,
+        'notifications' => [],
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }

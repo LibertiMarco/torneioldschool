@@ -132,7 +132,7 @@ $assetVersion = '20260528a';
 <body>
 
   <!-- HEADER -->
-  <div id="header-container"></div>
+  <?php include __DIR__ . '/../includi/header.php'; ?>
 
   <!-- CONTENUTO PRINCIPALE -->
   <main class="content">
@@ -307,10 +307,9 @@ $assetVersion = '20260528a';
     </section>
 
   <!-- FOOTER -->
-  <div id="footer-container"></div>
+  <div id="footer-container"><?php include __DIR__ . '/../includi/footer.html'; ?></div>
 
   <!-- SCRIPT: HEADER -->
-  <script src="/includi/header-interactions.js?v=<?= $assetVersion ?>"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
 
@@ -331,54 +330,7 @@ $assetVersion = '20260528a';
           }
         });
       }
-
-      // ====== HEADER DINAMICO ======
-      fetch("/includi/header.php?v=<?= $assetVersion ?>")
-        .then(response => response.text())
-        .then(data => {
-          document.getElementById("header-container").innerHTML = data;
-          initHeaderInteractions();
-
-          const header = document.querySelector(".site-header");
-          window.addEventListener("scroll", () => {
-            if (window.scrollY > 50) header.classList.add("scrolled");
-            else header.classList.remove("scrolled");
-          });
-
-          const dropdown = document.querySelector(".dropdown");
-          if (dropdown) {
-            const btn = dropdown.querySelector(".dropbtn");
-            const menu = dropdown.querySelector(".dropdown-content");
-
-            if (btn && menu) {
-              btn.addEventListener("click", (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                dropdown.classList.toggle("open");
-                menu.style.display = dropdown.classList.contains("open") ? "block" : "none";
-              });
-
-              document.addEventListener("click", (e) => {
-                if (!dropdown.contains(e.target)) {
-                  dropdown.classList.remove("open");
-                  menu.style.display = "none";
-                }
-              });
-            }
-          }
-        })
-        .catch(error => console.error("Errore nel caricamento dell'header:", error));
-    });
-  </script>
-
-  <!-- SCRIPT: FOOTER -->
-  <script>
-    fetch("/includi/footer.html?v=<?= $assetVersion ?>")
-      .then(response => response.text())
-      .then(data => {
-        document.getElementById("footer-container").innerHTML = data;
-      })
-      .catch(error => console.error("Errore nel caricamento del footer:", error));
+});
   </script>
 
   <!-- SCRIPT: SERIE C -->
