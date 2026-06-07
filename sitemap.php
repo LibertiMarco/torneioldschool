@@ -37,6 +37,7 @@ $torneoPages = glob(__DIR__ . '/tornei/*.php') ?: [];
 $torneoExclusions = [
     'partita_eventi.php',
     'TorneoTemplate.php',
+    'TorneoTemplateEsport.php',
 ];
 
 foreach ($torneoPages as $file) {

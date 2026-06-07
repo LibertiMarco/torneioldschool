@@ -164,14 +164,26 @@ function aggiornaGironiSquadreTorneo(?mysqli $dbConn, string $torneoSlug, array 
     $stmt->close();
 }
 
-function scegliTemplatePerFormula(string $formula, string $faseFinale, string $baseDir): array {
-    $default = [
+function scegliTemplatePerFormula(string $formula, string $faseFinale, string $baseDir, string $sezione = 'calcio'): array {
+    $defaultCalcio = [
         'html' => $baseDir . '/TorneoTemplate.php',
         'js'   => $baseDir . '/script-TorneoTemplate.js',
     ];
+    $defaultEsport = [
+        'html' => $baseDir . '/TorneoTemplateEsport.php',
+        'js'   => $baseDir . '/script-TorneoTemplateEsport.js',
+    ];
 
     if (!is_dir($baseDir)) {
-        return $default;
+        return $defaultCalcio;
+    }
+
+    if (
+        normalizeTorneoSezioneValue($sezione) === 'esport' &&
+        file_exists($defaultEsport['html']) &&
+        file_exists($defaultEsport['js'])
+    ) {
+        return $defaultEsport;
     }
 
     $coppaAfrica = [
@@ -181,13 +193,13 @@ function scegliTemplatePerFormula(string $formula, string $faseFinale, string $b
 
     switch ($formula) {
         case 'campionato':
-            return $default;
+            return $defaultCalcio;
         case 'girone':
             if ($faseFinale === 'eliminazione_diretta' && file_exists($coppaAfrica['html']) && file_exists($coppaAfrica['js'])) {
                 return $coppaAfrica; // Gironi + eliminazione diretta stile Coppa d'Africa
             }
-            if ($faseFinale === 'coppe' && file_exists($default['html']) && file_exists($default['js'])) {
-                return $default; // Gironi + Gold/Silver: usa template generico con entrambe le coppe
+            if ($faseFinale === 'coppe' && file_exists($defaultCalcio['html']) && file_exists($defaultCalcio['js'])) {
+                return $defaultCalcio; // Gironi + Gold/Silver: usa template generico con entrambe le coppe
             }
             break;
         case 'eliminazione':
@@ -199,10 +211,10 @@ function scegliTemplatePerFormula(string $formula, string $faseFinale, string $b
             break;
     }
 
-    return $default;
+    return $defaultCalcio;
 }
 
-function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $faseFinale = '') {
+function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $faseFinale = '', $sezione = 'calcio') {
     $baseDir = realpath(__DIR__ . '/../tornei');
     if (!$baseDir) {
         return;
@@ -211,9 +223,10 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $fase
     $nomePulito = cleanUtf8Text($nomeTorneo);
     $formulaTorneo = strtolower(trim((string)($formulaTorneo ?? '')));
     $faseFinale = strtolower(trim((string)($faseFinale ?? '')));
+    $sezione = normalizeTorneoSezioneValue($sezione);
 
     // Sceglie il template piÃ¹ adatto in base alle scelte
-    $templates = scegliTemplatePerFormula($formulaTorneo, $faseFinale, $baseDir);
+    $templates = scegliTemplatePerFormula($formulaTorneo, $faseFinale, $baseDir, $sezione);
     $htmlTemplate = $templates['html'] ?? null;
     $jsTemplate   = $templates['js'] ?? null;
     if (!$htmlTemplate || !$jsTemplate || !file_exists($htmlTemplate) || !file_exists($jsTemplate)) {
@@ -233,6 +246,7 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $fase
         [
             'TEMPLATE_SLUG',
             'Torneo Template',
+            'Torneo Esport',
             'script-TorneoTemplate.js',
             'Serie A',
             'script-SerieA.js',
@@ -247,6 +261,7 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $fase
         ],
         [
             $slug,
+            $nomePulito,
             $nomePulito,
             $newScriptName,
             $nomePulito,
@@ -457,7 +472,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
 
     $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
     if ($torneo->crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $sezione, $img, $squadre_complete, $config)) {
-        creaFileTorneoDaTemplate($nome, $slug, $formulaTorneo, $faseFinale);
+        creaFileTorneoDaTemplate($nome, $slug, $formulaTorneo, $faseFinale, $sezione);
     }
     header("Location: " . buildGestioneTorneiAdminUrl('crea', $sezione));
     exit;
@@ -486,7 +501,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
     $config = buildTorneoConfigFromRequest($_POST);
     $torneo->aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $sezione, $squadre_complete, $config);
-    creaFileTorneoDaTemplate($nome, $slug, $formulaTorneo, $faseFinale);
+    creaFileTorneoDaTemplate($nome, $slug, $formulaTorneo, $faseFinale, $sezione);
 
     $filePrecedente = $record['filetorneo'] ?? '';
     if ($filePrecedente && strcasecmp($filePrecedente, $filetorneo) !== 0) {

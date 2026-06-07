@@ -3615,6 +3615,10 @@ body {
   padding-left: 15px;
 }
 
+.regola:last-child {
+  margin-bottom: 0;
+}
+
 .regola h3 {
   font-family: 'Oswald', sans-serif;
   text-transform: uppercase;
@@ -3632,9 +3636,26 @@ body {
   color: #f0f0f0;
 }
 
+.regola p {
+  margin: 0 0 8px;
+}
+
+.regola p:last-child {
+  margin-bottom: 0;
+}
+
 .regola ul {
   list-style: none;
   padding-left: 0;
+  margin: 8px 0 0;
+}
+
+.regola li {
+  margin-bottom: 6px;
+}
+
+.regola li:last-child {
+  margin-bottom: 0;
 }
 
 .regola ul li::before {

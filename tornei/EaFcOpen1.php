@@ -74,7 +74,233 @@ if (!function_exists('renderRegoleMarkupFromText')) {
         return strtr(htmlspecialchars(trim($text), ENT_QUOTES, 'UTF-8'), $placeholders);
     }
 
+    function renderRegoleMarkupFromStructuredText(string $text): string {
+        $text = str_replace("\r\n", "\n", $text);
+        $text = preg_replace('/^\s*Il calendario\b.*pubblicat[^\n]*\n?/imu', '', $text);
+        $blocks = preg_split("/\n\s*\n/u", trim($text));
+        $sections = [];
+        $currentTitle = '';
+        $currentBodyLines = [];
+
+        $textLower = static function (string $value): string {
+            return function_exists('mb_strtolower')
+                ? mb_strtolower($value, 'UTF-8')
+                : strtolower($value);
+        };
+
+        $textUpper = static function (string $value): string {
+            return function_exists('mb_strtoupper')
+                ? mb_strtoupper($value, 'UTF-8')
+                : strtoupper($value);
+        };
+
+        $normalizeTitle = static function (string $value) use ($textLower): string {
+            $value = trim(preg_replace('/\s+/u', ' ', $value) ?? $value);
+
+            return $textLower($value);
+        };
+
+        $isBulletLine = static function (string $value): bool {
+            return preg_match('/^(?:[-*]|\x{2022})\s+/u', trim($value)) === 1;
+        };
+
+        $isTitleLine = static function (string $value) use ($isBulletLine, $textUpper, $normalizeTitle): bool {
+            $value = trim($value);
+            if ($value === '' || $isBulletLine($value)) {
+                return false;
+            }
+
+            if (preg_match('/[.?!;]\s*$/u', $value)) {
+                return false;
+            }
+
+            $words = preg_split('/\s+/u', $value, -1, PREG_SPLIT_NO_EMPTY);
+            $wordCount = is_array($words) ? count($words) : 0;
+            if ($wordCount === 0 || $wordCount > 12) {
+                return false;
+            }
+
+            $lettersOnly = preg_replace('/[^[:alpha:]]+/u', '', $value) ?? '';
+            if ($lettersOnly !== '' && $lettersOnly === $textUpper($lettersOnly)) {
+                return true;
+            }
+
+            $normalized = $normalizeTitle($value);
+            foreach (['struttura', 'fase ', 'premi', 'regole', 'calendario', 'punteggio', 'classifica', 'girone', 'gironi', 'coppe', 'tabellone', 'finale', 'semifinale', 'quarti'] as $prefix) {
+                if (strpos($normalized, $prefix) === 0 && $wordCount <= 6) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
+        $extractInlineTitle = static function (string $block) use ($isTitleLine): ?array {
+            $lines = preg_split("/\n/u", trim($block));
+            if (!is_array($lines) || empty($lines)) {
+                return null;
+            }
+
+            $firstLine = trim((string)array_shift($lines));
+            if ($firstLine === '' || strpos($firstLine, ':') === false) {
+                return null;
+            }
+
+            [$rawTitle, $rest] = explode(':', $firstLine, 2);
+            $rawTitle = trim($rawTitle);
+            if ($rawTitle === '' || !$isTitleLine($rawTitle)) {
+                return null;
+            }
+
+            $bodyLines = [];
+            $rest = trim($rest);
+            if ($rest !== '') {
+                $bodyLines[] = $rest;
+            }
+
+            foreach ($lines as $line) {
+                $line = trim((string)$line);
+                if ($line !== '') {
+                    $bodyLines[] = $line;
+                }
+            }
+
+            return [
+                'titleSource' => $rawTitle,
+                'bodyLines' => $bodyLines,
+            ];
+        };
+
+        $flushSection = static function (array &$sections, string &$titleSource, array &$bodyLines): void {
+            if ($titleSource === '' && empty($bodyLines)) {
+                return;
+            }
+
+            $sections[] = [
+                'titleSource' => $titleSource,
+                'bodyLines' => $bodyLines,
+            ];
+
+            $titleSource = '';
+            $bodyLines = [];
+        };
+
+        foreach ($blocks as $block) {
+            $block = trim((string)$block);
+            if ($block === '') {
+                continue;
+            }
+
+            $inlineSection = $extractInlineTitle($block);
+            if ($inlineSection !== null) {
+                $flushSection($sections, $currentTitle, $currentBodyLines);
+                $sections[] = $inlineSection;
+                continue;
+            }
+
+            $lines = preg_split("/\n/u", $block);
+            $lines = array_values(array_filter(array_map(static function ($line) {
+                return trim((string)$line);
+            }, is_array($lines) ? $lines : []), static function ($line) {
+                return $line !== '';
+            }));
+
+            if (empty($lines)) {
+                continue;
+            }
+
+            $firstLine = $lines[0];
+            $isHeadingOnlyBlock = count($lines) === 1 && $isTitleLine($firstLine);
+            $isTitledContentBlock = count($lines) > 1 && $isTitleLine($firstLine);
+
+            if ($isHeadingOnlyBlock) {
+                $flushSection($sections, $currentTitle, $currentBodyLines);
+                $currentTitle = $firstLine;
+                $currentBodyLines = [];
+                continue;
+            }
+
+            if ($isTitledContentBlock) {
+                $flushSection($sections, $currentTitle, $currentBodyLines);
+                $currentTitle = $firstLine;
+                $currentBodyLines = array_slice($lines, 1);
+                continue;
+            }
+
+            if ($currentTitle === '' && empty($currentBodyLines)) {
+                $currentBodyLines = $lines;
+                continue;
+            }
+
+            $currentBodyLines = array_merge($currentBodyLines, $lines);
+        }
+
+        $flushSection($sections, $currentTitle, $currentBodyLines);
+
+        $markup = '';
+        foreach ($sections as $section) {
+            $titleSource = trim((string)($section['titleSource'] ?? ''));
+            $title = $titleSource !== ''
+                ? str_replace(' - ', ' &mdash; ', htmlspecialchars($titleSource, ENT_QUOTES, 'UTF-8'))
+                : '';
+            $trimmedLines = array_values(array_filter(array_map(static function ($line) {
+                return trim((string)$line);
+            }, $section['bodyLines'] ?? []), static function ($line) {
+                return $line !== '';
+            }));
+
+            $normalizedTitle = $normalizeTitle($titleSource);
+            $allBullets = !empty($trimmedLines);
+            foreach ($trimmedLines as $line) {
+                if (!$isBulletLine($line)) {
+                    $allBullets = false;
+                    break;
+                }
+            }
+
+            $useList = $allBullets || in_array($normalizedTitle, ['fase 2 - coppe', 'regole di gioco', 'calendario'], true);
+            $usePremiGrid = $normalizedTitle === 'premi finali' && count($trimmedLines) > 1;
+
+            $markup .= '<div class="regola">';
+            if ($title !== '') {
+                $markup .= '<h3>' . $title . '</h3>';
+            }
+
+            if ($usePremiGrid) {
+                $intro = array_shift($trimmedLines);
+                if ($intro !== null && $intro !== '') {
+                    $markup .= '<p>' . decorateRegoleInline($intro) . '</p>';
+                }
+                if (!empty($trimmedLines)) {
+                    $markup .= '<div class="premi-grid">';
+                    foreach ($trimmedLines as $line) {
+                        $line = preg_replace('/^(?:[-*]|\x{2022})\s+/u', '', $line) ?? $line;
+                        $markup .= '<span>' . decorateRegoleInline($line) . '</span>';
+                    }
+                    $markup .= '</div>';
+                }
+            } elseif ($useList) {
+                $markup .= '<ul>';
+                foreach ($trimmedLines as $line) {
+                    $line = preg_replace('/^(?:[-*]|\x{2022})\s+/u', '', $line) ?? $line;
+                    $markup .= '<li>' . decorateRegoleInline($line) . '</li>';
+                }
+                $markup .= '</ul>';
+            } elseif (!empty($trimmedLines)) {
+                foreach ($trimmedLines as $line) {
+                    $markup .= '<p>' . decorateRegoleInline($line) . '</p>';
+                }
+            }
+
+            $markup .= '</div>';
+        }
+
+        return $markup;
+    }
+
     function renderRegoleMarkupFromText(string $text): string {
+        return renderRegoleMarkupFromStructuredText($text);
+
         $text = str_replace("\r\n", "\n", $text);
         $text = preg_replace('/^\s*Il calendario\b.*pubblicat[^\n]*\n?/imu', '', $text);
         $blocks = preg_split("/\n\s*\n/u", trim($text));
