@@ -1572,8 +1572,3 @@ document.querySelectorAll(".tab-button").forEach(btn => {
     }
   });
 });
-
-
-
-
-

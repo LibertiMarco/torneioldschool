@@ -14,9 +14,20 @@ if ($slug === '') {
 
 require_once __DIR__ . '/../includi/db.php';
 
+$hasTorneoSection = false;
+$checkSection = @$conn->query("SHOW COLUMNS FROM tornei LIKE 'sezione'");
+if (!$checkSection || $checkSection->num_rows === 0) {
+    @$conn->query("ALTER TABLE tornei ADD COLUMN sezione VARCHAR(20) NOT NULL DEFAULT 'calcio' AFTER categoria");
+    $checkSection = @$conn->query("SHOW COLUMNS FROM tornei LIKE 'sezione'");
+}
+$hasTorneoSection = $checkSection && $checkSection->num_rows > 0;
+
 $filenamePhp = $slug . '.php';
 $filenameHtml = $slug . '.html';
-$stmt = $conn->prepare("SELECT nome, img, categoria, config FROM tornei WHERE filetorneo IN (?, ?) ORDER BY (filetorneo LIKE '%.php') DESC LIMIT 1");
+$selectSql = $hasTorneoSection
+    ? "SELECT nome, img, categoria, sezione, config FROM tornei WHERE filetorneo IN (?, ?) ORDER BY (filetorneo LIKE '%.php') DESC LIMIT 1"
+    : "SELECT nome, img, categoria, config FROM tornei WHERE filetorneo IN (?, ?) ORDER BY (filetorneo LIKE '%.php') DESC LIMIT 1";
+$stmt = $conn->prepare($selectSql);
 $stmt->bind_param('ss', $filenamePhp, $filenameHtml);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -34,6 +45,7 @@ if ($row = $result->fetch_assoc()) {
         'nome' => $row['nome'],
         'img' => $row['img'],
         'categoria' => $row['categoria'],
+        'sezione' => $row['sezione'] ?? 'calcio',
         'config' => $config
     ]);
 } else {
