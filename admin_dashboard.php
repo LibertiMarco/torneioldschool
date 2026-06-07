@@ -515,6 +515,12 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
             </div>
 
             <div class="admin-card">
+                <h3>Crea Tornei ESPORT</h3>
+                <p>Apri il form admin gia impostato sulla sezione ESPORT per pubblicare tornei gaming dedicati.</p><br>
+                <a href="/api/gestione_tornei.php?sezione=esport&action=crea">Apri</a>
+            </div>
+
+            <div class="admin-card">
                 <h3>Gestione Squadre</h3>
                 <p>Visualizza e aggiorna le squadre iscritte ai tornei.</p><br>
                 <a href="/api/gestione_squadre.php">Vai</a>

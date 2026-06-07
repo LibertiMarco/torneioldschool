@@ -57,6 +57,7 @@ if (!empty($sessionAvatar)) {
     <!-- NAVIGAZIONE DESKTOP + MOBILE -->
     <nav class="header-nav" id="mainNav">
         <a href="<?= htmlspecialchars(login_with_base_path('/tornei.php')) ?>">Tornei</a>
+        <a href="<?= htmlspecialchars(login_with_base_path('/esport.php')) ?>">ESPORT</a>
         <a href="<?= htmlspecialchars(login_with_base_path('/blog.php')) ?>">Blog</a>
         <a href="<?= htmlspecialchars(login_with_base_path('/chisiamo.php')) ?>">Chi siamo</a>
         <a href="<?= htmlspecialchars(login_with_base_path('/contatti.php')) ?>">Contatti</a>

@@ -82,8 +82,11 @@ if ($homeNewsResult = $conn->query($homeNewsSql)) {
       <section class="home-hero">
         <div class="hero-overlay">
           <h1>Tornei calcetto Napoli</h1>
-          <p>Tornei di calcio a 5, 6 e 8 a Napoli: iscrizioni, calendari, classifiche, regolamenti e risultati.</p>
-          <a href="/tornei.php" class="hero-btn">Tornei</a>
+          <p>Tornei di calcio a 5, 6 e 8 a Napoli, piu la nuova area ESPORT con calendari, bracket e risultati dedicati.</p>
+          <div class="hero-actions">
+            <a href="/tornei.php" class="hero-btn">Tornei Calcio</a>
+            <a href="/esport.php" class="hero-btn hero-btn--ghost">ESPORT</a>
+          </div>
         </div>
       </section>
 
@@ -432,5 +435,4 @@ loadHallOfFame();
 
 </body>
 </html>
-
 

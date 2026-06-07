@@ -38,6 +38,21 @@ function escapeHtml(?string $value): string {
   return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 
+function normalizeTorneoSectionValue($value): string {
+  return strtolower(trim((string)$value)) === 'esport' ? 'esport' : 'calcio';
+}
+
+function ensureTorneiSectionColumn(mysqli $conn): bool {
+  $check = @$conn->query("SHOW COLUMNS FROM tornei LIKE 'sezione'");
+  if ($check && $check->num_rows > 0) {
+    return true;
+  }
+
+  @$conn->query("ALTER TABLE tornei ADD COLUMN sezione VARCHAR(20) NOT NULL DEFAULT 'calcio' AFTER categoria");
+  $check = @$conn->query("SHOW COLUMNS FROM tornei LIKE 'sezione'");
+  return $check && $check->num_rows > 0;
+}
+
 /**
  * Restituisce il percorso del file torneo forzando l'estensione .php e gestendo valori vuoti.
  */
@@ -125,9 +140,76 @@ $nome_utente = $_SESSION['nome'] ?? '';
 $cognome_utente = $_SESSION['cognome'] ?? '';
 $nome_completo = trim($nome_utente . ' ' . $cognome_utente);
 
+$sezioneAttiva = normalizeTorneoSectionValue($_GET['sezione'] ?? 'calcio');
+$isEsportSection = $sezioneAttiva === 'esport';
+$hasSectionColumn = ensureTorneiSectionColumn($conn);
+
+$sectionCopy = $isEsportSection
+  ? [
+      'hero_kicker' => 'Area ESPORT Old School',
+      'hero_title' => 'Tornei ESPORT',
+      'hero_description' => 'Bracket, calendari, risultati e tornei gaming firmati Tornei Old School in un hub dedicato.',
+      'stats_total_label' => 'Tornei esport totali',
+      'stats_active_label' => 'Attivi in questo momento',
+      'stats_programmed_label' => 'Gia programmati',
+      'stats_categories_label' => 'Categorie gaming',
+      'search_label' => 'Cerca torneo esport',
+      'search_placeholder' => 'Nome torneo esport o categoria',
+      'results_total_label' => 'Totale tornei esport',
+      'results_filtered_label' => 'Risultati esport',
+      'cta_title' => 'Vuoi seguire i tornei ESPORT?',
+      'cta_description' => 'Crea un account o accedi per salvare preferiti, ricevere notifiche e seguire i tornei gaming.',
+      'empty_live' => 'Nessun torneo esport in corso al momento.',
+      'empty_upcoming' => 'Nessun torneo esport programmato al momento.',
+      'empty_finished' => 'Nessun torneo esport terminato al momento.',
+      'empty_live_filtered' => 'Nessun torneo esport in corso corrisponde ai filtri attuali.',
+      'empty_upcoming_filtered' => 'Nessun torneo esport programmato corrisponde ai filtri attuali.',
+      'empty_finished_filtered' => 'Nessun torneo esport terminato corrisponde ai filtri attuali.',
+      'seo_title' => 'Tornei ESPORT - Calendari e risultati | Tornei Old School',
+      'seo_description' => 'Tornei esport firmati Tornei Old School: bracket, calendari, risultati e pagine dedicate per ogni competizione gaming.',
+      'canonical' => '/esport.php',
+      'breadcrumb_label' => 'ESPORT',
+    ]
+  : [
+      'hero_kicker' => 'Archivio tornei Old School',
+      'hero_title' => 'Tutti i tornei',
+      'hero_description' => 'Cerca in tempo reale, filtra per categoria e passa da in corso, programmati e terminati.',
+      'stats_total_label' => 'Tornei totali',
+      'stats_active_label' => 'Attivi in questo momento',
+      'stats_programmed_label' => 'Gia programmati',
+      'stats_categories_label' => 'Categorie disponibili',
+      'search_label' => 'Cerca torneo',
+      'search_placeholder' => 'Nome torneo o categoria',
+      'results_total_label' => 'Totale tornei',
+      'results_filtered_label' => 'Risultati',
+      'cta_title' => 'Vuoi seguire i tornei?',
+      'cta_description' => 'Crea un account o accedi per salvare preferiti, ricevere notifiche e seguire squadre e tornei.',
+      'empty_live' => 'Nessun torneo in corso al momento.',
+      'empty_upcoming' => 'Nessun torneo programmato al momento.',
+      'empty_finished' => 'Nessun torneo terminato al momento.',
+      'empty_live_filtered' => 'Nessun torneo in corso corrisponde ai filtri attuali.',
+      'empty_upcoming_filtered' => 'Nessun torneo programmato corrisponde ai filtri attuali.',
+      'empty_finished_filtered' => 'Nessun torneo terminato corrisponde ai filtri attuali.',
+      'seo_title' => 'Tornei calcetto Napoli (5, 6, 8) - Calendari e risultati | Tornei Old School',
+      'seo_description' => 'Tornei di calcio a 5, calcio a 6 e calciotto (8) a Napoli: calendari, risultati, tabelloni e documenti per ogni torneo.',
+      'canonical' => '/tornei.php',
+      'breadcrumb_label' => 'Tornei',
+    ];
+
 // === QUERY TORNEI ===
-$sql = "SELECT nome, stato, data_inizio, data_fine, img, filetorneo, categoria FROM tornei";
-$result = $conn->query($sql);
+$torneiSelect = "SELECT nome, stato, data_inizio, data_fine, img, filetorneo, categoria";
+$result = false;
+
+if ($hasSectionColumn) {
+  $stmt = $conn->prepare($torneiSelect . ", sezione FROM tornei WHERE sezione = ?");
+  if ($stmt) {
+    $stmt->bind_param('s', $sezioneAttiva);
+    $stmt->execute();
+    $result = $stmt->get_result();
+  }
+} elseif (!$isEsportSection) {
+  $result = $conn->query($torneiSelect . ", 'calcio' AS sezione FROM tornei");
+}
 
 $tornei = [
   'in corso' => [],
@@ -202,14 +284,14 @@ $totaleCategorie = count($categorieTornei);
 
 $baseUrl = seo_base_url();
 $torneiSeo = [
-  'title' => 'Tornei calcetto Napoli (5, 6, 8) - Calendari e risultati | Tornei Old School',
-  'description' => 'Tornei di calcio a 5, calcio a 6 e calciotto (8) a Napoli: calendari, risultati, tabelloni e documenti per ogni torneo.',
-  'url' => $baseUrl . '/tornei.php',
-  'canonical' => $baseUrl . '/tornei.php',
+  'title' => $sectionCopy['seo_title'],
+  'description' => $sectionCopy['seo_description'],
+  'url' => $baseUrl . $sectionCopy['canonical'],
+  'canonical' => $baseUrl . $sectionCopy['canonical'],
 ];
 $torneiBreadcrumbs = seo_breadcrumb_schema([
   ['name' => 'Home', 'url' => $baseUrl . '/'],
-  ['name' => 'Tornei', 'url' => $baseUrl . '/tornei.php'],
+  ['name' => $sectionCopy['breadcrumb_label'], 'url' => $baseUrl . $sectionCopy['canonical']],
 ]);
 ?>
 <!DOCTYPE html>
@@ -239,6 +321,12 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
         linear-gradient(135deg, #102236 0%, #16314d 52%, #22547d 100%);
       color: #fff;
       box-shadow: 0 24px 60px rgba(16, 34, 54, 0.24);
+    }
+    .tornei-page--esport .tornei-hero {
+      background:
+        radial-gradient(circle at top right, rgba(34, 211, 238, 0.2), transparent 32%),
+        linear-gradient(135deg, #0b1020 0%, #10223f 46%, #0c5f63 100%);
+      box-shadow: 0 24px 60px rgba(6, 24, 39, 0.3);
     }
     .tornei-hero::before,
     .tornei-hero::after {
@@ -282,6 +370,10 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+    }
+    .tornei-page--esport .tornei-kicker {
+      border-color: rgba(125, 243, 255, 0.18);
+      background: rgba(125, 243, 255, 0.08);
     }
     .tornei-hero h1 {
       margin: 16px 0 12px;
@@ -455,6 +547,10 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       background: linear-gradient(135deg, #15293e, #1f4a71);
       color: #fff;
       box-shadow: 0 20px 40px rgba(21, 41, 62, 0.2);
+    }
+    .tornei-page--esport .tornei-switch button.active {
+      background: linear-gradient(135deg, #0f172a, #0f766e);
+      box-shadow: 0 20px 40px rgba(15, 118, 110, 0.22);
     }
     .tornei-tab-label {
       display: block;
@@ -897,7 +993,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
   </style>
 </head>
 
-<body>
+<body class="<?= $isEsportSection ? 'tornei-page--esport' : 'tornei-page--calcio' ?>">
 
   <!-- HEADER -->
   <div id="header-container"></div>
@@ -908,26 +1004,26 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
     <section class="tornei-hero" aria-label="Panoramica tornei">
       <div class="tornei-hero-inner">
         <div>
-          <span class="tornei-kicker">Archivio tornei Old School</span>
-          <h1>Tutti i tornei</h1>
-          <p>Cerca in tempo reale, filtra per categoria e passa da in corso, programmati e terminati.</p>
+          <span class="tornei-kicker"><?= escapeHtml($sectionCopy['hero_kicker']) ?></span>
+          <h1><?= escapeHtml($sectionCopy['hero_title']) ?></h1>
+          <p><?= escapeHtml($sectionCopy['hero_description']) ?></p>
         </div>
         <div class="tornei-hero-stats">
           <div class="tornei-stat">
             <span class="tornei-stat-value"><?= $totaleTornei ?></span>
-            <span class="tornei-stat-label">Tornei totali</span>
+            <span class="tornei-stat-label"><?= escapeHtml($sectionCopy['stats_total_label']) ?></span>
           </div>
           <div class="tornei-stat">
             <span class="tornei-stat-value"><?= $totaliTornei['incorso'] ?></span>
-            <span class="tornei-stat-label">Attivi in questo momento</span>
+            <span class="tornei-stat-label"><?= escapeHtml($sectionCopy['stats_active_label']) ?></span>
           </div>
           <div class="tornei-stat">
             <span class="tornei-stat-value"><?= $totaliTornei['programmati'] ?></span>
-            <span class="tornei-stat-label">Gia programmati</span>
+            <span class="tornei-stat-label"><?= escapeHtml($sectionCopy['stats_programmed_label']) ?></span>
           </div>
           <div class="tornei-stat">
             <span class="tornei-stat-value"><?= $totaleCategorie ?></span>
-            <span class="tornei-stat-label">Categorie disponibili</span>
+            <span class="tornei-stat-label"><?= escapeHtml($sectionCopy['stats_categories_label']) ?></span>
           </div>
         </div>
       </div>
@@ -936,12 +1032,12 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
     <div class="tornei-controls">
       <div class="tornei-toolbar" aria-label="Strumenti di ricerca tornei">
         <div class="tornei-field">
-          <label for="torneiSearch">Cerca torneo</label>
+          <label for="torneiSearch"><?= escapeHtml($sectionCopy['search_label']) ?></label>
           <input
             id="torneiSearch"
             class="tornei-search"
             type="search"
-            placeholder="Nome torneo o categoria"
+            placeholder="<?= escapeHtml($sectionCopy['search_placeholder']) ?>"
             autocomplete="off">
         </div>
         <div class="tornei-field">
@@ -955,7 +1051,7 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
         </div>
         <div class="tornei-toolbar-actions">
           <button type="button" class="tornei-reset" id="torneiReset">Azzera filtri</button>
-          <span class="tornei-results" id="torneiResults" role="status" aria-live="polite">Totale tornei: <?= $totaleTornei ?></span>
+          <span class="tornei-results" id="torneiResults" role="status" aria-live="polite"><?= escapeHtml($sectionCopy['results_total_label']) ?>: <?= $totaleTornei ?></span>
         </div>
       </div>
 
@@ -986,11 +1082,11 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
             <?php renderTorneoCard($t); ?>
           <?php endforeach; ?>
         <?php else: ?>
-          <p>Nessun torneo in corso al momento.</p>
+          <p><?= escapeHtml($sectionCopy['empty_live']) ?></p>
         <?php endif; ?>
       </div>
       <?php if (!empty($tornei['in corso'])): ?>
-        <p class="tornei-empty" hidden>Nessun torneo in corso corrisponde ai filtri attuali.</p>
+        <p class="tornei-empty" hidden><?= escapeHtml($sectionCopy['empty_live_filtered']) ?></p>
       <?php endif; ?>
     </section>
 
@@ -1006,11 +1102,11 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
             <?php renderTorneoCard($t); ?>
           <?php endforeach; ?>
         <?php else: ?>
-          <p>Nessun torneo programmato al momento.</p>
+          <p><?= escapeHtml($sectionCopy['empty_upcoming']) ?></p>
         <?php endif; ?>
       </div>
       <?php if (!empty($tornei['programmato'])): ?>
-        <p class="tornei-empty" hidden>Nessun torneo programmato corrisponde ai filtri attuali.</p>
+        <p class="tornei-empty" hidden><?= escapeHtml($sectionCopy['empty_upcoming_filtered']) ?></p>
       <?php endif; ?>
     </section>
 
@@ -1026,11 +1122,11 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
             <?php renderTorneoCard($t); ?>
           <?php endforeach; ?>
         <?php else: ?>
-          <p>Nessun torneo terminato al momento.</p>
+          <p><?= escapeHtml($sectionCopy['empty_finished']) ?></p>
         <?php endif; ?>
       </div>
       <?php if (!empty($tornei['terminato'])): ?>
-        <p class="tornei-empty" hidden>Nessun torneo terminato corrisponde ai filtri attuali.</p>
+        <p class="tornei-empty" hidden><?= escapeHtml($sectionCopy['empty_finished_filtered']) ?></p>
         <div class="tornei-actions">
           <button type="button" class="tornei-more" data-more-for="terminati" hidden>Carica altri</button>
         </div>
@@ -1044,8 +1140,8 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
     <div class="cta-accesso">
       <div class="box">
         <div>
-          <h2>Vuoi seguire i tornei?</h2>
-          <p>Crea un account o accedi per salvare preferiti, ricevere notifiche e seguire squadre e tornei.</p>
+          <h2><?= escapeHtml($sectionCopy['cta_title']) ?></h2>
+          <p><?= escapeHtml($sectionCopy['cta_description']) ?></p>
         </div>
         <div class="cta-actions">
           <a class="btn" href="/register.php">Iscriviti</a>
@@ -1165,6 +1261,11 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
       const categorySelect = document.getElementById("torneiCategoria");
       const resetButton = document.getElementById("torneiReset");
       const resultsCounter = document.getElementById("torneiResults");
+      const resultsCopy = {
+        total: <?= json_encode($sectionCopy['results_total_label']) ?>,
+        filtered: <?= json_encode($sectionCopy['results_filtered_label']) ?>,
+      };
+      const activeSectionType = <?= json_encode($sezioneAttiva) ?>;
       const tabs = Array.from(document.querySelectorAll(".tornei-switch button"));
       const sections = {
         "incorso": document.getElementById("tornei-incorso"),
@@ -1215,6 +1316,9 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
         if (category) params.set("categoria", category);
         else params.delete("categoria");
 
+        if (activeSectionType === "esport") params.set("sezione", "esport");
+        else params.delete("sezione");
+
         if (activeTab && activeTab !== "incorso") params.set("tab", activeTab);
         else params.delete("tab");
 
@@ -1249,8 +1353,8 @@ $torneiBreadcrumbs = seo_breadcrumb_schema([
         }
 
         resultsCounter.textContent = totalVisible === totalAll
-          ? `Totale tornei: ${totalAll}`
-          : `Risultati: ${totalVisible} su ${totalAll}`;
+          ? `${resultsCopy.total}: ${totalAll}`
+          : `${resultsCopy.filtered}: ${totalVisible} su ${totalAll}`;
       }
 
       function updateResetButtonState() {

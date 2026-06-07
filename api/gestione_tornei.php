@@ -36,6 +36,30 @@ function cleanUtf8Text($value): string {
     return trim($value);
 }
 
+function normalizeTorneoSezioneValue($value): string {
+    return strtolower(trim((string)$value)) === 'esport' ? 'esport' : 'calcio';
+}
+
+function normalizeAdminActionValue($value): string {
+    $allowed = ['crea', 'modifica', 'elimina'];
+    return in_array($value, $allowed, true) ? $value : 'crea';
+}
+
+function buildGestioneTorneiAdminUrl(string $action = 'crea', string $sezione = 'calcio'): string {
+    $params = [];
+    $normalizedAction = normalizeAdminActionValue($action);
+    $normalizedSezione = normalizeTorneoSezioneValue($sezione);
+
+    if ($normalizedAction !== 'crea') {
+        $params['action'] = $normalizedAction;
+    }
+    if ($normalizedSezione !== 'calcio') {
+        $params['sezione'] = $normalizedSezione;
+    }
+
+    return 'gestione_tornei.php' . (!empty($params) ? '?' . http_build_query($params) : '');
+}
+
 function normalizeFaseFinaleValue(string $formula, string $fase): string {
     if ($formula === 'campionato') {
         if ($fase === 'gold') {
@@ -425,16 +449,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     $slug = sanitizeTorneoSlug($rawFile);
     $filetorneo = $slug . '.php';
     $categoria = cleanUtf8Text($_POST['categoria'] ?? '');
+    $sezione = normalizeTorneoSezioneValue($_POST['sezione'] ?? 'calcio');
     $img = salvaImmagineTorneo($nome, 'img_upload');
     $formulaTorneo = $_POST['formula_torneo'] ?? '';
     $faseFinale = $_POST['fase_finale'] ?? '';
     $config = buildTorneoConfigFromRequest($_POST);
 
     $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
-    if ($torneo->crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $img, $squadre_complete, $config)) {
+    if ($torneo->crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $sezione, $img, $squadre_complete, $config)) {
         creaFileTorneoDaTemplate($nome, $slug, $formulaTorneo, $faseFinale);
     }
-    header("Location: gestione_tornei.php");
+    header("Location: " . buildGestioneTorneiAdminUrl('crea', $sezione));
     exit;
 }
 
@@ -450,6 +475,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $slug = sanitizeTorneoSlug($rawFile);
     $filetorneo = $slug . '.php';
     $categoria = cleanUtf8Text($_POST['categoria'] ?? '');
+    $sezione = normalizeTorneoSezioneValue($_POST['sezione'] ?? 'calcio');
     $record = $torneo->getById($id);
     $img = salvaImmagineTorneo($nome, 'img_upload_mod');
     if (!$img && $record && !empty($record['img'])) {
@@ -459,7 +485,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $faseFinale = (string)($_POST['fase_finale'] ?? '');
     $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
     $config = buildTorneoConfigFromRequest($_POST);
-    $torneo->aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete, $config);
+    $torneo->aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $sezione, $squadre_complete, $config);
     creaFileTorneoDaTemplate($nome, $slug, $formulaTorneo, $faseFinale);
 
     $filePrecedente = $record['filetorneo'] ?? '';
@@ -475,16 +501,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
         aggiornaGironiSquadreTorneo($conn ?? null, $torneoSlugCorrente, $gironiSquadre);
     }
 
-    header("Location: gestione_tornei.php");
+    header("Location: " . buildGestioneTorneiAdminUrl('modifica', $sezione));
     exit;
 }
 
 // --- ELIMINA ---
 if (isset($_GET['elimina'])) {
     $id = (int)$_GET['elimina'];
+    $redirectSezione = normalizeTorneoSezioneValue($_GET['sezione'] ?? 'calcio');
     $record = $torneo->getById($id);
 
     if ($record) {
+        $redirectSezione = normalizeTorneoSezioneValue($record['sezione'] ?? $redirectSezione);
         eliminaFileTorneo($record['filetorneo'] ?? null);
         eliminaImmagineTorneo($record['img'] ?? null);
 
@@ -497,15 +525,22 @@ if (isset($_GET['elimina'])) {
     }
 
     $torneo->elimina($id);
-    header("Location: gestione_tornei.php");
+    header("Location: " . buildGestioneTorneiAdminUrl('elimina', $redirectSezione));
     exit;
 }
 
 // --- LISTA TORNEI ---
+$requestedSezione = normalizeTorneoSezioneValue($_GET['sezione'] ?? 'calcio');
+$requestedAdminAction = normalizeAdminActionValue($_GET['action'] ?? 'crea');
+$isEsportContext = $requestedSezione === 'esport';
+$dashboardTitle = $isEsportContext ? 'Gestione Tornei ESPORT' : 'Gestione Tornei';
 $torneiRows = [];
 $lista = $torneo->getAll();
 if ($lista instanceof mysqli_result) {
     while ($row = $lista->fetch_assoc()) {
+        if ($isEsportContext && normalizeTorneoSezioneValue($row['sezione'] ?? 'calcio') !== 'esport') {
+            continue;
+        }
         $torneiRows[] = $row;
     }
 } else {
@@ -709,7 +744,7 @@ if ($lista instanceof mysqli_result) {
     <main class="admin-wrapper">
         <section class="admin-container">
             <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
-            <h1 class="admin-title">Gestione Tornei</h1>
+            <h1 class="admin-title"><?= htmlspecialchars($dashboardTitle) ?></h1>
 
             <!-- SWITCH AZIONI -->
             <div class="admin-select-action" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
@@ -725,6 +760,14 @@ if ($lista instanceof mysqli_result) {
             <!-- FORM CREAZIONE -->
             <form method="POST" class="admin-form form-crea" enctype="multipart/form-data">
                 <h2>Aggiungi Torneo</h2>
+                <div class="form-group">
+                    <label for="sezione">Sezione</label>
+                    <select name="sezione" id="sezione">
+                        <option value="calcio" <?= $requestedSezione === 'calcio' ? 'selected' : '' ?>>Calcio</option>
+                        <option value="esport" <?= $requestedSezione === 'esport' ? 'selected' : '' ?>>ESPORT</option>
+                    </select>
+                    <small>Usa ESPORT per pubblicare il torneo nella nuova area dedicata.</small>
+                </div>
                 <div class="form-group">
                     <label for="formula_torneo">Formula torneo</label>
                     <select name="formula_torneo" id="formula_torneo" required>
@@ -842,11 +885,19 @@ if ($lista instanceof mysqli_result) {
                     <select name="id" id="selectTorneo" required>
                         <option value="">-- Seleziona un torneo --</option>
                         <?php foreach ($torneiRows as $row): ?>
-                            <option value="<?= $row['id'] ?>"><?= htmlspecialchars($row['nome']) ?></option>
+                            <option value="<?= $row['id'] ?>"><?= htmlspecialchars(strtoupper((string)($row['sezione'] ?? 'calcio')) . ' - ' . $row['nome']) ?></option>
                         <?php endforeach; ?>
                         <?php if (empty($torneiRows)): ?>
                             <option value="" disabled>Nessun torneo disponibile</option>
                         <?php endif; ?>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="mod_sezione">Sezione</label>
+                    <select name="sezione" id="mod_sezione">
+                        <option value="calcio">Calcio</option>
+                        <option value="esport">ESPORT</option>
                     </select>
                 </div>
 
@@ -974,6 +1025,7 @@ if ($lista instanceof mysqli_result) {
                         <tr>
                             <th data-col="nome">Nome</th>
                             <th data-col="stato">Stato</th>
+                            <th data-col="sezione">Sezione</th>
                             <th data-col="categoria">Categoria</th>
                             <th>Azioni</th>
                         </tr>
@@ -981,13 +1033,14 @@ if ($lista instanceof mysqli_result) {
                     <tbody>
                         <?php if (empty($torneiRows)): ?>
                             <tr>
-                                <td colspan="4">Nessun torneo disponibile.</td>
+                                <td colspan="5">Nessun torneo disponibile.</td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($torneiRows as $row): ?>
                                 <tr data-id="<?= $row['id'] ?>"> <!-- memorizziamo l'ID come attributo -->
                                     <td><?= htmlspecialchars($row['nome']) ?></td>
                                     <td><?= htmlspecialchars($row['stato']) ?></td>
+                                    <td><?= htmlspecialchars(strtoupper((string)($row['sezione'] ?? 'calcio'))) ?></td>
                                     <td><?= htmlspecialchars($row['categoria']) ?></td>
                                     <td>
                                           <a href="#" class="btn-danger delete-btn" data-id="<?= $row['id'] ?>" data-label="<?= htmlspecialchars($row['nome']) ?>" data-type="torneo">Elimina</a>
@@ -1012,6 +1065,7 @@ if ($lista instanceof mysqli_result) {
         const formModifica = document.querySelector('.form-modifica');
         const formElimina = document.querySelector('.form-elimina');
         const actionButtons = document.querySelectorAll('.action-toggle');
+        const defaultAdminAction = <?= json_encode($requestedAdminAction) ?>;
 
         function mostraSezione(valore) {
             [formCrea, formModifica, formElimina].forEach(f => f.classList.add('hidden'));
@@ -1029,7 +1083,7 @@ if ($lista instanceof mysqli_result) {
             btn.addEventListener('click', () => mostraSezione(btn.dataset.action));
         });
 
-        mostraSezione('crea');
+        mostraSezione(defaultAdminAction);
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -1614,7 +1668,8 @@ const campi = {
     inizio: document.getElementById('mod_inizio'),
     fine: document.getElementById('mod_fine'),
     file: document.getElementById('mod_file'),
-    categoria: document.getElementById('mod_categoria')
+    categoria: document.getElementById('mod_categoria'),
+    sezione: document.getElementById('mod_sezione')
 };
 const modController = window.__torneoFormControllers__ ? window.__torneoFormControllers__.modifica : null;
 const configInputs = {
@@ -1647,6 +1702,10 @@ function resetModFormConfig() {
             faseFinaleMod.innerHTML = '';
             faseFinaleMod.value = '';
         }
+    }
+
+    if (campi.sezione) {
+        campi.sezione.value = 'calcio';
     }
 
     clearSquadreGironiEditor();
@@ -1820,6 +1879,9 @@ selectTorneo.addEventListener('change', async (e) => {
             campi.fine.value = data.data_fine || '';
             campi.file.value = data.filetorneo || '';
             campi.categoria.value = data.categoria || '';
+            if (campi.sezione) {
+                campi.sezione.value = data.sezione || 'calcio';
+            }
             const torneoSlug = torneoSlugFromFile(data.filetorneo || '');
 
             const cfg = parseConfig(data.config || {});

@@ -191,6 +191,7 @@ CREATE TABLE IF NOT EXISTS tornei (
     img VARCHAR(255) DEFAULT '/img/tornei/pallone.png',
     filetorneo VARCHAR(255) NOT NULL,
     categoria VARCHAR(100) NOT NULL,
+    sezione ENUM('calcio','esport') NOT NULL DEFAULT 'calcio',
     squadre_complete TINYINT(1) NOT NULL DEFAULT 0,
     config LONGTEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

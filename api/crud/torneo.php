@@ -3,11 +3,31 @@ class torneo {
     private $conn;
     private $table = "tornei";
     private $hasConfig = false;
+    private $hasSection = false;
 
     public function __construct() {
-        require __DIR__ . '/../../includi/db.php'; // usa la connessione esistente
-        $this->conn = $conn; // $conn è definito in db.php
+        require __DIR__ . '/../../includi/db.php';
+        $this->conn = $conn;
         $this->hasConfig = $this->ensureConfigColumn();
+        $this->hasSection = $this->ensureSectionColumn();
+    }
+
+    private function hasColumn(string $column): bool {
+        if (!$this->conn) {
+            return false;
+        }
+
+        $safeColumn = preg_replace('/[^A-Za-z0-9_]/', '', $column);
+        if ($safeColumn === '') {
+            return false;
+        }
+
+        $check = @$this->conn->query("SHOW COLUMNS FROM {$this->table} LIKE '{$safeColumn}'");
+        return $check && $check->num_rows > 0;
+    }
+
+    private function normalizeSezione(?string $value): string {
+        return strtolower(trim((string)$value)) === 'esport' ? 'esport' : 'calcio';
     }
 
     /**
@@ -17,30 +37,30 @@ class torneo {
         if (!$this->conn) {
             return false;
         }
-        $has = false;
-        // Verifica presenza
-        $check = @$this->conn->query("SHOW COLUMNS FROM {$this->table} LIKE 'config'");
-        if ($check && $check->num_rows > 0) {
-            $has = true;
-        }
 
-        // Tenta aggiunta se mancante (prima JSON, poi LONGTEXT fallback)
-        if (!$has) {
+        if (!$this->hasColumn('config')) {
             @$this->conn->query("ALTER TABLE {$this->table} ADD COLUMN config JSON NULL");
-            $check = @$this->conn->query("SHOW COLUMNS FROM {$this->table} LIKE 'config'");
-            if ($check && $check->num_rows > 0) {
-                $has = true;
-            }
         }
-        if (!$has) {
+        if (!$this->hasColumn('config')) {
             @$this->conn->query("ALTER TABLE {$this->table} ADD COLUMN config LONGTEXT NULL");
-            $check = @$this->conn->query("SHOW COLUMNS FROM {$this->table} LIKE 'config'");
-            if ($check && $check->num_rows > 0) {
-                $has = true;
-            }
         }
 
-        return $has;
+        return $this->hasColumn('config');
+    }
+
+    /**
+     * Garantisce la presenza della colonna sezione per separare calcio ed esport.
+     */
+    private function ensureSectionColumn(): bool {
+        if (!$this->conn) {
+            return false;
+        }
+
+        if (!$this->hasColumn('sezione')) {
+            @$this->conn->query("ALTER TABLE {$this->table} ADD COLUMN sezione VARCHAR(20) NOT NULL DEFAULT 'calcio' AFTER categoria");
+        }
+
+        return $this->hasColumn('sezione');
     }
 
     /**
@@ -76,7 +96,7 @@ class torneo {
     /**
      * Crea un nuovo torneo
      */
-    public function crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $img = null, $squadre_complete = 0, $config = null) {
+    public function crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $sezione = 'calcio', $img = null, $squadre_complete = 0, $config = null) {
         if (empty($img)) {
             $img = "/img/tornei/pallone.png";
         }
@@ -86,28 +106,40 @@ class torneo {
             $configJson = json_encode($config, JSON_UNESCAPED_UNICODE);
         }
 
-        if ($this->hasConfig) {
-            $stmt = $this->conn->prepare("
-                INSERT INTO {$this->table}
-                (nome, stato, data_inizio, data_fine, img, filetorneo, categoria, squadre_complete, config)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            $stmt->bind_param("sssssssis", $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete, $configJson);
-        } else {
-            $stmt = $this->conn->prepare("
-                INSERT INTO {$this->table}
-                (nome, stato, data_inizio, data_fine, img, filetorneo, categoria, squadre_complete)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            $stmt->bind_param("sssssssi", $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete);
+        $columns = ['nome', 'stato', 'data_inizio', 'data_fine', 'img', 'filetorneo', 'categoria'];
+        $params = [$nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria];
+        $types = "sssssss";
+
+        if ($this->hasSection) {
+            $columns[] = 'sezione';
+            $params[] = $this->normalizeSezione($sezione);
+            $types .= "s";
         }
+
+        $columns[] = 'squadre_complete';
+        $params[] = $squadre_complete;
+        $types .= "i";
+
+        if ($this->hasConfig) {
+            $columns[] = 'config';
+            $params[] = $configJson;
+            $types .= "s";
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($columns), '?'));
+        $stmt = $this->conn->prepare("
+            INSERT INTO {$this->table}
+            (" . implode(', ', $columns) . ")
+            VALUES ({$placeholders})
+        ");
+        $stmt->bind_param($types, ...$params);
         return $stmt->execute();
     }
 
     /**
      * Aggiorna un torneo esistente
      */
-    public function aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete = 0, $config = null) {
+    public function aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $sezione = 'calcio', $squadre_complete = 0, $config = null) {
         if (empty($img)) {
             $img = "/img/tornei/pallone.png";
         }
@@ -117,21 +149,43 @@ class torneo {
             $configJson = json_encode($config, JSON_UNESCAPED_UNICODE);
         }
 
-        if ($this->hasConfig) {
-            $stmt = $this->conn->prepare("
-                UPDATE {$this->table}
-                SET nome = ?, stato = ?, data_inizio = ?, data_fine = ?, img = ?, filetorneo = ?, categoria = ?, squadre_complete = ?, config = ?
-                WHERE id = ?
-            ");
-            $stmt->bind_param("sssssssisi", $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete, $configJson, $id);
-        } else {
-            $stmt = $this->conn->prepare("
-                UPDATE {$this->table}
-                SET nome = ?, stato = ?, data_inizio = ?, data_fine = ?, img = ?, filetorneo = ?, categoria = ?, squadre_complete = ?
-                WHERE id = ?
-            ");
-            $stmt->bind_param("sssssssii", $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $squadre_complete, $id);
+        $assignments = [
+            'nome = ?',
+            'stato = ?',
+            'data_inizio = ?',
+            'data_fine = ?',
+            'img = ?',
+            'filetorneo = ?',
+            'categoria = ?',
+        ];
+        $params = [$nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria];
+        $types = "sssssss";
+
+        if ($this->hasSection) {
+            $assignments[] = 'sezione = ?';
+            $params[] = $this->normalizeSezione($sezione);
+            $types .= "s";
         }
+
+        $assignments[] = 'squadre_complete = ?';
+        $params[] = $squadre_complete;
+        $types .= "i";
+
+        if ($this->hasConfig) {
+            $assignments[] = 'config = ?';
+            $params[] = $configJson;
+            $types .= "s";
+        }
+
+        $params[] = $id;
+        $types .= "i";
+
+        $stmt = $this->conn->prepare("
+            UPDATE {$this->table}
+            SET " . implode(', ', $assignments) . "
+            WHERE id = ?
+        ");
+        $stmt->bind_param($types, ...$params);
         return $stmt->execute();
     }
 
@@ -145,9 +199,9 @@ class torneo {
     }
 
     /**
-     * Filtra tornei per stato e/o categoria
+     * Filtra tornei per stato, categoria e/o sezione
      */
-    public function filtra($stato = null, $categoria = null) {
+    public function filtra($stato = null, $categoria = null, $sezione = null) {
         $sql = "SELECT * FROM {$this->table} WHERE 1=1";
         $params = [];
         $types = "";
@@ -160,6 +214,11 @@ class torneo {
         if (!empty($categoria)) {
             $sql .= " AND categoria = ?";
             $params[] = $categoria;
+            $types .= "s";
+        }
+        if ($this->hasSection && !empty($sezione)) {
+            $sql .= " AND sezione = ?";
+            $params[] = $this->normalizeSezione($sezione);
             $types .= "s";
         }
 
