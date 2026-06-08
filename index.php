@@ -174,7 +174,7 @@ if ($homeNewsStmt = $conn->prepare($homeNewsSql)) {
         <div class="hero-overlay">
           <h1>Chi Siamo</h1>
           <p>Lo facciamo per passione, per condividere divertimento e amicizia con chiunque voglia partecipare.</p>
-          <a href="chisiamo.php" class="hero-btn">Scopri di più</a>
+          <a href="/chisiamo.php?sezione=calcio" class="hero-btn">Scopri di più</a>
         </div>
       </section>
 
@@ -183,7 +183,7 @@ if ($homeNewsStmt = $conn->prepare($homeNewsSql)) {
         <div class="hero-overlay">
           <h1>Contattaci</h1>
           <p>Siamo sempre disponibili per domande, iscrizioni o collaborazioni.</p>
-          <a href="contatti.php" class="hero-btn">Contatti</a>
+          <a href="/contatti.php?sezione=calcio" class="hero-btn">Contatti</a>
         </div>
       </section>
 

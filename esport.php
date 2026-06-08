@@ -169,7 +169,7 @@ if ($blogSectionReady && ($homeNewsStmt = $conn->prepare($homeNewsSql))) {
         <div class="hero-overlay">
           <h1>Chi Siamo</h1>
           <p>Lo facciamo per passione, dentro e fuori dal campo, per costruire community e competizioni che valgano la pena.</p>
-          <a href="chisiamo.php" class="hero-btn">Scopri di piu</a>
+          <a href="/chisiamo.php?sezione=esport" class="hero-btn">Scopri di piu</a>
         </div>
       </section>
 
@@ -177,7 +177,7 @@ if ($blogSectionReady && ($homeNewsStmt = $conn->prepare($homeNewsSql))) {
         <div class="hero-overlay">
           <h1>Contattaci</h1>
           <p>Siamo sempre disponibili per domande, iscrizioni o collaborazioni.</p>
-          <a href="contatti.php" class="hero-btn">Contatti</a>
+          <a href="/contatti.php?sezione=esport" class="hero-btn">Contatti</a>
         </div>
       </section>
 

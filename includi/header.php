@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/security.php';
 require_once __DIR__ . '/user_features.php';
+require_once __DIR__ . '/content_sections.php';
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $userFeatureFlags = normalize_user_feature_flags([]);
@@ -38,9 +39,99 @@ if (!empty($sessionAvatar)) {
         $avatarUrl = '/' . ltrim($sessionAvatar, '/');
     }
 }
+
+if (!function_exists('header_detect_section_mode')) {
+    function header_detect_section_mode(): string
+    {
+        foreach (['siteSectionContext', 'articleSection', 'blogSection', 'alboSection'] as $key) {
+            $candidate = $GLOBALS[$key] ?? null;
+            if (is_string($candidate) && trim($candidate) !== '') {
+                return normalize_content_section($candidate);
+            }
+        }
+
+        $requestedSection = trim((string)($_GET['sezione'] ?? ''));
+        if ($requestedSection !== '') {
+            return normalize_content_section($requestedSection);
+        }
+
+        $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? ($_SERVER['SCRIPT_NAME'] ?? ''), PHP_URL_PATH);
+        $currentScript = strtolower((string)basename((string)$requestPath));
+        if (in_array($currentScript, ['esport.php', 'tornei-esport.php'], true)) {
+            return 'esport';
+        }
+
+        return 'calcio';
+    }
+}
+
+if (!function_exists('header_mode_page_path')) {
+    function header_mode_page_path(string $section, string $currentScript): string
+    {
+        $section = normalize_content_section($section);
+        $currentScript = strtolower(trim($currentScript));
+
+        switch ($currentScript) {
+            case '':
+            case 'index.php':
+            case 'esport.php':
+                return $section === 'esport' ? '/esport.php' : '/index.php';
+            case 'tornei.php':
+            case 'tornei-esport.php':
+                return $section === 'esport' ? '/tornei-esport.php' : '/tornei.php';
+            case 'blog.php':
+            case 'articolo.php':
+                return '/blog.php?sezione=' . rawurlencode($section);
+            case 'chisiamo.php':
+                return '/chisiamo.php?sezione=' . rawurlencode($section);
+            case 'contatti.php':
+                return '/contatti.php?sezione=' . rawurlencode($section);
+            case 'albo.php':
+                return '/albo.php?sezione=' . rawurlencode($section);
+            default:
+                return $section === 'esport' ? '/esport.php' : '/index.php';
+        }
+    }
+}
+
+if (!function_exists('header_section_nav_path')) {
+    function header_section_nav_path(string $section, string $destination): string
+    {
+        $section = normalize_content_section($section);
+
+        switch ($destination) {
+            case 'home':
+                return $section === 'esport' ? '/esport.php' : '/index.php';
+            case 'tornei':
+                return $section === 'esport' ? '/tornei-esport.php' : '/tornei.php';
+            case 'blog':
+                return '/blog.php?sezione=' . rawurlencode($section);
+            case 'chisiamo':
+                return '/chisiamo.php?sezione=' . rawurlencode($section);
+            case 'contatti':
+                return '/contatti.php?sezione=' . rawurlencode($section);
+            default:
+                return '/index.php';
+        }
+    }
+}
+
+$headerRequestPath = parse_url($_SERVER['REQUEST_URI'] ?? ($_SERVER['SCRIPT_NAME'] ?? ''), PHP_URL_PATH);
+$headerCurrentScript = strtolower((string)basename((string)$headerRequestPath));
+$headerCurrentSection = header_detect_section_mode();
+$headerIsEsportMode = $headerCurrentSection === 'esport';
+$headerSportModeUrl = login_with_base_path(header_mode_page_path('calcio', $headerCurrentScript));
+$headerEsportModeUrl = login_with_base_path(header_mode_page_path('esport', $headerCurrentScript));
+$headerHomeUrl = login_with_base_path(header_section_nav_path($headerCurrentSection, 'home'));
+$headerNavLinks = [
+    ['label' => 'Tornei', 'path' => header_section_nav_path($headerCurrentSection, 'tornei')],
+    ['label' => 'Blog', 'path' => header_section_nav_path($headerCurrentSection, 'blog')],
+    ['label' => 'Chi siamo', 'path' => header_section_nav_path($headerCurrentSection, 'chisiamo')],
+    ['label' => 'Contatti', 'path' => header_section_nav_path($headerCurrentSection, 'contatti')],
+];
 ?>
 
-<header class="site-header" data-auth="<?= $isLoggedIn ? '1' : '0' ?>">
+<header class="site-header" data-auth="<?= $isLoggedIn ? '1' : '0' ?>" data-section="<?= htmlspecialchars($headerCurrentSection) ?>">
 
     <!-- HAMBURGER (solo mobile) -->
     <button class="mobile-menu-btn" id="mobileMenuBtn">
@@ -49,18 +140,20 @@ if (!empty($sessionAvatar)) {
 
     <!-- LOGO -->
     <div class="header-logo">
-        <a href="<?= htmlspecialchars(login_with_base_path('/index.php')) ?>">
+        <a href="<?= htmlspecialchars($headerHomeUrl) ?>">
             <img src="/img/logo_old_school.png" alt="Logo">
         </a>
     </div>
 
     <!-- NAVIGAZIONE DESKTOP + MOBILE -->
     <nav class="header-nav" id="mainNav">
-        <a href="<?= htmlspecialchars(login_with_base_path('/tornei.php')) ?>">Tornei</a>
-        <a href="<?= htmlspecialchars(login_with_base_path('/esport.php')) ?>">Esport</a>
-        <a href="<?= htmlspecialchars(login_with_base_path('/blog.php')) ?>">Blog</a>
-        <a href="<?= htmlspecialchars(login_with_base_path('/chisiamo.php')) ?>">Chi siamo</a>
-        <a href="<?= htmlspecialchars(login_with_base_path('/contatti.php')) ?>">Contatti</a>
+        <div class="header-mode-switch" aria-label="Modalita sito">
+            <a href="<?= htmlspecialchars($headerSportModeUrl) ?>" class="header-mode-link<?= !$headerIsEsportMode ? ' active' : '' ?>"<?= !$headerIsEsportMode ? ' aria-current="page"' : '' ?>>Sport</a>
+            <a href="<?= htmlspecialchars($headerEsportModeUrl) ?>" class="header-mode-link<?= $headerIsEsportMode ? ' active' : '' ?>"<?= $headerIsEsportMode ? ' aria-current="page"' : '' ?>>Esport</a>
+        </div>
+        <?php foreach ($headerNavLinks as $navLink): ?>
+            <a href="<?= htmlspecialchars(login_with_base_path($navLink['path'])) ?>"><?= htmlspecialchars($navLink['label']) ?></a>
+        <?php endforeach; ?>
     </nav>
 
     <div class="header-actions">
@@ -222,6 +315,48 @@ if (!empty($sessionAvatar)) {
 
 .header-nav a:hover {
     color: #cdd9ff;
+}
+
+.header-mode-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.header-mode-switch .header-mode-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 78px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    color: rgba(255,255,255,0.82);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.92rem;
+    letter-spacing: 0.3px;
+    text-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+.header-mode-switch .header-mode-link:hover {
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.header-mode-switch .header-mode-link.active {
+    background: #fff;
+    color: #15293e;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+}
+
+.header-mode-switch .header-mode-link.active:hover {
+    color: #15293e;
 }
 
 .header-actions {
@@ -538,6 +673,17 @@ if (!empty($sessionAvatar)) {
         text-align: left;
     }
 
+    .header-mode-switch {
+        width: 100%;
+        justify-content: space-between;
+        margin-bottom: 4px;
+    }
+
+    .header-mode-switch .header-mode-link {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
     .site-header {
         justify-content: center;
         padding: 12px 16px;
@@ -582,4 +728,3 @@ if (!empty($sessionAvatar)) {
 </script>
 <script src="/includi/consent-sync.js?v=20251220" defer></script>
 <script src="/includi/header-interactions.js?v=20251220" defer></script>
-
