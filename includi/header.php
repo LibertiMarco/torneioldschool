@@ -284,6 +284,10 @@ $headerNavLinks = [
     width: 100%;
 }
 
+.header-spacer--tournament ~ main.content > .torneo-hero {
+    margin-top: 36px !important;
+}
+
 /* LOGO NITIDO */
 .header-logo {
     display: flex;
@@ -705,6 +709,10 @@ $headerNavLinks = [
     .header-logo img {
         width: 48px;
         height: 48px;
+    }
+
+    .header-spacer--tournament ~ main.content > .torneo-hero {
+        margin-top: 32px !important;
     }
 
     .header-actions .notif-btn {
