@@ -284,9 +284,9 @@ $headerNavLinks = [
     width: 100%;
 }
 
-.header-spacer--tournament + main.content {
+.header-spacer--tournament ~ main.content {
     margin-top: 0 !important;
-    padding-top: 0 !important;
+    padding-top: 30px !important;
 }
 
 /* LOGO NITIDO */
@@ -712,6 +712,10 @@ $headerNavLinks = [
         height: 48px;
     }
 
+    .header-spacer--tournament ~ main.content {
+        padding-top: 24px !important;
+    }
+
     .header-actions .notif-btn {
         width: 36px;
         height: 36px;
@@ -741,10 +745,7 @@ $headerNavLinks = [
 
         const fallbackHeight = 80;
         const measuredHeight = Math.ceil(header.getBoundingClientRect().height);
-        const extraOffset = spacer.classList.contains("header-spacer--tournament")
-            ? (window.innerWidth <= 768 ? 18 : 24)
-            : 0;
-        const resolvedHeight = Math.max(fallbackHeight, measuredHeight) + extraOffset;
+        const resolvedHeight = Math.max(fallbackHeight, measuredHeight);
 
         document.documentElement.style.setProperty("--site-header-height", `${resolvedHeight}px`);
         spacer.style.height = `${resolvedHeight}px`;
@@ -770,19 +771,36 @@ $headerNavLinks = [
         observer.observe(header);
     };
 
+    const resetTournamentScroll = () => {
+        const spacer = document.querySelector("[data-header-spacer='1']");
+        if (!spacer || !spacer.classList.contains("header-spacer--tournament")) {
+            return;
+        }
+
+        window.scrollTo(0, 0);
+    };
+
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", queueSync, { once: true });
         document.addEventListener("DOMContentLoaded", initObserver, { once: true });
+        document.addEventListener("DOMContentLoaded", resetTournamentScroll, { once: true });
     } else {
         queueSync();
         initObserver();
+        resetTournamentScroll();
     }
 
     window.addEventListener("load", queueSync);
+    window.addEventListener("load", resetTournamentScroll);
+    window.addEventListener("pageshow", resetTournamentScroll);
     window.addEventListener("resize", queueSync);
 
     if (document.fonts && typeof document.fonts.ready?.then === "function") {
         document.fonts.ready.then(queueSync).catch(function () {});
+    }
+
+    if ("scrollRestoration" in window.history) {
+        window.history.scrollRestoration = "manual";
     }
 })();
 </script>
