@@ -17,7 +17,7 @@ function home_news_permalink(?string $title): string
 $baseUrl = seo_base_url();
 $pageSeo = [
     'title' => 'Tornei ESPORT | Tornei Old School',
-    'description' => 'La homepage dedicata ai tornei esport Tornei Old School: news, ranking in arrivo, albo d\'oro e accesso rapido ai tornei gaming.',
+    'description' => 'La homepage dedicata ai tornei esport Tornei Old School: news, ranking EA FC, albo d\'oro e accesso rapido ai tornei gaming.',
     'url' => $baseUrl . '/esport.php',
     'canonical' => $baseUrl . '/esport.php',
     'image' => $baseUrl . '/img/logo_old_school_1200.png',
@@ -128,25 +128,13 @@ if ($blogSectionReady && ($homeNewsStmt = $conn->prepare($homeNewsSql))) {
         <div class="leaders-header">
           <div>
             <p class="leaders-eyebrow">Ranking giocatori</p>
-            <h2>Ranking All Time - Tornei ESPORT</h2>
-            <p>Qui mostreremo il ranking ufficiale dei giocatori esport appena definiamo la formula di calcolo dedicata.</p>
+            <h2>Ranking EA FC</h2>
+            <p>Classifica generale dei player esport calcolata su tutti i tornei con categoria EA FC.</p>
           </div>
         </div>
 
-        <div class="leader-list">
-          <div class="leader-card">
-            <div class="leader-rank">?</div>
-            <div class="leader-main">
-              <div>
-                <div class="leader-name">Ranking in preparazione</div>
-                <div class="leader-team">La sezione e pronta: appena mi spieghi il calcolo collego il ranking reale.</div>
-              </div>
-              <div class="leader-meta">
-                <span>Formula dedicata</span>
-                <span>Aggiornamento live</span>
-              </div>
-            </div>
-          </div>
+        <div id="esportRankingList" class="leader-list">
+          <p class="loading">Caricamento in corso...</p>
         </div>
       </section>
 
@@ -287,6 +275,67 @@ function renderHallCard(item) {
     `;
 }
 
+function renderEsportLeaderCard(player, position) {
+    const foto = player.foto || '/img/giocatori/unknown.jpg';
+    const nome = `${player.nome ?? ''} ${player.cognome ?? ''}`.trim() || 'Giocatore';
+    const torneiGiocati = Number(player.tornei_giocati || 0);
+    const subtitleBase = torneiGiocati === 1 ? '1 torneo EA FC' : `${torneiGiocati} tornei EA FC`;
+    const subtitle = player.best_result ? `${subtitleBase} - ${player.best_result}` : subtitleBase;
+    const puntiGironi = Number(player.punti_gironi || 0) + Number(player.bonus_gironi || 0);
+    const puntiCoppe = Number(player.punti_gold || 0) + Number(player.punti_silver || 0);
+
+    return `
+      <div class="leader-card">
+        <div class="leader-rank">${position}</div>
+        <div class="leader-avatar">
+          <img src="${foto}" alt="${nome}" onerror="this.src='/img/giocatori/unknown.jpg';">
+        </div>
+        <div class="leader-main">
+          <div>
+            <div class="leader-name">${nome}</div>
+            <div class="leader-team">${subtitle}</div>
+          </div>
+          <div class="leader-meta">
+            <span>Totale: ${player.punti ?? 0} pt</span>
+            <span>Presenza: ${player.punti_partecipazione ?? 0} pt</span>
+            <span>Gironi: ${puntiGironi} pt</span>
+            <span>Coppe: ${puntiCoppe} pt</span>
+          </div>
+        </div>
+      </div>
+    `;
+}
+
+async function loadEsportRanking() {
+    const list = document.getElementById('esportRankingList');
+    if (!list) return;
+
+    list.innerHTML = '<p class="loading">Caricamento in corso...</p>';
+
+    try {
+        const params = new URLSearchParams({
+          categoria: 'ea fc',
+          limit: '5'
+        });
+        const response = await fetch('/api/esport_ranking.php?' + params.toString());
+        const payload = await response.json();
+        const items = Array.isArray(payload.data) ? payload.data : [];
+
+        if (!items.length) {
+            list.innerHTML = '<p class="empty-state">Nessun ranking EA FC disponibile al momento.</p>';
+            return;
+        }
+
+        list.innerHTML = items.map((player, idx) => {
+            const rank = player.posizione ?? (idx + 1);
+            return renderEsportLeaderCard(player, rank);
+        }).join('');
+    } catch (error) {
+        console.error('Errore nel caricamento del ranking esport:', error);
+        list.innerHTML = '<p class="empty-state">Impossibile recuperare il ranking EA FC.</p>';
+    }
+}
+
 async function loadHallOfFame() {
     const grid = document.getElementById('hallOfFameGrid');
     if (!grid) return;
@@ -310,6 +359,7 @@ async function loadHallOfFame() {
     }
 }
 
+loadEsportRanking();
 loadHallOfFame();
 </script>
 
