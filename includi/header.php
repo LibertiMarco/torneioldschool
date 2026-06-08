@@ -43,10 +43,16 @@ if (!empty($sessionAvatar)) {
 if (!function_exists('header_detect_section_mode')) {
     function header_detect_section_mode(): string
     {
-        foreach (['siteSectionContext', 'articleSection', 'blogSection', 'alboSection'] as $key) {
+        foreach (['siteSectionContext', 'articleSection', 'blogSection', 'alboSection', 'torneoSection', 'torneoSectionFallback'] as $key) {
             $candidate = $GLOBALS[$key] ?? null;
             if (is_string($candidate) && trim($candidate) !== '') {
                 return normalize_content_section($candidate);
+            }
+        }
+
+        foreach (['isEsportTournament', 'isEsportSection'] as $flagKey) {
+            if (array_key_exists($flagKey, $GLOBALS)) {
+                return !empty($GLOBALS[$flagKey]) ? 'esport' : 'calcio';
             }
         }
 

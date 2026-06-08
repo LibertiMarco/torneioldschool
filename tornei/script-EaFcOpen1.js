@@ -133,8 +133,16 @@ function getCupLabel(cupKey = "gold") {
 
 function buildCupLegendText(range, grouped = false) {
   if (grouped) {
-    const prefix = range.start === 1 ? "Prime" : "Successive";
-    return `${prefix} ${range.spots} di ogni girone: ${range.label}`;
+    if (range.key === "gold") {
+      return `Prime ${range.spots} di ogni girone: ${range.label}`;
+    }
+    if (range.key === "silver") {
+      return `Le altre ${range.spots} di ogni girone: ${range.label}`;
+    }
+    if (range.key === "bronze") {
+      return `Le restanti ${range.spots} di ogni girone: ${range.label}`;
+    }
+    return `${formatCupRange(range.start, range.end)} di ogni girone: ${range.label}`;
   }
   return `${formatCupRange(range.start, range.end)}: ${range.label}`;
 }
