@@ -126,6 +126,7 @@ $headerRequestPath = parse_url($_SERVER['REQUEST_URI'] ?? ($_SERVER['SCRIPT_NAME
 $headerCurrentScript = strtolower((string)basename((string)$headerRequestPath));
 $headerCurrentSection = header_detect_section_mode();
 $headerIsEsportMode = $headerCurrentSection === 'esport';
+$headerIsTournamentPage = strpos((string)$headerRequestPath, '/tornei/') !== false;
 $headerSportModeUrl = login_with_base_path(header_mode_page_path('calcio', $headerCurrentScript));
 $headerEsportModeUrl = login_with_base_path(header_mode_page_path('esport', $headerCurrentScript));
 $headerHomeUrl = login_with_base_path(header_section_nav_path($headerCurrentSection, 'home'));
@@ -253,7 +254,7 @@ $headerNavLinks = [
     </div>
 
 </header>
-<div class="header-spacer" aria-hidden="true"></div>
+<div class="header-spacer<?= $headerIsTournamentPage ? ' header-spacer--tournament' : '' ?>" aria-hidden="true"></div>
 
 <style>
 /* ----- STRUTTURA BASE ----- */
@@ -277,6 +278,11 @@ $headerNavLinks = [
 .header-spacer {
     height: 80px;
     width: 100%;
+}
+
+.header-spacer--tournament + main.content {
+    margin-top: 0 !important;
+    padding-top: 48px !important;
 }
 
 /* LOGO NITIDO */
@@ -699,6 +705,10 @@ $headerNavLinks = [
 
     .header-spacer {
         height: 72px;
+    }
+
+    .header-spacer--tournament + main.content {
+        padding-top: 40px !important;
     }
 
     .header-logo img {
