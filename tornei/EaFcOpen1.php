@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includi/require_login.php';
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
 $torneoSlug = 'EaFcOpen1';
 $torneoName = 'EA FC OPEN #1';
-$assetVersion = '20260608b';
+$assetVersion = '20260608c';
 
 require_once __DIR__ . '/../includi/db.php';
 $torneoConfig = [];
@@ -455,12 +455,16 @@ if (!empty($torneoConfig['regole_html'])) {
       flex-wrap: wrap;
     }
     .torneo-hero img {
-      width: 80px;
-      height: 80px;
+      width: auto;
+      height: auto;
+      max-width: 112px;
+      max-height: 112px;
       border-radius: 18px;
-      object-fit: cover;
+      object-fit: contain;
       box-shadow: 0 12px 30px rgba(21, 41, 62, 0.22);
       border: 3px solid #fff;
+      background: #fff;
+      padding: 4px;
     }
     .torneo-title {
       text-align: center;
@@ -650,12 +654,19 @@ if (!empty($torneoConfig['regole_html'])) {
     }
     @media (max-width: 600px) {
       main.content {
-        padding-top: 32px;
+        padding-top: 56px !important;
       }
       .torneo-hero {
-        margin-top: 14px;
+        margin-top: 0;
+        margin-bottom: 22px;
         flex-wrap: wrap;
-        gap: 16px;
+        gap: 14px;
+        flex-direction: column;
+      }
+      .torneo-hero img {
+        max-width: 124px;
+        max-height: 124px;
+        border-radius: 14px;
       }
       .torneo-title {
         min-width: 0;
@@ -664,6 +675,7 @@ if (!empty($torneoConfig['regole_html'])) {
         height: auto;
         flex: 1 1 100%;
         flex-direction: column;
+        gap: 10px;
       }
       .torneo-title h1 {
         width: 100%;
