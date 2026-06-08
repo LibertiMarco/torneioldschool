@@ -9,7 +9,7 @@ require_once __DIR__ . '/../includi/require_login.php';
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
 $torneoSlug = 'EaFcOpen1';
 $torneoName = 'EA FC OPEN #1';
-$assetVersion = '20260608a';
+$assetVersion = '20260608b';
 
 require_once __DIR__ . '/../includi/db.php';
 $torneoConfig = [];
@@ -442,13 +442,14 @@ if (!empty($torneoConfig['regole_html'])) {
 <style>
     main.content {
       margin-top: 0;
-      padding-top: 36px;
+      padding-top: 44px;
     }
     .torneo-hero {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 20px;
+      margin-top: 10px;
       margin-bottom: 25px;
       text-align: center;
       flex-wrap: wrap;
@@ -649,10 +650,12 @@ if (!empty($torneoConfig['regole_html'])) {
     }
     @media (max-width: 600px) {
       main.content {
-        padding-top: 24px;
+        padding-top: 32px;
       }
       .torneo-hero {
+        margin-top: 14px;
         flex-wrap: wrap;
+        gap: 16px;
       }
       .torneo-title {
         min-width: 0;

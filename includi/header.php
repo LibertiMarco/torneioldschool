@@ -275,7 +275,7 @@ $headerNavLinks = [
 }
 
 .header-spacer {
-    height: 72px;
+    height: 80px;
     width: 100%;
 }
 
@@ -698,7 +698,7 @@ $headerNavLinks = [
     }
 
     .header-spacer {
-        height: 68px;
+        height: 72px;
     }
 
     .header-logo img {
