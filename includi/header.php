@@ -286,7 +286,7 @@ $headerNavLinks = [
 
 .header-spacer--tournament + main.content {
     margin-top: 0 !important;
-    padding-top: 48px !important;
+    padding-top: 0 !important;
 }
 
 /* LOGO NITIDO */
@@ -707,10 +707,6 @@ $headerNavLinks = [
         position: fixed;
     }
 
-    .header-spacer--tournament + main.content {
-        padding-top: 40px !important;
-    }
-
     .header-logo img {
         width: 48px;
         height: 48px;
@@ -743,9 +739,12 @@ $headerNavLinks = [
             return;
         }
 
-        const fallbackHeight = window.innerWidth <= 768 ? 72 : 80;
+        const fallbackHeight = 80;
         const measuredHeight = Math.ceil(header.getBoundingClientRect().height);
-        const resolvedHeight = Math.max(fallbackHeight, measuredHeight);
+        const extraOffset = spacer.classList.contains("header-spacer--tournament")
+            ? (window.innerWidth <= 768 ? 18 : 24)
+            : 0;
+        const resolvedHeight = Math.max(fallbackHeight, measuredHeight) + extraOffset;
 
         document.documentElement.style.setProperty("--site-header-height", `${resolvedHeight}px`);
         spacer.style.height = `${resolvedHeight}px`;
