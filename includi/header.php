@@ -284,11 +284,6 @@ $headerNavLinks = [
     width: 100%;
 }
 
-.header-spacer--tournament ~ main.content {
-    margin-top: 0 !important;
-    padding-top: 30px !important;
-}
-
 /* LOGO NITIDO */
 .header-logo {
     display: flex;
@@ -710,10 +705,6 @@ $headerNavLinks = [
     .header-logo img {
         width: 48px;
         height: 48px;
-    }
-
-    .header-spacer--tournament ~ main.content {
-        padding-top: 24px !important;
     }
 
     .header-actions .notif-btn {
