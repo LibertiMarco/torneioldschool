@@ -167,7 +167,7 @@ $sectionCopy = $isEsportSection
       'empty_finished_filtered' => 'Nessun torneo esport terminato corrisponde ai filtri attuali.',
       'seo_title' => 'Tornei ESPORT - Calendari e risultati | Tornei Old School',
       'seo_description' => 'Tornei esport firmati Tornei Old School: bracket, calendari, risultati e pagine dedicate per ogni competizione gaming.',
-      'canonical' => '/esport.php',
+      'canonical' => '/tornei-esport.php',
       'breadcrumb_label' => 'ESPORT',
     ]
   : [

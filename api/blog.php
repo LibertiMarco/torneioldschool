@@ -6,10 +6,15 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/push_notifications.php';
 require_once __DIR__ . '/../includi/user_features.php';
+require_once __DIR__ . '/../includi/content_sections.php';
 header('Content-Type: application/json; charset=utf-8');
 
 $azione = $_GET['azione'] ?? '';
 $mediaBasePath = '/img/blog_media/';
+$requestedSectionRaw = trim((string)($_GET['sezione'] ?? ''));
+$blogSection = $requestedSectionRaw === '' ? '' : normalize_content_section($requestedSectionRaw);
+$blogSectionReady = ensure_blog_post_section_column($conn);
+$shouldFilterBySection = $blogSection !== '' && $blogSectionReady;
 
 function json_response($data, int $status = 200): void {
     http_response_code($status);
@@ -34,22 +39,36 @@ function build_cover_query(string $alias = 'cover'): string {
 
 // Ultimi 4 articoli
 if ($azione === 'ultimi') {
+    if ($blogSection !== '' && !$blogSectionReady) {
+        json_response([]);
+    }
     $sql = "SELECT id,
                    titolo,
                    " . build_cover_query('cover') . ",
                    SUBSTRING(contenuto, 1, 180) AS anteprima,
-                   DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data
-            FROM blog_post
-            ORDER BY data_pubblicazione DESC
-            LIMIT 4";
+                   DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data" .
+            ($blogSectionReady ? ", sezione" : ", 'calcio' AS sezione") . "
+            FROM blog_post";
+    if ($shouldFilterBySection) {
+        $sql .= " WHERE sezione = ?";
+    }
+    $sql .= " ORDER BY data_pubblicazione DESC LIMIT 4";
 
-    if ($result = $conn->query($sql)) {
-        $rows = $result->fetch_all(MYSQLI_ASSOC);
-        foreach ($rows as &$row) {
-            $row['immagine'] = $row['cover'] ?? '';
+    if ($stmt = $conn->prepare($sql)) {
+        if ($shouldFilterBySection) {
+            $stmt->bind_param('s', $blogSection);
         }
-        unset($row);
-        json_response($rows);
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+            $rows = $result->fetch_all(MYSQLI_ASSOC);
+            foreach ($rows as &$row) {
+                $row['immagine'] = $row['cover'] ?? '';
+            }
+            unset($row);
+            $stmt->close();
+            json_response($rows);
+        }
+        $stmt->close();
     }
 
     json_response(['error' => 'Impossibile recuperare gli articoli'], 500);
@@ -57,21 +76,36 @@ if ($azione === 'ultimi') {
 
 // Tutti gli articoli
 if ($azione === 'lista') {
+    if ($blogSection !== '' && !$blogSectionReady) {
+        json_response([]);
+    }
     $sql = "SELECT id,
                    titolo,
                    " . build_cover_query('cover') . ",
                    SUBSTRING(contenuto, 1, 220) AS anteprima,
-                   DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data
-            FROM blog_post
-            ORDER BY data_pubblicazione DESC";
+                   DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data" .
+            ($blogSectionReady ? ", sezione" : ", 'calcio' AS sezione") . "
+            FROM blog_post";
+    if ($shouldFilterBySection) {
+        $sql .= " WHERE sezione = ?";
+    }
+    $sql .= " ORDER BY data_pubblicazione DESC";
 
-    if ($result = $conn->query($sql)) {
-        $rows = $result->fetch_all(MYSQLI_ASSOC);
-        foreach ($rows as &$row) {
-            $row['immagine'] = $row['cover'] ?? '';
+    if ($stmt = $conn->prepare($sql)) {
+        if ($shouldFilterBySection) {
+            $stmt->bind_param('s', $blogSection);
         }
-        unset($row);
-        json_response($rows);
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+            $rows = $result->fetch_all(MYSQLI_ASSOC);
+            foreach ($rows as &$row) {
+                $row['immagine'] = $row['cover'] ?? '';
+            }
+            unset($row);
+            $stmt->close();
+            json_response($rows);
+        }
+        $stmt->close();
     }
 
     json_response(['error' => 'Impossibile recuperare la lista'], 500);
@@ -85,6 +119,7 @@ if ($azione === 'articolo' && isset($_GET['id'])) {
         "SELECT titolo,
                 contenuto,
                 " . build_cover_query('cover') . ",
+                " . ($blogSectionReady ? "sezione," : "'calcio' AS sezione,") . "
                 DATE_FORMAT(data_pubblicazione, '%d/%m/%Y %H:%i') AS data
          FROM blog_post
          WHERE id = ?"
@@ -120,6 +155,7 @@ if ($azione === 'articolo' && isset($_GET['id'])) {
 
         $articolo['media'] = $mediaItems;
         $articolo['immagine'] = $articolo['cover'] ?? '';
+        $articolo['sezione'] = $articolo['sezione'] ?? 'calcio';
         json_response($articolo);
     }
 

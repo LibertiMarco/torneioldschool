@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 require_once __DIR__ . '/includi/seo.php';
 require_once __DIR__ . '/includi/db.php';
+require_once __DIR__ . '/includi/content_sections.php';
 
 function blog_escape(?string $value): string
 {
@@ -71,15 +72,39 @@ function blog_permalink(?string $title): string
 }
 
 $baseUrl = seo_base_url();
+$requestedSectionRaw = trim((string)($_GET['sezione'] ?? ''));
+$blogSection = $requestedSectionRaw === '' ? '' : normalize_content_section($requestedSectionRaw);
+$isSectionFiltered = $blogSection !== '';
+$isEsportBlog = $blogSection === 'esport';
+$torneiLink = $isEsportBlog ? '/tornei-esport.php' : '/tornei.php';
+$blogPath = $isSectionFiltered ? '/blog.php?sezione=' . rawurlencode($blogSection) : '/blog.php';
+$blogHeroEyebrow = $isEsportBlog ? 'Novita dal gaming' : ($blogSection === 'calcio' ? 'Novita dai tornei' : 'Novita dal club');
+$blogHeroTitle = $isEsportBlog ? 'Blog ESPORT' : ($blogSection === 'calcio' ? 'Blog Tornei' : 'Blog &amp; approfondimenti');
+$blogHeroLead = $isEsportBlog
+    ? 'Aggiornamenti, backstage e guide dedicati alla nostra area esport. Cerca gli articoli per trovare subito bracket, annunci e racconti del momento.'
+    : ($blogSection === 'calcio'
+        ? 'Raccontiamo tornei, backstage e consigli per la community calcistica. Filtra gli articoli per trovare subito quello che ti interessa.'
+        : 'Raccontiamo tornei, backstage e consigli per la community. Filtra gli articoli per trovare subito quello che ti interessa.');
+$blogSearchPlaceholder = $isEsportBlog
+    ? 'Cerca un torneo esport, una guida o un recap...'
+    : ($blogSection === 'calcio'
+        ? 'Cerca un torneo, una guida o un racconto...'
+        : 'Cerca un torneo, una guida o un racconto...');
 $blogSeo = [
-    'title' => 'Blog e novita - Tornei Old School',
-    'description' => 'Articoli, aggiornamenti e storie dai tornei Old School con risultati, curiosita e approfondimenti.',
-    'url' => $baseUrl . '/blog.php',
-    'canonical' => $baseUrl . '/blog.php',
+    'title' => $isEsportBlog
+        ? 'Blog ESPORT - Tornei Old School'
+        : ($blogSection === 'calcio' ? 'Blog Tornei - Tornei Old School' : 'Blog e novita - Tornei Old School'),
+    'description' => $isEsportBlog
+        ? 'Articoli, aggiornamenti e approfondimenti dedicati ai tornei esport di Tornei Old School.'
+        : ($blogSection === 'calcio'
+            ? 'Articoli, aggiornamenti e storie dai tornei di calcio Tornei Old School.'
+            : 'Articoli, aggiornamenti e storie dai tornei Old School con risultati, curiosita e approfondimenti.'),
+    'url' => $baseUrl . $blogPath,
+    'canonical' => $baseUrl . $blogPath,
 ];
 $blogBreadcrumbs = seo_breadcrumb_schema([
     ['name' => 'Home', 'url' => $baseUrl . '/'],
-    ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
+    ['name' => $isEsportBlog ? 'Blog ESPORT' : 'Blog', 'url' => $baseUrl . $blogPath],
 ]);
 
 $blogPosts = [];
@@ -88,15 +113,28 @@ $blogSql = "SELECT id,
                    " . blog_cover_select('cover') . ",
                    SUBSTRING(contenuto, 1, 220) AS anteprima,
                    DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data
-            FROM blog_post
-            ORDER BY data_pubblicazione DESC";
-
-if ($blogResult = $conn->query($blogSql)) {
-    while ($row = $blogResult->fetch_assoc()) {
-        $row['immagine'] = $row['cover'] ?? '';
-        $blogPosts[] = $row;
+            FROM blog_post";
+$blogSectionReady = ensure_blog_post_section_column($conn);
+if (!$isSectionFiltered || $blogSectionReady) {
+    if ($isSectionFiltered && $blogSectionReady) {
+        $blogSql .= " WHERE sezione = ?";
     }
-    $blogResult->free();
+    $blogSql .= " ORDER BY data_pubblicazione DESC";
+
+    if ($blogStmt = $conn->prepare($blogSql)) {
+        if ($isSectionFiltered && $blogSectionReady) {
+            $blogStmt->bind_param('s', $blogSection);
+        }
+        if ($blogStmt->execute()) {
+            $blogResult = $blogStmt->get_result();
+            while ($row = $blogResult->fetch_assoc()) {
+                $row['immagine'] = $row['cover'] ?? '';
+                $blogPosts[] = $row;
+            }
+            $blogResult->free();
+        }
+        $blogStmt->close();
+    }
 }
 
 $featuredPost = $blogPosts[0] ?? null;
@@ -611,14 +649,14 @@ $blogPostsJson = json_encode(
 
 <section class="blog-hero">
   <div class="blog-hero-content">
-    <p class="eyebrow">Novita dal club</p>
-    <h1>Blog &amp; approfondimenti</h1>
+    <p class="eyebrow"><?= $blogHeroEyebrow ?></p>
+    <h1><?= $blogHeroTitle ?></h1>
     <p class="lead">
-      Raccontiamo tornei, backstage e consigli per la community. Filtra gli articoli per trovare subito quello che ti interessa.
+      <?= $blogHeroLead ?>
     </p>
     <label class="blog-search" for="blogSearch">
       <span class="sr-only">Cerca nel blog</span>
-      <input id="blogSearch" type="search" placeholder="Cerca un torneo, una guida o un racconto...">
+      <input id="blogSearch" type="search" placeholder="<?= blog_escape($blogSearchPlaceholder) ?>">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M15.5 14h-.79l-.28-.27a6 6 0 10-.71.71l.27.28v.79L20 21.49 21.49 20 15.5 14zm-6 0a4.5 4.5 0 110-9 4.5 4.5 0 010 9z"/>
       </svg>
@@ -632,13 +670,13 @@ $blogPostsJson = json_encode(
       <div class="section-heading with-meta">
         <div>
           <span class="section-eyebrow">In evidenza</span>
-          <h2>L'articolo del momento</h2>
+          <h2><?= $isEsportBlog ? "L'articolo esport del momento" : "L'articolo del momento" ?></h2>
         </div>
         <div class="section-meta">
           <span class="meta-pill" id="featuredUpdated">
             <?= $featuredPost ? 'Aggiornato ' . blog_escape($featuredPost['data'] ?? '') : 'In attesa di pubblicazioni' ?>
           </span>
-          <a class="meta-pill alt" href="/tornei.php">Vai ai tornei</a>
+          <a class="meta-pill alt" href="<?= blog_escape($torneiLink) ?>"><?= $isEsportBlog ? 'Vai ai tornei esport' : 'Vai ai tornei' ?></a>
         </div>
       </div>
       <div class="featured-card" id="featuredPost">
@@ -654,7 +692,7 @@ $blogPostsJson = json_encode(
             <p><?= blog_render_preview_html($featuredPost['anteprima'] ?? '', 'Scopri cosa e successo dietro le quinte del torneo!') ?></p>
             <div class="featured-actions">
               <a class="primary" href="<?= blog_escape(blog_permalink($featuredPost['titolo'] ?? '')) ?>">Leggi ora</a>
-              <a class="secondary" href="/tornei.php">Vedi i tornei</a>
+              <a class="secondary" href="<?= blog_escape($torneiLink) ?>"><?= $isEsportBlog ? 'Vedi i tornei esport' : 'Vedi i tornei' ?></a>
             </div>
           </div>
         <?php else: ?>
@@ -672,7 +710,7 @@ $blogPostsJson = json_encode(
       <div class="section-heading with-meta">
         <div>
           <span class="section-eyebrow">Archivio completo</span>
-          <h2>Tutti gli articoli</h2>
+          <h2><?= $isEsportBlog ? 'Tutti gli articoli ESPORT' : 'Tutti gli articoli' ?></h2>
         </div>
         <div class="section-meta">
           <span class="meta-pill" id="archiveCount"><?= count($blogPosts) ?> <?= count($blogPosts) === 1 ? 'articolo' : 'articoli' ?></span>
@@ -716,7 +754,7 @@ $blogPostsJson = json_encode(
 
   <aside class="blog-sidebar">
     <h3>Consigli di lettura</h3>
-    <p class="sidebar-desc">Gli aggiornamenti piu freschi da non perdere.</p>
+    <p class="sidebar-desc"><?= $isEsportBlog ? 'Gli aggiornamenti esport piu freschi da non perdere.' : 'Gli aggiornamenti piu freschi da non perdere.' ?></p>
     <div id="miniList">
       <?php if (!empty($sidebarPosts)): ?>
         <?php foreach ($sidebarPosts as $post): ?>

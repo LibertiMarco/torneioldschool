@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includi/admin_guard.php';
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/content_sections.php';
 
 $messages = [];
 $errors = [];
@@ -9,6 +10,7 @@ $albo = [];
 $competizioniList = [];
 $alboDelete = [];
 $orderColumnAvailable = false;
+$sectionColumnAvailable = false;
 $sortGroups = [];
 $defaultTorneoLogo = '/img/logo_old_school.png';
 
@@ -175,12 +177,17 @@ if (!$conn || $conn->connect_error) {
         $orderColumnAvailable = ensureOrdinamentoColumn($conn, $errors);
         ensureSingleDayColumns($conn, $errors);
         ensureTournamentLinkColumn($conn, $errors);
+        $sectionColumnAvailable = ensure_albo_section_column($conn);
+        if (!$sectionColumnAvailable) {
+            $errors[] = "Non riesco ad aggiungere o verificare la colonna 'sezione' nell'albo.";
+        }
     }
 
 if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $competizione = trim($_POST['competizione'] ?? '');
         $premio = strtoupper(trim($_POST['premio'] ?? 'VINCENTE'));
         $vincitrice = trim($_POST['vincitrice'] ?? '');
+        $sezione = normalize_content_section($_POST['sezione'] ?? 'calcio');
         $linkTorneoInput = $_POST['link_torneo'] ?? '';
         $inizio_mese = (int)($_POST['inizio_mese'] ?? 0);
         $inizio_anno = (int)($_POST['inizio_anno'] ?? 0);
@@ -210,28 +217,50 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $data_evento = null;
                 }
 
-                $stmt = $conn->prepare("INSERT INTO albo (competizione, premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url, link_torneo, inizio_mese, inizio_anno, fine_mese, fine_anno, giornata_unica, data_evento) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                $stmt = $sectionColumnAvailable
+                    ? $conn->prepare("INSERT INTO albo (competizione, premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url, link_torneo, sezione, inizio_mese, inizio_anno, fine_mese, fine_anno, giornata_unica, data_evento) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+                    : $conn->prepare("INSERT INTO albo (competizione, premio, vincitrice, vincitrice_logo, torneo_logo, tabellone_url, link_torneo, inizio_mese, inizio_anno, fine_mese, fine_anno, giornata_unica, data_evento) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
                 $tabellone_url = '';
                 $im = $inizio_mese ?: null;
                 $ia = $inizio_anno ?: null;
                 $fm = $fine_mese ?: null;
                 $fa = $fine_anno ?: null;
-                $stmt->bind_param(
-                    "sssssssiiiiis",
-                    $competizione,
-                    $premio,
-                    $vincitrice,
-                    $logo,
-                    $torneo_logo_path,
-                    $tabellone_url,
-                    $link_torneo,
-                    $im,
-                    $ia,
-                    $fm,
-                    $fa,
-                    $giornata_unica,
-                    $data_evento
-                );
+                if ($sectionColumnAvailable) {
+                    $stmt->bind_param(
+                        "ssssssssiiiiis",
+                        $competizione,
+                        $premio,
+                        $vincitrice,
+                        $logo,
+                        $torneo_logo_path,
+                        $tabellone_url,
+                        $link_torneo,
+                        $sezione,
+                        $im,
+                        $ia,
+                        $fm,
+                        $fa,
+                        $giornata_unica,
+                        $data_evento
+                    );
+                } else {
+                    $stmt->bind_param(
+                        "sssssssiiiiis",
+                        $competizione,
+                        $premio,
+                        $vincitrice,
+                        $logo,
+                        $torneo_logo_path,
+                        $tabellone_url,
+                        $link_torneo,
+                        $im,
+                        $ia,
+                        $fm,
+                        $fa,
+                        $giornata_unica,
+                        $data_evento
+                    );
+                }
                 $stmt->execute();
                 $stmt->close();
                 $messages[] = "Record inserito correttamente.";
@@ -279,23 +308,45 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $data_evento = null;
                 }
 
-                $stmt = $conn->prepare("UPDATE albo SET competizione=?, premio=?, vincitrice=?, vincitrice_logo=?, torneo_logo=?, tabellone_url='', link_torneo=?, inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=?, giornata_unica=?, data_evento=? WHERE id=?");
-                $stmt->bind_param(
-                    "ssssssiiiiisi",
-                    $competizione,
-                    $premio,
-                    $vincitrice,
-                    $logo,
-                    $torneo_logo_path,
-                    $link_torneo,
-                    $im2,
-                    $ia2,
-                    $fm2,
-                    $fa2,
-                    $giornata_unica,
-                    $data_evento,
-                    $id
-                );
+                $stmt = $sectionColumnAvailable
+                    ? $conn->prepare("UPDATE albo SET competizione=?, premio=?, vincitrice=?, vincitrice_logo=?, torneo_logo=?, tabellone_url='', link_torneo=?, sezione=?, inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=?, giornata_unica=?, data_evento=? WHERE id=?")
+                    : $conn->prepare("UPDATE albo SET competizione=?, premio=?, vincitrice=?, vincitrice_logo=?, torneo_logo=?, tabellone_url='', link_torneo=?, inizio_mese=?, inizio_anno=?, fine_mese=?, fine_anno=?, giornata_unica=?, data_evento=? WHERE id=?");
+                if ($sectionColumnAvailable) {
+                    $stmt->bind_param(
+                        "sssssssiiiiisi",
+                        $competizione,
+                        $premio,
+                        $vincitrice,
+                        $logo,
+                        $torneo_logo_path,
+                        $link_torneo,
+                        $sezione,
+                        $im2,
+                        $ia2,
+                        $fm2,
+                        $fa2,
+                        $giornata_unica,
+                        $data_evento,
+                        $id
+                    );
+                } else {
+                    $stmt->bind_param(
+                        "ssssssiiiiisi",
+                        $competizione,
+                        $premio,
+                        $vincitrice,
+                        $logo,
+                        $torneo_logo_path,
+                        $link_torneo,
+                        $im2,
+                        $ia2,
+                        $fm2,
+                        $fa2,
+                        $giornata_unica,
+                        $data_evento,
+                        $id
+                    );
+                }
                 $stmt->execute();
                 $stmt->close();
                 $messages[] = "Record aggiornato.";
@@ -494,6 +545,15 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
             <label>Vincitrice*</label>
             <input type="text" name="vincitrice" required>
           </div>
+          <?php if ($sectionColumnAvailable): ?>
+          <div>
+            <label>Sezione</label>
+            <select name="sezione">
+              <option value="calcio">Calcio</option>
+              <option value="esport">ESPORT</option>
+            </select>
+          </div>
+          <?php endif; ?>
           <div>
             <label>Link torneo</label>
             <input type="text" name="link_torneo" placeholder="/tornei/nome.php oppure https://...">
@@ -568,6 +628,14 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
           <label>Competizione<input type="text" name="competizione" id="upd_competizione" required></label>
           <label>Premio<input type="text" name="premio" id="upd_premio" style="text-transform: uppercase;"></label>
           <label>Vincitrice<input type="text" name="vincitrice" id="upd_vincitrice" required></label>
+          <?php if ($sectionColumnAvailable): ?>
+          <label>Sezione
+            <select name="sezione" id="upd_sezione">
+              <option value="calcio">Calcio</option>
+              <option value="esport">ESPORT</option>
+            </select>
+          </label>
+          <?php endif; ?>
           <label>Link torneo<input type="text" name="link_torneo" id="upd_link_torneo" placeholder="/tornei/nome.php oppure https://..."></label>
           <div class="file-input">
             <label class="file-label">
@@ -636,7 +704,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
               <select name="id" required>
                 <option value="">--</option>
                 <?php foreach ($alboDelete as $row): ?>
-                  <option value="<?= (int)$row['id'] ?>"><?= h($row['competizione']) ?><?= $row['premio'] ? ' - ' . h($row['premio']) : '' ?></option>
+                  <option value="<?= (int)$row['id'] ?>"><?= h(strtoupper((string)($row['sezione'] ?? 'calcio'))) ?> - <?= h($row['competizione']) ?><?= $row['premio'] ? ' - ' . h($row['premio']) : '' ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -672,11 +740,14 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
       const createSingleDay = document.getElementById('create_giornata_unica');
       const createEventDate = document.getElementById('create_data_evento');
       const normComp = (v) => (v || '').trim();
+      const normSection = (v) => String(v || 'calcio').trim().toLowerCase() === 'esport' ? 'esport' : 'calcio';
+      const recordKey = (record) => `${normSection(record?.sezione)}::${normComp(record?.competizione)}`;
       const fields = {
         id: document.getElementById('upd_id'),
         competizione: document.getElementById('upd_competizione'),
         premio: document.getElementById('upd_premio'),
         vincitrice: document.getElementById('upd_vincitrice'),
+        sezione: document.getElementById('upd_sezione'),
         link_torneo: document.getElementById('upd_link_torneo'),
         giornata_unica: document.getElementById('upd_giornata_unica'),
         data_evento: document.getElementById('upd_data_evento'),
@@ -703,15 +774,20 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
       function populateCompetizioni() {
         if (!selCompetizione) return;
-        const comps = Array.from(new Set(alboData.map(r => normComp(r.competizione)).filter(Boolean))).sort();
+        const comps = new Map();
+        alboData.forEach(record => {
+          const comp = normComp(record.competizione);
+          if (!comp) return;
+          comps.set(recordKey(record), `${String(record.sezione || 'calcio').toUpperCase()} - ${comp}`);
+        });
+        const entries = Array.from(comps.entries()).sort((a, b) => a[1].localeCompare(b[1], 'it'));
         selCompetizione.innerHTML = '<option value="">-- scegli torneo --</option>' +
-          comps.map(c => `<option value="${c}">${c}</option>`).join('');
+          entries.map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
       }
 
       function populatePremi(comp) {
         if (!selRecord) return;
-        const compNorm = normComp(comp);
-        const filtered = alboData.filter(r => normComp(r.competizione) === compNorm);
+        const filtered = alboData.filter(r => recordKey(r) === comp);
         selRecord.innerHTML = '<option value="">-- scegli premio --</option>' +
           filtered.map(r => `<option value="${r.id}">${r.premio || 'Premio'}</option>`).join('');
       }
@@ -723,6 +799,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
           fields.competizione.value = rec.competizione || '';
           fields.premio.value = rec.premio || '';
           fields.vincitrice.value = rec.vincitrice || '';
+          if (fields.sezione) fields.sezione.value = rec.sezione || 'calcio';
           fields.link_torneo.value = rec.link_torneo || '';
           fields.giornata_unica.checked = Number(rec.giornata_unica || 0) === 1;
           fields.data_evento.disabled = !fields.giornata_unica.checked;

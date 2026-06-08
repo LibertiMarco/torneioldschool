@@ -2,6 +2,7 @@
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/content_sections.php';
 
 if (!$conn || $conn->connect_error) {
     http_response_code(500);
@@ -10,6 +11,10 @@ if (!$conn || $conn->connect_error) {
 }
 
 $conn->set_charset('utf8mb4');
+$requestedSectionRaw = trim((string)($_GET['sezione'] ?? ''));
+$requestedSection = $requestedSectionRaw === '' ? '' : normalize_content_section($requestedSectionRaw);
+$alboSectionReady = ensure_albo_section_column($conn);
+$torneiSectionReady = ensure_tornei_section_column($conn);
 
 function getAlboColumns(mysqli $conn): array {
     $cols = [];
@@ -94,9 +99,12 @@ function alboItemSortTime(array $item): int {
     return 0;
 }
 
-function fetchAlboCustom(mysqli $conn): array {
+function fetchAlboCustom(mysqli $conn, string $section = '', bool $sectionReady = false): array {
     $check = $conn->query("SHOW TABLES LIKE 'albo'");
     if (!$check || $check->num_rows === 0) {
+        return [];
+    }
+    if ($section !== '' && !$sectionReady) {
         return [];
     }
     $cols = getAlboColumns($conn);
@@ -114,6 +122,7 @@ function fetchAlboCustom(mysqli $conn): array {
     $giornataUnicaCol = isset($cols['giornata_unica']) ? 'giornata_unica' : '0';
     $dataEventoCol = isset($cols['data_evento']) ? 'data_evento' : 'NULL';
     $createdCol = isset($cols['created_at']) ? 'created_at' : 'NULL';
+    $sectionCol = isset($cols['sezione']) ? 'sezione' : "'calcio'";
     $hasSort = isset($cols['ordinamento']);
     $sortSelect = $hasSort ? ', ordinamento' : '';
     $sortOrder = $hasSort ? 'COALESCE(ordinamento, 999999),' : '';
@@ -133,52 +142,66 @@ function fetchAlboCustom(mysqli $conn): array {
                {$fineAnnoCol} AS fine_anno,
                {$giornataUnicaCol} AS giornata_unica,
                {$dataEventoCol} AS data_evento,
+               {$sectionCol} AS sezione,
                {$createdCol} AS created_at{$sortSelect}
-        FROM albo
+        FROM albo";
+    if ($section !== '') {
+        $sql .= " WHERE sezione = ?";
+    }
+    $sql .= "
         ORDER BY {$sortOrder} COALESCE(fine_anno, inizio_anno, YEAR(created_at)) DESC,
                  COALESCE(fine_mese, inizio_mese, MONTH(created_at)) DESC,
                  id DESC
     ";
 
-    $res = $conn->query($sql);
-    if (!$res) {
-        return [];
-    }
-
     $rows = [];
-    while ($row = $res->fetch_assoc()) {
-        $anno = $row['fine_anno'] ?: $row['inizio_anno'] ?: '';
-        $tabUrl = trim((string)($row['tabellone_url'] ?? ''));
-        if ($tabUrl === '' || $tabUrl === '0') {
-            $tabUrl = '';
+    if ($stmt = $conn->prepare($sql)) {
+        if ($section !== '') {
+            $stmt->bind_param('s', $section);
         }
-        $rows[] = [
-            'record_id' => (int)$row['id'],
-            'competizione' => $row['competizione'],
-            'premio' => $row['premio'],
-            'stato' => 'archivio',
-            'data_inizio' => dateFromParts((int)$row['inizio_mese'], (int)$row['inizio_anno']),
-            'data_fine' => dateFromParts((int)$row['fine_mese'], (int)$row['fine_anno']),
-            'anno' => $anno,
-            'filetorneo' => $tabUrl,
-            'link_torneo' => normalizeTournamentLink($row['link_torneo'] ?? ''),
-            'torneo_logo' => $row['torneo_logo'],
-            'vincitrice' => $row['vincitrice'],
-            'logo_vincitrice' => $row['vincitrice_logo'],
-            'giornata_unica' => (int)($row['giornata_unica'] ?? 0),
-            'data_evento' => normalizeDateValue($row['data_evento'] ?? ''),
-            'created_at' => trim((string)($row['created_at'] ?? '')),
-            'ordinamento' => $hasSort ? (int)$row['ordinamento'] : null,
-        ];
+        if ($stmt->execute()) {
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $anno = $row['fine_anno'] ?: $row['inizio_anno'] ?: '';
+                $tabUrl = trim((string)($row['tabellone_url'] ?? ''));
+                if ($tabUrl === '' || $tabUrl === '0') {
+                    $tabUrl = '';
+                }
+                $rows[] = [
+                    'record_id' => (int)$row['id'],
+                    'competizione' => $row['competizione'],
+                    'premio' => $row['premio'],
+                    'stato' => 'archivio',
+                    'data_inizio' => dateFromParts((int)$row['inizio_mese'], (int)$row['inizio_anno']),
+                    'data_fine' => dateFromParts((int)$row['fine_mese'], (int)$row['fine_anno']),
+                    'anno' => $anno,
+                    'filetorneo' => $tabUrl,
+                    'link_torneo' => normalizeTournamentLink($row['link_torneo'] ?? ''),
+                    'torneo_logo' => $row['torneo_logo'],
+                    'vincitrice' => $row['vincitrice'],
+                    'logo_vincitrice' => $row['vincitrice_logo'],
+                    'giornata_unica' => (int)($row['giornata_unica'] ?? 0),
+                    'data_evento' => normalizeDateValue($row['data_evento'] ?? ''),
+                    'created_at' => trim((string)($row['created_at'] ?? '')),
+                    'ordinamento' => $hasSort ? (int)$row['ordinamento'] : null,
+                    'sezione' => normalize_content_section($row['sezione'] ?? 'calcio'),
+                ];
+            }
+        }
+        $stmt->close();
     }
     return $rows;
 }
 
-function fetchAlboFromTornei(mysqli $conn): array {
+function fetchAlboFromTornei(mysqli $conn, string $section = '', bool $sectionReady = false): array {
+    if ($section !== '' && !$sectionReady) {
+        return [];
+    }
     $sql = "
         SELECT
             t.nome AS torneo,
             t.categoria,
+            " . ($sectionReady ? "t.sezione," : "'calcio' AS sezione,") . "
             t.stato,
             t.data_inizio,
             t.data_fine,
@@ -194,72 +217,82 @@ function fetchAlboFromTornei(mysqli $conn): array {
             ORDER BY s2.punti DESC, s2.differenza_reti DESC, s2.gol_fatti DESC, s2.gol_subiti ASC, s2.nome ASC
             LIMIT 1
         )
-        WHERE t.stato = 'terminato'
+        WHERE t.stato = 'terminato'";
+    if ($section !== '' && $sectionReady) {
+        $sql .= " AND t.sezione = ?";
+    }
+    $sql .= "
         ORDER BY COALESCE(t.data_fine, t.data_inizio) DESC, t.nome ASC
     ";
 
-    $result = $conn->query($sql);
-    if (!$result) {
-        return [];
-    }
-
     $albo = [];
-    while ($row = $result->fetch_assoc()) {
-        if (empty($row['vincitrice'])) {
-            continue;
+    if ($stmt = $conn->prepare($sql)) {
+        if ($section !== '' && $sectionReady) {
+            $stmt->bind_param('s', $section);
         }
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+            while ($row = $result->fetch_assoc()) {
+                if (empty($row['vincitrice'])) {
+                    continue;
+                }
 
-        $anno = '';
-        if (!empty($row['data_fine']) && $row['data_fine'] !== '0000-00-00') {
-            $anno = date('Y', strtotime($row['data_fine']));
-        } elseif (!empty($row['data_inizio']) && $row['data_inizio'] !== '0000-00-00') {
-            $anno = date('Y', strtotime($row['data_inizio']));
+                $anno = '';
+                if (!empty($row['data_fine']) && $row['data_fine'] !== '0000-00-00') {
+                    $anno = date('Y', strtotime($row['data_fine']));
+                } elseif (!empty($row['data_inizio']) && $row['data_inizio'] !== '0000-00-00') {
+                    $anno = date('Y', strtotime($row['data_inizio']));
+                }
+
+                $tabUrl = trim((string)($row['filetorneo'] ?? ''));
+                if ($tabUrl === '' || $tabUrl === '0') {
+                    $tabUrl = '';
+                }
+
+                $albo[] = [
+                    'record_id' => 0,
+                    'competizione' => $row['torneo'],
+                    'premio' => $row['categoria'],
+                    'categoria' => $row['categoria'],
+                    'stato' => $row['stato'],
+                    'data_inizio' => $row['data_inizio'] ?: '',
+                    'data_fine' => $row['data_fine'] ?: '',
+                    'anno' => $anno,
+                    'filetorneo' => $tabUrl,
+                    'link_torneo' => resolveFileTorneoLink($tabUrl),
+                    'torneo_logo' => $row['torneo_img'],
+                    'vincitrice' => $row['vincitrice'] ?: '',
+                    'logo_vincitrice' => $row['logo_vincitrice'] ?: '',
+                    'giornata_unica' => (!empty($row['data_inizio']) && $row['data_inizio'] !== '0000-00-00' && $row['data_inizio'] === $row['data_fine']) ? 1 : 0,
+                    'data_evento' => (!empty($row['data_inizio']) && $row['data_inizio'] !== '0000-00-00' && $row['data_inizio'] === $row['data_fine']) ? $row['data_inizio'] : '',
+                    'created_at' => '',
+                    'sezione' => normalize_content_section($row['sezione'] ?? 'calcio'),
+                ];
+            }
         }
-
-        $tabUrl = trim((string)($row['filetorneo'] ?? ''));
-        if ($tabUrl === '' || $tabUrl === '0') {
-            $tabUrl = '';
-        }
-
-        $albo[] = [
-            // Uniformiamo le chiavi con quelle usate dall'albo personalizzato
-            'record_id' => 0,
-            'competizione' => $row['torneo'],
-            'premio' => $row['categoria'],
-            'categoria' => $row['categoria'],
-            'stato' => $row['stato'],
-            'data_inizio' => $row['data_inizio'] ?: '',
-            'data_fine' => $row['data_fine'] ?: '',
-            'anno' => $anno,
-            'filetorneo' => $tabUrl,
-            'link_torneo' => resolveFileTorneoLink($tabUrl),
-            'torneo_logo' => $row['torneo_img'],
-            'vincitrice' => $row['vincitrice'] ?: '',
-            'logo_vincitrice' => $row['logo_vincitrice'] ?: '',
-            'giornata_unica' => (!empty($row['data_inizio']) && $row['data_inizio'] !== '0000-00-00' && $row['data_inizio'] === $row['data_fine']) ? 1 : 0,
-            'data_evento' => (!empty($row['data_inizio']) && $row['data_inizio'] !== '0000-00-00' && $row['data_inizio'] === $row['data_fine']) ? $row['data_inizio'] : '',
-            'created_at' => '',
-        ];
+        $stmt->close();
     }
 
     return $albo;
 }
 
-$raw = fetchAlboCustom($conn);
+$raw = fetchAlboCustom($conn, $requestedSection, $alboSectionReady);
 if (empty($raw)) {
-    $raw = fetchAlboFromTornei($conn);
+    $raw = fetchAlboFromTornei($conn, $requestedSection, $torneiSectionReady);
 }
 
 // Raggruppa per competizione e raccoglie premi multipli
 $grouped = [];
 foreach ($raw as $item) {
-    $key = $item['competizione'] ?? ($item['torneo'] ?? 'Torneo');
     $competizione = $item['competizione'] ?? ($item['torneo'] ?? 'Torneo');
+    $sectionKey = normalize_content_section($item['sezione'] ?? 'calcio');
+    $key = $sectionKey . '::' . $competizione;
     $itemSortTime = alboItemSortTime($item);
     $itemRecordId = (int)($item['record_id'] ?? 0);
     if (!isset($grouped[$key])) {
         $grouped[$key] = [
             'competizione' => $competizione,
+            'sezione' => $sectionKey,
             'torneo_logo' => $item['torneo_logo'] ?? $item['torneo_img'] ?? '/img/logo_old_school.png',
             'data_inizio' => $item['data_inizio'] ?? '',
             'data_fine' => $item['data_fine'] ?? '',

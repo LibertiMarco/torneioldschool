@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/seo.php';
 require_once __DIR__ . '/includi/db.php';
+require_once __DIR__ . '/includi/content_sections.php';
 
 function home_escape(?string $value): string
 {
@@ -49,14 +50,26 @@ $homeNewsSql = "SELECT id,
                            END
                        ) AS cover,
                        DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data
-                FROM blog_post
-                ORDER BY data_pubblicazione DESC
-                LIMIT 4";
-if ($homeNewsResult = $conn->query($homeNewsSql)) {
-  while ($row = $homeNewsResult->fetch_assoc()) {
-    $homeNews[] = $row;
+                FROM blog_post";
+$blogSectionReady = ensure_blog_post_section_column($conn);
+if ($blogSectionReady) {
+  $homeNewsSql .= " WHERE sezione = ?";
+}
+$homeNewsSql .= " ORDER BY data_pubblicazione DESC LIMIT 4";
+
+if ($homeNewsStmt = $conn->prepare($homeNewsSql)) {
+  if ($blogSectionReady) {
+    $homeSection = 'calcio';
+    $homeNewsStmt->bind_param('s', $homeSection);
   }
-  $homeNewsResult->free();
+  if ($homeNewsStmt->execute()) {
+    $homeNewsResult = $homeNewsStmt->get_result();
+    while ($row = $homeNewsResult->fetch_assoc()) {
+      $homeNews[] = $row;
+    }
+    $homeNewsResult->free();
+  }
+  $homeNewsStmt->close();
 }
 ?>
 <!DOCTYPE html>
@@ -82,7 +95,7 @@ if ($homeNewsResult = $conn->query($homeNewsSql)) {
       <section class="home-hero">
         <div class="hero-overlay">
           <h1>Tornei calcetto Napoli</h1>
-          <p>Tornei di calcio a 5, 6 e 8 a Napoli, piu la nuova area ESPORT con calendari, bracket e risultati dedicati.</p>
+          <p>Tornei di calcio a 5, 6 e 8 a Napoli con calendari, classifiche e risultati dedicati.</p>
           <div class="hero-actions">
             <a href="/tornei.php" class="hero-btn">Tornei</a>
           </div>
@@ -97,7 +110,7 @@ if ($homeNewsResult = $conn->query($homeNewsSql)) {
             <h2>Ultime Notizie</h2>
             <p>Annunci dei nuovi bracket, le ultime notizie e storie dai nostri eventi.</p>
           </div>
-          <a href="blog.php" class="hero-btn hero-btn--ghost">Vai al blog</a>
+          <a href="/blog.php?sezione=calcio" class="hero-btn hero-btn--ghost">Vai al blog</a>
         </div>
 
         <div id="newsGrid" class="news-grid">
@@ -148,7 +161,7 @@ if ($homeNewsResult = $conn->query($homeNewsSql)) {
             <h2>Le vincitrici dei nostri tornei</h2>
             <p>Uno sguardo rapido a tutte le squadre che hanno conquistato i nostri trofei.</p>
           </div>
-          <a href="/albo.php" class="hero-btn hero-btn--ghost hero-btn--small">Albo completo</a>
+          <a href="/albo.php?sezione=calcio" class="hero-btn hero-btn--ghost hero-btn--small">Albo completo</a>
         </div>
 
         <div id="hallOfFameGrid" class="hof-grid">
@@ -344,7 +357,7 @@ async function loadHallOfFame() {
     grid.innerHTML = '<p class="loading">Caricamento in corso...</p>';
 
     try {
-        const response = await fetch('/api/albo_doro.php');
+        const response = await fetch('/api/albo_doro.php?sezione=calcio');
         const payload = await response.json();
         const data = Array.isArray(payload.data) ? payload.data.slice(0, 2) : [];
 

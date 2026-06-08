@@ -158,6 +158,7 @@ CREATE TABLE IF NOT EXISTS albo (
     torneo_logo VARCHAR(255) DEFAULT NULL,
     tabellone_url VARCHAR(255) DEFAULT NULL,
     link_torneo VARCHAR(255) DEFAULT NULL,
+    sezione ENUM('calcio','esport') NOT NULL DEFAULT 'calcio',
     inizio_mese TINYINT UNSIGNED DEFAULT NULL,
     inizio_anno SMALLINT UNSIGNED DEFAULT NULL,
     fine_mese TINYINT UNSIGNED DEFAULT NULL,
@@ -309,6 +310,7 @@ CREATE TABLE IF NOT EXISTS blog_post (
     titolo VARCHAR(255) NOT NULL,
     contenuto LONGTEXT NOT NULL,
     immagine VARCHAR(255) DEFAULT NULL,
+    sezione ENUM('calcio','esport') NOT NULL DEFAULT 'calcio',
     data_pubblicazione DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     KEY idx_blog_data (data_pubblicazione)

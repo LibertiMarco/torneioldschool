@@ -8,6 +8,7 @@ $requestedTitle = trim($_GET['titolo'] ?? '');
 $isLogged = isset($_SESSION['user_id']);
 require_once __DIR__ . '/includi/seo.php';
 require_once __DIR__ . '/includi/db.php';
+require_once __DIR__ . '/includi/content_sections.php';
 
 function article_escape(?string $value): string
 {
@@ -61,6 +62,10 @@ function article_render_content(string $text): string
 }
 
 $baseUrl = seo_base_url();
+$blogSectionReady = ensure_blog_post_section_column($conn);
+$articleSection = 'calcio';
+$articleBlogPath = '/blog.php';
+$articleBlogLabel = 'Blog';
 $articleId = 0;
 $articleRow = null;
 $articleTitleForUrl = $requestedTitle !== '' ? $requestedTitle : '';
@@ -76,7 +81,7 @@ $articleMeta = [
 $articleSchema = [];
 $breadcrumbSchema = seo_breadcrumb_schema([
     ['name' => 'Home', 'url' => $baseUrl . '/'],
-    ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
+    ['name' => $articleBlogLabel, 'url' => $baseUrl . $articleBlogPath],
     ['name' => 'Articolo', 'url' => $articleUrl],
 ]);
 $articleTitleText = 'Articolo';
@@ -103,6 +108,7 @@ $sql = "SELECT id,
                titolo,
                contenuto,
                data_pubblicazione,
+               " . ($blogSectionReady ? "sezione," : "'calcio' AS sezione,") . "
                COALESCE(
                    (SELECT CONCAT('/img/blog_media/', file_path)
                     FROM blog_media
@@ -146,6 +152,9 @@ if ($stmt) {
             }
 
             $articleUrl = $baseUrl . $targetPath;
+            $articleSection = normalize_content_section($row['sezione'] ?? 'calcio');
+            $articleBlogPath = '/blog.php?sezione=' . rawurlencode($articleSection);
+            $articleBlogLabel = $articleSection === 'esport' ? 'Blog ESPORT' : 'Blog';
             $cover = $row['cover'] ?? '';
             $coverUrl = $cover ? $baseUrl . '/' . ltrim($cover, '/') : $articleMeta['image'];
             $excerpt = seo_trim($row['contenuto'] ?? '', 180);
@@ -160,7 +169,7 @@ if ($stmt) {
 
             $breadcrumbSchema = seo_breadcrumb_schema([
                 ['name' => 'Home', 'url' => $baseUrl . '/'],
-                ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
+                ['name' => $articleBlogLabel, 'url' => $baseUrl . $articleBlogPath],
                 ['name' => $row['titolo'] ?? 'Articolo', 'url' => $articleUrl],
             ]);
 
@@ -237,7 +246,7 @@ if ($articleId === 0 && $fallbackId > 0) {
                 ];
                 $breadcrumbSchema = seo_breadcrumb_schema([
                     ['name' => 'Home', 'url' => $baseUrl . '/'],
-                    ['name' => 'Blog', 'url' => $baseUrl . '/blog.php'],
+                    ['name' => $articleBlogLabel, 'url' => $baseUrl . $articleBlogPath],
                     ['name' => $row['titolo'] ?? 'Articolo', 'url' => $articleUrl],
                 ]);
                 $articleSchema = [
@@ -321,17 +330,22 @@ if ($articleId > 0 && is_array($articleRow)) {
     $articleHasMedia = !empty($articleMediaSeed);
     $articleHasMultipleMedia = count($articleMediaSeed) > 1;
 
-    $relatedStmt = $conn->prepare(
-        "SELECT id,
-                titolo,
-                DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data
-         FROM blog_post
-         WHERE id <> ?
-         ORDER BY data_pubblicazione DESC
-         LIMIT 4"
-    );
+    $relatedSql = "SELECT id,
+                          titolo,
+                          DATE_FORMAT(data_pubblicazione, '%d/%m/%Y') AS data
+                   FROM blog_post
+                   WHERE id <> ?";
+    if ($blogSectionReady) {
+        $relatedSql .= " AND sezione = ?";
+    }
+    $relatedSql .= " ORDER BY data_pubblicazione DESC LIMIT 4";
+    $relatedStmt = $conn->prepare($relatedSql);
     if ($relatedStmt) {
-        $relatedStmt->bind_param('i', $articleId);
+        if ($blogSectionReady) {
+            $relatedStmt->bind_param('is', $articleId, $articleSection);
+        } else {
+            $relatedStmt->bind_param('i', $articleId);
+        }
         if ($relatedStmt->execute()) {
             $relatedResult = $relatedStmt->get_result();
             while ($relatedRow = $relatedResult->fetch_assoc()) {
@@ -896,13 +910,13 @@ if ($articleId === 0) {
 <main class="article-layout">
   <article class="article-panel" id="articlePanel">
     <div class="article-meta">
-      <a class="article-badge" href="/blog.php" aria-label="Torna al blog">
-        <span aria-hidden="true">&#8592;</span> Blog
+      <a class="article-badge" href="<?= article_escape($articleBlogPath) ?>" aria-label="Torna al blog">
+        <span aria-hidden="true">&#8592;</span> <?= article_escape($articleBlogLabel) ?>
       </a>
       <span id="articleDate" class="sr-only"><?= article_escape($articleDateLabel ?: '--/--/----') ?></span>
     </div>
     <div class="article-backlink-inline">
-      <a href="/blog.php" class="btn-back-blog" aria-label="Torna al blog">&#8592; Torna al blog</a>
+      <a href="<?= article_escape($articleBlogPath) ?>" class="btn-back-blog" aria-label="Torna al blog">&#8592; Torna al blog</a>
     </div>
     <h2 id="articleTitle"><?= article_escape($articleTitleText) ?></h2>
     <p class="article-subtitle" id="articleSubtitle"><?= article_escape($articleSubtitleText) ?></p>

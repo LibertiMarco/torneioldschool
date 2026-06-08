@@ -1,12 +1,20 @@
 <?php
 session_start();
 require_once __DIR__ . '/includi/seo.php';
+require_once __DIR__ . '/includi/content_sections.php';
 $baseUrl = seo_base_url();
+$requestedSectionRaw = trim((string)($_GET['sezione'] ?? ''));
+$alboSection = $requestedSectionRaw === '' ? '' : normalize_content_section($requestedSectionRaw);
+$isSectionFiltered = $alboSection !== '';
+$isEsportAlbo = $alboSection === 'esport';
+$alboPath = $isSectionFiltered ? '/albo.php?sezione=' . rawurlencode($alboSection) : '/albo.php';
 $pageSeo = [
-  'title' => 'Albo d\'oro | Tornei Old School',
-  'description' => 'Tutte le vincitrici dei tornei Old School con premi e tabelloni stagione per stagione.',
-  'url' => $baseUrl . '/albo.php',
-  'canonical' => $baseUrl . '/albo.php',
+  'title' => $isEsportAlbo ? 'Albo d\'oro ESPORT | Tornei Old School' : 'Albo d\'oro | Tornei Old School',
+  'description' => $isEsportAlbo
+    ? 'Tutte le vincitrici dei tornei esport Tornei Old School con premi e collegamenti alle competizioni.'
+    : 'Tutte le vincitrici dei tornei Old School con premi e tabelloni stagione per stagione.',
+  'url' => $baseUrl . $alboPath,
+  'canonical' => $baseUrl . $alboPath,
 ];
 ?>
 <!DOCTYPE html>
@@ -59,7 +67,7 @@ $pageSeo = [
 <body>
   <?php include __DIR__ . '/includi/header.php'; ?>
   <main class="albo-page">
-    <h1>Albo d'oro completo</h1>
+    <h1><?= $isEsportAlbo ? "Albo d'oro ESPORT" : "Albo d'oro completo" ?></h1>
     <div class="albo-filters">
       <label for="filterCompetizione">Torneo</label>
       <select id="filterCompetizione" class="albo-select">
@@ -174,6 +182,14 @@ $pageSeo = [
       return latest ? [latest] : [];
     }
 
+    function competitionKey(item) {
+      return `${String(item?.sezione || 'calcio')}::${String(item?.competizione || '')}`;
+    }
+
+    function competitionLabel(item) {
+      return `${String(item?.sezione || 'calcio').toUpperCase()} - ${String(item?.competizione || '')}`;
+    }
+
     function renderList(items) {
       if (!items.length) {
         grid.innerHTML = '<p>Nessun dato disponibile.</p>';
@@ -183,7 +199,12 @@ $pageSeo = [
     }
 
     function populateSelect(items) {
-      const unique = Array.from(new Set(items.map(i => i.competizione).filter(Boolean))).sort();
+      const uniqueMap = new Map();
+      items.forEach(item => {
+        if (!item?.competizione) return;
+        uniqueMap.set(competitionKey(item), competitionLabel(item));
+      });
+      const unique = Array.from(uniqueMap.entries()).sort((a, b) => a[1].localeCompare(b[1], 'it'));
       if (!unique.length) {
         select.innerHTML = '<option value="">Nessun torneo disponibile</option>';
         select.disabled = true;
@@ -191,9 +212,9 @@ $pageSeo = [
       }
 
       const latestItem = getLatestInsertedItems(items)[0] || null;
-      const defaultCompetizione = latestItem?.competizione || unique[0];
+      const defaultCompetizione = latestItem ? competitionKey(latestItem) : unique[0][0];
 
-      select.innerHTML = unique.map(name => `<option value="${name}">${name}</option>`).join('');
+      select.innerHTML = unique.map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
       select.disabled = false;
       select.value = defaultCompetizione;
       hasManualSelection = false;
@@ -211,13 +232,13 @@ $pageSeo = [
       }
 
       if (hasManualSelection && selectedCompetizione) {
-        filtered = filtered.filter(item => item.competizione === selectedCompetizione);
+        filtered = filtered.filter(item => competitionKey(item) === selectedCompetizione);
       }
 
       renderList(filtered);
     }
 
-    fetch('/api/albo_doro.php')
+    fetch('/api/albo_doro.php<?= $isSectionFiltered ? '?sezione=' . rawurlencode($alboSection) : '' ?>')
       .then(r => r.json())
       .then(data => {
         alboData = Array.isArray(data.data) ? data.data : [];

@@ -25,6 +25,8 @@ function sitemap_add(array &$urls, string $loc, ?string $lastmod = null, string 
 }
 
 sitemap_add($urls, $baseUrl . '/', sitemap_file_lastmod(__DIR__ . '/index.php'), 'daily', '1.0');
+sitemap_add($urls, $baseUrl . '/esport.php', sitemap_file_lastmod(__DIR__ . '/esport.php'), 'daily', '0.9');
+sitemap_add($urls, $baseUrl . '/tornei-esport.php', sitemap_file_lastmod(__DIR__ . '/tornei-esport.php'), 'daily', '0.8');
 sitemap_add($urls, $baseUrl . '/blog.php', sitemap_file_lastmod(__DIR__ . '/blog.php'), 'daily', '0.8');
 sitemap_add($urls, $baseUrl . '/classifica_giocatori.php', sitemap_file_lastmod(__DIR__ . '/classifica_giocatori.php'), 'daily', '0.7');
 sitemap_add($urls, $baseUrl . '/chisiamo.php', sitemap_file_lastmod(__DIR__ . '/chisiamo.php'), 'monthly', '0.6');

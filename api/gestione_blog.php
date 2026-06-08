@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includi/admin_guard.php';
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/content_sections.php';
 require_once __DIR__ . '/../includi/mail_helper.php';
 require_once __DIR__ . '/../includi/image_optimizer.php';
 
@@ -9,11 +10,13 @@ $errore = '';
 $successo = '';
 $titolo = '';
 $contenuto = '';
+$sezioneCreate = 'calcio';
 
 $mediaDir = __DIR__ . '/../img/blog_media/';
 $allowedImages = ['jpg', 'jpeg', 'png', 'webp'];
 $allowedVideos = ['mp4', 'webm', 'ogg', 'mov'];
 $maxUploadBytes = 30 * 1024 * 1024;
+$blogSectionReady = ensure_blog_post_section_column($conn);
 
 function ini_bytes(string $value): int {
   $value = trim($value);
@@ -132,13 +135,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($azioneForm === 'crea') {
       $titolo = sanitizeText($_POST['titolo'] ?? '');
       $contenuto = sanitizeText($_POST['contenuto'] ?? '');
+      $sezione = normalize_content_section($_POST['sezione'] ?? 'calcio');
+      $sezioneCreate = $sezione;
       $inviaNotifica = !empty($_POST['invia_notifica_newsletter']);
     if ($titolo === '' || $contenuto === '') {
       $errore = 'Compila titolo e contenuto per pubblicare un articolo.';
     } else {
-      $stmt = $conn->prepare("INSERT INTO blog_post (titolo, contenuto, immagine, data_pubblicazione) VALUES (?, ?, NULL, NOW())");
+      $stmt = $blogSectionReady
+        ? $conn->prepare("INSERT INTO blog_post (titolo, contenuto, immagine, sezione, data_pubblicazione) VALUES (?, ?, NULL, ?, NOW())")
+        : $conn->prepare("INSERT INTO blog_post (titolo, contenuto, immagine, data_pubblicazione) VALUES (?, ?, NULL, NOW())");
       if ($stmt) {
-        $stmt->bind_param('ss', $titolo, $contenuto);
+        if ($blogSectionReady) {
+          $stmt->bind_param('sss', $titolo, $contenuto, $sezione);
+        } else {
+          $stmt->bind_param('ss', $titolo, $contenuto);
+        }
         if ($stmt->execute()) {
           $postId = $stmt->insert_id;
           $titoloUsato = $titolo;
@@ -172,13 +183,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $soloMedia = ($_POST['solo_media_mod'] ?? '') === '1';
       $nuovoTitolo = sanitizeText($_POST['titolo_mod'] ?? '');
       $nuovoContenuto = sanitizeText($_POST['contenuto_mod'] ?? '');
+      $nuovaSezione = normalize_content_section($_POST['sezione_mod'] ?? 'calcio');
       if ($id <= 0 || (!$soloMedia && ($nuovoTitolo === '' || $nuovoContenuto === ''))) {
         $errore = 'Seleziona un articolo valido e compila tutti i campi.';
       } else {
         if (!$soloMedia) {
-          $stmt = $conn->prepare("UPDATE blog_post SET titolo = ?, contenuto = ? WHERE id = ?");
+          $stmt = $blogSectionReady
+            ? $conn->prepare("UPDATE blog_post SET titolo = ?, contenuto = ?, sezione = ? WHERE id = ?")
+            : $conn->prepare("UPDATE blog_post SET titolo = ?, contenuto = ? WHERE id = ?");
           if ($stmt) {
-            $stmt->bind_param('ssi', $nuovoTitolo, $nuovoContenuto, $id);
+            if ($blogSectionReady) {
+              $stmt->bind_param('sssi', $nuovoTitolo, $nuovoContenuto, $nuovaSezione, $id);
+            } else {
+              $stmt->bind_param('ssi', $nuovoTitolo, $nuovoContenuto, $id);
+            }
             if (!$stmt->execute()) {
               $errore = 'Aggiornamento non riuscito.';
             }
@@ -259,7 +277,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $articoli = [];
-$res = $conn->query("SELECT id, titolo, contenuto, data_pubblicazione AS data_iso, DATE_FORMAT(data_pubblicazione, '%d/%m/%Y %H:%i') AS data_pubblicazione FROM blog_post ORDER BY data_pubblicazione DESC");
+$articoliSelect = $blogSectionReady ? 'sezione' : "'calcio' AS sezione";
+$res = $conn->query("SELECT id, titolo, contenuto, {$articoliSelect}, data_pubblicazione AS data_iso, DATE_FORMAT(data_pubblicazione, '%d/%m/%Y %H:%i') AS data_pubblicazione FROM blog_post ORDER BY data_pubblicazione DESC");
 if ($res) {
   while ($row = $res->fetch_assoc()) {
     $row['id'] = (int)$row['id'];
@@ -416,6 +435,13 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <input type="hidden" name="azione" value="crea">
         <label for="titolo">Titolo</label>
         <input type="text" id="titolo" name="titolo" value="<?= htmlspecialchars($titolo) ?>" required>
+        <?php if ($blogSectionReady): ?>
+        <label for="sezione">Sezione</label>
+        <select id="sezione" name="sezione">
+          <option value="calcio" <?= $sezioneCreate === 'calcio' ? 'selected' : '' ?>>Calcio</option>
+          <option value="esport" <?= $sezioneCreate === 'esport' ? 'selected' : '' ?>>ESPORT</option>
+        </select>
+        <?php endif; ?>
 
         <div class="sections-builder">
           <div class="sections-header">
@@ -462,7 +488,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <select id="modSelectArticolo" required <?= empty($articoli) ? 'disabled' : '' ?>>
           <option value="">-- Scegli un articolo --</option>
           <?php foreach ($articoli as $articolo): ?>
-            <option value="<?= (int)$articolo['id'] ?>"><?= htmlspecialchars($articolo['titolo']) ?></option>
+            <option value="<?= (int)$articolo['id'] ?>"><?= htmlspecialchars(strtoupper((string)($articolo['sezione'] ?? 'calcio')) . ' - ' . $articolo['titolo']) ?></option>
           <?php endforeach; ?>
         </select>
         <?php if (empty($articoli)): ?>
@@ -471,6 +497,13 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
 
         <label for="titolo_mod">Titolo</label>
         <input type="text" id="titolo_mod" name="titolo_mod" required>
+        <?php if ($blogSectionReady): ?>
+        <label for="sezione_mod">Sezione</label>
+        <select id="sezione_mod" name="sezione_mod">
+          <option value="calcio">Calcio</option>
+          <option value="esport">ESPORT</option>
+        </select>
+        <?php endif; ?>
 
         <div class="sections-builder">
           <div class="sections-header">
@@ -545,6 +578,7 @@ setTimeout(clearAlerts, 4000);
 const moduloSelect = document.getElementById('modSelectArticolo');
 const idField = document.getElementById('articolo_id_mod');
 const titoloField = document.getElementById('titolo_mod');
+const sezioneField = document.getElementById('sezione_mod');
 const contenutoField = document.getElementById('contenuto_mod');
 const mediaList = document.getElementById('mediaList');
 const contenutoCreateField = document.getElementById('contenuto');
@@ -798,6 +832,7 @@ moduloSelect?.addEventListener('change', e => {
   if (!articolo) {
     idField.value = '';
     titoloField.value = '';
+    if (sezioneField) sezioneField.value = 'calcio';
     contenutoField.value = '';
     hydrateSections('mod', '');
     renderMediaList([]);
@@ -805,6 +840,7 @@ moduloSelect?.addEventListener('change', e => {
   }
   idField.value = articolo.id;
   titoloField.value = articolo.titolo || '';
+  if (sezioneField) sezioneField.value = articolo.sezione || 'calcio';
   contenutoField.value = articolo.contenuto || '';
   hydrateSections('mod', articolo.contenuto || '');
   renderMediaList(Array.isArray(articolo.media) ? articolo.media : []);
