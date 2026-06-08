@@ -254,9 +254,13 @@ $headerNavLinks = [
     </div>
 
 </header>
-<div class="header-spacer<?= $headerIsTournamentPage ? ' header-spacer--tournament' : '' ?>" aria-hidden="true"></div>
+<div class="header-spacer<?= $headerIsTournamentPage ? ' header-spacer--tournament' : '' ?>" data-header-spacer="1" aria-hidden="true"></div>
 
 <style>
+:root {
+    --site-header-height: 80px;
+}
+
 /* ----- STRUTTURA BASE ----- */
 .site-header {
     display: flex;
@@ -276,7 +280,7 @@ $headerNavLinks = [
 }
 
 .header-spacer {
-    height: 80px;
+    height: var(--site-header-height);
     width: 100%;
 }
 
@@ -703,10 +707,6 @@ $headerNavLinks = [
         position: fixed;
     }
 
-    .header-spacer {
-        height: 72px;
-    }
-
     .header-spacer--tournament + main.content {
         padding-top: 40px !important;
     }
@@ -727,6 +727,66 @@ $headerNavLinks = [
     }
 }
 </style>
+
+<script>
+(function () {
+    if (window.__HEADER_SPACER_SYNC__) {
+        return;
+    }
+
+    window.__HEADER_SPACER_SYNC__ = true;
+
+    const syncHeaderSpacer = () => {
+        const header = document.querySelector(".site-header");
+        const spacer = document.querySelector("[data-header-spacer='1']");
+        if (!header || !spacer) {
+            return;
+        }
+
+        const fallbackHeight = window.innerWidth <= 768 ? 72 : 80;
+        const measuredHeight = Math.ceil(header.getBoundingClientRect().height);
+        const resolvedHeight = Math.max(fallbackHeight, measuredHeight);
+
+        document.documentElement.style.setProperty("--site-header-height", `${resolvedHeight}px`);
+        spacer.style.height = `${resolvedHeight}px`;
+    };
+
+    const queueSync = () => {
+        window.requestAnimationFrame(syncHeaderSpacer);
+    };
+
+    const initObserver = () => {
+        if (typeof ResizeObserver === "undefined") {
+            return;
+        }
+
+        const header = document.querySelector(".site-header");
+        if (!header) {
+            return;
+        }
+
+        const observer = new ResizeObserver(() => {
+            queueSync();
+        });
+        observer.observe(header);
+    };
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", queueSync, { once: true });
+        document.addEventListener("DOMContentLoaded", initObserver, { once: true });
+    } else {
+        queueSync();
+        initObserver();
+    }
+
+    window.addEventListener("load", queueSync);
+    window.addEventListener("resize", queueSync);
+
+    if (document.fonts && typeof document.fonts.ready?.then === "function") {
+        document.fonts.ready.then(queueSync).catch(function () {});
+    }
+})();
+</script>
 
 <script>
 (function () {
