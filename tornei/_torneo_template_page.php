@@ -566,16 +566,13 @@ if (!empty($torneoConfig['regole_html'])) {
       z-index: 6;
       background: #fff;
     }
-    .gironi-grid table th:nth-child(2) {
+    .gironi-grid table th:nth-child(2),
+    .gironi-grid table td:nth-child(2) {
+      position: sticky;
+      left: 40px;
       min-width: 170px;
       width: 170px;
       z-index: 5;
-      background: #fff;
-      text-align: left;
-    }
-    .gironi-grid table td:nth-child(2) {
-      min-width: 170px;
-      width: 170px;
       background: #fff;
       text-align: left;
     }
