@@ -52,6 +52,21 @@ function normalizeGironeValue($value): string {
     return substr($value, 0, 32);
 }
 
+function torneoHasGironiConfig(array $config): bool {
+    $formato = strtolower(trim((string)($config['formato'] ?? $config['formula_torneo'] ?? '')));
+    $numeroGironi = max(0, (int)($config['numero_gironi'] ?? 0));
+
+    if ($formato === 'girone') {
+        return true;
+    }
+
+    if ($formato === 'campionato' || $formato === 'eliminazione') {
+        return false;
+    }
+
+    return $numeroGironi > 0;
+}
+
 function getGironeInfoForTorneo(Torneo $torneoModel, string $torneoSlug): array {
     if ($torneoSlug === '') {
         return ['is_girone' => false, 'labels' => []];
@@ -63,10 +78,9 @@ function getGironeInfoForTorneo(Torneo $torneoModel, string $torneoSlug): array 
     }
 
     $config = parseTorneoConfigValue($torneoRow['config'] ?? null);
-    $formato = strtolower(trim((string)($config['formato'] ?? $config['formula_torneo'] ?? '')));
     $numeroGironi = max(0, (int)($config['numero_gironi'] ?? 0));
 
-    if ($formato !== 'girone' || $numeroGironi <= 0) {
+    if (!torneoHasGironiConfig($config) || $numeroGironi <= 0) {
         return ['is_girone' => false, 'labels' => []];
     }
 
@@ -624,7 +638,9 @@ if ($resSquadre = $squadra->getAll()) {
         var config = torneiConfigMap[String(torneoSlug || '')] || {};
         var formato = String(config.formato || config.formula_torneo || '').trim().toLowerCase();
         var numeroGironi = parseInt(config.numero_gironi || '0', 10);
-        if (formato !== 'girone' || !numeroGironi || numeroGironi < 1) {
+        var hasExplicitNonGironi = formato === 'campionato' || formato === 'eliminazione';
+        var hasGironi = formato === 'girone' || (!hasExplicitNonGironi && numeroGironi > 0);
+        if (!hasGironi || !numeroGironi || numeroGironi < 1) {
           return [];
         }
         return buildGironeLabels(numeroGironi);

@@ -1595,7 +1595,7 @@ if ($lista instanceof mysqli_result) {
                 syncRegole(false);
 
                 function applyConfig(cfg = {}) {
-                    const formato = cfg.formato || cfg.formula_torneo || '';
+                    const formato = resolveFormulaFromConfig(cfg);
                     setTipoValue(formato);
 
                     if (campionatoInput) campionatoInput.value = cfg.campionato_squadre ?? '';
@@ -1740,6 +1740,20 @@ function torneoSlugFromFile(fileName = '') {
     return String(fileName || '').replace(/\.(html?|php)$/i, '').trim();
 }
 
+function resolveFormulaFromConfig(cfg = {}) {
+    const rawValue = String(cfg.formato || cfg.formula_torneo || '').trim().toLowerCase();
+    if (rawValue === 'campionato' || rawValue === 'girone' || rawValue === 'eliminazione') {
+        return rawValue;
+    }
+
+    const numeroGironi = Math.max(0, Number.parseInt(cfg.numero_gironi || '0', 10));
+    if (numeroGironi > 0) {
+        return 'girone';
+    }
+
+    return rawValue;
+}
+
 function buildGironeLabels(count) {
     const total = Math.max(0, Number.parseInt(count || '0', 10));
     return Array.from({ length: total }, (_, idx) => {
@@ -1762,7 +1776,16 @@ function normalizeGironeEditorValue(value = '') {
 }
 
 function shouldShowGironiEditor() {
-    return (formulaTorneoMod?.value || '') === 'girone';
+    const formulaValue = formulaTorneoMod?.value || '';
+    if (formulaValue === 'girone') {
+        return true;
+    }
+
+    if (formulaValue === 'campionato' || formulaValue === 'eliminazione') {
+        return false;
+    }
+
+    return Math.max(0, Number.parseInt(configInputs.gironi?.value || '0', 10)) > 0;
 }
 
 function clearSquadreGironiEditor() {
@@ -1827,7 +1850,8 @@ function renderSquadreGironiEditor() {
         });
 
         const currentValue = normalizeGironeEditorValue(team.girone);
-        select.value = labels.includes(currentValue) ? currentValue : '';
+        select.value = labels.includes(currentValue) ? currentValue : (labels.length === 1 ? labels[0] : '');
+        squadreGironiState[index].girone = select.value;
         select.addEventListener('change', () => {
             squadreGironiState[index].girone = select.value;
         });
@@ -1904,11 +1928,11 @@ selectTorneo.addEventListener('change', async (e) => {
                 modController.applyConfig(cfg);
             } else {
                 if (formulaTorneoMod) {
-                    formulaTorneoMod.value = cfg.formato || '';
+                    formulaTorneoMod.value = resolveFormulaFromConfig(cfg);
                 }
                 if (faseFinaleMod) {
                     faseFinaleMod.innerHTML = '';
-                    const formulaValue = cfg.formato || cfg.formula_torneo || '';
+                    const formulaValue = resolveFormulaFromConfig(cfg);
                     const options = formulaValue === 'girone'
                         ? [
                             { value: 'eliminazione_diretta', label: 'Eliminazione diretta' },

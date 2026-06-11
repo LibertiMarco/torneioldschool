@@ -7227,3 +7227,14 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
     font-size: clamp(18px, 7vw, 26px) !important;
   }
 }
+
+/* Nei gironi la seconda colonna deve scorrere con il resto della tabella. */
+body .gironi-grid table th:nth-child(2) {
+  left: auto !important;
+}
+
+body .gironi-grid table td:nth-child(2) {
+  position: static !important;
+  left: auto !important;
+  z-index: auto !important;
+}
