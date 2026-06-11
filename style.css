@@ -7227,3 +7227,34 @@ img.icon { filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
     font-size: clamp(18px, 7vw, 26px) !important;
   }
 }
+
+/* Correzione sticky per i gironi: la prima colonna deve occupare davvero 40px
+   e la seconda deve partire subito dopo senza finire coperta. */
+body .gironi-grid table th:nth-child(1),
+body .gironi-grid table td:nth-child(1) {
+  box-sizing: border-box !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+body .gironi-grid table th:nth-child(1) {
+  z-index: 8 !important;
+}
+
+body .gironi-grid table td:nth-child(1) {
+  z-index: 6 !important;
+}
+
+body .gironi-grid table th:nth-child(2),
+body .gironi-grid table td:nth-child(2) {
+  box-sizing: border-box !important;
+  left: 40px !important;
+}
+
+body .gironi-grid table th:nth-child(2) {
+  z-index: 7 !important;
+}
+
+body .gironi-grid table td:nth-child(2) {
+  z-index: 5 !important;
+}

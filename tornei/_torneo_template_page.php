@@ -563,8 +563,16 @@ if (!empty($torneoConfig['regole_html'])) {
       left: 0;
       min-width: 40px;
       width: 40px;
-      z-index: 6;
       background: #fff;
+      box-sizing: border-box;
+      padding-left: 0;
+      padding-right: 0;
+    }
+    .gironi-grid table th:nth-child(1) {
+      z-index: 8;
+    }
+    .gironi-grid table td:nth-child(1) {
+      z-index: 6;
     }
     .gironi-grid table th:nth-child(2),
     .gironi-grid table td:nth-child(2) {
@@ -572,9 +580,15 @@ if (!empty($torneoConfig['regole_html'])) {
       left: 40px;
       min-width: 170px;
       width: 170px;
-      z-index: 5;
       background: #fff;
       text-align: left;
+      box-sizing: border-box;
+    }
+    .gironi-grid table th:nth-child(2) {
+      z-index: 7;
+    }
+    .gironi-grid table td:nth-child(2) {
+      z-index: 5;
     }
     .gironi-grid table th:nth-child(n+3),
     .gironi-grid table td:nth-child(n+3) {
