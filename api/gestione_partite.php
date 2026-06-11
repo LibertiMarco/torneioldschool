@@ -24,13 +24,23 @@ $roundMap = [
   'FINALE' => 1,
 ];
 
-$torneiRes = $conn->query("SELECT nome, filetorneo FROM tornei WHERE stato <> 'terminato' ORDER BY nome ASC");
+$torneiHasSection = false;
+$checkTorneoSection = @$conn->query("SHOW COLUMNS FROM tornei LIKE 'sezione'");
+if ($checkTorneoSection && $checkTorneoSection->num_rows > 0) {
+  $torneiHasSection = true;
+}
+
+$torneiSelectSql = $torneiHasSection
+  ? "SELECT nome, filetorneo, sezione FROM tornei WHERE stato <> 'terminato' ORDER BY nome ASC"
+  : "SELECT nome, filetorneo FROM tornei WHERE stato <> 'terminato' ORDER BY nome ASC";
+$torneiRes = $conn->query($torneiSelectSql);
 if ($torneiRes) {
   while ($row = $torneiRes->fetch_assoc()) {
     $slug = preg_replace('/\.(html?|php)$/i', '', $row['filetorneo'] ?? '');
     $torneiDisponibili[] = [
       'nome' => $row['nome'] ?: $slug,
       'slug' => $slug,
+      'sezione' => strtolower(trim((string)($row['sezione'] ?? 'calcio'))) === 'esport' ? 'esport' : 'calcio',
     ];
   }
 }
@@ -1593,7 +1603,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
         </div>
         <div>
           <label class="required-label">Campo</label>
-          <select name="campo" required>
+          <select name="campo" id="campoCrea" required>
             <?= render_match_field_options($campiPartita) ?>
           </select>
         </div>
@@ -2013,7 +2023,9 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   let partiteData = <?php echo json_encode($partite, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
   let partiteModData = <?php echo json_encode($partiteNonGiocate, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
   let partiteGiocateData = <?php echo json_encode($partiteGiocate, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+  const torneiMeta = <?php echo json_encode($torneiDisponibili, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
   const squadreMap = <?php echo json_encode($squadrePerTorneo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+  const matchFieldsData = <?php echo json_encode($campiPartita, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
   const roundLabelMap = {
     'TRENTADUESIMI': 6,
     'SEDICESIMI': 5,
@@ -2027,13 +2039,57 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   const roundLabelFromGiornata = Object.fromEntries(Object.entries(roundLabelMap).map(([k,v]) => [String(v), k]));
   const roundLabelByKey = roundLabelFromGiornata;
   const basePhaseOptions = <?php echo json_encode($fasiAmmesseConBronzo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+  const torneoSectionMap = Object.fromEntries((torneiMeta || []).map(item => [
+    String(item?.slug || ''),
+    String(item?.sezione || 'calcio').trim().toLowerCase() === 'esport' ? 'esport' : 'calcio'
+  ]));
+  const ONLINE_MATCH_FIELD = 'Online';
   const isFormula1Tournament = (torneoSlug = '') => String(torneoSlug || '').trim().toLowerCase() === 'formula1';
+  const isEsportTournament = (torneoSlug = '') => torneoSectionMap[String(torneoSlug || '').trim()] === 'esport';
   const isRegularPhase = (phase = '') => String(phase || '').trim().toUpperCase() === 'REGULAR';
   const isSpareggioPhase = (phase = '') => String(phase || '').trim().toUpperCase() === 'SPAREGGIO';
   const isRoundBasedPhase = (phase = '') => !isRegularPhase(phase) && !isSpareggioPhase(phase);
   const getSpareggioSlotLabel = (slotValue) => {
     const normalized = String(slotValue ?? '').trim();
     return normalized === '' || normalized === '1' ? 'Spareggio' : `Spareggio ${normalized}`;
+  };
+
+  const syncMatchFieldSelect = (selectEl, torneoSlug = '', selectedValue = '', preserveUnknown = false) => {
+    if (!selectEl) return;
+
+    const currentValue = String(selectedValue ?? '').trim();
+    const values = [];
+    const seen = new Set();
+    const addValue = (rawValue) => {
+      const value = String(rawValue ?? '').trim();
+      const key = value.toLowerCase();
+      if (!value || seen.has(key)) return;
+      seen.add(key);
+      values.push(value);
+    };
+
+    (matchFieldsData || []).forEach(item => addValue(item?.nome));
+    if (isEsportTournament(torneoSlug)) {
+      addValue(ONLINE_MATCH_FIELD);
+    }
+    if (preserveUnknown) {
+      addValue(currentValue);
+    }
+
+    selectEl.innerHTML = '<option value="">-- Seleziona campo --</option>';
+    values.forEach(value => {
+      const label = preserveUnknown && currentValue && value === currentValue && !((matchFieldsData || []).some(item => String(item?.nome || '').trim().toLowerCase() === value.toLowerCase()))
+        ? `${value} (storico)`
+        : value;
+      selectEl.add(new Option(label, value));
+    });
+
+    const matchingValue = values.find(value => value.toLowerCase() === currentValue.toLowerCase());
+    if (currentValue && matchingValue) {
+      selectEl.value = matchingValue;
+    } else {
+      selectEl.value = '';
+    }
   };
 
   // Tabs
@@ -2111,7 +2167,9 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   const giornataCrea = document.getElementById('giornataCrea');
   const roundCrea = document.getElementById('roundCrea');
   const faseLegCrea = document.getElementById('faseLegCrea');
+  const campoCrea = document.getElementById('campoCrea');
   syncPhaseSelectOptions(faseCrea, torneoCrea?.value || '');
+  syncMatchFieldSelect(campoCrea, torneoCrea?.value || '');
 
   const getGiornataTarget = () => {
     const faseVal = (faseCrea?.value || '').toUpperCase();
@@ -2180,6 +2238,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   if (torneoCrea) {
     torneoCrea.addEventListener('change', () => {
       syncPhaseSelectOptions(faseCrea, torneoCrea.value || '');
+      syncMatchFieldSelect(campoCrea, torneoCrea.value || '', campoCrea?.value || '', false);
       populateSquadreFiltrate();
     });
   }
@@ -2225,6 +2284,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     syncPhaseSelectOptions(document.getElementById('fase_mod'), torneoVal);
     populateSquadre(torneoVal, 'squadra_casa_mod');
     populateSquadre(torneoVal, 'squadra_ospite_mod');
+    syncMatchFieldSelect(document.getElementById('campo_mod'), torneoVal, document.getElementById('campo_mod')?.value || '', false);
   });
 
   const renderFormMessage = (formId, type, text) => {
@@ -2306,21 +2366,6 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   });
 
   const fillField = (id, val) => { const el = document.getElementById(id); if (el) { if (el.type === 'checkbox') { el.checked = !!val; } else { el.value = val ?? ''; } } };
-  const setSelectValueAllowMissing = (id, val) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const nextValue = val ?? '';
-    if (nextValue === '') {
-      el.value = '';
-      return;
-    }
-    const hasOption = Array.from(el.options || []).some(opt => opt.value === nextValue);
-    if (!hasOption) {
-      el.add(new Option(`${nextValue} (storico)`, nextValue));
-    }
-    el.value = nextValue;
-  };
-
   const clearModificaFields = () => {
     const ids = [
       'torneo_mod','fase_mod','squadra_casa_mod','squadra_ospite_mod',
@@ -2337,6 +2382,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
         el.value = '';
       }
     });
+    syncMatchFieldSelect(document.getElementById('campo_mod'), '', '', false);
     toggleRoundGiornata(document.getElementById('fase_mod'), 'giornataWrapperMod', 'roundWrapperMod', 'legWrapperMod', 'faseLegMod');
     toggleRigoriGroup('decisa_rigori_mod', 'rigoriFieldsMod');
   };
@@ -2395,7 +2441,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     toggleRigoriGroup('decisa_rigori_mod', 'rigoriFieldsMod');
     fillField('data_partita_mod', partita.data_partita);
     fillField('ora_partita_mod', partita.ora_partita);
-    setSelectValueAllowMissing('campo_mod', partita.campo);
+    syncMatchFieldSelect(document.getElementById('campo_mod'), partita.torneo || '', partita.campo || '', true);
     fillField('arbitro_mod', partita.arbitro || '');
     fillField('giocata_mod', Number(partita.giocata || 0) === 1);
     fillField('link_youtube_mod', partita.link_youtube);
