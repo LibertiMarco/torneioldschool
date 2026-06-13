@@ -31,6 +31,11 @@ function esportRankingNormalizeTournamentKey(string $value): string
     return esportRankingLower(esportRankingStripExtension($value));
 }
 
+function esportRankingNormalizeSearchToken(string $value): string
+{
+    return str_replace([' ', '-', '_', '.'], '', esportRankingLower(trim($value)));
+}
+
 function esportRankingBaseTournamentKey(string $value): string
 {
     return preg_replace('/_(gold|silver|bronzo|bronze)$/i', '', esportRankingNormalizeTournamentKey($value)) ?? esportRankingNormalizeTournamentKey($value);
@@ -39,6 +44,49 @@ function esportRankingBaseTournamentKey(string $value): string
 function esportRankingNormalizeTeamKey(string $value): string
 {
     return esportRankingLower(trim($value));
+}
+
+function esportRankingNormalizePersonKey(string $value): string
+{
+    $normalized = preg_replace('/\s+/u', ' ', trim($value)) ?? trim($value);
+    return esportRankingLower($normalized);
+}
+
+function esportRankingSplitDisplayName(string $value): array
+{
+    $normalized = preg_replace('/\s+/u', ' ', trim($value)) ?? trim($value);
+    if ($normalized === '') {
+        return ['', ''];
+    }
+
+    $parts = preg_split('/\s+/u', $normalized) ?: [$normalized];
+    if (count($parts) === 1) {
+        return [$parts[0], ''];
+    }
+
+    $cognome = array_pop($parts);
+    $nome = trim(implode(' ', $parts));
+    return [$nome, $cognome];
+}
+
+function esportRankingBuildProfile(array $matchedPlayer, string $displayName, string $fallbackPhoto, int $fallbackId): array
+{
+    if (!empty($matchedPlayer)) {
+        return [
+            'id' => (int)($matchedPlayer['id'] ?? 0),
+            'nome' => trim((string)($matchedPlayer['nome'] ?? '')),
+            'cognome' => trim((string)($matchedPlayer['cognome'] ?? '')),
+            'foto' => trim((string)($matchedPlayer['foto'] ?? '')) ?: $fallbackPhoto,
+        ];
+    }
+
+    [$nome, $cognome] = esportRankingSplitDisplayName($displayName);
+    return [
+        'id' => $fallbackId,
+        'nome' => $nome,
+        'cognome' => $cognome,
+        'foto' => $fallbackPhoto,
+    ];
 }
 
 function esportRankingNormalizeGroupKey(?string $value): string
@@ -355,11 +403,18 @@ if ($cachedPayload !== null) {
 }
 
 $torneiSectionReady = ensure_tornei_section_column($conn);
-$compactCategoryFilter = '%' . str_replace(' ', '', esportRankingLower($categoryFilter)) . '%';
+$compactCategoryFilter = '%' . esportRankingNormalizeSearchToken($categoryFilter) . '%';
+$categoriaComparableSql = "REPLACE(REPLACE(REPLACE(REPLACE(LOWER(categoria), ' ', ''), '-', ''), '_', ''), '.', '')";
+$nomeComparableSql = "REPLACE(REPLACE(REPLACE(REPLACE(LOWER(nome), ' ', ''), '-', ''), '_', ''), '.', '')";
+$fileComparableSql = "REPLACE(REPLACE(REPLACE(REPLACE(LOWER(filetorneo), ' ', ''), '-', ''), '_', ''), '.', '')";
 $torneiSql = "
     SELECT nome, filetorneo, categoria, config
     FROM tornei
-    WHERE REPLACE(LOWER(categoria), ' ', '') LIKE ?
+    WHERE (
+        {$categoriaComparableSql} LIKE ?
+        OR {$nomeComparableSql} LIKE ?
+        OR {$fileComparableSql} LIKE ?
+    )
 ";
 if ($torneiSectionReady) {
     $torneiSql .= " AND sezione = 'esport'";
@@ -373,7 +428,7 @@ if (!$torneiStmt) {
     exit;
 }
 
-$torneiStmt->bind_param('s', $compactCategoryFilter);
+$torneiStmt->bind_param('sss', $compactCategoryFilter, $compactCategoryFilter, $compactCategoryFilter);
 $torneiStmt->execute();
 $torneiResult = $torneiStmt->get_result();
 
@@ -458,17 +513,10 @@ $teamsSql = "
         s.perse,
         s.gol_fatti,
         s.gol_subiti,
-        s.differenza_reti,
-        sg.giocatore_id,
-        sg.foto AS foto_associazione,
-        g.nome AS giocatore_nome,
-        g.cognome AS giocatore_cognome,
-        g.foto AS giocatore_foto
+        s.differenza_reti
     FROM squadre s
-    JOIN squadre_giocatori sg ON sg.squadra_id = s.id
-    JOIN giocatori g ON g.id = sg.giocatore_id
     WHERE LOWER(TRIM(s.torneo)) IN ($teamPlaceholders)
-    ORDER BY s.torneo ASC, s.nome ASC, g.cognome ASC, g.nome ASC
+    ORDER BY s.torneo ASC, s.nome ASC
 ";
 
 $teamsStmt = $conn->prepare($teamsSql);
@@ -497,6 +545,7 @@ while ($row = $teamsResult->fetch_assoc()) {
 
     $candidateTeam = [
         'nome' => $teamName,
+        'profile_key' => esportRankingNormalizePersonKey($teamName),
         'girone' => esportRankingNormalizeGroupKey((string)($row['girone'] ?? '')),
         'logo' => trim((string)($row['logo'] ?? '')),
         'punti' => (int)($row['punti'] ?? 0),
@@ -507,34 +556,75 @@ while ($row = $teamsResult->fetch_assoc()) {
         'gol_fatti' => (int)($row['gol_fatti'] ?? 0),
         'gol_subiti' => (int)($row['gol_subiti'] ?? 0),
         'differenza_reti' => (int)($row['differenza_reti'] ?? 0),
-        'members' => [],
     ];
 
     if (!isset($teamsByTournament[$canonicalTournament][$teamKey])) {
         $teamsByTournament[$canonicalTournament][$teamKey] = $candidateTeam;
     } elseif (esportRankingShouldReplaceTeam($teamsByTournament[$canonicalTournament][$teamKey], $candidateTeam)) {
-        $candidateTeam['members'] = $teamsByTournament[$canonicalTournament][$teamKey]['members'] ?? [];
         $teamsByTournament[$canonicalTournament][$teamKey] = $candidateTeam;
-    }
-
-    $playerId = (int)($row['giocatore_id'] ?? 0);
-    if ($playerId <= 0) {
-        continue;
-    }
-
-    $teamsByTournament[$canonicalTournament][$teamKey]['members'][$playerId] = true;
-
-    if (!isset($playerProfiles[$playerId])) {
-        $playerProfiles[$playerId] = [
-            'id' => $playerId,
-            'nome' => trim((string)($row['giocatore_nome'] ?? '')),
-            'cognome' => trim((string)($row['giocatore_cognome'] ?? '')),
-            'foto' => esportRankingPickPhoto($row),
-        ];
     }
 }
 
 $teamsStmt->close();
+
+if (!empty($teamsByTournament)) {
+    $playersByFullName = [];
+    $playersResult = $conn->query("SELECT id, nome, cognome, foto FROM giocatori ORDER BY id ASC");
+    if ($playersResult instanceof mysqli_result) {
+        while ($row = $playersResult->fetch_assoc()) {
+            $fullName = trim((string)($row['nome'] ?? '') . ' ' . (string)($row['cognome'] ?? ''));
+            $fullNameKey = esportRankingNormalizePersonKey($fullName);
+            if ($fullNameKey === '' || isset($playersByFullName[$fullNameKey])) {
+                continue;
+            }
+
+            $playersByFullName[$fullNameKey] = [
+                'id' => (int)($row['id'] ?? 0),
+                'nome' => trim((string)($row['nome'] ?? '')),
+                'cognome' => trim((string)($row['cognome'] ?? '')),
+                'foto' => trim((string)($row['foto'] ?? '')) ?: '/img/giocatori/unknown.jpg',
+            ];
+        }
+        $playersResult->free();
+    }
+
+    $syntheticPlayerIds = [];
+    $nextSyntheticPlayerId = -1;
+
+    foreach ($teamsByTournament as $canonicalTournament => $teams) {
+        foreach ($teams as $teamKey => $team) {
+            $profileKey = (string)($team['profile_key'] ?? '');
+            if ($profileKey === '') {
+                continue;
+            }
+
+            $fallbackPhoto = trim((string)($team['logo'] ?? '')) ?: '/img/giocatori/unknown.jpg';
+            $matchedPlayer = $playersByFullName[$profileKey] ?? [];
+
+            if (!isset($syntheticPlayerIds[$profileKey])) {
+                $syntheticPlayerIds[$profileKey] = $nextSyntheticPlayerId;
+                $nextSyntheticPlayerId--;
+            }
+
+            $profile = esportRankingBuildProfile(
+                $matchedPlayer,
+                (string)($team['nome'] ?? ''),
+                $fallbackPhoto,
+                $syntheticPlayerIds[$profileKey]
+            );
+
+            if (!isset($playerProfiles[$profileKey])) {
+                $playerProfiles[$profileKey] = $profile;
+                continue;
+            }
+
+            $currentPhoto = trim((string)($playerProfiles[$profileKey]['foto'] ?? ''));
+            if (($currentPhoto === '' || str_contains($currentPhoto, 'unknown.jpg')) && !str_contains($profile['foto'], 'unknown.jpg')) {
+                $playerProfiles[$profileKey]['foto'] = $profile['foto'];
+            }
+        }
+    }
+}
 
 $regularPointsByTeam = [];
 $knockoutStages = [];
@@ -669,8 +759,8 @@ foreach ($teamsByTournament as $canonicalTournament => $teams) {
     }
 
     foreach ($teams as $teamKey => $team) {
-        $teamMembers = array_keys($team['members'] ?? []);
-        if (empty($teamMembers)) {
+        $profileKey = (string)($team['profile_key'] ?? '');
+        if ($profileKey === '' || !isset($playerProfiles[$profileKey])) {
             continue;
         }
 
@@ -679,45 +769,38 @@ foreach ($teamsByTournament as $canonicalTournament => $teams) {
         $goldPoints = (int)($cupPointsByTeam[$teamKey]['gold'] ?? 0);
         $silverPoints = (int)($cupPointsByTeam[$teamKey]['silver'] ?? 0);
 
-        foreach ($teamMembers as $playerId) {
-            $playerId = (int)$playerId;
-            if ($playerId <= 0) {
-                continue;
-            }
-
-            if (!isset($playerTournamentBreakdown[$playerId][$canonicalTournament])) {
-                $playerTournamentBreakdown[$playerId][$canonicalTournament] = [
-                    'partecipazione' => 10,
-                    'gironi' => 0,
-                    'bonus_gironi' => 0,
-                    'gold' => 0,
-                    'silver' => 0,
-                    'tournament_name' => $tournaments[$canonicalTournament]['nome'] ?? $canonicalTournament,
-                    'teams' => [],
-                ];
-            }
-
-            $playerTournamentBreakdown[$playerId][$canonicalTournament]['gironi'] += $regularPoints;
-            $playerTournamentBreakdown[$playerId][$canonicalTournament]['bonus_gironi'] = max(
-                (int)$playerTournamentBreakdown[$playerId][$canonicalTournament]['bonus_gironi'],
-                $groupBonus
-            );
-            $playerTournamentBreakdown[$playerId][$canonicalTournament]['gold'] = max(
-                (int)$playerTournamentBreakdown[$playerId][$canonicalTournament]['gold'],
-                $goldPoints
-            );
-            $playerTournamentBreakdown[$playerId][$canonicalTournament]['silver'] = max(
-                (int)$playerTournamentBreakdown[$playerId][$canonicalTournament]['silver'],
-                $silverPoints
-            );
-            $playerTournamentBreakdown[$playerId][$canonicalTournament]['teams'][$teamKey] = $team['nome'];
+        if (!isset($playerTournamentBreakdown[$profileKey][$canonicalTournament])) {
+            $playerTournamentBreakdown[$profileKey][$canonicalTournament] = [
+                'partecipazione' => 10,
+                'gironi' => 0,
+                'bonus_gironi' => 0,
+                'gold' => 0,
+                'silver' => 0,
+                'tournament_name' => $tournaments[$canonicalTournament]['nome'] ?? $canonicalTournament,
+                'teams' => [],
+            ];
         }
+
+        $playerTournamentBreakdown[$profileKey][$canonicalTournament]['gironi'] += $regularPoints;
+        $playerTournamentBreakdown[$profileKey][$canonicalTournament]['bonus_gironi'] = max(
+            (int)$playerTournamentBreakdown[$profileKey][$canonicalTournament]['bonus_gironi'],
+            $groupBonus
+        );
+        $playerTournamentBreakdown[$profileKey][$canonicalTournament]['gold'] = max(
+            (int)$playerTournamentBreakdown[$profileKey][$canonicalTournament]['gold'],
+            $goldPoints
+        );
+        $playerTournamentBreakdown[$profileKey][$canonicalTournament]['silver'] = max(
+            (int)$playerTournamentBreakdown[$profileKey][$canonicalTournament]['silver'],
+            $silverPoints
+        );
+        $playerTournamentBreakdown[$profileKey][$canonicalTournament]['teams'][$teamKey] = $team['nome'];
     }
 }
 
 $ranking = [];
-foreach ($playerTournamentBreakdown as $playerId => $tournamentEntries) {
-    if (!isset($playerProfiles[$playerId])) {
+foreach ($playerTournamentBreakdown as $profileKey => $tournamentEntries) {
+    if (!isset($playerProfiles[$profileKey])) {
         continue;
     }
 
@@ -752,10 +835,10 @@ foreach ($playerTournamentBreakdown as $playerId => $tournamentEntries) {
 
     $totalPoints = $participationPoints + $groupStagePoints + $groupBonusPoints + $goldPoints + $silverPoints;
     $ranking[] = [
-        'id' => $playerId,
-        'nome' => $playerProfiles[$playerId]['nome'] ?? '',
-        'cognome' => $playerProfiles[$playerId]['cognome'] ?? '',
-        'foto' => $playerProfiles[$playerId]['foto'] ?? '/img/giocatori/unknown.jpg',
+        'id' => $playerProfiles[$profileKey]['id'] ?? 0,
+        'nome' => $playerProfiles[$profileKey]['nome'] ?? '',
+        'cognome' => $playerProfiles[$profileKey]['cognome'] ?? '',
+        'foto' => $playerProfiles[$profileKey]['foto'] ?? '/img/giocatori/unknown.jpg',
         'punti' => $totalPoints,
         'punti_partecipazione' => $participationPoints,
         'punti_gironi' => $groupStagePoints,
