@@ -28,6 +28,7 @@ $pageSchema = [
     'name' => 'Tornei Old School - ESPORT',
     'url' => $baseUrl . '/esport.php',
 ];
+$isLoggedIn = isset($_SESSION['user_id']);
 
 $homeNews = [];
 $homeNewsSql = "SELECT id,
@@ -79,6 +80,32 @@ if ($blogSectionReady && ($homeNewsStmt = $conn->prepare($homeNewsSql))) {
       background:
         linear-gradient(135deg, rgba(10, 20, 40, 0.7), rgba(18, 34, 58, 0.35)),
         url('img/home_tornei.png') center/cover no-repeat;
+    }
+    .leaders-actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 18px;
+    }
+    .leaders-toggle-btn {
+      min-height: 46px;
+      padding: 0 18px;
+      border: 1px solid #d0daeb;
+      border-radius: 999px;
+      background: #fff;
+      color: #15293e;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .leaders-toggle-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: #9fb2d4;
+      box-shadow: 0 10px 22px rgba(21, 41, 62, 0.08);
+    }
+    .leaders-toggle-btn:disabled {
+      opacity: 0.6;
+      cursor: default;
+      box-shadow: none;
     }
   </style>
 </head>
@@ -136,6 +163,17 @@ if ($blogSectionReady && ($homeNewsStmt = $conn->prepare($homeNewsSql))) {
         <div id="esportRankingList" class="leader-list">
           <p class="loading">Caricamento in corso...</p>
         </div>
+        <?php if ($isLoggedIn): ?>
+        <div id="esportRankingActions" class="leaders-actions" hidden>
+          <button
+            type="button"
+            id="esportRankingToggle"
+            class="leaders-toggle-btn"
+            aria-expanded="false">
+            Visualizza classifica completa
+          </button>
+        </div>
+        <?php endif; ?>
       </section>
 
       <section class="home-hof">
@@ -306,23 +344,55 @@ function renderEsportLeaderCard(player, position) {
     `;
 }
 
-async function loadEsportRanking() {
+const CAN_VIEW_FULL_RANKING = <?= $isLoggedIn ? 'true' : 'false' ?>;
+const DEFAULT_ESPORT_RANKING_LIMIT = 5;
+let esportRankingExpanded = false;
+let esportRankingLoading = false;
+
+function updateEsportRankingToggle(meta = {}) {
+    const actions = document.getElementById('esportRankingActions');
+    const toggle = document.getElementById('esportRankingToggle');
+    if (!actions || !toggle) return;
+
+    const canViewFull = Boolean(meta.can_view_full);
+    const hasMore = Boolean(meta.has_more);
+    const totalPlayers = Number(meta.total_players || 0);
+    const shouldShow = canViewFull && (hasMore || esportRankingExpanded) && totalPlayers > DEFAULT_ESPORT_RANKING_LIMIT;
+
+    actions.hidden = !shouldShow;
+    if (!shouldShow) return;
+
+    toggle.textContent = esportRankingExpanded ? 'Mostra solo top 5' : 'Visualizza classifica completa';
+    toggle.setAttribute('aria-expanded', esportRankingExpanded ? 'true' : 'false');
+    toggle.disabled = esportRankingLoading;
+}
+
+async function loadEsportRanking(limit = DEFAULT_ESPORT_RANKING_LIMIT) {
     const list = document.getElementById('esportRankingList');
     if (!list) return;
 
+    esportRankingLoading = true;
     list.innerHTML = '<p class="loading">Caricamento in corso...</p>';
+    updateEsportRankingToggle({
+      can_view_full: CAN_VIEW_FULL_RANKING,
+      has_more: esportRankingExpanded,
+      total_players: esportRankingExpanded ? limit : 0,
+    });
 
     try {
         const params = new URLSearchParams({
           categoria: 'ea fc',
-          limit: '5'
+          limit: String(limit)
         });
         const response = await fetch('/api/esport_ranking.php?' + params.toString());
         const payload = await response.json();
         const items = Array.isArray(payload.data) ? payload.data : [];
+        const meta = payload && typeof payload.meta === 'object' ? payload.meta : {};
 
         if (!items.length) {
             list.innerHTML = '<p class="empty-state">Nessun ranking EA FC disponibile al momento.</p>';
+            esportRankingLoading = false;
+            updateEsportRankingToggle(meta);
             return;
         }
 
@@ -330,9 +400,17 @@ async function loadEsportRanking() {
             const rank = player.posizione ?? (idx + 1);
             return renderEsportLeaderCard(player, rank);
         }).join('');
+        esportRankingLoading = false;
+        updateEsportRankingToggle(meta);
     } catch (error) {
         console.error('Errore nel caricamento del ranking esport:', error);
         list.innerHTML = '<p class="empty-state">Impossibile recuperare il ranking EA FC.</p>';
+        esportRankingLoading = false;
+        updateEsportRankingToggle({
+          can_view_full: CAN_VIEW_FULL_RANKING,
+          has_more: esportRankingExpanded,
+          total_players: 0,
+        });
     }
 }
 
@@ -359,7 +437,15 @@ async function loadHallOfFame() {
     }
 }
 
-loadEsportRanking();
+if (CAN_VIEW_FULL_RANKING) {
+    document.getElementById('esportRankingToggle')?.addEventListener('click', () => {
+        if (esportRankingLoading) return;
+        esportRankingExpanded = !esportRankingExpanded;
+        loadEsportRanking(esportRankingExpanded ? 50 : DEFAULT_ESPORT_RANKING_LIMIT);
+    });
+}
+
+loadEsportRanking(DEFAULT_ESPORT_RANKING_LIMIT);
 loadHallOfFame();
 </script>
 

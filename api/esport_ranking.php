@@ -2,6 +2,7 @@
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: public, max-age=60, stale-while-revalidate=300');
 
+require_once __DIR__ . '/../includi/security.php';
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/api_cache.php';
 require_once __DIR__ . '/../includi/content_sections.php';
@@ -386,13 +387,17 @@ function esportRankingHighlight(array $entry): array
     return ['', 0];
 }
 
-$limit = max(1, min(50, (int)($_GET['limit'] ?? 10)));
+$isAuthenticated = isset($_SESSION['user_id']);
+$maxLimit = $isAuthenticated ? 50 : 5;
+$requestedLimit = (int)($_GET['limit'] ?? 10);
+$limit = max(1, min($maxLimit, $requestedLimit));
 $categoryFilter = trim((string)($_GET['categoria'] ?? 'ea fc'));
 if ($categoryFilter === '') {
     $categoryFilter = 'ea fc';
 }
 
 $cacheKey = tos_api_cache_build_key('esport_ranking', [
+    'authenticated' => $isAuthenticated ? 1 : 0,
     'categoria' => $categoryFilter,
     'limit' => $limit,
 ]);
@@ -482,6 +487,11 @@ if (empty($tournaments)) {
         'data' => [],
         'meta' => [
             'categoria_filter' => $categoryFilter,
+            'can_view_full' => $isAuthenticated,
+            'has_more' => false,
+            'max_limit' => $maxLimit,
+            'requested_limit' => $requestedLimit,
+            'total_players' => 0,
             'tournaments' => [],
         ],
     ], JSON_UNESCAPED_UNICODE);
@@ -489,7 +499,19 @@ if (empty($tournaments)) {
         tos_api_cache_write($cacheKey, $emptyPayload);
         echo $emptyPayload;
     } else {
-        echo json_encode(['label' => 'EA FC', 'data' => [], 'meta' => ['categoria_filter' => $categoryFilter, 'tournaments' => []]], JSON_UNESCAPED_UNICODE);
+        echo json_encode([
+            'label' => 'EA FC',
+            'data' => [],
+            'meta' => [
+                'categoria_filter' => $categoryFilter,
+                'can_view_full' => $isAuthenticated,
+                'has_more' => false,
+                'max_limit' => $maxLimit,
+                'requested_limit' => $requestedLimit,
+                'total_players' => 0,
+                'tournaments' => [],
+            ],
+        ], JSON_UNESCAPED_UNICODE);
     }
     exit;
 }
@@ -899,6 +921,11 @@ $payload = json_encode([
     'data' => array_slice($ranking, 0, $limit),
     'meta' => [
         'categoria_filter' => $categoryFilter,
+        'can_view_full' => $isAuthenticated,
+        'has_more' => count($ranking) > $limit,
+        'max_limit' => $maxLimit,
+        'requested_limit' => $requestedLimit,
+        'total_players' => count($ranking),
         'tournaments' => array_values(array_map(static function (array $tournament): array {
             return [
                 'slug' => $tournament['slug'] ?? '',
@@ -918,6 +945,11 @@ if ($payload !== false) {
         'data' => array_slice($ranking, 0, $limit),
         'meta' => [
             'categoria_filter' => $categoryFilter,
+            'can_view_full' => $isAuthenticated,
+            'has_more' => count($ranking) > $limit,
+            'max_limit' => $maxLimit,
+            'requested_limit' => $requestedLimit,
+            'total_players' => count($ranking),
             'tournaments' => [],
         ],
     ], JSON_UNESCAPED_UNICODE);
