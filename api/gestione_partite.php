@@ -693,11 +693,14 @@ function squadraHaGiaPartita(
   $sql = "
     SELECT id, squadra_casa, squadra_ospite, fase_round, fase_leg
     FROM partite
-    WHERE torneo = ? AND fase = ? AND giornata = ?
+    WHERE torneo = ?
+      AND UPPER(TRIM(COALESCE(fase, ''))) = ?
+      AND giornata = ?
       AND (squadra_casa = ? OR squadra_ospite = ? OR squadra_casa = ? OR squadra_ospite = ?)
   ";
-  $types = "sisssss";
-  $params = [$torneo, $fase, $giornata, $casa, $casa, $ospite, $ospite];
+  $faseNormalized = strtoupper(trim((string)$fase));
+  $types = "ssissss";
+  $params = [$torneo, $faseNormalized, $giornata, $casa, $casa, $ospite, $ospite];
   if ($excludeId !== null) {
     $sql .= " AND id <> ?";
     $types .= "i";
