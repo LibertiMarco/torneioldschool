@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includi/admin_guard.php';
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/partite_schema.php';
 require_once __DIR__ . '/../includi/push_notifications.php';
 require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 
@@ -227,6 +228,7 @@ function giornata_to_roundLabel(?int $giornata, array $map): ?string {
 // Assicura che le colonne/tabella di supporto notifiche esistano
 ensure_notifiche_table($conn);
 ensure_follow_table($conn);
+ensure_partite_phase_schema($conn);
 ensure_partite_notifica_flag($conn);
 ensure_partite_unique_index($conn);
 ensure_rigori_columns($conn);

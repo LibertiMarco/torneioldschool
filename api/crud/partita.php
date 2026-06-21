@@ -5,7 +5,9 @@ class Partita {
 
     public function __construct() {
         require __DIR__ . '/../../includi/db.php';
+        require_once __DIR__ . '/../../includi/partite_schema.php';
         $this->conn = $conn;
+        ensure_partite_phase_schema($this->conn);
     }
 
     private function normalizeFase($fase): string {
@@ -20,11 +22,14 @@ class Partita {
         $ordineFase = "
             CASE 
                 WHEN fase = 'REGULAR' THEN COALESCE(giornata, 0)
-                WHEN fase_round = 'OTTAVI' THEN 1
-                WHEN fase_round = 'QUARTI' THEN 2
-                WHEN fase_round = 'SEMIFINALE' THEN 3
-                WHEN fase_round = 'FINALE' THEN 4
-                ELSE 5
+                WHEN fase = 'SPAREGGIO' THEN COALESCE(giornata, 0)
+                WHEN fase_round = 'TRENTADUESIMI' THEN 1
+                WHEN fase_round = 'SEDICESIMI' THEN 2
+                WHEN fase_round = 'OTTAVI' THEN 3
+                WHEN fase_round = 'QUARTI' THEN 4
+                WHEN fase_round = 'SEMIFINALE' THEN 5
+                WHEN fase_round = 'FINALE' THEN 6
+                ELSE 7
             END
         ";
         $sql = "SELECT * FROM {$this->table} ORDER BY torneo, fase, {$ordineFase}, data_partita, ora_partita";

@@ -6,6 +6,7 @@ ini_set('display_errors', '0');
 
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/api_cache.php';
+require_once __DIR__ . '/../includi/partite_schema.php';
 
 function respondError(string $msg, int $code = 500): void {
   http_response_code($code);
@@ -14,6 +15,8 @@ function respondError(string $msg, int $code = 500): void {
 }
 
 try {
+  ensure_partite_phase_schema($conn);
+
   $torneo = $_GET['torneo'] ?? '';
   $fase = strtoupper($_GET['fase'] ?? '');
   $idPartita = isset($_GET['id']) ? (int)$_GET['id'] : 0;

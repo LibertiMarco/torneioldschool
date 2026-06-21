@@ -3,6 +3,9 @@ header("Content-Type: application/json; charset=UTF-8");
 
 // --- CONNESSIONE DATABASE ---
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/partite_schema.php';
+
+ensure_partite_phase_schema($conn);
 
 $torneo = $_GET['torneo'] ?? '';
 $fase = strtoupper($_GET['fase'] ?? '');
