@@ -2,6 +2,9 @@
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/partite_schema.php';
+
+ensure_partita_giocatore_team_schema($conn);
 
 $torneo = trim($_GET['torneo'] ?? '');
 if ($torneo === '') {
@@ -76,11 +79,10 @@ $sql = "
     FROM squadre_giocatori sg
     JOIN squadre s ON s.id = sg.squadra_id AND s.torneo = ?
     JOIN giocatori g ON g.id = sg.giocatore_id
-    JOIN partita_giocatore pg ON pg.giocatore_id = g.id
+    JOIN partita_giocatore pg ON pg.giocatore_id = g.id AND pg.squadra_id = s.id
     JOIN partite p 
       ON p.id = pg.partita_id
      AND p.torneo = s.torneo
-     AND (p.squadra_casa = s.nome OR p.squadra_ospite = s.nome)
     WHERE 1=1
       $phaseClause
     GROUP BY sg.id

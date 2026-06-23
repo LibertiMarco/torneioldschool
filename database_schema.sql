@@ -290,6 +290,7 @@ CREATE TABLE IF NOT EXISTS partita_giocatore (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     partita_id INT UNSIGNED NOT NULL,
     giocatore_id INT UNSIGNED NOT NULL,
+    squadra_id INT UNSIGNED NOT NULL,
     presenza TINYINT UNSIGNED NOT NULL DEFAULT 1,
     goal INT UNSIGNED NOT NULL DEFAULT 0,
     autogol INT UNSIGNED NOT NULL DEFAULT 0,
@@ -300,8 +301,10 @@ CREATE TABLE IF NOT EXISTS partita_giocatore (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_partita_giocatore (partita_id, giocatore_id),
     KEY idx_pg_giocatore (giocatore_id),
+    KEY idx_pg_squadra (squadra_id),
     CONSTRAINT fk_pg_partita FOREIGN KEY (partita_id) REFERENCES partite(id) ON DELETE CASCADE,
-    CONSTRAINT fk_pg_giocatore FOREIGN KEY (giocatore_id) REFERENCES giocatori(id) ON DELETE CASCADE
+    CONSTRAINT fk_pg_giocatore FOREIGN KEY (giocatore_id) REFERENCES giocatori(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pg_squadra FOREIGN KEY (squadra_id) REFERENCES squadre(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Blog post (blog.php, articolo.php, api/blog.php)

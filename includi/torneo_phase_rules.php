@@ -274,9 +274,10 @@ if (!function_exists('torneo_stats_fetch_player_team_totals')) {
                 SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
             FROM partita_giocatore pg
             JOIN partite p ON p.id = pg.partita_id
+            JOIN squadre s ON s.id = pg.squadra_id
             WHERE pg.giocatore_id = ?
-              AND p.torneo = ?
-              AND (p.squadra_casa = ? OR p.squadra_ospite = ?)
+              AND s.torneo = ?
+              AND s.nome = ?
               $phaseClause
         ";
         $stmt = $conn->prepare($sql);
@@ -284,7 +285,7 @@ if (!function_exists('torneo_stats_fetch_player_team_totals')) {
             return torneo_stats_empty_player_totals();
         }
 
-        $stmt->bind_param('isss', $giocatoreId, $torneo, $teamName, $teamName);
+        $stmt->bind_param('iss', $giocatoreId, $torneo, $teamName);
         if (!$stmt->execute()) {
             $stmt->close();
             return torneo_stats_empty_player_totals();

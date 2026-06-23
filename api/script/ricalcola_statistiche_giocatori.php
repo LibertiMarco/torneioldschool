@@ -15,7 +15,10 @@ if (PHP_SAPI !== 'cli') {
 }
 
 require_once __DIR__ . '/../../includi/db.php';
+require_once __DIR__ . '/../../includi/partite_schema.php';
 require_once __DIR__ . '/../../includi/torneo_phase_rules.php';
+
+ensure_partita_giocatore_team_schema($conn);
 
 @set_time_limit(0);
 @ini_set('max_execution_time', '0');
@@ -61,11 +64,12 @@ function stats_recalc_overview(mysqli $conn): array
             JOIN tornei t
               ON t.filetorneo IN (CONCAT(s.torneo, '.php'), CONCAT(s.torneo, '.html'))
               OR t.nome = s.torneo
-            JOIN partita_giocatore pg ON pg.giocatore_id = sg.giocatore_id
+            JOIN partita_giocatore pg
+              ON pg.giocatore_id = sg.giocatore_id
+             AND pg.squadra_id = sg.squadra_id
             JOIN partite p
               ON p.id = pg.partita_id
              AND p.torneo = s.torneo
-             AND (p.squadra_casa = s.nome OR p.squadra_ospite = s.nome)
             WHERE p.giocata = 1
               AND JSON_UNQUOTE(JSON_EXTRACT(t.config, '$.formato')) = 'campionato'
               AND " . torneo_stats_normalized_phase_expr('p.fase') . " <> 'REGULAR'

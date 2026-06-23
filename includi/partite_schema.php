@@ -106,3 +106,59 @@ if (!function_exists('ensure_partite_phase_schema')) {
         }
     }
 }
+
+if (!function_exists('ensure_partita_giocatore_team_schema')) {
+    function ensure_partita_giocatore_team_schema(mysqli $conn): void
+    {
+        static $done = false;
+
+        if ($done) {
+            return;
+        }
+        $done = true;
+
+        $columnRes = $conn->query("SHOW COLUMNS FROM partita_giocatore LIKE 'squadra_id'");
+        $hasColumn = $columnRes instanceof mysqli_result && $columnRes->num_rows > 0;
+        if ($columnRes instanceof mysqli_result) {
+            $columnRes->free();
+        }
+
+        if (!$hasColumn) {
+            if ($conn->query("ALTER TABLE partita_giocatore ADD COLUMN squadra_id INT UNSIGNED NULL AFTER giocatore_id") !== true) {
+                error_log('Allineamento schema partita_giocatore fallito (colonna squadra_id): ' . $conn->error);
+                return;
+            }
+        }
+
+        $conn->query("
+            UPDATE partita_giocatore pg
+            JOIN (
+                SELECT
+                    pg2.id,
+                    COALESCE(
+                        MIN(CASE WHEN s.nome = p.squadra_casa THEN s.id END),
+                        MIN(CASE WHEN s.nome = p.squadra_ospite THEN s.id END)
+                    ) AS squadra_id
+                FROM partita_giocatore pg2
+                JOIN partite p ON p.id = pg2.partita_id
+                LEFT JOIN squadre_giocatori sg ON sg.giocatore_id = pg2.giocatore_id
+                LEFT JOIN squadre s
+                  ON s.id = sg.squadra_id
+                 AND s.torneo = p.torneo
+                 AND s.nome IN (p.squadra_casa, p.squadra_ospite)
+                GROUP BY pg2.id
+            ) resolved ON resolved.id = pg.id
+            SET pg.squadra_id = resolved.squadra_id
+            WHERE pg.squadra_id IS NULL
+        ");
+
+        $indexRes = $conn->query("SHOW INDEX FROM partita_giocatore WHERE Key_name = 'idx_pg_squadra'");
+        $hasIndex = $indexRes instanceof mysqli_result && $indexRes->num_rows > 0;
+        if ($indexRes instanceof mysqli_result) {
+            $indexRes->free();
+        }
+        if (!$hasIndex) {
+            $conn->query("ALTER TABLE partita_giocatore ADD KEY idx_pg_squadra (squadra_id)");
+        }
+    }
+}

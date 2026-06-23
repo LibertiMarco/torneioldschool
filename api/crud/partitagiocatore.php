@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../../includi/db.php';
+require_once __DIR__ . '/../../includi/partite_schema.php';
 require_once __DIR__ . '/../../includi/torneo_phase_rules.php';
 
 class partitagiocatore {
@@ -9,6 +10,7 @@ class partitagiocatore {
     public function __construct() {
         global $conn;
         $this->conn = $conn;
+        ensure_partita_giocatore_team_schema($this->conn);
     }
 
     /* ==========================================================
@@ -20,6 +22,7 @@ class partitagiocatore {
                 pg.id,
                 pg.partita_id,
                 pg.giocatore_id,
+                pg.squadra_id,
                 g.nome,
                 g.cognome,
                 s.nome AS squadra,
@@ -31,9 +34,7 @@ class partitagiocatore {
                 pg.voto
             FROM partita_giocatore pg
             JOIN giocatori g ON g.id = pg.giocatore_id
-            JOIN partite p ON p.id = pg.partita_id
-            JOIN squadre s ON s.torneo = p.torneo AND s.nome IN (p.squadra_casa, p.squadra_ospite)
-            JOIN squadre_giocatori sg ON sg.squadra_id = s.id AND sg.giocatore_id = g.id
+            LEFT JOIN squadre s ON s.id = pg.squadra_id
             WHERE pg.partita_id = ?
             ORDER BY g.cognome, g.nome
         ";
@@ -57,15 +58,19 @@ class partitagiocatore {
     /* ==========================================================
        CREA NUOVO RECORD
     ========================================================== */
-    public function create($partita_id, $giocatore_id, $goal, $assist, $giallo, $rosso, $voto) {
+    public function create($partita_id, $giocatore_id, $goal, $assist, $giallo, $rosso, $voto, $squadra_id = null) {
+        $squadra_id = $this->resolveSquadraId($partita_id, $giocatore_id, $squadra_id);
+        if ($squadra_id === null) {
+            return false;
+        }
 
         $sql = "
             INSERT INTO partita_giocatore
-            (partita_id, giocatore_id, presenza, goal, assist, cartellino_giallo, cartellino_rosso, voto)
-            VALUES (?, ?, 1, ?, ?, ?, ?, ?)
+            (partita_id, giocatore_id, squadra_id, presenza, goal, assist, cartellino_giallo, cartellino_rosso, voto)
+            VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?)
         ";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("iiiiiid", $partita_id, $giocatore_id, $goal, $assist, $giallo, $rosso, $voto);
+        $stmt->bind_param("iiiiiiid", $partita_id, $giocatore_id, $squadra_id, $goal, $assist, $giallo, $rosso, $voto);
         $stmt->execute();
 
         $this->aggiornaStatisticheGiocatore($giocatore_id, $goal, $assist, $giallo, $rosso, +1);
@@ -189,5 +194,55 @@ class partitagiocatore {
             $stmt2->bind_param("di", $media, $giocatore_id);
         }
         $stmt2->execute();
+    }
+
+    private function resolveSquadraId(int $partitaId, int $giocatoreId, $requestedSquadraId = null): ?int
+    {
+        $sql = "
+            SELECT s.id
+            FROM partite p
+            JOIN squadre s
+              ON s.torneo = p.torneo
+             AND s.nome IN (p.squadra_casa, p.squadra_ospite)
+            JOIN squadre_giocatori sg
+              ON sg.squadra_id = s.id
+             AND sg.giocatore_id = ?
+            WHERE p.id = ?
+        ";
+        $types = 'ii';
+        $params = [$giocatoreId, $partitaId];
+
+        $requestedSquadraId = (int)($requestedSquadraId ?? 0);
+        if ($requestedSquadraId > 0) {
+            $sql .= " AND s.id = ?";
+            $types .= 'i';
+            $params[] = $requestedSquadraId;
+        }
+
+        $sql .= " ORDER BY CASE WHEN s.nome = p.squadra_casa THEN 0 ELSE 1 END, s.id ASC";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return null;
+        }
+
+        $stmt->bind_param($types, ...$params);
+        if (!$stmt->execute()) {
+            $stmt->close();
+            return null;
+        }
+
+        $ids = [];
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $ids[] = (int)($row['id'] ?? 0);
+        }
+        $stmt->close();
+        $ids = array_values(array_unique(array_filter($ids)));
+
+        if ($requestedSquadraId > 0) {
+            return $ids[0] ?? null;
+        }
+
+        return count($ids) === 1 ? $ids[0] : null;
     }
 }

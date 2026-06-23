@@ -754,7 +754,7 @@ async function loadPlayers(){
 
   sel.innerHTML = `<option value="">-- Seleziona giocatore --</option>`;
   list.forEach(g => {
-    sel.innerHTML += `<option value="${g.id}">${formatPlayerLabel(g, true)}</option>`;
+    sel.innerHTML += `<option value="${g.id}" data-squadra-id="${g.squadra_id || ""}">${formatPlayerLabel(g, true)}</option>`;
   });
 }
 
@@ -807,18 +807,26 @@ async function loadStats(){
 document.getElementById("formAdd").addEventListener("submit", async e => {
   e.preventDefault();
   dismissKeyboardAndRecover();
+  const playerSelect = document.getElementById("add_giocatore");
+  const selectedPlayerOption = playerSelect?.selectedOptions?.[0] || null;
   const fd = new FormData(e.target);
   fd.append("azione","add");
   fd.set("cartellino_giallo", e.target.cartellino_giallo?.checked ? 1 : 0);
   fd.set("cartellino_rosso", e.target.cartellino_rosso?.checked ? 1 : 0);
   fd.set("autogol", e.target.autogol?.value || 0);
   fd.set("ultima_statistica", e.target.ultima_statistica?.checked ? 1 : 0);
+  fd.set("squadra_id", selectedPlayerOption?.dataset?.squadraId || "");
 
   const r = await fetch(API, { method:"POST", body:fd });
   const out = await r.json();
 
   if(out.error === "exists"){
       showMsg("Attenzione: giocatore già aggiunto", "error");
+      return;
+  }
+
+  if(out.error === "invalid_team"){
+      showMsg("Selezione squadra non valida per questo giocatore", "error");
       return;
   }
 

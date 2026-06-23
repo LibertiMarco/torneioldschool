@@ -5,11 +5,14 @@ header('Cache-Control: public, max-age=60, stale-while-revalidate=300');
 // --- CONNESSIONE DATABASE TRAMITE FILE ESTERNO ---
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/api_cache.php';
+require_once __DIR__ . '/../includi/partite_schema.php';
 require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 
 
 $torneo=$_GET['torneo']??''; $squadra=$_GET['squadra']??'';
 if(!$torneo || !$squadra){ echo json_encode(['error'=>'Parametri mancanti']); exit; }
+
+ensure_partita_giocatore_team_schema($conn);
 
 $cacheKey = tos_api_cache_build_key('get_rosa', [
     'torneo' => $torneo,
@@ -44,6 +47,7 @@ $sql = "
     LEFT JOIN (
         SELECT
             pg.giocatore_id,
+            pg.squadra_id,
             COALESCE(SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END), 0) AS presenze,
             COALESCE(SUM(pg.goal), 0) AS reti,
             COALESCE(SUM(pg.assist), 0) AS assist,
@@ -54,10 +58,9 @@ $sql = "
         FROM partita_giocatore pg
         JOIN partite p ON p.id = pg.partita_id
         WHERE p.torneo = ?
-          AND (p.squadra_casa = ? OR p.squadra_ospite = ?)
           $phaseClause
-        GROUP BY pg.giocatore_id
-    ) agg ON agg.giocatore_id = g.id
+        GROUP BY pg.giocatore_id, pg.squadra_id
+    ) agg ON agg.giocatore_id = g.id AND agg.squadra_id = s.id
     WHERE s.torneo = ? AND s.nome = ?
     ORDER BY g.cognome, g.nome
 ";
@@ -66,7 +69,7 @@ if (!$st) {
     echo json_encode(['error' => 'Errore query rosa']);
     exit;
 }
-$st->bind_param("sssss", $torneo, $squadra, $squadra, $torneo, $squadra);
+$st->bind_param("sss", $torneo, $torneo, $squadra);
 $st->execute();
 $res=$st->get_result();
 $out=[];

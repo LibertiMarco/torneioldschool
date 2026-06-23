@@ -1,6 +1,7 @@
 ﻿<?php
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/push_notifications.php';
+require_once __DIR__ . '/../includi/partite_schema.php';
 require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 require_once __DIR__ . '/crud/partita.php';
 header('Content-Type: application/json; charset=utf-8');
@@ -17,6 +18,8 @@ function ensure_autogol_column(mysqli $conn): void {
     }
 }
 ensure_autogol_column($conn);
+ensure_partita_phase_schema($conn);
+ensure_partita_giocatore_team_schema($conn);
 
 /* ==========================================================
    LISTA STATISTICHE DELLA PARTITA
@@ -31,6 +34,7 @@ if ($azione === 'list') {
                 pg.id,
                 pg.partita_id,
                 pg.giocatore_id,
+                pg.squadra_id,
                 g.nome,
                 g.cognome,
                 s.nome AS squadra,
@@ -44,9 +48,8 @@ if ($azione === 'list') {
                 pg.voto
             FROM partita_giocatore pg
             JOIN giocatori g ON g.id = pg.giocatore_id
-            JOIN partite p ON p.id = pg.partita_id
-            JOIN squadre s ON s.torneo = p.torneo AND s.nome IN (p.squadra_casa, p.squadra_ospite)
-            JOIN squadre_giocatori sg ON sg.squadra_id = s.id AND sg.giocatore_id = g.id
+            LEFT JOIN squadre s ON s.id = pg.squadra_id
+            LEFT JOIN squadre_giocatori sg ON sg.squadra_id = pg.squadra_id AND sg.giocatore_id = g.id
             WHERE pg.partita_id = ?
             ORDER BY g.cognome, g.nome";
 
@@ -115,10 +118,10 @@ function aggiornaGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squadraId
         FROM partita_giocatore pg
         JOIN partite p ON p.id = pg.partita_id
         WHERE pg.giocatore_id = ?
+          AND pg.squadra_id = ?
           AND p.torneo = ?
-          AND (p.squadra_casa = ? OR p.squadra_ospite = ?)
           $phaseFilter");
-    $q->bind_param("isss", $giocatoreId, $torneo, $nome, $nome);
+    $q->bind_param("iis", $giocatoreId, $squadraId, $torneo);
     $q->execute();
     $r = $q->get_result()->fetch_assoc() ?: [];
     $media = ($r['num_voti'] ?? 0) > 0 ? round(($r['somma_voti'] ?? 0) / $r['num_voti'], 2) : null;
@@ -138,26 +141,77 @@ function aggiornaGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squadraId
     $upd->execute();
 }
 
-function squadraPerPartitaGiocatore(mysqli $conn, int $partitaId, int $giocatoreId): ?int {
+function squadrePerPartitaGiocatore(mysqli $conn, int $partitaId, int $giocatoreId): array {
     $q = $conn->prepare("SELECT p.torneo, p.squadra_casa, p.squadra_ospite FROM partite p WHERE p.id=?");
     $q->bind_param("i", $partitaId);
     $q->execute();
     $p = $q->get_result()->fetch_assoc();
-    if (!$p) return null;
+    if (!$p) return [];
 
-    $sq = $conn->prepare("SELECT sg.squadra_id FROM squadre_giocatori sg JOIN squadre s ON s.id = sg.squadra_id WHERE sg.giocatore_id=? AND s.torneo=? AND s.nome IN (?, ?) LIMIT 1");
+    $sq = $conn->prepare("SELECT sg.squadra_id FROM squadre_giocatori sg JOIN squadre s ON s.id = sg.squadra_id WHERE sg.giocatore_id=? AND s.torneo=? AND s.nome IN (?, ?)");
     $sq->bind_param("isss", $giocatoreId, $p['torneo'], $p['squadra_casa'], $p['squadra_ospite']);
     $sq->execute();
-    $res = $sq->get_result()->fetch_assoc();
-    return $res['squadra_id'] ?? null;
+    $res = $sq->get_result();
+    $ids = [];
+    while ($row = $res->fetch_assoc()) {
+        $ids[] = (int)($row['squadra_id'] ?? 0);
+    }
+    return array_values(array_unique(array_filter($ids)));
 }
 
 function ricalcolaStatistiche(mysqli $conn, int $partitaId, int $giocatoreId): void {
     aggiornaGiocatoreGlobale($conn, $giocatoreId);
-    $squadraId = squadraPerPartitaGiocatore($conn, $partitaId, $giocatoreId);
-    if ($squadraId) {
+    foreach (squadrePerPartitaGiocatore($conn, $partitaId, $giocatoreId) as $squadraId) {
       aggiornaGiocatoreSquadra($conn, $giocatoreId, $squadraId);
     }
+}
+
+function resolveSquadraIdForPartitaGiocatore(mysqli $conn, int $partitaId, int $giocatoreId, int $requestedSquadraId = 0): ?int {
+    $sql = "
+        SELECT s.id
+        FROM partite p
+        JOIN squadre s
+          ON s.torneo = p.torneo
+         AND s.nome IN (p.squadra_casa, p.squadra_ospite)
+        JOIN squadre_giocatori sg
+          ON sg.squadra_id = s.id
+         AND sg.giocatore_id = ?
+        WHERE p.id = ?
+    ";
+    $types = "ii";
+    $params = [$giocatoreId, $partitaId];
+
+    if ($requestedSquadraId > 0) {
+        $sql .= " AND s.id = ?";
+        $types .= "i";
+        $params[] = $requestedSquadraId;
+    }
+
+    $sql .= " ORDER BY CASE WHEN s.nome = p.squadra_casa THEN 0 ELSE 1 END, s.id ASC";
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return null;
+    }
+    $stmt->bind_param($types, ...$params);
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return null;
+    }
+
+    $ids = [];
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $ids[] = (int)($row['id'] ?? 0);
+    }
+    $stmt->close();
+    $ids = array_values(array_unique(array_filter($ids)));
+
+    if ($requestedSquadraId > 0) {
+        return $ids[0] ?? null;
+    }
+
+    return count($ids) === 1 ? $ids[0] : null;
 }
 
 /**
@@ -183,9 +237,8 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId, bool $markAsPlayed = f
         LEFT JOIN (
           SELECT pg.partita_id, s.nome AS squadra, SUM(pg.goal) AS gol, SUM(pg.autogol) AS autogol
           FROM partita_giocatore pg
+          JOIN squadre s ON s.id = pg.squadra_id
           JOIN partite pp ON pp.id = pg.partita_id
-          JOIN squadre_giocatori sg ON sg.giocatore_id = pg.giocatore_id
-          JOIN squadre s ON s.id = sg.squadra_id
           WHERE pg.partita_id = ?
             AND s.torneo = pp.torneo
             AND s.nome IN (pp.squadra_casa, pp.squadra_ospite)
@@ -444,7 +497,7 @@ if ($azione === 'list_giocatori') {
     if (!$p) { echo json_encode([]); exit; }
 
     // Giocatori delle due squadre, esclusi quelli giÃ  inseriti per questa partita
-    $sql = "SELECT DISTINCT g.id, g.nome, g.cognome, s.nome AS squadra, sg.ruolo, COALESCE(sg.is_captain, 0) AS is_captain
+    $sql = "SELECT DISTINCT g.id, g.nome, g.cognome, s.id AS squadra_id, s.nome AS squadra, sg.ruolo, COALESCE(sg.is_captain, 0) AS is_captain
             FROM squadre s
             JOIN squadre_giocatori sg ON sg.squadra_id = s.id
             JOIN giocatori g ON g.id = sg.giocatore_id
@@ -473,6 +526,7 @@ if ($azione === 'add') {
 
     $partita_id = (int)$_POST['partita_id'];
     $giocatore  = (int)$_POST['giocatore_id'];
+    $squadraId  = (int)($_POST['squadra_id'] ?? 0);
     $ultimaStatistica = isset($_POST['ultima_statistica']) && (string)$_POST['ultima_statistica'] === '1';
     $goal       = (int)$_POST['goal'];
     $assist     = (int)$_POST['assist'];
@@ -480,6 +534,12 @@ if ($azione === 'add') {
     $giallo     = (int)$_POST['cartellino_giallo'];
     $rosso      = (int)$_POST['cartellino_rosso'];
     $voto       = $_POST['voto'] === "" ? null : (float)$_POST['voto'];
+    $squadraId = resolveSquadraIdForPartitaGiocatore($conn, $partita_id, $giocatore, $squadraId);
+
+    if ($squadraId === null) {
+        echo json_encode(["error" => "invalid_team"]);
+        exit;
+    }
 
     /* ðŸ”¥ CONTROLLO DUPLICATO */
     $check = $conn->prepare("SELECT id FROM partita_giocatore WHERE partita_id = ? AND giocatore_id = ?");
@@ -494,11 +554,11 @@ if ($azione === 'add') {
 
     /* âž• INSERIMENTO */
     $sql = "INSERT INTO partita_giocatore
-            (partita_id, giocatore_id, presenza, goal, autogol, assist, cartellino_giallo, cartellino_rosso, voto)
-            VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?)";
+            (partita_id, giocatore_id, squadra_id, presenza, goal, autogol, assist, cartellino_giallo, cartellino_rosso, voto)
+            VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iiiiiiid", $partita_id, $giocatore, $goal, $autogol, $assist, $giallo, $rosso, $voto);
+    $stmt->bind_param("iiiiiiiid", $partita_id, $giocatore, $squadraId, $goal, $autogol, $assist, $giallo, $rosso, $voto);
     $stmt->execute();
 
     ricalcolaStatistiche($conn, $partita_id, $giocatore);

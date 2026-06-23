@@ -229,6 +229,7 @@ function giornata_to_roundLabel(?int $giornata, array $map): ?string {
 ensure_notifiche_table($conn);
 ensure_follow_table($conn);
 ensure_partite_phase_schema($conn);
+ensure_partita_giocatore_team_schema($conn);
 ensure_partite_notifica_flag($conn);
 ensure_partite_unique_index($conn);
 ensure_rigori_columns($conn);
@@ -546,13 +547,13 @@ function aggiornaStatsGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squa
     FROM partita_giocatore pg
     JOIN partite p ON p.id = pg.partita_id
     WHERE pg.giocatore_id = ?
+      AND pg.squadra_id = ?
       AND p.torneo = ?
-      AND (p.squadra_casa = ? OR p.squadra_ospite = ?)
       $phaseFilter
   ";
   $q = $conn->prepare($sql);
   if (!$q) return;
-  $q->bind_param('isss', $giocatoreId, $team['torneo'], $team['nome'], $team['nome']);
+  $q->bind_param('iis', $giocatoreId, $squadraId, $team['torneo']);
   $q->execute();
   $r = $q->get_result()->fetch_assoc() ?: [];
   $q->close();
