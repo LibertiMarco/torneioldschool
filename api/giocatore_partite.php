@@ -71,6 +71,43 @@ $fotoSelect = "
     END AS foto
 ";
 
+function giocatore_partite_fetch_extra_goals(mysqli $conn, int $giocatoreId, array $excludedTournaments = []): int
+{
+    if ($giocatoreId <= 0 || !giocatore_goal_extra_table_exists($conn)) {
+        return 0;
+    }
+
+    $excludedTournaments = array_values(array_filter(array_map('trim', $excludedTournaments), static fn(string $value): bool => $value !== ''));
+    if (empty($excludedTournaments)) {
+        return giocatore_goal_extra_fetch_global_total($conn, $giocatoreId);
+    }
+
+    $placeholders = implode(',', array_fill(0, count($excludedTournaments), '?'));
+    $types = 'i' . str_repeat('s', count($excludedTournaments));
+    $params = array_merge([$giocatoreId], $excludedTournaments);
+
+    $stmt = $conn->prepare("
+        SELECT COALESCE(SUM(gge.goal), 0) AS totale
+        FROM giocatore_goal_extra gge
+        LEFT JOIN squadre s ON s.id = gge.squadra_id
+        WHERE gge.giocatore_id = ?
+          AND (gge.squadra_id IS NULL OR s.torneo NOT IN ($placeholders))
+    ");
+    if (!$stmt) {
+        return 0;
+    }
+
+    $stmt->bind_param($types, ...$params);
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return 0;
+    }
+
+    $row = $stmt->get_result()->fetch_assoc() ?: [];
+    $stmt->close();
+    return (int)($row['totale'] ?? 0);
+}
+
 // Dati riepilogativi del giocatore
 $sqlPlayer = "
     SELECT 
@@ -118,7 +155,7 @@ $player = [
     'ruolo' => $playerRow['ruolo'],
     'foto' => $playerRow['foto'],
     'totali' => [
-        'gol' => (int)$playerRow['gol_totali'],
+        'gol' => (int)$playerRow['gol_totali'] + giocatore_partite_fetch_extra_goals($conn, $giocatoreId, $excludedTournaments),
         'presenze' => (int)$playerRow['presenze_totali'],
         'assist' => (int)$playerRow['assist_totali'],
     ],

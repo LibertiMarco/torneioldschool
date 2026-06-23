@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/partite_schema.php';
+require_once __DIR__ . '/giocatore_goal_extra.php';
 
 if (!function_exists('torneo_stats_table_has_column')) {
     function torneo_stats_table_has_column(mysqli $conn, string $table, string $column): bool
@@ -254,6 +255,52 @@ if (!function_exists('torneo_stats_empty_player_totals')) {
     }
 }
 
+if (!function_exists('torneo_stats_fetch_player_global_totals')) {
+    function torneo_stats_fetch_player_global_totals(mysqli $conn, int $giocatoreId): array
+    {
+        if ($giocatoreId <= 0) {
+            return torneo_stats_empty_player_totals();
+        }
+
+        $globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($conn, 'p.torneo');
+        $stmt = $conn->prepare("
+            SELECT
+                COALESCE(SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END), 0) AS presenze,
+                COALESCE(SUM(pg.goal), 0) AS reti,
+                COALESCE(SUM(pg.assist), 0) AS assist,
+                COALESCE(SUM(pg.cartellino_giallo), 0) AS gialli,
+                COALESCE(SUM(pg.cartellino_rosso), 0) AS rossi,
+                SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN pg.voto ELSE 0 END) AS somma_voti,
+                SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN 1 ELSE 0 END) AS num_voti
+            FROM partita_giocatore pg
+            JOIN partite p ON p.id = pg.partita_id
+            WHERE pg.giocatore_id = ?
+        ");
+        if (!$stmt) {
+            return torneo_stats_empty_player_totals();
+        }
+
+        $stmt->bind_param('i', $giocatoreId);
+        if (!$stmt->execute()) {
+            $stmt->close();
+            return torneo_stats_empty_player_totals();
+        }
+
+        $row = $stmt->get_result()->fetch_assoc() ?: [];
+        $stmt->close();
+        $numVoti = (int)($row['num_voti'] ?? 0);
+
+        return [
+            'presenze' => (int)($row['presenze'] ?? 0),
+            'reti' => (int)($row['reti'] ?? 0) + giocatore_goal_extra_fetch_global_total($conn, $giocatoreId),
+            'assist' => (int)($row['assist'] ?? 0),
+            'gialli' => (int)($row['gialli'] ?? 0),
+            'rossi' => (int)($row['rossi'] ?? 0),
+            'media_voti' => $numVoti > 0 ? round(((float)($row['somma_voti'] ?? 0)) / $numVoti, 2) : null,
+        ];
+    }
+}
+
 if (!function_exists('torneo_stats_fetch_player_team_totals')) {
     function torneo_stats_fetch_player_team_totals(mysqli $conn, int $giocatoreId, string $torneo, string $teamName): array
     {
@@ -309,6 +356,90 @@ if (!function_exists('torneo_stats_fetch_player_team_totals')) {
     }
 }
 
+if (!function_exists('torneo_stats_rebuild_player_global_aggregate')) {
+    function torneo_stats_rebuild_player_global_aggregate(mysqli $conn, int $giocatoreId): void
+    {
+        $stats = torneo_stats_fetch_player_global_totals($conn, $giocatoreId);
+        $stmt = $conn->prepare("
+            UPDATE giocatori
+            SET presenze = ?, reti = ?, assist = ?, gialli = ?, rossi = ?, media_voti = ?
+            WHERE id = ?
+        ");
+        if (!$stmt) {
+            return;
+        }
+
+        $stmt->bind_param(
+            'iiiiidi',
+            $stats['presenze'],
+            $stats['reti'],
+            $stats['assist'],
+            $stats['gialli'],
+            $stats['rossi'],
+            $stats['media_voti'],
+            $giocatoreId
+        );
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
+if (!function_exists('torneo_stats_rebuild_player_team_aggregate')) {
+    function torneo_stats_rebuild_player_team_aggregate(mysqli $conn, int $giocatoreId, int $squadraId): void
+    {
+        if ($giocatoreId <= 0 || $squadraId <= 0) {
+            return;
+        }
+
+        $teamStmt = $conn->prepare("SELECT nome, torneo FROM squadre WHERE id = ? LIMIT 1");
+        if (!$teamStmt) {
+            return;
+        }
+
+        $teamStmt->bind_param('i', $squadraId);
+        if (!$teamStmt->execute()) {
+            $teamStmt->close();
+            return;
+        }
+
+        $team = $teamStmt->get_result()->fetch_assoc();
+        $teamStmt->close();
+        if (!$team) {
+            return;
+        }
+
+        $stats = torneo_stats_fetch_player_team_totals(
+            $conn,
+            $giocatoreId,
+            (string)($team['torneo'] ?? ''),
+            (string)($team['nome'] ?? '')
+        );
+
+        $stmt = $conn->prepare("
+            UPDATE squadre_giocatori
+            SET presenze = ?, reti = ?, assist = ?, gialli = ?, rossi = ?, media_voti = ?
+            WHERE giocatore_id = ? AND squadra_id = ?
+        ");
+        if (!$stmt) {
+            return;
+        }
+
+        $stmt->bind_param(
+            'iiiiidii',
+            $stats['presenze'],
+            $stats['reti'],
+            $stats['assist'],
+            $stats['gialli'],
+            $stats['rossi'],
+            $stats['media_voti'],
+            $giocatoreId,
+            $squadraId
+        );
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
 if (!function_exists('torneo_stats_rebuild_all_player_aggregates')) {
     function torneo_stats_rebuild_all_player_aggregates(mysqli $conn): array
     {
@@ -317,6 +448,7 @@ if (!function_exists('torneo_stats_rebuild_all_player_aggregates')) {
             'associazioni_squadra' => 0,
         ];
         $globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($conn, 'p.torneo');
+        $globalExtraGoalsExpr = giocatore_goal_extra_global_expr($conn, 'g.id');
 
         $sqlGlobal = "
             UPDATE giocatori g
@@ -336,7 +468,7 @@ if (!function_exists('torneo_stats_rebuild_all_player_aggregates')) {
             ) agg ON agg.giocatore_id = g.id
             SET
                 g.presenze = COALESCE(agg.presenze, 0),
-                g.reti = COALESCE(agg.goal, 0),
+                g.reti = COALESCE(agg.goal, 0) + {$globalExtraGoalsExpr},
                 g.assist = COALESCE(agg.assist, 0),
                 g.gialli = COALESCE(agg.gialli, 0),
                 g.rossi = COALESCE(agg.rossi, 0),

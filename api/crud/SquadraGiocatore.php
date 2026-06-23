@@ -162,6 +162,7 @@ class SquadraGiocatore {
     }
 
     private function aggiornaTotaliGiocatore($giocatoreId) {
+        $goalExtraGlobal = giocatore_goal_extra_fetch_global_total($this->conn, (int)$giocatoreId);
         $globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($this->conn, 's.torneo');
         $sql = "
             UPDATE giocatori g
@@ -181,7 +182,7 @@ class SquadraGiocatore {
             ) agg ON agg.giocatore_id = g.id
             SET 
                 g.presenze = COALESCE(agg.sum_presenze, 0),
-                g.reti = COALESCE(agg.sum_reti, 0),
+                g.reti = COALESCE(agg.sum_reti, 0) + ?,
                 g.assist = COALESCE(agg.sum_assist, 0),
                 g.gialli = COALESCE(agg.sum_gialli, 0),
                 g.rossi = COALESCE(agg.sum_rossi, 0),
@@ -193,7 +194,7 @@ class SquadraGiocatore {
             WHERE g.id = ?
         ";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("ii", $giocatoreId, $giocatoreId);
+        $stmt->bind_param("iii", $giocatoreId, $goalExtraGlobal, $giocatoreId);
         $stmt->execute();
         $stmt->close();
     }

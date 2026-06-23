@@ -1,5 +1,7 @@
 ﻿<?php
 require_once __DIR__ . '/../includi/admin_guard.php';
+require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/giocatore_goal_extra.php';
 
 require_once __DIR__ . '/crud/giocatore.php';
 require_once __DIR__ . '/crud/Squadra.php';
@@ -12,6 +14,8 @@ $pivot = new SquadraGiocatore();
 $torneoModel = new torneo();
 $adminCsrf = csrf_get_token('admin_giocatori');
 $csrfWarning = false;
+
+ensure_giocatore_goal_extra_schema($conn);
 
 // Se il POST supera i limiti di upload/post di PHP, $_POST e $_FILES arrivano vuoti
 // e il controllo CSRF fallirebbe: intercettiamo la condizione e mostriamo un messaggio chiaro.
@@ -439,6 +443,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dissocia_squadra'])) 
     redirectGestione('associazioni', ['assoc_op' => 'rimuovi']);
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiungi_goal_extra'])) {
+    $giocatoreExtraId = (int)($_POST['goal_extra_giocatore'] ?? 0);
+    $squadraExtraId = (int)($_POST['goal_extra_squadra'] ?? 0);
+    $goalExtraValue = max(0, (int)($_POST['goal_extra_valore'] ?? 0));
+    $goalExtraNote = trim((string)($_POST['goal_extra_note'] ?? ''));
+
+    if ($giocatoreExtraId <= 0 || $goalExtraValue <= 0) {
+        redirectGestione('gol_extra', ['goal_extra_error' => 'invalid']);
+    }
+
+    if (!$giocatore->getById($giocatoreExtraId)) {
+        redirectGestione('gol_extra', ['goal_extra_error' => 'player']);
+    }
+
+    if ($squadraExtraId > 0 && !$pivot->esisteAssociazione($giocatoreExtraId, $squadraExtraId)) {
+        redirectGestione('gol_extra', ['goal_extra_error' => 'team']);
+    }
+
+    $createdId = giocatore_goal_extra_create(
+        $conn,
+        $giocatoreExtraId,
+        $squadraExtraId > 0 ? $squadraExtraId : null,
+        $goalExtraValue,
+        $goalExtraNote,
+        isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+    );
+
+    if ($createdId === null) {
+        redirectGestione('gol_extra', ['goal_extra_error' => 'save']);
+    }
+
+    torneo_stats_rebuild_player_global_aggregate($conn, $giocatoreExtraId);
+    if ($squadraExtraId > 0) {
+        torneo_stats_rebuild_player_team_aggregate($conn, $giocatoreExtraId, $squadraExtraId);
+    }
+
+    redirectGestione('gol_extra', ['goal_extra_saved' => 1]);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['elimina_goal_extra'])) {
+    $goalExtraEntryId = (int)($_POST['goal_extra_id'] ?? 0);
+    $deletedGoalExtra = giocatore_goal_extra_delete($conn, $goalExtraEntryId);
+
+    if (!$deletedGoalExtra) {
+        redirectGestione('gol_extra', ['goal_extra_error' => 'delete']);
+    }
+
+    $giocatoreExtraId = (int)($deletedGoalExtra['giocatore_id'] ?? 0);
+    $squadraExtraId = (int)($deletedGoalExtra['squadra_id'] ?? 0);
+    if ($giocatoreExtraId > 0) {
+        torneo_stats_rebuild_player_global_aggregate($conn, $giocatoreExtraId);
+    }
+    if ($giocatoreExtraId > 0 && $squadraExtraId > 0) {
+        torneo_stats_rebuild_player_team_aggregate($conn, $giocatoreExtraId, $squadraExtraId);
+    }
+
+    redirectGestione('gol_extra', ['goal_extra_deleted' => 1]);
+}
+
 // --- ELIMINA ---
 if (isset($_GET['elimina'])) {
     $idElimina = (int)$_GET['elimina'];
@@ -461,6 +524,43 @@ $giocatoriElimina = array_slice(array_reverse($giocatori), 0, 10); // ultimi 10 
 $giocatoriJson = htmlspecialchars(
     json_encode(
         $giocatori,
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT
+    ),
+    ENT_QUOTES,
+    'UTF-8'
+);
+
+$goalExtraEntries = giocatore_goal_extra_list($conn);
+$goalExtraTeamMap = [];
+$goalExtraAssocSql = "
+    SELECT sg.giocatore_id, s.id AS squadra_id, s.nome AS squadra_nome, s.torneo
+    FROM squadre_giocatori sg
+    JOIN squadre s ON s.id = sg.squadra_id
+    ORDER BY s.torneo ASC, s.nome ASC
+";
+$goalExtraAssocRes = $conn->query($goalExtraAssocSql);
+if ($goalExtraAssocRes instanceof mysqli_result) {
+    while ($row = $goalExtraAssocRes->fetch_assoc()) {
+        $playerId = (string)($row['giocatore_id'] ?? '');
+        if ($playerId === '') {
+            continue;
+        }
+
+        if (!isset($goalExtraTeamMap[$playerId])) {
+            $goalExtraTeamMap[$playerId] = [];
+        }
+
+        $goalExtraTeamMap[$playerId][] = [
+            'id' => (int)($row['squadra_id'] ?? 0),
+            'label' => trim((string)($row['torneo'] ?? '')) . ' | ' . trim((string)($row['squadra_nome'] ?? '')),
+        ];
+    }
+    $goalExtraAssocRes->free();
+}
+
+$goalExtraTeamMapJson = htmlspecialchars(
+    json_encode(
+        $goalExtraTeamMap,
         JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT
     ),
     ENT_QUOTES,
@@ -746,12 +846,21 @@ $giocatoriJson = htmlspecialchars(
 <div class="admin-alert error" id="assocAlert">Il giocatore fa già parte di questa squadra</div>
 <?php endif; ?>
 
+<?php if (isset($_GET['goal_extra_saved']) && $_GET['goal_extra_saved'] === '1'): ?>
+<div class="admin-alert success" id="goalExtraSavedAlert">Gol extra salvato correttamente.</div>
+<?php elseif (isset($_GET['goal_extra_deleted']) && $_GET['goal_extra_deleted'] === '1'): ?>
+<div class="admin-alert success" id="goalExtraDeletedAlert">Gol extra eliminato.</div>
+<?php elseif (isset($_GET['goal_extra_error'])): ?>
+<div class="admin-alert error" id="goalExtraErrorAlert">Operazione gol extra non riuscita. Verifica giocatore, squadra e valore inserito.</div>
+<?php endif; ?>
+
 <!-- PICKLIST -->
 <div class="admin-select-action">
     <label for="azione">Seleziona azione:</label>
         <select id="azione" class="operation-picker">
           <option value="crea" <?php if(($currentAction ?? 'crea') === 'crea') echo 'selected'; ?>>Aggiungi Giocatore</option>
           <option value="associazioni" <?php if(($currentAction ?? '') === 'associazioni') echo 'selected'; ?>>Associazione Calciatore-Squadra</option>
+          <option value="gol_extra" <?php if(($currentAction ?? '') === 'gol_extra') echo 'selected'; ?>>Gol Extra Admin</option>
           <option value="modifica" <?php if(($currentAction ?? '') === 'modifica') echo 'selected'; ?>>Modifica Giocatore</option>
           <option value="elimina" <?php if(($currentAction ?? '') === 'elimina') echo 'selected'; ?>>Elimina Giocatore</option>
         </select>
@@ -840,6 +949,84 @@ $giocatoriJson = htmlspecialchars(
 
 <button type="submit" name="aggiorna" class="btn-primary">Aggiorna Giocatore</button>
 </form>
+
+<section class="admin-table-section form-gol-extra hidden">
+<h2>Gol Extra Admin</h2>
+<p>Questi gol vengono sommati alle statistiche del giocatore senza essere collegati a una partita e senza modificare risultati o tabellini.</p>
+
+<form method="POST" class="admin-form">
+<?= csrf_field('admin_giocatori') ?>
+<div class="form-group">
+    <label>Giocatore</label>
+    <select name="goal_extra_giocatore" id="goalExtraPlayer" required>
+        <option value="">-- Seleziona un giocatore --</option>
+        <?php foreach ($giocatori as $g): ?>
+        <option value="<?= (int)$g['id'] ?>"><?= htmlspecialchars(trim(($g['cognome'] ?? '') . ' ' . ($g['nome'] ?? ''))) ?></option>
+        <?php endforeach; ?>
+    </select>
+</div>
+
+<div class="form-group">
+    <label>Squadra opzionale</label>
+    <select name="goal_extra_squadra" id="goalExtraTeam">
+        <option value="">Nessuna squadra / solo totale giocatore</option>
+    </select>
+    <small>La squadra serve solo per attribuire il gol al contesto corretto del giocatore; non modifica le statistiche della squadra.</small>
+</div>
+
+<div class="form-row">
+    <div class="form-group half">
+        <label>Gol da aggiungere</label>
+        <input type="number" name="goal_extra_valore" min="1" value="1" required>
+    </div>
+    <div class="form-group half">
+        <label>Nota</label>
+        <input type="text" name="goal_extra_note" maxlength="255" placeholder="Es. rettifica admin">
+    </div>
+</div>
+
+<input type="hidden" id="goalExtraTeamMap" value="<?= $goalExtraTeamMapJson ?>">
+<button type="submit" name="aggiungi_goal_extra" class="btn-primary">Salva gol extra</button>
+</form>
+
+<div class="admin-table-section">
+    <h3>Storico gol extra</h3>
+    <table class="admin-table-squadre">
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Giocatore</th>
+                <th>Squadra</th>
+                <th>Gol</th>
+                <th>Nota</th>
+                <th>Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php if (!empty($goalExtraEntries)): ?>
+            <?php foreach ($goalExtraEntries as $entry): ?>
+            <tr>
+                <td><?= htmlspecialchars(date('d/m/Y H:i', strtotime((string)($entry['created_at'] ?? 'now')))) ?></td>
+                <td><?= htmlspecialchars(trim(($entry['cognome'] ?? '') . ' ' . ($entry['nome'] ?? ''))) ?></td>
+                <td><?= htmlspecialchars(trim((string)($entry['torneo_slug'] ?? '')) !== '' ? (($entry['torneo_slug'] ?? '') . ' | ' . ($entry['squadra_nome'] ?? '')) : 'Nessuna') ?></td>
+                <td><?= (int)($entry['goal'] ?? 0) ?></td>
+                <td><?= htmlspecialchars((string)($entry['note'] ?? '')) ?></td>
+                <td>
+                    <form method="POST" onsubmit="return confirm('Eliminare questo gol extra?');" style="display:inline;">
+                        <?= csrf_field('admin_giocatori') ?>
+                        <input type="hidden" name="goal_extra_id" value="<?= (int)($entry['id'] ?? 0) ?>">
+                        <button type="submit" name="elimina_goal_extra" class="btn-danger">Elimina</button>
+                    </form>
+                </td>
+            </tr>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <tr><td colspan="6">Nessun gol extra registrato.</td></tr>
+        <?php endif; ?>
+        </tbody>
+    </table>
+</div>
+</section>
 
 <!-- ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ SEZIONE ELIMINA -->
 <!-- GESTIONE ASSOCIAZIONI -->
@@ -1143,15 +1330,20 @@ const formCrea = document.querySelector('.form-crea');
 const formModifica = document.querySelector('.form-modifica');
 const formElimina = document.querySelector('.form-elimina');
 const formAssociazioni = document.querySelector('.form-associazioni');
+const formGolExtra = document.querySelector('.form-gol-extra');
 const duplicateAlert = document.getElementById('duplicateAlert');
 const assocAlert = document.getElementById('assocAlert');
+const goalExtraSavedAlert = document.getElementById('goalExtraSavedAlert');
+const goalExtraDeletedAlert = document.getElementById('goalExtraDeletedAlert');
+const goalExtraErrorAlert = document.getElementById('goalExtraErrorAlert');
 
 function mostraSezione(val) {
-    [formCrea, formModifica, formElimina, formAssociazioni].forEach(f => f && f.classList.add('hidden'));
+    [formCrea, formModifica, formElimina, formAssociazioni, formGolExtra].forEach(f => f && f.classList.add('hidden'));
     if (val === 'crea' && formCrea) formCrea.classList.remove('hidden');
     if (val === 'modifica' && formModifica) formModifica.classList.remove('hidden');
     if (val === 'elimina' && formElimina) formElimina.classList.remove('hidden');
     if (val === 'associazioni' && formAssociazioni) formAssociazioni.classList.remove('hidden');
+    if (val === 'gol_extra' && formGolExtra) formGolExtra.classList.remove('hidden');
     if (currentActionInput) currentActionInput.value = val;
     if (selectAzione) selectAzione.value = val;
 }
@@ -1159,7 +1351,7 @@ function mostraSezione(val) {
 const initialAction = currentActionInput?.value || selectAzione?.value || 'crea';
 mostraSezione(initialAction);
 function dismissAlerts() {
-    [duplicateAlert, assocAlert].forEach(alertEl => {
+    [duplicateAlert, assocAlert, goalExtraSavedAlert, goalExtraDeletedAlert, goalExtraErrorAlert].forEach(alertEl => {
         if (alertEl && alertEl.parentElement) {
             alertEl.parentElement.removeChild(alertEl);
         }
@@ -1215,6 +1407,15 @@ if (duplicateAlert) {
 if (assocAlert) {
     clearAlertParam('assoc_exists');
 }
+if (goalExtraSavedAlert) {
+    clearAlertParam('goal_extra_saved');
+}
+if (goalExtraDeletedAlert) {
+    clearAlertParam('goal_extra_deleted');
+}
+if (goalExtraErrorAlert) {
+    clearAlertParam('goal_extra_error');
+}
 
 selectAzione.addEventListener('change', e => {
     mostraSezione(e.target.value);
@@ -1264,6 +1465,9 @@ const modAssocRuolo = document.getElementById("mod_assoc_ruolo");
 const ruoloAssocia = document.getElementById("ruolo_associa");
 const assocOperationSelect = document.getElementById("assocOperation");
 const assocOpParam = (document.getElementById("assocOpParam")?.value || "").trim();
+const goalExtraPlayer = document.getElementById("goalExtraPlayer");
+const goalExtraTeam = document.getElementById("goalExtraTeam");
+const goalExtraTeamMapRaw = document.getElementById("goalExtraTeamMap")?.value || "{}";
 const assocFormAdd = document.querySelector(".assoc-form-add");
 const assocFormEdit = document.querySelector(".assoc-form-edit");
 const assocFormRemove = document.querySelector(".assoc-form-remove");
@@ -1284,6 +1488,12 @@ try {
     allPlayers = JSON.parse(allPlayersDataEl?.getAttribute("data-all-players") || "[]") || [];
 } catch (e) {
     allPlayers = [];
+}
+let goalExtraTeamMap = {};
+try {
+    goalExtraTeamMap = JSON.parse(goalExtraTeamMapRaw) || {};
+} catch (e) {
+    goalExtraTeamMap = {};
 }
 let assocAvailablePlayers = [];
 
@@ -1343,6 +1553,22 @@ function populateModAssocStatsFromOption(option) {
     if (modAssocRemoveFoto) modAssocRemoveFoto.checked = false;
     if (modAssocCapitano) modAssocCapitano.checked = ds.captain === "1";
     if (modAssocRuolo) modAssocRuolo.value = ds.ruolo || "";
+}
+
+function populateGoalExtraTeams() {
+    if (!goalExtraTeam) return;
+
+    const playerId = String(goalExtraPlayer?.value || "");
+    goalExtraTeam.innerHTML = '<option value="">Nessuna squadra / solo totale giocatore</option>';
+    goalExtraTeam.disabled = false;
+
+    const teams = Array.isArray(goalExtraTeamMap[playerId]) ? goalExtraTeamMap[playerId] : [];
+    teams.forEach(team => {
+        const opt = document.createElement("option");
+        opt.value = team.id;
+        opt.textContent = team.label || `Squadra #${team.id}`;
+        goalExtraTeam.appendChild(opt);
+    });
 }
 
 async function loadSquadre(select, torneo, placeholder = "-- Seleziona una squadra --") {
@@ -1916,6 +2142,8 @@ selectGiocatore?.addEventListener("change", async e => {
     document.getElementById("mod_rossi").value      = data.rossi;
     document.getElementById("mod_media").value      = data.media_voti;
 });
+goalExtraPlayer?.addEventListener("change", populateGoalExtraTeams);
+populateGoalExtraTeams();
 </script>
 <script>
 // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ORDINAMENTO TABELLA ELIMINA GIOCATORI

@@ -77,80 +77,11 @@ if ($azione === 'list') {
 }
 
 function aggiornaGiocatoreGlobale(mysqli $conn, int $giocatoreId): void {
-    $globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($conn, 'p.torneo');
-    $q = $conn->prepare("SELECT 
-        COUNT(*) AS presenze,
-        COALESCE(SUM(pg.goal),0) AS goal,
-        COALESCE(SUM(pg.assist),0) AS assist,
-        COALESCE(SUM(pg.cartellino_giallo),0) AS gialli,
-        COALESCE(SUM(pg.cartellino_rosso),0) AS rossi,
-        SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN pg.voto ELSE 0 END) AS somma_voti,
-        SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN 1 ELSE 0 END) AS num_voti
-        FROM partita_giocatore pg
-        JOIN partite p ON p.id = pg.partita_id
-        WHERE pg.giocatore_id=?");
-    $q->bind_param("i", $giocatoreId);
-    $q->execute();
-    $r = $q->get_result()->fetch_assoc() ?: [];
-    $media = ($r['num_voti'] ?? 0) > 0 ? round(($r['somma_voti'] ?? 0) / $r['num_voti'], 2) : null;
-    $upd = $conn->prepare("UPDATE giocatori SET presenze=?, reti=?, assist=?, gialli=?, rossi=?, media_voti=? WHERE id=?");
-    $upd->bind_param(
-        "iiiiidi",
-        $r['presenze'],
-        $r['goal'],
-        $r['assist'],
-        $r['gialli'],
-        $r['rossi'],
-        $media,
-        $giocatoreId
-    );
-    $upd->execute();
+    torneo_stats_rebuild_player_global_aggregate($conn, $giocatoreId);
 }
 
 function aggiornaGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squadraId): void {
-    $teamInfo = $conn->prepare("SELECT nome, torneo FROM squadre WHERE id=?");
-    $teamInfo->bind_param("i", $squadraId);
-    $teamInfo->execute();
-    $t = $teamInfo->get_result()->fetch_assoc();
-    if (!$t) return;
-    $nome = $t['nome'];
-    $torneo = $t['torneo'];
-
-    $phaseFilter = torneo_stats_team_phase_clause($conn, (string)$torneo, 'p.fase');
-    $teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
-    $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
-    $q = $conn->prepare("SELECT 
-        COUNT(*) AS presenze,
-        COALESCE(SUM(pg.goal),0) AS goal,
-        COALESCE(SUM(pg.assist),0) AS assist,
-        COALESCE(SUM(pg.cartellino_giallo),0) AS gialli,
-        COALESCE(SUM(pg.cartellino_rosso),0) AS rossi,
-        SUM(CASE WHEN pg.voto IS NOT NULL THEN pg.voto ELSE 0 END) AS somma_voti,
-        SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
-        FROM partita_giocatore pg
-        JOIN partite p ON p.id = pg.partita_id
-        WHERE pg.giocatore_id = ?
-          AND {$resolvedTeamExpr} = ?
-          AND p.torneo = ?
-          $phaseFilter");
-    $q->bind_param("iis", $giocatoreId, $squadraId, $torneo);
-    $q->execute();
-    $r = $q->get_result()->fetch_assoc() ?: [];
-    $media = ($r['num_voti'] ?? 0) > 0 ? round(($r['somma_voti'] ?? 0) / $r['num_voti'], 2) : null;
-
-    $upd = $conn->prepare("UPDATE squadre_giocatori SET presenze=?, reti=?, assist=?, gialli=?, rossi=?, media_voti=? WHERE giocatore_id=? AND squadra_id=?");
-    $upd->bind_param(
-        "iiiiidii",
-        $r['presenze'],
-        $r['goal'],
-        $r['assist'],
-        $r['gialli'],
-        $r['rossi'],
-        $media,
-        $giocatoreId,
-        $squadraId
-    );
-    $upd->execute();
+    torneo_stats_rebuild_player_team_aggregate($conn, $giocatoreId, $squadraId);
 }
 
 function squadrePerPartitaGiocatore(mysqli $conn, int $partitaId, int $giocatoreId): array {

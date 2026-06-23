@@ -20,54 +20,7 @@ function h(string $value): string {
 }
 
 function fetch_player_global_stats(mysqli $conn, int $giocatoreId): array {
-    $empty = [
-        'presenze' => 0,
-        'reti' => 0,
-        'assist' => 0,
-        'gialli' => 0,
-        'rossi' => 0,
-        'media_voti' => null,
-    ];
-    if ($giocatoreId <= 0) {
-        return $empty;
-    }
-
-    $globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($conn, 'p.torneo');
-    $stmt = $conn->prepare("
-        SELECT
-            COALESCE(SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END), 0) AS presenze,
-            COALESCE(SUM(pg.goal), 0) AS reti,
-            COALESCE(SUM(pg.assist), 0) AS assist,
-            COALESCE(SUM(pg.cartellino_giallo), 0) AS gialli,
-            COALESCE(SUM(pg.cartellino_rosso), 0) AS rossi,
-            SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN pg.voto ELSE 0 END) AS somma_voti,
-            SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN 1 ELSE 0 END) AS num_voti
-        FROM partita_giocatore pg
-        JOIN partite p ON p.id = pg.partita_id
-        WHERE pg.giocatore_id = ?
-    ");
-    if (!$stmt) {
-        return $empty;
-    }
-
-    $stmt->bind_param("i", $giocatoreId);
-    if (!$stmt->execute()) {
-        $stmt->close();
-        return $empty;
-    }
-
-    $row = $stmt->get_result()->fetch_assoc() ?: [];
-    $stmt->close();
-    $numVoti = (int)($row['num_voti'] ?? 0);
-
-    return [
-        'presenze' => (int)($row['presenze'] ?? 0),
-        'reti' => (int)($row['reti'] ?? 0),
-        'assist' => (int)($row['assist'] ?? 0),
-        'gialli' => (int)($row['gialli'] ?? 0),
-        'rossi' => (int)($row['rossi'] ?? 0),
-        'media_voti' => $numVoti > 0 ? round(((float)($row['somma_voti'] ?? 0)) / $numVoti, 2) : null,
-    ];
+    return torneo_stats_fetch_player_global_totals($conn, $giocatoreId);
 }
 
 function fetch_player_team_stats(mysqli $conn, int $giocatoreId, array $team): array {

@@ -3,6 +3,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/partite_schema.php';
+require_once __DIR__ . '/../includi/giocatore_goal_extra.php';
 if (!function_exists('partita_giocatore_resolved_team_expr')) {
     http_response_code(500);
     echo json_encode(['error' => 'Helper squadra partita non disponibile']);
@@ -70,6 +71,19 @@ if ($torneo === 'Coppadafrica') {
 
 $teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
 $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
+$matchStatsSubquery = "
+    SELECT
+        pg.giocatore_id,
+        {$resolvedTeamExpr} AS squadra_ref,
+        SUM(pg.goal) AS gol,
+        SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END) AS presenze
+    FROM partita_giocatore pg
+    JOIN partite p
+      ON p.id = pg.partita_id
+    WHERE p.torneo = ?
+      $phaseClause
+    GROUP BY pg.giocatore_id, squadra_ref
+";
 
 $sql = "
     SELECT 
@@ -80,20 +94,18 @@ $sql = "
         s.logo AS logo,
         COALESCE(sg.foto, g.foto, s.logo) AS foto,
         s.torneo AS torneo,
-        SUM(pg.goal) AS gol,
-        SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END) AS presenze
+        COALESCE(match_stats.gol, 0) AS gol,
+        COALESCE(match_stats.presenze, 0) AS presenze
     FROM squadre_giocatori sg
-    JOIN squadre s ON s.id = sg.squadra_id AND s.torneo = ?
+    JOIN squadre s ON s.id = sg.squadra_id
     JOIN giocatori g ON g.id = sg.giocatore_id
-    JOIN partita_giocatore pg ON pg.giocatore_id = g.id
-    JOIN partite p 
-      ON p.id = pg.partita_id
-     AND p.torneo = s.torneo
-    WHERE 1=1
-      AND {$resolvedTeamExpr} = s.id
-      $phaseClause
-    GROUP BY sg.id
-    HAVING SUM(pg.goal) > 0
+    LEFT JOIN (
+        {$matchStatsSubquery}
+    ) match_stats
+     ON match_stats.giocatore_id = g.id
+     AND match_stats.squadra_ref = s.id
+    WHERE s.torneo = ?
+      AND COALESCE(match_stats.gol, 0) > 0
     ORDER BY gol DESC, presenze DESC, g.cognome ASC, g.nome ASC
 ";
 
@@ -104,7 +116,7 @@ if (!$stmt) {
     exit;
 }
 
-$stmt->bind_param('s', $torneo);
+$stmt->bind_param('ss', $torneo, $torneo);
 $stmt->execute();
 $res = $stmt->get_result();
 

@@ -307,6 +307,24 @@ CREATE TABLE IF NOT EXISTS partita_giocatore (
     CONSTRAINT fk_pg_squadra FOREIGN KEY (squadra_id) REFERENCES squadre(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Gol extra manuali per giocatori, non collegati a una partita
+CREATE TABLE IF NOT EXISTS giocatore_goal_extra (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    giocatore_id INT UNSIGNED NOT NULL,
+    squadra_id INT UNSIGNED DEFAULT NULL,
+    goal INT UNSIGNED NOT NULL DEFAULT 1,
+    note VARCHAR(255) DEFAULT NULL,
+    created_by INT UNSIGNED DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_gge_player (giocatore_id),
+    KEY idx_gge_team (squadra_id),
+    KEY idx_gge_creator (created_by),
+    CONSTRAINT fk_gge_player FOREIGN KEY (giocatore_id) REFERENCES giocatori(id) ON DELETE CASCADE,
+    CONSTRAINT fk_gge_team FOREIGN KEY (squadra_id) REFERENCES squadre(id) ON DELETE SET NULL,
+    CONSTRAINT fk_gge_creator FOREIGN KEY (created_by) REFERENCES utenti(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Blog post (blog.php, articolo.php, api/blog.php)
 CREATE TABLE IF NOT EXISTS blog_post (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

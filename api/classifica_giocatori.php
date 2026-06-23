@@ -42,6 +42,18 @@ $offset = ($page - 1) * $perPage;
 
 $excludedTournaments = ['SerieB']; // usa lo slug del file torneo (SerieB.php)
 $excludedPlaceholder = implode(',', array_fill(0, count($excludedTournaments), '?'));
+$extraGoalsUsesExcludedFilter = giocatore_goal_extra_table_exists($conn);
+$extraGoalsExpr = $extraGoalsUsesExcludedFilter
+    ? "COALESCE((
+        SELECT SUM(gge.goal)
+        FROM giocatore_goal_extra gge
+        LEFT JOIN squadre gges ON gges.id = gge.squadra_id
+        WHERE gge.giocatore_id = g.id
+          AND (gge.squadra_id IS NULL OR gges.torneo NOT IN ($excludedPlaceholder))
+    ), 0)"
+    : '0';
+$goalField = "(COALESCE(agg.gol, 0) + {$extraGoalsExpr})";
+$presenzeField = "COALESCE(agg.presenze, 0)";
 
 $conditionsBase = [];
 $searchConditions = [];
@@ -50,14 +62,14 @@ $typesSearch = '';
 
 // Filtri base (escludi zero)
 if ($ordine === 'gol') {
-    $conditionsBase[] = 'agg.gol > 0';
+    $conditionsBase[] = $goalField . ' > 0';
 } elseif ($ordine === 'presenze') {
-    $conditionsBase[] = 'agg.presenze > 0';
+    $conditionsBase[] = $presenzeField . ' > 0';
 }
 
 // Filtro ricerca (applicato PRIMA del ranking)
 if ($search !== '') {
-    $searchConditions[] = '(CONCAT_WS(" ", nome, cognome) LIKE ? OR CONCAT_WS(" ", cognome, nome) LIKE ?)';
+    $searchConditions[] = '(CONCAT_WS(" ", g.nome, g.cognome) LIKE ? OR CONCAT_WS(" ", g.cognome, g.nome) LIKE ?)';
     $like = '%' . $search . '%';
     $paramsSearch[] = $like;
     $paramsSearch[] = $like;
@@ -69,11 +81,8 @@ $whereSearch = $searchConditions ? ($whereBase ? ' AND ' : 'WHERE ') . implode('
 $whereAll = $whereBase . $whereSearch;
 
 $orderFields = $ordine === 'presenze'
-    ? 'agg.presenze DESC, agg.gol DESC, g.cognome ASC, g.nome ASC'
-    : 'agg.gol DESC, agg.presenze DESC, g.cognome ASC, g.nome ASC';
-
-// Colonne chiave per il ranking (competizione: 1,1,3 in caso di pari)
-$rankPrimary = $ordine === 'presenze' ? 'agg.presenze' : 'agg.gol';
+    ? 'presenze DESC, gol DESC, g.cognome ASC, g.nome ASC'
+    : 'gol DESC, presenze DESC, g.cognome ASC, g.nome ASC';
 
 $aggregateSubquery = "
     SELECT 
@@ -101,19 +110,21 @@ $sqlAll = "
         '' AS squadra,
         '' AS torneo,
         {$fotoSelect},
-        agg.gol,
-        agg.presenze,
+        {$goalField} AS gol,
+        {$presenzeField} AS presenze,
         agg.media_voti
     FROM giocatori g
-    INNER JOIN (
+    LEFT JOIN (
         $aggregateSubquery
     ) AS agg ON agg.giocatore_id = g.id
     $whereBase
     ORDER BY $orderFields
 ";
 
-$paramsBase = $excludedTournaments;
-$typesBase = str_repeat('s', count($excludedTournaments));
+$paramsBase = $extraGoalsUsesExcludedFilter
+    ? array_merge($excludedTournaments, $excludedTournaments)
+    : $excludedTournaments;
+$typesBase = str_repeat('s', count($paramsBase));
 
 $stmt = $conn->prepare($sqlAll);
 if (!$stmt) {
@@ -154,19 +165,21 @@ $sqlFiltered = "
         '' AS squadra,
         '' AS torneo,
         {$fotoSelect},
-        agg.gol,
-        agg.presenze,
+        {$goalField} AS gol,
+        {$presenzeField} AS presenze,
         agg.media_voti
     FROM giocatori g
-    INNER JOIN (
+    LEFT JOIN (
         $aggregateSubquery
     ) AS agg ON agg.giocatore_id = g.id
     $whereAll
     ORDER BY $orderFields
 ";
 
-$paramsFiltered = array_merge($excludedTournaments, $paramsSearch);
-$typesFiltered = str_repeat('s', count($excludedTournaments)) . $typesSearch;
+$paramsFiltered = $extraGoalsUsesExcludedFilter
+    ? array_merge($excludedTournaments, $excludedTournaments, $paramsSearch)
+    : array_merge($excludedTournaments, $paramsSearch);
+$typesFiltered = str_repeat('s', count($paramsFiltered) - count($paramsSearch)) . $typesSearch;
 
 $stmt = $conn->prepare($sqlFiltered);
 if (!$stmt) {
