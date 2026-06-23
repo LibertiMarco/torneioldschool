@@ -17,6 +17,7 @@ class partitagiocatore {
        GET ALL STATISTICHE DI UNA PARTITA
     ========================================================== */
     public function getByPartita($partita_id) {
+        $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', 'pg.squadra_id', 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
         $sql = "
             SELECT 
                 pg.id,
@@ -34,7 +35,8 @@ class partitagiocatore {
                 pg.voto
             FROM partita_giocatore pg
             JOIN giocatori g ON g.id = pg.giocatore_id
-            LEFT JOIN squadre s ON s.id = pg.squadra_id
+            JOIN partite p ON p.id = pg.partita_id
+            LEFT JOIN squadre s ON s.id = {$resolvedTeamExpr}
             WHERE pg.partita_id = ?
             ORDER BY g.cognome, g.nome
         ";

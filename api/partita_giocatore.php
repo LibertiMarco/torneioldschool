@@ -20,6 +20,10 @@ function ensure_autogol_column(mysqli $conn): void {
 ensure_autogol_column($conn);
 ensure_partita_phase_schema($conn);
 ensure_partita_giocatore_team_schema($conn);
+if (!function_exists('partita_giocatore_resolved_team_expr')) {
+    echo json_encode(["error" => "Helper squadra partita non disponibile"]);
+    exit;
+}
 
 /* ==========================================================
    LISTA STATISTICHE DELLA PARTITA
@@ -29,6 +33,7 @@ if ($azione === 'list') {
     if (empty($_GET['partita_id'])) { echo json_encode([]); exit; }
 
     $partita_id = (int)$_GET['partita_id'];
+    $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', 'pg.squadra_id', 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
 
     $sql = "SELECT 
                 pg.id,
@@ -48,8 +53,9 @@ if ($azione === 'list') {
                 pg.voto
             FROM partita_giocatore pg
             JOIN giocatori g ON g.id = pg.giocatore_id
-            LEFT JOIN squadre s ON s.id = pg.squadra_id
-            LEFT JOIN squadre_giocatori sg ON sg.squadra_id = pg.squadra_id AND sg.giocatore_id = g.id
+            JOIN partite p ON p.id = pg.partita_id
+            LEFT JOIN squadre s ON s.id = {$resolvedTeamExpr}
+            LEFT JOIN squadre_giocatori sg ON sg.squadra_id = s.id AND sg.giocatore_id = g.id
             WHERE pg.partita_id = ?
             ORDER BY g.cognome, g.nome";
 
@@ -107,6 +113,7 @@ function aggiornaGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squadraId
     $torneo = $t['torneo'];
 
     $phaseFilter = torneo_stats_team_phase_clause($conn, (string)$torneo, 'p.fase');
+    $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', 'pg.squadra_id', 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
     $q = $conn->prepare("SELECT 
         COUNT(*) AS presenze,
         COALESCE(SUM(pg.goal),0) AS goal,
@@ -118,7 +125,7 @@ function aggiornaGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squadraId
         FROM partita_giocatore pg
         JOIN partite p ON p.id = pg.partita_id
         WHERE pg.giocatore_id = ?
-          AND pg.squadra_id = ?
+          AND {$resolvedTeamExpr} = ?
           AND p.torneo = ?
           $phaseFilter");
     $q->bind_param("iis", $giocatoreId, $squadraId, $torneo);
@@ -227,6 +234,7 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId, bool $markAsPlayed = f
 
     // Somma i gol per squadra aggregando per nome squadra (evita duplicazioni per giocatori trasferiti)
     // e aggiunge gli autogol alla squadra avversaria
+    $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', 'pg.squadra_id', 'pp.torneo', 'pp.squadra_casa', 'pp.squadra_ospite');
     $sumSql = $conn->prepare("
         SELECT 
           SUM(CASE WHEN agg.squadra = p.squadra_casa THEN agg.gol ELSE 0 END) AS gol_casa,
@@ -237,8 +245,8 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId, bool $markAsPlayed = f
         LEFT JOIN (
           SELECT pg.partita_id, s.nome AS squadra, SUM(pg.goal) AS gol, SUM(pg.autogol) AS autogol
           FROM partita_giocatore pg
-          JOIN squadre s ON s.id = pg.squadra_id
           JOIN partite pp ON pp.id = pg.partita_id
+          JOIN squadre s ON s.id = {$resolvedTeamExpr}
           WHERE pg.partita_id = ?
             AND s.torneo = pp.torneo
             AND s.nome IN (pp.squadra_casa, pp.squadra_ospite)

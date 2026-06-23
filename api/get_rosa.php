@@ -13,6 +13,10 @@ $torneo=$_GET['torneo']??''; $squadra=$_GET['squadra']??'';
 if(!$torneo || !$squadra){ echo json_encode(['error'=>'Parametri mancanti']); exit; }
 
 ensure_partita_giocatore_team_schema($conn);
+if (!function_exists('partita_giocatore_resolved_team_expr')) {
+    echo json_encode(['error' => 'Helper squadra partita non disponibile']);
+    exit;
+}
 
 $cacheKey = tos_api_cache_build_key('get_rosa', [
     'torneo' => $torneo,
@@ -25,6 +29,7 @@ if ($cachedPayload !== null) {
 }
 
 $phaseClause = torneo_stats_team_phase_clause($conn, $torneo, 'p.fase');
+$resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', 'pg.squadra_id', 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
 $sql = "
     SELECT 
         g.id, g.nome, g.cognome, g.ruolo,
@@ -46,21 +51,32 @@ $sql = "
     JOIN giocatori g ON g.id = sg.giocatore_id
     LEFT JOIN (
         SELECT
-            pg.giocatore_id,
-            pg.squadra_id,
-            COALESCE(SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END), 0) AS presenze,
-            COALESCE(SUM(pg.goal), 0) AS reti,
-            COALESCE(SUM(pg.assist), 0) AS assist,
-            COALESCE(SUM(pg.cartellino_giallo), 0) AS gialli,
-            COALESCE(SUM(pg.cartellino_rosso), 0) AS rossi,
-            SUM(CASE WHEN pg.voto IS NOT NULL THEN pg.voto ELSE 0 END) AS somma_voti,
-            SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
-        FROM partita_giocatore pg
-        JOIN partite p ON p.id = pg.partita_id
-        WHERE p.torneo = ?
-          $phaseClause
-        GROUP BY pg.giocatore_id, pg.squadra_id
-    ) agg ON agg.giocatore_id = g.id AND agg.squadra_id = s.id
+            src.giocatore_id,
+            src.squadra_ref,
+            COALESCE(SUM(CASE WHEN src.presenza = 1 THEN 1 ELSE 0 END), 0) AS presenze,
+            COALESCE(SUM(src.goal), 0) AS reti,
+            COALESCE(SUM(src.assist), 0) AS assist,
+            COALESCE(SUM(src.cartellino_giallo), 0) AS gialli,
+            COALESCE(SUM(src.cartellino_rosso), 0) AS rossi,
+            SUM(CASE WHEN src.voto IS NOT NULL THEN src.voto ELSE 0 END) AS somma_voti,
+            SUM(CASE WHEN src.voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
+        FROM (
+            SELECT
+                pg.giocatore_id,
+                {$resolvedTeamExpr} AS squadra_ref,
+                pg.presenza,
+                pg.goal,
+                pg.assist,
+                pg.cartellino_giallo,
+                pg.cartellino_rosso,
+                pg.voto
+            FROM partita_giocatore pg
+            JOIN partite p ON p.id = pg.partita_id
+            WHERE p.torneo = ?
+              $phaseClause
+        ) src
+        GROUP BY src.giocatore_id, src.squadra_ref
+    ) agg ON agg.giocatore_id = g.id AND agg.squadra_ref = s.id
     WHERE s.torneo = ? AND s.nome = ?
     ORDER BY g.cognome, g.nome
 ";

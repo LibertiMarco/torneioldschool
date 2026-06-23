@@ -162,3 +162,31 @@ if (!function_exists('ensure_partita_giocatore_team_schema')) {
         }
     }
 }
+
+if (!function_exists('partita_giocatore_resolved_team_expr')) {
+    function partita_giocatore_resolved_team_expr(
+        string $playerIdColumn = 'pg.giocatore_id',
+        string $teamIdColumn = 'pg.squadra_id',
+        string $tournamentColumn = 'p.torneo',
+        string $homeTeamColumn = 'p.squadra_casa',
+        string $awayTeamColumn = 'p.squadra_ospite'
+    ): string {
+        $playerIdColumn = trim($playerIdColumn) !== '' ? trim($playerIdColumn) : 'pg.giocatore_id';
+        $teamIdColumn = trim($teamIdColumn) !== '' ? trim($teamIdColumn) : 'pg.squadra_id';
+        $tournamentColumn = trim($tournamentColumn) !== '' ? trim($tournamentColumn) : 'p.torneo';
+        $homeTeamColumn = trim($homeTeamColumn) !== '' ? trim($homeTeamColumn) : 'p.squadra_casa';
+        $awayTeamColumn = trim($awayTeamColumn) !== '' ? trim($awayTeamColumn) : 'p.squadra_ospite';
+
+        return "COALESCE(
+            {$teamIdColumn},
+            (
+                SELECT MIN(s2.id)
+                FROM squadre_giocatori sg2
+                JOIN squadre s2 ON s2.id = sg2.squadra_id
+                WHERE sg2.giocatore_id = {$playerIdColumn}
+                  AND s2.torneo = {$tournamentColumn}
+                  AND s2.nome IN ({$homeTeamColumn}, {$awayTeamColumn})
+            )
+        )";
+    }
+}

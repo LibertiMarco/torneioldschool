@@ -5,6 +5,11 @@ require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/partite_schema.php';
 
 ensure_partita_giocatore_team_schema($conn);
+if (!function_exists('partita_giocatore_resolved_team_expr')) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Helper squadra partita non disponibile']);
+    exit;
+}
 
 $torneo = trim($_GET['torneo'] ?? '');
 if ($torneo === '') {
@@ -65,6 +70,8 @@ if ($torneo === 'Coppadafrica') {
     $phaseClause = "AND $phaseExpr = 'REGULAR'";
 }
 
+$resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', 'pg.squadra_id', 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
+
 $sql = "
     SELECT 
         g.id,
@@ -79,11 +86,12 @@ $sql = "
     FROM squadre_giocatori sg
     JOIN squadre s ON s.id = sg.squadra_id AND s.torneo = ?
     JOIN giocatori g ON g.id = sg.giocatore_id
-    JOIN partita_giocatore pg ON pg.giocatore_id = g.id AND pg.squadra_id = s.id
+    JOIN partita_giocatore pg ON pg.giocatore_id = g.id
     JOIN partite p 
       ON p.id = pg.partita_id
      AND p.torneo = s.torneo
     WHERE 1=1
+      AND {$resolvedTeamExpr} = s.id
       $phaseClause
     GROUP BY sg.id
     HAVING SUM(pg.goal) > 0

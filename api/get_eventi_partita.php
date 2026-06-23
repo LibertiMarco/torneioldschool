@@ -3,6 +3,10 @@ require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/partite_schema.php';
 
 ensure_partita_giocatore_team_schema($conn);
+if (!function_exists('partita_giocatore_resolved_team_expr')) {
+    echo json_encode([]);
+    exit;
+}
 
 $partita = $_GET["partita"] ?? 0;
 
@@ -15,6 +19,8 @@ if (!$match) {
     echo json_encode([]);
     exit;
 }
+
+$resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', 'pg.squadra_id', 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
 
 $stmt2 = $conn->prepare("
     SELECT 
@@ -33,8 +39,9 @@ $stmt2 = $conn->prepare("
         COALESCE(sg.is_captain, 0) AS is_captain
     FROM partita_giocatore pg
     JOIN giocatori g ON g.id = pg.giocatore_id
-    LEFT JOIN squadre s ON s.id = pg.squadra_id
-    LEFT JOIN squadre_giocatori sg ON sg.squadra_id = pg.squadra_id AND sg.giocatore_id = g.id
+    JOIN partite p ON p.id = pg.partita_id
+    LEFT JOIN squadre s ON s.id = {$resolvedTeamExpr}
+    LEFT JOIN squadre_giocatori sg ON sg.squadra_id = s.id AND sg.giocatore_id = g.id
     WHERE pg.partita_id = ?
 ");
 $stmt2->bind_param("i", $partita);
