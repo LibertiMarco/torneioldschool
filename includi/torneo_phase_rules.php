@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/partite_schema.php';
 
 if (!function_exists('torneo_stats_table_has_column')) {
     function torneo_stats_table_has_column(mysqli $conn, string $table, string $column): bool
@@ -263,6 +264,8 @@ if (!function_exists('torneo_stats_fetch_player_team_totals')) {
         }
 
         $phaseClause = torneo_stats_team_phase_clause($conn, $torneo, 'p.fase');
+        $teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
+        $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
         $sql = "
             SELECT
                 COALESCE(SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END), 0) AS presenze,
@@ -274,7 +277,7 @@ if (!function_exists('torneo_stats_fetch_player_team_totals')) {
                 SUM(CASE WHEN pg.voto IS NOT NULL THEN 1 ELSE 0 END) AS num_voti
             FROM partita_giocatore pg
             JOIN partite p ON p.id = pg.partita_id
-            JOIN squadre s ON s.id = pg.squadra_id
+            JOIN squadre s ON s.id = {$resolvedTeamExpr}
             WHERE pg.giocatore_id = ?
               AND s.torneo = ?
               AND s.nome = ?

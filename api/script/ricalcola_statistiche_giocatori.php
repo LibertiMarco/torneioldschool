@@ -55,6 +55,8 @@ function stats_recalc_overview(mysqli $conn): array
         return $overview;
     }
 
+    $teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
+    $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
     $sql = "
         SELECT COUNT(*) AS totale
         FROM (
@@ -66,11 +68,11 @@ function stats_recalc_overview(mysqli $conn): array
               OR t.nome = s.torneo
             JOIN partita_giocatore pg
               ON pg.giocatore_id = sg.giocatore_id
-             AND pg.squadra_id = sg.squadra_id
             JOIN partite p
               ON p.id = pg.partita_id
              AND p.torneo = s.torneo
             WHERE p.giocata = 1
+              AND {$resolvedTeamExpr} = sg.squadra_id
               AND JSON_UNQUOTE(JSON_EXTRACT(t.config, '$.formato')) = 'campionato'
               AND " . torneo_stats_normalized_phase_expr('p.fase') . " <> 'REGULAR'
             GROUP BY sg.id

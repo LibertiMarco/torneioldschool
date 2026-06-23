@@ -18,8 +18,6 @@ function ensure_autogol_column(mysqli $conn): void {
     }
 }
 ensure_autogol_column($conn);
-ensure_partita_phase_schema($conn);
-ensure_partita_giocatore_team_schema($conn);
 if (!function_exists('partita_giocatore_resolved_team_expr')) {
     echo json_encode(["error" => "Helper squadra partita non disponibile"]);
     exit;
@@ -33,13 +31,14 @@ if ($azione === 'list') {
     if (empty($_GET['partita_id'])) { echo json_encode([]); exit; }
 
     $partita_id = (int)$_GET['partita_id'];
-    $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', 'pg.squadra_id', 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
+    $teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
+    $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
 
     $sql = "SELECT 
                 pg.id,
                 pg.partita_id,
                 pg.giocatore_id,
-                pg.squadra_id,
+                {$resolvedTeamExpr} AS squadra_id,
                 g.nome,
                 g.cognome,
                 s.nome AS squadra,
@@ -60,6 +59,11 @@ if ($azione === 'list') {
             ORDER BY g.cognome, g.nome";
 
     $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        http_response_code(500);
+        echo json_encode(["error" => "Errore query statistiche partita"]);
+        exit;
+    }
     $stmt->bind_param("i", $partita_id);
     $stmt->execute();
 
@@ -113,7 +117,8 @@ function aggiornaGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squadraId
     $torneo = $t['torneo'];
 
     $phaseFilter = torneo_stats_team_phase_clause($conn, (string)$torneo, 'p.fase');
-    $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', 'pg.squadra_id', 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
+    $teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
+    $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
     $q = $conn->prepare("SELECT 
         COUNT(*) AS presenze,
         COALESCE(SUM(pg.goal),0) AS goal,
@@ -234,7 +239,8 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId, bool $markAsPlayed = f
 
     // Somma i gol per squadra aggregando per nome squadra (evita duplicazioni per giocatori trasferiti)
     // e aggiunge gli autogol alla squadra avversaria
-    $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', 'pg.squadra_id', 'pp.torneo', 'pp.squadra_casa', 'pp.squadra_ospite');
+    $teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
+    $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'pp.torneo', 'pp.squadra_casa', 'pp.squadra_ospite');
     $sumSql = $conn->prepare("
         SELECT 
           SUM(CASE WHEN agg.squadra = p.squadra_casa THEN agg.gol ELSE 0 END) AS gol_casa,
@@ -498,6 +504,7 @@ if ($azione === 'list_giocatori') {
 
     // Recupero info partita (torneo, squadre)
     $q = $conn->prepare("SELECT torneo, squadra_casa, squadra_ospite FROM partite WHERE id=?");
+    if (!$q) { echo json_encode([]); exit; }
     $q->bind_param("i", $partita_id);
     $q->execute();
     $p = $q->get_result()->fetch_assoc();
@@ -515,6 +522,7 @@ if ($azione === 'list_giocatori') {
             ORDER BY g.cognome, g.nome";
 
     $stmt = $conn->prepare($sql);
+    if (!$stmt) { echo json_encode([]); exit; }
     $stmt->bind_param("sssi", $p['torneo'], $p['squadra_casa'], $p['squadra_ospite'], $partita_id);
     $stmt->execute();
 
@@ -531,6 +539,10 @@ if ($azione === 'list_giocatori') {
    AGGIUNTA STATISTICA
 ========================================================== */
 if ($azione === 'add') {
+    ensure_partite_phase_schema($conn);
+    if (!partita_giocatore_has_squadra_column($conn)) {
+        ensure_partita_giocatore_team_schema($conn);
+    }
 
     $partita_id = (int)$_POST['partita_id'];
     $giocatore  = (int)$_POST['giocatore_id'];
@@ -561,12 +573,29 @@ if ($azione === 'add') {
     }
 
     /* âž• INSERIMENTO */
-    $sql = "INSERT INTO partita_giocatore
-            (partita_id, giocatore_id, squadra_id, presenza, goal, autogol, assist, cartellino_giallo, cartellino_rosso, voto)
-            VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)";
-
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iiiiiiiid", $partita_id, $giocatore, $squadraId, $goal, $autogol, $assist, $giallo, $rosso, $voto);
+    if (partita_giocatore_has_squadra_column($conn, true)) {
+        $sql = "INSERT INTO partita_giocatore
+                (partita_id, giocatore_id, squadra_id, presenza, goal, autogol, assist, cartellino_giallo, cartellino_rosso, voto)
+                VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            http_response_code(500);
+            echo json_encode(["error" => "insert_failed"]);
+            exit;
+        }
+        $stmt->bind_param("iiiiiiiid", $partita_id, $giocatore, $squadraId, $goal, $autogol, $assist, $giallo, $rosso, $voto);
+    } else {
+        $sql = "INSERT INTO partita_giocatore
+                (partita_id, giocatore_id, presenza, goal, autogol, assist, cartellino_giallo, cartellino_rosso, voto)
+                VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            http_response_code(500);
+            echo json_encode(["error" => "insert_failed"]);
+            exit;
+        }
+        $stmt->bind_param("iiiiiid", $partita_id, $giocatore, $goal, $autogol, $assist, $giallo, $rosso, $voto);
+    }
     $stmt->execute();
 
     ricalcolaStatistiche($conn, $partita_id, $giocatore);
@@ -582,6 +611,7 @@ if ($azione === 'add') {
    MODIFICA
 ========================================================== */
 if ($azione === 'edit') {
+    ensure_partite_phase_schema($conn);
 
     $id     = (int)$_POST['id'];
     $goal   = (int)$_POST['goal'];
@@ -627,6 +657,7 @@ if ($azione === 'edit') {
    ELIMINA
 ========================================================== */
 if ($azione === 'delete') {
+    ensure_partite_phase_schema($conn);
 
     $id = (int)$_POST['id'];
 

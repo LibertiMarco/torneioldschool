@@ -2,7 +2,6 @@
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/partite_schema.php';
 
-ensure_partita_giocatore_team_schema($conn);
 if (!function_exists('partita_giocatore_resolved_team_expr')) {
     echo json_encode([]);
     exit;
@@ -20,7 +19,8 @@ if (!$match) {
     exit;
 }
 
-$resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', 'pg.squadra_id', 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
+$teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
+$resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
 
 $stmt2 = $conn->prepare("
     SELECT 

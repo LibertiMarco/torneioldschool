@@ -17,13 +17,14 @@ class partitagiocatore {
        GET ALL STATISTICHE DI UNA PARTITA
     ========================================================== */
     public function getByPartita($partita_id) {
-        $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', 'pg.squadra_id', 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
+        $teamIdExpr = partita_giocatore_team_id_expr($this->conn, 'pg.squadra_id');
+        $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
         $sql = "
             SELECT 
                 pg.id,
                 pg.partita_id,
                 pg.giocatore_id,
-                pg.squadra_id,
+                {$resolvedTeamExpr} AS squadra_id,
                 g.nome,
                 g.cognome,
                 s.nome AS squadra,
@@ -66,13 +67,23 @@ class partitagiocatore {
             return false;
         }
 
-        $sql = "
-            INSERT INTO partita_giocatore
-            (partita_id, giocatore_id, squadra_id, presenza, goal, assist, cartellino_giallo, cartellino_rosso, voto)
-            VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?)
-        ";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("iiiiiiid", $partita_id, $giocatore_id, $squadra_id, $goal, $assist, $giallo, $rosso, $voto);
+        if (partita_giocatore_has_squadra_column($this->conn, true)) {
+            $sql = "
+                INSERT INTO partita_giocatore
+                (partita_id, giocatore_id, squadra_id, presenza, goal, assist, cartellino_giallo, cartellino_rosso, voto)
+                VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?)
+            ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("iiiiiiid", $partita_id, $giocatore_id, $squadra_id, $goal, $assist, $giallo, $rosso, $voto);
+        } else {
+            $sql = "
+                INSERT INTO partita_giocatore
+                (partita_id, giocatore_id, presenza, goal, assist, cartellino_giallo, cartellino_rosso, voto)
+                VALUES (?, ?, 1, ?, ?, ?, ?, ?)
+            ";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("iiiiiid", $partita_id, $giocatore_id, $goal, $assist, $giallo, $rosso, $voto);
+        }
         $stmt->execute();
 
         $this->aggiornaStatisticheGiocatore($giocatore_id, $goal, $assist, $giallo, $rosso, +1);

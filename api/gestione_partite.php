@@ -534,7 +534,8 @@ function aggiornaStatsGiocatoreSquadra(mysqli $conn, int $giocatoreId, int $squa
   if (!$team) return;
 
   $phaseFilter = torneo_stats_team_phase_clause($conn, (string)($team['torneo'] ?? ''), 'p.fase');
-  $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', 'pg.squadra_id', 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
+  $teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
+  $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
 
   $sql = "
     SELECT 

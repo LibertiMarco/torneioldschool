@@ -160,6 +160,38 @@ if (!function_exists('ensure_partita_giocatore_team_schema')) {
         if (!$hasIndex) {
             $conn->query("ALTER TABLE partita_giocatore ADD KEY idx_pg_squadra (squadra_id)");
         }
+
+        if (function_exists('partita_giocatore_has_squadra_column')) {
+            partita_giocatore_has_squadra_column($conn, true);
+        }
+    }
+}
+
+if (!function_exists('partita_giocatore_has_squadra_column')) {
+    function partita_giocatore_has_squadra_column(mysqli $conn, bool $refresh = false): bool
+    {
+        static $cache = [];
+
+        $cacheKey = spl_object_hash($conn) . ':partita_giocatore.squadra_id';
+        if (!$refresh && array_key_exists($cacheKey, $cache)) {
+            return $cache[$cacheKey];
+        }
+
+        $res = $conn->query("SHOW COLUMNS FROM partita_giocatore LIKE 'squadra_id'");
+        $cache[$cacheKey] = $res instanceof mysqli_result && $res->num_rows > 0;
+        if ($res instanceof mysqli_result) {
+            $res->free();
+        }
+
+        return $cache[$cacheKey];
+    }
+}
+
+if (!function_exists('partita_giocatore_team_id_expr')) {
+    function partita_giocatore_team_id_expr(mysqli $conn, string $qualifiedColumn = 'pg.squadra_id'): string
+    {
+        $qualifiedColumn = trim($qualifiedColumn) !== '' ? trim($qualifiedColumn) : 'pg.squadra_id';
+        return partita_giocatore_has_squadra_column($conn) ? $qualifiedColumn : 'NULL';
     }
 }
 

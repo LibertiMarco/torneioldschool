@@ -3,8 +3,6 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/partite_schema.php';
-
-ensure_partita_giocatore_team_schema($conn);
 if (!function_exists('partita_giocatore_resolved_team_expr')) {
     http_response_code(500);
     echo json_encode(['error' => 'Helper squadra partita non disponibile']);
@@ -70,7 +68,8 @@ if ($torneo === 'Coppadafrica') {
     $phaseClause = "AND $phaseExpr = 'REGULAR'";
 }
 
-$resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', 'pg.squadra_id', 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
+$teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
+$resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
 
 $sql = "
     SELECT 

@@ -11,6 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 
 if (!$conn || $conn->connect_error) {
     http_response_code(500);
@@ -161,6 +162,12 @@ $resTeams = $stmt->get_result();
 $teams = [];
 if ($resTeams) {
     while ($row = $resTeams->fetch_assoc()) {
+        $teamStats = torneo_stats_fetch_player_team_totals(
+            $conn,
+            $giocatoreId,
+            (string)($row['torneo'] ?? ''),
+            (string)($row['squadra'] ?? '')
+        );
         $teams[] = [
             'squadra_id' => (int)$row['squadra_id'],
             'squadra' => $row['squadra'],
@@ -168,12 +175,12 @@ if ($resTeams) {
             'torneo' => $row['torneo'],
             'torneo_nome' => $row['torneo_nome'] ?? $row['torneo'],
             'ruolo' => $row['ruolo_squadra'],
-            'presenze' => (int)$row['presenze'],
-            'gol' => (int)$row['gol'],
-            'assist' => (int)$row['assist'],
-            'gialli' => (int)$row['gialli'],
-            'rossi' => (int)$row['rossi'],
-            'media_voti' => $row['media_voti'] !== null ? (float)$row['media_voti'] : null,
+            'presenze' => (int)($teamStats['presenze'] ?? 0),
+            'gol' => (int)($teamStats['reti'] ?? 0),
+            'assist' => (int)($teamStats['assist'] ?? 0),
+            'gialli' => (int)($teamStats['gialli'] ?? 0),
+            'rossi' => (int)($teamStats['rossi'] ?? 0),
+            'media_voti' => array_key_exists('media_voti', $teamStats) && $teamStats['media_voti'] !== null ? (float)$teamStats['media_voti'] : null,
             'is_captain' => (int)$row['is_captain'] === 1,
         ];
     }
