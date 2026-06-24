@@ -16,6 +16,9 @@ $fasiAmmesse = ['REGULAR', 'GOLD', 'SILVER', 'BRONZO'];
 $fasiAmmesseConBronzo = ['REGULAR', 'GOLD', 'SILVER', 'BRONZO'];
 $fasiAmmesseConSpareggio = ['REGULAR', 'SPAREGGIO', 'GOLD', 'SILVER', 'BRONZO'];
 $maxGiornateRegular = 10;
+$maxGiornateRegularOverrides = [
+  'McLeague' => 14,
+];
 $roundMap = [
   'TRENTADUESIMI' => 6,
   'SEDICESIMI' => 5,
@@ -1466,7 +1469,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
         </div>
         <div id="giornataWrapper">
           <label class="required-label">Giornata</label>
-          <select name="giornata" id="giornataCrea" required>
+          <select name="giornata" id="giornataCrea" data-default-max="<?= (int)$maxGiornateRegular ?>" required>
             <option value="">-- Seleziona giornata (1-<?= $maxGiornateRegular ?>) --</option>
             <?php for ($g = 1; $g <= $maxGiornateRegular; $g++): ?>
               <option value="<?= $g ?>"><?= $g ?></option>
@@ -1963,6 +1966,18 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   const isRegularPhase = (phase = '') => String(phase || '').trim().toUpperCase() === 'REGULAR';
   const isSpareggioPhase = (phase = '') => String(phase || '').trim().toUpperCase() === 'SPAREGGIO';
   const isRoundBasedPhase = (phase = '') => !isRegularPhase(phase) && !isSpareggioPhase(phase);
+  const regularGiornateMaxDefault = <?= (int)$maxGiornateRegular ?>;
+  const regularGiornateMaxOverrides = <?= json_encode($maxGiornateRegularOverrides, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+  const getRegularGiornateMax = (torneoSlug = '') => {
+    const normalized = String(torneoSlug || '').trim().toLowerCase();
+    for (const [slug, limit] of Object.entries(regularGiornateMaxOverrides || {})) {
+      if (String(slug || '').trim().toLowerCase() === normalized) {
+        const parsed = Number.parseInt(limit, 10);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : regularGiornateMaxDefault;
+      }
+    }
+    return regularGiornateMaxDefault;
+  };
   const getSpareggioSlotLabel = (slotValue) => {
     const normalized = String(slotValue ?? '').trim();
     return normalized === '' || normalized === '1' ? 'Spareggio' : `Spareggio ${normalized}`;
@@ -2082,7 +2097,25 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   const roundCrea = document.getElementById('roundCrea');
   const faseLegCrea = document.getElementById('faseLegCrea');
   const campoCrea = document.getElementById('campoCrea');
+
+  const syncCreateGiornataOptions = (torneoSlug = '', selectedValue = '') => {
+    if (!giornataCrea) return;
+    const maxGiornate = getRegularGiornateMax(torneoSlug);
+    const currentValue = String(selectedValue || giornataCrea.value || '').trim();
+    giornataCrea.innerHTML = `<option value="">-- Seleziona giornata (1-${maxGiornate}) --</option>`;
+    for (let g = 1; g <= maxGiornate; g += 1) {
+      giornataCrea.add(new Option(String(g), String(g)));
+    }
+    if (currentValue) {
+      const hasOption = Array.from(giornataCrea.options).some(opt => opt.value === currentValue);
+      giornataCrea.value = hasOption ? currentValue : '';
+    } else {
+      giornataCrea.value = '';
+    }
+  };
+
   syncPhaseSelectOptions(faseCrea, torneoCrea?.value || '');
+  syncCreateGiornataOptions(torneoCrea?.value || '');
   syncMatchFieldSelect(campoCrea, torneoCrea?.value || '');
 
   const getGiornataTarget = () => {
@@ -2152,6 +2185,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   if (torneoCrea) {
     torneoCrea.addEventListener('change', () => {
       syncPhaseSelectOptions(faseCrea, torneoCrea.value || '');
+      syncCreateGiornataOptions(torneoCrea.value || '');
       syncMatchFieldSelect(campoCrea, torneoCrea.value || '', campoCrea?.value || '', false);
       populateSquadreFiltrate();
     });
