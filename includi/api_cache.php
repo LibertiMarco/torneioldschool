@@ -58,3 +58,13 @@ if (!function_exists('tos_api_cache_write')) {
         @rename($tmpPath, $path);
     }
 }
+
+if (!function_exists('tos_api_cache_delete')) {
+    function tos_api_cache_delete(string $cacheKey): void
+    {
+        $path = tos_api_cache_path($cacheKey);
+        if (is_file($path)) {
+            @unlink($path);
+        }
+    }
+}

@@ -71,6 +71,8 @@ if ($torneo === 'Coppadafrica') {
 
 $teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
 $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
+$extraTeamGoalsExpr = giocatore_goal_extra_team_expr($conn, 'g.id', 's.id');
+$goalField = "(COALESCE(match_stats.gol, 0) + {$extraTeamGoalsExpr})";
 $matchStatsSubquery = "
     SELECT
         pg.giocatore_id,
@@ -94,7 +96,7 @@ $sql = "
         s.logo AS logo,
         COALESCE(sg.foto, g.foto, s.logo) AS foto,
         s.torneo AS torneo,
-        COALESCE(match_stats.gol, 0) AS gol,
+        {$goalField} AS gol,
         COALESCE(match_stats.presenze, 0) AS presenze
     FROM squadre_giocatori sg
     JOIN squadre s ON s.id = sg.squadra_id
@@ -105,7 +107,7 @@ $sql = "
      ON match_stats.giocatore_id = g.id
      AND match_stats.squadra_ref = s.id
     WHERE s.torneo = ?
-      AND COALESCE(match_stats.gol, 0) > 0
+      AND {$goalField} > 0
     ORDER BY gol DESC, presenze DESC, g.cognome ASC, g.nome ASC
 ";
 

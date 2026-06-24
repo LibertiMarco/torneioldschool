@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: public, max-age=60, stale-while-revalidate=300');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 // --- CONNESSIONE DATABASE TRAMITE FILE ESTERNO ---
 require_once __DIR__ . '/../includi/db.php';
@@ -30,13 +30,14 @@ if ($cachedPayload !== null) {
 $phaseClause = torneo_stats_team_phase_clause($conn, $torneo, 'p.fase');
 $teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
 $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
+$extraTeamGoalsExpr = giocatore_goal_extra_team_expr($conn, 'g.id', 's.id');
 $sql = "
     SELECT 
         g.id, g.nome, g.cognome, g.ruolo,
         sg.ruolo AS ruolo_squadra,
         sg.is_captain,
         COALESCE(agg.presenze, 0) AS presenze,
-        COALESCE(agg.reti, 0) AS reti,
+        COALESCE(agg.reti, 0) + {$extraTeamGoalsExpr} AS reti,
         COALESCE(agg.assist, 0) AS assist,
         COALESCE(agg.gialli, 0) AS gialli,
         COALESCE(agg.rossi, 0) AS rossi,

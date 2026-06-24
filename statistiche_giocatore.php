@@ -26,8 +26,12 @@ function fetch_player_global_stats(mysqli $conn, int $giocatoreId): array {
 function fetch_player_team_stats(mysqli $conn, int $giocatoreId, array $team): array {
     $teamName = trim((string)($team['nome'] ?? ''));
     $torneoSlug = trim((string)($team['torneo'] ?? ''));
+    $teamId = (int)($team['id'] ?? 0);
     $stats = torneo_stats_fetch_player_team_totals($conn, $giocatoreId, $torneoSlug, $teamName);
-    $stats['reti'] = (int)($stats['reti'] ?? 0) + giocatore_goal_extra_fetch_named_team_total($conn, $giocatoreId, $torneoSlug, $teamName);
+    $extraGoals = $teamId > 0
+        ? giocatore_goal_extra_fetch_team_total($conn, $giocatoreId, $teamId)
+        : giocatore_goal_extra_fetch_named_team_total($conn, $giocatoreId, $torneoSlug, $teamName);
+    $stats['reti'] = (int)($stats['reti'] ?? 0) + $extraGoals;
     return $stats;
 }
 

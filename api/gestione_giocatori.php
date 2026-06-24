@@ -1,6 +1,7 @@
 ﻿<?php
 require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/api_cache.php';
 require_once __DIR__ . '/../includi/giocatore_goal_extra.php';
 
 require_once __DIR__ . '/crud/giocatore.php';
@@ -16,6 +17,35 @@ $adminCsrf = csrf_get_token('admin_giocatori');
 $csrfWarning = false;
 
 ensure_giocatore_goal_extra_schema($conn);
+
+function invalidateGoalExtraTeamCache(mysqli $conn, int $squadraId): void {
+    if ($squadraId <= 0 || !function_exists('tos_api_cache_build_key') || !function_exists('tos_api_cache_delete')) {
+        return;
+    }
+
+    $stmt = $conn->prepare("SELECT torneo, nome FROM squadre WHERE id = ? LIMIT 1");
+    if (!$stmt) {
+        return;
+    }
+
+    $stmt->bind_param('i', $squadraId);
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return;
+    }
+
+    $team = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$team) {
+        return;
+    }
+
+    $cacheKey = tos_api_cache_build_key('get_rosa', [
+        'torneo' => (string)($team['torneo'] ?? ''),
+        'squadra' => (string)($team['nome'] ?? ''),
+    ]);
+    tos_api_cache_delete($cacheKey);
+}
 
 // Se il POST supera i limiti di upload/post di PHP, $_POST e $_FILES arrivano vuoti
 // e il controllo CSRF fallirebbe: intercettiamo la condizione e mostriamo un messaggio chiaro.
@@ -477,6 +507,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiungi_goal_extra']
     torneo_stats_rebuild_player_global_aggregate($conn, $giocatoreExtraId);
     if ($squadraExtraId > 0) {
         torneo_stats_rebuild_player_team_aggregate($conn, $giocatoreExtraId, $squadraExtraId);
+        invalidateGoalExtraTeamCache($conn, $squadraExtraId);
     }
 
     redirectGestione('gol_extra', ['goal_extra_saved' => 1]);
@@ -497,6 +528,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['elimina_goal_extra'])
     }
     if ($giocatoreExtraId > 0 && $squadraExtraId > 0) {
         torneo_stats_rebuild_player_team_aggregate($conn, $giocatoreExtraId, $squadraExtraId);
+        invalidateGoalExtraTeamCache($conn, $squadraExtraId);
     }
 
     redirectGestione('gol_extra', ['goal_extra_deleted' => 1]);

@@ -205,11 +205,10 @@ if ($resTeams) {
             (string)($row['torneo'] ?? ''),
             (string)($row['squadra'] ?? '')
         );
-        $teamExtraGoals = giocatore_goal_extra_fetch_named_team_total(
+        $teamExtraGoals = giocatore_goal_extra_fetch_team_total(
             $conn,
             $giocatoreId,
-            (string)($row['torneo'] ?? ''),
-            (string)($row['squadra'] ?? '')
+            (int)($row['squadra_id'] ?? 0)
         );
         $teams[] = [
             'squadra_id' => (int)$row['squadra_id'],
