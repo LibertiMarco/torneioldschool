@@ -43,16 +43,27 @@ $offset = ($page - 1) * $perPage;
 $excludedTournaments = ['SerieB']; // usa lo slug del file torneo (SerieB.php)
 $excludedPlaceholder = implode(',', array_fill(0, count($excludedTournaments), '?'));
 $extraGoalsUsesExcludedFilter = giocatore_goal_extra_table_exists($conn);
-$extraGoalsExpr = $extraGoalsUsesExcludedFilter
-    ? "COALESCE((
-        SELECT SUM(gge.goal)
+$extraGoalsJoin = '';
+$extraGoalsField = '0';
+if ($extraGoalsUsesExcludedFilter) {
+    $extraGoalsAggregateSubquery = "
+        SELECT
+            gge.giocatore_id,
+            SUM(gge.goal) AS gol_extra
         FROM giocatore_goal_extra gge
         LEFT JOIN squadre gges ON gges.id = gge.squadra_id
-        WHERE gge.giocatore_id = g.id
-          AND (gge.squadra_id IS NULL OR gges.torneo NOT IN ($excludedPlaceholder))
-    ), 0)"
-    : '0';
-$goalField = "(COALESCE(agg.gol, 0) + {$extraGoalsExpr})";
+        WHERE gge.squadra_id IS NULL
+           OR gges.torneo NOT IN ($excludedPlaceholder)
+        GROUP BY gge.giocatore_id
+    ";
+    $extraGoalsJoin = "
+        LEFT JOIN (
+            $extraGoalsAggregateSubquery
+        ) AS extra_agg ON extra_agg.giocatore_id = g.id
+    ";
+    $extraGoalsField = 'COALESCE(extra_agg.gol_extra, 0)';
+}
+$goalField = "(COALESCE(agg.gol, 0) + {$extraGoalsField})";
 $presenzeField = "COALESCE(agg.presenze, 0)";
 
 $conditionsBase = [];
@@ -117,6 +128,7 @@ $sqlAll = "
     LEFT JOIN (
         $aggregateSubquery
     ) AS agg ON agg.giocatore_id = g.id
+    $extraGoalsJoin
     $whereBase
     ORDER BY $orderFields
 ";
@@ -172,6 +184,7 @@ $sqlFiltered = "
     LEFT JOIN (
         $aggregateSubquery
     ) AS agg ON agg.giocatore_id = g.id
+    $extraGoalsJoin
     $whereAll
     ORDER BY $orderFields
 ";
