@@ -205,6 +205,12 @@ if ($resTeams) {
             (string)($row['torneo'] ?? ''),
             (string)($row['squadra'] ?? '')
         );
+        $teamExtraGoals = giocatore_goal_extra_fetch_named_team_total(
+            $conn,
+            $giocatoreId,
+            (string)($row['torneo'] ?? ''),
+            (string)($row['squadra'] ?? '')
+        );
         $teams[] = [
             'squadra_id' => (int)$row['squadra_id'],
             'squadra' => $row['squadra'],
@@ -213,7 +219,7 @@ if ($resTeams) {
             'torneo_nome' => $row['torneo_nome'] ?? $row['torneo'],
             'ruolo' => $row['ruolo_squadra'],
             'presenze' => (int)($teamStats['presenze'] ?? 0),
-            'gol' => (int)($teamStats['reti'] ?? 0),
+            'gol' => (int)($teamStats['reti'] ?? 0) + $teamExtraGoals,
             'assist' => (int)($teamStats['assist'] ?? 0),
             'gialli' => (int)($teamStats['gialli'] ?? 0),
             'rossi' => (int)($teamStats['rossi'] ?? 0),
