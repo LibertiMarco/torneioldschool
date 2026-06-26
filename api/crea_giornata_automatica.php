@@ -556,15 +556,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         </div>
       </section>
 
-      <section class="auto-card auto-hidden" id="contextSummaryCard">
-        <h2>Contesto torneo</h2>
-        <div class="auto-summary-grid" id="summaryGrid"></div>
-        <div style="margin-top: 16px;">
-          <strong style="display:block; margin-bottom: 8px; color:#15293e;">Giornate regular già presenti</strong>
-          <div id="giornateBadges" class="auto-badges"></div>
-        </div>
-      </section>
-
       <section class="auto-card auto-card--half auto-hidden" id="teamsCard">
         <div class="auto-team-toolbar">
           <div>
@@ -711,9 +702,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     tournamentSelect: document.getElementById('tournamentSelect'),
     giornataInput: document.getElementById('giornataInput'),
     allowReturnInput: document.getElementById('allowReturnInput'),
-    summaryCard: document.getElementById('contextSummaryCard'),
-    summaryGrid: document.getElementById('summaryGrid'),
-    giornateBadges: document.getElementById('giornateBadges'),
     teamsCard: document.getElementById('teamsCard'),
     teamsList: document.getElementById('teamsList'),
     selectAllTeamsBtn: document.getElementById('selectAllTeamsBtn'),
@@ -980,42 +968,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         seen.add(value);
         return true;
       });
-  }
-
-  function renderSummary() {
-    const context = state.context;
-    if (!context) {
-      els.summaryCard.classList.add('auto-hidden');
-      return;
-    }
-
-    const matches = context.partite_regular || [];
-    const teams = context.squadre || [];
-    els.summaryGrid.innerHTML = `
-      <div class="auto-summary-item">
-        <strong>${teams.length}</strong>
-        <span>Squadre nel torneo</span>
-      </div>
-      <div class="auto-summary-item">
-        <strong>${matches.length}</strong>
-        <span>Partite già presenti in regular season</span>
-      </div>
-      <div class="auto-summary-item">
-        <strong>${(context.giornate_regular || []).length}</strong>
-        <span>Giornate regular già create</span>
-      </div>
-      <div class="auto-summary-item">
-        <strong>${(context.campi || []).length}</strong>
-        <span>Campi trovati nella gestione esistente</span>
-      </div>
-    `;
-
-    const giornate = context.giornate_regular || [];
-    els.giornateBadges.innerHTML = giornate.length
-      ? giornate.map(giornata => `<span class="auto-badge">Giornata ${giornata}</span>`).join('')
-      : '<span class="auto-empty">Nessuna giornata regular ancora presente.</span>';
-
-    els.summaryCard.classList.remove('auto-hidden');
   }
 
   function renderTeams() {
@@ -1347,7 +1299,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       state.selectedTeams = [];
       state.slots = [];
       resetSlotEditor();
-      [els.summaryCard, els.teamsCard, els.slotsCard, els.availabilityCard, els.dataCard, els.actionsCard, els.previewCard].forEach(el => el.classList.add('auto-hidden'));
+      [els.teamsCard, els.slotsCard, els.availabilityCard, els.dataCard, els.actionsCard, els.previewCard].forEach(el => el.classList.add('auto-hidden'));
       return;
     }
 
@@ -1362,7 +1314,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       state.slots = [];
       els.giornataInput.value = Number(context.prossima_giornata || 1);
       resetSlotEditor();
-      renderSummary();
       renderTeams();
       renderSlots();
       renderClassifica();
