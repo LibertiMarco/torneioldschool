@@ -544,6 +544,12 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
                 <a href="/api/gestione_partite.php">Apri</a>
             </div>
 
+            <div class="admin-card">
+                <h3>Crea giornata automatica</h3>
+                <p>Genera una nuova giornata di regular season partendo da classifica, slot e disponibilita.</p><br>
+                <a href="/api/crea_giornata_automatica.php">Apri</a>
+            </div>
+
       <div class="admin-card">
         <h3>Utenti & Iscrizioni</h3>
           <p>Controlla gli utenti registrati e le loro iscrizioni.</p><br>
