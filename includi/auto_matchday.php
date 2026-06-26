@@ -661,8 +661,21 @@ if (!function_exists('auto_matchday_normalize_availability_rules')) {
                     continue;
                 }
 
-                $weekday = (int)($rule['weekday'] ?? 0);
-                $weekday = ($weekday >= 1 && $weekday <= 7) ? $weekday : 0;
+                $weekdaySource = [];
+                if (isset($rule['weekdays']) && is_array($rule['weekdays'])) {
+                    $weekdaySource = $rule['weekdays'];
+                } elseif (isset($rule['weekday'])) {
+                    $weekdaySource = [$rule['weekday']];
+                }
+
+                $weekdays = [];
+                foreach ($weekdaySource as $weekdayValue) {
+                    $weekday = (int)$weekdayValue;
+                    if ($weekday >= 1 && $weekday <= 7 && !in_array($weekday, $weekdays, true)) {
+                        $weekdays[] = $weekday;
+                    }
+                }
+
                 $startTime = auto_matchday_normalize_time($rule['start_time'] ?? '');
                 $endTime = auto_matchday_normalize_time($rule['end_time'] ?? '');
 
@@ -670,12 +683,13 @@ if (!function_exists('auto_matchday_normalize_availability_rules')) {
                     $endTime = $startTime;
                 }
 
-                if ($weekday === 0 && $startTime === '' && $endTime === '') {
+                if (empty($weekdays) && $startTime === '' && $endTime === '') {
                     continue;
                 }
 
                 $result[$teamId][] = [
-                    'weekday' => $weekday,
+                    'weekday' => $weekdays[0] ?? 0,
+                    'weekdays' => $weekdays,
                     'start_time' => $startTime,
                     'end_time' => $endTime,
                 ];
@@ -721,11 +735,24 @@ if (!function_exists('auto_matchday_slot_matches_team_rules')) {
         $slotWeekday = (int)date('N', strtotime($slotDate));
 
         foreach ($rules as $rule) {
-            $weekday = (int)($rule['weekday'] ?? 0);
+            $weekdays = [];
+            if (isset($rule['weekdays']) && is_array($rule['weekdays'])) {
+                foreach ($rule['weekdays'] as $weekdayValue) {
+                    $weekday = (int)$weekdayValue;
+                    if ($weekday >= 1 && $weekday <= 7 && !in_array($weekday, $weekdays, true)) {
+                        $weekdays[] = $weekday;
+                    }
+                }
+            } else {
+                $weekday = (int)($rule['weekday'] ?? 0);
+                if ($weekday >= 1 && $weekday <= 7) {
+                    $weekdays[] = $weekday;
+                }
+            }
             $startMinutes = auto_matchday_time_to_minutes((string)($rule['start_time'] ?? ''));
             $endMinutes = auto_matchday_time_to_minutes((string)($rule['end_time'] ?? ''));
 
-            if ($weekday > 0 && $weekday !== $slotWeekday) {
+            if (!empty($weekdays) && !in_array($slotWeekday, $weekdays, true)) {
                 continue;
             }
 

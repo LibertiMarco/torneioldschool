@@ -222,6 +222,40 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       margin: 0;
       color: #15293e;
     }
+    .auto-weekday-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 2px;
+    }
+    .auto-weekday-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border: 1px solid #dce4ef;
+      border-radius: 999px;
+      background: #fff;
+      color: #15293e;
+      font-weight: 600;
+      font-size: 0.9rem;
+      line-height: 1.2;
+      cursor: pointer;
+    }
+    .auto-weekday-option input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: #15293e;
+      flex-shrink: 0;
+    }
+    .auto-weekday-help {
+      display: block;
+      margin-top: 8px;
+      color: #6a788c;
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
     .auto-availability-row .auto-form-group:nth-child(1) { grid-column: span 4; }
     .auto-availability-row .auto-form-group:nth-child(2) { grid-column: span 3; }
     .auto-availability-row .auto-form-group:nth-child(3) { grid-column: span 3; }
@@ -475,7 +509,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
           <div>
             <h2>Disponibilità opzionali per squadra</h2>
             <p style="margin: 6px 0 0;">
-              Ogni regola può essere: solo giorno, solo fascia oraria o giorno + fascia oraria. Se una squadra non ha regole,
+              Ogni regola può essere: uno o più giorni, solo fascia oraria oppure giorni + fascia oraria. Se una squadra non ha regole,
               può essere assegnata a qualsiasi slot disponibile.
             </p>
           </div>
@@ -553,6 +587,15 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     preview: null,
     selectedTeams: [],
   };
+  const weekdayOptions = [
+    { value: '1', label: 'Lunedì' },
+    { value: '2', label: 'Martedì' },
+    { value: '3', label: 'Mercoledì' },
+    { value: '4', label: 'Giovedì' },
+    { value: '5', label: 'Venerdì' },
+    { value: '6', label: 'Sabato' },
+    { value: '7', label: 'Domenica' },
+  ];
 
   const els = {
     alertArea: document.getElementById('alertArea'),
@@ -651,8 +694,11 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       }
       snapshot[teamId] = [];
       block.querySelectorAll('.auto-availability-row').forEach(row => {
+        const weekdays = Array.from(row.querySelectorAll('[data-role="weekday-option"]:checked'))
+          .map(input => input.value || '')
+          .filter(Boolean);
         snapshot[teamId].push({
-          weekday: row.querySelector('[data-field="weekday"]')?.value || '',
+          weekdays,
           start_time: row.querySelector('[data-field="start_time"]')?.value || '',
           end_time: row.querySelector('[data-field="end_time"]')?.value || '',
         });
@@ -717,6 +763,23 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     });
 
     return options.join('');
+  }
+
+  function normalizeWeekdays(rule = {}) {
+    const source = Array.isArray(rule.weekdays)
+      ? rule.weekdays
+      : (rule.weekday ? [rule.weekday] : []);
+    const seen = new Set();
+
+    return source
+      .map(value => String(value ?? '').trim())
+      .filter(value => {
+        if (!/^[1-7]$/.test(value) || seen.has(value)) {
+          return false;
+        }
+        seen.add(value);
+        return true;
+      });
   }
 
   function renderSummary() {
@@ -809,21 +872,21 @@ require_once __DIR__ . '/../includi/admin_guard.php';
   }
 
   function addAvailabilityRow(container, rule = {}) {
+    const selectedWeekdays = new Set(normalizeWeekdays(rule));
     const row = document.createElement('div');
     row.className = 'auto-availability-row';
     row.innerHTML = `
       <div class="auto-form-group">
-        <label>Giorno</label>
-        <select data-field="weekday">
-          <option value="">Qualsiasi giorno</option>
-          <option value="1" ${String(rule.weekday || '') === '1' ? 'selected' : ''}>Lunedì</option>
-          <option value="2" ${String(rule.weekday || '') === '2' ? 'selected' : ''}>Martedì</option>
-          <option value="3" ${String(rule.weekday || '') === '3' ? 'selected' : ''}>Mercoledì</option>
-          <option value="4" ${String(rule.weekday || '') === '4' ? 'selected' : ''}>Giovedì</option>
-          <option value="5" ${String(rule.weekday || '') === '5' ? 'selected' : ''}>Venerdì</option>
-          <option value="6" ${String(rule.weekday || '') === '6' ? 'selected' : ''}>Sabato</option>
-          <option value="7" ${String(rule.weekday || '') === '7' ? 'selected' : ''}>Domenica</option>
-        </select>
+        <label>Giorni</label>
+        <div class="auto-weekday-picker">
+          ${weekdayOptions.map(option => `
+            <label class="auto-weekday-option">
+              <input type="checkbox" data-role="weekday-option" value="${option.value}" ${selectedWeekdays.has(option.value) ? 'checked' : ''}>
+              <span>${option.label}</span>
+            </label>
+          `).join('')}
+        </div>
+        <small class="auto-weekday-help">Se non selezioni nessun giorno, la regola vale per qualsiasi giorno.</small>
       </div>
       <div class="auto-form-group">
         <label>Dalle</label>
@@ -861,7 +924,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         <header>
           <div>
             <h4>${escapeHtml(team.nome)}</h4>
-            <p style="margin: 4px 0 0; color:#5b6b7d;">Aggiungi una o più regole opzionali per i suoi slot preferiti.</p>
+            <p style="margin: 4px 0 0; color:#5b6b7d;">Aggiungi una o più regole opzionali con uno o più giorni preferiti.</p>
           </div>
           <button type="button" class="auto-btn auto-btn-secondary" data-add-availability="${teamId}">Aggiungi disponibilità</button>
         </header>
