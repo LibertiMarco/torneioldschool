@@ -674,6 +674,19 @@ if (!function_exists('auto_matchday_normalize_availability_rules')) {
                     }
                 }
 
+                $timeSource = [];
+                if (isset($rule['times']) && is_array($rule['times'])) {
+                    $timeSource = $rule['times'];
+                }
+
+                $times = [];
+                foreach ($timeSource as $timeValue) {
+                    $time = auto_matchday_normalize_time((string)$timeValue);
+                    if ($time !== '' && !in_array($time, $times, true)) {
+                        $times[] = $time;
+                    }
+                }
+
                 $weekdaySource = [];
                 if (isset($rule['weekdays']) && is_array($rule['weekdays'])) {
                     $weekdaySource = $rule['weekdays'];
@@ -696,12 +709,13 @@ if (!function_exists('auto_matchday_normalize_availability_rules')) {
                     $endTime = $startTime;
                 }
 
-                if (empty($dates) && empty($weekdays) && $startTime === '' && $endTime === '') {
+                if (empty($dates) && empty($times) && empty($weekdays) && $startTime === '' && $endTime === '') {
                     continue;
                 }
 
                 $result[$teamId][] = [
                     'dates' => $dates,
+                    'times' => $times,
                     'weekday' => $weekdays[0] ?? 0,
                     'weekdays' => $weekdays,
                     'start_time' => $startTime,
@@ -738,8 +752,9 @@ if (!function_exists('auto_matchday_slot_matches_team_rules')) {
         }
 
         $slotDate = auto_matchday_normalize_date($slot['data'] ?? '');
+        $slotTime = auto_matchday_normalize_time((string)($slot['ora'] ?? ''));
         $slotTimeMinutes = auto_matchday_time_to_minutes((string)($slot['ora'] ?? ''));
-        if ($slotDate === '' || $slotTimeMinutes === null) {
+        if ($slotDate === '' || $slotTime === '' || $slotTimeMinutes === null) {
             return [
                 'has_rules' => true,
                 'matched' => false,
@@ -755,6 +770,16 @@ if (!function_exists('auto_matchday_slot_matches_team_rules')) {
                     $date = auto_matchday_normalize_date((string)$dateValue);
                     if ($date !== '' && !in_array($date, $dates, true)) {
                         $dates[] = $date;
+                    }
+                }
+            }
+
+            $times = [];
+            if (isset($rule['times']) && is_array($rule['times'])) {
+                foreach ($rule['times'] as $timeValue) {
+                    $time = auto_matchday_normalize_time((string)$timeValue);
+                    if ($time !== '' && !in_array($time, $times, true)) {
+                        $times[] = $time;
                     }
                 }
             }
@@ -781,6 +806,10 @@ if (!function_exists('auto_matchday_slot_matches_team_rules')) {
             }
 
             if (empty($dates) && !empty($weekdays) && !in_array($slotWeekday, $weekdays, true)) {
+                continue;
+            }
+
+            if (!empty($times) && !in_array($slotTime, $times, true)) {
                 continue;
             }
 

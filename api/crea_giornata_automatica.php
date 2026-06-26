@@ -316,9 +316,8 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       font-size: 0.82rem;
       line-height: 1.4;
     }
-    .auto-availability-row .auto-form-group:nth-child(1) { grid-column: span 4; }
-    .auto-availability-row .auto-form-group:nth-child(2) { grid-column: span 3; }
-    .auto-availability-row .auto-form-group:nth-child(3) { grid-column: span 3; }
+    .auto-availability-row .auto-form-group:nth-child(1) { grid-column: span 5; }
+    .auto-availability-row .auto-form-group:nth-child(2) { grid-column: span 5; }
     .auto-availability-row .auto-availability-remove { grid-column: span 2; }
     .auto-table-wrap {
       overflow-x: auto;
@@ -640,7 +639,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
           <div>
             <h2>Disponibilità opzionali per squadra</h2>
             <p style="margin: 6px 0 0;">
-              Ogni regola può essere: uno o più giorni degli slot creati, solo fascia oraria oppure giorni + fascia oraria. Se una squadra non ha regole,
+              Ogni regola può essere: uno o più giorni degli slot creati, uno o più orari degli slot creati oppure giorni + orari. Se una squadra non ha regole,
               può essere assegnata a qualsiasi slot disponibile.
             </p>
           </div>
@@ -821,10 +820,12 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         const dates = Array.from(row.querySelectorAll('[data-role="availability-date-option"]:checked'))
           .map(input => input.value || '')
           .filter(Boolean);
+        const times = Array.from(row.querySelectorAll('[data-role="availability-time-option"]:checked'))
+          .map(input => input.value || '')
+          .filter(Boolean);
         snapshot[teamId].push({
           dates,
-          start_time: row.querySelector('[data-field="start_time"]')?.value || '',
-          end_time: row.querySelector('[data-field="end_time"]')?.value || '',
+          times,
         });
       });
     });
@@ -993,6 +994,29 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       }));
   }
 
+  function formatAvailabilityTimeLabel(value) {
+    const normalized = String(value || '').trim();
+    return normalized ? normalized.slice(0, 5) : '';
+  }
+
+  function availableSlotTimeOptions() {
+    const seen = new Set();
+    return state.slots
+      .map(slot => String(slot.ora || '').trim())
+      .filter(time => {
+        if (!time || seen.has(time)) {
+          return false;
+        }
+        seen.add(time);
+        return true;
+      })
+      .sort((left, right) => left.localeCompare(right))
+      .map(time => ({
+        value: time,
+        label: formatAvailabilityTimeLabel(time),
+      }));
+  }
+
   function upsertSlot(slot) {
     const normalized = normalizeSlot(slot);
     const key = slotIdentity(normalized);
@@ -1018,6 +1042,23 @@ require_once __DIR__ . '/../includi/admin_guard.php';
 
     return source
       .map(value => String(value ?? '').trim())
+      .filter(value => {
+        if (!value || seen.has(value)) {
+          return false;
+        }
+        seen.add(value);
+        return true;
+      });
+  }
+
+  function normalizeAvailabilityTimes(rule = {}) {
+    const source = Array.isArray(rule.times)
+      ? rule.times
+      : [];
+    const seen = new Set();
+
+    return source
+      .map(value => formatAvailabilityTimeLabel(value))
       .filter(value => {
         if (!value || seen.has(value)) {
           return false;
@@ -1093,6 +1134,8 @@ require_once __DIR__ . '/../includi/admin_guard.php';
   function addAvailabilityRow(container, rule = {}) {
     const selectedDates = new Set(normalizeAvailabilityDates(rule));
     const dateOptions = availableSlotDateOptions();
+    const selectedTimes = new Set(normalizeAvailabilityTimes(rule));
+    const timeOptions = availableSlotTimeOptions();
     const row = document.createElement('div');
     row.className = 'auto-availability-row';
     row.innerHTML = `
@@ -1111,12 +1154,18 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         <small class="auto-weekday-help">Sono mostrati solo i giorni presenti negli slot creati. Se non selezioni nessun giorno, la regola vale per qualsiasi giorno.</small>
       </div>
       <div class="auto-form-group">
-        <label>Dalle</label>
-        <input type="time" data-field="start_time" value="${escapeAttr(rule.start_time ? String(rule.start_time).slice(0, 5) : '')}">
-      </div>
-      <div class="auto-form-group">
-        <label>Alle</label>
-        <input type="time" data-field="end_time" value="${escapeAttr(rule.end_time ? String(rule.end_time).slice(0, 5) : '')}">
+        <label>Orari</label>
+        <div class="auto-weekday-picker">
+          ${timeOptions.length
+            ? timeOptions.map(option => `
+                <label class="auto-weekday-option">
+                  <input type="checkbox" data-role="availability-time-option" value="${escapeAttr(option.value)}" ${selectedTimes.has(option.value) ? 'checked' : ''}>
+                  <span>${escapeHtml(option.label)}</span>
+                </label>
+              `).join('')
+            : '<span class="auto-empty">Aggiungi almeno uno slot per scegliere gli orari disponibili.</span>'}
+        </div>
+        <small class="auto-weekday-help">Sono mostrati solo gli orari presenti negli slot creati. Se non selezioni nessun orario, la regola vale per qualsiasi orario.</small>
       </div>
       <button type="button" class="auto-btn auto-btn-danger auto-availability-remove">Rimuovi</button>
     `;
@@ -1146,7 +1195,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         <header>
           <div>
             <h4>${escapeHtml(team.nome)}</h4>
-            <p style="margin: 4px 0 0; color:#5b6b7d;">Aggiungi una o più regole opzionali scegliendo tra i giorni degli slot creati.</p>
+            <p style="margin: 4px 0 0; color:#5b6b7d;">Aggiungi una o più regole opzionali scegliendo tra i giorni e gli orari degli slot creati.</p>
           </div>
           <button type="button" class="auto-btn auto-btn-secondary" data-add-availability="${teamId}">Aggiungi disponibilità</button>
         </header>
