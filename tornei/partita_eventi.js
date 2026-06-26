@@ -1,4 +1,4 @@
-﻿// ====================== PARAMETRI URL ======================
+// ====================== PARAMETRI URL ======================
 const params     = new URLSearchParams(window.location.search);
 const ID_PARTITA = params.get("id");
 const TORNEO     = params.get("torneo");
@@ -179,7 +179,7 @@ async function caricaPartita() {
       <div class="match-header">
         <span>
           ${campo}
-          ${campo !== "Campo da definire" ? `
+          ${campo !== "Campo da definire" && campo.trim().toLowerCase() !== "online" ? `
             <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(campo)}"
               target="_blank" class="maps-link" aria-label="Apri in Google Maps">
               <span class="maps-icon" aria-hidden="true"></span>

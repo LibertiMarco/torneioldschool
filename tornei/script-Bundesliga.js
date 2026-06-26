@@ -1006,7 +1006,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
             <span>
               ${stadio}
               ${
-                stadio && stadio !== "Campo da definire"
+                stadio && stadio !== "Campo da definire" && stadio.trim().toLowerCase() !== "online"
                   ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stadio)}"
                         target="_blank"
                         class="maps-link">&#128205;</a>`

@@ -411,7 +411,7 @@ function mostraClassifica(classifica, partiteGiocate = []) {
   const faseSelect = document.getElementById("faseSelect");
   const legendaEsistente = document.querySelector(".legenda-coppe");
 
-  // rimuove eventuale legenda già presente
+  // rimuove eventuale legenda giÃ  presente
   if (legendaEsistente) legendaEsistente.remove();
 
   // crea legenda solo se siamo in fase girone
@@ -419,8 +419,8 @@ function mostraClassifica(classifica, partiteGiocate = []) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
-      <div class="box gold-box">🏆 COPPA GOLD</div>
-      <div class="box silver-box">🥈 COPPA SILVER</div>
+      <div class="box gold-box">ðŸ† COPPA GOLD</div>
+      <div class="box silver-box">ðŸ¥ˆ COPPA SILVER</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
@@ -524,7 +524,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "GOL
             <span>
               ${stadio}
               ${
-                stadio && stadio !== "Campo da definire"
+                stadio && stadio !== "Campo da definire" && stadio.trim().toLowerCase() !== "online"
                   ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stadio)}"
                         target="_blank"
                         class="maps-link">&#128205;</a>`
@@ -829,7 +829,7 @@ async function caricaSquadrePerRosa() {
     // 1. Ordina le squadre in ordine alfabetico (A -> Z)
     squadre.sort((a, b) => a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }));
 
-    // 2️⃣ Popola la select e imposta la prima come selezionata
+    // 2ï¸âƒ£ Popola la select e imposta la prima come selezionata
     squadre.forEach((sq, index) => {
       if (sq.logo) {
         teamLogos[sq.nome] = sq.logo;
@@ -841,12 +841,12 @@ async function caricaSquadrePerRosa() {
       select.appendChild(opt);
     });
 
-    // 3️⃣ Mostra subito la rosa della prima squadra
+    // 3ï¸âƒ£ Mostra subito la rosa della prima squadra
     if (squadre.length > 0) {
       caricaRosaSquadra(squadre[0].nome);
     }
 
-    // 4️⃣ Evento cambio squadra
+    // 4ï¸âƒ£ Evento cambio squadra
     select.addEventListener("change", () => {
       const squadra = select.value;
       if (squadra) caricaRosaSquadra(squadra);

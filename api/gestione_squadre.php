@@ -293,11 +293,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // dati per le liste (convertiti in array per evitare false/null)
 $torneiList = [];
 $torneiConfigBySlug = [];
+$torneoSectionBySlug = [];
+$torneoLabelAllBySlug = [];
 if ($resTornei = $torneoModel->getAll()) {
     while ($r = $resTornei->fetch_assoc()) {
         $slugValue = sanitizeTorneoSlugValue($r['filetorneo'] ?? $r['nome'] ?? '');
         if ($slugValue !== '') {
             $torneiConfigBySlug[$slugValue] = parseTorneoConfigValue($r['config'] ?? null);
+            $torneoSectionBySlug[$slugValue] = strtolower(trim((string)($r['sezione'] ?? 'calcio'))) === 'esport' ? 'esport' : 'calcio';
+            $torneoLabelAllBySlug[$slugValue] = $r['nome'] ?? $slugValue;
         }
         // Se il torneo ha il flag "squadre_complete" attivo, non lo mostriamo per la creazione squadre
         $flagComplete = $r['squadre_complete'] ?? 0;
@@ -326,18 +330,27 @@ if (is_array($resFiltro)) {
 }
 
 $squadreList = [];
-$seenSquadre = [];
+$esportReuseList = [];
 if ($resSquadre = $squadra->getAll()) {
     while ($r = $resSquadre->fetch_assoc()) {
-        $nomeKey = strtolower(trim($r['nome'] ?? ''));
-        if ($nomeKey === '') {
+        $nome = trim((string)($r['nome'] ?? ''));
+        $torneoSlug = trim((string)($r['torneo'] ?? ''));
+        if ($nome === '') {
             continue;
         }
-        if (isset($seenSquadre[$nomeKey])) {
-            continue; // evita duplicati della stessa squadra su tornei diversi
-        }
-        $seenSquadre[$nomeKey] = true;
         $squadreList[] = $r;
+
+        if (($torneoSectionBySlug[$torneoSlug] ?? 'calcio') !== 'esport') {
+            continue;
+        }
+
+        $esportReuseList[] = [
+            'id' => (int)($r['id'] ?? 0),
+            'nome' => $nome,
+            'torneo' => $torneoSlug,
+            'torneo_label' => $torneoLabelAllBySlug[$torneoSlug] ?? $torneoSlug,
+            'logo' => (string)($r['logo'] ?? ''),
+        ];
     }
 }
 ?>
@@ -455,7 +468,7 @@ if ($resSquadre = $squadra->getAll()) {
       <div class="panel-card" data-section="crea">
         <form method="POST" class="admin-form" enctype="multipart/form-data">
           <input type="hidden" name="azione" value="crea">
-          <div class="form-group"><label>Nome</label><input type="text" name="nome" required></div>
+          <div class="form-group"><label>Nome</label><input type="text" name="nome" id="crea_nome" required></div>
           <div class="form-group">
             <label>Torneo</label>
             <select name="torneo" id="crea_torneo" required>
@@ -465,6 +478,30 @@ if ($resSquadre = $squadra->getAll()) {
                 <option value="<?= htmlspecialchars($slugValue) ?>"><?= htmlspecialchars($row['nome']) ?></option>
               <?php endforeach; ?>
             </select>
+          </div>
+          <div class="form-group hidden" id="riusa_esport_group">
+            <label>Riutilizza squadra ESPORT esistente (opzionale)</label>
+            <input
+              type="text"
+              id="riusa_esport_search"
+              class="search-input full-width"
+              placeholder="Cerca player o torneo esport..."
+              autocomplete="off"
+            >
+            <small id="riusa_esport_feedback" class="search-feedback hidden">Nessuna squadra esport trovata con questo filtro.</small>
+            <select id="riusa_esport" disabled>
+              <option value="">-- Seleziona una squadra/player esport --</option>
+              <?php foreach ($esportReuseList as $row): ?>
+                <option
+                  value="<?= (int)$row['id'] ?>"
+                  data-team-name="<?= htmlspecialchars($row['nome'], ENT_QUOTES, 'UTF-8') ?>"
+                  data-logo-id="<?= $row['logo'] !== '' ? (int)$row['id'] : '' ?>"
+                >
+                  <?= htmlspecialchars($row['nome']) ?> (<?= htmlspecialchars($row['torneo_label']) ?>)
+                </option>
+              <?php endforeach; ?>
+            </select>
+            <small>Disponibile solo per i tornei ESPORT: seleziona una squadra giÃ  usata per riproporre rapidamente il nome del player.</small>
           </div>
           <div class="form-group hidden" id="crea_girone_group">
             <label>Girone</label>
@@ -613,6 +650,7 @@ if ($resSquadre = $squadra->getAll()) {
       function qs(sel) { return document.querySelector(sel); }
       function qsa(sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); }
       var torneiConfigMap = <?php echo json_encode($torneiConfigBySlug, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+      var torneiSectionMap = <?php echo json_encode($torneoSectionBySlug, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
 
       function normalizeGironeValue(value) {
         return String(value || '')
@@ -764,11 +802,10 @@ if ($resSquadre = $squadra->getAll()) {
         return text.trim();
       }
 
-      function initLogoReuseSearch() {
-        var searchInput = document.getElementById('logo_esistente_search');
-        var select = document.getElementById('logo_esistente');
-        var feedback = document.getElementById('logo_esistente_feedback');
-        if (!searchInput || !select) return;
+      function initFilterableSelect(searchInput, select, feedback, emptyPlaceholder) {
+        if (!searchInput || !select) {
+          return function noop() {};
+        }
 
         var options = Array.prototype.slice.call(select.options).map(function(option, index) {
           return {
@@ -780,9 +817,11 @@ if ($resSquadre = $squadra->getAll()) {
 
         if (options.length <= 1) {
           searchInput.disabled = true;
-          searchInput.placeholder = 'Nessun scudetto disponibile da riutilizzare';
+          if (emptyPlaceholder) {
+            searchInput.placeholder = emptyPlaceholder;
+          }
           if (feedback) feedback.classList.add('hidden');
-          return;
+          return function noop() {};
         }
 
         function renderOptions() {
@@ -830,6 +869,67 @@ if ($resSquadre = $squadra->getAll()) {
 
         searchInput.addEventListener('input', renderOptions);
         renderOptions();
+        return renderOptions;
+      }
+
+      function initLogoReuseSearch() {
+        var searchInput = document.getElementById('logo_esistente_search');
+        var select = document.getElementById('logo_esistente');
+        var feedback = document.getElementById('logo_esistente_feedback');
+        initFilterableSelect(searchInput, select, feedback, 'Nessun scudetto disponibile da riutilizzare');
+      }
+
+      function initEsportReuseSelector() {
+        var torneoSelect = document.getElementById('crea_torneo');
+        var group = document.getElementById('riusa_esport_group');
+        var searchInput = document.getElementById('riusa_esport_search');
+        var select = document.getElementById('riusa_esport');
+        var feedback = document.getElementById('riusa_esport_feedback');
+        var nomeInput = document.getElementById('crea_nome');
+        var logoSelect = document.getElementById('logo_esistente');
+        if (!torneoSelect || !group || !searchInput || !select || !nomeInput) return;
+
+        var renderOptions = initFilterableSelect(
+          searchInput,
+          select,
+          feedback,
+          'Nessuna squadra esport disponibile da riutilizzare'
+        );
+        var hasReusableTeams = Array.prototype.slice.call(select.options).length > 1;
+
+        function syncVisibility() {
+          var torneoSlug = String(torneoSelect.value || '');
+          var isEsport = torneiSectionMap[torneoSlug] === 'esport';
+          group.classList.toggle('hidden', !isEsport);
+          searchInput.disabled = !isEsport || !hasReusableTeams;
+          select.disabled = !isEsport || !hasReusableTeams;
+
+          if (!isEsport) {
+            searchInput.value = '';
+            select.value = '';
+            if (feedback) feedback.classList.add('hidden');
+          }
+
+          renderOptions();
+        }
+
+        select.addEventListener('change', function() {
+          var option = select.options[select.selectedIndex];
+          if (!option) return;
+
+          var teamName = option.getAttribute('data-team-name') || '';
+          var logoId = option.getAttribute('data-logo-id') || '';
+
+          if (teamName) {
+            nomeInput.value = teamName;
+          }
+          if (logoSelect && logoId) {
+            logoSelect.value = logoId;
+          }
+        });
+
+        torneoSelect.addEventListener('change', syncVisibility);
+        syncVisibility();
       }
 
       function initCreateGironeLoader() {
@@ -1030,6 +1130,7 @@ if ($resSquadre = $squadra->getAll()) {
         initFileButtons();
         initFiltroElenco();
         initLogoReuseSearch();
+        initEsportReuseSelector();
         initCreateGironeLoader();
         initModificaLoader();
         initFooter();

@@ -110,9 +110,13 @@ function match_link(array $p): string {
     return '/tornei/partita_eventi.php?' . $query;
 }
 
+function is_virtual_match_field(string $place): bool {
+    return strtolower(trim($place)) === 'online';
+}
+
 function maps_search_url(string $place): string {
     $query = trim($place);
-    if ($query === '') {
+    if ($query === '' || is_virtual_match_field($query)) {
         return '';
     }
     return 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($query);
@@ -506,11 +510,13 @@ $seo = [
                                 </div>
                                 <span class="match-time"><?= h(format_match_datetime($p['data_partita'], $p['ora_partita'])) ?></span>
                             </div>
-                            <?php if ($campoLabel !== '' && $mapsUrl !== ''): ?>
+                            <?php if ($campoLabel !== ''): ?>
                                 <div class="match-location">
-                                    <a class="maps-link" href="<?= h($mapsUrl) ?>" target="_blank" rel="noopener" aria-label="Apri <?= h($campoLabel) ?> su Google Maps">
-                                        <span class="maps-icon" aria-hidden="true"></span>
-                                    </a>
+                                    <?php if ($mapsUrl !== ''): ?>
+                                        <a class="maps-link" href="<?= h($mapsUrl) ?>" target="_blank" rel="noopener" aria-label="Apri <?= h($campoLabel) ?> su Google Maps">
+                                            <span class="maps-icon" aria-hidden="true"></span>
+                                        </a>
+                                    <?php endif; ?>
                                     <span><?= h($campoLabel) ?></span>
                                 </div>
                             <?php endif; ?>

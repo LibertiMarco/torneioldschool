@@ -510,9 +510,9 @@ function mostraClassifica(classifica, partiteGiocate = []) {
     const legenda = document.createElement("div");
     legenda.classList.add("legenda-coppe");
     legenda.innerHTML = `
-      <div class="box gold-box">ðŸ† 1-2: Coppa Gold (quarti)</div>
-      <div class="box gold-box gold-ottavi">ðŸ¥‡ Coppa Gold (ottavi): 3 vs 14, 4 vs 13, 5 vs 12, 6 vs 11, 7 vs 10, 8 vs 9</div>
-      <div class="box silver-box">ðŸ¥ˆ Coppa Silver: 15 vs 18, 16 vs 17</div>
+      <div class="box gold-box">Ã°Å¸Ââ€  1-2: Coppa Gold (quarti)</div>
+      <div class="box gold-box gold-ottavi">Ã°Å¸Â¥â€¡ Coppa Gold (ottavi): 3 vs 14, 4 vs 13, 5 vs 12, 6 vs 11, 7 vs 10, 8 vs 9</div>
+      <div class="box silver-box">Ã°Å¸Â¥Ë† Coppa Silver: 15 vs 18, 16 vs 17</div>
     `;
 
     const wrapper = document.getElementById("classificaWrapper");
@@ -787,7 +787,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
             <span>
               ${stadio}
               ${
-                stadio && stadio !== "Campo da definire"
+                stadio && stadio !== "Campo da definire" && stadio.trim().toLowerCase() !== "online"
                   ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stadio)}"
                         target="_blank"
                         class="maps-link">&#128205;</a>`
