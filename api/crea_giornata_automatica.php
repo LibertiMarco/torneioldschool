@@ -268,15 +268,11 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     .auto-availability-team {
       border: 1px solid #dce4ef;
       border-radius: 16px;
-      padding: 18px;
+      padding: 14px;
       background: #fbfdff;
     }
     .auto-availability-team header {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 14px;
+      margin-bottom: 10px;
     }
     .auto-availability-team h4 {
       margin: 0;
@@ -316,9 +312,8 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       font-size: 0.82rem;
       line-height: 1.4;
     }
-    .auto-availability-row .auto-form-group:nth-child(1) { grid-column: span 5; }
-    .auto-availability-row .auto-form-group:nth-child(2) { grid-column: span 5; }
-    .auto-availability-row .auto-availability-remove { grid-column: span 2; }
+    .auto-availability-row .auto-form-group:nth-child(1) { grid-column: span 6; }
+    .auto-availability-row .auto-form-group:nth-child(2) { grid-column: span 6; }
     .auto-table-wrap {
       overflow-x: auto;
       border: 1px solid #dce4ef;
@@ -472,9 +467,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       .auto-slot-editor-grid .auto-form-group:nth-child(3),
       .auto-slot-editor-grid .auto-form-group:nth-child(4),
       .auto-availability-row .auto-form-group:nth-child(1),
-      .auto-availability-row .auto-form-group:nth-child(2),
-      .auto-availability-row .auto-form-group:nth-child(3),
-      .auto-availability-row .auto-availability-remove {
+      .auto-availability-row .auto-form-group:nth-child(2) {
         grid-column: span 12;
       }
     }
@@ -540,6 +533,44 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       .auto-slot-item .auto-slot-remove {
         padding: 7px 10px;
         border-radius: 10px;
+      }
+      .auto-availability-team {
+        padding: 10px 11px;
+        border-radius: 12px;
+      }
+      .auto-availability-team header {
+        margin-bottom: 8px;
+      }
+      .auto-availability-team h4 {
+        font-size: 0.96rem;
+        line-height: 1.2;
+      }
+      .auto-availability-team header p {
+        margin-top: 3px !important;
+        font-size: 0.76rem;
+        line-height: 1.2;
+      }
+      .auto-availability-row {
+        padding: 10px;
+        gap: 10px;
+        border-radius: 12px;
+      }
+      .auto-weekday-picker {
+        gap: 6px;
+      }
+      .auto-weekday-option {
+        gap: 5px;
+        padding: 6px 8px;
+        font-size: 0.8rem;
+      }
+      .auto-weekday-option input {
+        width: 14px;
+        height: 14px;
+      }
+      .auto-weekday-help {
+        margin-top: 6px;
+        font-size: 0.74rem;
+        line-height: 1.25;
       }
     }
   </style>
@@ -650,17 +681,11 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       <section class="auto-card auto-hidden" id="dataCard">
         <h2>Dati regular season già presenti</h2>
         <div class="auto-grid">
-          <div class="auto-card auto-card--half" style="padding:0;">
+          <div class="auto-card auto-card--wide" style="padding:0;">
             <div style="padding:22px 22px 12px;">
               <h3>Classifica attuale</h3>
             </div>
             <div class="auto-table-wrap" id="classificaWrap"></div>
-          </div>
-          <div class="auto-card auto-card--half" style="padding:0;">
-            <div style="padding:22px 22px 12px;">
-              <h3>Partite regular già create</h3>
-            </div>
-            <div class="auto-table-wrap" id="matchesWrap"></div>
           </div>
         </div>
       </section>
@@ -739,7 +764,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     availabilityList: document.getElementById('availabilityList'),
     dataCard: document.getElementById('dataCard'),
     classificaWrap: document.getElementById('classificaWrap'),
-    matchesWrap: document.getElementById('matchesWrap'),
     actionsCard: document.getElementById('actionsCard'),
     generatePreviewBtn: document.getElementById('generatePreviewBtn'),
     previewCard: document.getElementById('previewCard'),
@@ -859,9 +883,9 @@ require_once __DIR__ . '/../includi/admin_guard.php';
   function availableFields() {
     const seen = new Set();
     return (state.context?.campi || [])
-      .map(field => String(field ?? '').trim())
+      .map(field => normalizeFieldValue(field))
       .filter(field => {
-        const key = field.toLowerCase();
+        const key = normalizeFieldKey(field);
         if (!field || seen.has(key)) {
           return false;
         }
@@ -870,18 +894,30 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       });
   }
 
+  function normalizeFieldValue(value) {
+    return String(value ?? '').trim().replace(/\s+/g, ' ');
+  }
+
+  function normalizeFieldKey(value) {
+    return normalizeFieldValue(value).toLowerCase();
+  }
+
   function fieldSelectOptions(currentValue = '') {
     const fields = availableFields();
-    const normalizedCurrentValue = String(currentValue ?? '').trim();
-    const selectedFieldKey = normalizedCurrentValue.toLowerCase();
-    const hasCurrentValue = selectedFieldKey !== '' && fields.some(field => field.toLowerCase() === selectedFieldKey);
+    const normalizedCurrentValue = normalizeFieldValue(currentValue);
+    const selectedFieldKey = normalizeFieldKey(normalizedCurrentValue);
+    const hasCurrentValue = selectedFieldKey !== '' && fields.some(field => normalizeFieldKey(field) === selectedFieldKey);
     const placeholder = fields.length ? '-- Seleziona campo --' : 'Nessun campo disponibile';
     const options = [
-      `<option value="" ${(selectedFieldKey === '' || !hasCurrentValue) ? 'selected' : ''}>${placeholder}</option>`,
+      `<option value="" ${selectedFieldKey === '' ? 'selected' : ''}>${placeholder}</option>`,
     ];
 
+    if (selectedFieldKey !== '' && !hasCurrentValue) {
+      options.push(`<option value="${escapeAttr(normalizedCurrentValue)}" selected>${escapeHtml(normalizedCurrentValue)}</option>`);
+    }
+
     fields.forEach(field => {
-      const selected = field.toLowerCase() === selectedFieldKey ? 'selected' : '';
+      const selected = normalizeFieldKey(field) === selectedFieldKey ? 'selected' : '';
       options.push(`<option value="${escapeAttr(field)}" ${selected}>${escapeHtml(field)}</option>`);
     });
 
@@ -901,7 +937,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     return {
       data: String(slot.data || '').trim(),
       ora: String(slot.ora || '').trim(),
-      campo: String(slot.campo || '').trim(),
+      campo: normalizeFieldValue(slot.campo || ''),
       quantita: Math.max(1, parseInt(slot.quantita, 10) || 1),
     };
   }
@@ -911,7 +947,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     return [
       normalized.data,
       normalized.ora,
-      normalized.campo.toLowerCase(),
+      normalizeFieldKey(normalized.campo),
     ].join('|');
   }
 
@@ -1068,6 +1104,21 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       });
   }
 
+  function mergeAvailabilityRules(rules = []) {
+    const mergedDates = new Set();
+    const mergedTimes = new Set();
+
+    (Array.isArray(rules) ? rules : []).forEach(rule => {
+      normalizeAvailabilityDates(rule).forEach(date => mergedDates.add(date));
+      normalizeAvailabilityTimes(rule).forEach(time => mergedTimes.add(time));
+    });
+
+    return {
+      dates: Array.from(mergedDates),
+      times: Array.from(mergedTimes),
+    };
+  }
+
   function renderTeams() {
     const teams = state.context?.squadre || [];
     const selected = state.selectedTeams.length ? new Set(state.selectedTeams) : new Set(teams.map(team => Number(team.id)));
@@ -1167,7 +1218,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         </div>
         <small class="auto-weekday-help">Sono mostrati solo gli orari presenti negli slot creati. Se non selezioni nessun orario, la regola vale per qualsiasi orario.</small>
       </div>
-      <button type="button" class="auto-btn auto-btn-danger auto-availability-remove">Rimuovi</button>
     `;
     container.appendChild(row);
   }
@@ -1195,20 +1245,15 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         <header>
           <div>
             <h4>${escapeHtml(team.nome)}</h4>
-            <p style="margin: 4px 0 0; color:#5b6b7d;">Aggiungi una o più regole opzionali scegliendo tra i giorni e gli orari degli slot creati.</p>
+            <p style="margin: 4px 0 0; color:#5b6b7d;">Disponibilità opzionale sui giorni e sugli orari degli slot creati.</p>
           </div>
-          <button type="button" class="auto-btn auto-btn-secondary" data-add-availability="${teamId}">Aggiungi disponibilità</button>
         </header>
         <div class="auto-availability-rows"></div>
       `;
 
       const rowsWrap = block.querySelector('.auto-availability-rows');
       const rules = Array.isArray(snapshot[teamId]) && snapshot[teamId].length ? snapshot[teamId] : [];
-      if (rules.length) {
-        rules.forEach(rule => addAvailabilityRow(rowsWrap, rule));
-      } else {
-        addAvailabilityRow(rowsWrap, {});
-      }
+      addAvailabilityRow(rowsWrap, rules.length ? mergeAvailabilityRules(rules) : {});
 
       els.availabilityList.appendChild(block);
     });
@@ -1254,38 +1299,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         </table>
       `
       : '<div style="padding:18px;" class="auto-empty">Classifica non disponibile.</div>';
-  }
-
-  function renderMatches() {
-    const rows = state.context?.partite_regular || [];
-    els.matchesWrap.innerHTML = rows.length
-      ? `
-        <table class="auto-table">
-          <thead>
-            <tr>
-              <th>Giornata</th>
-              <th>Casa</th>
-              <th>Ospite</th>
-              <th>Data</th>
-              <th>Ora</th>
-              <th>Campo</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map(match => `
-              <tr>
-                <td>${match.giornata ?? '-'}</td>
-                <td>${escapeHtml(match.squadra_casa)}</td>
-                <td>${escapeHtml(match.squadra_ospite)}</td>
-                <td>${escapeHtml(match.data_partita || '')}</td>
-                <td>${escapeHtml((match.ora_partita || '').slice(0, 5))}</td>
-                <td>${escapeHtml(match.campo || '')}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `
-      : '<div style="padding:18px;" class="auto-empty">Nessuna partita regular season presente.</div>';
   }
 
   function previewTeamOptions(currentValue) {
@@ -1427,7 +1440,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       renderTeams();
       renderSlots();
       renderClassifica();
-      renderMatches();
       els.dataCard.classList.remove('auto-hidden');
       els.actionsCard.classList.remove('auto-hidden');
       els.previewCard.classList.add('auto-hidden');
@@ -1557,30 +1569,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         state.slots = state.slots.filter((_, index) => index !== slotIndex);
         renderSlots();
         renderAvailability();
-      }
-      if (state.preview) {
-        schedulePreviewValidation();
-      }
-    }
-  });
-
-  els.availabilityList.addEventListener('click', event => {
-    const addButton = event.target.closest('[data-add-availability]');
-    if (addButton) {
-      const block = addButton.closest('.auto-availability-team');
-      const wrap = block?.querySelector('.auto-availability-rows');
-      if (wrap) {
-        addAvailabilityRow(wrap, {});
-      }
-      return;
-    }
-
-    if (event.target.matches('.auto-availability-remove')) {
-      const teamBlock = event.target.closest('.auto-availability-team');
-      const wrap = teamBlock?.querySelector('.auto-availability-rows');
-      event.target.closest('.auto-availability-row')?.remove();
-      if (wrap && !wrap.children.length) {
-        addAvailabilityRow(wrap, {});
       }
       if (state.preview) {
         schedulePreviewValidation();
