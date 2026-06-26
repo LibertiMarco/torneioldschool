@@ -361,7 +361,8 @@ if (!function_exists('auto_matchday_fetch_global_occupied_slots')) {
             if ($key === '') {
                 continue;
             }
-            $slots[$key] = [
+
+            $entry = [
                 'id' => (int)($row['id'] ?? 0),
                 'torneo' => (string)($row['torneo'] ?? ''),
                 'squadra_casa' => (string)($row['squadra_casa'] ?? ''),
@@ -370,6 +371,21 @@ if (!function_exists('auto_matchday_fetch_global_occupied_slots')) {
                 'ora' => $time,
                 'campo' => $field,
             ];
+
+            if (!isset($slots[$key])) {
+                $slots[$key] = [
+                    'count' => 0,
+                    'data' => $date,
+                    'ora' => $time,
+                    'campo' => $field,
+                    'squadra_casa' => (string)($row['squadra_casa'] ?? ''),
+                    'squadra_ospite' => (string)($row['squadra_ospite'] ?? ''),
+                    'entries' => [],
+                ];
+            }
+
+            $slots[$key]['count']++;
+            $slots[$key]['entries'][] = $entry;
         }
 
         return $slots;
@@ -482,13 +498,75 @@ if (!function_exists('auto_matchday_slot_key')) {
     }
 }
 
+if (!function_exists('auto_matchday_split_slot_fields')) {
+    function auto_matchday_split_slot_fields(string $value): array
+    {
+        $parts = preg_split('/[\r\n,;]+/', $value) ?: [];
+        $result = [];
+        $seen = [];
+
+        foreach ($parts as $part) {
+            $field = preg_replace('/\s+/', ' ', trim((string)$part));
+            if ($field === '') {
+                continue;
+            }
+
+            $key = function_exists('mb_strtolower') ? mb_strtolower($field, 'UTF-8') : strtolower($field);
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $result[] = $field;
+        }
+
+        return $result;
+    }
+}
+
+if (!function_exists('auto_matchday_extract_slot_fields')) {
+    function auto_matchday_extract_slot_fields(array $row): array
+    {
+        $result = [];
+        $seen = [];
+        $sources = [];
+
+        if (array_key_exists('campi', $row)) {
+            $sources[] = $row['campi'];
+        }
+        if (array_key_exists('campo', $row)) {
+            $sources[] = $row['campo'];
+        }
+
+        foreach ($sources as $source) {
+            $fields = is_array($source) ? $source : auto_matchday_split_slot_fields((string)$source);
+            foreach ($fields as $fieldValue) {
+                $field = preg_replace('/\s+/', ' ', trim((string)$fieldValue));
+                if ($field === '') {
+                    continue;
+                }
+
+                $key = function_exists('mb_strtolower') ? mb_strtolower($field, 'UTF-8') : strtolower($field);
+                if (isset($seen[$key])) {
+                    continue;
+                }
+
+                $seen[$key] = true;
+                $result[] = $field;
+            }
+        }
+
+        return $result;
+    }
+}
+
 if (!function_exists('auto_matchday_normalize_slots')) {
     function auto_matchday_normalize_slots($value): array
     {
         $rows = is_array($value) ? $value : [];
         $result = [];
-        $seen = [];
         $duplicateCount = 0;
+        $slotCounters = [];
 
         foreach ($rows as $index => $row) {
             if (!is_array($row)) {
@@ -496,33 +574,71 @@ if (!function_exists('auto_matchday_normalize_slots')) {
             }
             $date = auto_matchday_normalize_date($row['data'] ?? '');
             $time = auto_matchday_normalize_time($row['ora'] ?? '');
-            $field = trim((string)($row['campo'] ?? ''));
-            $key = auto_matchday_slot_key($date, $time, $field);
+            $fields = auto_matchday_extract_slot_fields($row);
+            $quantity = max(1, (int)($row['quantita'] ?? $row['quantity'] ?? 1));
 
-            if ($key === '') {
-                continue;
+            if (empty($fields) && trim((string)($row['campo'] ?? '')) !== '') {
+                $fields = [trim((string)$row['campo'])];
             }
 
-            if (isset($seen[$key])) {
-                $duplicateCount++;
-                continue;
-            }
+            foreach ($fields as $fieldIndex => $field) {
+                $publicKey = auto_matchday_slot_key($date, $time, $field);
 
-            $seen[$key] = true;
-            $result[] = [
-                'id' => 'slot_' . ($index + 1),
-                'data' => $date,
-                'ora' => $time,
-                'campo' => $field,
-                'key' => $key,
-                'sort_index' => count($result),
-            ];
+                if ($publicKey === '') {
+                    continue;
+                }
+
+                for ($copyIndex = 0; $copyIndex < $quantity; $copyIndex++) {
+                    $slotCounters[$publicKey] = ($slotCounters[$publicKey] ?? 0) + 1;
+                    $instanceNumber = $slotCounters[$publicKey];
+
+                    $result[] = [
+                        'id' => 'slot_' . ($index + 1) . '_' . ($fieldIndex + 1) . '_' . ($copyIndex + 1),
+                        'data' => $date,
+                        'ora' => $time,
+                        'campo' => $field,
+                        'key' => $publicKey . '#' . $instanceNumber,
+                        'public_key' => $publicKey,
+                        'slot_number' => $instanceNumber,
+                        'sort_index' => count($result),
+                    ];
+                }
+            }
         }
 
         return [
             'slots' => $result,
             'duplicate_count' => $duplicateCount,
         ];
+    }
+}
+
+if (!function_exists('auto_matchday_build_slot_capacity_map')) {
+    function auto_matchday_build_slot_capacity_map(array $slots): array
+    {
+        $result = [];
+
+        foreach ($slots as $slot) {
+            if (!is_array($slot)) {
+                continue;
+            }
+
+            $publicKey = (string)($slot['public_key'] ?? '');
+            if ($publicKey === '') {
+                $publicKey = auto_matchday_slot_key(
+                    (string)($slot['data'] ?? ''),
+                    (string)($slot['ora'] ?? ''),
+                    (string)($slot['campo'] ?? '')
+                );
+            }
+            if ($publicKey === '') {
+                continue;
+            }
+
+            $result[$publicKey] = ($result[$publicKey] ?? 0) + 1;
+        }
+
+        return $result;
     }
 }
 
@@ -1234,7 +1350,8 @@ if (!function_exists('auto_matchday_validate_preview_rows')) {
         array $occupiedSlots,
         bool $allowReturn,
         int $giornata,
-        array $availabilityRules
+        array $availabilityRules,
+        array $slotCapacityMap = []
     ): array {
         $validatedRows = [];
         $previewPairCounts = [];
@@ -1310,8 +1427,8 @@ if (!function_exists('auto_matchday_validate_preview_rows')) {
                         $occupied['data'],
                         substr($occupied['ora'], 0, 5),
                         $occupied['campo'],
-                        $occupied['squadra_casa'],
-                        $occupied['squadra_ospite']
+                        (string)($occupied['squadra_casa'] ?? ''),
+                        (string)($occupied['squadra_ospite'] ?? '')
                     );
                 }
             }
@@ -1365,12 +1482,59 @@ if (!function_exists('auto_matchday_validate_preview_rows')) {
             }
         }
 
+        $globalMessages = [];
         foreach ($previewSlotUsage as $slotKey => $rowIndexes) {
-            if (count($rowIndexes) <= 1) {
+            $configuredCapacity = max(1, (int)($slotCapacityMap[$slotKey] ?? 1));
+            $occupiedCount = (int)($occupiedSlots[$slotKey]['count'] ?? 0);
+            $remainingCapacity = max(0, $configuredCapacity - $occupiedCount);
+            $plannedCount = count($rowIndexes);
+
+            foreach ($rowIndexes as $rowIndex) {
+                $validatedRows[$rowIndex]['errors'] = array_values(array_filter(
+                    $validatedRows[$rowIndex]['errors'],
+                    static function (string $error): bool {
+                        return $error !== 'Slot duplicato all\'interno della preview'
+                            && $error !== 'Slot non disponibile';
+                    }
+                ));
+            }
+
+            if ($plannedCount <= $remainingCapacity) {
                 continue;
             }
-            foreach ($rowIndexes as $rowIndex) {
-                $validatedRows[$rowIndex]['errors'][] = 'Slot duplicato all\'interno della preview';
+
+            foreach ($rowIndexes as $position => $rowIndex) {
+                if ($position < $remainingCapacity) {
+                    continue;
+                }
+
+                $validatedRows[$rowIndex]['errors'][] = $configuredCapacity > 1
+                    ? 'Capienza contemporanea del campo superata'
+                    : 'Slot non disponibile';
+            }
+
+            $sampleRow = $validatedRows[$rowIndexes[0]] ?? null;
+            if (!$sampleRow) {
+                continue;
+            }
+
+            if ($occupiedCount > 0) {
+                $globalMessages[] = sprintf(
+                    'Lo slot %s %s - %s ha gia %d partita/e presenti su %d disponibilita totali.',
+                    $sampleRow['data'],
+                    substr($sampleRow['ora'], 0, 5),
+                    $sampleRow['campo'],
+                    $occupiedCount,
+                    $configuredCapacity
+                );
+            } else {
+                $globalMessages[] = sprintf(
+                    'Lo slot %s %s - %s supera la capienza massima di %d partita/e contemporanee.',
+                    $sampleRow['data'],
+                    substr($sampleRow['ora'], 0, 5),
+                    $sampleRow['campo'],
+                    $configuredCapacity
+                );
             }
         }
 
@@ -1425,6 +1589,7 @@ if (!function_exists('auto_matchday_generate_preview')) {
         $giornata = max(1, (int)($payload['giornata'] ?? 0));
         $allowReturn = !empty($payload['allow_return']);
         $normalizedSlots = auto_matchday_normalize_slots($payload['slots'] ?? []);
+        $slotCapacityMap = auto_matchday_build_slot_capacity_map($normalizedSlots['slots']);
         $availabilityRules = auto_matchday_normalize_availability_rules($payload['availability'] ?? []);
 
         if ($tournamentId <= 0) {
@@ -1503,7 +1668,8 @@ if (!function_exists('auto_matchday_generate_preview')) {
             $occupiedSlots,
             $allowReturn,
             $giornata,
-            $availabilityRules
+            $availabilityRules,
+            $slotCapacityMap
         );
 
         $messages = $validation['messages'];
@@ -1555,6 +1721,8 @@ if (!function_exists('auto_matchday_validate_payload')) {
         $selectedTeamIds = auto_matchday_int_list($payload['selected_team_ids'] ?? []);
         $giornata = max(1, (int)($payload['giornata'] ?? 0));
         $allowReturn = !empty($payload['allow_return']);
+        $normalizedSlots = auto_matchday_normalize_slots($payload['slots'] ?? []);
+        $slotCapacityMap = auto_matchday_build_slot_capacity_map($normalizedSlots['slots']);
         $availabilityRules = auto_matchday_normalize_availability_rules($payload['availability'] ?? []);
         $rows = is_array($payload['rows'] ?? null) ? $payload['rows'] : [];
 
@@ -1591,7 +1759,8 @@ if (!function_exists('auto_matchday_validate_payload')) {
             $occupiedSlots,
             $allowReturn,
             $giornata,
-            $availabilityRules
+            $availabilityRules,
+            $slotCapacityMap
         );
 
         return [

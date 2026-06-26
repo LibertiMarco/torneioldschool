@@ -200,9 +200,10 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       background: #f8fbff;
       border: 1px solid #dce4ef;
     }
-    .auto-slot-row .auto-form-group:nth-child(1) { grid-column: span 4; }
-    .auto-slot-row .auto-form-group:nth-child(2) { grid-column: span 3; }
+    .auto-slot-row .auto-form-group:nth-child(1) { grid-column: span 3; }
+    .auto-slot-row .auto-form-group:nth-child(2) { grid-column: span 2; }
     .auto-slot-row .auto-form-group:nth-child(3) { grid-column: span 4; }
+    .auto-slot-row .auto-form-group:nth-child(4) { grid-column: span 2; }
     .auto-slot-row .auto-slot-remove { grid-column: span 1; }
     .auto-availability-team {
       border: 1px solid #dce4ef;
@@ -373,6 +374,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       .auto-slot-row .auto-form-group:nth-child(1),
       .auto-slot-row .auto-form-group:nth-child(2),
       .auto-slot-row .auto-form-group:nth-child(3),
+      .auto-slot-row .auto-form-group:nth-child(4),
       .auto-slot-row .auto-slot-remove,
       .auto-availability-row .auto-form-group:nth-child(1),
       .auto-availability-row .auto-form-group:nth-child(2),
@@ -461,7 +463,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         <div class="auto-slot-toolbar">
           <div>
             <h2>Slot disponibili</h2>
-            <p style="margin: 6px 0 0;">Inserisci data, ora e campo dei possibili slot da usare per le nuove partite.</p>
+            <p style="margin: 6px 0 0;">Inserisci data, ora, campo e quante partite contemporanee puo ospitare quello slot.</p>
           </div>
           <button type="button" class="auto-btn auto-btn-secondary" id="addSlotBtn">Aggiungi slot</button>
         </div>
@@ -662,11 +664,14 @@ require_once __DIR__ . '/../includi/admin_guard.php';
   }
 
   function collectSlots() {
-    return Array.from(document.querySelectorAll('.auto-slot-row')).map(row => ({
-      data: row.querySelector('[data-field="data"]')?.value || '',
-      ora: row.querySelector('[data-field="ora"]')?.value || '',
-      campo: row.querySelector('[data-field="campo"]')?.value || '',
-    }));
+    return Array.from(document.querySelectorAll('.auto-slot-row')).map(row => {
+      return {
+        data: row.querySelector('[data-field="data"]')?.value || '',
+        ora: row.querySelector('[data-field="ora"]')?.value || '',
+        campo: row.querySelector('[data-field="campo"]')?.value || '',
+        quantita: Number(row.querySelector('[data-field="quantita"]')?.value || 1),
+      };
+    });
   }
 
   function collectAvailability() {
@@ -743,6 +748,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
   }
 
   function addSlotRow(slot = {}) {
+    const quantity = Math.max(1, parseInt(slot.quantita, 10) || 1);
     const wrapper = document.createElement('div');
     wrapper.className = 'auto-slot-row';
     wrapper.innerHTML = `
@@ -758,6 +764,10 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         <label>Campo</label>
         <input type="text" data-field="campo" list="availableFields" placeholder="Es. Campo 1" value="${escapeAttr(slot.campo || '')}">
       </div>
+      <div class="auto-form-group">
+        <label>Partite contemporanee</label>
+        <input type="number" min="1" step="1" data-field="quantita" value="${escapeAttr(quantity)}">
+      </div>
       <button type="button" class="auto-btn auto-btn-danger auto-slot-remove">Rimuovi</button>
     `;
     els.slotList.appendChild(wrapper);
@@ -766,7 +776,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
   function renderSlots() {
     const currentSlots = collectSlots();
     els.slotList.innerHTML = '';
-    const slots = currentSlots.length ? currentSlots : [{ data: '', ora: '', campo: '' }];
+    const slots = currentSlots.length ? currentSlots : [{ data: '', ora: '', campo: '', quantita: 1 }];
     slots.forEach(addSlotRow);
     els.slotsCard.classList.remove('auto-hidden');
   }
