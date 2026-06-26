@@ -69,6 +69,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       display: flex;
       flex-direction: column;
       gap: 6px;
+      min-width: 0;
     }
     .auto-form-group label {
       font-weight: 700;
@@ -78,6 +79,9 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     .auto-form-group select,
     .auto-form-group textarea {
       width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
       border-radius: 10px;
       border: 1px solid #d5dbe4;
       background: #fafbff;
@@ -196,6 +200,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       gap: 12px;
       align-items: end;
       padding: 14px;
+      overflow: hidden;
       border-radius: 14px;
       background: #f8fbff;
       border: 1px solid #dce4ef;
@@ -292,6 +297,9 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     .auto-preview-table select,
     .auto-preview-table input {
       width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
       border-radius: 10px;
       border: 1px solid #d5dbe4;
       background: #fafbff;
