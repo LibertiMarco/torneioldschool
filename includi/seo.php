@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/env_loader.php';
+
 if (!function_exists('seo_base_url')) {
     if (!defined('ASSET_VERSION')) {
         define('ASSET_VERSION', '20251220');
@@ -24,16 +26,13 @@ if (!function_exists('seo_base_url')) {
 
     function seo_base_url(): string
     {
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? '') === '443');
-        $scheme = $https ? 'https' : 'http';
-        return $scheme . '://' . $host;
+        return tos_base_url();
     }
 
     function seo_current_url(): string
     {
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
-        return rtrim(seo_base_url(), '/') . $uri;
+        return rtrim(tos_origin_url(), '/') . $uri;
     }
 
     function seo_clean(?string $value): string

@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/env_loader.php';
+
 // Session hardening: set secure cookie flags and strict mode before starting
 if (!defined('REMEMBER_COOKIE_NAME')) {
     define('REMEMBER_COOKIE_NAME', 'tos_keep_login');
@@ -8,8 +10,9 @@ if (!defined('REMEMBER_COOKIE_LIFETIME')) {
 }
 $loginDebugEnabled = getenv('LOGIN_DEBUG') === '1';
 if ($loginDebugEnabled) {
+    tos_ensure_parent_dir(tos_runtime_path('logs/php-error.log'));
     ini_set('log_errors', '1');
-    ini_set('error_log', __DIR__ . '/../error.txt');
+    ini_set('error_log', tos_runtime_path('logs/php-error.log'));
 }
 if (!function_exists('tos_debug_log')) {
     function tos_debug_log(string $message, bool $enabled, array $context = []): void
@@ -53,7 +56,8 @@ if (!function_exists('login_with_base_path')) {
     }
 }
 
-$defaultErrorLog = __DIR__ . '/../error.txt';
+$defaultErrorLog = tos_runtime_path('logs/php-error.log');
+tos_ensure_parent_dir($defaultErrorLog);
 if (!ini_get('log_errors')) {
     ini_set('log_errors', '1');
 }
@@ -86,7 +90,7 @@ if (session_status() === PHP_SESSION_NONE) {
     $cookieLifetime = $rememberRequested ? REMEMBER_COOKIE_LIFETIME : 0;
     tos_debug_log('session_start', $loginDebugEnabled, [
         'remember_cookie_present' => $rememberRequested,
-        'session_cookie' => $_COOKIE[session_name()] ?? '(none)',
+        'session_cookie_present' => !empty($_COOKIE[session_name()]),
         'session_status' => session_status(),
     ]);
 
@@ -133,9 +137,7 @@ if (session_status() === PHP_SESSION_NONE) {
             setcookie(REMEMBER_COOKIE_NAME, $rememberValue, array_merge($cookieParams, ['expires' => $expires]));
         }
         tos_debug_log('keepalive_remember', $loginDebugEnabled, [
-            'session_id' => session_id(),
             'user_id' => $_SESSION['user_id'] ?? null,
-            'remember_cookie' => $_COOKIE[REMEMBER_COOKIE_NAME] ?? '(none)',
             'expires' => $expires,
         ]);
     }
@@ -274,8 +276,6 @@ if (!isset($_SESSION['user_id']) && !empty($_COOKIE[REMEMBER_COOKIE_NAME])) {
                             ]));
                             tos_debug_log('remember_autologin_ok', $loginDebugEnabled, [
                                 'user_id' => $user['id'],
-                                'session_id' => session_id(),
-                                'selector' => $selector,
                             ]);
                         } else {
                             $forget = $conn->prepare("UPDATE utenti SET remember_selector = NULL, remember_token_hash = NULL, remember_expires_at = NULL WHERE remember_selector = ?");
@@ -286,7 +286,6 @@ if (!isset($_SESSION['user_id']) && !empty($_COOKIE[REMEMBER_COOKIE_NAME])) {
                             }
                             tos_clear_remember_cookie($isHttps);
                             tos_debug_log('remember_autologin_invalid', $loginDebugEnabled, [
-                                'selector' => $selector,
                                 'expires_at' => $expiresAt,
                                 'token_match' => $tokenMatches,
                             ]);
@@ -302,11 +301,11 @@ if (!isset($_SESSION['user_id']) && !empty($_COOKIE[REMEMBER_COOKIE_NAME])) {
             }
         } else {
             tos_clear_remember_cookie($isHttps);
-            tos_debug_log('remember_autologin_bad_format', $loginDebugEnabled, ['raw' => $rawRemember]);
+            tos_debug_log('remember_autologin_bad_format', $loginDebugEnabled, ['cookie_length' => strlen($rawRemember)]);
         }
     } else {
         tos_clear_remember_cookie($isHttps);
-        tos_debug_log('remember_autologin_missing_sep', $loginDebugEnabled, ['raw' => $rawRemember]);
+        tos_debug_log('remember_autologin_missing_sep', $loginDebugEnabled, ['cookie_length' => strlen($rawRemember)]);
     }
 }
 
@@ -440,23 +439,58 @@ if (!function_exists('rate_limit_allow')) {
     {
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         $key = $action . ':' . $ip;
+        $bucketFile = tos_runtime_path('rate_limits/' . sha1($key) . '.json');
         $now = time();
 
-        if (!isset($_SESSION['_rate_limits'][$key])) {
-            $_SESSION['_rate_limits'][$key] = ['start' => $now, 'count' => 0];
+        $dir = dirname($bucketFile);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
         }
 
-        $bucket = &$_SESSION['_rate_limits'][$key];
+        $handle = @fopen($bucketFile, 'c+');
+        if (!$handle) {
+            if (!isset($_SESSION['_rate_limits'][$key])) {
+                $_SESSION['_rate_limits'][$key] = ['start' => $now, 'count' => 0];
+            }
+            $bucket = &$_SESSION['_rate_limits'][$key];
+            if (($now - ($bucket['start'] ?? 0)) >= $windowSeconds) {
+                $bucket = ['start' => $now, 'count' => 0];
+            }
+            if (($bucket['count'] ?? 0) >= $limit) {
+                return false;
+            }
+            $bucket['count'] = (int)($bucket['count'] ?? 0) + 1;
+            return true;
+        }
 
-        if (($now - $bucket['start']) >= $windowSeconds) {
+        @flock($handle, LOCK_EX);
+        $raw = stream_get_contents($handle);
+        $bucket = json_decode($raw ?: '', true);
+        if (!is_array($bucket)) {
             $bucket = ['start' => $now, 'count' => 0];
         }
 
-        if ($bucket['count'] >= $limit) {
+        if (($now - (int)($bucket['start'] ?? 0)) >= $windowSeconds) {
+            $bucket = ['start' => $now, 'count' => 0];
+        }
+
+        if ((int)($bucket['count'] ?? 0) >= $limit) {
+            @flock($handle, LOCK_UN);
+            @fclose($handle);
             return false;
         }
 
-        $bucket['count']++;
+        $bucket['count'] = (int)($bucket['count'] ?? 0) + 1;
+        $bucket['start'] = (int)($bucket['start'] ?? $now);
+
+        rewind($handle);
+        ftruncate($handle, 0);
+        fwrite($handle, json_encode($bucket, JSON_UNESCAPED_SLASHES));
+        fflush($handle);
+        @flock($handle, LOCK_UN);
+        @fclose($handle);
+
+        $_SESSION['_rate_limits'][$key] = $bucket;
         return true;
     }
 }
@@ -466,10 +500,25 @@ if (!function_exists('rate_limit_retry_after')) {
     {
         $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         $key = $action . ':' . $ip;
-        if (!isset($_SESSION['_rate_limits'][$key])) {
+        $bucketFile = tos_runtime_path('rate_limits/' . sha1($key) . '.json');
+
+        $bucket = null;
+        if (is_file($bucketFile)) {
+            $raw = @file_get_contents($bucketFile);
+            $decoded = json_decode($raw ?: '', true);
+            if (is_array($decoded)) {
+                $bucket = $decoded;
+            }
+        }
+
+        if ($bucket === null) {
+            $bucket = $_SESSION['_rate_limits'][$key] ?? null;
+        }
+
+        if (!is_array($bucket)) {
             return 0;
         }
-        $bucket = $_SESSION['_rate_limits'][$key];
+
         $elapsed = time() - ($bucket['start'] ?? 0);
         $remaining = $windowSeconds - $elapsed;
         return $remaining > 0 ? $remaining : 0;

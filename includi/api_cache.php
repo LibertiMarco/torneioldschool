@@ -1,10 +1,12 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/env_loader.php';
+
 if (!function_exists('tos_api_cache_base_dir')) {
     function tos_api_cache_base_dir(): string
     {
-        return __DIR__ . '/../cache/api';
+        return tos_runtime_path('cache/api');
     }
 }
 

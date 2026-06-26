@@ -6,8 +6,9 @@ $loginDebugEnabled = getenv('LOGIN_DEBUG') === '1';
 $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
 if ($loginDebugEnabled) {
     // Forza un log locale visibile (fallback se php.ini punta altrove)
+    tos_ensure_parent_dir(tos_runtime_path('logs/php-error.log'));
     ini_set('log_errors', '1');
-    ini_set('error_log', __DIR__ . '/error.txt');
+    ini_set('error_log', tos_runtime_path('logs/php-error.log'));
 }
 if (!function_exists('login_debug_log')) {
     function login_debug_log(string $message, bool $enabled, array $context = []): void
@@ -21,13 +22,11 @@ if (!function_exists('login_debug_log')) {
 }
 
 login_debug_log('page_load', $loginDebugEnabled, [
-    'session_id' => session_id(),
     'method' => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
     'error_log' => ini_get('error_log'),
-    'cookie_sent' => $_COOKIE[session_name()] ?? '(none)',
+    'session_cookie_present' => !empty($_COOKIE[session_name()]),
     'session_status' => session_status(),
     'csrf_token_len' => strlen($_SESSION['_csrf_tokens']['login_form'] ?? ''),
-    'csrf_token_preview' => substr($_SESSION['_csrf_tokens']['login_form'] ?? '', 0, 8),
 ]);
 
 $recaptchaSiteKey = getenv('RECAPTCHA_SITE_KEY') ?: '';
@@ -142,14 +141,10 @@ $csrfValid = ($postedCsrf !== '' && $cookieCsrf !== '' && hash_equals($cookieCsr
     if (!$csrfValid) {
         $error = "Sessione scaduta. Ricarica la pagina e riprova.";
         login_debug_log('csrf_invalid', $loginDebugEnabled, [
-            'session_id' => session_id(),
             'posted_token_len' => strlen($postedCsrf),
             'session_token_len' => strlen($_SESSION['_csrf_tokens']['login_form'] ?? ''),
-            'posted_token_preview' => substr($postedCsrf, 0, 8),
-            'session_token_preview' => substr($_SESSION['_csrf_tokens']['login_form'] ?? '', 0, 8),
             'cookie_token_len' => strlen($cookieCsrf),
-            'cookie_token_preview' => substr($cookieCsrf, 0, 8),
-            'cookie_sent' => $_COOKIE[session_name()] ?? '(none)',
+            'session_cookie_present' => !empty($_COOKIE[session_name()]),
             'headers' => [
                 'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
                 'referer' => $_SERVER['HTTP_REFERER'] ?? '',
@@ -158,7 +153,7 @@ $csrfValid = ($postedCsrf !== '' && $cookieCsrf !== '' && hash_equals($cookieCsr
         ]);
     } elseif (honeypot_triggered()) {
         $error = "Richiesta non valida.";
-        login_debug_log('honeypot_triggered', $loginDebugEnabled, ['session_id' => session_id()]);
+        login_debug_log('honeypot_triggered', $loginDebugEnabled);
     } elseif (!rate_limit_allow('login_attempt', 5, 900)) {
         $wait = rate_limit_retry_after('login_attempt', 900);
         $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
@@ -192,12 +187,14 @@ $csrfValid = ($postedCsrf !== '' && $cookieCsrf !== '' && hash_equals($cookieCsr
                 // Utente corretto ma non verificato: reindirizza a pagina dedicata
                 $pendingEmail = urlencode($email);
                 unset($_SESSION['login_redirect']);
-                header("Location: /verify_pending.php?email={$pendingEmail}");
+                header('Location: ' . login_with_base_path('/verify_pending.php') . "?email={$pendingEmail}");
                 exit;
             } else {
+            // Rigenera l'ID dopo autenticazione per prevenire session fixation.
+            session_regenerate_id(true);
+            $_SESSION['__created_at'] = time();
+
             // imposta le variabili di sessione
-            // Evitiamo di rigenerare l'ID per non perdere il cookie in alcuni browser/proxy
-            // (il session hardening resta attivo altrove)
             $_SESSION['user_id'] = $row['id'];
             $_SESSION['email'] = $row['email'];
             $_SESSION['nome'] = $row['nome'];
@@ -208,7 +205,6 @@ $csrfValid = ($postedCsrf !== '' && $cookieCsrf !== '' && hash_equals($cookieCsr
             login_debug_log('login_success', $loginDebugEnabled, [
                 'user_id' => $row['id'],
                 'remember' => $rememberMe,
-                'session_id' => session_id(),
             ]);
 
             // Imposta sempre il cookie di sessione con durata coerente
@@ -229,7 +225,6 @@ $csrfValid = ($postedCsrf !== '' && $cookieCsrf !== '' && hash_equals($cookieCsr
                 $sessionCookieExpires = 0;
             }
             login_debug_log('session_cookie_set', $loginDebugEnabled, [
-                'session_id' => session_id(),
                 'expires' => $sessionCookieExpires,
                 'secure' => $isHttps,
                 'remember' => $rememberMe,
@@ -289,19 +284,19 @@ $csrfValid = ($postedCsrf !== '' && $cookieCsrf !== '' && hash_equals($cookieCsr
             }
 
             // salva la sessione e poi reindirizza
-            session_write_close();
             $target = login_get_redirect($defaultRedirect);
             unset($_SESSION['login_redirect']);
+            session_write_close();
             header("Location: {$target}");
             exit;
             }
         } else {
             $error = $invalidCredentialsMessage;
-            login_debug_log('invalid_credentials', $loginDebugEnabled, ['email' => $email, 'session_id' => session_id()]);
+            login_debug_log('invalid_credentials', $loginDebugEnabled, ['email' => $email]);
         }
     } else {
         $error = $invalidCredentialsMessage;
-        login_debug_log('user_not_found', $loginDebugEnabled, ['email' => $email, 'session_id' => session_id()]);
+        login_debug_log('user_not_found', $loginDebugEnabled, ['email' => $email]);
     }
 }
 }

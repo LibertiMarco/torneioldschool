@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/env_loader.php';
 
 // Invio email: usa SMTP se configurato, altrimenti mail() con envelope corretto
 if (!function_exists('tos_email_is_deliverable')) {
@@ -228,14 +229,7 @@ if (!function_exists('inviaEmailResetPassword')) {
 
 if (!function_exists('build_absolute_url')) {
     function build_absolute_url(string $path): string {
-        $protoHeader = $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '';
-        $protocol = $protoHeader !== ''
-            ? (stripos($protoHeader, 'https') !== false ? 'https' : 'http')
-            : ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http");
-
-        $host = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? ($_SERVER['HTTP_HOST'] ?? 'localhost');
-        $normalizedPath = '/' . ltrim($path, '/');
-        return "{$protocol}://{$host}{$normalizedPath}";
+        return tos_absolute_url($path);
     }
 }
 

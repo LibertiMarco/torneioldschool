@@ -14,9 +14,9 @@ Options -Indexes
 
 # Blocca accesso web a risorse operative e sensibili che non devono essere pubbliche
 RewriteRule ^(?:\.git|\.sfdx)(?:/|$) - [F,L,NC]
-RewriteRule ^(?:backups|vendor)(?:/|$) - [F,L,NC]
+RewriteRule ^(?:backups|vendor|cache)(?:/|$) - [F,L,NC]
 RewriteRule ^api/script/(?:crea_tabelle|crea_utente|popola_tornei|popola_dati_random|purge_data|reset_classifica|ripristino)\.php$ - [F,L,NC]
-RewriteRule ^(?:api/create_user|build_assets|prep|tmp_run|tmp_check_pg|tmp_check_pg_missing)\.php$ - [F,L,NC]
+RewriteRule ^(?:api/create_user|build_assets|prep|tmp_[^/]+)\.php$ - [F,L,NC]
 
 <FilesMatch "^(?:database_schema\.sql|error\.txt|output\.txt|diff_style\.txt|test_write\.tmp|\.user\.ini)$">
   Require all denied

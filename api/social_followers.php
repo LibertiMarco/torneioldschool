@@ -307,7 +307,7 @@ function youtube_param_attempts(array $normalized): array
 
 function tiktok_token_cache_file(): string
 {
-    return __DIR__ . '/../cache/tiktok_token.json';
+    return tos_runtime_path('cache/tiktok_token.json');
 }
 
 function tiktok_write_cache(array $data): void
@@ -569,8 +569,8 @@ $config = [
     'FALLBACK_YOUTUBE' => getenv('FALLBACK_YOUTUBE') ?: '',
 ];
 
-$cacheFile = __DIR__ . '/../cache/social_followers.json';
-$lockFile = __DIR__ . '/../cache/social_followers.lock';
+$cacheFile = tos_runtime_path('cache/social_followers.json');
+$lockFile = tos_runtime_path('cache/social_followers.lock');
 $cacheTtl = 6 * 60 * 60; // 6 ore
 $staleCacheTtl = 7 * 24 * 60 * 60; // 7 giorni
 $force = isset($_GET['force']) && $_GET['force'] === '1';
