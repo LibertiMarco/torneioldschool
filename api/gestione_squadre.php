@@ -5,6 +5,10 @@ require_once __DIR__ . '/crud/Squadra.php';
 require_once __DIR__ . '/crud/torneo.php';
 require_once __DIR__ . '/../includi/image_optimizer.php';
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_or_same_origin_require('admin_squadre');
+}
+
 $squadra = new Squadra();
 $torneoModel = new Torneo();
 

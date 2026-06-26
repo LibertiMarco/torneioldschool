@@ -1,13 +1,13 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
+require_once __DIR__ . '/../includi/security.php';
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/push_notifications.php';
 require_once __DIR__ . '/../includi/user_features.php';
 require_once __DIR__ . '/../includi/content_sections.php';
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: Mon, 01 Jan 1990 00:00:00 GMT');
 
 $azione = $_GET['azione'] ?? '';
 $mediaBasePath = '/img/blog_media/';
@@ -222,6 +222,10 @@ if ($azione === 'commenti' && isset($_GET['id'])) {
 
 // Elimina commento (owner o admin)
 if ($azione === 'commenti_elimina' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!tos_request_is_same_origin()) {
+        json_response(['error' => 'Richiesta non autorizzata.'], 400);
+    }
+
     if (!isset($_SESSION['user_id'])) {
         json_response(['error' => 'Devi effettuare il login per eliminare un commento.'], 401);
     }
@@ -265,6 +269,10 @@ if ($azione === 'commenti_elimina' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Salva commento
 if ($azione === 'commenti_salva' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!tos_request_is_same_origin()) {
+        json_response(['error' => 'Richiesta non autorizzata.'], 400);
+    }
+
     if (!isset($_SESSION['user_id'])) {
         json_response(['error' => 'Per commentare devi aver effettuato il login.'], 401);
     }

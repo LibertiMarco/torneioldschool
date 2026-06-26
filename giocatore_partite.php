@@ -1,7 +1,5 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/includi/security.php';
 if (!isset($_SESSION['user_id'])) {
     $back = $_SERVER['REQUEST_URI'] ?? '/classifica_giocatori.php';
     $_SESSION['redirect_after_login'] = $back;

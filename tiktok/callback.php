@@ -1,9 +1,11 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/../includi/env_loader.php';
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 function tiktoauth_json(array $payload, int $status = 200): void
 {
@@ -17,6 +19,12 @@ $state = isset($_GET['state']) ? (string)$_GET['state'] : null;
 
 if ($code === '') {
     tiktoauth_json(['ok' => false, 'error' => 'Parametro code mancante'], 400);
+}
+
+$expectedState = (string)($_SESSION['tiktok_oauth_state'] ?? '');
+unset($_SESSION['tiktok_oauth_state']);
+if ($state === null || $expectedState === '' || !hash_equals($expectedState, $state)) {
+    tiktoauth_json(['ok' => false, 'error' => 'State OAuth non valido'], 400);
 }
 
 $clientKey = trim((string)getenv('TIKTOK_CLIENT_KEY'));

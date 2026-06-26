@@ -1,6 +1,9 @@
 ﻿<?php
 require_once __DIR__ . '/../includi/security.php';
 header('Content-Type: application/json');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: Mon, 01 Jan 1990 00:00:00 GMT');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -13,6 +16,12 @@ $data = json_decode($raw ?? '', true);
 if (!is_array($data)) {
     http_response_code(400);
     echo json_encode(['error' => 'Payload non valido']);
+    exit;
+}
+
+if (!tos_request_is_same_origin()) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Richiesta non autorizzata']);
     exit;
 }
 

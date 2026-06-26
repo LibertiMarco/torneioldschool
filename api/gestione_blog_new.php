@@ -1,5 +1,8 @@
 ﻿<?php
 require_once __DIR__ . '/../includi/admin_guard.php';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  csrf_or_same_origin_require('admin_blog');
+}
 
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/mail_helper.php';

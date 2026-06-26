@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/../includi/security.php';
 header('Content-Type: application/json');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: Mon, 01 Jan 1990 00:00:00 GMT');
 
 // Consent proof for anonymous visitors: store hashed session + truncated IP/UA
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -88,6 +91,10 @@ if ($method === 'GET') {
 }
 
 if (in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
+    if (!tos_request_is_same_origin()) {
+        json_response(400, ['error' => 'Richiesta non autorizzata']);
+    }
+
     $raw = file_get_contents('php://input');
     $data = json_decode($raw ?? '', true);
     if (!is_array($data)) {
@@ -133,6 +140,10 @@ if (in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
 }
 
 if ($method === 'DELETE') {
+    if (!tos_request_is_same_origin()) {
+        json_response(400, ['error' => 'Richiesta non autorizzata']);
+    }
+
     $stmt = $conn->prepare("DELETE FROM consensi_anonimi WHERE session_hash = ?");
     $stmt->bind_param("s", $sessHash);
     $stmt->execute();

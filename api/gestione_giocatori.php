@@ -78,6 +78,10 @@ $currentAssocOp = isset($_GET['assoc_op']) ? trim($_GET['assoc_op']) : '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = $_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     if (!csrf_is_valid($token, 'admin_giocatori')) {
+        if (!tos_request_is_same_origin()) {
+            http_response_code(400);
+            exit('Richiesta non autorizzata.');
+        }
         // Se il token manca o Ã¨ scaduto ma l'admin ha comunque la sessione attiva,
         // proseguiamo (solo area admin) ma segnaliamo lato UI che Ã¨ stato rigenerato.
         $csrfWarning = true;
@@ -535,8 +539,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['elimina_goal_extra'])
 }
 
 // --- ELIMINA ---
-if (isset($_GET['elimina'])) {
-    $idElimina = (int)$_GET['elimina'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['elimina'])) {
+    $idElimina = (int)$_POST['elimina'];
     $recordElimina = $giocatore->getById($idElimina);
     if ($giocatore->elimina($idElimina) && $recordElimina && isset($recordElimina['foto'])) {
         cancellaFotoGiocatore($recordElimina['foto']);
@@ -1340,6 +1344,11 @@ $goalExtraTeamMapJson = htmlspecialchars(
     </div>
 </div>
 
+<form method="POST" id="deletePlayerForm" class="hidden">
+    <?= csrf_field('admin_giocatori') ?>
+    <input type="hidden" name="elimina" id="deletePlayerInput" value="">
+</form>
+
 <div class="modal-overlay hidden" id="removeAssocModal">
     <div class="modal-window">
         <h3>Rimuovere l'associazione?</h3>
@@ -2001,7 +2010,11 @@ document.addEventListener("click", event => {
 if (confirmDeleteBtn) {
     confirmDeleteBtn.addEventListener("click", () => {
         if (!pendingDeleteId) return;
-        window.location.href = `?elimina=${encodeURIComponent(pendingDeleteId)}`;
+        const deleteForm = document.getElementById("deletePlayerForm");
+        const deleteInput = document.getElementById("deletePlayerInput");
+        if (!deleteForm || !deleteInput) return;
+        deleteInput.value = pendingDeleteId;
+        deleteForm.submit();
     });
 }
 

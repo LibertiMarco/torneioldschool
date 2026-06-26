@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/../includi/env_loader.php';
 
 function tiktoauth_abort(string $message, int $status = 500): void
@@ -13,7 +14,8 @@ function tiktoauth_abort(string $message, int $status = 500): void
 $clientKey = trim((string)getenv('TIKTOK_CLIENT_KEY'));
 $redirectUri = trim((string)getenv('TIKTOK_REDIRECT_URI'));
 $scope = isset($_GET['scope']) && $_GET['scope'] !== '' ? $_GET['scope'] : 'user.info.basic';
-$state = isset($_GET['state']) && $_GET['state'] !== '' ? $_GET['state'] : bin2hex(random_bytes(8));
+$state = bin2hex(random_bytes(16));
+$_SESSION['tiktok_oauth_state'] = $state;
 
 if ($clientKey === '') {
     tiktoauth_abort('Config mancante: TIKTOK_CLIENT_KEY', 400);

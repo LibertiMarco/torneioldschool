@@ -1,5 +1,10 @@
 ﻿<?php
 error_reporting(E_ALL);
+require_once __DIR__ . '/../../includi/security.php';
+if (!tos_is_cli()) {
+    http_response_code(403);
+    exit('Accesso consentito solo da CLI.');
+}
 ini_set('display_errors', '1');
 
 $host = 'localhost';

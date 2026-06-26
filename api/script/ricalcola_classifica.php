@@ -1,4 +1,9 @@
 <?php
+if (PHP_SAPI !== 'cli') {
+  require_once __DIR__ . '/../../includi/admin_guard.php';
+  header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+}
+
 require __DIR__ . '/../../includi/db.php';
 
 /**
@@ -12,7 +17,7 @@ function arg(string $name, int $cliIndex, array $argv): ?string {
   if (PHP_SAPI === 'cli') {
     return $argv[$cliIndex] ?? null;
   }
-  return $_GET[$name] ?? null;
+  return $_POST[$name] ?? $_GET[$name] ?? null;
 }
 
 function getTornei(mysqli $conn): array {
@@ -59,7 +64,8 @@ function renderForm(mysqli $conn, string $message = ''): void {
       <?php if (empty($tornei)): ?>
         <p class="empty">Nessun torneo trovato.</p>
       <?php else: ?>
-        <form method="get">
+        <form method="post">
+          <?= csrf_field('rebuild_classifica') ?>
           <label for="torneo">Seleziona torneo</label>
           <select id="torneo" name="torneo" required>
             <option value="">-- scegli --</option>
@@ -80,6 +86,14 @@ function renderForm(mysqli $conn, string $message = ''): void {
 
 $torneo = trim((string)arg('torneo', 1, $argv ?? []));
 $confirm = trim((string)arg('confirm', 2, $argv ?? []));
+
+if (PHP_SAPI !== 'cli' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+  renderForm($conn, 'Seleziona un torneo e conferma per ricalcolare.');
+}
+
+if (PHP_SAPI !== 'cli') {
+  csrf_require('rebuild_classifica');
+}
 
 if (PHP_SAPI !== 'cli' && ($torneo === '' || strtolower($confirm) !== 'yes')) {
   renderForm($conn, 'Seleziona un torneo e conferma per ricalcolare.');

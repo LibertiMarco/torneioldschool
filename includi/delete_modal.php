@@ -14,6 +14,9 @@
         </div>
     </div>
 </div>
-<form id="deleteForm" method="GET" class="hidden">
+<form id="deleteForm" method="POST" class="hidden">
+    <?php if (isset($deleteModalCsrfKey) && is_string($deleteModalCsrfKey) && $deleteModalCsrfKey !== ''): ?>
+        <?= csrf_field($deleteModalCsrfKey) ?>
+    <?php endif; ?>
     <input type="hidden" name="elimina" id="deleteInputId">
 </form>

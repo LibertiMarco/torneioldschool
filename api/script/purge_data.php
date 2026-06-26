@@ -1,6 +1,11 @@
 <?php
 // Uso: php api/script/purge_data.php
 require_once __DIR__ . '/../../includi/db.php';
+require_once __DIR__ . '/../../includi/security.php';
+if (!tos_is_cli()) {
+    http_response_code(403);
+    exit('Accesso consentito solo da CLI.');
+}
 
 $RETENTION_EVENTS_DAYS = 45;     // eventi_utente (tracking)
 $RETENTION_LOG_DAYS = 365;       // consensi_log, newsletter_log

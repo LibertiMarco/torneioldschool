@@ -1,6 +1,9 @@
 <?php
-session_start();
+require_once __DIR__ . '/../includi/security.php';
 header('Content-Type: application/json');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: Mon, 01 Jan 1990 00:00:00 GMT');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
@@ -55,6 +58,10 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST' || $method === 'PUT' || $method === 'PATCH') {
+    if (!tos_request_is_same_origin()) {
+        json_response(400, ['error' => 'Richiesta non autorizzata']);
+    }
+
     $raw = file_get_contents('php://input');
     $data = json_decode($raw ?? '', true);
     if (!is_array($data)) {
@@ -74,6 +81,10 @@ if ($method === 'POST' || $method === 'PUT' || $method === 'PATCH') {
 }
 
 if ($method === 'DELETE') {
+    if (!tos_request_is_same_origin()) {
+        json_response(400, ['error' => 'Richiesta non autorizzata']);
+    }
+
     $consents = consent_save($conn, $userId, $email, [
         'marketing' => 0,
         'newsletter' => 0,

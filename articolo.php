@@ -1,8 +1,5 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
+require_once __DIR__ . '/includi/security.php';
 $requestedId = (int)($_GET['id'] ?? 0);
 $requestedTitle = trim($_GET['titolo'] ?? '');
 $isLogged = isset($_SESSION['user_id']);

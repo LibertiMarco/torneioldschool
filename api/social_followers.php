@@ -13,6 +13,45 @@ function json_response(array $data, int $status = 200): void
     exit;
 }
 
+function social_request_is_same_origin(): bool
+{
+    $host = trim((string)($_SERVER['HTTP_HOST'] ?? ''));
+    if ($host === '') {
+        return false;
+    }
+
+    $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
+    $current = parse_url(($isHttps ? 'https' : 'http') . '://' . $host);
+    if (!is_array($current)) {
+        return false;
+    }
+
+    foreach (['HTTP_ORIGIN', 'HTTP_REFERER'] as $headerName) {
+        $value = trim((string)($_SERVER[$headerName] ?? ''));
+        if ($value === '') {
+            continue;
+        }
+
+        $candidate = parse_url($value);
+        if (!is_array($candidate)) {
+            continue;
+        }
+
+        $currentScheme = strtolower((string)($current['scheme'] ?? ''));
+        $currentHost = strtolower((string)($current['host'] ?? ''));
+        $currentPort = isset($current['port']) ? (int)$current['port'] : ($currentScheme === 'https' ? 443 : 80);
+        $candidateScheme = strtolower((string)($candidate['scheme'] ?? ''));
+        $candidateHost = strtolower((string)($candidate['host'] ?? ''));
+        $candidatePort = isset($candidate['port']) ? (int)$candidate['port'] : ($candidateScheme === 'https' ? 443 : 80);
+
+        if ($candidateScheme === $currentScheme && $candidateHost === $currentHost && $candidatePort === $currentPort) {
+            return true;
+        }
+    }
+
+    return strtolower(trim((string)($_SERVER['HTTP_SEC_FETCH_SITE'] ?? ''))) === 'same-origin';
+}
+
 function ensure_parent_dir(string $path): void
 {
     $dir = dirname($path);
@@ -535,6 +574,9 @@ $lockFile = __DIR__ . '/../cache/social_followers.lock';
 $cacheTtl = 6 * 60 * 60; // 6 ore
 $staleCacheTtl = 7 * 24 * 60 * 60; // 7 giorni
 $force = isset($_GET['force']) && $_GET['force'] === '1';
+if ($force && !social_request_is_same_origin()) {
+    $force = false;
+}
 $cachedPayload = read_json_file($cacheFile);
 $cacheAge = file_exists($cacheFile) ? max(0, time() - (int)filemtime($cacheFile)) : null;
 

@@ -1,7 +1,9 @@
 <?php
-session_start();
+require_once __DIR__ . '/../includi/security.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Robots-Tag: noindex, nofollow', true);
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
@@ -92,6 +94,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 // POST follow/unfollow
+if (!tos_request_is_same_origin()) {
+    http_response_code(400);
+    respond(['error' => 'Richiesta non autorizzata']);
+}
+
 $tipo = strtolower(clean_str($_POST['tipo'] ?? ''));
 $azione = strtolower(clean_str($_POST['azione'] ?? 'follow'));
 $torneo = clean_str($_POST['torneo'] ?? '');

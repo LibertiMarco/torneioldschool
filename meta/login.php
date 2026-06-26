@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/../includi/env_loader.php';
 
 $appId = trim((string)getenv('META_APP_ID'));
@@ -8,7 +9,8 @@ $redirectUri = trim((string)getenv('META_REDIRECT_URI'));
 $scope = isset($_GET['scope']) && $_GET['scope'] !== ''
     ? $_GET['scope']
     : 'pages_show_list,pages_read_engagement,pages_read_user_content,instagram_basic';
-$state = isset($_GET['state']) && $_GET['state'] !== '' ? $_GET['state'] : bin2hex(random_bytes(8));
+$state = bin2hex(random_bytes(16));
+$_SESSION['meta_oauth_state'] = $state;
 
 if ($redirectUri === '') {
     // fallback di sicurezza per evitare errori di config

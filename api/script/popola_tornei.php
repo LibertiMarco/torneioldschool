@@ -1,5 +1,10 @@
 <?php
 require_once __DIR__ . '/../../includi/db.php'; // connessione al DB
+require_once __DIR__ . '/../../includi/security.php';
+if (!tos_is_cli()) {
+    http_response_code(403);
+    exit('Accesso consentito solo da CLI.');
+}
 
 // Disattiva avvisi per evitare output indesiderato
 error_reporting(E_ALL);

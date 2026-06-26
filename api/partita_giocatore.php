@@ -1,12 +1,38 @@
 ﻿<?php
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/security.php';
+require_once __DIR__ . '/../includi/user_features.php';
 require_once __DIR__ . '/../includi/push_notifications.php';
 require_once __DIR__ . '/../includi/partite_schema.php';
 require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 require_once __DIR__ . '/crud/partita.php';
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+
+function partita_giocatore_json_error(string $message, int $status = 400): void {
+    http_response_code($status);
+    echo json_encode(["error" => $message], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if (!isset($_SESSION['user_id'])) {
+    partita_giocatore_json_error('Non autenticato', 401);
+}
+
+if (!user_has_admin_access((string)($_SESSION['ruolo'] ?? ''))) {
+    partita_giocatore_json_error('Accesso negato', 403);
+}
 
 $azione = $_GET['azione'] ?? $_POST['azione'] ?? '';
+$writeActions = ['add', 'edit', 'delete'];
+if (in_array($azione, $writeActions, true)) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        partita_giocatore_json_error('Metodo non consentito', 405);
+    }
+    if (!tos_request_is_same_origin()) {
+        partita_giocatore_json_error('Richiesta non autorizzata', 400);
+    }
+}
 
 /* ==========================================================
    ASSICURA COLONNA AUTOGOL
@@ -19,8 +45,7 @@ function ensure_autogol_column(mysqli $conn): void {
 }
 ensure_autogol_column($conn);
 if (!function_exists('partita_giocatore_resolved_team_expr')) {
-    echo json_encode(["error" => "Helper squadra partita non disponibile"]);
-    exit;
+    partita_giocatore_json_error("Helper squadra partita non disponibile", 500);
 }
 
 /* ==========================================================

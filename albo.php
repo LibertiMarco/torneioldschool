@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/seo.php';
 require_once __DIR__ . '/includi/content_sections.php';
 $baseUrl = seo_base_url();

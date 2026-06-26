@@ -5,6 +5,11 @@ require_once __DIR__ . '/crud/utente.php';
 require_once __DIR__ . '/../includi/user_features.php';
 $utente = new Utente();
 $featureDefinitions = user_feature_definitions();
+$csrfKey = 'admin_utenti';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_or_same_origin_require($csrfKey);
+}
 
 // --- CREA ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
@@ -40,8 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
 }
 
 // --- ELIMINA ---
-if (isset($_GET['elimina'])) {
-    $utente->elimina((int)$_GET['elimina']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['elimina'])) {
+    $utente->elimina((int)$_POST['elimina']);
     header("Location: gestione_utenti.php");
     exit;
 }
@@ -312,6 +317,7 @@ $lista = $utente->getAll();
         <div class="create-register-box">
           <h2>Aggiungi un nuovo utente</h2>
           <form method="POST" class="admin-form create-register-form" id="formCreaUtente" autocomplete="off">
+            <?= csrf_field($csrfKey) ?>
             <label for="crea_nome">Nome</label>
             <input type="text" id="crea_nome" name="nome" required>
 
@@ -384,6 +390,7 @@ $lista = $utente->getAll();
 
       <!-- FORM MODIFICA -->
       <form method="POST" class="admin-form form-modifica hidden" id="formModifica">
+        <?= csrf_field($csrfKey) ?>
         <h2>Modifica Utente</h2>
         <div class="form-group">
           <label>Seleziona Utente</label>
@@ -459,9 +466,10 @@ $lista = $utente->getAll();
     </section>
     </main>
 
-    <div id="footer-container"></div>
+  <div id="footer-container"></div>
 
-    <?php include __DIR__ . '/../includi/delete_modal.php'; ?>
+  <?php $deleteModalCsrfKey = $csrfKey; ?>
+  <?php include __DIR__ . '/../includi/delete_modal.php'; ?>
 
     <!-- SCRIPT SWITCH SEZIONI -->
     <script>

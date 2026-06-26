@@ -1,18 +1,18 @@
 <?php
-require __DIR__ . '/../../includi/db.php'; // 🔹 aggiorna il percorso se serve
+require_once __DIR__ . '/../../includi/security.php';
 
-// ✅ Controllo parametri
-if (!isset($_GET['torneo']) || empty($_GET['torneo'])) {
-    die("❌ Errore: specifica il torneo con ?torneo=NomeTorneo");
+if (!tos_is_cli()) {
+    http_response_code(403);
+    exit('Accesso consentito solo da CLI.');
 }
 
-if (!isset($_GET['confirm']) || $_GET['confirm'] !== 'yes') {
-    die("⚠️ Conferma richiesta. Aggiungi '&confirm=yes' all'URL per eseguire il reset.");
+require __DIR__ . '/../../includi/db.php';
+
+$torneo = trim((string)($argv[1] ?? ''));
+if ($torneo === '') {
+    exit("Errore: specifica il torneo. Uso: php api/script/reset_classifica.php torneo_slug\n");
 }
 
-$torneo = $_GET['torneo'];
-
-// 🔹 Query per azzerare solo le squadre del torneo scelto
 $sql = "
     UPDATE squadre
     SET
@@ -28,14 +28,19 @@ $sql = "
 ";
 
 $stmt = $conn->prepare($sql);
+if (!$stmt) {
+    fwrite(STDERR, "Errore prepare: " . $conn->error . "\n");
+    exit(1);
+}
+
 $stmt->bind_param("s", $torneo);
 
 if ($stmt->execute()) {
-    echo "✅ Classifica del torneo '{$torneo}' azzerata con successo!";
+    echo "Classifica del torneo '{$torneo}' azzerata con successo.\n";
 } else {
-    echo "❌ Errore durante il reset: " . $stmt->error;
+    fwrite(STDERR, "Errore durante il reset: " . $stmt->error . "\n");
+    exit(1);
 }
 
 $stmt->close();
 $conn->close();
-?>

@@ -6,6 +6,10 @@ require_once __DIR__ . '/../includi/partite_schema.php';
 require_once __DIR__ . '/../includi/push_notifications.php';
 require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  csrf_or_same_origin_require('admin_partite');
+}
+
 $errore = '';
 $successo = '';
 $azione = $_POST['azione'] ?? '';

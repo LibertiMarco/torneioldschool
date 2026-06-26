@@ -8,6 +8,11 @@ $squadraModel = new Squadra();
 require_once __DIR__ . '/../includi/image_optimizer.php';
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/torneo_phase_rules.php';
+$csrfKey = 'admin_tornei';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_or_same_origin_require($csrfKey);
+}
 
 function intOrZero($value): int {
     return max(0, (int)$value);
@@ -521,9 +526,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
 }
 
 // --- ELIMINA ---
-if (isset($_GET['elimina'])) {
-    $id = (int)$_GET['elimina'];
-    $redirectSezione = normalizeTorneoSezioneValue($_GET['sezione'] ?? 'calcio');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['elimina'])) {
+    $id = (int)$_POST['elimina'];
+    $redirectSezione = normalizeTorneoSezioneValue($_POST['sezione'] ?? 'calcio');
     $record = $torneo->getById($id);
 
     if ($record) {
@@ -774,6 +779,7 @@ if ($lista instanceof mysqli_result) {
 
             <!-- FORM CREAZIONE -->
             <form method="POST" class="admin-form form-crea" enctype="multipart/form-data">
+                <?= csrf_field($csrfKey) ?>
                 <h2>Aggiungi Torneo</h2>
                 <div class="form-group">
                     <label for="sezione">Sezione</label>
@@ -892,6 +898,7 @@ if ($lista instanceof mysqli_result) {
 
             <!-- FORM MODIFICA -->
             <form method="POST" class="admin-form form-modifica hidden" id="formModifica" enctype="multipart/form-data">
+                <?= csrf_field($csrfKey) ?>
                 <h2>Modifica Torneo</h2>
                 <input type="hidden" name="torneo_slug_corrente" id="mod_torneo_slug_corrente" value="">
 
@@ -1073,6 +1080,7 @@ if ($lista instanceof mysqli_result) {
 
   <div id="footer-container"></div>
 
+  <?php $deleteModalCsrfKey = $csrfKey; ?>
   <?php include __DIR__ . '/../includi/delete_modal.php'; ?>
 
     <script>

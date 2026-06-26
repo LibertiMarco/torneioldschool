@@ -4,6 +4,10 @@ require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/image_optimizer.php';
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_or_same_origin_require('admin_staff');
+}
+
 $errors = [];
 $messages = [];
 $staffList = [];

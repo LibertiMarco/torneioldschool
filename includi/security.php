@@ -353,6 +353,87 @@ if (!function_exists('csrf_field')) {
     }
 }
 
+if (!function_exists('tos_origin_parts')) {
+    function tos_origin_parts(?string $url): ?array
+    {
+        if (!$url) {
+            return null;
+        }
+
+        $parts = parse_url($url);
+        if ($parts === false) {
+            return null;
+        }
+
+        $scheme = strtolower((string)($parts['scheme'] ?? ''));
+        $host = strtolower((string)($parts['host'] ?? ''));
+        if ($scheme === '' || $host === '') {
+            return null;
+        }
+
+        $port = isset($parts['port']) ? (int)$parts['port'] : ($scheme === 'https' ? 443 : 80);
+        return [$scheme, $host, $port];
+    }
+}
+
+if (!function_exists('tos_current_origin')) {
+    function tos_current_origin(): ?string
+    {
+        $host = trim((string)($_SERVER['HTTP_HOST'] ?? ''));
+        if ($host === '') {
+            return null;
+        }
+
+        $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
+        return ($isHttps ? 'https' : 'http') . '://' . $host;
+    }
+}
+
+if (!function_exists('tos_is_cli')) {
+    function tos_is_cli(): bool
+    {
+        return PHP_SAPI === 'cli';
+    }
+}
+
+if (!function_exists('tos_request_is_same_origin')) {
+    function tos_request_is_same_origin(): bool
+    {
+        $current = tos_origin_parts(tos_current_origin());
+        if ($current === null) {
+            return false;
+        }
+
+        foreach (['HTTP_ORIGIN', 'HTTP_REFERER'] as $headerName) {
+            $headerValue = trim((string)($_SERVER[$headerName] ?? ''));
+            if ($headerValue === '') {
+                continue;
+            }
+
+            $candidate = tos_origin_parts($headerValue);
+            if ($candidate !== null && $candidate === $current) {
+                return true;
+            }
+        }
+
+        $fetchSite = strtolower(trim((string)($_SERVER['HTTP_SEC_FETCH_SITE'] ?? '')));
+        return $fetchSite === 'same-origin';
+    }
+}
+
+if (!function_exists('csrf_or_same_origin_require')) {
+    function csrf_or_same_origin_require(string $key = 'default'): void
+    {
+        $token = $_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        if (csrf_is_valid($token, $key) || tos_request_is_same_origin()) {
+            return;
+        }
+
+        http_response_code(400);
+        exit('Richiesta non autorizzata.');
+    }
+}
+
 // Simple rate limiting (session + IP based)
 if (!function_exists('rate_limit_allow')) {
     function rate_limit_allow(string $action, int $limit, int $windowSeconds): bool

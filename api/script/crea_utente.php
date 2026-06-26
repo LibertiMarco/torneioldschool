@@ -1,38 +1,34 @@
 <?php
-// Connessione al database
-$host = "localhost";
-$user = "root";
-$pass = "";
-$db = "torneioldschool";
+require_once __DIR__ . '/../../includi/security.php';
 
-$conn = new mysqli($host, $user, $pass, $db);
-if ($conn->connect_error) {
-  die("Connessione fallita: " . $conn->connect_error);
+if (!tos_is_cli()) {
+    http_response_code(403);
+    exit('Accesso consentito solo da CLI.');
 }
 
-// Dati dell'utente da creare
-$email = "marcoliberti001@gmail.com";   // <-- cambialo
-$password_piana = "Marco01";            // <-- cambialo
-$ruolo = "admin";                 // <-- puoi mettere "utente", "admin", ecc.
+require_once __DIR__ . '/../crud/utente.php';
 
-// Genera l'hash sicuro della password
-$password_hash = password_hash($password_piana, PASSWORD_DEFAULT);
+$email = trim((string)($argv[1] ?? ''));
+$password = trim((string)($argv[2] ?? ''));
+$ruolo = trim((string)($argv[3] ?? 'user'));
+$nome = trim((string)($argv[4] ?? 'Admin'));
+$cognome = trim((string)($argv[5] ?? ''));
 
-// Inserisci nel DB
-$sql = "INSERT INTO utenti (email, password, ruolo) VALUES (?, ?, ?)";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("sss", $email, $password_hash, $ruolo);
-
-if ($stmt->execute()) {
-  echo "✅ Utente creato con successo!<br>";
-  echo "Email: $email<br>";
-  echo "Password: $password_piana<br>";
-  echo "Tipo utenza: $ruolo<br>";
-  echo "Hash salvato nel DB:<br>$password_hash";
-} else {
-  echo "❌ Errore: " . $stmt->error;
+if ($email === '' || $password === '') {
+    exit("Uso: php api/script/crea_utente.php email password [ruolo] [nome] [cognome]\n");
 }
 
-$stmt->close();
-$conn->close();
-?>
+$allowedRoles = ['user', 'admin', 'sysadmin'];
+if (!in_array($ruolo, $allowedRoles, true)) {
+    exit("Errore: ruolo non valido. Valori ammessi: user, admin, sysadmin.\n");
+}
+
+$utente = new Utente();
+$result = $utente->crea($email, $nome, $cognome, $password, $ruolo);
+
+if (!empty($result['error'])) {
+    fwrite(STDERR, "Errore: " . $result['error'] . "\n");
+    exit(1);
+}
+
+echo "Utente creato correttamente: {$email} ({$ruolo})\n";

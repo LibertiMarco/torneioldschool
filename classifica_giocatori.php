@@ -1,7 +1,5 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/includi/security.php';
 $loggedIn = isset($_SESSION['user_id']);
 require_once __DIR__ . '/includi/seo.php';
 $baseUrl = seo_base_url();

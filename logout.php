@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/includi/security.php';
 $userId = $_SESSION['user_id'] ?? null;
 
 if ($userId) {

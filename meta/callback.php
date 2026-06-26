@@ -1,9 +1,11 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/../includi/env_loader.php';
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 function meta_json(array $payload, int $status = 200): void
 {
@@ -131,6 +133,12 @@ $pageHint = isset($_GET['page_id']) ? trim((string)$_GET['page_id']) : '';
 
 if ($code === '') {
     meta_json(['ok' => false, 'error' => 'Parametro code mancante'], 400);
+}
+
+$expectedState = (string)($_SESSION['meta_oauth_state'] ?? '');
+unset($_SESSION['meta_oauth_state']);
+if ($state === null || $expectedState === '' || !hash_equals($expectedState, $state)) {
+    meta_json(['ok' => false, 'error' => 'State OAuth non valido'], 400);
 }
 
 $appId = trim((string)getenv('META_APP_ID'));

@@ -1,7 +1,9 @@
 <?php
-session_start();
+require_once __DIR__ . '/../includi/security.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Robots-Tag: noindex, nofollow', true);
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 mysqli_report(MYSQLI_REPORT_OFF);
 
 if (!isset($_SESSION['user_id'])) {
@@ -18,6 +20,14 @@ $notifications = [];
 $unreadCount = 0;
 $markRead = isset($_GET['mark_read']) && $_GET['mark_read'] === '1';
 $badgeOnly = isset($_GET['badge_only']) && $_GET['badge_only'] === '1';
+
+if (($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) || $markRead) {
+    if (!tos_request_is_same_origin()) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Richiesta non autorizzata']);
+        exit;
+    }
+}
 
 // Elimina una singola notifica (generica o commento)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
