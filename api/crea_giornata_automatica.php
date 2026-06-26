@@ -544,7 +544,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
 </main>
 
 <div id="footer-container"></div>
-<datalist id="availableFields"></datalist>
 
 <script>
   const apiUrl = '/api/crea_giornata_automatica_api.php';
@@ -582,7 +581,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     previewMessageArea: document.getElementById('previewMessageArea'),
     revalidatePreviewBtn: document.getElementById('revalidatePreviewBtn'),
     createMatchesBtn: document.getElementById('createMatchesBtn'),
-    fieldList: document.getElementById('availableFields'),
   };
 
   let previewValidationTimer = null;
@@ -689,10 +687,36 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     };
   }
 
-  function buildFieldOptions() {
-    els.fieldList.innerHTML = (state.context?.campi || [])
-      .map(field => `<option value="${escapeHtml(field)}"></option>`)
-      .join('');
+  function availableFields() {
+    const seen = new Set();
+    return (state.context?.campi || [])
+      .map(field => String(field ?? '').trim())
+      .filter(field => {
+        const key = field.toLowerCase();
+        if (!field || seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+  }
+
+  function fieldSelectOptions(currentValue = '') {
+    const fields = availableFields();
+    const normalizedCurrentValue = String(currentValue ?? '').trim();
+    const selectedFieldKey = normalizedCurrentValue.toLowerCase();
+    const hasCurrentValue = selectedFieldKey !== '' && fields.some(field => field.toLowerCase() === selectedFieldKey);
+    const placeholder = fields.length ? '-- Seleziona campo --' : 'Nessun campo disponibile';
+    const options = [
+      `<option value="" ${(selectedFieldKey === '' || !hasCurrentValue) ? 'selected' : ''}>${placeholder}</option>`,
+    ];
+
+    fields.forEach(field => {
+      const selected = field.toLowerCase() === selectedFieldKey ? 'selected' : '';
+      options.push(`<option value="${escapeAttr(field)}" ${selected}>${escapeHtml(field)}</option>`);
+    });
+
+    return options.join('');
   }
 
   function renderSummary() {
@@ -749,6 +773,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
 
   function addSlotRow(slot = {}) {
     const quantity = Math.max(1, parseInt(slot.quantita, 10) || 1);
+    const fields = availableFields();
     const wrapper = document.createElement('div');
     wrapper.className = 'auto-slot-row';
     wrapper.innerHTML = `
@@ -762,7 +787,9 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       </div>
       <div class="auto-form-group">
         <label>Campo</label>
-        <input type="text" data-field="campo" list="availableFields" placeholder="Es. Campo 1" value="${escapeAttr(slot.campo || '')}">
+        <select data-field="campo" ${fields.length ? '' : 'disabled'}>
+          ${fieldSelectOptions(slot.campo || '')}
+        </select>
       </div>
       <div class="auto-form-group">
         <label>Partite contemporanee</label>
@@ -962,7 +989,9 @@ require_once __DIR__ . '/../includi/admin_guard.php';
           <input type="time" data-field="ora" value="${escapeAttr((row.ora || '').slice(0, 5))}">
         </td>
         <td>
-          <input type="text" data-field="campo" list="availableFields" value="${escapeAttr(row.campo || '')}">
+          <select data-field="campo" ${availableFields().length ? '' : 'disabled'}>
+            ${fieldSelectOptions(row.campo || '')}
+          </select>
         </td>
         <td>${row.giornata ?? ''}</td>
         <td>Regular season</td>
@@ -1057,7 +1086,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       state.preview = null;
       state.selectedTeams = (context.squadre || []).map(team => Number(team.id));
       els.giornataInput.value = Number(context.prossima_giornata || 1);
-      buildFieldOptions();
       renderSummary();
       renderTeams();
       renderSlots();
