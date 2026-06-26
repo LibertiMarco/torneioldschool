@@ -193,23 +193,71 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       flex-direction: column;
       gap: 12px;
     }
-    .auto-slot-row,
+    .auto-slot-editor,
+    .auto-slot-item,
     .auto-availability-row {
-      display: grid;
-      grid-template-columns: repeat(12, minmax(0, 1fr));
-      gap: 12px;
-      align-items: end;
       padding: 14px;
       overflow: hidden;
       border-radius: 14px;
       background: #f8fbff;
       border: 1px solid #dce4ef;
     }
-    .auto-slot-row .auto-form-group:nth-child(1) { grid-column: span 3; }
-    .auto-slot-row .auto-form-group:nth-child(2) { grid-column: span 2; }
-    .auto-slot-row .auto-form-group:nth-child(3) { grid-column: span 4; }
-    .auto-slot-row .auto-form-group:nth-child(4) { grid-column: span 2; }
-    .auto-slot-row .auto-slot-remove { grid-column: span 1; }
+    .auto-slot-editor-grid,
+    .auto-availability-row {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+    .auto-slot-editor-grid .auto-form-group:nth-child(1) { grid-column: span 3; }
+    .auto-slot-editor-grid .auto-form-group:nth-child(2) { grid-column: span 2; }
+    .auto-slot-editor-grid .auto-form-group:nth-child(3) { grid-column: span 4; }
+    .auto-slot-editor-grid .auto-form-group:nth-child(4) { grid-column: span 2; }
+    .auto-slot-editor-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 12px;
+    }
+    .auto-slot-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: #fbfdff;
+    }
+    .auto-slot-item-main {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+    .auto-slot-item-title {
+      color: #15293e;
+      font-weight: 800;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+    .auto-slot-item-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .auto-slot-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: #edf2f7;
+      color: #334155;
+      font-size: 0.82rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .auto-slot-item .auto-slot-remove {
+      padding: 8px 12px;
+      flex-shrink: 0;
+    }
     .auto-availability-team {
       border: 1px solid #dce4ef;
       border-radius: 16px;
@@ -413,11 +461,10 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       .auto-card--narrow {
         grid-column: span 12;
       }
-      .auto-slot-row .auto-form-group:nth-child(1),
-      .auto-slot-row .auto-form-group:nth-child(2),
-      .auto-slot-row .auto-form-group:nth-child(3),
-      .auto-slot-row .auto-form-group:nth-child(4),
-      .auto-slot-row .auto-slot-remove,
+      .auto-slot-editor-grid .auto-form-group:nth-child(1),
+      .auto-slot-editor-grid .auto-form-group:nth-child(2),
+      .auto-slot-editor-grid .auto-form-group:nth-child(3),
+      .auto-slot-editor-grid .auto-form-group:nth-child(4),
       .auto-availability-row .auto-form-group:nth-child(1),
       .auto-availability-row .auto-form-group:nth-child(2),
       .auto-availability-row .auto-form-group:nth-child(3),
@@ -431,6 +478,37 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       }
       .auto-matchday-container {
         padding: 24px 18px;
+      }
+      .auto-slot-editor {
+        padding: 12px;
+      }
+      .auto-slot-editor-actions {
+        justify-content: stretch;
+      }
+      .auto-slot-editor-actions .auto-btn {
+        width: 100%;
+      }
+      .auto-slot-item {
+        padding: 8px 10px;
+        gap: 8px;
+        align-items: flex-start;
+      }
+      .auto-slot-item-main {
+        gap: 4px;
+      }
+      .auto-slot-item-title {
+        font-size: 0.94rem;
+      }
+      .auto-slot-item-meta {
+        gap: 5px;
+      }
+      .auto-slot-pill {
+        padding: 4px 7px;
+        font-size: 0.76rem;
+      }
+      .auto-slot-item .auto-slot-remove {
+        padding: 7px 10px;
+        border-radius: 10px;
       }
     }
   </style>
@@ -505,9 +583,31 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         <div class="auto-slot-toolbar">
           <div>
             <h2>Slot disponibili</h2>
-            <p style="margin: 6px 0 0;">Inserisci data, ora, campo e quante partite contemporanee puo ospitare quello slot.</p>
+            <p style="margin: 6px 0 0;">Seleziona data, ora, campo e capienza, poi aggiungi lo slot alla lista.</p>
           </div>
-          <button type="button" class="auto-btn auto-btn-secondary" id="addSlotBtn">Aggiungi slot</button>
+        </div>
+        <div class="auto-slot-editor">
+          <div class="auto-slot-editor-grid">
+            <div class="auto-form-group">
+              <label for="slotDateInput">Data</label>
+              <input type="date" id="slotDateInput">
+            </div>
+            <div class="auto-form-group">
+              <label for="slotTimeInput">Ora</label>
+              <input type="time" id="slotTimeInput">
+            </div>
+            <div class="auto-form-group">
+              <label for="slotFieldInput">Campo</label>
+              <select id="slotFieldInput"></select>
+            </div>
+            <div class="auto-form-group">
+              <label for="slotQuantityInput">Partite contemporanee</label>
+              <input type="number" id="slotQuantityInput" min="1" step="1" value="1">
+            </div>
+          </div>
+          <div class="auto-slot-editor-actions">
+            <button type="button" class="auto-btn auto-btn-secondary" id="addSlotBtn">Aggiungi slot selezionato</button>
+          </div>
         </div>
         <div id="slotList" class="auto-slot-list"></div>
       </section>
@@ -594,6 +694,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     context: null,
     preview: null,
     selectedTeams: [],
+    slots: [],
   };
   const weekdayOptions = [
     { value: '1', label: 'Lunedì' },
@@ -619,6 +720,10 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     clearTeamsBtn: document.getElementById('clearTeamsBtn'),
     slotsCard: document.getElementById('slotsCard'),
     slotList: document.getElementById('slotList'),
+    slotDateInput: document.getElementById('slotDateInput'),
+    slotTimeInput: document.getElementById('slotTimeInput'),
+    slotFieldInput: document.getElementById('slotFieldInput'),
+    slotQuantityInput: document.getElementById('slotQuantityInput'),
     addSlotBtn: document.getElementById('addSlotBtn'),
     availabilityCard: document.getElementById('availabilityCard'),
     availabilityList: document.getElementById('availabilityList'),
@@ -716,14 +821,12 @@ require_once __DIR__ . '/../includi/admin_guard.php';
   }
 
   function collectSlots() {
-    return Array.from(document.querySelectorAll('.auto-slot-row')).map(row => {
-      return {
-        data: row.querySelector('[data-field="data"]')?.value || '',
-        ora: row.querySelector('[data-field="ora"]')?.value || '',
-        campo: row.querySelector('[data-field="campo"]')?.value || '',
-        quantita: Number(row.querySelector('[data-field="quantita"]')?.value || 1),
-      };
-    });
+    return state.slots.map(slot => ({
+      data: slot.data,
+      ora: slot.ora,
+      campo: slot.campo,
+      quantita: slot.quantita,
+    }));
   }
 
   function collectAvailability() {
@@ -771,6 +874,95 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     });
 
     return options.join('');
+  }
+
+  function renderSlotFieldSelect(currentValue = '') {
+    if (!els.slotFieldInput) {
+      return;
+    }
+    const fields = availableFields();
+    els.slotFieldInput.innerHTML = fieldSelectOptions(currentValue);
+    els.slotFieldInput.disabled = !fields.length;
+  }
+
+  function normalizeSlot(slot = {}) {
+    return {
+      data: String(slot.data || '').trim(),
+      ora: String(slot.ora || '').trim(),
+      campo: String(slot.campo || '').trim(),
+      quantita: Math.max(1, parseInt(slot.quantita, 10) || 1),
+    };
+  }
+
+  function slotIdentity(slot = {}) {
+    const normalized = normalizeSlot(slot);
+    return [
+      normalized.data,
+      normalized.ora,
+      normalized.campo.toLowerCase(),
+    ].join('|');
+  }
+
+  function readSlotEditorValue() {
+    return normalizeSlot({
+      data: els.slotDateInput?.value || '',
+      ora: els.slotTimeInput?.value || '',
+      campo: els.slotFieldInput?.value || '',
+      quantita: els.slotQuantityInput?.value || 1,
+    });
+  }
+
+  function resetSlotEditor(options = {}) {
+    const keepDate = options.keepDate ?? false;
+    const keepTime = options.keepTime ?? false;
+    const keepQuantity = options.keepQuantity ?? false;
+
+    if (els.slotDateInput && !keepDate) {
+      els.slotDateInput.value = '';
+    }
+    if (els.slotTimeInput && !keepTime) {
+      els.slotTimeInput.value = '';
+    }
+    if (els.slotQuantityInput && !keepQuantity) {
+      els.slotQuantityInput.value = '1';
+    }
+
+    renderSlotFieldSelect('');
+  }
+
+  function formatSlotDateLabel(value) {
+    const normalized = String(value || '').trim();
+    if (!normalized) {
+      return '-';
+    }
+
+    const date = new Date(`${normalized}T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      return normalized;
+    }
+
+    return date.toLocaleDateString('it-IT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
+
+  function upsertSlot(slot) {
+    const normalized = normalizeSlot(slot);
+    const key = slotIdentity(normalized);
+    const existingIndex = state.slots.findIndex(current => slotIdentity(current) === key);
+
+    if (existingIndex >= 0) {
+      state.slots[existingIndex] = {
+        ...state.slots[existingIndex],
+        quantita: state.slots[existingIndex].quantita + normalized.quantita,
+      };
+      return 'updated';
+    }
+
+    state.slots.push(normalized);
+    return 'added';
   }
 
   function normalizeWeekdays(rule = {}) {
@@ -842,41 +1034,50 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     els.teamsCard.classList.remove('auto-hidden');
   }
 
-  function addSlotRow(slot = {}) {
-    const quantity = Math.max(1, parseInt(slot.quantita, 10) || 1);
-    const fields = availableFields();
-    const wrapper = document.createElement('div');
-    wrapper.className = 'auto-slot-row';
-    wrapper.innerHTML = `
-      <div class="auto-form-group">
-        <label>Data</label>
-        <input type="date" data-field="data" value="${escapeAttr(slot.data || '')}">
-      </div>
-      <div class="auto-form-group">
-        <label>Ora</label>
-        <input type="time" data-field="ora" value="${escapeAttr((slot.ora || '').slice(0, 5))}">
-      </div>
-      <div class="auto-form-group">
-        <label>Campo</label>
-        <select data-field="campo" ${fields.length ? '' : 'disabled'}>
-          ${fieldSelectOptions(slot.campo || '')}
-        </select>
-      </div>
-      <div class="auto-form-group">
-        <label>Partite contemporanee</label>
-        <input type="number" min="1" step="1" data-field="quantita" value="${escapeAttr(quantity)}">
-      </div>
-      <button type="button" class="auto-btn auto-btn-danger auto-slot-remove">Rimuovi</button>
-    `;
-    els.slotList.appendChild(wrapper);
+  function renderSlots() {
+    renderSlotFieldSelect(els.slotFieldInput?.value || '');
+    els.slotList.innerHTML = state.slots.length
+      ? state.slots.map((slot, index) => `
+          <div class="auto-slot-item" data-slot-index="${index}">
+            <div class="auto-slot-item-main">
+              <div class="auto-slot-item-title">${escapeHtml(slot.campo)}</div>
+              <div class="auto-slot-item-meta">
+                <span class="auto-slot-pill">${escapeHtml(formatSlotDateLabel(slot.data))}</span>
+                <span class="auto-slot-pill">${escapeHtml((slot.ora || '').slice(0, 5) || '-')}</span>
+                <span class="auto-slot-pill">${slot.quantita} ${slot.quantita === 1 ? 'partita' : 'partite'}</span>
+              </div>
+            </div>
+            <button type="button" class="auto-btn auto-btn-danger auto-slot-remove" data-slot-index="${index}">Rimuovi</button>
+          </div>
+        `).join('')
+      : '<div class="auto-empty">Nessuno slot aggiunto. Seleziona uno slot e aggiungilo alla lista.</div>';
+    els.slotsCard.classList.remove('auto-hidden');
   }
 
-  function renderSlots() {
-    const currentSlots = collectSlots();
-    els.slotList.innerHTML = '';
-    const slots = currentSlots.length ? currentSlots : [{ data: '', ora: '', campo: '', quantita: 1 }];
-    slots.forEach(addSlotRow);
-    els.slotsCard.classList.remove('auto-hidden');
+  function addSelectedSlot() {
+    const slot = readSlotEditorValue();
+    if (!slot.data || !slot.ora || !slot.campo) {
+      renderAlerts([{ type: 'error', text: 'Per aggiungere uno slot devi selezionare data, ora e campo.' }]);
+      return;
+    }
+
+    const action = upsertSlot(slot);
+    renderSlots();
+    renderAlerts([{
+      type: 'info',
+      text: action === 'updated'
+        ? 'Slot già presente: capienza aggiornata.'
+        : 'Slot aggiunto alla lista.',
+    }]);
+    resetSlotEditor({
+      keepDate: true,
+      keepTime: true,
+      keepQuantity: true,
+    });
+
+    if (state.preview) {
+      schedulePreviewValidation();
+    }
   }
 
   function addAvailabilityRow(container, rule = {}) {
@@ -1144,6 +1345,8 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       state.context = null;
       state.preview = null;
       state.selectedTeams = [];
+      state.slots = [];
+      resetSlotEditor();
       [els.summaryCard, els.teamsCard, els.slotsCard, els.availabilityCard, els.dataCard, els.actionsCard, els.previewCard].forEach(el => el.classList.add('auto-hidden'));
       return;
     }
@@ -1156,7 +1359,9 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       state.context = context;
       state.preview = null;
       state.selectedTeams = (context.squadre || []).map(team => Number(team.id));
+      state.slots = [];
       els.giornataInput.value = Number(context.prossima_giornata || 1);
+      resetSlotEditor();
       renderSummary();
       renderTeams();
       renderSlots();
@@ -1281,25 +1486,19 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     }
   });
 
-  els.addSlotBtn.addEventListener('click', () => {
-    addSlotRow();
-  });
+  els.addSlotBtn.addEventListener('click', addSelectedSlot);
 
   els.slotList.addEventListener('click', event => {
-    if (event.target.matches('.auto-slot-remove')) {
-      event.target.closest('.auto-slot-row')?.remove();
-      if (!els.slotList.children.length) {
-        addSlotRow();
+    const removeButton = event.target.closest('.auto-slot-remove');
+    if (removeButton) {
+      const slotIndex = Number(removeButton.dataset.slotIndex || -1);
+      if (slotIndex >= 0) {
+        state.slots = state.slots.filter((_, index) => index !== slotIndex);
+        renderSlots();
       }
       if (state.preview) {
         schedulePreviewValidation();
       }
-    }
-  });
-
-  els.slotList.addEventListener('change', () => {
-    if (state.preview) {
-      schedulePreviewValidation();
     }
   });
 
@@ -1354,7 +1553,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
   });
 
   loadTournaments();
-  addSlotRow();
+  resetSlotEditor();
 </script>
 </body>
 </html>
