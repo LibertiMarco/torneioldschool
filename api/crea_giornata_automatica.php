@@ -640,7 +640,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
           <div>
             <h2>Disponibilità opzionali per squadra</h2>
             <p style="margin: 6px 0 0;">
-              Ogni regola può essere: uno o più giorni, solo fascia oraria oppure giorni + fascia oraria. Se una squadra non ha regole,
+              Ogni regola può essere: uno o più giorni degli slot creati, solo fascia oraria oppure giorni + fascia oraria. Se una squadra non ha regole,
               può essere assegnata a qualsiasi slot disponibile.
             </p>
           </div>
@@ -719,15 +719,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     selectedTeams: [],
     slots: [],
   };
-  const weekdayOptions = [
-    { value: '1', label: 'Lunedì' },
-    { value: '2', label: 'Martedì' },
-    { value: '3', label: 'Mercoledì' },
-    { value: '4', label: 'Giovedì' },
-    { value: '5', label: 'Venerdì' },
-    { value: '6', label: 'Sabato' },
-    { value: '7', label: 'Domenica' },
-  ];
 
   const els = {
     alertArea: document.getElementById('alertArea'),
@@ -827,11 +818,11 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       }
       snapshot[teamId] = [];
       block.querySelectorAll('.auto-availability-row').forEach(row => {
-        const weekdays = Array.from(row.querySelectorAll('[data-role="weekday-option"]:checked'))
+        const dates = Array.from(row.querySelectorAll('[data-role="availability-date-option"]:checked'))
           .map(input => input.value || '')
           .filter(Boolean);
         snapshot[teamId].push({
-          weekdays,
+          dates,
           start_time: row.querySelector('[data-field="start_time"]')?.value || '',
           end_time: row.querySelector('[data-field="end_time"]')?.value || '',
         });
@@ -968,6 +959,40 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     });
   }
 
+  function formatAvailabilityDateLabel(value) {
+    const normalized = String(value || '').trim();
+    if (!normalized) {
+      return '';
+    }
+
+    const date = new Date(`${normalized}T00:00:00`);
+    if (Number.isNaN(date.getTime())) {
+      return normalized;
+    }
+
+    const weekday = date.toLocaleDateString('it-IT', { weekday: 'long' });
+    const dayMonth = date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+    return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${dayMonth}`;
+  }
+
+  function availableSlotDateOptions() {
+    const seen = new Set();
+    return state.slots
+      .map(slot => String(slot.data || '').trim())
+      .filter(date => {
+        if (!date || seen.has(date)) {
+          return false;
+        }
+        seen.add(date);
+        return true;
+      })
+      .sort((left, right) => left.localeCompare(right))
+      .map(date => ({
+        value: date,
+        label: formatAvailabilityDateLabel(date),
+      }));
+  }
+
   function upsertSlot(slot) {
     const normalized = normalizeSlot(slot);
     const key = slotIdentity(normalized);
@@ -985,16 +1010,16 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     return 'added';
   }
 
-  function normalizeWeekdays(rule = {}) {
-    const source = Array.isArray(rule.weekdays)
-      ? rule.weekdays
-      : (rule.weekday ? [rule.weekday] : []);
+  function normalizeAvailabilityDates(rule = {}) {
+    const source = Array.isArray(rule.dates)
+      ? rule.dates
+      : [];
     const seen = new Set();
 
     return source
       .map(value => String(value ?? '').trim())
       .filter(value => {
-        if (!/^[1-7]$/.test(value) || seen.has(value)) {
+        if (!value || seen.has(value)) {
           return false;
         }
         seen.add(value);
@@ -1047,6 +1072,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
 
     const action = upsertSlot(slot);
     renderSlots();
+    renderAvailability();
     renderAlerts([{
       type: 'info',
       text: action === 'updated'
@@ -1065,21 +1091,24 @@ require_once __DIR__ . '/../includi/admin_guard.php';
   }
 
   function addAvailabilityRow(container, rule = {}) {
-    const selectedWeekdays = new Set(normalizeWeekdays(rule));
+    const selectedDates = new Set(normalizeAvailabilityDates(rule));
+    const dateOptions = availableSlotDateOptions();
     const row = document.createElement('div');
     row.className = 'auto-availability-row';
     row.innerHTML = `
       <div class="auto-form-group">
         <label>Giorni</label>
         <div class="auto-weekday-picker">
-          ${weekdayOptions.map(option => `
-            <label class="auto-weekday-option">
-              <input type="checkbox" data-role="weekday-option" value="${option.value}" ${selectedWeekdays.has(option.value) ? 'checked' : ''}>
-              <span>${option.label}</span>
-            </label>
-          `).join('')}
+          ${dateOptions.length
+            ? dateOptions.map(option => `
+                <label class="auto-weekday-option">
+                  <input type="checkbox" data-role="availability-date-option" value="${escapeAttr(option.value)}" ${selectedDates.has(option.value) ? 'checked' : ''}>
+                  <span>${escapeHtml(option.label)}</span>
+                </label>
+              `).join('')
+            : '<span class="auto-empty">Aggiungi almeno uno slot per scegliere i giorni disponibili.</span>'}
         </div>
-        <small class="auto-weekday-help">Se non selezioni nessun giorno, la regola vale per qualsiasi giorno.</small>
+        <small class="auto-weekday-help">Sono mostrati solo i giorni presenti negli slot creati. Se non selezioni nessun giorno, la regola vale per qualsiasi giorno.</small>
       </div>
       <div class="auto-form-group">
         <label>Dalle</label>
@@ -1117,7 +1146,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         <header>
           <div>
             <h4>${escapeHtml(team.nome)}</h4>
-            <p style="margin: 4px 0 0; color:#5b6b7d;">Aggiungi una o più regole opzionali con uno o più giorni preferiti.</p>
+            <p style="margin: 4px 0 0; color:#5b6b7d;">Aggiungi una o più regole opzionali scegliendo tra i giorni degli slot creati.</p>
           </div>
           <button type="button" class="auto-btn auto-btn-secondary" data-add-availability="${teamId}">Aggiungi disponibilità</button>
         </header>
@@ -1478,6 +1507,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       if (slotIndex >= 0) {
         state.slots = state.slots.filter((_, index) => index !== slotIndex);
         renderSlots();
+        renderAvailability();
       }
       if (state.preview) {
         schedulePreviewValidation();
