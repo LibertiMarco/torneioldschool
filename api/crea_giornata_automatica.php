@@ -669,10 +669,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         <div class="auto-slot-toolbar">
           <div>
             <h2>Disponibilità opzionali per squadra</h2>
-            <p style="margin: 6px 0 0;">
-              Ogni regola può essere: uno o più giorni degli slot creati, uno o più orari degli slot creati oppure giorni + orari. Se una squadra non ha regole,
-              può essere assegnata a qualsiasi slot disponibile.
-            </p>
           </div>
         </div>
         <div id="availabilityList" class="auto-availability-list"></div>
@@ -1202,7 +1198,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
               `).join('')
             : '<span class="auto-empty">Aggiungi almeno uno slot per scegliere i giorni disponibili.</span>'}
         </div>
-        <small class="auto-weekday-help">Sono mostrati solo i giorni presenti negli slot creati. Se non selezioni nessun giorno, la regola vale per qualsiasi giorno.</small>
       </div>
       <div class="auto-form-group">
         <label>Orari</label>
@@ -1216,7 +1211,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
               `).join('')
             : '<span class="auto-empty">Aggiungi almeno uno slot per scegliere gli orari disponibili.</span>'}
         </div>
-        <small class="auto-weekday-help">Sono mostrati solo gli orari presenti negli slot creati. Se non selezioni nessun orario, la regola vale per qualsiasi orario.</small>
       </div>
     `;
     container.appendChild(row);
@@ -1245,7 +1239,6 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         <header>
           <div>
             <h4>${escapeHtml(team.nome)}</h4>
-            <p style="margin: 4px 0 0; color:#5b6b7d;">Disponibilità opzionale sui giorni e sugli orari degli slot creati.</p>
           </div>
         </header>
         <div class="auto-availability-rows"></div>
