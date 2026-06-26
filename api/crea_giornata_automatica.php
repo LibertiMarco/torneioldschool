@@ -186,6 +186,13 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       color: #15293e;
       font-weight: 600;
       line-height: 1.4;
+      min-width: 0;
+      word-break: break-word;
+    }
+    .auto-team-item small {
+      color: #5b6b7d;
+      font-size: 0.8rem;
+      line-height: 1.3;
     }
     .auto-slot-list,
     .auto-availability-list {
@@ -478,6 +485,31 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       }
       .auto-matchday-container {
         padding: 24px 18px;
+      }
+      .auto-team-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .auto-team-item {
+        gap: 8px;
+        align-items: flex-start;
+        padding: 9px 10px;
+        border-radius: 10px;
+      }
+      .auto-team-item input {
+        width: 16px;
+        height: 16px;
+        margin-top: 2px;
+      }
+      .auto-team-item span {
+        font-size: 0.9rem;
+        line-height: 1.25;
+      }
+      .auto-team-item small {
+        display: block;
+        margin-top: 2px;
+        font-size: 0.72rem;
+        line-height: 1.2;
       }
       .auto-slot-editor {
         padding: 12px;
