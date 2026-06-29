@@ -35,6 +35,28 @@ function fetch_player_team_stats(mysqli $conn, int $giocatoreId, array $team): a
     return $stats;
 }
 
+function resolve_torneo_link(?string $value): string {
+    $value = trim((string)$value);
+    if ($value === '' || $value === '0') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $value)) {
+        return $value;
+    }
+    if (preg_match('#^/[A-Za-z0-9/_\\-.?=&%#]+$#', $value)) {
+        return $value;
+    }
+
+    $value = ltrim($value, '/');
+    $slug = preg_replace('/\.(html?|php)$/i', '', $value);
+    $slug = preg_replace('/[^A-Za-z0-9_-]/', '', $slug);
+    if ($slug === '') {
+        return '';
+    }
+
+    return '/tornei/' . $slug . '.php';
+}
+
 // Carica il giocatore associato all'account
 $giocatore = null;
 $stmt = $conn->prepare("SELECT id, nome, cognome, ruolo, presenze, reti, assist, gialli, rossi, media_voti, foto FROM giocatori WHERE utente_id = ? LIMIT 1");
@@ -60,7 +82,8 @@ if ($giocatore) {
     $stmt = $conn->prepare("
         SELECT s.id, s.nome, s.torneo, s.logo,
                sg.is_captain,
-               t.nome AS torneo_nome
+               t.nome AS torneo_nome,
+               t.filetorneo AS torneo_file
         FROM squadre_giocatori sg
         JOIN squadre s ON s.id = sg.squadra_id
         LEFT JOIN tornei t ON (t.filetorneo = s.torneo OR t.filetorneo = CONCAT(s.torneo, '.php') OR t.nome = s.torneo)
@@ -226,6 +249,9 @@ $seo = [
         .badge { display: inline-block; padding: 3px 8px; border-radius: 8px; background: #e8edf5; color: #1a2d44; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
         .squadre-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
         .team-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #fff; display: flex; flex-direction: column; gap: 8px; }
+        .team-card-link { text-decoration: none; color: inherit; transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+        .team-card-link:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15,31,51,0.12); border-color: #cbd5e1; }
+        .team-card-link:focus-visible { outline: 3px solid rgba(21,41,62,0.22); outline-offset: 2px; }
         .team-head { display: flex; align-items: center; gap: 10px; }
         .team-head img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1px solid #e2e8f0; }
         .team-stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.95rem; color: #1a2d44; }
@@ -459,14 +485,21 @@ $seo = [
             <?php else: ?>
                 <div class="squadre-grid">
                     <?php foreach ($squadre as $s): ?>
+                        <?php
+                            $torneoNome = trim($s['torneo_nome'] ?? '') !== '' ? $s['torneo_nome'] : $s['torneo'];
+                            $torneoLink = resolve_torneo_link($s['torneo_file'] ?? $s['torneo']);
+                        ?>
+                        <?php if ($torneoLink !== ''): ?>
+                        <a class="team-card team-card-link" href="<?= h($torneoLink) ?>">
+                        <?php else: ?>
                         <div class="team-card">
+                        <?php endif; ?>
                             <div class="team-head">
                                 <?php if (!empty($s['logo'])): ?>
                                     <img src="<?= h($s['logo']) ?>" alt="Logo <?= h($s['nome']) ?>">
                                 <?php endif; ?>
                                 <div>
                                     <strong><?= h($s['nome']) ?></strong><br>
-                                    <?php $torneoNome = trim($s['torneo_nome'] ?? '') !== '' ? $s['torneo_nome'] : $s['torneo']; ?>
                                     <small><?= h($torneoNome) ?><?= $s['is_captain'] ? ' - Capitano' : '' ?></small>
                                 </div>
                             </div>
@@ -478,7 +511,11 @@ $seo = [
                                 <span><strong>Rossi:</strong> <?= (int)$s['rossi'] ?></span>
                                 <span><strong>MV:</strong> <?= $s['media_voti'] !== null ? h($s['media_voti']) : 'N/D' ?></span>
                             </div>
+                        <?php if ($torneoLink !== ''): ?>
+                        </a>
+                        <?php else: ?>
                         </div>
+                        <?php endif; ?>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
