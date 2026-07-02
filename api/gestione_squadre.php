@@ -56,6 +56,30 @@ function normalizeGironeValue($value): string {
     return substr($value, 0, 32);
 }
 
+function normalizeSquadraReuseKey($value): string {
+    $value = preg_replace('/\s+/u', ' ', trim((string)$value));
+    if ($value === '') {
+        return '';
+    }
+
+    if (function_exists('mb_strtolower')) {
+        return mb_strtolower($value, 'UTF-8');
+    }
+
+    return strtolower($value);
+}
+
+function shouldReplaceEsportReuseEntry(array $current, array $candidate): bool {
+    $currentHasLogo = trim((string)($current['logo'] ?? '')) !== '';
+    $candidateHasLogo = trim((string)($candidate['logo'] ?? '')) !== '';
+
+    if ($currentHasLogo !== $candidateHasLogo) {
+        return $candidateHasLogo;
+    }
+
+    return (int)($candidate['id'] ?? 0) > (int)($current['id'] ?? 0);
+}
+
 function torneoHasGironiConfig(array $config): bool {
     $formato = strtolower(trim((string)($config['formato'] ?? $config['formula_torneo'] ?? '')));
     $numeroGironi = max(0, (int)($config['numero_gironi'] ?? 0));
@@ -176,22 +200,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nome = trim($_POST['nome'] ?? '');
         $torneo = sanitizeTorneoSlugValue(trim($_POST['torneo'] ?? ''));
         $girone = normalizeGironeValue($_POST['girone'] ?? '');
+        $riusaEsportId = (int)($_POST['riusa_esport_id'] ?? 0);
         $logoEsistenteId = (int)($_POST['logo_esistente'] ?? 0);
+        $squadraRiutilizzata = $riusaEsportId > 0 ? $squadra->getById($riusaEsportId) : null;
+
+        if ($nome === '' && $squadraRiutilizzata) {
+            $nome = trim((string)($squadraRiutilizzata['nome'] ?? ''));
+        }
+
         if ($nome === '' || $torneo === '') {
             $errore = 'Compila tutti i campi obbligatori.';
         } else {
             $gironeInfo = getGironeInfoForTorneo($torneoModel, $torneo);
             $gironeSelezionato = null;
             if ($gironeInfo['is_girone']) {
-                if ($girone === '' || !in_array($girone, $gironeInfo['labels'], true)) {
+                if ($girone !== '' && !in_array($girone, $gironeInfo['labels'], true)) {
                     $errore = 'Seleziona un girone valido per questo torneo.';
-                } else {
+                } elseif ($girone !== '') {
                     $gironeSelezionato = $girone;
+                } elseif ($riusaEsportId <= 0) {
+                    $errore = 'Seleziona un girone valido per questo torneo.';
                 }
             }
 
             // Se l'admin ha scelto un logo da una squadra esistente, lo usiamo come default
             $logo = null;
+            if ($squadraRiutilizzata && $logoEsistenteId <= 0 && !empty($squadraRiutilizzata['logo'])) {
+                $logo = (string)$squadraRiutilizzata['logo'];
+            }
             if ($logoEsistenteId > 0) {
                 $squadraOrig = $squadra->getById($logoEsistenteId);
                 if ($squadraOrig && !empty($squadraOrig['logo'])) {
@@ -331,6 +367,7 @@ if (is_array($resFiltro)) {
 
 $squadreList = [];
 $esportReuseList = [];
+$esportReuseMap = [];
 if ($resSquadre = $squadra->getAll()) {
     while ($r = $resSquadre->fetch_assoc()) {
         $nome = trim((string)($r['nome'] ?? ''));
@@ -344,15 +381,56 @@ if ($resSquadre = $squadra->getAll()) {
             continue;
         }
 
-        $esportReuseList[] = [
+        $torneoLabel = $torneoLabelAllBySlug[$torneoSlug] ?? $torneoSlug;
+        $reuseKey = normalizeSquadraReuseKey($nome);
+        if ($reuseKey === '') {
+            continue;
+        }
+
+        $candidate = [
             'id' => (int)($r['id'] ?? 0),
             'nome' => $nome,
             'torneo' => $torneoSlug,
-            'torneo_label' => $torneoLabelAllBySlug[$torneoSlug] ?? $torneoSlug,
+            'torneo_label' => $torneoLabel,
             'logo' => (string)($r['logo'] ?? ''),
+            'tornei_labels' => $torneoLabel !== '' ? [$torneoLabel] : [],
         ];
+
+        if (!isset($esportReuseMap[$reuseKey])) {
+            $esportReuseMap[$reuseKey] = $candidate;
+            continue;
+        }
+
+        if ($torneoLabel !== '' && !in_array($torneoLabel, $esportReuseMap[$reuseKey]['tornei_labels'], true)) {
+            $esportReuseMap[$reuseKey]['tornei_labels'][] = $torneoLabel;
+        }
+
+        if (shouldReplaceEsportReuseEntry($esportReuseMap[$reuseKey], $candidate)) {
+            $candidate['tornei_labels'] = $esportReuseMap[$reuseKey]['tornei_labels'];
+            $esportReuseMap[$reuseKey] = $candidate;
+        }
     }
 }
+
+$esportReuseList = array_values($esportReuseMap);
+usort($esportReuseList, static function(array $left, array $right): int {
+    return strcasecmp((string)($left['nome'] ?? ''), (string)($right['nome'] ?? ''));
+});
+
+foreach ($esportReuseList as &$reuseRow) {
+    $labels = array_values(array_filter(array_unique($reuseRow['tornei_labels'] ?? []), static function($label) {
+        return trim((string)$label) !== '';
+    }));
+    $reuseRow['tornei_labels'] = $labels;
+    $reuseRow['filter_text'] = trim($reuseRow['nome'] . ' ' . implode(' ', $labels));
+
+    if (count($labels) <= 2) {
+        $reuseRow['tornei_summary'] = implode(', ', $labels);
+    } else {
+        $reuseRow['tornei_summary'] = $labels[0] . ', ' . $labels[1] . ' +' . (count($labels) - 2);
+    }
+}
+unset($reuseRow);
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -489,15 +567,16 @@ if ($resSquadre = $squadra->getAll()) {
               autocomplete="off"
             >
             <small id="riusa_esport_feedback" class="search-feedback hidden">Nessuna squadra esport trovata con questo filtro.</small>
-            <select id="riusa_esport" disabled>
+            <select id="riusa_esport" name="riusa_esport_id" disabled>
               <option value="">-- Seleziona una squadra/player esport --</option>
               <?php foreach ($esportReuseList as $row): ?>
                 <option
                   value="<?= (int)$row['id'] ?>"
                   data-team-name="<?= htmlspecialchars($row['nome'], ENT_QUOTES, 'UTF-8') ?>"
                   data-logo-id="<?= $row['logo'] !== '' ? (int)$row['id'] : '' ?>"
+                  data-filter-text="<?= htmlspecialchars($row['filter_text'], ENT_QUOTES, 'UTF-8') ?>"
                 >
-                  <?= htmlspecialchars($row['nome']) ?> (<?= htmlspecialchars($row['torneo_label']) ?>)
+                  <?= htmlspecialchars($row['nome']) ?><?= $row['tornei_summary'] !== '' ? ' (' . htmlspecialchars($row['tornei_summary']) . ')' : '' ?>
                 </option>
               <?php endforeach; ?>
             </select>
@@ -720,6 +799,23 @@ if ($resSquadre = $squadra->getAll()) {
         selectEl.value = labels.indexOf(normalizedValue) !== -1 ? normalizedValue : '';
       }
 
+      function syncCreateReuseRequirements() {
+        var nomeInput = document.getElementById('crea_nome');
+        var reuseSelect = document.getElementById('riusa_esport');
+        var gironeGroup = document.getElementById('crea_girone_group');
+        var gironeSelect = document.getElementById('crea_girone');
+        var hasReuseSelection = !!(reuseSelect && !reuseSelect.disabled && String(reuseSelect.value || '') !== '');
+
+        if (nomeInput) {
+          nomeInput.required = !hasReuseSelection;
+        }
+
+        if (gironeSelect) {
+          var gironeVisible = !!(gironeGroup && !gironeGroup.classList.contains('hidden') && !gironeSelect.disabled);
+          gironeSelect.required = gironeVisible && !hasReuseSelection;
+        }
+      }
+
       function initTabs() {
         var tabs = qsa('.tab-buttons button');
         var sections = qsa('[data-section]');
@@ -809,9 +905,10 @@ if ($resSquadre = $squadra->getAll()) {
 
         var options = Array.prototype.slice.call(select.options).map(function(option, index) {
           return {
-            value: option.value,
+            node: option.cloneNode(true),
             text: option.textContent || '',
-            isPlaceholder: index === 0
+            isPlaceholder: index === 0,
+            filterText: option.getAttribute('data-filter-text') || option.textContent || ''
           };
         });
 
@@ -832,21 +929,15 @@ if ($resSquadre = $squadra->getAll()) {
 
           options.forEach(function(item) {
             if (item.isPlaceholder) {
-              var placeholderOption = document.createElement('option');
-              placeholderOption.value = item.value;
-              placeholderOption.textContent = item.text;
-              fragment.appendChild(placeholderOption);
+              fragment.appendChild(item.node.cloneNode(true));
               return;
             }
 
-            if (query && normalizeSearchText(item.text).indexOf(query) === -1) {
+            if (query && normalizeSearchText(item.filterText).indexOf(query) === -1) {
               return;
             }
 
-            var option = document.createElement('option');
-            option.value = item.value;
-            option.textContent = item.text;
-            fragment.appendChild(option);
+            fragment.appendChild(item.node.cloneNode(true));
             hasMatches = true;
           });
 
@@ -911,6 +1002,7 @@ if ($resSquadre = $squadra->getAll()) {
           }
 
           renderOptions();
+          syncCreateReuseRequirements();
         }
 
         select.addEventListener('change', function() {
@@ -926,6 +1018,8 @@ if ($resSquadre = $squadra->getAll()) {
           if (logoSelect && logoId) {
             logoSelect.value = logoId;
           }
+
+          syncCreateReuseRequirements();
         });
 
         torneoSelect.addEventListener('change', syncVisibility);
@@ -940,6 +1034,7 @@ if ($resSquadre = $squadra->getAll()) {
 
         function refreshCreateGirone() {
           syncGironeField(createGironeGroup, createGironeSelect, createTorneo.value || '', createGironeSelect.value || '');
+          syncCreateReuseRequirements();
         }
 
         createTorneo.addEventListener('change', refreshCreateGirone);
