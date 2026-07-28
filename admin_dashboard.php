@@ -659,7 +659,7 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
                     <?php
                       $referralCode = (string)($row['referral_code'] ?? '');
                       $leadCount = (int)($row['lead_count'] ?? 0);
-                      $referralLink = login_with_base_path('/fantaoldschool') . '?ref=' . rawurlencode($referralCode);
+                      $referralLink = 'https://fanta.torneioldschool.it/?ref=' . rawurlencode($referralCode);
                     ?>
                     <tr>
                       <td>
@@ -679,7 +679,7 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
                             <a class="referral-link-btn primary" href="<?= htmlspecialchars($referralLink) ?>" target="_blank" rel="noopener">Apri link</a>
                             <button type="button" class="referral-link-btn" data-copy-link="<?= htmlspecialchars($referralLink) ?>">Copia</button>
                           </div>
-                          <span class="referral-link-preview">/fantaoldschool?ref=<?= htmlspecialchars($referralCode) ?></span>
+                          <span class="referral-link-preview">fanta.torneioldschool.it/?ref=<?= htmlspecialchars($referralCode) ?></span>
                         <?php else: ?>
                           <span class="referral-empty">non disponibile</span>
                         <?php endif; ?>
@@ -715,7 +715,7 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
                   <?php
                     $referralCode = (string)($row['referral_code'] ?? '');
                     $leadCount = (int)($row['lead_count'] ?? 0);
-                    $referralLink = login_with_base_path('/fantaoldschool') . '?ref=' . rawurlencode($referralCode);
+                    $referralLink = 'https://fanta.torneioldschool.it/?ref=' . rawurlencode($referralCode);
                   ?>
                   <article class="referral-user-card">
                     <h4><?= htmlspecialchars((string)($row['label'] ?? 'Utente')) ?></h4>
@@ -728,7 +728,7 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
                           <a class="referral-link-btn primary" href="<?= htmlspecialchars($referralLink) ?>" target="_blank" rel="noopener">Apri link</a>
                           <button type="button" class="referral-link-btn" data-copy-link="<?= htmlspecialchars($referralLink) ?>">Copia</button>
                         </div>
-                        <span class="referral-link-preview">/fantaoldschool?ref=<?= htmlspecialchars($referralCode) ?></span>
+                        <span class="referral-link-preview">fanta.torneioldschool.it/?ref=<?= htmlspecialchars($referralCode) ?></span>
                       <?php endif; ?>
                     </div>
                     <div class="referral-lead-list" style="margin-top:12px;">

@@ -853,7 +853,7 @@ $nomeCompleto = trim(($currentUser['nome'] ?? '') . ' ' . ($currentUser['cognome
       <div class="player-photo-card">
         <div class="eyebrow" style="margin-bottom:6px;">Fanta Old School</div>
         <h2 style="margin:0 0 10px;">Referral personale</h2>
-        <p style="margin:0 0 12px;color:#475569;">Apri la tua area dedicata per copiare il link personale <code>fantaoldschool?ref=...</code> e controllare chi ha compilato il form dal tuo invito.</p>
+        <p style="margin:0 0 12px;color:#475569;">Apri la tua area dedicata per copiare il link personale <code>fanta.torneioldschool.it/?ref=...</code> e controllare chi ha compilato il form dal tuo invito.</p>
         <a class="file-btn" href="<?= htmlspecialchars(login_with_base_path('/fantaoldschool')) ?>">Apri Fanta Old School</a>
       </div>
 

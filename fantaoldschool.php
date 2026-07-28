@@ -61,6 +61,7 @@ if (!function_exists('fanta_old_school_verify_recaptcha')) {
 $publicPath = login_with_base_path('/fantaoldschool');
 $baseUrl = rtrim(seo_base_url(), '/');
 $pageUrl = $baseUrl . $publicPath;
+$publicReferralUrl = 'https://fanta.torneioldschool.it/';
 $requestedReferralCode = trim((string)($_GET['ref'] ?? ''));
 $normalizedReferralCode = $requestedReferralCode !== '' ? fanta_old_school_normalize_lookup_code($requestedReferralCode) : '';
 $isInviteLanding = $normalizedReferralCode !== '';
@@ -72,7 +73,7 @@ $currentUserCode = $currentUserId > 0 ? fanta_old_school_get_referral_code($conn
 $currentUserLeads = $currentUserId > 0 ? fanta_old_school_fetch_user_leads($conn, $currentUserId) : [];
 $referrer = $isInviteLanding ? fanta_old_school_find_referrer($conn, $normalizedReferralCode) : null;
 $referrerLabel = $referrer ? fanta_old_school_user_label($referrer) : '';
-$shareLink = $currentUserCode ? $pageUrl . '?ref=' . rawurlencode($currentUserCode) : '';
+$shareLink = $currentUserCode ? $publicReferralUrl . '?ref=' . rawurlencode($currentUserCode) : '';
 $banner = $_SESSION['fanta_old_school_flash'] ?? null;
 $errorMessage = '';
 $formValues = [
@@ -594,7 +595,7 @@ $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?
 
       <aside class="fos-card">
         <h3>Link previsto</h3>
-        <p>Il formato del link e <code>torneioldschool.it/fantaoldschool?ref=codice-utente</code> e apre direttamente il form pubblico per chi riceve l'invito.</p>
+        <p>Il formato del link e <code>fanta.torneioldschool.it/?ref=codice-utente</code> e apre direttamente il form pubblico per chi riceve l'invito.</p>
       </aside>
     </div>
   <?php endif; ?>
