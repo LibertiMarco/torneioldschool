@@ -194,7 +194,7 @@ function team_name_class(string $name): string {
     return '';
 }
 
-function fetchMatches(mysqli $conn, array $teams, bool $future = true): array {
+function fetchMatches(mysqli $conn, int $playerId, array $teams, bool $future = true): array {
     if (empty($teams)) {
         return [];
     }
@@ -212,7 +212,12 @@ function fetchMatches(mysqli $conn, array $teams, bool $future = true): array {
     if (empty($membershipClauses)) {
         return [];
     }
-    $limit = $future ? 5 : 10;
+    $participationJoin = $future
+        ? ''
+        : 'JOIN partita_giocatore pg_player
+             ON pg_player.partita_id = p.id
+            AND pg_player.giocatore_id = ?
+            AND pg_player.presenza = 1';
     $condition = $future
         ? "AND giocata = 0 AND data_partita >= CURDATE()"
         : "AND giocata = 1";
@@ -226,20 +231,22 @@ function fetchMatches(mysqli $conn, array $teams, bool $future = true): array {
                sc.logo AS logo_casa, so.logo AS logo_ospite,
                t.nome AS torneo_nome
         FROM partite p
+        $participationJoin
         LEFT JOIN squadre sc ON sc.nome = p.squadra_casa AND sc.torneo = p.torneo
         LEFT JOIN squadre so ON so.nome = p.squadra_ospite AND so.torneo = p.torneo
         LEFT JOIN tornei t ON (t.filetorneo = p.torneo OR t.filetorneo = CONCAT(p.torneo, '.php') OR t.nome = p.torneo)
         WHERE (" . implode(' OR ', $membershipClauses) . ")
         $condition
         $order
-        LIMIT $limit
+        " . ($future ? 'LIMIT 5' : '') . "
     ";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         return [];
     }
-    $types = str_repeat('s', count($membershipParams));
-    $stmt->bind_param($types, ...$membershipParams);
+    $params = $future ? $membershipParams : array_merge([$playerId], $membershipParams);
+    $types = ($future ? '' : 'i') . str_repeat('s', count($membershipParams));
+    $stmt->bind_param($types, ...$params);
     $matches = [];
     if ($stmt->execute()) {
         $res = $stmt->get_result();
@@ -251,8 +258,9 @@ function fetchMatches(mysqli $conn, array $teams, bool $future = true): array {
     return $matches;
 }
 
-$prossimePartite = $giocatore ? fetchMatches($conn, $squadre, true) : [];
-$partiteGiocate  = $giocatore ? fetchMatches($conn, $squadre, false) : [];
+$playerId = (int)($giocatore['id'] ?? 0);
+$prossimePartite = $giocatore ? fetchMatches($conn, $playerId, $squadre, true) : [];
+$partiteGiocate  = $giocatore ? fetchMatches($conn, $playerId, $squadre, false) : [];
 
 $seo = [
     'title' => 'Statistiche Giocatore',
