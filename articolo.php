@@ -150,7 +150,11 @@ if ($stmt) {
 
             $articleUrl = $baseUrl . $targetPath;
             $articleSection = normalize_content_section($row['sezione'] ?? 'calcio');
-            $articleBlogPath = '/blog.php?sezione=' . rawurlencode($articleSection);
+            if ($articleSection !== content_current_section()) {
+                header('Location: ' . content_url_for_section($articleSection, $targetPath), true, 301);
+                exit;
+            }
+            $articleBlogPath = '/blog.php';
             $articleBlogLabel = $articleSection === 'esport' ? 'Blog ESPORT' : 'Blog';
             $cover = $row['cover'] ?? '';
             $coverUrl = $cover ? $baseUrl . '/' . ltrim($cover, '/') : $articleMeta['image'];

@@ -11,8 +11,7 @@ header('Expires: Mon, 01 Jan 1990 00:00:00 GMT');
 
 $azione = $_GET['azione'] ?? '';
 $mediaBasePath = '/img/blog_media/';
-$requestedSectionRaw = trim((string)($_GET['sezione'] ?? ''));
-$blogSection = $requestedSectionRaw === '' ? '' : normalize_content_section($requestedSectionRaw);
+$blogSection = content_current_section();
 $blogSectionReady = ensure_blog_post_section_column($conn);
 $shouldFilterBySection = $blogSection !== '' && $blogSectionReady;
 

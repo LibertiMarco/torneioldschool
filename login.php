@@ -85,7 +85,7 @@ $loginCsrf = csrf_get_token('login_form');
 setcookie('login_csrf', $loginCsrf, [
     'expires' => time() + REMEMBER_COOKIE_LIFETIME, // allineato alla durata sessione "ricorda"
     'path' => '/',
-    'domain' => '',
+    'domain' => $sharedCookieDomain ?? '',
     'secure' => $isHttps,
     'httponly' => false,
     'samesite' => 'Lax',

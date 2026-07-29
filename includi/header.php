@@ -43,31 +43,7 @@ if (!empty($sessionAvatar)) {
 if (!function_exists('header_detect_section_mode')) {
     function header_detect_section_mode(): string
     {
-        foreach (['siteSectionContext', 'articleSection', 'blogSection', 'alboSection', 'torneoSection', 'torneoSectionFallback'] as $key) {
-            $candidate = $GLOBALS[$key] ?? null;
-            if (is_string($candidate) && trim($candidate) !== '') {
-                return normalize_content_section($candidate);
-            }
-        }
-
-        foreach (['isEsportTournament', 'isEsportSection'] as $flagKey) {
-            if (array_key_exists($flagKey, $GLOBALS)) {
-                return !empty($GLOBALS[$flagKey]) ? 'esport' : 'calcio';
-            }
-        }
-
-        $requestedSection = trim((string)($_GET['sezione'] ?? ''));
-        if ($requestedSection !== '') {
-            return normalize_content_section($requestedSection);
-        }
-
-        $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? ($_SERVER['SCRIPT_NAME'] ?? ''), PHP_URL_PATH);
-        $currentScript = strtolower((string)basename((string)$requestPath));
-        if (in_array($currentScript, ['esport.php', 'tornei-esport.php'], true)) {
-            return 'esport';
-        }
-
-        return 'calcio';
+        return content_current_section();
     }
 }
 
@@ -81,7 +57,7 @@ if (!function_exists('header_mode_page_path')) {
             case '':
             case 'index.php':
             case 'esport.php':
-                return $section === 'esport' ? '/esport.php' : '/index.php';
+                return '/';
             case 'tornei.php':
             case 'tornei-esport.php':
                 return $section === 'esport' ? '/tornei-esport.php' : '/tornei.php';
@@ -107,15 +83,15 @@ if (!function_exists('header_section_nav_path')) {
 
         switch ($destination) {
             case 'home':
-                return $section === 'esport' ? '/esport.php' : '/index.php';
+                return '/';
             case 'tornei':
                 return $section === 'esport' ? '/tornei-esport.php' : '/tornei.php';
             case 'blog':
-                return '/blog.php?sezione=' . rawurlencode($section);
+                return '/blog.php';
             case 'chisiamo':
-                return '/chisiamo.php?sezione=' . rawurlencode($section);
+                return '/chisiamo.php';
             case 'contatti':
-                return '/contatti.php?sezione=' . rawurlencode($section);
+                return '/contatti.php';
             default:
                 return '/index.php';
         }
@@ -127,8 +103,6 @@ $headerCurrentScript = strtolower((string)basename((string)$headerRequestPath));
 $headerCurrentSection = header_detect_section_mode();
 $headerIsEsportMode = $headerCurrentSection === 'esport';
 $headerIsTournamentPage = strpos((string)$headerRequestPath, '/tornei/') !== false;
-$headerSportModeUrl = login_with_base_path(header_mode_page_path('calcio', $headerCurrentScript));
-$headerEsportModeUrl = login_with_base_path(header_mode_page_path('esport', $headerCurrentScript));
 $headerHomeUrl = login_with_base_path(header_section_nav_path($headerCurrentSection, 'home'));
 $headerNavLinks = [
     ['label' => 'Tornei', 'path' => header_section_nav_path($headerCurrentSection, 'tornei')],
@@ -154,10 +128,6 @@ $headerNavLinks = [
 
     <!-- NAVIGAZIONE DESKTOP + MOBILE -->
     <nav class="header-nav" id="mainNav">
-        <div class="header-mode-switch" aria-label="Modalita sito">
-            <a href="<?= htmlspecialchars($headerSportModeUrl) ?>" class="header-mode-link<?= !$headerIsEsportMode ? ' active' : '' ?>"<?= !$headerIsEsportMode ? ' aria-current="page"' : '' ?>>Sport</a>
-            <a href="<?= htmlspecialchars($headerEsportModeUrl) ?>" class="header-mode-link<?= $headerIsEsportMode ? ' active' : '' ?>"<?= $headerIsEsportMode ? ' aria-current="page"' : '' ?>>Esport</a>
-        </div>
         <?php foreach ($headerNavLinks as $navLink): ?>
             <a href="<?= htmlspecialchars(login_with_base_path($navLink['path'])) ?>"><?= htmlspecialchars($navLink['label']) ?></a>
         <?php endforeach; ?>
@@ -204,24 +174,28 @@ $headerNavLinks = [
                           <span>Il mio account</span>
                       </a>
 
-                      <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/fantaoldschool')) ?>">
-                          <span>Fanta Old School</span>
-                      </a>
+                      <?php if (!$headerIsEsportMode): ?>
+                          <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/fantaoldschool')) ?>">
+                              <span>Fanta Old School</span>
+                          </a>
+                      <?php endif; ?>
 
-                      <?php if ($hasPlayerProfile): ?>
+                      <?php if (!$headerIsEsportMode && $hasPlayerProfile): ?>
                           <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/statistiche_giocatore.php')) ?>">
                               <span>Statistiche giocatore</span>
                           </a>
                       <?php endif; ?>
 
-                      <?php foreach ($featureDefinitions as $featureKey => $featureConfig): ?>
-                          <?php $isFeatureVisible = $hasAdminAccess || user_can_access_feature($conn, (int)$_SESSION['user_id'], (string)$sessionRole, $featureKey); ?>
-                          <?php if ($isFeatureVisible): ?>
-                              <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path($featureConfig['path'])) ?>">
-                                  <span><?= htmlspecialchars($featureConfig['menu_label']) ?></span>
-                              </a>
-                          <?php endif; ?>
-                      <?php endforeach; ?>
+                      <?php if (!$headerIsEsportMode): ?>
+                          <?php foreach ($featureDefinitions as $featureKey => $featureConfig): ?>
+                              <?php $isFeatureVisible = $hasAdminAccess || user_can_access_feature($conn, (int)$_SESSION['user_id'], (string)$sessionRole, $featureKey); ?>
+                              <?php if ($isFeatureVisible): ?>
+                                  <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path($featureConfig['path'])) ?>">
+                                      <span><?= htmlspecialchars($featureConfig['menu_label']) ?></span>
+                                  </a>
+                              <?php endif; ?>
+                          <?php endforeach; ?>
+                      <?php endif; ?>
 
                       <?php if ($hasAdminAccess): ?>
                           <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/admin_dashboard.php')) ?>">
@@ -330,48 +304,6 @@ $headerNavLinks = [
 
 .header-nav a:hover {
     color: #cdd9ff;
-}
-
-.header-mode-switch {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.18);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
-}
-
-.header-mode-switch .header-mode-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 78px;
-    padding: 8px 14px;
-    border-radius: 999px;
-    color: rgba(255,255,255,0.82);
-    text-decoration: none;
-    font-weight: 700;
-    font-size: 0.92rem;
-    letter-spacing: 0.3px;
-    text-shadow: none;
-    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
-}
-
-.header-mode-switch .header-mode-link:hover {
-    color: #fff;
-    transform: translateY(-1px);
-}
-
-.header-mode-switch .header-mode-link.active {
-    background: #fff;
-    color: #15293e;
-    box-shadow: 0 8px 18px rgba(0,0,0,0.18);
-}
-
-.header-mode-switch .header-mode-link.active:hover {
-    color: #15293e;
 }
 
 .header-actions {
@@ -686,17 +618,6 @@ $headerNavLinks = [
         white-space: nowrap;
         padding: 6px 0;
         text-align: left;
-    }
-
-    .header-mode-switch {
-        width: 100%;
-        justify-content: space-between;
-        margin-bottom: 4px;
-    }
-
-    .header-mode-switch .header-mode-link {
-        flex: 1 1 0;
-        min-width: 0;
     }
 
     .site-header {

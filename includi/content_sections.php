@@ -7,6 +7,48 @@ if (!function_exists('normalize_content_section')) {
     }
 }
 
+if (!function_exists('content_request_host')) {
+    function content_request_host(): string
+    {
+        $host = strtolower(trim((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '')));
+        return preg_replace('/:\d+$/', '', $host) ?? $host;
+    }
+}
+
+if (!function_exists('content_is_esport_host')) {
+    function content_is_esport_host(): bool
+    {
+        $configuredHost = strtolower(trim((string)(getenv('ESPORT_HOST') ?: 'esport.torneioldschool.it')));
+        return content_request_host() === $configuredHost;
+    }
+}
+
+if (!function_exists('content_current_section')) {
+    function content_current_section(): string
+    {
+        return content_is_esport_host() ? 'esport' : 'calcio';
+    }
+}
+
+if (!function_exists('content_site_origin')) {
+    function content_site_origin(string $section): string
+    {
+        $section = normalize_content_section($section);
+        $envKey = $section === 'esport' ? 'ESPORT_BASE_URL' : 'SPORT_BASE_URL';
+        $fallback = $section === 'esport'
+            ? 'https://esport.torneioldschool.it'
+            : 'https://torneioldschool.it';
+        return rtrim((string)(getenv($envKey) ?: $fallback), '/');
+    }
+}
+
+if (!function_exists('content_url_for_section')) {
+    function content_url_for_section(string $section, string $path = '/'): string
+    {
+        return content_site_origin($section) . '/' . ltrim($path, '/');
+    }
+}
+
 if (!function_exists('content_section_label')) {
     function content_section_label(string $section): string
     {

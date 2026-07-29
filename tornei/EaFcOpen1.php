@@ -12,6 +12,7 @@ $torneoName = 'EA FC OPEN #1';
 $assetVersion = '20260608c';
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/content_sections.php';
 $torneoConfig = [];
 $torneoSection = 'calcio';
 $isEsportTournament = false;
@@ -51,6 +52,11 @@ try {
     }
 } catch (Throwable $e) {
     // ignora eventuali errori di lettura config
+}
+
+if ($torneoSection !== content_current_section()) {
+    header('Location: ' . content_url_for_section($torneoSection, '/tornei/EaFcOpen1.php'), true, 301);
+    exit;
 }
 
 if (!function_exists('renderRegoleMarkupFromText')) {

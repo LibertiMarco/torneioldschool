@@ -5,6 +5,7 @@ require_once __DIR__ . '/includi/security.php';
 // === CONNESSIONE AL DATABASE ===
 require_once __DIR__ . '/includi/db.php'; // contiene $conn
 require_once __DIR__ . '/includi/seo.php';
+require_once __DIR__ . '/includi/content_sections.php';
 
 // === FUNZIONE PER FORMATTARE LE DATE ===
 if (!function_exists('formattaData')) {
@@ -140,7 +141,9 @@ $nome_utente = $_SESSION['nome'] ?? '';
 $cognome_utente = $_SESSION['cognome'] ?? '';
 $nome_completo = trim($nome_utente . ' ' . $cognome_utente);
 
-$sezioneAttiva = normalizeTorneoSectionValue($_GET['sezione'] ?? 'calcio');
+$sezioneAttiva = function_exists('content_current_section')
+  ? content_current_section()
+  : normalizeTorneoSectionValue($_GET['sezione'] ?? 'calcio');
 $isEsportSection = $sezioneAttiva === 'esport';
 $hasSectionColumn = ensureTorneiSectionColumn($conn);
 

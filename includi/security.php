@@ -84,6 +84,13 @@ if (!function_exists('tos_register_shutdown_logger')) {
 tos_register_shutdown_logger();
 
 $isHttps = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
+$requestCookieHost = strtolower(trim((string)($_SERVER['HTTP_HOST'] ?? '')));
+$requestCookieHost = preg_replace('/:\d+$/', '', $requestCookieHost) ?? $requestCookieHost;
+$sharedCookieDomain = (
+    $requestCookieHost === 'torneioldschool.it'
+    || $requestCookieHost === 'www.torneioldschool.it'
+    || $requestCookieHost === 'esport.torneioldschool.it'
+) ? '.torneioldschool.it' : '';
 
 if (session_status() === PHP_SESSION_NONE) {
     $rememberRequested = !empty($_COOKIE[REMEMBER_COOKIE_NAME]);
@@ -101,6 +108,7 @@ if (session_status() === PHP_SESSION_NONE) {
         session_set_cookie_params([
             'lifetime' => $cookieLifetime,
             'path' => '/',
+            'domain' => $sharedCookieDomain,
             'secure' => $isHttps,
             'httponly' => true,
             'samesite' => 'Lax',

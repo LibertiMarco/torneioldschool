@@ -12,6 +12,25 @@
 RewriteEngine On
 Options -Indexes
 
+# Il sottodominio eSport condivide i file dell'app, ma ha una homepage propria.
+RewriteCond %{HTTP_HOST} ^esport\.torneioldschool\.it(?::\d+)?$ [NC]
+RewriteRule ^$ esport.php [L]
+
+# I vecchi URL eSport sul dominio principale confluiscono nel nuovo sottodominio.
+RewriteCond %{HTTP_HOST} ^(?:www\.)?torneioldschool\.it(?::\d+)?$ [NC]
+RewriteRule ^esport\.php$ https://esport.torneioldschool.it/ [R=301,L]
+RewriteCond %{HTTP_HOST} ^(?:www\.)?torneioldschool\.it(?::\d+)?$ [NC]
+RewriteRule ^tornei-esport\.php$ https://esport.torneioldschool.it/tornei-esport.php [R=301,L]
+
+# Sul sottodominio non devono essere raggiungibili le entry point della sezione Sport.
+RewriteCond %{HTTP_HOST} ^esport\.torneioldschool\.it(?::\d+)?$ [NC]
+RewriteCond %{THE_REQUEST} \s/+esport\.php(?:[?\s]) [NC]
+RewriteRule ^esport\.php$ / [R=301,L]
+RewriteCond %{HTTP_HOST} ^esport\.torneioldschool\.it(?::\d+)?$ [NC]
+RewriteRule ^index\.php$ / [R=301,L]
+RewriteCond %{HTTP_HOST} ^esport\.torneioldschool\.it(?::\d+)?$ [NC]
+RewriteRule ^tornei\.php$ /tornei-esport.php [R=301,L]
+
 # Blocca accesso web a risorse operative e sensibili che non devono essere pubbliche
 RewriteRule ^(?:\.git|\.sfdx)(?:/|$) - [F,L,NC]
 RewriteRule ^(?:backups|vendor|cache)(?:/|$) - [F,L,NC]

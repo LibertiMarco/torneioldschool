@@ -16,6 +16,7 @@ $torneoSectionFallback = isset($torneoSectionFallback) && strtolower(trim((strin
     : 'calcio';
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/content_sections.php';
 $torneoConfig = [];
 $torneoSection = $torneoSectionFallback;
 $isEsportTournament = $torneoSection === 'esport';
@@ -55,6 +56,12 @@ try {
     }
 } catch (Throwable $e) {
     // ignora eventuali errori di lettura config
+}
+
+if ($torneoSection !== content_current_section()) {
+    $targetPath = '/tornei/' . basename((string)($_SERVER['SCRIPT_NAME'] ?? ($torneoSlug . '.php')));
+    header('Location: ' . content_url_for_section($torneoSection, $targetPath), true, 301);
+    exit;
 }
 
 if (!function_exists('renderRegoleMarkupFromText')) {

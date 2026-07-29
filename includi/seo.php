@@ -26,6 +26,18 @@ if (!function_exists('seo_base_url')) {
 
     function seo_base_url(): string
     {
+        $host = strtolower(trim((string)($_SERVER['HTTP_HOST'] ?? '')));
+        $host = preg_replace('/:\d+$/', '', $host) ?? $host;
+        $esportHost = strtolower(trim((string)(getenv('ESPORT_HOST') ?: 'esport.torneioldschool.it')));
+        if ($host === $esportHost) {
+            $configured = tos_normalize_base_url(getenv('ESPORT_BASE_URL') ?: '');
+            if ($configured !== null) {
+                return $configured;
+            }
+            $https = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
+                || (($_SERVER['SERVER_PORT'] ?? '') === '443');
+            return ($https ? 'https' : 'http') . '://' . $esportHost;
+        }
         return tos_base_url();
     }
 

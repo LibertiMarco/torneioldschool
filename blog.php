@@ -70,12 +70,11 @@ function blog_permalink(?string $title): string
 }
 
 $baseUrl = seo_base_url();
-$requestedSectionRaw = trim((string)($_GET['sezione'] ?? ''));
-$blogSection = $requestedSectionRaw === '' ? '' : normalize_content_section($requestedSectionRaw);
-$isSectionFiltered = $blogSection !== '';
+$blogSection = content_current_section();
+$isSectionFiltered = true;
 $isEsportBlog = $blogSection === 'esport';
 $torneiLink = $isEsportBlog ? '/tornei-esport.php' : '/tornei.php';
-$blogPath = $isSectionFiltered ? '/blog.php?sezione=' . rawurlencode($blogSection) : '/blog.php';
+$blogPath = '/blog.php';
 $blogHeroEyebrow = $isEsportBlog ? 'Novita dal gaming' : ($blogSection === 'calcio' ? 'Novita dai tornei' : 'Novita dal club');
 $blogHeroTitle = $isEsportBlog ? 'Blog ESPORT' : ($blogSection === 'calcio' ? 'Blog Tornei' : 'Blog &amp; approfondimenti');
 $blogHeroLead = $isEsportBlog

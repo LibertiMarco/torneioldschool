@@ -18,15 +18,15 @@ $baseUrl = seo_base_url();
 $pageSeo = [
     'title' => 'Tornei ESPORT | Tornei Old School',
     'description' => 'La homepage dedicata ai tornei esport Tornei Old School: news, ranking EA FC, albo d\'oro e accesso rapido ai tornei gaming.',
-    'url' => $baseUrl . '/esport.php',
-    'canonical' => $baseUrl . '/esport.php',
+    'url' => $baseUrl . '/',
+    'canonical' => $baseUrl . '/',
     'image' => $baseUrl . '/img/logo_old_school_1200.png',
 ];
 $pageSchema = [
     '@context' => 'https://schema.org',
     '@type' => 'Organization',
     'name' => 'Tornei Old School - ESPORT',
-    'url' => $baseUrl . '/esport.php',
+    'url' => $baseUrl . '/',
 ];
 $isLoggedIn = isset($_SESSION['user_id']);
 
@@ -133,7 +133,7 @@ if ($blogSectionReady && ($homeNewsStmt = $conn->prepare($homeNewsSql))) {
             <h2>Ultime Notizie ESPORT</h2>
             <p>Aggiornamenti, bracket, annunci e contenuti dedicati ai nostri tornei gaming.</p>
           </div>
-          <a href="/blog.php?sezione=esport" class="hero-btn hero-btn--ghost">Vai al blog</a>
+          <a href="/blog.php" class="hero-btn hero-btn--ghost">Vai al blog</a>
         </div>
 
         <div id="newsGrid" class="news-grid">
@@ -183,7 +183,7 @@ if ($blogSectionReady && ($homeNewsStmt = $conn->prepare($homeNewsSql))) {
             <h2>Le vincitrici dei nostri tornei esport</h2>
             <p>Uno sguardo rapido alle squadre e ai player che hanno alzato i trofei dell'area gaming.</p>
           </div>
-          <a href="/albo.php?sezione=esport" class="hero-btn hero-btn--ghost hero-btn--small">Albo completo</a>
+          <a href="/albo.php" class="hero-btn hero-btn--ghost hero-btn--small">Albo completo</a>
         </div>
 
         <div id="hallOfFameGrid" class="hof-grid">
@@ -195,7 +195,7 @@ if ($blogSectionReady && ($homeNewsStmt = $conn->prepare($homeNewsSql))) {
         <div class="hero-overlay">
           <h1>Chi Siamo</h1>
           <p>Lo facciamo per passione, dentro e fuori dal campo, per costruire community e competizioni che valgano la pena.</p>
-          <a href="/chisiamo.php?sezione=esport" class="hero-btn">Scopri di piu</a>
+          <a href="/chisiamo.php" class="hero-btn">Scopri di piu</a>
         </div>
       </section>
 
@@ -203,7 +203,7 @@ if ($blogSectionReady && ($homeNewsStmt = $conn->prepare($homeNewsSql))) {
         <div class="hero-overlay">
           <h1>Contattaci</h1>
           <p>Siamo sempre disponibili per domande, iscrizioni o collaborazioni.</p>
-          <a href="/contatti.php?sezione=esport" class="hero-btn">Contatti</a>
+          <a href="/contatti.php" class="hero-btn">Contatti</a>
         </div>
       </section>
 
@@ -421,7 +421,7 @@ async function loadHallOfFame() {
     grid.innerHTML = '<p class="loading">Caricamento in corso...</p>';
 
     try {
-        const response = await fetch('/api/albo_doro.php?sezione=esport');
+        const response = await fetch('/api/albo_doro.php');
         const payload = await response.json();
         const data = Array.isArray(payload.data) ? payload.data.slice(0, 2) : [];
 

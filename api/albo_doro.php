@@ -11,8 +11,7 @@ if (!$conn || $conn->connect_error) {
 }
 
 $conn->set_charset('utf8mb4');
-$requestedSectionRaw = trim((string)($_GET['sezione'] ?? ''));
-$requestedSection = $requestedSectionRaw === '' ? '' : normalize_content_section($requestedSectionRaw);
+$requestedSection = content_current_section();
 $alboSectionReady = ensure_albo_section_column($conn);
 $torneiSectionReady = ensure_tornei_section_column($conn);
 

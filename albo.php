@@ -3,11 +3,10 @@ require_once __DIR__ . '/includi/security.php';
 require_once __DIR__ . '/includi/seo.php';
 require_once __DIR__ . '/includi/content_sections.php';
 $baseUrl = seo_base_url();
-$requestedSectionRaw = trim((string)($_GET['sezione'] ?? ''));
-$alboSection = $requestedSectionRaw === '' ? '' : normalize_content_section($requestedSectionRaw);
-$isSectionFiltered = $alboSection !== '';
+$alboSection = content_current_section();
+$isSectionFiltered = true;
 $isEsportAlbo = $alboSection === 'esport';
-$alboPath = $isSectionFiltered ? '/albo.php?sezione=' . rawurlencode($alboSection) : '/albo.php';
+$alboPath = '/albo.php';
 $pageSeo = [
   'title' => $isEsportAlbo ? 'Albo d\'oro ESPORT | Tornei Old School' : 'Albo d\'oro | Tornei Old School',
   'description' => $isEsportAlbo
