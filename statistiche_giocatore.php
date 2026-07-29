@@ -116,13 +116,38 @@ function format_match_datetime(?string $data, ?string $ora): string {
 }
 
 function render_stage(array $p): string {
-    if (!empty($p['giornata'])) {
+    $phase = strtoupper(trim((string)($p['fase'] ?? '')));
+    $round = strtoupper(trim((string)($p['fase_round'] ?? '')));
+    $leg = strtoupper(trim((string)($p['fase_leg'] ?? '')));
+    $roundLabels = [
+        'TRENTADUESIMI' => 'Trentaduesimi',
+        'SEDICESIMI' => 'Sedicesimi',
+        'OTTAVI' => 'Ottavi',
+        'QUARTI' => 'Quarti',
+        'SEMIFINALE' => 'Semifinale',
+        'FINALE' => 'Finale',
+    ];
+
+    // Nelle fasi finali il round ha priorita sulla giornata tecnica salvata nel DB.
+    if ($round !== '') {
+        $parts = [$roundLabels[$round] ?? ucfirst(strtolower($round))];
+        if ($leg !== '' && $leg !== 'UNICA') {
+            $parts[] = ucfirst(strtolower($leg));
+        }
+        return implode(' - ', $parts);
+    }
+
+    if ($phase === 'REGULAR' && !empty($p['giornata'])) {
         return 'Giornata ' . (int)$p['giornata'];
     }
+
     $parts = [];
-    if (!empty($p['fase'])) $parts[] = $p['fase'];
-    if (!empty($p['fase_round'])) $parts[] = $p['fase_round'];
-    if (!empty($p['fase_leg'])) $parts[] = $p['fase_leg'];
+    if ($phase !== '') $parts[] = ucfirst(strtolower($phase));
+    if ($round !== '') $parts[] = $roundLabels[$round] ?? ucfirst(strtolower($round));
+    if ($leg !== '' && $leg !== 'UNICA') $parts[] = ucfirst(strtolower($leg));
+    if (!$parts && !empty($p['giornata'])) {
+        return 'Giornata ' . (int)$p['giornata'];
+    }
     return $parts ? implode(' - ', $parts) : '';
 }
 function match_link(array $p): string {

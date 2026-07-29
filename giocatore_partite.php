@@ -162,22 +162,40 @@ function formatDecimal(value, digits = 2) {
 
 function formatStage(match) {
     const fase = (match.fase || '').toString().toUpperCase().trim();
-    const isPlayoff = fase === 'GOLD' || fase === 'SILVER';
+    const round = (match.fase_round || '').toString().toUpperCase().trim();
     const faseLeg = (match.fase_leg || '').toString().toUpperCase().trim();
+    const roundLabels = {
+        TRENTADUESIMI: 'Trentaduesimi',
+        SEDICESIMI: 'Sedicesimi',
+        OTTAVI: 'Ottavi',
+        QUARTI: 'Quarti',
+        SEMIFINALE: 'Semifinale',
+        FINALE: 'Finale'
+    };
 
-    if (match.giornata && !isPlayoff) {
+    // Nelle fasi finali il round prevale sulla giornata tecnica.
+    if (round) {
+        const parts = [roundLabels[round] || round];
+        if (faseLeg && faseLeg !== 'UNICA') {
+            parts.push(faseLeg.charAt(0) + faseLeg.slice(1).toLowerCase());
+        }
+        return parts.join(' - ');
+    }
+
+    if (match.giornata && fase === 'REGULAR') {
         return `Giornata ${match.giornata}`;
     }
+
     const parts = [];
-    if (match.fase) parts.push(match.fase);
-    if (match.fase_round) parts.push(match.fase_round);
-    if (match.fase_leg) {
-        const isSingleLeg = faseLeg === 'UNICA';
-        if (!(isPlayoff && isSingleLeg)) {
-            parts.push(match.fase_leg);
-        }
+    if (fase) parts.push(fase.charAt(0) + fase.slice(1).toLowerCase());
+    if (round) parts.push(roundLabels[round] || round);
+    if (faseLeg && faseLeg !== 'UNICA') {
+        parts.push(faseLeg.charAt(0) + faseLeg.slice(1).toLowerCase());
     }
-    return parts.length ? parts.join(' - ') : '';
+    if (!parts.length && match.giornata) {
+        return `Giornata ${match.giornata}`;
+    }
+    return parts.join(' - ');
 }
 
 function updateToggle(tipo) {
