@@ -256,12 +256,19 @@ if (!function_exists('torneo_stats_empty_player_totals')) {
 }
 
 if (!function_exists('torneo_stats_fetch_player_global_totals')) {
-    function torneo_stats_fetch_player_global_totals(mysqli $conn, int $giocatoreId): array
+    function torneo_stats_fetch_player_global_totals(mysqli $conn, int $giocatoreId, ?string $section = null): array
     {
         if ($giocatoreId <= 0) {
             return torneo_stats_empty_player_totals();
         }
 
+        $section = $section !== null
+            ? (strtolower(trim($section)) === 'esport' ? 'esport' : 'calcio')
+            : null;
+        $sectionJoin = $section !== null
+            ? "LEFT JOIN tornei t_scope ON (t_scope.filetorneo = p.torneo OR t_scope.filetorneo = CONCAT(p.torneo, '.php') OR t_scope.nome = p.torneo)"
+            : '';
+        $sectionWhere = $section !== null ? "AND COALESCE(t_scope.sezione, 'calcio') = ?" : '';
         $globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($conn, 'p.torneo');
         $stmt = $conn->prepare("
             SELECT
@@ -274,13 +281,28 @@ if (!function_exists('torneo_stats_fetch_player_global_totals')) {
                 SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN 1 ELSE 0 END) AS num_voti
             FROM partita_giocatore pg
             JOIN partite p ON p.id = pg.partita_id
+            $sectionJoin
             WHERE pg.giocatore_id = ?
+              $sectionWhere
+              AND EXISTS (
+                  SELECT 1
+                  FROM squadre_giocatori sg_member
+                  JOIN squadre s_member ON s_member.id = sg_member.squadra_id
+                  WHERE sg_member.giocatore_id = pg.giocatore_id
+                    AND s_member.torneo = p.torneo
+                    AND s_member.nome IN (p.squadra_casa, p.squadra_ospite)
+                    AND (pg.squadra_id IS NULL OR pg.squadra_id = s_member.id)
+              )
         ");
         if (!$stmt) {
             return torneo_stats_empty_player_totals();
         }
 
-        $stmt->bind_param('i', $giocatoreId);
+        if ($section !== null) {
+            $stmt->bind_param('is', $giocatoreId, $section);
+        } else {
+            $stmt->bind_param('i', $giocatoreId);
+        }
         if (!$stmt->execute()) {
             $stmt->close();
             return torneo_stats_empty_player_totals();
@@ -290,9 +312,34 @@ if (!function_exists('torneo_stats_fetch_player_global_totals')) {
         $stmt->close();
         $numVoti = (int)($row['num_voti'] ?? 0);
 
+        $extraGoals = giocatore_goal_extra_fetch_global_total($conn, $giocatoreId);
+        if ($section !== null && giocatore_goal_extra_table_exists($conn)) {
+            $extraGoals = 0;
+            $extraStmt = $conn->prepare("
+                SELECT COALESCE(SUM(gge.goal), 0) AS totale
+                FROM giocatore_goal_extra gge
+                JOIN squadre s_extra ON s_extra.id = gge.squadra_id
+                LEFT JOIN tornei t_extra ON (
+                    t_extra.filetorneo = s_extra.torneo
+                    OR t_extra.filetorneo = CONCAT(s_extra.torneo, '.php')
+                    OR t_extra.nome = s_extra.torneo
+                )
+                WHERE gge.giocatore_id = ?
+                  AND COALESCE(t_extra.sezione, 'calcio') = ?
+            ");
+            if ($extraStmt) {
+                $extraStmt->bind_param('is', $giocatoreId, $section);
+                if ($extraStmt->execute()) {
+                    $extraRow = $extraStmt->get_result()->fetch_assoc() ?: [];
+                    $extraGoals = (int)($extraRow['totale'] ?? 0);
+                }
+                $extraStmt->close();
+            }
+        }
+
         return [
             'presenze' => (int)($row['presenze'] ?? 0),
-            'reti' => (int)($row['reti'] ?? 0) + giocatore_goal_extra_fetch_global_total($conn, $giocatoreId),
+            'reti' => (int)($row['reti'] ?? 0) + $extraGoals,
             'assist' => (int)($row['assist'] ?? 0),
             'gialli' => (int)($row['gialli'] ?? 0),
             'rossi' => (int)($row['rossi'] ?? 0),
@@ -325,6 +372,9 @@ if (!function_exists('torneo_stats_fetch_player_team_totals')) {
             FROM partita_giocatore pg
             JOIN partite p ON p.id = pg.partita_id
             JOIN squadre s ON s.id = {$resolvedTeamExpr}
+            JOIN squadre_giocatori sg_member
+              ON sg_member.squadra_id = s.id
+             AND sg_member.giocatore_id = pg.giocatore_id
             WHERE pg.giocatore_id = ?
               AND s.torneo = ?
               AND s.nome = ?

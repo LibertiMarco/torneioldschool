@@ -9,6 +9,7 @@ if (!isset($_SESSION['user_id'])) {
 
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/torneo_phase_rules.php';
+require_once __DIR__ . '/../includi/content_sections.php';
 
 if (!$conn || $conn->connect_error) {
     http_response_code(500);
@@ -17,6 +18,7 @@ if (!$conn || $conn->connect_error) {
 }
 
 $conn->set_charset('utf8mb4');
+$siteSection = content_current_section();
 
 $giocatoreId = (int)($_GET['giocatore_id'] ?? 0);
 $tipo = strtolower(trim($_GET['tipo'] ?? 'gol'));
@@ -68,27 +70,29 @@ $fotoSelect = "
     END AS foto
 ";
 
-function giocatore_partite_fetch_extra_goals(mysqli $conn, int $giocatoreId, array $excludedTournaments = []): int
+function giocatore_partite_fetch_extra_goals(mysqli $conn, int $giocatoreId, string $section, array $excludedTournaments = []): int
 {
     if ($giocatoreId <= 0 || !giocatore_goal_extra_table_exists($conn)) {
         return 0;
     }
 
     $excludedTournaments = array_values(array_filter(array_map('trim', $excludedTournaments), static fn(string $value): bool => $value !== ''));
-    if (empty($excludedTournaments)) {
-        return giocatore_goal_extra_fetch_global_total($conn, $giocatoreId);
+    $excludedSql = '';
+    if (!empty($excludedTournaments)) {
+        $placeholders = implode(',', array_fill(0, count($excludedTournaments), '?'));
+        $excludedSql = " AND s.torneo NOT IN ($placeholders)";
     }
-
-    $placeholders = implode(',', array_fill(0, count($excludedTournaments), '?'));
-    $types = 'i' . str_repeat('s', count($excludedTournaments));
-    $params = array_merge([$giocatoreId], $excludedTournaments);
+    $types = 'is' . str_repeat('s', count($excludedTournaments));
+    $params = array_merge([$giocatoreId, $section], $excludedTournaments);
 
     $stmt = $conn->prepare("
         SELECT COALESCE(SUM(gge.goal), 0) AS totale
         FROM giocatore_goal_extra gge
-        LEFT JOIN squadre s ON s.id = gge.squadra_id
+        JOIN squadre s ON s.id = gge.squadra_id
+        LEFT JOIN tornei t ON (t.filetorneo = s.torneo OR t.filetorneo = CONCAT(s.torneo, '.php') OR t.nome = s.torneo)
         WHERE gge.giocatore_id = ?
-          AND (gge.squadra_id IS NULL OR s.torneo NOT IN ($placeholders))
+          AND COALESCE(t.sezione, 'calcio') = ?
+          $excludedSql
     ");
     if (!$stmt) {
         return 0;
@@ -119,13 +123,27 @@ $sqlPlayer = "
     FROM giocatori g
     LEFT JOIN partita_giocatore pg ON pg.giocatore_id = g.id
     LEFT JOIN partite p ON p.id = pg.partita_id{$whereExcluded}
+    LEFT JOIN tornei t_scope ON (t_scope.filetorneo = p.torneo OR t_scope.filetorneo = CONCAT(p.torneo, '.php') OR t_scope.nome = p.torneo)
     WHERE g.id = ?
+      AND (p.id IS NULL OR COALESCE(t_scope.sezione, 'calcio') = ?)
+      AND (
+        p.id IS NULL
+        OR EXISTS (
+            SELECT 1
+            FROM squadre_giocatori sg_member
+            JOIN squadre s_member ON s_member.id = sg_member.squadra_id
+            WHERE sg_member.giocatore_id = g.id
+              AND s_member.torneo = p.torneo
+              AND s_member.nome IN (p.squadra_casa, p.squadra_ospite)
+              AND (pg.squadra_id IS NULL OR pg.squadra_id = s_member.id)
+        )
+      )
     GROUP BY g.id
     LIMIT 1
 ";
 
-$paramsPlayer = array_merge($paramsExcluded, [$giocatoreId]);
-$typesPlayer = $typesExcluded . 'i';
+$paramsPlayer = array_merge($paramsExcluded, [$giocatoreId, $siteSection]);
+$typesPlayer = $typesExcluded . 'is';
 
 $stmt = $conn->prepare($sqlPlayer);
 if (!$stmt) {
@@ -152,7 +170,7 @@ $player = [
     'ruolo' => $playerRow['ruolo'],
     'foto' => $playerRow['foto'],
     'totali' => [
-        'gol' => (int)$playerRow['gol_totali'] + giocatore_partite_fetch_extra_goals($conn, $giocatoreId, $excludedTournaments),
+        'gol' => (int)$playerRow['gol_totali'] + giocatore_partite_fetch_extra_goals($conn, $giocatoreId, $siteSection, $excludedTournaments),
         'presenze' => (int)$playerRow['presenze_totali'],
         'assist' => (int)$playerRow['assist_totali'],
     ],
@@ -176,12 +194,14 @@ $sqlTeams = "
     FROM squadre_giocatori sg
     JOIN squadre s ON s.id = sg.squadra_id
     LEFT JOIN tornei t ON (t.filetorneo = s.torneo OR t.filetorneo = CONCAT(s.torneo, '.php') OR t.nome = s.torneo)
-    WHERE sg.giocatore_id = ?{$whereExcludedTeams}
+    WHERE sg.giocatore_id = ?
+      AND COALESCE(t.sezione, 'calcio') = ?
+      {$whereExcludedTeams}
     ORDER BY s.torneo ASC, s.nome ASC, sg.id ASC
 ";
 
-$paramsTeams = array_merge([$giocatoreId], $paramsExcludedTeams);
-$typesTeams = 'i' . $typesExcludedTeams;
+$paramsTeams = array_merge([$giocatoreId, $siteSection], $paramsExcludedTeams);
+$typesTeams = 'is' . $typesExcludedTeams;
 
 $stmt = $conn->prepare($sqlTeams);
 if (!$stmt) {
@@ -259,13 +279,24 @@ $sqlMatches = "
     LEFT JOIN tornei t ON (t.filetorneo = p.torneo OR t.filetorneo = CONCAT(p.torneo, '.php') OR t.nome = p.torneo)
     LEFT JOIN squadre sc ON sc.nome = p.squadra_casa AND sc.torneo = p.torneo
     LEFT JOIN squadre so ON so.nome = p.squadra_ospite AND so.torneo = p.torneo
-    WHERE pg.giocatore_id = ?{$whereExcluded} AND {$whereStat}
+    WHERE pg.giocatore_id = ?{$whereExcluded}
+      AND EXISTS (
+          SELECT 1
+          FROM squadre_giocatori sg_member
+          JOIN squadre s_member ON s_member.id = sg_member.squadra_id
+          WHERE sg_member.giocatore_id = pg.giocatore_id
+            AND s_member.torneo = p.torneo
+            AND s_member.nome IN (p.squadra_casa, p.squadra_ospite)
+            AND (pg.squadra_id IS NULL OR pg.squadra_id = s_member.id)
+      )
+      AND COALESCE(t.sezione, 'calcio') = ?
+      AND {$whereStat}
     ORDER BY p.data_partita DESC, p.ora_partita DESC, pg.partita_id DESC
     LIMIT ?
 ";
 
-$paramsMatches = array_merge([$giocatoreId], $paramsExcluded, [$limit]);
-$typesMatches = 'i' . $typesExcluded . 'i';
+$paramsMatches = array_merge([$giocatoreId], $paramsExcluded, [$siteSection, $limit]);
+$typesMatches = 'i' . $typesExcluded . 'si';
 
 $stmt = $conn->prepare($sqlMatches);
 if (!$stmt) {
