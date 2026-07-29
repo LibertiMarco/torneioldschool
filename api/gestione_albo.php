@@ -191,7 +191,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $competizione = trim($_POST['competizione'] ?? '');
         $premio = strtoupper(trim($_POST['premio'] ?? 'VINCENTE'));
         $vincitrice = trim($_POST['vincitrice'] ?? '');
-        $sezione = normalize_content_section($_POST['sezione'] ?? 'calcio');
+        $sezione = $adminSection;
         $linkTorneoInput = $_POST['link_torneo'] ?? '';
         $inizio_mese = (int)($_POST['inizio_mese'] ?? 0);
         $inizio_anno = (int)($_POST['inizio_anno'] ?? 0);
@@ -269,6 +269,15 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->close();
                 $messages[] = "Record inserito correttamente.";
             } elseif ($azione === 'update' && $id > 0) {
+                if ($sectionColumnAvailable) {
+                    $ownership = $conn->prepare("SELECT id FROM albo WHERE id = ? AND sezione = ? LIMIT 1");
+                    $ownership->bind_param('is', $id, $adminSection);
+                    $ownership->execute();
+                    $ownership->store_result();
+                    $allowed = $ownership->num_rows === 1;
+                    $ownership->close();
+                    if (!$allowed) throw new Exception('Record non disponibile in questa area amministrativa.');
+                }
                 $link_torneo = normalizeTournamentLinkInput($linkTorneoInput);
                 if ($competizione === '' || $vincitrice === '') {
                     throw new Exception('Compila almeno competizione e vincitrice.');
@@ -355,8 +364,11 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->close();
                 $messages[] = "Record aggiornato.";
             } elseif ($azione === 'delete' && $id > 0) {
-                $stmt = $conn->prepare("DELETE FROM albo WHERE id=?");
-                $stmt->bind_param("i", $id);
+                $stmt = $sectionColumnAvailable
+                    ? $conn->prepare("DELETE FROM albo WHERE id=? AND sezione=?")
+                    : $conn->prepare("DELETE FROM albo WHERE id=?");
+                if ($sectionColumnAvailable) $stmt->bind_param("is", $id, $adminSection);
+                else $stmt->bind_param("i", $id);
                 $stmt->execute();
                 $stmt->close();
                 $messages[] = "Record eliminato.";
@@ -365,7 +377,9 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!is_array($ordine) || empty($ordine)) {
                     throw new Exception('Nessun ordine ricevuto.');
                 }
-                $stmt = $conn->prepare("UPDATE albo SET ordinamento=? WHERE id=?");
+                $stmt = $sectionColumnAvailable
+                    ? $conn->prepare("UPDATE albo SET ordinamento=? WHERE id=? AND sezione=?")
+                    : $conn->prepare("UPDATE albo SET ordinamento=? WHERE id=?");
                 if (!$stmt) {
                     throw new Exception('Impossibile salvare il nuovo ordine.');
                 }
@@ -375,7 +389,8 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     foreach ($ids as $idOrd) {
                         $idOrd = (int)$idOrd;
                         if ($idOrd <= 0) continue;
-                        $stmt->bind_param("ii", $pos, $idOrd);
+                        if ($sectionColumnAvailable) $stmt->bind_param("iis", $pos, $idOrd, $adminSection);
+                        else $stmt->bind_param("ii", $pos, $idOrd);
                         $stmt->execute();
                         $pos++;
                     }
@@ -391,11 +406,18 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $albo = [];
     if (empty($errors)) {
         $orderPrefix = $orderColumnAvailable ? "COALESCE(ordinamento, 999999)," : "";
-        $res = $conn->query("SELECT * FROM albo ORDER BY {$orderPrefix} COALESCE(fine_anno, inizio_anno, YEAR(created_at)) DESC, COALESCE(fine_mese, inizio_mese, MONTH(created_at)) DESC, id DESC");
-        if ($res) {
+        $alboSql = "SELECT * FROM albo"
+            . ($sectionColumnAvailable ? " WHERE sezione = ?" : "")
+            . " ORDER BY {$orderPrefix} COALESCE(fine_anno, inizio_anno, YEAR(created_at)) DESC, COALESCE(fine_mese, inizio_mese, MONTH(created_at)) DESC, id DESC";
+        $alboStmt = $conn->prepare($alboSql);
+        if ($alboStmt) {
+            if ($sectionColumnAvailable) $alboStmt->bind_param('s', $adminSection);
+            $alboStmt->execute();
+            $res = $alboStmt->get_result();
             while ($row = $res->fetch_assoc()) {
                 $albo[] = $row;
             }
+            $alboStmt->close();
         }
 
         // Lista competizioni per ordinamento manuale
@@ -553,8 +575,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
           <div>
             <label>Sezione</label>
             <select name="sezione">
-              <option value="calcio">Calcio</option>
-              <option value="esport">ESPORT</option>
+              <option value="<?= h($adminSection) ?>" selected><?= $adminIsEsport ? 'ESPORT' : 'Sport' ?></option>
             </select>
           </div>
           <?php endif; ?>
@@ -635,8 +656,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
           <?php if ($sectionColumnAvailable): ?>
           <label>Sezione
             <select name="sezione" id="upd_sezione">
-              <option value="calcio">Calcio</option>
-              <option value="esport">ESPORT</option>
+              <option value="<?= h($adminSection) ?>" selected><?= $adminIsEsport ? 'ESPORT' : 'Sport' ?></option>
             </select>
           </label>
           <?php endif; ?>

@@ -93,6 +93,8 @@ $sharedCookieDomain = (
 ) ? '.torneioldschool.it' : '';
 
 if (session_status() === PHP_SESSION_NONE) {
+    // Nuovo nome condiviso: evita conflitti con i vecchi PHPSESSID host-only.
+    session_name('tos_session');
     $rememberRequested = !empty($_COOKIE[REMEMBER_COOKIE_NAME]);
     $cookieLifetime = $rememberRequested ? REMEMBER_COOKIE_LIFETIME : 0;
     tos_debug_log('session_start', $loginDebugEnabled, [

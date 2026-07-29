@@ -298,6 +298,7 @@ if ($torneiResult) {
 
 $torneiAssociazioni = $tornei;
 $torneiStatusBySlug = [];
+$torneiSectionBySlug = [];
 $torneiCatalogoResult = $torneoModel->getAll();
 if ($torneiCatalogoResult instanceof mysqli_result) {
     while ($row = $torneiCatalogoResult->fetch_assoc()) {
@@ -306,19 +307,21 @@ if ($torneiCatalogoResult instanceof mysqli_result) {
             continue;
         }
         $torneiStatusBySlug[$slug] = strtolower(trim((string)($row['stato'] ?? '')));
+        $torneiSectionBySlug[$slug] = strtolower(trim((string)($row['sezione'] ?? 'calcio'))) === 'esport' ? 'esport' : 'calcio';
     }
 }
 
 if (!empty($torneiStatusBySlug)) {
     $torneiAssociazioni = array_values(array_filter(
         $tornei,
-        static function (array $torneoVal) use ($torneiStatusBySlug): bool {
+        static function (array $torneoVal) use ($torneiStatusBySlug, $torneiSectionBySlug, $adminSection): bool {
             $slug = normalizeTorneoSlugValue($torneoVal['id'] ?? $torneoVal['torneo'] ?? $torneoVal['nome'] ?? '');
             if ($slug === '') {
                 return false;
             }
 
-            return ($torneiStatusBySlug[$slug] ?? '') !== 'terminato';
+            return ($torneiStatusBySlug[$slug] ?? '') !== 'terminato'
+                && ($torneiSectionBySlug[$slug] ?? 'calcio') === $adminSection;
         }
     ));
 }

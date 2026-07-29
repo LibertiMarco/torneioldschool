@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/security.php';
 require_once __DIR__ . '/user_features.php';
+require_once __DIR__ . '/content_sections.php';
+
+$adminSection = content_current_section();
+$adminIsEsport = $adminSection === 'esport';
 
 $currentPath = $_SERVER['REQUEST_URI'] ?? '/admin_dashboard.php';
 

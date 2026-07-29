@@ -3,14 +3,16 @@ require_once __DIR__ . '/includi/admin_guard.php';
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/fanta_old_school.php';
 
+$adminSection = $adminSection ?? content_current_section();
+$adminIsEsport = $adminSection === 'esport';
 $csrfKey = 'admin_fanta_old_school';
 $adminFlash = $_SESSION['fanta_old_school_admin_flash'] ?? null;
 unset($_SESSION['fanta_old_school_admin_flash']);
 
-$activeTab = (isset($_GET['tab']) && $_GET['tab'] === 'fanta-old-school') ? 'fanta-old-school' : 'strumenti';
+$activeTab = (!$adminIsEsport && isset($_GET['tab']) && $_GET['tab'] === 'fanta-old-school') ? 'fanta-old-school' : 'strumenti';
 $fantaView = (isset($_GET['fos_view']) && $_GET['fos_view'] === 'records') ? 'records' : 'inviti';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fanta_old_school_action'])) {
+if (!$adminIsEsport && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fanta_old_school_action'])) {
     csrf_require($csrfKey);
 
     $leadId = (int)($_POST['lead_id'] ?? 0);
@@ -483,7 +485,7 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
     <?php include __DIR__ . '/includi/header.php'; ?>
 
     <main class="admin-dashboard">
-        <h1 class="admin-title">Pannello Amministratore</h1>
+        <h1 class="admin-title"><?= $adminIsEsport ? 'Pannello Amministratore ESPORT' : 'Pannello Amministratore SPORT' ?></h1>
 
         <?php if ($adminFlash && !empty($adminFlash['message'])): ?>
           <div class="admin-inline-banner <?= htmlspecialchars((string)($adminFlash['type'] ?? 'info')) ?>">
@@ -492,6 +494,7 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
         <?php endif; ?>
 
         <div class="admin-tab-nav" role="tablist" aria-label="Sezioni dashboard admin">
+            <?php if (!$adminIsEsport): ?>
             <button
                 type="button"
                 class="admin-tab-btn <?= $activeTab === 'strumenti' ? 'is-active' : '' ?>"
@@ -504,20 +507,15 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
                 data-tab-target="adminTabFantaOldSchool"
                 aria-selected="<?= $activeTab === 'fanta-old-school' ? 'true' : 'false' ?>"
             >Fanta Old School</button>
+            <?php endif; ?>
         </div>
 
         <section id="adminTabStrumenti" class="admin-tab-panel <?= $activeTab === 'strumenti' ? 'is-active' : '' ?>">
         <div class="cards-container">
             <div class="admin-card">
-                <h3>Gestione Tornei</h3>
-                <p>Crea, modifica o elimina tornei esistenti.</p><br>
+                <h3>Gestione Tornei <?= $adminIsEsport ? 'ESPORT' : 'SPORT' ?></h3>
+                <p>Crea, modifica o elimina esclusivamente i tornei <?= $adminIsEsport ? 'esport' : 'sportivi' ?>.</p><br>
                 <a href="/api/gestione_tornei.php">Gestisci</a>
-            </div>
-
-            <div class="admin-card">
-                <h3>Crea Tornei ESPORT</h3>
-                <p>Apri il form admin gia impostato sulla sezione ESPORT per pubblicare tornei gaming dedicati.</p><br>
-                <a href="/api/gestione_tornei.php?sezione=esport&action=crea">Apri</a>
             </div>
 
             <div class="admin-card">
@@ -550,6 +548,7 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
                 <a href="/api/crea_giornata_automatica.php">Apri</a>
             </div>
 
+      <?php if (!$adminIsEsport): ?>
       <div class="admin-card">
         <h3>Utenti & Iscrizioni</h3>
           <p>Controlla gli utenti registrati e le loro iscrizioni.</p><br>
@@ -579,27 +578,31 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
         <p>Apri la tab dedicata e controlla quanti invitati ha portato ogni utente.</p><br>
         <a href="<?= htmlspecialchars(login_with_base_path('/admin_dashboard.php?tab=fanta-old-school')) ?>">Apri tab</a>
       </div>
+      <?php endif; ?>
 
       <div class="admin-card">
-        <h3>Gestione Blog</h3>
-        <p>Pubblica nuovi articoli e tieni aggiornato il blog.</p><br>
+        <h3>Gestione Blog <?= $adminIsEsport ? 'ESPORT' : 'SPORT' ?></h3>
+        <p>Pubblica e modifica esclusivamente gli articoli <?= $adminIsEsport ? 'esport' : 'sportivi' ?>.</p><br>
         <a href="/api/gestione_blog.php">Crea articoli</a>
       </div>
 
+      <?php if (!$adminIsEsport): ?>
       <div class="admin-card">
         <h3>Gestione Staff</h3>
         <p>Aggiungi arbitri, videomaker e altri ruoli dello staff.</p><br>
         <a href="/api/gestione_staff.php">Gestisci</a>
       </div>
+      <?php endif; ?>
 
       <div class="admin-card">
-        <h3>Albo d'oro</h3>
-        <p>Inserisci e aggiorna le vincitrici dei tornei.</p><br>
+        <h3>Albo d'oro <?= $adminIsEsport ? 'ESPORT' : 'SPORT' ?></h3>
+        <p>Inserisci e aggiorna esclusivamente le vincitrici <?= $adminIsEsport ? 'esport' : 'sportive' ?>.</p><br>
         <a href="/api/gestione_albo.php">Gestisci</a>
       </div>
     </div>
     </section>
 
+    <?php if (!$adminIsEsport): ?>
     <section id="adminTabFantaOldSchool" class="admin-tab-panel <?= $activeTab === 'fanta-old-school' ? 'is-active' : '' ?>">
       <div class="referral-summary-grid">
         <div class="referral-summary-card">
@@ -860,6 +863,7 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
         </div>
       </section>
     </section>
+    <?php endif; ?>
 
     <a class="logout-btn" href="index.php">Esci dal pannello</a>
     </main>

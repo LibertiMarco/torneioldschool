@@ -39,9 +39,16 @@ if ($checkTorneoSection && $checkTorneoSection->num_rows > 0) {
 }
 
 $torneiSelectSql = $torneiHasSection
-  ? "SELECT nome, filetorneo, sezione FROM tornei WHERE stato <> 'terminato' ORDER BY nome ASC"
+  ? "SELECT nome, filetorneo, sezione FROM tornei WHERE stato <> 'terminato' AND sezione = ? ORDER BY nome ASC"
   : "SELECT nome, filetorneo FROM tornei WHERE stato <> 'terminato' ORDER BY nome ASC";
-$torneiRes = $conn->query($torneiSelectSql);
+$torneiStmt = $conn->prepare($torneiSelectSql);
+if ($torneiStmt && $torneiHasSection) {
+  $torneiStmt->bind_param('s', $adminSection);
+}
+if ($torneiStmt) {
+  $torneiStmt->execute();
+}
+$torneiRes = $torneiStmt ? $torneiStmt->get_result() : false;
 if ($torneiRes) {
   while ($row = $torneiRes->fetch_assoc()) {
     $slug = preg_replace('/\.(html?|php)$/i', '', $row['filetorneo'] ?? '');
@@ -51,6 +58,9 @@ if ($torneiRes) {
       'sezione' => strtolower(trim((string)($row['sezione'] ?? 'calcio'))) === 'esport' ? 'esport' : 'calcio',
     ];
   }
+}
+if ($torneiStmt) {
+  $torneiStmt->close();
 }
 
 if (!empty($torneiDisponibili)) {

@@ -14,13 +14,29 @@ $errore = '';
 $successo = '';
 $titolo = '';
 $contenuto = '';
-$sezioneCreate = 'calcio';
+$sezioneCreate = $adminSection;
 
 $mediaDir = __DIR__ . '/../img/blog_media/';
 $allowedImages = ['jpg', 'jpeg', 'png', 'webp'];
 $allowedVideos = ['mp4', 'webm', 'ogg', 'mov'];
 $maxUploadBytes = 30 * 1024 * 1024;
 $blogSectionReady = ensure_blog_post_section_column($conn);
+
+function adminBlogPostBelongsToSection(mysqli $conn, int $postId, string $section, bool $sectionReady): bool {
+  if ($postId <= 0) return false;
+  $sql = $sectionReady
+    ? 'SELECT id FROM blog_post WHERE id = ? AND sezione = ? LIMIT 1'
+    : 'SELECT id FROM blog_post WHERE id = ? LIMIT 1';
+  $stmt = $conn->prepare($sql);
+  if (!$stmt) return false;
+  if ($sectionReady) $stmt->bind_param('is', $postId, $section);
+  else $stmt->bind_param('i', $postId);
+  $stmt->execute();
+  $stmt->store_result();
+  $belongs = $stmt->num_rows === 1 && ($sectionReady || $section === 'calcio');
+  $stmt->close();
+  return $belongs;
+}
 
 function ini_bytes(string $value): int {
   $value = trim($value);
@@ -139,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($azioneForm === 'crea') {
       $titolo = sanitizeText($_POST['titolo'] ?? '');
       $contenuto = sanitizeText($_POST['contenuto'] ?? '');
-      $sezione = normalize_content_section($_POST['sezione'] ?? 'calcio');
+      $sezione = $adminSection;
       $sezioneCreate = $sezione;
       $inviaNotifica = !empty($_POST['invia_notifica_newsletter']);
     if ($titolo === '' || $contenuto === '') {
@@ -187,9 +203,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $soloMedia = ($_POST['solo_media_mod'] ?? '') === '1';
       $nuovoTitolo = sanitizeText($_POST['titolo_mod'] ?? '');
       $nuovoContenuto = sanitizeText($_POST['contenuto_mod'] ?? '');
-      $nuovaSezione = normalize_content_section($_POST['sezione_mod'] ?? 'calcio');
+      $nuovaSezione = $adminSection;
       if ($id <= 0 || (!$soloMedia && ($nuovoTitolo === '' || $nuovoContenuto === ''))) {
         $errore = 'Seleziona un articolo valido e compila tutti i campi.';
+      } elseif (!adminBlogPostBelongsToSection($conn, $id, $adminSection, $blogSectionReady)) {
+        $errore = 'Articolo non disponibile in questa area amministrativa.';
       } else {
         if (!$soloMedia) {
           $stmt = $blogSectionReady
@@ -221,6 +239,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $id = (int)($_POST['articolo_id'] ?? 0);
       if ($id <= 0) {
         $errore = 'Articolo non valido.';
+      } elseif (!adminBlogPostBelongsToSection($conn, $id, $adminSection, $blogSectionReady)) {
+        $errore = 'Articolo non disponibile in questa area amministrativa.';
       } else {
         $mediaStmt = $conn->prepare("SELECT file_path FROM blog_media WHERE post_id = ?");
         if ($mediaStmt) {
@@ -249,13 +269,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       if ($mediaId <= 0) {
         $errore = 'Media non valido.';
       } else {
-        $stmt = $conn->prepare("SELECT file_path FROM blog_media WHERE id = ?");
+        $stmt = $conn->prepare("SELECT file_path, post_id FROM blog_media WHERE id = ?");
         if ($stmt) {
           $stmt->bind_param('i', $mediaId);
           $stmt->execute();
           $res = $stmt->get_result()->fetch_assoc();
           $stmt->close();
-          if ($res) {
+          if ($res && adminBlogPostBelongsToSection($conn, (int)($res['post_id'] ?? 0), $adminSection, $blogSectionReady)) {
             $del = $conn->prepare("DELETE FROM blog_media WHERE id = ?");
             if ($del) {
               $del->bind_param('i', $mediaId);
@@ -282,12 +302,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $articoli = [];
 $articoliSelect = $blogSectionReady ? 'sezione' : "'calcio' AS sezione";
-$res = $conn->query("SELECT id, titolo, contenuto, {$articoliSelect}, data_pubblicazione AS data_iso, DATE_FORMAT(data_pubblicazione, '%d/%m/%Y %H:%i') AS data_pubblicazione FROM blog_post ORDER BY data_pubblicazione DESC");
-if ($res) {
+$articoliSql = "SELECT id, titolo, contenuto, {$articoliSelect}, data_pubblicazione AS data_iso, DATE_FORMAT(data_pubblicazione, '%d/%m/%Y %H:%i') AS data_pubblicazione FROM blog_post"
+  . ($blogSectionReady ? ' WHERE sezione = ?' : '')
+  . ' ORDER BY data_pubblicazione DESC';
+$articoliStmt = $conn->prepare($articoliSql);
+if ($articoliStmt) {
+  if ($blogSectionReady) $articoliStmt->bind_param('s', $adminSection);
+  $articoliStmt->execute();
+  $res = $articoliStmt->get_result();
   while ($row = $res->fetch_assoc()) {
     $row['id'] = (int)$row['id'];
     $articoli[] = $row;
   }
+  $articoliStmt->close();
 }
 
 $mediaByPost = [];
@@ -442,8 +469,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <?php if ($blogSectionReady): ?>
         <label for="sezione">Sezione</label>
         <select id="sezione" name="sezione">
-          <option value="calcio" <?= $sezioneCreate === 'calcio' ? 'selected' : '' ?>>Calcio</option>
-          <option value="esport" <?= $sezioneCreate === 'esport' ? 'selected' : '' ?>>ESPORT</option>
+          <option value="<?= htmlspecialchars($adminSection) ?>" selected><?= $adminIsEsport ? 'ESPORT' : 'Sport' ?></option>
         </select>
         <?php endif; ?>
 
@@ -504,8 +530,7 @@ $articoliJson = json_encode($articoli, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_S
         <?php if ($blogSectionReady): ?>
         <label for="sezione_mod">Sezione</label>
         <select id="sezione_mod" name="sezione_mod">
-          <option value="calcio">Calcio</option>
-          <option value="esport">ESPORT</option>
+          <option value="<?= htmlspecialchars($adminSection) ?>" selected><?= $adminIsEsport ? 'ESPORT' : 'Sport' ?></option>
         </select>
         <?php endif; ?>
 

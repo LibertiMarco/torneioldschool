@@ -333,11 +333,15 @@ $torneoSectionBySlug = [];
 $torneoLabelAllBySlug = [];
 if ($resTornei = $torneoModel->getAll()) {
     while ($r = $resTornei->fetch_assoc()) {
+        $rowSection = strtolower(trim((string)($r['sezione'] ?? 'calcio'))) === 'esport' ? 'esport' : 'calcio';
         $slugValue = sanitizeTorneoSlugValue($r['filetorneo'] ?? $r['nome'] ?? '');
         if ($slugValue !== '') {
             $torneiConfigBySlug[$slugValue] = parseTorneoConfigValue($r['config'] ?? null);
-            $torneoSectionBySlug[$slugValue] = strtolower(trim((string)($r['sezione'] ?? 'calcio'))) === 'esport' ? 'esport' : 'calcio';
+            $torneoSectionBySlug[$slugValue] = $rowSection;
             $torneoLabelAllBySlug[$slugValue] = $r['nome'] ?? $slugValue;
+        }
+        if ($rowSection !== $adminSection) {
+            continue;
         }
         // Se il torneo ha il flag "squadre_complete" attivo, non lo mostriamo per la creazione squadre
         $flagComplete = $r['squadre_complete'] ?? 0;
@@ -358,10 +362,16 @@ foreach ($torneiList as $tRow) {
 $torneiFiltro = [];
 $resFiltro = $squadra->getTornei();
 if (is_array($resFiltro)) {
-    $torneiFiltro = $resFiltro;
+    $torneiFiltro = array_values(array_filter($resFiltro, static function (array $row) use ($torneoSectionBySlug, $adminSection): bool {
+        $slug = sanitizeTorneoSlugValue($row['id'] ?? $row['torneo'] ?? $row['nome'] ?? '');
+        return ($torneoSectionBySlug[$slug] ?? 'calcio') === $adminSection;
+    }));
 } elseif ($resFiltro) {
     while ($r = $resFiltro->fetch_assoc()) {
-        $torneiFiltro[] = $r;
+        $slug = sanitizeTorneoSlugValue($r['id'] ?? $r['torneo'] ?? $r['nome'] ?? '');
+        if (($torneoSectionBySlug[$slug] ?? 'calcio') === $adminSection) {
+            $torneiFiltro[] = $r;
+        }
     }
 }
 
@@ -375,7 +385,9 @@ if ($resSquadre = $squadra->getAll()) {
         if ($nome === '') {
             continue;
         }
-        $squadreList[] = $r;
+        if (($torneoSectionBySlug[$torneoSlug] ?? 'calcio') === $adminSection) {
+            $squadreList[] = $r;
+        }
 
         if (($torneoSectionBySlug[$torneoSlug] ?? 'calcio') !== 'esport') {
             continue;

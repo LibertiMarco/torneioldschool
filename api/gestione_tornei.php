@@ -469,7 +469,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     $slug = sanitizeTorneoSlug($rawFile);
     $filetorneo = $slug . '.php';
     $categoria = cleanUtf8Text($_POST['categoria'] ?? '');
-    $sezione = normalizeTorneoSezioneValue($_POST['sezione'] ?? 'calcio');
+    $sezione = $adminSection;
     $img = salvaImmagineTorneo($nome, 'img_upload');
     $formulaTorneo = $_POST['formula_torneo'] ?? '';
     $faseFinale = $_POST['fase_finale'] ?? '';
@@ -495,8 +495,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $slug = sanitizeTorneoSlug($rawFile);
     $filetorneo = $slug . '.php';
     $categoria = cleanUtf8Text($_POST['categoria'] ?? '');
-    $sezione = normalizeTorneoSezioneValue($_POST['sezione'] ?? 'calcio');
+    $sezione = $adminSection;
     $record = $torneo->getById($id);
+    if (!$record || normalizeTorneoSezioneValue($record['sezione'] ?? 'calcio') !== $adminSection) {
+        http_response_code(403);
+        exit('Torneo non disponibile in questa area amministrativa.');
+    }
     $img = salvaImmagineTorneo($nome, 'img_upload_mod');
     if (!$img && $record && !empty($record['img'])) {
         $img = $record['img'];
@@ -528,10 +532,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
 // --- ELIMINA ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['elimina'])) {
     $id = (int)$_POST['elimina'];
-    $redirectSezione = normalizeTorneoSezioneValue($_POST['sezione'] ?? 'calcio');
+    $redirectSezione = $adminSection;
     $record = $torneo->getById($id);
 
-    if ($record) {
+    if ($record && normalizeTorneoSezioneValue($record['sezione'] ?? 'calcio') === $adminSection) {
         $redirectSezione = normalizeTorneoSezioneValue($record['sezione'] ?? $redirectSezione);
         eliminaFileTorneo($record['filetorneo'] ?? null);
         eliminaImmagineTorneo($record['img'] ?? null);
@@ -544,13 +548,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['elimina'])) {
         $squadraModel->eliminaByTorneo($torneoSlug);
     }
 
-    $torneo->elimina($id);
+    if ($record && normalizeTorneoSezioneValue($record['sezione'] ?? 'calcio') === $adminSection) {
+        $torneo->elimina($id);
+    }
     header("Location: " . buildGestioneTorneiAdminUrl('elimina', $redirectSezione));
     exit;
 }
 
 // --- LISTA TORNEI ---
-$requestedSezione = normalizeTorneoSezioneValue($_GET['sezione'] ?? 'calcio');
+$requestedSezione = $adminSection;
 $requestedAdminAction = normalizeAdminActionValue($_GET['action'] ?? 'crea');
 $isEsportContext = $requestedSezione === 'esport';
 $dashboardTitle = $isEsportContext ? 'Gestione Tornei ESPORT' : 'Gestione Tornei';
@@ -558,7 +564,7 @@ $torneiRows = [];
 $lista = $torneo->getAll();
 if ($lista instanceof mysqli_result) {
     while ($row = $lista->fetch_assoc()) {
-        if ($isEsportContext && normalizeTorneoSezioneValue($row['sezione'] ?? 'calcio') !== 'esport') {
+        if (normalizeTorneoSezioneValue($row['sezione'] ?? 'calcio') !== $adminSection) {
             continue;
         }
         $torneiRows[] = $row;
@@ -784,8 +790,7 @@ if ($lista instanceof mysqli_result) {
                 <div class="form-group">
                     <label for="sezione">Sezione</label>
                     <select name="sezione" id="sezione">
-                        <option value="calcio" <?= $requestedSezione === 'calcio' ? 'selected' : '' ?>>Calcio</option>
-                        <option value="esport" <?= $requestedSezione === 'esport' ? 'selected' : '' ?>>ESPORT</option>
+                        <option value="<?= htmlspecialchars($adminSection) ?>" selected><?= $adminIsEsport ? 'ESPORT' : 'Sport' ?></option>
                     </select>
                     <small>Usa ESPORT per pubblicare il torneo nella nuova area dedicata.</small>
                 </div>
@@ -918,8 +923,7 @@ if ($lista instanceof mysqli_result) {
                 <div class="form-group">
                     <label for="mod_sezione">Sezione</label>
                     <select name="sezione" id="mod_sezione">
-                        <option value="calcio">Calcio</option>
-                        <option value="esport">ESPORT</option>
+                        <option value="<?= htmlspecialchars($adminSection) ?>" selected><?= $adminIsEsport ? 'ESPORT' : 'Sport' ?></option>
                     </select>
                 </div>
 
