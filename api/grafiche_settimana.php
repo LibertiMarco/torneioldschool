@@ -78,23 +78,23 @@ async function drawTournament(tournament, week) {
   const graphic = tournament.grafiche[0];
   const sections = graphic.sezioni || [];
   const matchCount = sections.reduce((n,s)=>n+(s.partite||[]).length,0);
-  const width = 1080, height = 1920, headerH = 260, footerH = 70;
+  const width = 1080, height = 1920, headerH = 410, footerH = 140;
   const sectionH = matchCount > 12 ? 38 : 48;
   const availableRowsH = height-headerH-footerH-(sections.length*sectionH);
-  const rowH = Math.min(145, Math.floor(availableRowsH/Math.max(1,matchCount)));
+  const rowH = Math.floor(availableRowsH/Math.max(1,matchCount));
   const compact = rowH < 105;
   const theme = tournamentTheme(tournament);
   const canvas = document.createElement('canvas'); canvas.width=width; canvas.height=height;
   const ctx = canvas.getContext('2d');
   const oldSchoolLogo = await loadImage('/img/logo_old_school.png');
   ctx.fillStyle=theme.bg; ctx.fillRect(0,0,width,height);
-  ctx.fillStyle=theme.accent; ctx.fillRect(0,0,14,height); ctx.fillRect(42,226,width-84,4);
-  drawContainedImage(ctx,oldSchoolLogo,48,38,132,132);
-  ctx.textAlign='left'; ctx.fillStyle='#fff'; ctx.font='900 58px Arial'; ctx.fillText('MATCHDAY',220,86);
-  ctx.fillStyle=theme.accent; ctx.font='800 38px Arial'; ctx.fillText(tournament.nome.toUpperCase(),220,140,650);
-  ctx.fillStyle=theme.muted; ctx.font='600 23px Arial'; ctx.fillText(`${shortDate(week.dal)} — ${shortDate(week.al)}`,220,184);
-  ctx.textAlign='right'; ctx.fillStyle=theme.muted; ctx.font='700 18px Arial'; ctx.fillText('TORNEI OLD SCHOOL',1038,66);
-  ctx.font='500 18px Arial'; ctx.fillText(`${matchCount} ${matchCount===1?'PARTITA':'PARTITE'} IN PROGRAMMA`,1038,98);
+  ctx.fillStyle=theme.accent; ctx.fillRect(0,0,14,height); ctx.fillRect(42,375,width-84,4);
+  drawContainedImage(ctx,oldSchoolLogo,48,205,132,132);
+  ctx.textAlign='left'; ctx.fillStyle='#fff'; ctx.font='900 58px Arial'; ctx.fillText('MATCHDAY',220,250);
+  ctx.fillStyle=theme.accent; ctx.font='800 38px Arial'; ctx.fillText(tournament.nome.toUpperCase(),220,304,650);
+  ctx.fillStyle=theme.muted; ctx.font='600 23px Arial'; ctx.fillText(`${shortDate(week.dal)} — ${shortDate(week.al)}`,220,348);
+  ctx.textAlign='right'; ctx.fillStyle=theme.muted; ctx.font='700 18px Arial'; ctx.fillText('TORNEI OLD SCHOOL',1038,230);
+  ctx.font='500 18px Arial'; ctx.fillText(`${matchCount} ${matchCount===1?'PARTITA':'PARTITE'} IN PROGRAMMA`,1038,262);
   let y=headerH;
   for (const section of sections) {
     ctx.fillStyle=theme.accent; ctx.fillRect(42,y+sectionH-7,28,3);
@@ -104,7 +104,7 @@ async function drawTournament(tournament, week) {
       ctx.fillStyle=matchIndex%2===0?theme.panel:theme.alternate; ctx.fillRect(42,y+3,width-84,rowH-6);
       ctx.fillStyle=theme.accent; ctx.fillRect(42,y+3,5,rowH-6);
       const [homeLogo,awayLogo]=await Promise.all([loadImage(match.squadra_casa.logo_url_assoluto||match.squadra_casa.logo),loadImage(match.squadra_ospite.logo_url_assoluto||match.squadra_ospite.logo)]);
-      const logoSize=Math.max(42,Math.min(72,rowH-34));
+      const logoSize=Math.max(42,Math.min(105,rowH-34));
       const logoY=y+(rowH-logoSize)/2-8;
       const teamY=logoY+(logoSize/2);
       drawContainedImage(ctx,homeLogo,67,logoY,logoSize,logoSize);
@@ -115,7 +115,8 @@ async function drawTournament(tournament, week) {
       ctx.textAlign='center'; ctx.fillStyle=theme.accent; ctx.font=`900 ${compact?19:24}px Arial`; ctx.fillText('VS',width/2,teamY);
       ctx.textBaseline='alphabetic';
       ctx.fillStyle=theme.muted; ctx.font=`600 ${compact?16:20}px Arial`;
-      ctx.fillText(`${shortDate(match.data)}  •  ${match.ora || 'Ora da definire'}  •  ${match.campo || 'Luogo da definire'}`,width/2,y+rowH-(compact?15:28),760);
+      const metaY=teamY+(compact?31:Math.min(58,Math.max(40,rowH*.16)));
+      ctx.fillText(`${shortDate(match.data)}  •  ${match.ora || 'Ora da definire'}  •  ${match.campo || 'Luogo da definire'}`,width/2,metaY,760);
       y+=rowH; matchIndex++;
     }
   }
