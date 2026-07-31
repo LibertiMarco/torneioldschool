@@ -89,7 +89,7 @@ async function drawTournament(tournament, week) {
     ? shortDate(firstMatchDate)
     : `${shortDate(firstMatchDate)} — ${shortDate(lastMatchDate)}`;
   const width = 1080, height = 1920, headerH = 410, footerH = 140;
-  const sectionH = matchCount > 12 ? 38 : 48;
+  const sectionH = matchCount===1 ? 92 : (matchCount > 12 ? 38 : 48);
   const availableRowsH = height-headerH-footerH-(sections.length*sectionH);
   const rowH = Math.floor(availableRowsH/Math.max(1,matchCount));
   const compact = rowH < 105;
@@ -107,8 +107,15 @@ async function drawTournament(tournament, week) {
   ctx.font='500 18px Arial'; ctx.fillText(`${matchCount} ${matchCount===1?'PARTITA':'PARTITE'} IN PROGRAMMA`,1038,262);
   let y=headerH;
   for (const section of sections) {
-    ctx.fillStyle=theme.accent; ctx.fillRect(42,y+sectionH-7,28,3);
-    ctx.textAlign='left'; ctx.fillStyle='#fff'; ctx.font=`800 ${compact?21:26}px Arial`; ctx.fillText((section.nome || 'Partite').toUpperCase(),82,y+sectionH-2); y+=sectionH;
+    if(matchCount===1) {
+      ctx.textAlign='center'; ctx.fillStyle=theme.accent; ctx.font='900 46px Arial';
+      ctx.fillText((section.nome || 'Partita').toUpperCase(),width/2,y+57,900);
+      ctx.fillRect(width/2-70,y+76,140,4);
+    } else {
+      ctx.fillStyle=theme.accent; ctx.fillRect(42,y+sectionH-7,28,3);
+      ctx.textAlign='left'; ctx.fillStyle='#fff'; ctx.font=`800 ${compact?21:26}px Arial`; ctx.fillText((section.nome || 'Partite').toUpperCase(),82,y+sectionH-2);
+    }
+    y+=sectionH;
     let matchIndex=0;
     for (const match of section.partite || []) {
       ctx.fillStyle=matchIndex%2===0?theme.panel:theme.alternate; ctx.fillRect(42,y+3,width-84,rowH-6);
