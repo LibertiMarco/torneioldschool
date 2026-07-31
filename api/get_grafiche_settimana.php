@@ -154,6 +154,35 @@ function get_grafiche_settimana_sezioni(string $type, array $matches): array
     return $sections;
 }
 
+/**
+ * Prepara tutte le sezioni di un torneo per una singola grafica, senza
+ * spezzare le partite in piu immagini.
+ */
+function get_grafiche_settimana_sezioni_torneo(array $tournament): array
+{
+    $sections = [];
+
+    foreach ($tournament['ordine_gruppi'] as $groupKey) {
+        $group = $tournament['gruppi'][$groupKey];
+        $groupSections = get_grafiche_settimana_sezioni($group['tipo'], $group['partite']);
+
+        foreach ($groupSections as $section) {
+            $nameParts = array_filter([
+                $section['nome'] ?? null,
+                $group['label'] ?? null,
+                $group['tipo'] === 'coppa' ? ($group['sottotitolo'] ?? null) : null,
+            ]);
+
+            $sections[] = [
+                'nome' => implode(' - ', array_values(array_unique($nameParts))),
+                'partite' => $section['partite'],
+            ];
+        }
+    }
+
+    return $sections;
+}
+
 try {
     $timezone = new DateTimeZone('Europe/Rome');
     $dataParam = isset($_GET['data']) ? trim((string)$_GET['data']) : '';
@@ -293,7 +322,7 @@ try {
         if ($type === 'regular_season') {
             $groupKey = 'regular:' . ($matchDay !== null ? $matchDay : 'nd');
             $subtitle = 'Regular Season';
-            $label = $matchDay !== null ? $matchDay . 'ª Giornata' : 'Giornata da definire';
+            $label = $matchDay !== null ? $matchDay . '\u{00AA} Giornata' : 'Giornata da definire';
             $logicalGroup = 'regular-season_giornata-' . ($matchDay !== null ? $matchDay : 'nd');
         } else {
             $phaseSlug = get_grafiche_settimana_slug($phaseName, 'fase');
@@ -344,28 +373,25 @@ try {
             $tournament['nome'],
             $tournament['id'] !== null ? 'torneo-' . $tournament['id'] : 'torneo'
         );
-        $graphics = [];
+        $sections = get_grafiche_settimana_sezioni_torneo($tournament);
+        $matchesCount = array_sum(array_map(
+            static fn(array $section): int => count($section['partite'] ?? []),
+            $sections
+        ));
+        $graphics = $matchesCount > 0 ? [[
+            'id_logico' => $tournamentSlug . '_matchday',
+            'tipo' => 'torneo',
+            'titolo' => 'MATCHDAY',
+            'sottotitolo' => $tournament['nome'],
+            'label' => null,
+            'story_index' => 1,
+            'story_totali' => 1,
+            'numero_partite' => $matchesCount,
+            'sezioni' => $sections,
+        ]] : [];
 
-        foreach ($tournament['ordine_gruppi'] as $groupKey) {
-            $group = $tournament['gruppi'][$groupKey];
-            $chunks = array_chunk($group['partite'], 4);
-            $storyTotal = count($chunks);
-
-            foreach ($chunks as $chunkIndex => $matches) {
-                $storyIndex = $chunkIndex + 1;
-                $graphics[] = [
-                    'id_logico' => $tournamentSlug . '_' . $group['id_gruppo'] . '_' . $storyIndex,
-                    'tipo' => $group['tipo'],
-                    'titolo' => 'MATCHDAY',
-                    'sottotitolo' => $group['sottotitolo'],
-                    'label' => $group['label'],
-                    'story_index' => $storyIndex,
-                    'story_totali' => $storyTotal,
-                    'numero_partite' => count($matches),
-                    'sezioni' => get_grafiche_settimana_sezioni($group['tipo'], $matches),
-                ];
-                $graphicsCount++;
-            }
+        if ($graphics) {
+            $graphicsCount++;
         }
 
         if ($graphics) {
