@@ -114,6 +114,28 @@ async function drawTournament(tournament, week) {
       ctx.fillStyle=matchIndex%2===0?theme.panel:theme.alternate; ctx.fillRect(42,y+3,width-84,rowH-6);
       ctx.fillStyle=theme.accent; ctx.fillRect(42,y+3,5,rowH-6);
       const [homeLogo,awayLogo]=await Promise.all([loadImage(match.squadra_casa.logo_url_assoluto||match.squadra_casa.logo),loadImage(match.squadra_ospite.logo_url_assoluto||match.squadra_ospite.logo)]);
+      if(matchCount===1) {
+        const heroY=y+(rowH*.43), heroLogoSize=220;
+        const homeLogoX=72, awayLogoX=width-72-heroLogoSize;
+        drawContainedImage(ctx,homeLogo,homeLogoX,heroY-(heroLogoSize/2),heroLogoSize,heroLogoSize);
+        drawContainedImage(ctx,awayLogo,awayLogoX,heroY-(heroLogoSize/2),heroLogoSize,heroLogoSize);
+        ctx.textBaseline='middle'; ctx.fillStyle='#fff'; ctx.font='800 38px Arial';
+        ctx.textAlign='left'; ctx.fillText(match.squadra_casa.nome,322,heroY,155);
+        ctx.textAlign='right'; ctx.fillText(match.squadra_ospite.nome,width-322,heroY,155);
+        ctx.textAlign='center'; ctx.fillStyle=theme.accent; ctx.font='900 48px Arial'; ctx.fillText('VS',width/2,heroY);
+        ctx.textBaseline='alphabetic';
+        ctx.fillStyle=theme.accent; ctx.fillRect(180,heroY+165,width-360,3);
+        ctx.fillStyle='#fff'; ctx.font='800 31px Arial';
+        ctx.fillText(`${shortDate(match.data)}  •  ${match.ora || 'Ora da definire'}`,width/2,heroY+225);
+        ctx.fillStyle=theme.muted; ctx.font='700 28px Arial'; ctx.fillText(match.campo || 'Luogo da definire',width/2,heroY+275,760);
+        if(match.risultato_andata) {
+          const firstLeg=match.risultato_andata;
+          ctx.fillStyle=theme.accent; ctx.font='700 24px Arial';
+          ctx.fillText(`ANDATA: ${firstLeg.squadra_casa} ${firstLeg.gol_casa}–${firstLeg.gol_ospite} ${firstLeg.squadra_ospite}`,width/2,heroY+335,760);
+        }
+        y+=rowH; matchIndex++;
+        continue;
+      }
       const visualScale=Math.max(.82,Math.min(1.55,rowH/140));
       const logoSize=Math.max(42,Math.min(130,rowH*.36));
       const teamFont=Math.round(Math.max(20,Math.min(36,25*visualScale)));
