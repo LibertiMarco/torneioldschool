@@ -6,7 +6,7 @@ if (!defined('REMEMBER_COOKIE_NAME')) {
     define('REMEMBER_COOKIE_NAME', 'tos_keep_login');
 }
 if (!defined('REMEMBER_COOKIE_LIFETIME')) {
-    define('REMEMBER_COOKIE_LIFETIME', 60 * 60 * 24 * 30); // 30 giorni
+    define('REMEMBER_COOKIE_LIFETIME', 60 * 60 * 24 * 365); // 1 anno, rinnovato a ogni utilizzo
 }
 $loginDebugEnabled = getenv('LOGIN_DEBUG') === '1';
 if ($loginDebugEnabled) {
@@ -103,8 +103,20 @@ if (session_status() === PHP_SESSION_NONE) {
         'session_status' => session_status(),
     ]);
 
-    // Mantieni i file di sessione per almeno 30 giorni (allineato al cookie remember)
+    // Mantieni i file di sessione per la durata del cookie persistente.
     ini_set('session.gc_maxlifetime', (string)REMEMBER_COOKIE_LIFETIME);
+
+    // Usa una directory dedicata: nella cartella PHP globale il garbage collector
+    // di un'altra applicazione con lifetime piu breve puo eliminare queste sessioni.
+    $sessionSavePath = tos_runtime_path('sessions');
+    if (!is_dir($sessionSavePath)) {
+        @mkdir($sessionSavePath, 0775, true);
+    }
+    if (is_dir($sessionSavePath) && is_writable($sessionSavePath)) {
+        ini_set('session.save_path', $sessionSavePath);
+    } else {
+        error_log('session save path non disponibile: ' . $sessionSavePath);
+    }
 
     if (function_exists('session_set_cookie_params')) {
         session_set_cookie_params([
@@ -265,23 +277,26 @@ if (!isset($_SESSION['user_id']) && !empty($_COOKIE[REMEMBER_COOKIE_NAME])) {
 
                             $cookieParams = tos_cookie_params($isHttps);
                             $cookieLifetime = REMEMBER_COOKIE_LIFETIME;
-                            $newSelector = bin2hex(random_bytes(9));
-                            $newValidator = bin2hex(random_bytes(32));
-                            $newHash = hash('sha256', $newValidator);
                             $newExpires = date('Y-m-d H:i:s', time() + $cookieLifetime);
 
-                            $saveNewToken = $conn->prepare("UPDATE utenti SET remember_selector = ?, remember_token_hash = ?, remember_expires_at = ? WHERE id = ?");
-                            if ($saveNewToken) {
-                                $saveNewToken->bind_param('sssi', $newSelector, $newHash, $newExpires, $user['id']);
-                                $saveNewToken->execute();
-                                $saveNewToken->close();
+                            // Non ruotare il token durante l'auto-login. Quando piu richieste
+                            // arrivano insieme con una sessione scaduta, la prima rotazione
+                            // renderebbe invalido il cookie usato dalle altre richieste, che
+                            // potrebbero poi cancellarlo dal browser. Il token resta casuale
+                            // e salvato nel DB solo come hash; qui ne prolunghiamo la scadenza.
+                            $extendToken = $conn->prepare("UPDATE utenti SET remember_expires_at = ? WHERE id = ? AND remember_selector = ? AND remember_token_hash = ?");
+                            if ($extendToken) {
+                                $validatorHash = hash('sha256', $validator);
+                                $extendToken->bind_param('siss', $newExpires, $user['id'], $selector, $validatorHash);
+                                $extendToken->execute();
+                                $extendToken->close();
                             }
 
                             $cookieExpires = time() + $cookieLifetime;
                             setcookie(session_name(), session_id(), array_merge($cookieParams, [
                                 'expires' => $cookieExpires,
                             ]));
-                            setcookie(REMEMBER_COOKIE_NAME, $newSelector . ':' . $newValidator, array_merge($cookieParams, [
+                            setcookie(REMEMBER_COOKIE_NAME, $rawRemember, array_merge($cookieParams, [
                                 'expires' => $cookieExpires,
                             ]));
                             tos_debug_log('remember_autologin_ok', $loginDebugEnabled, [

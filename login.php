@@ -534,7 +534,7 @@ $csrfValid = ($postedCsrf !== '' && $cookieCsrf !== '' && hash_equals($cookieCsr
 
         <div class="remember-row">
           <label class="remember-me">
-            <input type="checkbox" name="remember_me" value="1">
+            <input type="checkbox" name="remember_me" value="1" checked>
             <span>Resta connesso</span>
           </label>
         </div>
