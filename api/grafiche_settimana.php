@@ -210,6 +210,21 @@ async function saveImage(item) {
     if(error?.name!=='AbortError') throw error;
   }
 }
+async function saveAllImages() {
+  if(isIPhoneSafari) {
+    const files=await Promise.all(generated.map(async item => new File(
+      [await canvasToBlob(item.canvas)],item.name,{type:'image/png'}
+    )));
+    if(navigator.share && (!navigator.canShare || navigator.canShare({files}))) {
+      await navigator.share({files,title:'Grafiche Tornei Old School'});
+      return;
+    }
+    throw new Error('Questa versione di iOS non supporta il salvataggio multiplo. Usa “Salva immagine” su ogni grafica.');
+  }
+  generated.forEach((item,index)=>setTimeout(
+    ()=>saveImage(item).catch(error=>{statusEl.textContent=error.message}),index*350
+  ));
+}
 async function generate() {
   statusEl.textContent='Recupero partite e generazione immagini…'; grid.innerHTML=''; generated=[]; downloadAll.hidden=true;
   try {
@@ -227,9 +242,10 @@ async function generate() {
     statusEl.textContent=isIPhoneSafari
       ? `Create ${generated.length} immagini. Tocca “Salva immagine” e scegli “Salva immagine” nel pannello iOS.`
       : `Create ${generated.length} immagini: una per ciascun torneo.`;
-    downloadAll.hidden=generated.length<2 || isIPhoneSafari;
+    downloadAll.textContent=isIPhoneSafari?'Salva tutte':'Scarica tutte';
+    downloadAll.hidden=generated.length<2;
   } catch(error) { statusEl.textContent=error.message; }
 }
 document.getElementById('generate').onclick=generate;
-downloadAll.onclick=()=>generated.forEach((item,index)=>setTimeout(()=>saveImage(item).catch(error=>{statusEl.textContent=error.message}),index*350));
+downloadAll.onclick=async()=>{try{await saveAllImages()}catch(error){if(error?.name!=='AbortError')statusEl.textContent=error.message}};
 </script></body></html>
