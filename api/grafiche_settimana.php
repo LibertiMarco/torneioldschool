@@ -26,7 +26,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
 <body><main>
   <a href="/admin_dashboard.php">Torna alla dashboard</a>
   <h1>Grafiche partite settimanali</h1>
-  <p>Viene generato un unico PNG per torneo, contenente tutte le partite programmate con data, ora e luogo.</p>
+  <p>Viene generato un unico PNG per torneo con tutte le partite del periodo, inclusi i risultati di quelle gia giocate.</p>
   <div class="toolbar">
     <label>Data di riferimento <input id="date" type="date"></label>
     <button id="generate" type="button">Genera grafiche</button>
@@ -104,7 +104,7 @@ async function drawTournament(tournament, week) {
   ctx.fillStyle=theme.accent; ctx.font='800 38px Arial'; ctx.fillText(tournament.nome.toUpperCase(),220,304,650);
   ctx.fillStyle=theme.muted; ctx.font='600 23px Arial'; ctx.fillText(tournamentDateLabel,220,348);
   ctx.textAlign='right'; ctx.fillStyle=theme.muted; ctx.font='700 18px Arial'; ctx.fillText('TORNEI OLD SCHOOL',1038,230);
-  ctx.font='500 18px Arial'; ctx.fillText(`${matchCount} ${matchCount===1?'PARTITA':'PARTITE'} IN PROGRAMMA`,1038,262);
+  ctx.font='500 18px Arial'; ctx.fillText(`${matchCount} ${matchCount===1?'PARTITA':'PARTITE'} NEL PERIODO`,1038,262);
   let y=headerH;
   for (const section of sections) {
     if(matchCount===1) {
@@ -118,6 +118,10 @@ async function drawTournament(tournament, week) {
     y+=sectionH;
     let matchIndex=0;
     for (const match of section.partite || []) {
+      const result=match.risultato;
+      const centerLabel=result ? `${result.gol_casa} — ${result.gol_ospite}` : 'VS';
+      const penaltiesLabel=result?.decisa_rigori && result.rigori_casa!==null && result.rigori_ospite!==null
+        ? `  •  d.c.r. ${result.rigori_casa}–${result.rigori_ospite}` : '';
       ctx.fillStyle=matchIndex%2===0?theme.panel:theme.alternate; ctx.fillRect(42,y+3,width-84,rowH-6);
       ctx.fillStyle=theme.accent; ctx.fillRect(42,y+3,5,rowH-6);
       const [homeLogo,awayLogo]=await Promise.all([loadImage(match.squadra_casa.logo_url_assoluto||match.squadra_casa.logo),loadImage(match.squadra_ospite.logo_url_assoluto||match.squadra_ospite.logo)]);
@@ -129,11 +133,11 @@ async function drawTournament(tournament, week) {
         ctx.textBaseline='middle'; ctx.fillStyle='#fff'; ctx.font='800 38px Arial';
         ctx.textAlign='left'; ctx.fillText(match.squadra_casa.nome,322,heroY,155);
         ctx.textAlign='right'; ctx.fillText(match.squadra_ospite.nome,width-322,heroY,155);
-        ctx.textAlign='center'; ctx.fillStyle=theme.accent; ctx.font='900 48px Arial'; ctx.fillText('VS',width/2,heroY);
+        ctx.textAlign='center'; ctx.fillStyle=theme.accent; ctx.font=`900 ${result?54:48}px Arial`; ctx.fillText(centerLabel,width/2,heroY);
         ctx.textBaseline='alphabetic';
         ctx.fillStyle=theme.accent; ctx.fillRect(180,heroY+165,width-360,3);
         ctx.fillStyle='#fff'; ctx.font='800 31px Arial';
-        ctx.fillText(`${shortDate(match.data)}  •  ${match.ora || 'Ora da definire'}`,width/2,heroY+225);
+        ctx.fillText(`${shortDate(match.data)}  •  ${match.ora || 'Ora da definire'}${penaltiesLabel}`,width/2,heroY+225);
         ctx.fillStyle=theme.muted; ctx.font='700 28px Arial'; ctx.fillText(match.campo || 'Luogo da definire',width/2,heroY+275,760);
         if(match.risultato_andata) {
           const firstLeg=match.risultato_andata;
@@ -158,11 +162,11 @@ async function drawTournament(tournament, week) {
       ctx.textBaseline='middle';
       ctx.fillStyle='#fff'; ctx.font=`700 ${teamFont}px Arial`; ctx.textAlign='left'; ctx.fillText(match.squadra_casa.nome,homeTextX,teamY,teamTextWidth);
       ctx.textAlign='right'; ctx.fillText(match.squadra_ospite.nome,awayTextX,teamY,teamTextWidth);
-      ctx.textAlign='center'; ctx.fillStyle=theme.accent; ctx.font=`900 ${vsFont}px Arial`; ctx.fillText('VS',width/2,teamY);
+      ctx.textAlign='center'; ctx.fillStyle=theme.accent; ctx.font=`900 ${result?Math.min(38,vsFont+4):vsFont}px Arial`; ctx.fillText(centerLabel,width/2,teamY);
       ctx.textBaseline='alphabetic';
       ctx.fillStyle=theme.muted; ctx.font=`600 ${metaFont}px Arial`;
       const metaY=teamY+(compact?31:Math.min(72,Math.max(40,rowH*.16)));
-      const matchMeta=`${shortDate(match.data)}  •  ${match.ora || 'Ora da definire'}  •  ${match.campo || 'Luogo da definire'}`;
+      const matchMeta=`${shortDate(match.data)}  •  ${match.ora || 'Ora da definire'}  •  ${match.campo || 'Luogo da definire'}${penaltiesLabel}`;
       const firstLeg=match.risultato_andata;
       if(firstLeg && rowH>=150) {
         const firstLegLabel=`ANDATA: ${firstLeg.squadra_casa} ${firstLeg.gol_casa}–${firstLeg.gol_ospite} ${firstLeg.squadra_ospite}`;

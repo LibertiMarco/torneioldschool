@@ -238,6 +238,12 @@ try {
             p.data_partita,
             p.ora_partita,
             p.campo,
+            p.giocata,
+            p.gol_casa,
+            p.gol_ospite,
+            p.decisa_rigori,
+            p.rigori_casa,
+            p.rigori_ospite,
             p.giornata,
             p.fase,
             p.fase_round,
@@ -286,7 +292,6 @@ try {
           )
         WHERE p.data_partita >= ?
           AND p.data_partita <= ?
-          AND p.giocata = 0
         ORDER BY
             p.data_partita ASC,
             p.ora_partita ASC,
@@ -386,6 +391,18 @@ try {
             'data' => (string)$row['data_partita'],
             'ora' => substr((string)$row['ora_partita'], 0, 5),
             'campo' => get_grafiche_settimana_campo($row['campo']),
+            'stato' => (int)$row['giocata'] === 1 ? 'giocata' : 'programmata',
+            'risultato' => (int)$row['giocata'] === 1
+                && $row['gol_casa'] !== null
+                && $row['gol_ospite'] !== null
+                    ? [
+                        'gol_casa' => (int)$row['gol_casa'],
+                        'gol_ospite' => (int)$row['gol_ospite'],
+                        'decisa_rigori' => (int)($row['decisa_rigori'] ?? 0) === 1,
+                        'rigori_casa' => $row['rigori_casa'] !== null ? (int)$row['rigori_casa'] : null,
+                        'rigori_ospite' => $row['rigori_ospite'] !== null ? (int)$row['rigori_ospite'] : null,
+                      ]
+                    : null,
             'risultato_andata' => strtoupper(trim((string)$row['fase_leg'])) === 'RITORNO'
                 && (int)($row['andata_giocata'] ?? 0) === 1
                 && $row['andata_gol_casa'] !== null
