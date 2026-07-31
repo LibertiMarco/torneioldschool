@@ -78,6 +78,16 @@ async function drawTournament(tournament, week) {
   const graphic = tournament.grafiche[0];
   const sections = graphic.sezioni || [];
   const matchCount = sections.reduce((n,s)=>n+(s.partite||[]).length,0);
+  const tournamentDates = sections
+    .flatMap(section => section.partite || [])
+    .map(match => match.data)
+    .filter(Boolean)
+    .sort();
+  const firstMatchDate = tournamentDates[0] || week.dal;
+  const lastMatchDate = tournamentDates[tournamentDates.length-1] || week.al;
+  const tournamentDateLabel = firstMatchDate === lastMatchDate
+    ? shortDate(firstMatchDate)
+    : `${shortDate(firstMatchDate)} — ${shortDate(lastMatchDate)}`;
   const width = 1080, height = 1920, headerH = 410, footerH = 140;
   const sectionH = matchCount > 12 ? 38 : 48;
   const availableRowsH = height-headerH-footerH-(sections.length*sectionH);
@@ -92,7 +102,7 @@ async function drawTournament(tournament, week) {
   drawContainedImage(ctx,oldSchoolLogo,48,205,132,132);
   ctx.textAlign='left'; ctx.fillStyle='#fff'; ctx.font='900 58px Arial'; ctx.fillText('MATCHDAY',220,250);
   ctx.fillStyle=theme.accent; ctx.font='800 38px Arial'; ctx.fillText(tournament.nome.toUpperCase(),220,304,650);
-  ctx.fillStyle=theme.muted; ctx.font='600 23px Arial'; ctx.fillText(`${shortDate(week.dal)} — ${shortDate(week.al)}`,220,348);
+  ctx.fillStyle=theme.muted; ctx.font='600 23px Arial'; ctx.fillText(tournamentDateLabel,220,348);
   ctx.textAlign='right'; ctx.fillStyle=theme.muted; ctx.font='700 18px Arial'; ctx.fillText('TORNEI OLD SCHOOL',1038,230);
   ctx.font='500 18px Arial'; ctx.fillText(`${matchCount} ${matchCount===1?'PARTITA':'PARTITE'} IN PROGRAMMA`,1038,262);
   let y=headerH;
