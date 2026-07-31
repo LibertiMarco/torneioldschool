@@ -125,7 +125,34 @@ async function drawTournament(tournament, week) {
   return canvas;
 }
 
-function download(item) { const a=document.createElement('a'); a.download=item.name; a.href=item.canvas.toDataURL('image/png'); a.click(); }
+const isIPhoneSafari = /iP(hone|ad|od)/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+const canvasToBlob = canvas => new Promise((resolve,reject) => canvas.toBlob(
+  blob => blob ? resolve(blob) : reject(new Error('Impossibile creare il file PNG.')),
+  'image/png'
+));
+async function saveImage(item) {
+  let fallbackWindow=null;
+  if(isIPhoneSafari && !navigator.share) fallbackWindow=window.open('about:blank','_blank');
+  try {
+    const blob=await canvasToBlob(item.canvas);
+    const file=new File([blob],item.name,{type:'image/png'});
+    if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))) {
+      await navigator.share({files:[file],title:item.name});
+      return;
+    }
+    const url=URL.createObjectURL(blob);
+    if(fallbackWindow) {
+      fallbackWindow.location.href=url;
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+      return;
+    }
+    const a=document.createElement('a'); a.download=item.name; a.href=url; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+  } catch(error) {
+    if(fallbackWindow) fallbackWindow.close();
+    if(error?.name!=='AbortError') throw error;
+  }
+}
 async function generate() {
   statusEl.textContent='Recupero partite e generazione immagini…'; grid.innerHTML=''; generated=[]; downloadAll.hidden=true;
   try {
@@ -136,11 +163,16 @@ async function generate() {
       const item={canvas,name:`matchday-${safeName(tournament.nome)}-${data.settimana.dal}.png`}; generated.push(item);
       const card=document.createElement('section'); card.className='card';
       const head=document.createElement('div'); head.className='card-head'; head.innerHTML=`<h2>${tournament.nome}</h2>`;
-      const btn=document.createElement('button'); btn.textContent='Scarica PNG'; btn.onclick=()=>download(item); head.appendChild(btn); card.append(head,canvas); grid.appendChild(card);
+      const btn=document.createElement('button'); btn.textContent=isIPhoneSafari?'Salva immagine':'Scarica PNG';
+      btn.onclick=async()=>{try{await saveImage(item)}catch(error){statusEl.textContent=error.message}};
+      head.appendChild(btn); card.append(head,canvas); grid.appendChild(card);
     }
-    statusEl.textContent=`Create ${generated.length} immagini: una per ciascun torneo.`; downloadAll.hidden=generated.length<2;
+    statusEl.textContent=isIPhoneSafari
+      ? `Create ${generated.length} immagini. Tocca “Salva immagine” e scegli “Salva immagine” nel pannello iOS.`
+      : `Create ${generated.length} immagini: una per ciascun torneo.`;
+    downloadAll.hidden=generated.length<2 || isIPhoneSafari;
   } catch(error) { statusEl.textContent=error.message; }
 }
 document.getElementById('generate').onclick=generate;
-downloadAll.onclick=()=>generated.forEach((item,index)=>setTimeout(()=>download(item),index*250));
+downloadAll.onclick=()=>generated.forEach((item,index)=>setTimeout(()=>saveImage(item).catch(error=>{statusEl.textContent=error.message}),index*350));
 </script></body></html>
