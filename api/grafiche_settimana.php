@@ -104,14 +104,14 @@ async function drawTournament(tournament, week) {
       ctx.fillStyle=matchIndex%2===0?theme.panel:theme.alternate; ctx.fillRect(42,y+3,width-84,rowH-6);
       ctx.fillStyle=theme.accent; ctx.fillRect(42,y+3,5,rowH-6);
       const [homeLogo,awayLogo]=await Promise.all([loadImage(match.squadra_casa.logo_url_assoluto||match.squadra_casa.logo),loadImage(match.squadra_ospite.logo_url_assoluto||match.squadra_ospite.logo)]);
-      const logoSize=Math.max(42,Math.min(105,rowH-34));
+      const logoSize=Math.max(42,Math.min(90,rowH-34));
       const logoY=y+(rowH-logoSize)/2-8;
       const teamY=logoY+(logoSize/2);
       drawContainedImage(ctx,homeLogo,67,logoY,logoSize,logoSize);
       drawContainedImage(ctx,awayLogo,width-67-logoSize,logoY,logoSize,logoSize);
       ctx.textBaseline='middle';
-      ctx.fillStyle='#fff'; ctx.font=`700 ${compact?20:25}px Arial`; ctx.textAlign='left'; ctx.fillText(match.squadra_casa.nome,155,teamY,265);
-      ctx.textAlign='right'; ctx.fillText(match.squadra_ospite.nome,width-155,teamY,265);
+      ctx.fillStyle='#fff'; ctx.font=`700 ${compact?20:25}px Arial`; ctx.textAlign='left'; ctx.fillText(match.squadra_casa.nome,180,teamY,240);
+      ctx.textAlign='right'; ctx.fillText(match.squadra_ospite.nome,width-180,teamY,240);
       ctx.textAlign='center'; ctx.fillStyle=theme.accent; ctx.font=`900 ${compact?19:24}px Arial`; ctx.fillText('VS',width/2,teamY);
       ctx.textBaseline='alphabetic';
       ctx.fillStyle=theme.muted; ctx.font=`600 ${compact?16:20}px Arial`;
