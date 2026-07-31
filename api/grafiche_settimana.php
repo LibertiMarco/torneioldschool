@@ -105,12 +105,15 @@ async function drawTournament(tournament, week) {
       ctx.fillStyle=theme.accent; ctx.fillRect(42,y+3,5,rowH-6);
       const [homeLogo,awayLogo]=await Promise.all([loadImage(match.squadra_casa.logo_url_assoluto||match.squadra_casa.logo),loadImage(match.squadra_ospite.logo_url_assoluto||match.squadra_ospite.logo)]);
       const logoSize=Math.max(42,Math.min(72,rowH-34));
-      drawContainedImage(ctx,homeLogo,67,y+(rowH-logoSize)/2-8,logoSize,logoSize);
-      drawContainedImage(ctx,awayLogo,width-67-logoSize,y+(rowH-logoSize)/2-8,logoSize,logoSize);
-      const teamY=y+(compact?34:Math.min(58,rowH*.43));
+      const logoY=y+(rowH-logoSize)/2-8;
+      const teamY=logoY+(logoSize/2);
+      drawContainedImage(ctx,homeLogo,67,logoY,logoSize,logoSize);
+      drawContainedImage(ctx,awayLogo,width-67-logoSize,logoY,logoSize,logoSize);
+      ctx.textBaseline='middle';
       ctx.fillStyle='#fff'; ctx.font=`700 ${compact?20:25}px Arial`; ctx.textAlign='left'; ctx.fillText(match.squadra_casa.nome,155,teamY,265);
       ctx.textAlign='right'; ctx.fillText(match.squadra_ospite.nome,width-155,teamY,265);
       ctx.textAlign='center'; ctx.fillStyle=theme.accent; ctx.font=`900 ${compact?19:24}px Arial`; ctx.fillText('VS',width/2,teamY);
+      ctx.textBaseline='alphabetic';
       ctx.fillStyle=theme.muted; ctx.font=`600 ${compact?16:20}px Arial`;
       ctx.fillText(`${shortDate(match.data)}  •  ${match.ora || 'Ora da definire'}  •  ${match.campo || 'Luogo da definire'}`,width/2,y+rowH-(compact?15:28),760);
       y+=rowH; matchIndex++;
