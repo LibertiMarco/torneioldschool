@@ -132,7 +132,7 @@ if (!function_exists('renderRegoleMarkupFromText')) {
                 if ($line !== '') {
                     $bodyLines[] = $line;
                 }
-            }
+            } 
 
             $markup .= '<div class="regola">';
             if ($title !== '') {
