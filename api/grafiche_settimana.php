@@ -57,14 +57,14 @@ const drawContainedImage = (ctx,img,x,y,maxWidth,maxHeight) => {
 const shortDate = value => new Intl.DateTimeFormat('it-IT',{weekday:'short',day:'2-digit',month:'2-digit'}).format(new Date(value+'T12:00:00'));
 const safeName = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
 const tournamentThemes = [
-  {bg1:'#071426',bg2:'#173456',accent:'#f2c94c',panel:'rgba(255,255,255,.09)',muted:'#c4d3e3'},
-  {bg1:'#210b20',bg2:'#70234d',accent:'#ffcf5a',panel:'rgba(255,255,255,.10)',muted:'#f3cede'},
-  {bg1:'#071d16',bg2:'#12664f',accent:'#9df0c7',panel:'rgba(255,255,255,.10)',muted:'#c6eadc'},
-  {bg1:'#18102d',bg2:'#52318b',accent:'#d9b7ff',panel:'rgba(255,255,255,.10)',muted:'#ddcff1'},
-  {bg1:'#241107',bg2:'#9a3f14',accent:'#ffd166',panel:'rgba(255,255,255,.10)',muted:'#f4d6c4'},
-  {bg1:'#071a24',bg2:'#086788',accent:'#7de2f4',panel:'rgba(255,255,255,.10)',muted:'#c4e5eb'},
-  {bg1:'#200b0b',bg2:'#8f2020',accent:'#ffb3a7',panel:'rgba(255,255,255,.10)',muted:'#f1ceca'},
-  {bg1:'#181b08',bg2:'#66751c',accent:'#e6f58a',panel:'rgba(255,255,255,.10)',muted:'#e3e8c3'}
+  {bg:'#091522',accent:'#e5b93f',panel:'#102235',alternate:'#0d1d2d',muted:'#aebdca'},
+  {bg:'#1b1017',accent:'#df9e32',panel:'#301a28',alternate:'#271620',muted:'#ccb9c4'},
+  {bg:'#0b1915',accent:'#5fc49b',panel:'#122b24',alternate:'#10241f',muted:'#abc8bd'},
+  {bg:'#151126',accent:'#a98bd4',panel:'#241c3e',alternate:'#1d1833',muted:'#c1b7d0'},
+  {bg:'#1e130d',accent:'#e49a3a',panel:'#382117',alternate:'#2d1b13',muted:'#d0bcaf'},
+  {bg:'#081820',accent:'#45b6d0',panel:'#102c38',alternate:'#0d252f',muted:'#abc6ce'},
+  {bg:'#1d0f10',accent:'#d7645d',panel:'#35191b',alternate:'#2b1517',muted:'#ceb2b3'},
+  {bg:'#17190d',accent:'#a8bc49',panel:'#292d15',alternate:'#222512',muted:'#c4c9ab'}
 ];
 const tournamentTheme = tournament => {
   const key=String(tournament.id ?? tournament.nome ?? 'torneo');
@@ -87,23 +87,22 @@ async function drawTournament(tournament, week) {
   const canvas = document.createElement('canvas'); canvas.width=width; canvas.height=height;
   const ctx = canvas.getContext('2d');
   const oldSchoolLogo = await loadImage('/img/logo_old_school.png');
-  const bg = ctx.createLinearGradient(0,0,width,height); bg.addColorStop(0,theme.bg1); bg.addColorStop(1,theme.bg2);
-  ctx.fillStyle=bg; ctx.fillRect(0,0,width,height);
-  ctx.globalAlpha=.13; ctx.fillStyle=theme.accent;
-  const patternStep=145+(theme.seed%75), patternWidth=24+(theme.seed%28), patternAngle=-.18-((theme.seed%22)/100);
-  for(let i=-height;i<width;i+=patternStep){ctx.save();ctx.translate(i,0);ctx.rotate(patternAngle);ctx.fillRect(0,0,patternWidth,height*1.2);ctx.restore();}
-  ctx.globalAlpha=1; ctx.fillStyle=theme.accent; ctx.fillRect(0,0,18,height);
-  drawContainedImage(ctx,oldSchoolLogo,52,37,150,150);
-  ctx.textAlign='center'; ctx.fillStyle=theme.accent; ctx.font='900 62px Arial'; ctx.fillText('MATCHDAY',width/2,82);
-  ctx.fillStyle='#fff'; ctx.font='800 42px Arial'; ctx.fillText(tournament.nome,width/2,140);
-  ctx.fillStyle=theme.muted; ctx.font='600 26px Arial';
-  ctx.fillText(`${shortDate(week.dal)} — ${shortDate(week.al)}`,width/2,190);
-  ctx.font='500 21px Arial'; ctx.fillText(`${matchCount} ${matchCount===1?'partita':'partite'}`,width/2,225);
+  ctx.fillStyle=theme.bg; ctx.fillRect(0,0,width,height);
+  ctx.fillStyle=theme.accent; ctx.fillRect(0,0,14,height); ctx.fillRect(42,226,width-84,4);
+  drawContainedImage(ctx,oldSchoolLogo,48,38,132,132);
+  ctx.textAlign='left'; ctx.fillStyle='#fff'; ctx.font='900 58px Arial'; ctx.fillText('MATCHDAY',220,86);
+  ctx.fillStyle=theme.accent; ctx.font='800 38px Arial'; ctx.fillText(tournament.nome.toUpperCase(),220,140,650);
+  ctx.fillStyle=theme.muted; ctx.font='600 23px Arial'; ctx.fillText(`${shortDate(week.dal)} — ${shortDate(week.al)}`,220,184);
+  ctx.textAlign='right'; ctx.fillStyle=theme.muted; ctx.font='700 18px Arial'; ctx.fillText('TORNEI OLD SCHOOL',1038,66);
+  ctx.font='500 18px Arial'; ctx.fillText(`${matchCount} ${matchCount===1?'PARTITA':'PARTITE'} IN PROGRAMMA`,1038,98);
   let y=headerH;
   for (const section of sections) {
-    ctx.textAlign='left'; ctx.fillStyle=theme.accent; ctx.font=`800 ${compact?19:23}px Arial`; ctx.fillText(section.nome || 'Partite',54,y+sectionH-12); y+=sectionH;
+    ctx.fillStyle=theme.accent; ctx.fillRect(42,y+sectionH-7,28,3);
+    ctx.textAlign='left'; ctx.fillStyle='#fff'; ctx.font=`800 ${compact?18:21}px Arial`; ctx.fillText((section.nome || 'Partite').toUpperCase(),82,y+sectionH-2); y+=sectionH;
+    let matchIndex=0;
     for (const match of section.partite || []) {
-      ctx.fillStyle=theme.panel; rounded(ctx,42,y+4,width-84,rowH-8,compact?12:18);
+      ctx.fillStyle=matchIndex%2===0?theme.panel:theme.alternate; ctx.fillRect(42,y+3,width-84,rowH-6);
+      ctx.fillStyle=theme.accent; ctx.fillRect(42,y+3,5,rowH-6);
       const [homeLogo,awayLogo]=await Promise.all([loadImage(match.squadra_casa.logo_url_assoluto||match.squadra_casa.logo),loadImage(match.squadra_ospite.logo_url_assoluto||match.squadra_ospite.logo)]);
       const logoSize=Math.max(42,Math.min(72,rowH-34));
       drawContainedImage(ctx,homeLogo,67,y+(rowH-logoSize)/2-8,logoSize,logoSize);
@@ -114,10 +113,12 @@ async function drawTournament(tournament, week) {
       ctx.textAlign='center'; ctx.fillStyle=theme.accent; ctx.font=`900 ${compact?19:24}px Arial`; ctx.fillText('VS',width/2,teamY);
       ctx.fillStyle=theme.muted; ctx.font=`600 ${compact?16:20}px Arial`;
       ctx.fillText(`${shortDate(match.data)}  •  ${match.ora || 'Ora da definire'}  •  ${match.campo || 'Luogo da definire'}`,width/2,y+rowH-(compact?15:28),760);
-      y+=rowH;
+      y+=rowH; matchIndex++;
     }
   }
-  ctx.textAlign='center'; ctx.fillStyle=theme.muted; ctx.font='500 18px Arial'; ctx.fillText('TORNEI OLD SCHOOL  •  1080 × 1920',width/2,height-28);
+  ctx.fillStyle=theme.accent; ctx.fillRect(42,height-53,width-84,2);
+  ctx.textAlign='left'; ctx.fillStyle=theme.muted; ctx.font='500 17px Arial'; ctx.fillText('CALENDARIO SETTIMANALE',42,height-25);
+  ctx.textAlign='right'; ctx.fillText('torneioldschool.it',1038,height-25);
   return canvas;
 }
 
