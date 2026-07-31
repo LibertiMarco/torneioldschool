@@ -48,41 +48,76 @@ const loadImage = src => new Promise(resolve => {
   img.onload = () => resolve(img); img.onerror = () => resolve(null); img.src = src;
 });
 const rounded = (ctx,x,y,w,h,r=16) => { ctx.beginPath(); ctx.roundRect(x,y,w,h,r); ctx.fill(); };
+const drawContainedImage = (ctx,img,x,y,maxWidth,maxHeight) => {
+  if (!img?.naturalWidth || !img?.naturalHeight) return;
+  const scale=Math.min(maxWidth/img.naturalWidth,maxHeight/img.naturalHeight);
+  const width=img.naturalWidth*scale, height=img.naturalHeight*scale;
+  ctx.drawImage(img,x+(maxWidth-width)/2,y+(maxHeight-height)/2,width,height);
+};
 const shortDate = value => new Intl.DateTimeFormat('it-IT',{weekday:'short',day:'2-digit',month:'2-digit'}).format(new Date(value+'T12:00:00'));
 const safeName = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
+const tournamentThemes = [
+  {bg1:'#071426',bg2:'#173456',accent:'#f2c94c',panel:'rgba(255,255,255,.09)',muted:'#c4d3e3'},
+  {bg1:'#210b20',bg2:'#70234d',accent:'#ffcf5a',panel:'rgba(255,255,255,.10)',muted:'#f3cede'},
+  {bg1:'#071d16',bg2:'#12664f',accent:'#9df0c7',panel:'rgba(255,255,255,.10)',muted:'#c6eadc'},
+  {bg1:'#18102d',bg2:'#52318b',accent:'#d9b7ff',panel:'rgba(255,255,255,.10)',muted:'#ddcff1'},
+  {bg1:'#241107',bg2:'#9a3f14',accent:'#ffd166',panel:'rgba(255,255,255,.10)',muted:'#f4d6c4'},
+  {bg1:'#071a24',bg2:'#086788',accent:'#7de2f4',panel:'rgba(255,255,255,.10)',muted:'#c4e5eb'},
+  {bg1:'#200b0b',bg2:'#8f2020',accent:'#ffb3a7',panel:'rgba(255,255,255,.10)',muted:'#f1ceca'},
+  {bg1:'#181b08',bg2:'#66751c',accent:'#e6f58a',panel:'rgba(255,255,255,.10)',muted:'#e3e8c3'}
+];
+const tournamentTheme = tournament => {
+  const key=String(tournament.id ?? tournament.nome ?? 'torneo');
+  let hash=2166136261;
+  for(let i=0;i<key.length;i++){ hash^=key.charCodeAt(i); hash=Math.imul(hash,16777619); }
+  const seed=Math.abs(hash);
+  return {...tournamentThemes[seed % tournamentThemes.length],seed};
+};
 
 async function drawTournament(tournament, week) {
   const graphic = tournament.grafiche[0];
   const sections = graphic.sezioni || [];
   const matchCount = sections.reduce((n,s)=>n+(s.partite||[]).length,0);
-  const width = 1080, headerH = 255, sectionH = 58, rowH = 138, footerH = 80;
-  const height = headerH + sections.length*sectionH + matchCount*rowH + footerH;
+  const width = 1080, height = 1920, headerH = 260, footerH = 70;
+  const sectionH = matchCount > 12 ? 38 : 48;
+  const availableRowsH = height-headerH-footerH-(sections.length*sectionH);
+  const rowH = Math.min(145, Math.floor(availableRowsH/Math.max(1,matchCount)));
+  const compact = rowH < 105;
+  const theme = tournamentTheme(tournament);
   const canvas = document.createElement('canvas'); canvas.width=width; canvas.height=height;
   const ctx = canvas.getContext('2d');
-  const bg = ctx.createLinearGradient(0,0,width,height); bg.addColorStop(0,'#071426'); bg.addColorStop(1,'#173456');
+  const oldSchoolLogo = await loadImage('/img/logo_old_school.png');
+  const bg = ctx.createLinearGradient(0,0,width,height); bg.addColorStop(0,theme.bg1); bg.addColorStop(1,theme.bg2);
   ctx.fillStyle=bg; ctx.fillRect(0,0,width,height);
-  ctx.fillStyle='#f2c94c'; ctx.fillRect(0,0,18,height);
-  ctx.textAlign='center'; ctx.fillStyle='#f2c94c'; ctx.font='900 62px Arial'; ctx.fillText('MATCHDAY',width/2,82);
+  ctx.globalAlpha=.13; ctx.fillStyle=theme.accent;
+  const patternStep=145+(theme.seed%75), patternWidth=24+(theme.seed%28), patternAngle=-.18-((theme.seed%22)/100);
+  for(let i=-height;i<width;i+=patternStep){ctx.save();ctx.translate(i,0);ctx.rotate(patternAngle);ctx.fillRect(0,0,patternWidth,height*1.2);ctx.restore();}
+  ctx.globalAlpha=1; ctx.fillStyle=theme.accent; ctx.fillRect(0,0,18,height);
+  drawContainedImage(ctx,oldSchoolLogo,52,37,150,150);
+  ctx.textAlign='center'; ctx.fillStyle=theme.accent; ctx.font='900 62px Arial'; ctx.fillText('MATCHDAY',width/2,82);
   ctx.fillStyle='#fff'; ctx.font='800 42px Arial'; ctx.fillText(tournament.nome,width/2,140);
-  ctx.fillStyle='#b9cbe0'; ctx.font='600 26px Arial';
+  ctx.fillStyle=theme.muted; ctx.font='600 26px Arial';
   ctx.fillText(`${shortDate(week.dal)} — ${shortDate(week.al)}`,width/2,190);
   ctx.font='500 21px Arial'; ctx.fillText(`${matchCount} ${matchCount===1?'partita':'partite'}`,width/2,225);
   let y=headerH;
   for (const section of sections) {
-    ctx.textAlign='left'; ctx.fillStyle='#f2c94c'; ctx.font='800 25px Arial'; ctx.fillText(section.nome || 'Partite',54,y+35); y+=sectionH;
+    ctx.textAlign='left'; ctx.fillStyle=theme.accent; ctx.font=`800 ${compact?19:23}px Arial`; ctx.fillText(section.nome || 'Partite',54,y+sectionH-12); y+=sectionH;
     for (const match of section.partite || []) {
-      ctx.fillStyle='rgba(255,255,255,.08)'; rounded(ctx,42,y+5,width-84,rowH-14,18);
+      ctx.fillStyle=theme.panel; rounded(ctx,42,y+4,width-84,rowH-8,compact?12:18);
       const [homeLogo,awayLogo]=await Promise.all([loadImage(match.squadra_casa.logo_url_assoluto||match.squadra_casa.logo),loadImage(match.squadra_ospite.logo_url_assoluto||match.squadra_ospite.logo)]);
-      if(homeLogo) ctx.drawImage(homeLogo,67,y+27,72,72); if(awayLogo) ctx.drawImage(awayLogo,width-139,y+27,72,72);
-      ctx.fillStyle='#fff'; ctx.font='700 25px Arial'; ctx.textAlign='left'; ctx.fillText(match.squadra_casa.nome,155,y+58,265);
-      ctx.textAlign='right'; ctx.fillText(match.squadra_ospite.nome,width-155,y+58,265);
-      ctx.textAlign='center'; ctx.fillStyle='#f2c94c'; ctx.font='900 24px Arial'; ctx.fillText('VS',width/2,y+54);
-      ctx.fillStyle='#d9e5f2'; ctx.font='600 20px Arial';
-      ctx.fillText(`${shortDate(match.data)}  •  ${match.ora || 'Ora da definire'}  •  ${match.campo || 'Luogo da definire'}`,width/2,y+101,700);
+      const logoSize=Math.max(42,Math.min(72,rowH-34));
+      drawContainedImage(ctx,homeLogo,67,y+(rowH-logoSize)/2-8,logoSize,logoSize);
+      drawContainedImage(ctx,awayLogo,width-67-logoSize,y+(rowH-logoSize)/2-8,logoSize,logoSize);
+      const teamY=y+(compact?34:Math.min(58,rowH*.43));
+      ctx.fillStyle='#fff'; ctx.font=`700 ${compact?20:25}px Arial`; ctx.textAlign='left'; ctx.fillText(match.squadra_casa.nome,155,teamY,265);
+      ctx.textAlign='right'; ctx.fillText(match.squadra_ospite.nome,width-155,teamY,265);
+      ctx.textAlign='center'; ctx.fillStyle=theme.accent; ctx.font=`900 ${compact?19:24}px Arial`; ctx.fillText('VS',width/2,teamY);
+      ctx.fillStyle=theme.muted; ctx.font=`600 ${compact?16:20}px Arial`;
+      ctx.fillText(`${shortDate(match.data)}  •  ${match.ora || 'Ora da definire'}  •  ${match.campo || 'Luogo da definire'}`,width/2,y+rowH-(compact?15:28),760);
       y+=rowH;
     }
   }
-  ctx.textAlign='center'; ctx.fillStyle='#8299b2'; ctx.font='500 18px Arial'; ctx.fillText('TORNEI OLD SCHOOL',width/2,height-32);
+  ctx.textAlign='center'; ctx.fillStyle=theme.muted; ctx.font='500 18px Arial'; ctx.fillText('TORNEI OLD SCHOOL  •  1080 × 1920',width/2,height-28);
   return canvas;
 }
 
