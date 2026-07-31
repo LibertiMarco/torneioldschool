@@ -108,7 +108,7 @@ async function drawTournament(tournament, week) {
   let y=headerH;
   for (const section of sections) {
     ctx.fillStyle=theme.accent; ctx.fillRect(42,y+sectionH-7,28,3);
-    ctx.textAlign='left'; ctx.fillStyle='#fff'; ctx.font=`800 ${compact?18:21}px Arial`; ctx.fillText((section.nome || 'Partite').toUpperCase(),82,y+sectionH-2); y+=sectionH;
+    ctx.textAlign='left'; ctx.fillStyle='#fff'; ctx.font=`800 ${compact?21:26}px Arial`; ctx.fillText((section.nome || 'Partite').toUpperCase(),82,y+sectionH-2); y+=sectionH;
     let matchIndex=0;
     for (const match of section.partite || []) {
       ctx.fillStyle=matchIndex%2===0?theme.panel:theme.alternate; ctx.fillRect(42,y+3,width-84,rowH-6);
@@ -133,7 +133,17 @@ async function drawTournament(tournament, week) {
       ctx.textBaseline='alphabetic';
       ctx.fillStyle=theme.muted; ctx.font=`600 ${metaFont}px Arial`;
       const metaY=teamY+(compact?31:Math.min(72,Math.max(40,rowH*.16)));
-      ctx.fillText(`${shortDate(match.data)}  •  ${match.ora || 'Ora da definire'}  •  ${match.campo || 'Luogo da definire'}`,width/2,metaY,760);
+      const matchMeta=`${shortDate(match.data)}  •  ${match.ora || 'Ora da definire'}  •  ${match.campo || 'Luogo da definire'}`;
+      const firstLeg=match.risultato_andata;
+      if(firstLeg && rowH>=150) {
+        const firstLegLabel=`ANDATA: ${firstLeg.squadra_casa} ${firstLeg.gol_casa}–${firstLeg.gol_ospite} ${firstLeg.squadra_ospite}`;
+        ctx.fillStyle=theme.accent; ctx.font=`700 ${Math.max(17,metaFont-1)}px Arial`; ctx.fillText(firstLegLabel,width/2,teamY+40,760);
+        ctx.fillStyle=theme.muted; ctx.font=`600 ${metaFont}px Arial`; ctx.fillText(matchMeta,width/2,teamY+72,760);
+      } else if(firstLeg) {
+        ctx.fillText(`ANDATA ${firstLeg.gol_casa}–${firstLeg.gol_ospite}  •  ${matchMeta}`,width/2,metaY,800);
+      } else {
+        ctx.fillText(matchMeta,width/2,metaY,760);
+      }
       y+=rowH; matchIndex++;
     }
   }

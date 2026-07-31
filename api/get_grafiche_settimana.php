@@ -225,7 +225,12 @@ try {
             p.giornata,
             p.fase,
             p.fase_round,
-            p.fase_leg
+            p.fase_leg,
+            pa.squadra_casa AS andata_squadra_casa,
+            pa.squadra_ospite AS andata_squadra_ospite,
+            pa.gol_casa AS andata_gol_casa,
+            pa.gol_ospite AS andata_gol_ospite,
+            pa.giocata AS andata_giocata
         FROM partite p
         LEFT JOIN tornei t
           ON t.id = (
@@ -246,6 +251,23 @@ try {
         LEFT JOIN squadre so
           ON so.nome = p.squadra_ospite
          AND so.torneo = p.torneo
+        LEFT JOIN partite pa
+          ON pa.id = (
+              SELECT pa2.id
+              FROM partite pa2
+              WHERE UPPER(TRIM(COALESCE(p.fase_leg, ''))) = 'RITORNO'
+                AND pa2.torneo = p.torneo
+                AND pa2.fase = p.fase
+                AND COALESCE(pa2.fase_round, '') = COALESCE(p.fase_round, '')
+                AND UPPER(TRIM(COALESCE(pa2.fase_leg, ''))) = 'ANDATA'
+                AND (
+                    (pa2.squadra_casa = p.squadra_casa AND pa2.squadra_ospite = p.squadra_ospite)
+                    OR
+                    (pa2.squadra_casa = p.squadra_ospite AND pa2.squadra_ospite = p.squadra_casa)
+                )
+              ORDER BY pa2.data_partita DESC, pa2.ora_partita DESC, pa2.id DESC
+              LIMIT 1
+          )
         WHERE p.data_partita >= ?
           AND p.data_partita <= ?
           AND p.giocata = 0
@@ -348,6 +370,17 @@ try {
             'data' => (string)$row['data_partita'],
             'ora' => substr((string)$row['ora_partita'], 0, 5),
             'campo' => (string)$row['campo'],
+            'risultato_andata' => strtoupper(trim((string)$row['fase_leg'])) === 'RITORNO'
+                && (int)($row['andata_giocata'] ?? 0) === 1
+                && $row['andata_gol_casa'] !== null
+                && $row['andata_gol_ospite'] !== null
+                    ? [
+                        'squadra_casa' => (string)$row['andata_squadra_casa'],
+                        'squadra_ospite' => (string)$row['andata_squadra_ospite'],
+                        'gol_casa' => (int)$row['andata_gol_casa'],
+                        'gol_ospite' => (int)$row['andata_gol_ospite'],
+                      ]
+                    : null,
             'squadra_casa' => get_grafiche_settimana_squadra(
                 $row['squadra_casa_id'],
                 (string)$row['squadra_casa'],
