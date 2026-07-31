@@ -111,6 +111,22 @@ function get_grafiche_settimana_squadra($id, string $nome, $logo): array
     ];
 }
 
+function get_grafiche_settimana_campo(?string $campo): string
+{
+    $campo = trim((string)$campo);
+    $key = function_exists('mb_strtolower')
+        ? mb_strtolower($campo, 'UTF-8')
+        : strtolower($campo);
+
+    $labels = [
+        'centro sportivo la paratina, napoli' => 'La paratina',
+        'sporting club san francesco, napoli' => 'San Francesco',
+        'complesso kennedy, napoli' => 'Complesso Kennedy',
+    ];
+
+    return $labels[$key] ?? $campo;
+}
+
 function get_grafiche_settimana_sezioni(string $type, array $matches): array
 {
     if ($type === 'regular_season') {
@@ -344,7 +360,7 @@ try {
         if ($type === 'regular_season') {
             $groupKey = 'regular:' . ($matchDay !== null ? $matchDay : 'nd');
             $subtitle = 'Regular Season';
-            $label = $matchDay !== null ? $matchDay . '\u{00AA} Giornata' : 'Giornata da definire';
+            $label = $matchDay !== null ? $matchDay . "\u{00AA} Giornata" : 'Giornata da definire';
             $logicalGroup = 'regular-season_giornata-' . ($matchDay !== null ? $matchDay : 'nd');
         } else {
             $phaseSlug = get_grafiche_settimana_slug($phaseName, 'fase');
@@ -369,7 +385,7 @@ try {
             'id' => (int)$row['id'],
             'data' => (string)$row['data_partita'],
             'ora' => substr((string)$row['ora_partita'], 0, 5),
-            'campo' => (string)$row['campo'],
+            'campo' => get_grafiche_settimana_campo($row['campo']),
             'risultato_andata' => strtoupper(trim((string)$row['fase_leg'])) === 'RITORNO'
                 && (int)($row['andata_giocata'] ?? 0) === 1
                 && $row['andata_gol_casa'] !== null
