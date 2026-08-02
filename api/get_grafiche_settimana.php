@@ -180,6 +180,9 @@ function get_grafiche_settimana_sezioni_torneo(array $tournament): array
 
     foreach ($tournament['ordine_gruppi'] as $groupKey) {
         $group = $tournament['gruppi'][$groupKey];
+        if (empty($group['ha_partite_da_giocare'])) {
+            continue;
+        }
         $groupSections = get_grafiche_settimana_sezioni($group['tipo'], $group['partite']);
 
         foreach ($groupSections as $section) {
@@ -382,8 +385,13 @@ try {
                 'sottotitolo' => $subtitle,
                 'label' => $label,
                 'id_gruppo' => $logicalGroup,
+                'ha_partite_da_giocare' => false,
                 'partite' => [],
             ];
+        }
+
+        if ((int)$row['giocata'] !== 1) {
+            $tournaments[$tournamentKey]['gruppi'][$groupKey]['ha_partite_da_giocare'] = true;
         }
 
         $tournaments[$tournamentKey]['gruppi'][$groupKey]['partite'][] = [

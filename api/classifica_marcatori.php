@@ -52,7 +52,42 @@ function get_torneo_config(mysqli $conn, string $torneo): array
     return is_array($decoded) ? $decoded : [];
 }
 
+function torneo_ha_due_giornate_regular(mysqli $conn, string $torneo): bool
+{
+    $stmt = $conn->prepare("
+        SELECT
+            COUNT(DISTINCT giornata) AS numero_giornate,
+            MIN(giornata) AS prima_giornata,
+            MAX(giornata) AS ultima_giornata
+        FROM partite
+        WHERE torneo = ?
+          AND UPPER(CASE
+              WHEN TRIM(COALESCE(fase, '')) IN ('', 'GIRONE') THEN 'REGULAR'
+              ELSE TRIM(COALESCE(fase, ''))
+          END) = 'REGULAR'
+          AND giornata IS NOT NULL
+    ");
+    if (!$stmt) {
+        return false;
+    }
+
+    $stmt->bind_param('s', $torneo);
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return false;
+    }
+
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    return (int)($row['numero_giornate'] ?? 0) === 2
+        && (int)($row['prima_giornata'] ?? 0) === 1
+        && (int)($row['ultima_giornata'] ?? 0) === 2;
+}
+
 // Per Coppa d'Africa contiamo tutte le fasi.
+// Lo stesso vale per i tornei con una regular season di sole due giornate:
+// la classifica capocannoniere comprende anche tutte le fasi finali.
 // Per tutti i tornei a gironi includiamo anche la Coppa Gold.
 // Per gli altri tornei consideriamo solo la fase REGULAR (anche se fase vuota o "GIRONE").
 // Uso COALESCE per includere anche valori NULL di fase come regular, evitando di escludere partite registrate senza fase.
@@ -60,8 +95,9 @@ $phaseExpr = "UPPER(CASE WHEN TRIM(COALESCE(p.fase, '')) IN ('', 'GIRONE') THEN 
 $torneoConfig = get_torneo_config($conn, $torneo);
 $torneoFormat = strtolower(trim((string)($torneoConfig['formato'] ?? $torneoConfig['formula_torneo'] ?? '')));
 $isGironeTournament = ($torneoFormat === 'girone');
+$hasTwoRegularMatchdays = torneo_ha_due_giornate_regular($conn, $torneo);
 
-if ($torneo === 'Coppadafrica') {
+if ($torneo === 'Coppadafrica' || $hasTwoRegularMatchdays) {
     $phaseClause = '';
 } elseif ($isGironeTournament) {
     $phaseClause = "AND $phaseExpr IN ('REGULAR','GOLD')";
