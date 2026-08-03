@@ -26,7 +26,7 @@ if ($email === '' || $nome === '' || $password === '') {
     exit;
 }
 
-$allowedRoles = ['user', 'admin', 'sysadmin'];
+$allowedRoles = ['user', 'grafico', 'admin', 'sysadmin'];
 if (!in_array($ruolo, $allowedRoles, true)) {
     http_response_code(422);
     echo json_encode(['error' => 'Ruolo non valido'], JSON_UNESCAPED_UNICODE);

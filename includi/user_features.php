@@ -173,6 +173,42 @@ if (!function_exists('user_has_admin_access')) {
     }
 }
 
+if (!function_exists('user_has_graphics_access')) {
+    function user_has_graphics_access(string $role): bool
+    {
+        return in_array(trim($role), ['grafico', 'admin', 'sysadmin'], true);
+    }
+}
+
+if (!function_exists('ensure_user_graphics_role_schema')) {
+    function ensure_user_graphics_role_schema(mysqli $conn): bool
+    {
+        static $checked = false;
+        static $ready = false;
+        if ($checked) {
+            return $ready;
+        }
+        $checked = true;
+
+        $result = $conn->query("SHOW COLUMNS FROM utenti LIKE 'ruolo'");
+        $column = $result instanceof mysqli_result ? $result->fetch_assoc() : null;
+        if ($result instanceof mysqli_result) {
+            $result->close();
+        }
+        if ($column && stripos((string)($column['Type'] ?? ''), "'grafico'") !== false) {
+            return $ready = true;
+        }
+
+        $ready = $conn->query(
+            "ALTER TABLE utenti MODIFY COLUMN ruolo ENUM('user','grafico','admin','sysadmin') NOT NULL DEFAULT 'user'"
+        ) === true;
+        if (!$ready) {
+            error_log('user_features: impossibile aggiungere il ruolo grafico - ' . $conn->error);
+        }
+        return $ready;
+    }
+}
+
 if (!function_exists('user_can_access_feature')) {
     function user_can_access_feature(mysqli $conn, int $userId, string $role, string $featureKey): bool
     {

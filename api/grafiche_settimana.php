@@ -1,12 +1,12 @@
 <?php
-require_once __DIR__ . '/../includi/admin_guard.php';
+require_once __DIR__ . '/../includi/graphics_guard.php';
 ?>
 <!doctype html>
 <html lang="it">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Grafiche partite settimanali</title>
+  <title>Grafiche partite giornaliere</title>
   <style>
     :root { color-scheme: dark; font-family: Arial, sans-serif; }
     body { margin: 0; background: #08111f; color: #fff; }
@@ -25,10 +25,10 @@ require_once __DIR__ . '/../includi/admin_guard.php';
 </head>
 <body><main>
   <a href="/admin_dashboard.php">Torna alla dashboard</a>
-  <h1>Grafiche partite settimanali</h1>
-  <p>Viene generato un unico PNG per torneo con tutte le partite del periodo, inclusi i risultati di quelle gia giocate.</p>
+  <h1>Grafiche partite giornaliere</h1>
+  <p>Viene generato un unico PNG per torneo con le partite del giorno selezionato, inclusi i risultati di quelle gia giocate.</p>
   <div class="toolbar">
-    <label>Data di riferimento <input id="date" type="date"></label>
+    <label>Giorno delle partite <input id="date" type="date"></label>
     <button id="generate" type="button">Genera grafiche</button>
     <button id="downloadAll" type="button" hidden>Scarica tutte</button>
   </div>
@@ -36,7 +36,8 @@ require_once __DIR__ . '/../includi/admin_guard.php';
 </main>
 <script>
 const dateInput = document.getElementById('date');
-dateInput.value = new Date().toISOString().slice(0, 10);
+const today = new Date();
+dateInput.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 const grid = document.getElementById('grid');
 const statusEl = document.getElementById('status');
 const downloadAll = document.getElementById('downloadAll');
@@ -181,7 +182,7 @@ async function drawTournament(tournament, week) {
     }
   }
   ctx.fillStyle=theme.accent; ctx.fillRect(42,height-53,width-84,2);
-  ctx.textAlign='left'; ctx.fillStyle=theme.muted; ctx.font='500 17px Arial'; ctx.fillText('CALENDARIO SETTIMANALE',42,height-25);
+  ctx.textAlign='left'; ctx.fillStyle=theme.muted; ctx.font='500 17px Arial'; ctx.fillText('PARTITE DEL GIORNO',42,height-25);
   ctx.textAlign='right'; ctx.fillText('torneioldschool.it',1038,height-25);
   return canvas;
 }

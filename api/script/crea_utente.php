@@ -18,9 +18,9 @@ if ($email === '' || $password === '') {
     exit("Uso: php api/script/crea_utente.php email password [ruolo] [nome] [cognome]\n");
 }
 
-$allowedRoles = ['user', 'admin', 'sysadmin'];
+$allowedRoles = ['user', 'grafico', 'admin', 'sysadmin'];
 if (!in_array($ruolo, $allowedRoles, true)) {
-    exit("Errore: ruolo non valido. Valori ammessi: user, admin, sysadmin.\n");
+    exit("Errore: ruolo non valido. Valori ammessi: user, grafico, admin, sysadmin.\n");
 }
 
 $utente = new Utente();

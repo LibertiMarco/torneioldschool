@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../includi/graphics_guard.php';
+
 header('Content-Type: application/json; charset=utf-8');
 
 ini_set('display_errors', '0');
@@ -221,10 +223,10 @@ try {
         $referenceDate = new DateTimeImmutable('today', $timezone);
     }
 
-    $weekStart = $referenceDate->modify('next monday');
-    $weekEnd = $weekStart->modify('+6 days');
-    $fromDate = $weekStart->format('Y-m-d');
-    $toDate = $weekEnd->format('Y-m-d');
+    // La grafica giornaliera contiene esclusivamente le partite della data
+    // richiesta (oggi, quando il parametro non viene passato).
+    $fromDate = $referenceDate->format('Y-m-d');
+    $toDate = $fromDate;
 
     $sql = "
         SELECT

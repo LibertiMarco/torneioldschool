@@ -543,8 +543,8 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
             </div>
 
             <div class="admin-card">
-                <h3>Grafiche settimanali</h3>
-                <p>Genera e scarica un'immagine con tutte le partite di ogni torneo.</p><br>
+                <h3>Grafiche giornaliere</h3>
+                <p>Genera e scarica le immagini dei tornei che giocano nel giorno selezionato.</p><br>
                 <a href="/api/grafiche_settimana.php">Genera</a>
             </div>
 

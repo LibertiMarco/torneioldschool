@@ -364,6 +364,7 @@ $lista = $utente->getAll();
             <label for="crea_ruolo">Ruolo</label>
             <select id="crea_ruolo" name="ruolo" required>
               <option value="user">Utente</option>
+              <option value="grafico">Grafico</option>
               <option value="admin">Amministratore</option>
               <option value="sysadmin">Sysadmin</option>
             </select>
@@ -408,6 +409,7 @@ $lista = $utente->getAll();
         <div class="form-group"><label>Ruolo</label>
           <select name="ruolo" id="mod_ruolo" required>
             <option value="user">Utente</option>
+            <option value="grafico">Grafico</option>
             <option value="admin">Amministratore</option>
             <option value="sysadmin">Sysadmin</option>
           </select>

@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS utenti (
     fanta_referral_code VARCHAR(120) DEFAULT NULL,
     email VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
-    ruolo ENUM('user','admin','sysadmin') NOT NULL DEFAULT 'user',
+    ruolo ENUM('user','grafico','admin','sysadmin') NOT NULL DEFAULT 'user',
     feature_flags LONGTEXT DEFAULT NULL,
     avatar VARCHAR(255) DEFAULT NULL,
     email_verificata TINYINT(1) NOT NULL DEFAULT 0,

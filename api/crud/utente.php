@@ -11,6 +11,7 @@ class Utente
     {
         require __DIR__ . '/../../includi/db.php';
         $this->conn = $conn;
+        ensure_user_graphics_role_schema($this->conn);
         ensure_user_feature_flags_column($this->conn);
     }
 

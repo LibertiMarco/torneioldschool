@@ -8,6 +8,7 @@ $userFeatureFlags = normalize_user_feature_flags([]);
 $featureDefinitions = user_feature_definitions();
 $sessionRole = $_SESSION['ruolo'] ?? 'user';
 $hasAdminAccess = user_has_admin_access((string)$sessionRole);
+$hasGraphicsAccess = user_has_graphics_access((string)$sessionRole);
 
 $hasPlayerProfile = false;
 if ($isLoggedIn) {
@@ -200,6 +201,12 @@ $headerNavLinks = [
                       <?php if ($hasAdminAccess): ?>
                           <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/admin_dashboard.php')) ?>">
                               <span>Gestione Sito</span>
+                          </a>
+                      <?php endif; ?>
+
+                      <?php if ($hasGraphicsAccess): ?>
+                          <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path('/api/grafiche_settimana.php')) ?>">
+                              <span>Grafiche giornaliere</span>
                           </a>
                       <?php endif; ?>
 
