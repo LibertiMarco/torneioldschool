@@ -300,6 +300,13 @@ $lista = $utente->getAll();
   <main class="admin-wrapper">
     <section class="admin-container">
       <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
+      <?php if (isset($_GET['php_cache'])): ?>
+        <div class="admin-alert <?= $_GET['php_cache'] === 'cache_aggiornata' ? 'success' : 'warning' ?>">
+          <?= $_GET['php_cache'] === 'cache_aggiornata'
+            ? 'Cache PHP aggiornata correttamente.'
+            : 'OPcache non disponibile o non resettabile: potrebbe essere necessario riavviare PHP dal pannello hosting.' ?>
+        </div>
+      <?php endif; ?>
       <h1 class="admin-title">Gestione Utenti</h1>
 
       <!-- PICKLIST -->
