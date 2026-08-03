@@ -394,6 +394,10 @@ $lista = $utente->getAll();
         <?= csrf_field($csrfKey) ?>
         <h2>Modifica Utente</h2>
         <div class="form-group">
+          <label for="searchUtenteMod">Cerca utente</label>
+          <input type="search" id="searchUtenteMod" placeholder="Nome, cognome o email" autocomplete="off">
+        </div>
+        <div class="form-group">
           <label>Seleziona Utente</label>
           <select name="id" id="selectUtenteMod" required>
             <option value="">-- Seleziona un utente --</option>
@@ -493,6 +497,10 @@ $lista = $utente->getAll();
   <!-- POPOLAMENTO DATI UTENTE -->
   <script>
     const selectUtenteMod = document.getElementById('selectUtenteMod');
+    const searchUtenteMod = document.getElementById('searchUtenteMod');
+    const utentiModOptions = Array.from(selectUtenteMod.options)
+      .filter(option => option.value)
+      .map(option => ({ value: option.value, text: option.textContent }));
     const campi = {
       email: document.getElementById('mod_email'),
       nome: document.getElementById('mod_nome'),
@@ -506,6 +514,33 @@ $lista = $utente->getAll();
         input.checked = false;
       });
     }
+
+    searchUtenteMod.addEventListener('input', () => {
+      const query = searchUtenteMod.value.trim().toLocaleLowerCase('it');
+      const selectedId = selectUtenteMod.value;
+      const matches = utentiModOptions.filter(option => option.text.toLocaleLowerCase('it').includes(query));
+
+      selectUtenteMod.replaceChildren();
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = matches.length
+        ? `-- Seleziona un utente (${matches.length}) --`
+        : '-- Nessun utente trovato --';
+      selectUtenteMod.appendChild(placeholder);
+
+      matches.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item.value;
+        option.textContent = item.text;
+        selectUtenteMod.appendChild(option);
+      });
+
+      if (matches.some(item => item.value === selectedId)) {
+        selectUtenteMod.value = selectedId;
+      } else if (selectedId) {
+        selectUtenteMod.dispatchEvent(new Event('change'));
+      }
+    });
 
     selectUtenteMod.addEventListener('change', async (e) => {
       const id = e.target.value;
