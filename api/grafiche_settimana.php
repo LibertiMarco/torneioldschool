@@ -26,7 +26,7 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
 <body><main>
   <a href="/admin_dashboard.php">Torna alla dashboard</a>
   <h1>Grafiche partite giornaliere</h1>
-  <p>Viene generato un unico PNG per torneo con le partite del giorno selezionato, inclusi i risultati di quelle gia giocate.</p>
+  <p>Il giorno selezionato individua i tornei da pubblicare; ogni PNG contiene tutte le loro partite della settimana, incluse quelle gia giocate.</p>
   <div class="toolbar">
     <label>Giorno delle partite <input id="date" type="date"></label>
     <button id="generate" type="button">Genera grafiche</button>

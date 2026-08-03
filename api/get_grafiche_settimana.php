@@ -182,9 +182,6 @@ function get_grafiche_settimana_sezioni_torneo(array $tournament): array
 
     foreach ($tournament['ordine_gruppi'] as $groupKey) {
         $group = $tournament['gruppi'][$groupKey];
-        if (empty($group['ha_partite_da_giocare'])) {
-            continue;
-        }
         $groupSections = get_grafiche_settimana_sezioni($group['tipo'], $group['partite']);
 
         foreach ($groupSections as $section) {
@@ -223,10 +220,11 @@ try {
         $referenceDate = new DateTimeImmutable('today', $timezone);
     }
 
-    // La grafica giornaliera contiene esclusivamente le partite della data
-    // richiesta (oggi, quando il parametro non viene passato).
-    $fromDate = $referenceDate->format('Y-m-d');
-    $toDate = $fromDate;
+    // Il giorno richiesto seleziona i tornei da mostrare; per ciascuno vengono
+    // poi incluse tutte le partite della settimana corrente.
+    $targetDate = $referenceDate->format('Y-m-d');
+    $fromDate = $referenceDate->modify('monday this week')->format('Y-m-d');
+    $toDate = $referenceDate->modify('sunday this week')->format('Y-m-d');
 
     $sql = "
         SELECT
@@ -352,6 +350,7 @@ try {
                 'id' => $tournamentId,
                 'nome' => (string)$row['torneo_nome'],
                 'codice' => (string)$row['torneo_codice'],
+                'ha_partite_da_giocare_oggi' => false,
                 'gruppi' => [],
                 'ordine_gruppi' => [],
             ];
@@ -390,6 +389,10 @@ try {
                 'ha_partite_da_giocare' => false,
                 'partite' => [],
             ];
+        }
+
+        if ((string)$row['data_partita'] === $targetDate && (int)$row['giocata'] !== 1) {
+            $tournaments[$tournamentKey]['ha_partite_da_giocare_oggi'] = true;
         }
 
         if ((int)$row['giocata'] !== 1) {
@@ -445,6 +448,9 @@ try {
 
     foreach ($tournamentOrder as $tournamentKey) {
         $tournament = $tournaments[$tournamentKey];
+        if (empty($tournament['ha_partite_da_giocare_oggi'])) {
+            continue;
+        }
         $tournamentSlug = get_grafiche_settimana_slug(
             $tournament['nome'],
             $tournament['id'] !== null ? 'torneo-' . $tournament['id'] : 'torneo'
