@@ -17,7 +17,7 @@ if ($torneo === '') {
     exit;
 }
 
-function get_torneo_config(mysqli $conn, string $torneo): array
+function get_torneo_details(mysqli $conn, string $torneo): array
 {
     if ($torneo === '') {
         return [];
@@ -26,7 +26,7 @@ function get_torneo_config(mysqli $conn, string $torneo): array
     $filenamePhp = $torneo . '.php';
     $filenameHtml = $torneo . '.html';
     $stmt = $conn->prepare("
-        SELECT config
+        SELECT nome, data_inizio, data_fine, config
         FROM tornei
         WHERE filetorneo IN (?, ?)
         ORDER BY (filetorneo LIKE '%.php') DESC
@@ -44,12 +44,13 @@ function get_torneo_config(mysqli $conn, string $torneo): array
 
     $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-    if (!$row || empty($row['config'])) {
+    if (!$row) {
         return [];
     }
 
-    $decoded = json_decode((string)$row['config'], true);
-    return is_array($decoded) ? $decoded : [];
+    $decoded = json_decode((string)($row['config'] ?? ''), true);
+    $row['config_decoded'] = is_array($decoded) ? $decoded : [];
+    return $row;
 }
 
 function torneo_ha_due_giornate_regular(mysqli $conn, string $torneo): bool
@@ -86,18 +87,25 @@ function torneo_ha_due_giornate_regular(mysqli $conn, string $torneo): bool
 }
 
 // Per Coppa d'Africa contiamo tutte le fasi.
-// Lo stesso vale per i tornei con una regular season di sole due giornate:
+// Lo stesso vale per i tornei disputati in un solo giorno, per quelli che
+// contengono "allinonenight" nel nome e per quelli con una regular season di sole due giornate:
 // la classifica capocannoniere comprende anche tutte le fasi finali.
 // Per tutti i tornei a gironi includiamo anche la Coppa Gold.
 // Per gli altri tornei consideriamo solo la fase REGULAR (anche se fase vuota o "GIRONE").
 // Uso COALESCE per includere anche valori NULL di fase come regular, evitando di escludere partite registrate senza fase.
 $phaseExpr = "UPPER(CASE WHEN TRIM(COALESCE(p.fase, '')) IN ('', 'GIRONE') THEN 'REGULAR' ELSE TRIM(COALESCE(p.fase, '')) END)";
-$torneoConfig = get_torneo_config($conn, $torneo);
+$torneoDetails = get_torneo_details($conn, $torneo);
+$torneoConfig = $torneoDetails['config_decoded'] ?? [];
 $torneoFormat = strtolower(trim((string)($torneoConfig['formato'] ?? $torneoConfig['formula_torneo'] ?? '')));
 $isGironeTournament = ($torneoFormat === 'girone');
 $hasTwoRegularMatchdays = torneo_ha_due_giornate_regular($conn, $torneo);
+$startDate = trim((string)($torneoDetails['data_inizio'] ?? ''));
+$endDate = trim((string)($torneoDetails['data_fine'] ?? ''));
+$isSingleDayTournament = $startDate !== '' && $startDate !== '0000-00-00' && $startDate === $endDate;
+$tournamentName = strtolower((string)($torneoDetails['nome'] ?? ''));
+$isAllInOneNightTournament = strpos($tournamentName, 'allinonenight') !== false;
 
-if ($torneo === 'Coppadafrica' || $hasTwoRegularMatchdays) {
+if ($torneo === 'Coppadafrica' || $hasTwoRegularMatchdays || $isSingleDayTournament || $isAllInOneNightTournament) {
     $phaseClause = '';
 } elseif ($isGironeTournament) {
     $phaseClause = "AND $phaseExpr IN ('REGULAR','GOLD')";
