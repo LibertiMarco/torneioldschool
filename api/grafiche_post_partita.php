@@ -5,6 +5,11 @@ require_once __DIR__ . '/../includi/db.php';
 $partiteGrafiche = [];
 $partiteStmt = $conn->prepare(
   "SELECT p.id, p.torneo,
+          (SELECT t.id FROM tornei t
+           WHERE t.nome = p.torneo
+              OR t.filetorneo = p.torneo
+              OR REPLACE(REPLACE(t.filetorneo, '.php', ''), '.html', '') = REPLACE(REPLACE(p.torneo, '.php', ''), '.html', '')
+           LIMIT 1) AS torneo_id,
           COALESCE((
             SELECT t.nome
             FROM tornei t
@@ -69,6 +74,8 @@ if ($partiteStmt && $partiteStmt->execute()) {
     input,select { background:#081522; color:#fff; }
     input[readonly] { color:#b9c9d7; background:#0b1926; }
     input[type=file] { padding:8px; color:#bac8d5; }
+    input[type=range] { padding:4px 0; accent-color:var(--gold); }
+    .range-value { color:var(--muted); font-size:12px; font-weight:600; }
     button { border:0; cursor:pointer; background:var(--gold); color:#101722; font-weight:850; }
     .secondary { background:#263d53; color:#fff; }
     .actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
@@ -109,6 +116,9 @@ if ($partiteStmt && $partiteStmt->execute()) {
           <label>Gol casa<input id="ftHomeScore" type="number" min="0" value="0" readonly></label>
           <label>Gol ospite<input id="ftAwayScore" type="number" min="0" value="0" readonly></label>
           <label class="wide">Foto pre-match dei capitani<input id="ftCaptains" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          <label>Zoom foto <span class="range-value" id="ftZoomValue">100%</span><input id="ftZoom" type="range" min="100" max="250" value="100"></label>
+          <label>Posizione orizzontale <span class="range-value" id="ftXValue">50%</span><input id="ftX" type="range" min="0" max="100" value="50"></label>
+          <label class="wide">Posizione verticale <span class="range-value" id="ftYValue">0%</span><input id="ftY" type="range" min="0" max="100" value="0"></label>
           <label class="wide">Giornata / fase<input id="ftRound" value="" readonly></label>
         </div>
       </div>
@@ -120,6 +130,9 @@ if ($partiteStmt && $partiteStmt->execute()) {
           <label>Cognome<input id="mvpSurname" value="ROSSI"></label>
           <label class="wide">Squadra<input id="mvpTeam" value="NOME SQUADRA"></label>
           <label class="wide">Foto MVP<input id="mvpPhoto" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          <label>Zoom foto <span class="range-value" id="mvpZoomValue">100%</span><input id="mvpZoom" type="range" min="100" max="250" value="100"></label>
+          <label>Posizione orizzontale <span class="range-value" id="mvpXValue">50%</span><input id="mvpX" type="range" min="0" max="100" value="50"></label>
+          <label class="wide">Posizione verticale <span class="range-value" id="mvpYValue">0%</span><input id="mvpY" type="range" min="0" max="100" value="0"></label>
           <label>Logo squadra (facoltativo)<input id="mvpLogo" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label>Dettaglio (facoltativo)<input id="mvpDetails" value="MAN OF THE MATCH"></label>
         </div>
@@ -147,7 +160,18 @@ if ($partiteStmt && $partiteStmt->execute()) {
 </main>
 <script>
 const $ = id => document.getElementById(id);
-const W=1080,H=1350,GOLD='#e8bd45',BG='#07131f',PANEL='#102438',MUTED='#aebdca';
+const W=1080,H=1350;
+let GOLD='#e8bd45',BG='#07131f',PANEL='#102438',MUTED='#aebdca';
+const tournamentThemes=[
+  {bg:'#091522',accent:'#e5b93f',panel:'#102235',muted:'#aebdca'},
+  {bg:'#1b1017',accent:'#df9e32',panel:'#301a28',muted:'#ccb9c4'},
+  {bg:'#0b1915',accent:'#5fc49b',panel:'#122b24',muted:'#abc8bd'},
+  {bg:'#151126',accent:'#a98bd4',panel:'#241c3e',muted:'#c1b7d0'},
+  {bg:'#1e130d',accent:'#e49a3a',panel:'#382117',muted:'#d0bcaf'},
+  {bg:'#081820',accent:'#45b6d0',panel:'#102c38',muted:'#abc6ce'},
+  {bg:'#1d0f10',accent:'#d7645d',panel:'#35191b',muted:'#ceb2b3'},
+  {bg:'#17190d',accent:'#a8bc49',panel:'#292d15',muted:'#c4c9ab'}
+];
 const matches=<?= json_encode($partiteGrafiche, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const imageState={ftHomeLogo:null,ftAwayLogo:null,ftCaptains:null,mvpPhoto:null,mvpLogo:null,brand:null};
 const imageFields=['ftCaptains','mvpPhoto','mvpLogo'];
@@ -156,24 +180,27 @@ const upper=(value,fallback='')=>String(value||fallback).trim().toUpperCase();
 
 function loadImage(src){return new Promise(resolve=>{if(!src)return resolve(null);const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src=src;});}
 function fileImage(file){return new Promise((resolve,reject)=>{if(!file)return resolve(null);const reader=new FileReader();reader.onload=async()=>resolve(await loadImage(reader.result));reader.onerror=reject;reader.readAsDataURL(file);});}
-function cover(ctx,img,x,y,w,h,position='top'){if(!img?.naturalWidth)return;const scale=Math.max(w/img.naturalWidth,h/img.naturalHeight);const sw=w/scale,sh=h/scale,sx=(img.naturalWidth-sw)/2;let sy=0;if(position==='center')sy=(img.naturalHeight-sh)/2;else if(position==='bottom')sy=img.naturalHeight-sh;sy=Math.max(0,Math.min(sy,img.naturalHeight-sh));ctx.drawImage(img,sx,sy,sw,sh,x,y,w,h);}
+function cover(ctx,img,x,y,w,h,crop={}){if(!img?.naturalWidth)return;const zoom=Math.max(1,Number(crop.zoom||100)/100);const scale=Math.max(w/img.naturalWidth,h/img.naturalHeight)*zoom;const sw=w/scale,sh=h/scale;const px=Math.max(0,Math.min(100,Number(crop.x??50)))/100,py=Math.max(0,Math.min(100,Number(crop.y??0)))/100;const sx=(img.naturalWidth-sw)*px,sy=(img.naturalHeight-sh)*py;ctx.drawImage(img,sx,sy,sw,sh,x,y,w,h);}
 function contain(ctx,img,x,y,w,h){if(!img?.naturalWidth)return;const scale=Math.min(w/img.naturalWidth,h/img.naturalHeight);const dw=img.naturalWidth*scale,dh=img.naturalHeight*scale;ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh);}
 function roundedRect(ctx,x,y,w,h,r,fill){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fillStyle=fill;ctx.fill();}
 function fitText(ctx,text,maxWidth,startSize,minSize=22,weight=800){let size=startSize;do{ctx.font=`${weight} ${size}px Arial`;if(ctx.measureText(text).width<=maxWidth)break;size-=2;}while(size>minSize);return size;}
+function applyTournamentTheme(value){let hash=2166136261;const key=String(value||'torneo');for(let i=0;i<key.length;i++){hash^=key.charCodeAt(i);hash=Math.imul(hash,16777619);}const theme=tournamentThemes[Math.abs(hash)%tournamentThemes.length];BG=theme.bg;GOLD=theme.accent;PANEL=theme.panel;MUTED=theme.muted;}
+function cropValues(prefix){return{zoom:$(prefix+'Zoom').value,x:$(prefix+'X').value,y:$(prefix+'Y').value};}
+function updateCropLabels(){['ft','mvp'].forEach(prefix=>{$(prefix+'ZoomValue').textContent=$(prefix+'Zoom').value+'%';$(prefix+'XValue').textContent=$(prefix+'X').value+'%';$(prefix+'YValue').textContent=$(prefix+'Y').value+'%';});}
 function background(ctx){const gradient=ctx.createLinearGradient(0,0,W,H);gradient.addColorStop(0,'#10263a');gradient.addColorStop(.5,BG);gradient.addColorStop(1,'#050d15');ctx.fillStyle=gradient;ctx.fillRect(0,0,W,H);ctx.fillStyle=GOLD;ctx.fillRect(0,0,14,H);ctx.globalAlpha=.08;for(let x=-500;x<W+500;x+=145){ctx.save();ctx.translate(x,0);ctx.rotate(-.22);ctx.fillStyle='#fff';ctx.fillRect(0,0,2,H*1.3);ctx.restore();}ctx.globalAlpha=1;}
 function brandHeader(ctx,tournament,label){contain(ctx,imageState.brand,52,45,112,112);ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='900 48px Arial';ctx.fillText(label,190,90);ctx.fillStyle=GOLD;fitText(ctx,upper(tournament,'TORNEI OLD SCHOOL'),720,27,18,800);ctx.fillText(upper(tournament,'TORNEI OLD SCHOOL'),190,132,720);ctx.fillStyle=GOLD;ctx.fillRect(48,172,W-96,4);}
 function placeholder(ctx,x,y,w,h,label){roundedRect(ctx,x,y,w,h,18,'#172b3d');ctx.strokeStyle='#ffffff30';ctx.lineWidth=3;ctx.setLineDash([12,12]);ctx.strokeRect(x+2,y+2,w-4,h-4);ctx.setLineDash([]);ctx.fillStyle=MUTED;ctx.textAlign='center';ctx.font='700 25px Arial';ctx.fillText(label,x+w/2,y+h/2);}
 
-function drawFulltime(){const c=$('fulltimeCanvas'),ctx=c.getContext('2d');background(ctx);brandHeader(ctx,$('ftTournament').value,'FULL TIME');const photo={x:48,y:205,w:984,h:600};if(imageState.ftCaptains){ctx.save();ctx.beginPath();ctx.roundRect(photo.x,photo.y,photo.w,photo.h,22);ctx.clip();cover(ctx,imageState.ftCaptains,photo.x,photo.y,photo.w,photo.h);const g=ctx.createLinearGradient(0,photo.y+280,0,photo.y+photo.h);g.addColorStop(0,'transparent');g.addColorStop(1,'#07131fe8');ctx.fillStyle=g;ctx.fillRect(photo.x,photo.y,photo.w,photo.h);ctx.restore();}else placeholder(ctx,photo.x,photo.y,photo.w,photo.h,'CARICA LA FOTO DEI DUE CAPITANI');
+function drawFulltime(){const selected=matches.find(item=>String(item.id)===String($('ftMatch').value))||matches.find(item=>String(item.torneo)===$('ftTournamentSelect').value);applyTournamentTheme(selected?.torneo_id??$('ftTournamentSelect').value??$('ftTournament').value);const c=$('fulltimeCanvas'),ctx=c.getContext('2d');background(ctx);brandHeader(ctx,$('ftTournament').value,'FULL TIME');const photo={x:48,y:205,w:984,h:600};if(imageState.ftCaptains){ctx.save();ctx.beginPath();ctx.roundRect(photo.x,photo.y,photo.w,photo.h,22);ctx.clip();cover(ctx,imageState.ftCaptains,photo.x,photo.y,photo.w,photo.h,cropValues('ft'));const g=ctx.createLinearGradient(0,photo.y+280,0,photo.y+photo.h);g.addColorStop(0,'transparent');g.addColorStop(1,BG+'ee');ctx.fillStyle=g;ctx.fillRect(photo.x,photo.y,photo.w,photo.h);ctx.restore();}else placeholder(ctx,photo.x,photo.y,photo.w,photo.h,'CARICA LA FOTO DEI DUE CAPITANI');
   roundedRect(ctx,48,765,984,430,22,PANEL);ctx.fillStyle=GOLD;ctx.fillRect(48,765,984,6);contain(ctx,imageState.ftHomeLogo||imageState.brand,80,835,155,155);contain(ctx,imageState.ftAwayLogo||imageState.brand,845,835,155,155);
   const home=upper($('ftHome').value,'SQUADRA CASA'),away=upper($('ftAway').value,'SQUADRA OSPITE');ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.textAlign='left';fitText(ctx,home,260,34,20,800);ctx.fillText(home,80,1045,260);ctx.textAlign='right';fitText(ctx,away,260,34,20,800);ctx.fillText(away,1000,1045,260);
   ctx.textAlign='center';ctx.fillStyle=GOLD;ctx.font='900 118px Arial';ctx.fillText(`${$('ftHomeScore').value||0} - ${$('ftAwayScore').value||0}`,W/2,910);ctx.fillStyle=MUTED;ctx.font='750 23px Arial';ctx.fillText(upper($('ftRound').value,'PARTITA'),W/2,1120);ctx.textBaseline='alphabetic';footer(ctx,$('ftTournament').value);
 }
-function drawMvp(){const c=$('mvpCanvas'),ctx=c.getContext('2d');background(ctx);brandHeader(ctx,$('mvpTournament').value,'MVP');const photo={x:48,y:205,w:984,h:760};if(imageState.mvpPhoto){ctx.save();ctx.beginPath();ctx.roundRect(photo.x,photo.y,photo.w,photo.h,22);ctx.clip();cover(ctx,imageState.mvpPhoto,photo.x,photo.y,photo.w,photo.h);const g=ctx.createLinearGradient(0,photo.y+350,0,photo.y+photo.h);g.addColorStop(0,'transparent');g.addColorStop(1,'#07131ff5');ctx.fillStyle=g;ctx.fillRect(photo.x,photo.y,photo.w,photo.h);ctx.restore();}else placeholder(ctx,photo.x,photo.y,photo.w,photo.h,'CARICA LA FOTO DEL GIOCATORE');
+function drawMvp(){const tournament=matches.find(item=>String(item.torneo_nome||item.torneo).toLowerCase()===String($('mvpTournament').value).trim().toLowerCase());applyTournamentTheme(tournament?.torneo_id??$('mvpTournament').value);const c=$('mvpCanvas'),ctx=c.getContext('2d');background(ctx);brandHeader(ctx,$('mvpTournament').value,'MVP');const photo={x:48,y:205,w:984,h:760};if(imageState.mvpPhoto){ctx.save();ctx.beginPath();ctx.roundRect(photo.x,photo.y,photo.w,photo.h,22);ctx.clip();cover(ctx,imageState.mvpPhoto,photo.x,photo.y,photo.w,photo.h,cropValues('mvp'));const g=ctx.createLinearGradient(0,photo.y+350,0,photo.y+photo.h);g.addColorStop(0,'transparent');g.addColorStop(1,BG+'f5');ctx.fillStyle=g;ctx.fillRect(photo.x,photo.y,photo.w,photo.h);ctx.restore();}else placeholder(ctx,photo.x,photo.y,photo.w,photo.h,'CARICA LA FOTO DEL GIOCATORE');
   const name=`${upper($('mvpName').value,'NOME')} ${upper($('mvpSurname').value,'COGNOME')}`;ctx.fillStyle='#fff';ctx.textAlign='center';fitText(ctx,name,820,66,32,900);ctx.fillText(name,W/2,1035,820);const team=upper($('mvpTeam').value,'NOME SQUADRA');ctx.fillStyle=GOLD;fitText(ctx,team,650,31,21,800);ctx.fillText(team,W/2,1088,650);contain(ctx,imageState.mvpLogo,72,992,105,105);const details=upper($('mvpDetails').value,'MAN OF THE MATCH');ctx.fillStyle=MUTED;ctx.font='700 22px Arial';ctx.fillText(details,W/2,1132);footer(ctx,$('mvpTournament').value);
 }
 function footer(ctx,tournament){ctx.fillStyle=GOLD;ctx.fillRect(48,1258,W-96,2);ctx.fillStyle=MUTED;ctx.font='600 18px Arial';ctx.textAlign='left';ctx.fillText(upper(tournament,'TORNEO'),48,1300,650);ctx.textAlign='right';ctx.fillText('torneioldschool.it',W-48,1300);}
-function drawAll(){drawFulltime();drawMvp();$('status').textContent='Anteprime aggiornate.';}
+function drawAll(){updateCropLabels();drawFulltime();drawMvp();$('status').textContent='Anteprime aggiornate.';}
 async function updateImage(id){imageState[id]=await fileImage($(id).files?.[0]);drawAll();}
 function uniqueBy(items,keyFn){const map=new Map();items.forEach(item=>{const key=keyFn(item);if(key&&!map.has(key))map.set(key,item);});return [...map.entries()];}
 function setOptions(select,placeholder,options){select.innerHTML='';select.append(new Option(placeholder,''));options.forEach(([value,label])=>select.append(new Option(label,value)));select.disabled=options.length===0;}
@@ -213,6 +240,7 @@ async function selectMatch(){
   const match=matches.find(item=>String(item.id)===String($('ftMatch').value));
   if(!match){clearMatch();return;}
   $('ftTournament').value=match.torneo_nome||match.torneo||'';
+  $('mvpTournament').value=match.torneo_nome||match.torneo||'';
   $('ftHome').value=match.squadra_casa||'';
   $('ftAway').value=match.squadra_ospite||'';
   $('ftHomeScore').value=match.gol_casa??0;
