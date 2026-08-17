@@ -555,6 +555,12 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
             </div>
 
             <div class="admin-card">
+                <h3>Copertina partite</h3>
+                <p>Crea una copertina Reel e una miniatura YouTube con risultato e foto dei capitani.</p><br>
+                <a href="/api/copertina_partite.php">Genera</a>
+            </div>
+
+            <div class="admin-card">
                 <h3>Crea giornata automatica</h3>
                 <p>Genera una nuova giornata di regular season partendo da classifica, slot e disponibilita.</p><br>
                 <a href="/api/crea_giornata_automatica.php">Apri</a>
