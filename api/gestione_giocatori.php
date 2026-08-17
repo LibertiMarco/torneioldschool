@@ -844,6 +844,41 @@ $goalExtraTeamMapJson = htmlspecialchars(
             color: #1f2937;
         }
 
+        .assoc-search-results, .assoc-selected-players {
+            margin-top: 10px;
+            border: 1px solid #d8e0e8;
+            border-radius: 12px;
+            background: #fff;
+            overflow: hidden;
+        }
+        .assoc-search-results { max-height: 320px; overflow-y: auto; }
+        .assoc-player-result, .assoc-selected-player {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 11px 13px;
+            border-bottom: 1px solid #edf1f5;
+        }
+        .assoc-player-result:last-child, .assoc-selected-player:last-child { border-bottom: 0; }
+        .assoc-player-copy { min-width: 0; }
+        .assoc-player-name { display: block; color: #15293e; font-weight: 750; }
+        .assoc-player-meta { display: block; margin-top: 2px; color: #6b7788; font-size: .8rem; }
+        .assoc-add-player, .assoc-remove-player {
+            flex: 0 0 auto;
+            border: 0;
+            border-radius: 9px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 800;
+        }
+        .assoc-add-player { background: #15293e; color: #fff; }
+        .assoc-remove-player { background: #fee2e2; color: #b4232f; }
+        .assoc-add-player:disabled { background: #d8dee6; color: #64748b; cursor: default; }
+        .assoc-basket-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 20px; }
+        .assoc-count { padding: 4px 9px; border-radius: 999px; background: #e7eef8; color: #15293e; font-size: .82rem; font-weight: 800; }
+        .assoc-empty { margin: 0; padding: 16px; text-align: center; color: #6b7788; }
+
         @media (max-width: 600px) {
             .modal-window {
                 padding: 24px;
@@ -852,6 +887,7 @@ $goalExtraTeamMapJson = htmlspecialchars(
                 flex-wrap: nowrap;
                 flex-direction: row;
             }
+            .assoc-player-result, .assoc-selected-player { padding: 12px 10px; }
         }
     </style>
 </head>
@@ -1108,19 +1144,19 @@ $goalExtraTeamMapJson = htmlspecialchars(
 
       <div class="form-group">
           <label>Giocatori</label>
-          <input type="search" id="assocGiocatoreSearch" placeholder="Cerca per nome o cognome" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search">
-          <select name="giocatore_associa[]" id="assocGiocatore" required multiple size="8">
-              <option value="" disabled>-- Seleziona uno o piu giocatori --</option>
-              <?php foreach ($giocatori as $g): ?>
-              <?php
-                  $isPortiere = isset($g['ruolo']) && preg_match('/portiere|\\bgk\\b|^p$/i', $g['ruolo']);
-                  $label = trim(($g['cognome'] ?? '') . ' ' . ($g['nome'] ?? ''));
-                  if ($isPortiere) $label .= ' (GK)';
-              ?>
-              <option value="<?= $g['id'] ?>"><?= htmlspecialchars($label) ?></option>
-              <?php endforeach; ?>
-          </select>
-          <small>Puoi selezionare piu giocatori (Ctrl/Cmd + click); digita 2-3 lettere per filtrare l'elenco.</small>
+          <input type="search" id="assocGiocatoreSearch" placeholder="Digita almeno 2 lettere" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search">
+          <div id="assocSearchResults" class="assoc-search-results" aria-live="polite">
+              <p class="assoc-empty">Cerca un calciatore per nome o cognome.</p>
+          </div>
+          <select name="giocatore_associa[]" id="assocGiocatore" required multiple hidden aria-hidden="true"></select>
+          <div class="assoc-basket-head">
+              <strong>Giocatori da associare</strong>
+              <span id="assocSelectedCount" class="assoc-count">0 selezionati</span>
+          </div>
+          <div id="assocSelectedPlayers" class="assoc-selected-players">
+              <p class="assoc-empty">Nessun giocatore selezionato.</p>
+          </div>
+          <small>Puoi effettuare pi&ugrave; ricerche: i giocatori selezionati restano nella lista fino al salvataggio.</small>
       </div>
       <div class="form-group">
           <label>Ruolo in squadra</label>
@@ -1148,7 +1184,7 @@ $goalExtraTeamMapJson = htmlspecialchars(
           <small>Se non carichi nulla verrà usata la foto del giocatore.</small>
       </div>
 
-      <button type="submit" name="associa_squadra" class="btn-primary">Aggiungi associazione</button>
+      <button type="submit" name="associa_squadra" id="assocSubmitButton" class="btn-primary" disabled>Associa giocatori</button>
   </form>
 
   <form method="POST" class="admin-form assoc-form assoc-form-edit hidden" enctype="multipart/form-data">
@@ -1488,6 +1524,10 @@ const assocTorneo = document.getElementById("assocTorneo");
 const assocSquadra = document.getElementById("assocSquadra");
 const assocGiocatore = document.getElementById("assocGiocatore");
 const assocGiocatoreSearch = document.getElementById("assocGiocatoreSearch");
+const assocSearchResults = document.getElementById("assocSearchResults");
+const assocSelectedPlayers = document.getElementById("assocSelectedPlayers");
+const assocSelectedCount = document.getElementById("assocSelectedCount");
+const assocSubmitButton = document.getElementById("assocSubmitButton");
 const assocCapitano = document.getElementById("capitano_associa");
 const remTorneo = document.getElementById("remTorneo");
 const remSquadra = document.getElementById("remSquadra");
@@ -1540,9 +1580,13 @@ try {
     goalExtraTeamMap = {};
 }
 let assocAvailablePlayers = [];
+const assocSelectedPlayersMap = new Map();
+let assocSearchTimer = null;
+let assocSearchController = null;
 
 const API_SQUADRE_TORNEO = "/api/get_squadre_torneo.php";
 const API_GIOCATORI_SQUADRA = "/api/get_giocatori_squadra.php";
+const API_SEARCH_GIOCATORI_ASSOC = "/api/search_giocatori_associazione.php";
 
 function isPortiereRuolo(ruolo) {
     const r = (ruolo || "").toLowerCase().trim();
@@ -1700,7 +1744,7 @@ async function fetchGiocatoriAssociatiIds(squadraId) {
 
 function updateCaptainAvailability() {
     if (!assocGiocatore || !assocCapitano) return;
-    const selectedCount = assocGiocatore.selectedOptions ? assocGiocatore.selectedOptions.length : 0;
+    const selectedCount = assocSelectedPlayersMap.size;
     const shouldDisable = selectedCount > 1;
     assocCapitano.disabled = shouldDisable;
     if (shouldDisable) {
@@ -1709,61 +1753,158 @@ function updateCaptainAvailability() {
 }
 
 async function aggiornaGiocatoriDisponibiliPerAssociazione() {
-    if (!assocGiocatore) return;
-    const squadraId = assocSquadra?.value;
-    // Nessuna squadra: mostra tutti
-    if (!squadraId) {
-        assocAvailablePlayers = [...allPlayers];
-        renderAssocGiocatori(assocGiocatoreSearch?.value || "", false);
-        return;
-    }
-
-    const associati = await fetchGiocatoriAssociatiIds(squadraId);
-    const setAssociati = new Set(associati);
-    assocAvailablePlayers = allPlayers.filter(p => !setAssociati.has(String(p.id)));
-    renderAssocGiocatori(assocGiocatoreSearch?.value || "", false);
+    assocAvailablePlayers = [];
+    clearAssocSelection();
+    await searchAssocGiocatori(assocGiocatoreSearch?.value || "");
 }
 
-function renderAssocGiocatori(term = "", preserveSelection = true) {
+function createAssocEmpty(text) {
+    const p = document.createElement("p");
+    p.className = "assoc-empty";
+    p.textContent = text;
+    return p;
+}
+
+function syncAssocHiddenSelect() {
     if (!assocGiocatore) return;
-    const normalized = (term || "").trim().toLowerCase();
-    const selectedValues = preserveSelection
-        ? new Set(
-            Array.from(assocGiocatore.selectedOptions || [])
-                .map(opt => String(opt.value || ""))
-                .filter(Boolean)
-          )
-        : new Set();
-    const placeholder = "-- Seleziona uno o piu giocatori --";
-
-    resetSelect(assocGiocatore, placeholder, false);
-
-    const filteredPlayers = assocAvailablePlayers.filter(player => {
-        const label = buildPlayerLabel(player, "cognome").toLowerCase();
-        return normalized === "" || label.includes(normalized) || selectedValues.has(String(player.id));
+    assocGiocatore.innerHTML = "";
+    assocSelectedPlayersMap.forEach(player => {
+        const option = document.createElement("option");
+        option.value = player.id;
+        option.textContent = buildPlayerLabel(player, "cognome");
+        option.selected = true;
+        assocGiocatore.appendChild(option);
     });
-
-    filteredPlayers.forEach(player => {
-        const opt = document.createElement("option");
-        opt.value = player.id;
-        opt.textContent = buildPlayerLabel(player, "cognome");
-        opt.selected = selectedValues.has(String(player.id));
-        assocGiocatore.appendChild(opt);
-    });
-
-    if (!filteredPlayers.length) {
-        const emptyOpt = document.createElement("option");
-        emptyOpt.value = "";
-        emptyOpt.textContent = "Nessun giocatore trovato";
-        emptyOpt.disabled = true;
-        assocGiocatore.appendChild(emptyOpt);
+    assocGiocatore.disabled = assocSelectedPlayersMap.size === 0;
+    if (assocSubmitButton) {
+        const count = assocSelectedPlayersMap.size;
+        assocSubmitButton.disabled = count === 0 || !assocSquadra?.value;
+        assocSubmitButton.textContent = count === 1 ? "Associa 1 giocatore" : `Associa ${count} giocatori`;
     }
-
+    if (assocSelectedCount) {
+        const count = assocSelectedPlayersMap.size;
+        assocSelectedCount.textContent = count === 1 ? "1 selezionato" : `${count} selezionati`;
+    }
     updateCaptainAvailability();
 }
 
+function renderAssocSelectedPlayers() {
+    if (!assocSelectedPlayers) return;
+    assocSelectedPlayers.innerHTML = "";
+    if (!assocSelectedPlayersMap.size) {
+        assocSelectedPlayers.appendChild(createAssocEmpty("Nessun giocatore selezionato."));
+        syncAssocHiddenSelect();
+        return;
+    }
+    assocSelectedPlayersMap.forEach(player => {
+        const row = document.createElement("div");
+        row.className = "assoc-selected-player";
+        const copy = document.createElement("div");
+        copy.className = "assoc-player-copy";
+        const name = document.createElement("span");
+        name.className = "assoc-player-name";
+        name.textContent = buildPlayerLabel(player, "cognome");
+        const meta = document.createElement("span");
+        meta.className = "assoc-player-meta";
+        meta.textContent = `ID ${player.id}`;
+        copy.append(name, meta);
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "assoc-remove-player";
+        remove.dataset.playerId = player.id;
+        remove.textContent = "Rimuovi";
+        row.append(copy, remove);
+        assocSelectedPlayers.appendChild(row);
+    });
+    syncAssocHiddenSelect();
+}
+
+function clearAssocSelection() {
+    assocSelectedPlayersMap.clear();
+    renderAssocSelectedPlayers();
+}
+
+function renderAssocGiocatori(term = "") {
+    if (!assocSearchResults) return;
+    const normalized = (term || "").trim().toLowerCase();
+    assocSearchResults.innerHTML = "";
+    if (normalized.length < 2) {
+        assocSearchResults.appendChild(createAssocEmpty("Digita almeno 2 lettere per cercare."));
+        return;
+    }
+    const filteredPlayers = assocAvailablePlayers.filter(player => {
+        const label = buildPlayerLabel(player, "cognome").toLowerCase();
+        return label.includes(normalized) || String(player.id) === normalized;
+    }).slice(0, 30);
+
+    filteredPlayers.forEach(player => {
+        const row = document.createElement("div");
+        row.className = "assoc-player-result";
+        const copy = document.createElement("div");
+        copy.className = "assoc-player-copy";
+        const name = document.createElement("span");
+        name.className = "assoc-player-name";
+        name.textContent = buildPlayerLabel(player, "cognome");
+        const meta = document.createElement("span");
+        meta.className = "assoc-player-meta";
+        meta.textContent = `ID ${player.id}${player.ruolo ? ` · ${player.ruolo}` : ""}`;
+        copy.append(name, meta);
+        const add = document.createElement("button");
+        add.type = "button";
+        add.className = "assoc-add-player";
+        add.dataset.playerId = player.id;
+        add.disabled = assocSelectedPlayersMap.has(String(player.id));
+        add.textContent = add.disabled ? "Aggiunto" : "+ Aggiungi";
+        row.append(copy, add);
+        assocSearchResults.appendChild(row);
+    });
+
+    if (!filteredPlayers.length) {
+        assocSearchResults.appendChild(createAssocEmpty("Nessun giocatore trovato."));
+    }
+}
+
 function filterAssocGiocatori(term) {
-    renderAssocGiocatori(term, true);
+    if (assocSearchTimer) window.clearTimeout(assocSearchTimer);
+    assocSearchTimer = window.setTimeout(() => searchAssocGiocatori(term), 280);
+}
+
+async function searchAssocGiocatori(term = "") {
+    const normalized = String(term || "").trim();
+    if (normalized.length < 2) {
+        assocAvailablePlayers = [];
+        renderAssocGiocatori(normalized);
+        return;
+    }
+    if (!assocSquadra?.value) {
+        assocAvailablePlayers = [];
+        if (assocSearchResults) {
+            assocSearchResults.innerHTML = "";
+            assocSearchResults.appendChild(createAssocEmpty("Seleziona prima una squadra."));
+        }
+        return;
+    }
+    if (assocSearchController) assocSearchController.abort();
+    assocSearchController = new AbortController();
+    if (assocSearchResults) {
+        assocSearchResults.innerHTML = "";
+        assocSearchResults.appendChild(createAssocEmpty("Ricerca in corso..."));
+    }
+    try {
+        const url = `${API_SEARCH_GIOCATORI_ASSOC}?q=${encodeURIComponent(normalized)}&squadra_id=${encodeURIComponent(assocSquadra.value)}`;
+        const response = await fetch(url, {signal: assocSearchController.signal});
+        const data = await response.json();
+        if (!response.ok || !Array.isArray(data)) throw new Error(data?.error || "Ricerca non disponibile");
+        assocAvailablePlayers = data;
+        renderAssocGiocatori(normalized);
+    } catch (error) {
+        if (error.name === "AbortError") return;
+        assocAvailablePlayers = [];
+        if (assocSearchResults) {
+            assocSearchResults.innerHTML = "";
+            assocSearchResults.appendChild(createAssocEmpty("Errore durante la ricerca."));
+        }
+    }
 }
 
 function filterGiocatori(term) {
@@ -2129,10 +2270,27 @@ assocSquadra?.addEventListener("change", () => {
     saveAddAssocState(assocTorneo?.value || "", assocSquadra.value);
     aggiornaGiocatoriDisponibiliPerAssociazione();
 });
-assocGiocatore?.addEventListener("change", () => updateCaptainAvailability());
 assocGiocatoreSearch?.addEventListener("input", e => filterAssocGiocatori(e.target.value));
 assocGiocatoreSearch?.addEventListener("search", e => filterAssocGiocatori(e.target.value));
+assocSearchResults?.addEventListener("click", e => {
+    const button = e.target.closest(".assoc-add-player");
+    if (!button) return;
+    const id = String(button.dataset.playerId || "");
+    const player = assocAvailablePlayers.find(item => String(item.id) === id);
+    if (!player || assocSelectedPlayersMap.has(id)) return;
+    assocSelectedPlayersMap.set(id, player);
+    renderAssocSelectedPlayers();
+    renderAssocGiocatori(assocGiocatoreSearch?.value || "");
+});
+assocSelectedPlayers?.addEventListener("click", e => {
+    const button = e.target.closest(".assoc-remove-player");
+    if (!button) return;
+    assocSelectedPlayersMap.delete(String(button.dataset.playerId || ""));
+    renderAssocSelectedPlayers();
+    renderAssocGiocatori(assocGiocatoreSearch?.value || "");
+});
 updateCaptainAvailability();
+renderAssocSelectedPlayers();
 
 function mostraFormAssoc(val) {
     [assocFormAdd, assocFormEdit, assocFormRemove].forEach(f => f && f.classList.add('hidden'));
