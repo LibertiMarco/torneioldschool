@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includi/graphics_guard.php';
 require_once __DIR__ . '/../includi/db.php';
+$embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
 
 $partite = [];
 $stmt = $conn->prepare(
@@ -55,8 +56,8 @@ if ($stmt && $stmt->execute()) {
   </style>
 </head>
 <body><main>
-  <a href="/admin_dashboard.php">Torna alla dashboard</a>
-  <h1>Copertina partite</h1>
+  <?php if (!$embedded): ?><a href="/admin_dashboard.php">Torna alla dashboard</a><?php endif; ?>
+  <h1><?= $embedded ? 'COPERTINE' : 'Copertina partite' ?></h1>
   <p class="intro">Crea una copertina Reel e una miniatura YouTube dalla stessa partita e foto dei capitani.</p>
   <div class="workspace">
     <section class="controls"><div class="fields">

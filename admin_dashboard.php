@@ -543,21 +543,9 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
             </div>
 
             <div class="admin-card">
-                <h3>Grafiche giornaliere</h3>
-                <p>Genera e scarica le immagini dei tornei che giocano nel giorno selezionato.</p><br>
-                <a href="/api/grafiche_settimana.php">Genera</a>
-            </div>
-
-            <div class="admin-card">
-                <h3>Grafiche post partita</h3>
-                <p>Crea le grafiche Full Time con i capitani e MVP con foto e nome del giocatore.</p><br>
-                <a href="/api/grafiche_post_partita.php">Genera</a>
-            </div>
-
-            <div class="admin-card">
-                <h3>Copertina partite</h3>
-                <p>Crea una copertina Reel e una miniatura YouTube con risultato e foto dei capitani.</p><br>
-                <a href="/api/copertina_partite.php">Genera</a>
+                <h3>Generatore grafiche</h3>
+                <p>Crea Matchday, Fulltime, MVP e copertine Reel o YouTube da un'unica area.</p><br>
+                <a href="/api/generatore_grafiche.php">Apri</a>
             </div>
 
             <div class="admin-card">

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includi/graphics_guard.php';
 require_once __DIR__ . '/../includi/db.php';
+$embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
 
 $partiteGrafiche = [];
 $partiteStmt = $conn->prepare(
@@ -117,8 +118,8 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 </head>
 <body>
 <main>
-  <a href="/admin_dashboard.php">Torna alla dashboard</a>
-  <h1>Grafiche post partita</h1>
+  <?php if (!$embedded): ?><a href="/admin_dashboard.php">Torna alla dashboard</a><?php endif; ?>
+  <h1><?= $embedded ? 'FULLTIME E MVP' : 'Grafiche post partita' ?></h1>
   <p class="intro">Genera anteprime Full Time e MVP in formato Instagram 1080 × 1350. In questa versione di prova i dati non vengono salvati.</p>
 
   <div class="workspace">

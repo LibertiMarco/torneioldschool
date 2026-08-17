@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includi/graphics_guard.php';
+$embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
 ?>
 <!doctype html>
 <html lang="it">
@@ -24,8 +25,8 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
   </style>
 </head>
 <body><main>
-  <a href="/admin_dashboard.php">Torna alla dashboard</a>
-  <h1>Grafiche partite giornaliere</h1>
+  <?php if (!$embedded): ?><a href="/admin_dashboard.php">Torna alla dashboard</a><?php endif; ?>
+  <h1><?= $embedded ? 'MATCHDAY' : 'Grafiche partite giornaliere' ?></h1>
   <p>Il giorno selezionato individua i tornei da pubblicare; ogni PNG contiene tutte le loro partite della settimana, incluse quelle gia giocate.</p>
   <div class="toolbar">
     <label>Giorno delle partite <input id="date" type="date"></label>
