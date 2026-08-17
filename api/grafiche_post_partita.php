@@ -21,6 +21,15 @@ $partiteStmt = $conn->prepare(
    LEFT JOIN squadre sc ON sc.nome = p.squadra_casa AND sc.torneo = p.torneo
    LEFT JOIN squadre so ON so.nome = p.squadra_ospite AND so.torneo = p.torneo
    WHERE p.giocata = 1
+     AND NOT EXISTS (
+       SELECT 1
+       FROM tornei tx
+       WHERE (tx.nome = p.torneo
+          OR tx.filetorneo = p.torneo
+          OR REPLACE(REPLACE(tx.filetorneo, '.php', ''), '.html', '') = REPLACE(REPLACE(p.torneo, '.php', ''), '.html', ''))
+         AND tx.stato = 'terminato'
+         AND tx.data_fine < DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+     )
    ORDER BY p.data_partita DESC, p.ora_partita DESC, p.id DESC"
 );
 if ($partiteStmt && $partiteStmt->execute()) {
