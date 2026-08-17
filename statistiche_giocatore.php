@@ -234,6 +234,63 @@ function fetch_player_cup_awards(mysqli $conn, array $teams): array {
     return $awards;
 }
 
+function fetch_player_regular_season_awards(mysqli $conn, array $teams): array {
+    $awards = [];
+    $processedTournaments = [];
+    foreach ($teams as $playerTeam) {
+        $torneo = trim((string)($playerTeam['torneo'] ?? ''));
+        if ($torneo === '' || isset($processedTournaments[$torneo])) continue;
+        $processedTournaments[$torneo] = true;
+
+        // La Regular Season e conclusa quando e gia iniziata una fase successiva
+        // oppure quando il torneo e stato marcato come terminato.
+        $completionStmt = $conn->prepare("SELECT
+                EXISTS(SELECT 1 FROM partite p WHERE p.torneo = ? AND p.fase <> 'REGULAR' LIMIT 1) AS fase_successiva,
+                COALESCE((SELECT MAX(t.stato = 'terminato') FROM tornei t
+                          WHERE t.filetorneo = ? OR t.filetorneo = CONCAT(?, '.php') OR t.nome = ?), 0) AS torneo_terminato,
+                (SELECT MAX(p2.data_partita) FROM partite p2
+                 WHERE p2.torneo = ? AND p2.fase = 'REGULAR' AND p2.giocata = 1) AS ultima_regular");
+        if (!$completionStmt) continue;
+        $completionStmt->bind_param('sssss', $torneo, $torneo, $torneo, $torneo, $torneo);
+        $completionStmt->execute();
+        $completion = $completionStmt->get_result()->fetch_assoc();
+        $completionStmt->close();
+        if (!$completion || (!(int)$completion['fase_successiva'] && !(int)$completion['torneo_terminato'])) continue;
+
+        $leaderStmt = $conn->prepare("SELECT s.id, s.nome, s.logo, s.punti, s.giocate,
+                                            t.nome AS torneo_nome, t.filetorneo AS torneo_file
+                                     FROM squadre s
+                                     LEFT JOIN tornei t ON (t.filetorneo = s.torneo OR t.filetorneo = CONCAT(s.torneo, '.php') OR t.nome = s.torneo)
+                                     WHERE s.torneo = ? AND s.giocate > 0
+                                     ORDER BY s.punti DESC, s.differenza_reti DESC, s.gol_fatti DESC,
+                                              s.gol_subiti ASC, s.nome ASC
+                                     LIMIT 1");
+        if (!$leaderStmt) continue;
+        $leaderStmt->bind_param('s', $torneo);
+        $leaderStmt->execute();
+        $leader = $leaderStmt->get_result()->fetch_assoc();
+        $leaderStmt->close();
+        if (!$leader) continue;
+
+        foreach ($teams as $team) {
+            if ((int)($team['id'] ?? 0) !== (int)$leader['id']) continue;
+            $lastRegular = trim((string)($completion['ultima_regular'] ?? ''));
+            $awards[] = [
+                'id' => 'regular-' . (int)$leader['id'],
+                'tipo' => 'Squadra',
+                'premio' => 'Regular Season',
+                'competizione' => (string)($leader['torneo_nome'] ?: $torneo),
+                'squadra' => (string)$leader['nome'],
+                'anno' => $lastRegular !== '' ? date('Y', strtotime($lastRegular)) : '',
+                'logo' => (string)($leader['logo'] ?? ''),
+                'link' => resolve_torneo_link((string)($leader['torneo_file'] ?: $torneo)),
+            ];
+            break;
+        }
+    }
+    return $awards;
+}
+
 function fetch_player_awards(mysqli $conn, array $giocatore, array $teams, string $section): array {
     if (empty($teams)) return [];
     $check = $conn->query("SHOW TABLES LIKE 'albo'");
@@ -462,6 +519,7 @@ $prossimePartite = $giocatore ? fetchMatches($conn, $playerId, $squadre, true) :
 $partiteGiocate  = $giocatore ? fetchMatches($conn, $playerId, $squadre, false) : [];
 $premiGiocatore = $giocatore
     ? deduplicate_player_awards(array_merge(
+        fetch_player_regular_season_awards($conn, $squadre),
         fetch_player_cup_awards($conn, $squadre),
         fetch_player_awards($conn, $giocatore, $squadre, $siteSection)
     ))
