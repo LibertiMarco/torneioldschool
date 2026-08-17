@@ -4,13 +4,23 @@ require_once __DIR__ . '/../includi/db.php';
 
 $partiteGrafiche = [];
 $partiteStmt = $conn->prepare(
-  "SELECT p.id, p.torneo, p.fase, p.fase_round, p.giornata,
+  "SELECT p.id, p.torneo,
+          COALESCE((
+            SELECT t.nome
+            FROM tornei t
+            WHERE t.nome = p.torneo
+               OR t.filetorneo = p.torneo
+               OR REPLACE(REPLACE(t.filetorneo, '.php', ''), '.html', '') = REPLACE(REPLACE(p.torneo, '.php', ''), '.html', '')
+            LIMIT 1
+          ), p.torneo) AS torneo_nome,
+          p.fase, p.fase_round, p.giornata,
           p.squadra_casa, p.squadra_ospite, p.gol_casa, p.gol_ospite,
           p.data_partita, p.giocata,
           sc.logo AS logo_casa, so.logo AS logo_ospite
    FROM partite p
    LEFT JOIN squadre sc ON sc.nome = p.squadra_casa AND sc.torneo = p.torneo
    LEFT JOIN squadre so ON so.nome = p.squadra_ospite AND so.torneo = p.torneo
+   WHERE p.giocata = 1
    ORDER BY p.data_partita DESC, p.ora_partita DESC, p.id DESC"
 );
 if ($partiteStmt && $partiteStmt->execute()) {
@@ -80,14 +90,10 @@ if ($partiteStmt && $partiteStmt->execute()) {
 
       <div id="fulltimePanel" class="panel active">
         <div class="fields">
-          <label class="wide">Partita
-            <select id="ftMatch">
-              <option value="">Seleziona una partita</option>
-              <?php foreach ($partiteGrafiche as $partita): ?>
-                <option value="<?= (int)$partita['id'] ?>"><?= htmlspecialchars(($partita['torneo'] ?? '') . ' — ' . ($partita['squadra_casa'] ?? '') . ' ' . ($partita['gol_casa'] ?? '-') . '-' . ($partita['gol_ospite'] ?? '-') . ' ' . ($partita['squadra_ospite'] ?? '') . ((int)($partita['giocata'] ?? 0) === 1 ? '' : ' (non giocata)'), ENT_QUOTES, 'UTF-8') ?></option>
-              <?php endforeach; ?>
-            </select>
-          </label>
+          <label class="wide">Torneo<select id="ftTournamentSelect"><option value="">Seleziona il torneo</option></select></label>
+          <label>Fase<select id="ftPhase" disabled><option value="">Seleziona la fase</option></select></label>
+          <label>Giornata / turno<select id="ftRoundSelect" disabled><option value="">Seleziona la giornata</option></select></label>
+          <label class="wide">Partita<select id="ftMatch" disabled><option value="">Seleziona la partita</option></select></label>
           <label class="wide">Torneo<input id="ftTournament" value="" readonly></label>
           <label>Squadra casa<input id="ftHome" value="" readonly></label>
           <label>Squadra ospite<input id="ftAway" value="" readonly></label>
@@ -160,13 +166,44 @@ function drawMvp(){const c=$('mvpCanvas'),ctx=c.getContext('2d');background(ctx)
 function footer(ctx,tournament){ctx.fillStyle=GOLD;ctx.fillRect(48,1258,W-96,2);ctx.fillStyle=MUTED;ctx.font='600 18px Arial';ctx.textAlign='left';ctx.fillText(upper(tournament,'TORNEO'),48,1300,650);ctx.textAlign='right';ctx.fillText('torneioldschool.it',W-48,1300);}
 function drawAll(){drawFulltime();drawMvp();$('status').textContent='Anteprime aggiornate.';}
 async function updateImage(id){imageState[id]=await fileImage($(id).files?.[0]);drawAll();}
+function uniqueBy(items,keyFn){const map=new Map();items.forEach(item=>{const key=keyFn(item);if(key&&!map.has(key))map.set(key,item);});return [...map.entries()];}
+function setOptions(select,placeholder,options){select.innerHTML='';select.append(new Option(placeholder,''));options.forEach(([value,label])=>select.append(new Option(label,value)));select.disabled=options.length===0;}
+function roundKey(match){return match.fase_round ? `round:${match.fase_round}` : `day:${match.giornata??''}`;}
+function roundLabel(match){return match.fase_round ? String(match.fase_round).replaceAll('_',' ') : (match.giornata ? `GIORNATA ${match.giornata}` : 'TURNO UNICO');}
+function populateTournaments(){
+  const tournaments=uniqueBy(matches,item=>String(item.torneo||'')).map(([key,item])=>[key,item.torneo_nome||item.torneo]);
+  setOptions($('ftTournamentSelect'),'Seleziona il torneo',tournaments);
+}
+function selectTournament(){
+  const tournament=$('ftTournamentSelect').value;
+  const filtered=matches.filter(item=>String(item.torneo)===tournament);
+  const phases=uniqueBy(filtered,item=>String(item.fase||'')).map(([key])=>[key,key.replaceAll('_',' ')]);
+  setOptions($('ftPhase'),'Seleziona la fase',phases);
+  setOptions($('ftRoundSelect'),'Seleziona la giornata',[]);
+  setOptions($('ftMatch'),'Seleziona la partita',[]);
+  clearMatch();
+}
+function selectPhase(){
+  const filtered=matches.filter(item=>String(item.torneo)===$('ftTournamentSelect').value&&String(item.fase)===$('ftPhase').value);
+  const rounds=uniqueBy(filtered,roundKey).map(([key,item])=>[key,roundLabel(item)]);
+  setOptions($('ftRoundSelect'),'Seleziona la giornata',rounds);
+  setOptions($('ftMatch'),'Seleziona la partita',[]);
+  clearMatch();
+}
+function selectRound(){
+  const filtered=matches.filter(item=>String(item.torneo)===$('ftTournamentSelect').value&&String(item.fase)===$('ftPhase').value&&roundKey(item)===$('ftRoundSelect').value);
+  const games=filtered.map(item=>[String(item.id),`${item.squadra_casa} ${item.gol_casa??0}-${item.gol_ospite??0} ${item.squadra_ospite}`]);
+  setOptions($('ftMatch'),'Seleziona la partita',games);
+  clearMatch();
+}
+function clearMatch(){
+  $('ftTournament').value='';$('ftHome').value='';$('ftAway').value='';$('ftHomeScore').value=0;$('ftAwayScore').value=0;$('ftRound').value='';
+  imageState.ftHomeLogo=null;imageState.ftAwayLogo=null;drawFulltime();
+}
 async function selectMatch(){
   const match=matches.find(item=>String(item.id)===String($('ftMatch').value));
-  if(!match){
-    $('ftTournament').value='';$('ftHome').value='';$('ftAway').value='';$('ftHomeScore').value=0;$('ftAwayScore').value=0;$('ftRound').value='';
-    imageState.ftHomeLogo=null;imageState.ftAwayLogo=null;drawFulltime();return;
-  }
-  $('ftTournament').value=match.torneo||'';
+  if(!match){clearMatch();return;}
+  $('ftTournament').value=match.torneo_nome||match.torneo||'';
   $('ftHome').value=match.squadra_casa||'';
   $('ftAway').value=match.squadra_ospite||'';
   $('ftHomeScore').value=match.gol_casa??0;
@@ -181,13 +218,16 @@ function download(canvasId,name){const canvas=$(canvasId);const a=document.creat
 
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===button.dataset.panel));}));
 imageFields.forEach(id=>$(id).addEventListener('change',()=>updateImage(id).catch(()=>{$('status').textContent='Impossibile leggere questa immagine.';})));
+$('ftTournamentSelect').addEventListener('change',selectTournament);
+$('ftPhase').addEventListener('change',selectPhase);
+$('ftRoundSelect').addEventListener('change',selectRound);
 $('ftMatch').addEventListener('change',()=>selectMatch().catch(()=>{$('status').textContent='Impossibile caricare i dati della partita.';}));
 document.querySelectorAll('input:not([type=file])').forEach(input=>input.addEventListener('input',drawAll));
 $('generate').addEventListener('click',drawAll);
 $('reset').addEventListener('click',()=>{imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});drawAll();$('status').textContent='Immagini rimosse.';});
 document.querySelector('[data-download=fulltime]').addEventListener('click',()=>download('fulltimeCanvas',`fulltime-${safeName($('ftHome').value)}-${safeName($('ftAway').value)}.png`));
 document.querySelector('[data-download=mvp]').addEventListener('click',()=>download('mvpCanvas',`mvp-${safeName($('mvpName').value)}-${safeName($('mvpSurname').value)}.png`));
-(async()=>{imageState.brand=await loadImage('/img/logo_old_school.png');drawAll();})();
+(async()=>{imageState.brand=await loadImage('/img/logo_old_school.png');populateTournaments();drawAll();})();
 </script>
 </body>
 </html>
