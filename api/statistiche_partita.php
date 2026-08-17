@@ -392,6 +392,43 @@ body.stats-admin-page .admin-container {
     }
 }
 
+.lineup-toolbar, .lineup-footer, .lineup-score {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.lineup-toolbar { margin-bottom: 16px; }
+.lineup-score { background: #15293e; color: #fff; padding: 12px 18px; border-radius: 12px; font-weight: 800; }
+.lineup-score strong { font-size: 22px; color: #fff; }
+.team-lineup { background: #fff; border: 1px solid #dde3ea; border-radius: 16px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(21,41,62,.07); }
+.team-lineup h2 { margin: 0; padding: 15px 18px; background: #15293e; color: #fff; font-size: 20px; }
+.team-actions { padding: 10px 14px; background: #f3f6f9; border-bottom: 1px solid #dde3ea; display: flex; gap: 8px; }
+.team-actions button { border: 1px solid #cbd5e1; background: #fff; border-radius: 8px; padding: 7px 10px; cursor: pointer; font-weight: 700; }
+.player-row { display: grid; grid-template-columns: minmax(190px, 1fr) repeat(3, 112px) 70px 70px 92px; gap: 10px; align-items: center; padding: 12px 14px; border-bottom: 1px solid #edf0f3; }
+.player-row:last-child { border-bottom: 0; }
+.player-row:not(.is-present) { opacity: .55; background: #f5f5f5; }
+.player-name { display: flex; gap: 9px; align-items: center; font-weight: 750; min-width: 0; }
+.presence-toggle { width: 20px; height: 20px; accent-color: #15293e; flex: 0 0 auto; }
+.stat-stepper { display: grid; grid-template-columns: 32px 1fr 32px; align-items: center; border: 1px solid #ccd5df; border-radius: 9px; overflow: hidden; }
+.stat-stepper button { height: 34px; border: 0; background: #eef2f6; font-size: 19px; cursor: pointer; }
+.stat-stepper input { width: 100%; height: 34px; padding: 0; border: 0; text-align: center; font-weight: 800; background: #fff; -moz-appearance: textfield; }
+.stat-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.event-toggle { display: flex; justify-content: center; align-items: center; gap: 5px; font-weight: 700; cursor: pointer; }
+.event-toggle input { width: 20px; height: 20px; }
+.vote-input { width: 100%; min-height: 36px; border: 1px solid #ccd5df; border-radius: 9px; text-align: center; font-weight: 700; }
+.lineup-labels { display: grid; grid-template-columns: minmax(190px, 1fr) repeat(3, 112px) 70px 70px 92px; gap: 10px; padding: 8px 14px; background: #f8fafc; color: #607083; font-size: 12px; font-weight: 800; text-align: center; }
+.lineup-labels span:first-child { text-align: left; }
+.lineup-footer { position: sticky; bottom: 0; z-index: 20; background: rgba(248,249,251,.96); padding: 14px 0 calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid #dce3ea; }
+.lineup-footer .btn-primary { min-width: 190px; }
+.saving-note { color: #607083; font-size: 13px; }
+@media (max-width: 820px) {
+  .lineup-labels { display: none; }
+  .player-row { grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
+  .player-name { grid-column: 1 / -1; }
+  .stat-stepper::before { content: attr(data-label); position: absolute; transform: translateY(-27px); font-size: 11px; color: #64748b; font-weight: 700; }
+  .stat-stepper { margin-top: 18px; position: relative; }
+  .event-toggle { margin-top: 8px; }
+  .vote-input { margin-top: 8px; }
+}
+
 </style>
 </head>
 
@@ -418,169 +455,178 @@ body.stats-admin-page .admin-container {
     <span id="partitaInfo"></span>
 </div>
 
-<!-- Selettore Azione -->
-<div class="admin-select-action" style="margin-bottom:20px;">
-  <label>Azione:</label>
-  <select id="azioneStat">
-    <option value="add">Aggiungi Statistica</option>
-    <option value="edit">Modifica Statistica</option>
-    <option value="delete">Elimina Statistica</option>
-  </select>
-</div>
-
-<!-- ===================== AGGIUNGI ====================== -->
-<form id="formAdd" class="admin-form">
-  <h2>Aggiungi Statistica</h2>
-
-  <input type="hidden" name="partita_id" value="<?php echo $partita_id; ?>">
-
-  <div class="form-group">
-    <label>Giocatore</label>
-    <select name="giocatore_id" id="add_giocatore" required>
-      <option>Caricamento...</option>
-    </select>
+<form id="lineupForm">
+  <div class="lineup-toolbar">
+    <p class="saving-note">Seleziona chi ha giocato e inserisci tutti gli eventi direttamente nella distinta.</p>
+    <div class="lineup-score"><span id="homeScoreName">Casa</span> <strong id="liveScore">0 - 0</strong> <span id="awayScoreName">Ospite</span></div>
   </div>
-
-  <div class="form-row">
-    <div class="form-group half">
-      <label>Gol</label>
-      <input type="number" name="goal" min="0" value="0" required>
-    </div>
-    <div class="form-group half">
-      <label>Assist</label>
-      <input type="number" name="assist" min="0" value="0" required>
-    </div>
-  </div>
-
-  <div class="form-row">
-    <div class="form-group half">
-      <label>Giallo</label>
-      <input type="checkbox" name="cartellino_giallo" value="1">
-    </div>
-    <div class="form-group half">
-      <label>Rosso</label>
-      <input type="checkbox" name="cartellino_rosso" value="1">
-    </div>
-  </div>
-
-  <div class="form-row">
-    <div class="form-group half">
-      <label>Autogol</label>
-      <input type="number" name="autogol" min="0" value="0" required>
-    </div>
-    <div class="form-group half">
-      <label>Voto</label>
-      <input type="number" name="voto" min="0" max="10" step="0.5" value="6">
-    </div>
-  </div>
-
-  <div class="form-group">
+  <div id="lineupRoot"><p>Caricamento distinta...</p></div>
+  <div class="lineup-footer">
     <label class="last-stat-card">
-      <input class="last-stat-input" type="checkbox" name="ultima_statistica" value="1">
+      <input class="last-stat-input" type="checkbox" id="finalizzaPartita" value="1">
       <span class="last-stat-switch" aria-hidden="true"></span>
       <span class="last-stat-copy">
-        <span class="last-stat-title">Ultima statistica</span>
-        <span class="last-stat-desc">Se attiva, al salvataggio la partita viene segnata come giocata.</span>
+        <span class="last-stat-title">Finalizza partita</span>
+        <span class="last-stat-desc">Segna la partita come giocata e invia le notifiche.</span>
       </span>
     </label>
+    <button class="btn-primary" id="saveLineup" type="submit">Salva tutta la distinta</button>
   </div>
-
-  <button class="btn-primary" type="submit">+ Aggiungi</button>
 </form>
-
-<!-- ===================== MODIFICA ====================== -->
-<section id="sectionEdit" class="admin-form hidden">
-  <h2>Modifica Statistica</h2>
-
-  <form id="formEdit" class="admin-form">
-    <input type="hidden" name="id" id="edit_id">
-    <input type="hidden" name="partita_id" value="<?php echo $partita_id; ?>">
-
-    <div class="form-group">
-      <label>Giocatore</label>
-      <select id="edit_giocatore_sel">
-        <option value="">-- Seleziona giocatore --</option>
-      </select>
-    </div>
-
-    <div class="form-row">
-    <div class="form-group half">
-      <label>Gol</label>
-      <input id="edit_goal" type="number" name="goal" min="0" required>
-    </div>
-    <div class="form-group half">
-      <label>Assist</label>
-      <input id="edit_assist" type="number" name="assist" min="0" required>
-    </div>
-  </div>
-
-  <div class="form-row">
-    <div class="form-group half">
-      <label>Giallo</label>
-      <input id="edit_giallo" type="checkbox" name="cartellino_giallo" value="1">
-    </div>
-    <div class="form-group half">
-      <label>Rosso</label>
-      <input id="edit_rosso" type="checkbox" name="cartellino_rosso" value="1">
-    </div>
-  </div>
-
-    <div class="form-row">
-      <div class="form-group half">
-        <label>Autogol</label>
-        <input id="edit_autogol" type="number" name="autogol" min="0" value="0" required>
-      </div>
-      <div class="form-group half">
-        <label>Voto</label>
-        <input id="edit_voto" type="number" name="voto" min="0" max="10" step="0.5">
-      </div>
-    </div>
-
-    <button class="btn-primary">Salva Modifiche</button>
-  </form>
-</section>
-
-<!-- ===================== ELIMINA ====================== -->
-<section id="sectionDelete" class="admin-form hidden">
-  <h2>Elimina Statistica</h2>
-
-  <div class="table-scroll">
-    <table class="admin-table" id="tabellaDelete">
-      <thead>
-        <tr>
-          <th>Giocatore</th>
-          <th>Squadra</th>
-          <th>Gol</th>
-          <th>Assist</th>
-          <th>Autogol</th>
-          <th>Gialli</th>
-          <th>Rossi</th>
-          <th>Voto</th>
-          <th>Elimina</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-</section>
 
 </section>
 </main>
 
-<div class="confirm-modal" id="modalDeleteStat">
-  <div class="confirm-card">
-    <h4>Conferma eliminazione</h4>
-    <p id="deleteStatText">Sei sicuro di voler eliminare questa statistica?</p>
-    <div class="confirm-actions">
-      <button type="button" class="btn-ghost" id="btnCancelDeleteStat">Annulla</button>
-      <button type="button" class="modern-danger" id="btnConfirmDeleteStat">Elimina</button>
-    </div>
-  </div>
-</div>
-
 <script>
 const ID = <?php echo $partita_id; ?>;
 const API = "/api/partita_giocatore.php";
+let matchInfo = null;
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
+}
+
+function showLineupMessage(message, type = "success") {
+  const box = document.getElementById("msgBox");
+  box.textContent = message;
+  box.className = "msg-box " + (type === "error" ? "msg-error" : "msg-success");
+  box.style.opacity = "1";
+  window.setTimeout(() => box.style.opacity = "0", 2600);
+}
+
+function playerBadges(player) {
+  const badges = [];
+  if (/portiere|\bgk\b|^p$/i.test(String(player.ruolo || "").trim())) badges.push("GK");
+  if (String(player.is_captain || 0) === "1") badges.push("C");
+  return badges.map(label => `<span class="player-meta-badge${label === "C" ? " captain" : ""}">${label}</span>`).join("");
+}
+
+function stepper(field, label, value) {
+  return `<div class="stat-stepper" data-label="${label}">
+    <button type="button" data-step="-1" aria-label="Diminuisci ${label}">−</button>
+    <input type="number" min="0" inputmode="numeric" data-field="${field}" value="${Math.max(0, Number(value) || 0)}" aria-label="${label}">
+    <button type="button" data-step="1" aria-label="Aumenta ${label}">+</button>
+  </div>`;
+}
+
+function renderPlayerRow(player) {
+  const present = player.statistica_id ? Number(player.presenza) === 1 : true;
+  const vote = player.voto === null || player.voto === undefined ? "6" : player.voto;
+  return `<div class="player-row ${present ? "is-present" : ""}" data-player-id="${Number(player.giocatore_id)}" data-team-id="${Number(player.squadra_id)}" data-side="${escapeHtml(player.lato)}">
+    <label class="player-name">
+      <input class="presence-toggle" type="checkbox" data-field="presenza" ${present ? "checked" : ""}>
+      <span>${escapeHtml(`${player.cognome || ""} ${player.nome || ""}`.trim())}</span>${playerBadges(player)}
+    </label>
+    ${stepper("goal", "Gol", player.goal)}
+    ${stepper("assist", "Assist", player.assist)}
+    ${stepper("autogol", "Autogol", player.autogol)}
+    <label class="event-toggle" title="Cartellino giallo"><input type="checkbox" data-field="cartellino_giallo" ${Number(player.cartellino_giallo) ? "checked" : ""}> 🟨</label>
+    <label class="event-toggle" title="Cartellino rosso"><input type="checkbox" data-field="cartellino_rosso" ${Number(player.cartellino_rosso) ? "checked" : ""}> 🟥</label>
+    <input class="vote-input" type="number" min="0" max="10" step="0.5" inputmode="decimal" data-field="voto" value="${escapeHtml(vote)}" aria-label="Voto">
+  </div>`;
+}
+
+function renderTeam(side, players) {
+  const name = players[0]?.squadra || (side === "casa" ? "Squadra casa" : "Squadra ospite");
+  return `<section class="team-lineup" data-team-side="${side}">
+    <h2>${escapeHtml(name)}</h2>
+    <div class="team-actions"><button type="button" data-select-team="1">Tutti presenti</button><button type="button" data-select-team="0">Nessuno</button></div>
+    <div class="lineup-labels"><span>Giocatore</span><span>Gol</span><span>Assist</span><span>Autogol</span><span>Giallo</span><span>Rosso</span><span>Voto</span></div>
+    ${players.map(renderPlayerRow).join("")}
+  </section>`;
+}
+
+function updateLiveScore() {
+  let home = 0, away = 0, homeOwn = 0, awayOwn = 0;
+  document.querySelectorAll(".player-row.is-present").forEach(row => {
+    const goals = Number(row.querySelector('[data-field="goal"]')?.value) || 0;
+    const own = Number(row.querySelector('[data-field="autogol"]')?.value) || 0;
+    if (row.dataset.side === "casa") { home += goals; homeOwn += own; }
+    else { away += goals; awayOwn += own; }
+  });
+  document.getElementById("liveScore").textContent = `${home + awayOwn} - ${away + homeOwn}`;
+}
+
+async function loadLineup() {
+  const [matchResponse, lineupResponse] = await Promise.all([
+    fetch(`/api/get_partita.php?id=${ID}`),
+    fetch(`${API}?azione=lineup&partita_id=${ID}`)
+  ]);
+  matchInfo = await matchResponse.json();
+  const players = await lineupResponse.json();
+  if (!lineupResponse.ok || !Array.isArray(players)) throw new Error(players?.error || "Distinta non disponibile");
+
+  document.getElementById("partitaInfo").innerHTML = `<b>${escapeHtml(matchInfo.squadra_casa)} - ${escapeHtml(matchInfo.squadra_ospite)}</b><br>${escapeHtml(matchInfo.data_partita || "")} | ${escapeHtml(String(matchInfo.ora_partita || "").slice(0,5))}<br><span style="font-size:14px;color:#444;">${escapeHtml(matchInfo.torneo || "")} - ${escapeHtml(matchInfo.fase || "REGULAR")}</span>`;
+  document.getElementById("homeScoreName").textContent = matchInfo.squadra_casa || "Casa";
+  document.getElementById("awayScoreName").textContent = matchInfo.squadra_ospite || "Ospite";
+  document.getElementById("finalizzaPartita").checked = Number(matchInfo.giocata || 0) === 1;
+  document.getElementById("lineupRoot").innerHTML = ["casa", "ospite"].map(side => renderTeam(side, players.filter(p => p.lato === side))).join("");
+  updateLiveScore();
+}
+
+document.getElementById("lineupRoot").addEventListener("click", event => {
+  const stepButton = event.target.closest("[data-step]");
+  if (stepButton) {
+    const input = stepButton.parentElement.querySelector("input");
+    input.value = Math.max(0, (Number(input.value) || 0) + Number(stepButton.dataset.step));
+    input.dispatchEvent(new Event("input", {bubbles:true}));
+    return;
+  }
+  const teamButton = event.target.closest("[data-select-team]");
+  if (teamButton) {
+    const checked = teamButton.dataset.selectTeam === "1";
+    teamButton.closest(".team-lineup").querySelectorAll(".presence-toggle").forEach(input => {
+      input.checked = checked;
+      input.closest(".player-row").classList.toggle("is-present", checked);
+    });
+    updateLiveScore();
+  }
+});
+
+document.getElementById("lineupRoot").addEventListener("change", event => {
+  if (event.target.matches(".presence-toggle")) event.target.closest(".player-row").classList.toggle("is-present", event.target.checked);
+  updateLiveScore();
+});
+document.getElementById("lineupRoot").addEventListener("input", updateLiveScore);
+
+document.getElementById("lineupForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const button = document.getElementById("saveLineup");
+  const rows = [...document.querySelectorAll(".player-row")].map(row => ({
+    giocatore_id: Number(row.dataset.playerId), squadra_id: Number(row.dataset.teamId),
+    presenza: row.querySelector('[data-field="presenza"]').checked ? 1 : 0,
+    goal: row.querySelector('[data-field="goal"]').value,
+    assist: row.querySelector('[data-field="assist"]').value,
+    autogol: row.querySelector('[data-field="autogol"]').value,
+    cartellino_giallo: row.querySelector('[data-field="cartellino_giallo"]').checked ? 1 : 0,
+    cartellino_rosso: row.querySelector('[data-field="cartellino_rosso"]').checked ? 1 : 0,
+    voto: row.querySelector('[data-field="voto"]').value
+  }));
+  const fd = new FormData();
+  fd.set("azione", "save_bulk"); fd.set("partita_id", ID); fd.set("stats", JSON.stringify(rows));
+  fd.set("finalizza", document.getElementById("finalizzaPartita").checked ? "1" : "0");
+  button.disabled = true; button.textContent = "Salvataggio...";
+  try {
+    const response = await fetch(API, {method:"POST", body:fd});
+    const output = await response.json();
+    if (!response.ok || !output.success) throw new Error(output.error || "Errore durante il salvataggio");
+    showLineupMessage(output.message || "Distinta salvata");
+    await loadLineup();
+  } catch (error) { showLineupMessage(error.message, "error"); }
+  finally { button.disabled = false; button.textContent = "Salva tutta la distinta"; }
+});
+
+document.getElementById("btnBackStats")?.addEventListener("click", event => {
+  event.preventDefault();
+  if (window.history.length > 1) window.history.back(); else window.location.href = "/api/gestione_partite.php";
+});
+
+loadLineup().catch(error => {
+  document.getElementById("lineupRoot").innerHTML = `<p>Impossibile caricare la distinta: ${escapeHtml(error.message)}</p>`;
+  showLineupMessage(error.message, "error");
+});
+
+if (false) {
 let currentStats = [];
 let pendingDelete = null;
 const KEYBOARD_VIEWPORT_DELTA = 140;
@@ -931,6 +977,7 @@ document.getElementById("btnBackStats")?.addEventListener("click", (e) => {
   await loadPlayers();
   await loadStats();
 })();
+}
 </script>
 
 </body>

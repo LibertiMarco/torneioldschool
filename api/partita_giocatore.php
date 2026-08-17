@@ -24,7 +24,7 @@ if (!user_has_admin_access((string)($_SESSION['ruolo'] ?? ''))) {
 }
 
 $azione = $_GET['azione'] ?? $_POST['azione'] ?? '';
-$writeActions = ['add', 'edit', 'delete'];
+$writeActions = ['add', 'edit', 'delete', 'save_bulk'];
 if (in_array($azione, $writeActions, true)) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         partita_giocatore_json_error('Metodo non consentito', 405);
@@ -488,6 +488,140 @@ if ($azione === 'list_giocatori') {
     while ($row = $res->fetch_assoc()) { $out[] = $row; }
 
     echo json_encode($out);
+    exit;
+}
+
+/* ==========================================================
+   DISTINTA COMPLETA: rose e statistiche già salvate
+========================================================== */
+if ($azione === 'lineup') {
+    if (empty($_GET['partita_id'])) { echo json_encode([]); exit; }
+
+    $partitaId = (int)$_GET['partita_id'];
+    $stmt = $conn->prepare("
+        SELECT DISTINCT
+            g.id AS giocatore_id,
+            g.nome,
+            g.cognome,
+            s.id AS squadra_id,
+            s.nome AS squadra,
+            CASE WHEN s.nome = p.squadra_casa THEN 'casa' ELSE 'ospite' END AS lato,
+            sg.ruolo,
+            COALESCE(sg.is_captain, 0) AS is_captain,
+            pg.id AS statistica_id,
+            COALESCE(pg.presenza, 0) AS presenza,
+            COALESCE(pg.goal, 0) AS goal,
+            COALESCE(pg.autogol, 0) AS autogol,
+            COALESCE(pg.assist, 0) AS assist,
+            COALESCE(pg.cartellino_giallo, 0) AS cartellino_giallo,
+            COALESCE(pg.cartellino_rosso, 0) AS cartellino_rosso,
+            pg.voto
+        FROM partite p
+        JOIN squadre s
+          ON s.torneo = p.torneo
+         AND s.nome IN (p.squadra_casa, p.squadra_ospite)
+        JOIN squadre_giocatori sg ON sg.squadra_id = s.id
+        JOIN giocatori g ON g.id = sg.giocatore_id
+        LEFT JOIN partita_giocatore pg
+          ON pg.partita_id = p.id
+         AND pg.giocatore_id = g.id
+        WHERE p.id = ?
+        ORDER BY lato, s.nome, g.cognome, g.nome
+    ");
+    if (!$stmt) { partita_giocatore_json_error('Errore caricamento distinta', 500); }
+    $stmt->bind_param('i', $partitaId);
+    $stmt->execute();
+    $rows = $stmt->get_result();
+    $out = [];
+    while ($row = $rows->fetch_assoc()) { $out[] = $row; }
+    $stmt->close();
+    echo json_encode($out, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/* ==========================================================
+   SALVATAGGIO COLLETTIVO DELLA DISTINTA
+========================================================== */
+if ($azione === 'save_bulk') {
+    ensure_partite_phase_schema($conn);
+    if (!partita_giocatore_has_squadra_column($conn)) {
+        ensure_partita_giocatore_team_schema($conn);
+    }
+
+    $partitaId = (int)($_POST['partita_id'] ?? 0);
+    $finalizza = (string)($_POST['finalizza'] ?? '0') === '1';
+    $righe = json_decode((string)($_POST['stats'] ?? ''), true);
+    if ($partitaId <= 0 || !is_array($righe)) {
+        partita_giocatore_json_error('Dati distinta non validi');
+    }
+
+    $existingStmt = $conn->prepare('SELECT giocatore_id FROM partita_giocatore WHERE partita_id = ?');
+    $existingStmt->bind_param('i', $partitaId);
+    $existingStmt->execute();
+    $coinvolti = [];
+    $existingRows = $existingStmt->get_result();
+    while ($row = $existingRows->fetch_assoc()) { $coinvolti[(int)$row['giocatore_id']] = true; }
+    $existingStmt->close();
+
+    $upsert = $conn->prepare("
+        INSERT INTO partita_giocatore
+            (partita_id, giocatore_id, squadra_id, presenza, goal, autogol, assist, cartellino_giallo, cartellino_rosso, voto)
+        VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+            squadra_id = VALUES(squadra_id), presenza = 1, goal = VALUES(goal),
+            autogol = VALUES(autogol), assist = VALUES(assist),
+            cartellino_giallo = VALUES(cartellino_giallo),
+            cartellino_rosso = VALUES(cartellino_rosso), voto = VALUES(voto)
+    ");
+    $delete = $conn->prepare('DELETE FROM partita_giocatore WHERE partita_id = ? AND giocatore_id = ?');
+    if (!$upsert || !$delete) { partita_giocatore_json_error('Errore preparazione salvataggio', 500); }
+
+    $conn->begin_transaction();
+    try {
+        foreach ($righe as $riga) {
+            $giocatoreId = (int)($riga['giocatore_id'] ?? 0);
+            $squadraRichiesta = (int)($riga['squadra_id'] ?? 0);
+            if ($giocatoreId <= 0) { throw new RuntimeException('Giocatore non valido'); }
+            $coinvolti[$giocatoreId] = true;
+
+            if (empty($riga['presenza'])) {
+                $delete->bind_param('ii', $partitaId, $giocatoreId);
+                if (!$delete->execute()) { throw new RuntimeException($delete->error); }
+                continue;
+            }
+
+            $squadraId = resolveSquadraIdForPartitaGiocatore($conn, $partitaId, $giocatoreId, $squadraRichiesta);
+            if ($squadraId === null) { throw new RuntimeException('Squadra non valida per un giocatore'); }
+
+            $goal = max(0, (int)($riga['goal'] ?? 0));
+            $autogol = max(0, (int)($riga['autogol'] ?? 0));
+            $assist = max(0, (int)($riga['assist'] ?? 0));
+            $giallo = !empty($riga['cartellino_giallo']) ? 1 : 0;
+            $rosso = !empty($riga['cartellino_rosso']) ? 1 : 0;
+            $voto = ($riga['voto'] ?? '') === '' || $riga['voto'] === null ? null : (float)$riga['voto'];
+            if ($voto !== null && ($voto < 0 || $voto > 10)) { throw new RuntimeException('Voto non valido'); }
+
+            $upsert->bind_param('iiiiiiiid', $partitaId, $giocatoreId, $squadraId, $goal, $autogol, $assist, $giallo, $rosso, $voto);
+            if (!$upsert->execute()) { throw new RuntimeException($upsert->error); }
+        }
+
+        foreach (array_keys($coinvolti) as $giocatoreId) {
+            ricalcolaStatistiche($conn, $partitaId, (int)$giocatoreId);
+        }
+        $infoClassifica = aggiornaGolPartita($conn, $partitaId, $finalizza);
+        aggiornaClassificaDaInfo($infoClassifica);
+        $conn->commit();
+    } catch (Throwable $e) {
+        $conn->rollback();
+        error_log('Salvataggio distinta fallito: ' . $e->getMessage());
+        partita_giocatore_json_error('Impossibile salvare la distinta', 500);
+    } finally {
+        $upsert->close();
+        $delete->close();
+    }
+
+    inviaNotificaEsito($conn, $partitaId, $infoClassifica ?? null);
+    echo json_encode(['success' => true, 'message' => $finalizza ? 'Partita finalizzata' : 'Distinta salvata']);
     exit;
 }
 
