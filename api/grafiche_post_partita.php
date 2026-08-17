@@ -113,8 +113,8 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     .preview-head button { width:auto; padding:9px 13px; }
     canvas { display:block; width:100%; max-width:540px; height:auto; margin:auto; background:#0a1724; box-shadow:0 12px 32px #0008; }
     .status { min-height:22px; margin:14px 0 0; color:#b9cad9; }
-    @media(max-width:1050px){ .workspace{grid-template-columns:1fr}.controls{position:static}.previews{grid-template-columns:1fr 1fr} }
-    @media(max-width:720px){ .previews{grid-template-columns:1fr}.fields{grid-template-columns:1fr}.wide{grid-column:auto}.actions{grid-template-columns:1fr} }
+    @media(max-width:1050px){ .workspace{grid-template-columns:minmax(0,52%) minmax(0,48%);gap:10px}.controls{position:sticky;top:8px;padding:12px}body.with-site-header .controls{top:90px}.previews{grid-template-columns:1fr;gap:12px}.preview-card{padding:8px}.preview-head{align-items:flex-start;flex-direction:column}.preview-head button{width:100%;font-size:12px} }
+    @media(max-width:720px){ main{width:min(100% - 10px,1440px);margin-left:auto;margin-right:auto}.fields{grid-template-columns:1fr}.wide{grid-column:auto}.actions{grid-template-columns:1fr}.tabs{gap:5px}.tab{padding:9px 5px;font-size:11px}label{font-size:12px}input,select,button{padding:8px 7px;font-size:12px}.preview-head h2{font-size:14px} }
     body.with-site-header>main{margin-top:110px}
   </style>
 </head>
