@@ -44,6 +44,26 @@ if ($partiteStmt && $partiteStmt->execute()) {
   }
   $partiteStmt->close();
 }
+
+$giocatoriGrafiche = [];
+$giocatoriStmt = $conn->prepare(
+  "SELECT pg.partita_id, g.id, g.nome, g.cognome,
+          s.id AS squadra_id, s.nome AS squadra_nome, s.logo AS squadra_logo
+   FROM partita_giocatore pg
+   JOIN partite p ON p.id = pg.partita_id AND p.giocata = 1
+   JOIN giocatori g ON g.id = pg.giocatore_id
+   JOIN squadre s ON s.id = pg.squadra_id
+   WHERE COALESCE(pg.presenza, 1) = 1
+   ORDER BY s.nome, g.nome, g.cognome"
+);
+if ($giocatoriStmt && $giocatoriStmt->execute()) {
+  $giocatoriResult = $giocatoriStmt->get_result();
+  while ($giocatore = $giocatoriResult->fetch_assoc()) {
+    $partitaId = (string)$giocatore['partita_id'];
+    $giocatoriGrafiche[$partitaId][] = $giocatore;
+  }
+  $giocatoriStmt->close();
+}
 ?>
 <!doctype html>
 <html lang="it">
@@ -76,6 +96,10 @@ if ($partiteStmt && $partiteStmt->execute()) {
     input[type=file] { padding:8px; color:#bac8d5; }
     input[type=range] { padding:4px 0; accent-color:var(--gold); }
     .range-value { color:var(--muted); font-size:12px; font-weight:600; }
+    .player-options { display:grid; gap:8px; max-height:260px; overflow:auto; padding:10px; background:#081522; border:1px solid #ffffff18; border-radius:10px; }
+    .player-option { display:flex; grid-template-columns:none; align-items:center; gap:9px; padding:7px 8px; border-radius:8px; background:#ffffff08; font-weight:650; }
+    .player-option input { width:auto; margin:0; }
+    .player-empty { color:var(--muted); font-size:13px; padding:8px; }
     button { border:0; cursor:pointer; background:var(--gold); color:#101722; font-weight:850; }
     .secondary { background:#263d53; color:#fff; }
     .actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
@@ -125,15 +149,17 @@ if ($partiteStmt && $partiteStmt->execute()) {
 
       <div id="mvpPanel" class="panel">
         <div class="fields">
-          <label class="wide">Torneo<input id="mvpTournament" value="TORNEI OLD SCHOOL"></label>
-          <label>Nome<input id="mvpName" value="MARIO"></label>
-          <label>Cognome<input id="mvpSurname" value="ROSSI"></label>
-          <label class="wide">Squadra<input id="mvpTeam" value="NOME SQUADRA"></label>
+          <label class="wide">Torneo<input id="mvpTournament" value="" readonly></label>
+          <div class="wide">
+            <label>Seleziona MVP</label>
+            <div id="mvpPlayers" class="player-options"><div class="player-empty">Seleziona prima una partita nel Full Time.</div></div>
+          </div>
+          <label class="wide">Selezione<input id="mvpNames" value="" readonly></label>
+          <label class="wide">Squadra<input id="mvpTeam" value="" readonly></label>
           <label class="wide">Foto MVP<input id="mvpPhoto" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label>Zoom foto <span class="range-value" id="mvpZoomValue">100%</span><input id="mvpZoom" type="range" min="100" max="250" value="100"></label>
           <label>Posizione orizzontale <span class="range-value" id="mvpXValue">50%</span><input id="mvpX" type="range" min="0" max="100" value="50"></label>
           <label class="wide">Posizione verticale <span class="range-value" id="mvpYValue">0%</span><input id="mvpY" type="range" min="0" max="100" value="0"></label>
-          <label>Logo squadra (facoltativo)<input id="mvpLogo" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label>Dettaglio (facoltativo)<input id="mvpDetails" value="MAN OF THE MATCH"></label>
         </div>
       </div>
@@ -173,8 +199,9 @@ const tournamentThemes=[
   {bg:'#17190d',accent:'#a8bc49',panel:'#292d15',muted:'#c4c9ab'}
 ];
 const matches=<?= json_encode($partiteGrafiche, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-const imageState={ftHomeLogo:null,ftAwayLogo:null,ftCaptains:null,mvpPhoto:null,mvpLogo:null,brand:null};
-const imageFields=['ftCaptains','mvpPhoto','mvpLogo'];
+const matchPlayers=<?= json_encode($giocatoriGrafiche, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const imageState={ftHomeLogo:null,ftAwayLogo:null,ftCaptains:null,mvpPhoto:null,mvpLogos:[],brand:null};
+const imageFields=['ftCaptains','mvpPhoto'];
 const safeName=value=>String(value||'grafica').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
 const upper=(value,fallback='')=>String(value||fallback).trim().toUpperCase();
 
@@ -191,13 +218,13 @@ function background(ctx){const gradient=ctx.createLinearGradient(0,0,W,H);gradie
 function brandHeader(ctx,tournament,label){contain(ctx,imageState.brand,52,45,112,112);ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='900 48px Arial';ctx.fillText(label,190,90);ctx.fillStyle=GOLD;fitText(ctx,upper(tournament,'TORNEI OLD SCHOOL'),720,27,18,800);ctx.fillText(upper(tournament,'TORNEI OLD SCHOOL'),190,132,720);ctx.fillStyle=GOLD;ctx.fillRect(48,172,W-96,4);}
 function placeholder(ctx,x,y,w,h,label){roundedRect(ctx,x,y,w,h,18,'#172b3d');ctx.strokeStyle='#ffffff30';ctx.lineWidth=3;ctx.setLineDash([12,12]);ctx.strokeRect(x+2,y+2,w-4,h-4);ctx.setLineDash([]);ctx.fillStyle=MUTED;ctx.textAlign='center';ctx.font='700 25px Arial';ctx.fillText(label,x+w/2,y+h/2);}
 
-function drawFulltime(){const selected=matches.find(item=>String(item.id)===String($('ftMatch').value))||matches.find(item=>String(item.torneo)===$('ftTournamentSelect').value);applyTournamentTheme(selected?.torneo_id??$('ftTournamentSelect').value??$('ftTournament').value);const c=$('fulltimeCanvas'),ctx=c.getContext('2d');background(ctx);brandHeader(ctx,$('ftTournament').value,'FULL TIME');const photo={x:48,y:205,w:984,h:600};if(imageState.ftCaptains){ctx.save();ctx.beginPath();ctx.roundRect(photo.x,photo.y,photo.w,photo.h,22);ctx.clip();cover(ctx,imageState.ftCaptains,photo.x,photo.y,photo.w,photo.h,cropValues('ft'));const g=ctx.createLinearGradient(0,photo.y+280,0,photo.y+photo.h);g.addColorStop(0,'transparent');g.addColorStop(1,BG+'ee');ctx.fillStyle=g;ctx.fillRect(photo.x,photo.y,photo.w,photo.h);ctx.restore();}else placeholder(ctx,photo.x,photo.y,photo.w,photo.h,'CARICA LA FOTO DEI DUE CAPITANI');
-  roundedRect(ctx,48,765,984,430,22,PANEL);ctx.fillStyle=GOLD;ctx.fillRect(48,765,984,6);contain(ctx,imageState.ftHomeLogo||imageState.brand,80,835,155,155);contain(ctx,imageState.ftAwayLogo||imageState.brand,845,835,155,155);
+function drawFulltime(){const selected=matches.find(item=>String(item.id)===String($('ftMatch').value))||matches.find(item=>String(item.torneo)===$('ftTournamentSelect').value);applyTournamentTheme(selected?.torneo_id??$('ftTournamentSelect').value??$('ftTournament').value);const c=$('fulltimeCanvas'),ctx=c.getContext('2d');background(ctx);brandHeader(ctx,$('ftTournament').value,'FULL TIME');const photo={x:48,y:205,w:984,h:720};if(imageState.ftCaptains){ctx.save();ctx.beginPath();ctx.roundRect(photo.x,photo.y,photo.w,photo.h,22);ctx.clip();cover(ctx,imageState.ftCaptains,photo.x,photo.y,photo.w,photo.h,cropValues('ft'));const g=ctx.createLinearGradient(0,photo.y+350,0,photo.y+photo.h);g.addColorStop(0,'transparent');g.addColorStop(1,BG+'ee');ctx.fillStyle=g;ctx.fillRect(photo.x,photo.y,photo.w,photo.h);ctx.restore();}else placeholder(ctx,photo.x,photo.y,photo.w,photo.h,'CARICA LA FOTO DEI DUE CAPITANI');
+  roundedRect(ctx,48,850,984,345,22,PANEL);ctx.fillStyle=GOLD;ctx.fillRect(48,850,984,6);contain(ctx,imageState.ftHomeLogo||imageState.brand,80,885,130,130);contain(ctx,imageState.ftAwayLogo||imageState.brand,870,885,130,130);
   const home=upper($('ftHome').value,'SQUADRA CASA'),away=upper($('ftAway').value,'SQUADRA OSPITE');ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.textAlign='left';fitText(ctx,home,260,34,20,800);ctx.fillText(home,80,1045,260);ctx.textAlign='right';fitText(ctx,away,260,34,20,800);ctx.fillText(away,1000,1045,260);
   ctx.textAlign='center';ctx.fillStyle=GOLD;ctx.font='900 118px Arial';ctx.fillText(`${$('ftHomeScore').value||0} - ${$('ftAwayScore').value||0}`,W/2,910);ctx.fillStyle=MUTED;ctx.font='750 23px Arial';ctx.fillText(upper($('ftRound').value,'PARTITA'),W/2,1120);ctx.textBaseline='alphabetic';footer(ctx,$('ftTournament').value);
 }
 function drawMvp(){const tournament=matches.find(item=>String(item.torneo_nome||item.torneo).toLowerCase()===String($('mvpTournament').value).trim().toLowerCase());applyTournamentTheme(tournament?.torneo_id??$('mvpTournament').value);const c=$('mvpCanvas'),ctx=c.getContext('2d');background(ctx);brandHeader(ctx,$('mvpTournament').value,'MVP');const photo={x:48,y:205,w:984,h:760};if(imageState.mvpPhoto){ctx.save();ctx.beginPath();ctx.roundRect(photo.x,photo.y,photo.w,photo.h,22);ctx.clip();cover(ctx,imageState.mvpPhoto,photo.x,photo.y,photo.w,photo.h,cropValues('mvp'));const g=ctx.createLinearGradient(0,photo.y+350,0,photo.y+photo.h);g.addColorStop(0,'transparent');g.addColorStop(1,BG+'f5');ctx.fillStyle=g;ctx.fillRect(photo.x,photo.y,photo.w,photo.h);ctx.restore();}else placeholder(ctx,photo.x,photo.y,photo.w,photo.h,'CARICA LA FOTO DEL GIOCATORE');
-  const name=`${upper($('mvpName').value,'NOME')} ${upper($('mvpSurname').value,'COGNOME')}`;ctx.fillStyle='#fff';ctx.textAlign='center';fitText(ctx,name,820,66,32,900);ctx.fillText(name,W/2,1035,820);const team=upper($('mvpTeam').value,'NOME SQUADRA');ctx.fillStyle=GOLD;fitText(ctx,team,650,31,21,800);ctx.fillText(team,W/2,1088,650);contain(ctx,imageState.mvpLogo,72,992,105,105);const details=upper($('mvpDetails').value,'MAN OF THE MATCH');ctx.fillStyle=MUTED;ctx.font='700 22px Arial';ctx.fillText(details,W/2,1132);footer(ctx,$('mvpTournament').value);
+  const name=upper($('mvpNames').value,'SELEZIONA MVP');ctx.fillStyle='#fff';ctx.textAlign='center';fitText(ctx,name,820,66,25,900);ctx.fillText(name,W/2,1035,820);const team=upper($('mvpTeam').value,'SQUADRA');ctx.fillStyle=GOLD;fitText(ctx,team,650,31,19,800);ctx.fillText(team,W/2,1088,650);imageState.mvpLogos.slice(0,2).forEach((logo,index)=>contain(ctx,logo,72+(index*112),992,100,100));const details=upper($('mvpDetails').value,'MAN OF THE MATCH');ctx.fillStyle=MUTED;ctx.font='700 22px Arial';ctx.fillText(details,W/2,1132);footer(ctx,$('mvpTournament').value);
 }
 function footer(ctx,tournament){ctx.fillStyle=GOLD;ctx.fillRect(48,1258,W-96,2);ctx.fillStyle=MUTED;ctx.font='600 18px Arial';ctx.textAlign='left';ctx.fillText(upper(tournament,'TORNEO'),48,1300,650);ctx.textAlign='right';ctx.fillText('torneioldschool.it',W-48,1300);}
 function drawAll(){updateCropLabels();drawFulltime();drawMvp();$('status').textContent='Anteprime aggiornate.';}
@@ -232,9 +259,41 @@ function selectRound(){
   setOptions($('ftMatch'),'Seleziona la partita',games);
   clearMatch();
 }
+function resetMvpSelection(message='Seleziona prima una partita nel Full Time.'){
+  $('mvpPlayers').innerHTML='';const empty=document.createElement('div');empty.className='player-empty';empty.textContent=message;$('mvpPlayers').append(empty);
+  $('mvpNames').value='';$('mvpTeam').value='';imageState.mvpLogos=[];drawMvp();
+}
+function addMvpOption(container,value,label,data,type='player'){
+  const row=document.createElement('label');row.className='player-option';
+  const input=document.createElement('input');input.type='checkbox';input.value=value;input.dataset.type=type;input._mvpData=data;
+  const text=document.createElement('span');text.textContent=label;row.append(input,text);container.append(row);
+  input.addEventListener('change',async()=>{
+    const all=[...container.querySelectorAll('input[type=checkbox]')];
+    if(input.checked&&type==='group')all.forEach(other=>{if(other!==input)other.checked=false;});
+    if(input.checked&&type==='player')all.filter(other=>other.dataset.type==='group').forEach(other=>other.checked=false);
+    await updateMvpSelection();
+  });
+}
+function renderMvpPlayers(match){
+  const container=$('mvpPlayers');container.innerHTML='';
+  addMvpOption(container,'group:home',`IL GRUPPO (${match.squadra_casa})`,{name:'IL GRUPPO',team:match.squadra_casa,logo:match.logo_casa},'group');
+  addMvpOption(container,'group:away',`IL GRUPPO (${match.squadra_ospite})`,{name:'IL GRUPPO',team:match.squadra_ospite,logo:match.logo_ospite},'group');
+  const players=matchPlayers[String(match.id)]||[];
+  players.forEach(player=>addMvpOption(container,`player:${player.id}`,`${player.nome} ${player.cognome} — ${player.squadra_nome}`,{name:`${player.nome} ${player.cognome}`,team:player.squadra_nome,logo:player.squadra_logo}));
+  if(!players.length){const note=document.createElement('div');note.className='player-empty';note.textContent='Nessun giocatore presente nel tabellino: puoi comunque scegliere uno dei due gruppi.';container.append(note);}
+  $('mvpNames').value='';$('mvpTeam').value='';imageState.mvpLogos=[];drawMvp();
+}
+async function updateMvpSelection(){
+  const selected=[...$('mvpPlayers').querySelectorAll('input[type=checkbox]:checked')].map(input=>input._mvpData);
+  $('mvpNames').value=selected.map(item=>item.name).join(' • ');
+  $('mvpTeam').value=[...new Set(selected.map(item=>item.team).filter(Boolean))].join(' / ');
+  const logoPaths=[...new Set(selected.map(item=>item.logo).filter(Boolean))];
+  imageState.mvpLogos=(await Promise.all(logoPaths.slice(0,2).map(loadImage))).filter(Boolean);
+  drawMvp();
+}
 function clearMatch(){
   $('ftTournament').value='';$('ftHome').value='';$('ftAway').value='';$('ftHomeScore').value=0;$('ftAwayScore').value=0;$('ftRound').value='';
-  imageState.ftHomeLogo=null;imageState.ftAwayLogo=null;drawFulltime();
+  $('mvpTournament').value='';imageState.ftHomeLogo=null;imageState.ftAwayLogo=null;resetMvpSelection();drawFulltime();
 }
 async function selectMatch(){
   const match=matches.find(item=>String(item.id)===String($('ftMatch').value));
@@ -248,6 +307,7 @@ async function selectMatch(){
   const phase=String(match.fase||'').toUpperCase();
   $('ftRound').value=match.fase_round ? String(match.fase_round).replaceAll('_',' ') : (phase==='REGULAR' && match.giornata ? `GIORNATA ${match.giornata}` : phase);
   [imageState.ftHomeLogo,imageState.ftAwayLogo]=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);
+  renderMvpPlayers(match);
   drawFulltime();
   $('status').textContent='Dati e loghi caricati dalla partita selezionata.';
 }
