@@ -26,7 +26,9 @@ $partiteStmt = $conn->prepare(
    FROM partite p
    LEFT JOIN squadre sc ON sc.nome = p.squadra_casa AND sc.torneo = p.torneo
    LEFT JOIN squadre so ON so.nome = p.squadra_ospite AND so.torneo = p.torneo
-   WHERE p.giocata = 1
+   WHERE (p.giocata = 1
+      OR (p.giocata = 0
+          AND p.data_partita BETWEEN DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND CURDATE()))
      AND NOT EXISTS (
        SELECT 1
        FROM tornei tx
@@ -308,7 +310,7 @@ function selectPhase(){
 }
 function selectRound(){
   const filtered=matches.filter(item=>String(item.torneo)===$('ftTournamentSelect').value&&String(item.fase)===$('ftPhase').value&&roundKey(item)===$('ftRoundSelect').value);
-  const games=filtered.map(item=>[String(item.id),`${item.squadra_casa} ${item.gol_casa??0}-${item.gol_ospite??0} ${item.squadra_ospite}`]);
+  const games=filtered.map(item=>[String(item.id),`${item.squadra_casa} ${item.gol_casa??0}-${item.gol_ospite??0} ${item.squadra_ospite}${Number(item.giocata)===1?'':' (non terminata)'}`]);
   setOptions($('ftMatch'),'Seleziona la partita',games);
   clearMatch();
 }
@@ -344,6 +346,7 @@ async function updateMvpSelection(){
 }
 function clearMatch(){
   $('ftTournament').value='';$('ftHome').value='';$('ftAway').value='';$('ftHomeScore').value=0;$('ftAwayScore').value=0;$('ftRound').value='';
+  $('ftHomeScore').readOnly=true;$('ftAwayScore').readOnly=true;
   $('mvpTournament').value='';imageState.ftHomeLogo=null;imageState.ftAwayLogo=null;resetMvpSelection();drawFulltime();
 }
 async function selectMatch(){
@@ -355,12 +358,15 @@ async function selectMatch(){
   $('ftAway').value=match.squadra_ospite||'';
   $('ftHomeScore').value=match.gol_casa??0;
   $('ftAwayScore').value=match.gol_ospite??0;
+  const finished=Number(match.giocata)===1;
+  $('ftHomeScore').readOnly=finished;
+  $('ftAwayScore').readOnly=finished;
   const phase=String(match.fase||'').toUpperCase();
   $('ftRound').value=match.fase_round ? String(match.fase_round).replaceAll('_',' ') : (phase==='REGULAR' && match.giornata ? `GIORNATA ${match.giornata}` : phase);
   [imageState.ftHomeLogo,imageState.ftAwayLogo]=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);
   renderMvpPlayers(match);
   drawFulltime();
-  $('status').textContent='Dati e loghi caricati dalla partita selezionata.';
+  $('status').textContent=finished?'Partita terminata: risultato caricato e bloccato.':'Partita non terminata degli ultimi 7 giorni: puoi modificare i gol solo nella grafica.';
 }
 const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const canvasBlob=canvas=>new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Impossibile creare il PNG.')),'image/png'));
