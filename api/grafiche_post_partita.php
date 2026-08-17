@@ -48,7 +48,7 @@ if ($partiteStmt && $partiteStmt->execute()) {
 $giocatoriGrafiche = [];
 $giocatoriStmt = $conn->prepare(
   "SELECT pg.partita_id, g.id, g.nome, g.cognome,
-          s.id AS squadra_id, s.nome AS squadra_nome, s.logo AS squadra_logo
+          s.id AS squadra_id, s.nome AS squadra_nome
    FROM partita_giocatore pg
    JOIN partite p ON p.id = pg.partita_id AND p.giocata = 1
    JOIN giocatori g ON g.id = pg.giocatore_id
@@ -200,7 +200,7 @@ const tournamentThemes=[
 ];
 const matches=<?= json_encode($partiteGrafiche, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const matchPlayers=<?= json_encode($giocatoriGrafiche, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-const imageState={ftHomeLogo:null,ftAwayLogo:null,ftCaptains:null,mvpPhoto:null,mvpLogos:[],brand:null};
+const imageState={ftHomeLogo:null,ftAwayLogo:null,ftCaptains:null,mvpPhoto:null,brand:null};
 const imageFields=['ftCaptains','mvpPhoto'];
 const safeName=value=>String(value||'grafica').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
 const upper=(value,fallback='')=>String(value||fallback).trim().toUpperCase();
@@ -225,7 +225,7 @@ function drawFulltime(){const selected=matches.find(item=>String(item.id)===Stri
 }
 function drawMvp(){const tournament=matches.find(item=>String(item.torneo_nome||item.torneo).toLowerCase()===String($('mvpTournament').value).trim().toLowerCase());applyTournamentTheme(tournament?.torneo_id??$('mvpTournament').value);const c=$('mvpCanvas'),ctx=c.getContext('2d');background(ctx);brandHeader(ctx,$('mvpTournament').value,'MVP');const photo={x:48,y:205,w:984,h:760};if(imageState.mvpPhoto){ctx.save();ctx.beginPath();ctx.roundRect(photo.x,photo.y,photo.w,photo.h,22);ctx.clip();cover(ctx,imageState.mvpPhoto,photo.x,photo.y,photo.w,photo.h,cropValues('mvp'));const g=ctx.createLinearGradient(0,photo.y+350,0,photo.y+photo.h);g.addColorStop(0,'transparent');g.addColorStop(1,BG+'f5');ctx.fillStyle=g;ctx.fillRect(photo.x,photo.y,photo.w,photo.h);ctx.restore();}else placeholder(ctx,photo.x,photo.y,photo.w,photo.h,'CARICA LA FOTO DEL GIOCATORE');
   const names=upper($('mvpNames').value,'SELEZIONA MVP').split(' • ').filter(Boolean);ctx.fillStyle='#fff';ctx.textAlign='center';if(names.length===1){fitText(ctx,names[0],900,58,30,900);ctx.fillText(names[0],W/2,1045,900);}else if(names.length===2){names.forEach((name,index)=>{fitText(ctx,name,900,42,27,900);ctx.fillText(name,W/2,1025+(index*48),900);});}else{const joined=names.join(' • ');fitText(ctx,joined,920,38,23,900);ctx.fillText(joined,W/2,1050,920);}
-  const logos=imageState.mvpLogos.slice(0,2),team=upper($('mvpTeam').value,'SQUADRA'),logoSize=logos.length>1?58:70,logoGap=10,textGap=logos.length?20:0;ctx.fillStyle=GOLD;fitText(ctx,team,720,28,18,800);const teamWidth=Math.min(720,ctx.measureText(team).width),logosWidth=logos.length*logoSize+Math.max(0,logos.length-1)*logoGap,totalWidth=logosWidth+textGap+teamWidth,startX=(W-totalWidth)/2,rowY=1150;logos.forEach((logo,index)=>contain(ctx,logo,startX+index*(logoSize+logoGap),rowY-logoSize/2,logoSize,logoSize));ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(team,startX+logosWidth+textGap,rowY,teamWidth);ctx.textBaseline='alphabetic';const details=upper($('mvpDetails').value,'MAN OF THE MATCH');ctx.fillStyle=MUTED;ctx.font='700 20px Arial';ctx.textAlign='center';ctx.fillText(details,W/2,1215);footer(ctx,$('mvpTournament').value);
+  const team=upper($('mvpTeam').value,'SQUADRA');ctx.fillStyle=GOLD;ctx.textAlign='center';fitText(ctx,team,820,30,18,800);ctx.fillText(team,W/2,1150,820);const details=upper($('mvpDetails').value,'MAN OF THE MATCH');ctx.fillStyle=MUTED;ctx.font='700 20px Arial';ctx.fillText(details,W/2,1215);footer(ctx,$('mvpTournament').value);
 }
 function footer(ctx,tournament){ctx.fillStyle=GOLD;ctx.fillRect(48,1258,W-96,2);ctx.fillStyle=MUTED;ctx.font='600 18px Arial';ctx.textAlign='left';ctx.fillText(upper(tournament,'TORNEO'),48,1300,650);ctx.textAlign='right';ctx.fillText('torneioldschool.it',W-48,1300);}
 function drawAll(){updateCropLabels();drawFulltime();drawMvp();$('status').textContent='Anteprime aggiornate.';}
@@ -262,7 +262,7 @@ function selectRound(){
 }
 function resetMvpSelection(message='Seleziona prima una partita nel Full Time.'){
   $('mvpPlayers').innerHTML='';const empty=document.createElement('div');empty.className='player-empty';empty.textContent=message;$('mvpPlayers').append(empty);
-  $('mvpNames').value='';$('mvpTeam').value='';imageState.mvpLogos=[];drawMvp();
+  $('mvpNames').value='';$('mvpTeam').value='';drawMvp();
 }
 function addMvpOption(container,value,label,data,type='player'){
   const row=document.createElement('label');row.className='player-option';
@@ -277,19 +277,17 @@ function addMvpOption(container,value,label,data,type='player'){
 }
 function renderMvpPlayers(match){
   const container=$('mvpPlayers');container.innerHTML='';
-  addMvpOption(container,'group:home',`IL GRUPPO (${match.squadra_casa})`,{name:'IL GRUPPO',team:match.squadra_casa,logo:match.logo_casa},'group');
-  addMvpOption(container,'group:away',`IL GRUPPO (${match.squadra_ospite})`,{name:'IL GRUPPO',team:match.squadra_ospite,logo:match.logo_ospite},'group');
+  addMvpOption(container,'group:home',`IL GRUPPO (${match.squadra_casa})`,{name:'IL GRUPPO',team:match.squadra_casa},'group');
+  addMvpOption(container,'group:away',`IL GRUPPO (${match.squadra_ospite})`,{name:'IL GRUPPO',team:match.squadra_ospite},'group');
   const players=matchPlayers[String(match.id)]||[];
-  players.forEach(player=>addMvpOption(container,`player:${player.id}`,`${player.nome} ${player.cognome} — ${player.squadra_nome}`,{name:`${player.nome} ${player.cognome}`,team:player.squadra_nome,logo:player.squadra_logo}));
+  players.forEach(player=>addMvpOption(container,`player:${player.id}`,`${player.nome} ${player.cognome} — ${player.squadra_nome}`,{name:`${player.nome} ${player.cognome}`,team:player.squadra_nome}));
   if(!players.length){const note=document.createElement('div');note.className='player-empty';note.textContent='Nessun giocatore presente nel tabellino: puoi comunque scegliere uno dei due gruppi.';container.append(note);}
-  $('mvpNames').value='';$('mvpTeam').value='';imageState.mvpLogos=[];drawMvp();
+  $('mvpNames').value='';$('mvpTeam').value='';drawMvp();
 }
 async function updateMvpSelection(){
   const selected=[...$('mvpPlayers').querySelectorAll('input[type=checkbox]:checked')].map(input=>input._mvpData);
   $('mvpNames').value=selected.map(item=>item.name).join(' • ');
   $('mvpTeam').value=[...new Set(selected.map(item=>item.team).filter(Boolean))].join(' / ');
-  const logoPaths=[...new Set(selected.map(item=>item.logo).filter(Boolean))];
-  imageState.mvpLogos=(await Promise.all(logoPaths.slice(0,2).map(loadImage))).filter(Boolean);
   drawMvp();
 }
 function clearMatch(){
