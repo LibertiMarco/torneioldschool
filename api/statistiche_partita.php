@@ -408,6 +408,7 @@ body.stats-admin-page .admin-container {
 .player-name { display: flex; gap: 9px; align-items: center; font-weight: 750; min-width: 0; }
 .presence-toggle { width: 20px; height: 20px; accent-color: #15293e; flex: 0 0 auto; }
 .stat-stepper { display: grid; grid-template-columns: 32px 1fr 32px; align-items: center; border: 1px solid #ccd5df; border-radius: 9px; overflow: hidden; }
+.stat-control-label { display: none; }
 .stat-stepper button { height: 34px; border: 0; background: #eef2f6; font-size: 19px; cursor: pointer; }
 .stat-stepper input { width: 100%; height: 34px; padding: 0; border: 0; text-align: center; font-weight: 800; background: #fff; -moz-appearance: textfield; }
 .stat-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; }
@@ -423,8 +424,9 @@ body.stats-admin-page .admin-container {
   .lineup-labels { display: none; }
   .player-row { grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
   .player-name { grid-column: 1 / -1; }
-  .stat-stepper::before { content: attr(data-label); position: absolute; transform: translateY(-27px); font-size: 11px; color: #64748b; font-weight: 700; }
-  .stat-stepper { margin-top: 18px; position: relative; }
+  .stat-control { min-width: 0; }
+  .stat-control-label { display: block; margin: 0 0 5px; color: #516274; font-size: 12px; font-weight: 800; text-align: center; }
+  .stat-stepper { position: relative; }
   .event-toggle { margin-top: 8px; }
   .vote-input { margin-top: 8px; }
 }
@@ -502,10 +504,13 @@ function playerBadges(player) {
 }
 
 function stepper(field, label, value) {
-  return `<div class="stat-stepper" data-label="${label}">
-    <button type="button" data-step="-1" aria-label="Diminuisci ${label}">−</button>
-    <input type="number" min="0" inputmode="numeric" data-field="${field}" value="${Math.max(0, Number(value) || 0)}" aria-label="${label}">
-    <button type="button" data-step="1" aria-label="Aumenta ${label}">+</button>
+  return `<div class="stat-control">
+    <span class="stat-control-label">${label}</span>
+    <div class="stat-stepper">
+      <button type="button" data-step="-1" aria-label="Diminuisci ${label}">−</button>
+      <input type="number" min="0" inputmode="numeric" data-field="${field}" value="${Math.max(0, Number(value) || 0)}" aria-label="${label}">
+      <button type="button" data-step="1" aria-label="Aumenta ${label}">+</button>
+    </div>
   </div>`;
 }
 
