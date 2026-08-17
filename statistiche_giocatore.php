@@ -144,6 +144,96 @@ function premio_team_category(string $premio): string {
     return '';
 }
 
+function fetch_player_cup_awards(mysqli $conn, array $teams): array {
+    if (empty($teams)) return [];
+    $clauses = [];
+    $params = [];
+    foreach ($teams as $team) {
+        $torneo = trim((string)($team['torneo'] ?? ''));
+        $teamName = trim((string)($team['nome'] ?? ''));
+        if ($torneo === '' || $teamName === '') continue;
+        $clauses[] = '(p.torneo = ? AND (p.squadra_casa = ? OR p.squadra_ospite = ?))';
+        array_push($params, $torneo, $teamName, $teamName);
+    }
+    if (!$clauses) return [];
+
+    $sql = "SELECT p.id, p.torneo, p.fase, p.fase_leg, p.squadra_casa, p.squadra_ospite,
+                   p.gol_casa, p.gol_ospite, p.decisa_rigori, p.rigori_casa, p.rigori_ospite,
+                   p.data_partita, t.nome AS torneo_nome, t.filetorneo AS torneo_file
+            FROM partite p
+            LEFT JOIN tornei t ON (t.filetorneo = p.torneo OR t.filetorneo = CONCAT(p.torneo, '.php') OR t.nome = p.torneo)
+            WHERE p.giocata = 1
+              AND p.fase IN ('GOLD', 'SILVER', 'BRONZO')
+              AND p.fase_round = 'FINALE'
+              AND (" . implode(' OR ', $clauses) . ")
+            ORDER BY p.data_partita DESC, p.id DESC";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) return [];
+    $types = str_repeat('s', count($params));
+    $stmt->bind_param($types, ...$params);
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return [];
+    }
+
+    // Raggruppa andata e ritorno della stessa finale e calcola il risultato aggregato.
+    $finals = [];
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $pair = [(string)$row['squadra_casa'], (string)$row['squadra_ospite']];
+        sort($pair, SORT_NATURAL | SORT_FLAG_CASE);
+        $key = premio_normalize((string)$row['torneo']) . ':' . (string)$row['fase'] . ':' . premio_normalize(implode('|', $pair));
+        if (!isset($finals[$key])) {
+            $finals[$key] = ['rows' => [], 'goals' => [], 'latest' => $row];
+        }
+        $finals[$key]['rows'][] = $row;
+        $home = (string)$row['squadra_casa'];
+        $away = (string)$row['squadra_ospite'];
+        $finals[$key]['goals'][$home] = ($finals[$key]['goals'][$home] ?? 0) + (int)$row['gol_casa'];
+        $finals[$key]['goals'][$away] = ($finals[$key]['goals'][$away] ?? 0) + (int)$row['gol_ospite'];
+    }
+    $stmt->close();
+
+    $awards = [];
+    foreach ($finals as $final) {
+        $goals = $final['goals'];
+        if (count($goals) !== 2) continue;
+        arsort($goals);
+        $names = array_keys($goals);
+        $scores = array_values($goals);
+        $winner = $scores[0] > $scores[1] ? $names[0] : '';
+
+        // In parita, il risultato ai rigori della gara decisiva stabilisce la vincitrice.
+        if ($winner === '') {
+            foreach ($final['rows'] as $row) {
+                if ((int)$row['decisa_rigori'] !== 1 || $row['rigori_casa'] === null || $row['rigori_ospite'] === null) continue;
+                if ((int)$row['rigori_casa'] > (int)$row['rigori_ospite']) $winner = (string)$row['squadra_casa'];
+                if ((int)$row['rigori_ospite'] > (int)$row['rigori_casa']) $winner = (string)$row['squadra_ospite'];
+            }
+        }
+        if ($winner === '') continue;
+
+        foreach ($teams as $team) {
+            if (premio_normalize((string)($team['nome'] ?? '')) !== premio_normalize($winner)) continue;
+            if (trim((string)($team['torneo'] ?? '')) !== trim((string)$final['latest']['torneo'])) continue;
+            $phase = strtoupper((string)$final['latest']['fase']);
+            $labels = ['GOLD' => 'Coppa Gold', 'SILVER' => 'Coppa Silver', 'BRONZO' => 'Coppa Bronzo'];
+            $awards[] = [
+                'id' => 'final-' . (int)$final['latest']['id'],
+                'tipo' => 'Squadra',
+                'premio' => $labels[$phase] ?? ('Coppa ' . ucfirst(strtolower($phase))),
+                'competizione' => (string)($final['latest']['torneo_nome'] ?: $final['latest']['torneo']),
+                'squadra' => (string)$team['nome'],
+                'anno' => !empty($final['latest']['data_partita']) ? date('Y', strtotime((string)$final['latest']['data_partita'])) : '',
+                'logo' => (string)($team['logo'] ?? ''),
+                'link' => resolve_torneo_link((string)($final['latest']['torneo_file'] ?: $final['latest']['torneo'])),
+            ];
+            break;
+        }
+    }
+    return $awards;
+}
+
 function fetch_player_awards(mysqli $conn, array $giocatore, array $teams, string $section): array {
     if (empty($teams)) return [];
     $check = $conn->query("SHOW TABLES LIKE 'albo'");
@@ -197,6 +287,21 @@ function fetch_player_awards(mysqli $conn, array $giocatore, array $teams, strin
     }
     $stmt->close();
     return $awards;
+}
+
+function deduplicate_player_awards(array $awards): array {
+    $result = [];
+    $seen = [];
+    foreach ($awards as $award) {
+        $key = premio_normalize((string)($award['tipo'] ?? '')) . ':'
+            . premio_normalize((string)($award['premio'] ?? '')) . ':'
+            . premio_normalize((string)($award['competizione'] ?? '')) . ':'
+            . premio_normalize((string)($award['squadra'] ?? ''));
+        if (isset($seen[$key])) continue;
+        $seen[$key] = true;
+        $result[] = $award;
+    }
+    return $result;
 }
 
 function format_match_datetime(?string $data, ?string $ora): string {
@@ -355,7 +460,12 @@ function fetchMatches(mysqli $conn, int $playerId, array $teams, bool $future = 
 $playerId = (int)($giocatore['id'] ?? 0);
 $prossimePartite = $giocatore ? fetchMatches($conn, $playerId, $squadre, true) : [];
 $partiteGiocate  = $giocatore ? fetchMatches($conn, $playerId, $squadre, false) : [];
-$premiGiocatore  = $giocatore ? fetch_player_awards($conn, $giocatore, $squadre, $siteSection) : [];
+$premiGiocatore = $giocatore
+    ? deduplicate_player_awards(array_merge(
+        fetch_player_cup_awards($conn, $squadre),
+        fetch_player_awards($conn, $giocatore, $squadre, $siteSection)
+    ))
+    : [];
 
 $seo = [
     'title' => 'Statistiche Giocatore',
