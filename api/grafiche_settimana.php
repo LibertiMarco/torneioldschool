@@ -24,7 +24,9 @@ $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
     canvas { display:block; width:min(100%,540px); height:auto; margin:auto; background:#0d1b2d; box-shadow:0 10px 35px #0008; }
   </style>
 </head>
-<body><main>
+<body>
+<?php if (!$embedded): ?><?php include __DIR__ . '/../includi/header.php'; ?><?php endif; ?>
+<main>
   <?php if (!$embedded): ?><a href="/admin_dashboard.php">Torna alla dashboard</a><?php endif; ?>
   <h1><?= $embedded ? 'MATCHDAY' : 'Grafiche partite giornaliere' ?></h1>
   <p>Il giorno selezionato individua i tornei da pubblicare; ogni PNG contiene tutte le loro partite della settimana, incluse quelle gia giocate.</p>
@@ -35,6 +37,7 @@ $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
   </div>
   <div class="status" id="status"></div><div class="grid" id="grid"></div>
 </main>
+<?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script>
 const dateInput = document.getElementById('date');
 const today = new Date();
@@ -254,4 +257,5 @@ async function generate() {
 }
 document.getElementById('generate').onclick=generate;
 downloadAll.onclick=async()=>{try{await saveAllImages()}catch(error){if(error?.name!=='AbortError')statusEl.textContent=error.message}};
+<?php if (!$embedded): ?>fetch('/includi/footer.html').then(response=>response.text()).then(html=>{document.getElementById('footer-container').innerHTML=html;}).catch(()=>{});<?php endif; ?>
 </script></body></html>

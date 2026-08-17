@@ -15,7 +15,9 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
     @media(max-width:650px){.tabs{grid-template-columns:1fr}.frame{min-height:1750px}}
   </style>
 </head>
-<body><main>
+<body>
+<?php include __DIR__ . '/../includi/header.php'; ?>
+<main>
   <a href="/admin_dashboard.php">Torna alla dashboard</a>
   <h1>Generatore grafiche</h1>
   <p class="intro">Tutti gli strumenti grafici Old School in un’unica area.</p>
@@ -30,6 +32,7 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
     <iframe id="coversFrame" class="frame" title="Generatore copertine" data-src="/api/copertina_partite.php?embed=1"></iframe>
   </section>
 </main>
+<div id="footer-container"></div>
 <script>
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(tab=>tab.classList.toggle('active',tab===button));
@@ -37,4 +40,5 @@ document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click
   const frame=document.getElementById(button.dataset.target);
   if(!frame.getAttribute('src')&&frame.dataset.src)frame.src=frame.dataset.src;
 }));
+fetch('/includi/footer.html').then(response=>response.text()).then(html=>{document.getElementById('footer-container').innerHTML=html;}).catch(()=>{});
 </script></body></html>

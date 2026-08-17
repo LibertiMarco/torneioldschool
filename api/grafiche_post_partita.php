@@ -117,6 +117,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
   </style>
 </head>
 <body>
+<?php if (!$embedded): ?><?php include __DIR__ . '/../includi/header.php'; ?><?php endif; ?>
 <main>
   <?php if (!$embedded): ?><a href="/admin_dashboard.php">Torna alla dashboard</a><?php endif; ?>
   <h1><?= $embedded ? 'FULLTIME E MVP' : 'Grafiche post partita' ?></h1>
@@ -185,6 +186,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     </section>
   </div>
 </main>
+<?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script>
 const $ = id => document.getElementById(id);
 const W=1080,H=1350;
@@ -349,6 +351,7 @@ $('reset').addEventListener('click',()=>{imageFields.forEach(id=>{imageState[id]
 document.querySelector('[data-download=fulltime]').addEventListener('click',()=>download('fulltimeCanvas',`fulltime-${safeName($('ftHome').value)}-${safeName($('ftAway').value)}.png`));
 document.querySelector('[data-download=mvp]').addEventListener('click',()=>download('mvpCanvas',`mvp-${safeName($('mvpName').value)}-${safeName($('mvpSurname').value)}.png`));
 (async()=>{imageState.brand=await loadImage('/img/logo_old_school.png');populateTournaments();drawAll();})();
+<?php if (!$embedded): ?>fetch('/includi/footer.html').then(response=>response.text()).then(html=>{document.getElementById('footer-container').innerHTML=html;}).catch(()=>{});<?php endif; ?>
 </script>
 </body>
 </html>

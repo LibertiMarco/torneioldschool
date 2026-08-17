@@ -55,7 +55,9 @@ if ($stmt && $stmt->execute()) {
     @media(max-width:1050px){.workspace{grid-template-columns:1fr}.controls{position:static}}@media(max-width:760px){.fields,.previews{grid-template-columns:1fr}.wide{grid-column:auto}}
   </style>
 </head>
-<body><main>
+<body>
+<?php if (!$embedded): ?><?php include __DIR__ . '/../includi/header.php'; ?><?php endif; ?>
+<main>
   <?php if (!$embedded): ?><a href="/admin_dashboard.php">Torna alla dashboard</a><?php endif; ?>
   <h1><?= $embedded ? 'COPERTINE' : 'Copertina partite' ?></h1>
   <p class="intro">Crea una copertina Reel e una miniatura YouTube dalla stessa partita e foto dei capitani.</p>
@@ -80,6 +82,8 @@ if ($stmt && $stmt->execute()) {
       <article class="card"><div class="head"><h2>Copertina YouTube</h2><button id="downloadYoutube" type="button">Scarica PNG</button></div><canvas id="youtubeCanvas" width="1280" height="720"></canvas></article>
     </section>
   </div>
+</main>
+<?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script>
 const matches=<?= json_encode($partite,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
 const $=id=>document.getElementById(id);let selected=null,photo=null,brand=null,homeLogo=null,awayLogo=null,tournamentLogo=null;
@@ -105,4 +109,5 @@ async function chooseMatch(){selected=matches.find(m=>String(m.id)===$('match').
 function download(id,name){const a=document.createElement('a');a.download=name;a.href=$(id).toDataURL('image/png');document.body.appendChild(a);a.click();a.remove()}
 $('tournament').onchange=chooseTournament;$('phase').onchange=choosePhase;$('round').onchange=chooseRound;$('match').onchange=()=>chooseMatch().catch(()=>{$('status').textContent='Errore durante il caricamento della partita.'});$('photo').onchange=async()=>{photo=await fileImage($('photo').files?.[0]);draw()};['zoom','posX','posY','scoreHome','scoreAway'].forEach(id=>$(id).oninput=draw);$('downloadReel').onclick=()=>download('reelCanvas',`reel-${safe(selected?.squadra_casa)}-${safe(selected?.squadra_ospite)}.png`);$('downloadYoutube').onclick=()=>download('youtubeCanvas',`youtube-${safe(selected?.squadra_casa)}-${safe(selected?.squadra_ospite)}.png`);
 (async()=>{brand=await loadImage('/img/logo_old_school.png');tournaments();draw()})();
-</script></main></body></html>
+<?php if (!$embedded): ?>fetch('/includi/footer.html').then(response=>response.text()).then(html=>{document.getElementById('footer-container').innerHTML=html;}).catch(()=>{});<?php endif; ?>
+</script></body></html>
