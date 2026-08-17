@@ -1,5 +1,25 @@
 <?php
 require_once __DIR__ . '/../includi/graphics_guard.php';
+require_once __DIR__ . '/../includi/db.php';
+
+$partiteGrafiche = [];
+$partiteStmt = $conn->prepare(
+  "SELECT p.id, p.torneo, p.fase, p.fase_round, p.giornata,
+          p.squadra_casa, p.squadra_ospite, p.gol_casa, p.gol_ospite,
+          p.data_partita, p.giocata,
+          sc.logo AS logo_casa, so.logo AS logo_ospite
+   FROM partite p
+   LEFT JOIN squadre sc ON sc.nome = p.squadra_casa AND sc.torneo = p.torneo
+   LEFT JOIN squadre so ON so.nome = p.squadra_ospite AND so.torneo = p.torneo
+   ORDER BY p.data_partita DESC, p.ora_partita DESC, p.id DESC"
+);
+if ($partiteStmt && $partiteStmt->execute()) {
+  $partiteResult = $partiteStmt->get_result();
+  while ($partita = $partiteResult->fetch_assoc()) {
+    $partiteGrafiche[] = $partita;
+  }
+  $partiteStmt->close();
+}
 ?>
 <!doctype html>
 <html lang="it">
@@ -26,8 +46,9 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
     .fields { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
     .wide { grid-column:1/-1; }
     label { display:grid; gap:6px; color:#e9f1f8; font-size:14px; font-weight:750; }
-    input,button { width:100%; border:1px solid #ffffff18; border-radius:10px; padding:11px 12px; font:inherit; }
-    input { background:#081522; color:#fff; }
+    input,select,button { width:100%; border:1px solid #ffffff18; border-radius:10px; padding:11px 12px; font:inherit; }
+    input,select { background:#081522; color:#fff; }
+    input[readonly] { color:#b9c9d7; background:#0b1926; }
     input[type=file] { padding:8px; color:#bac8d5; }
     button { border:0; cursor:pointer; background:var(--gold); color:#101722; font-weight:850; }
     .secondary { background:#263d53; color:#fff; }
@@ -59,16 +80,21 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
 
       <div id="fulltimePanel" class="panel active">
         <div class="fields">
-          <label class="wide">Torneo<input id="ftTournament" value="TORNEI OLD SCHOOL"></label>
-          <label>Squadra casa<input id="ftHome" value="SQUADRA CASA"></label>
-          <label>Squadra ospite<input id="ftAway" value="SQUADRA OSPITE"></label>
-          <label>Gol casa<input id="ftHomeScore" type="number" min="0" value="3"></label>
-          <label>Gol ospite<input id="ftAwayScore" type="number" min="0" value="2"></label>
-          <label>Logo casa<input id="ftHomeLogo" type="file" accept="image/png,image/jpeg,image/webp"></label>
-          <label>Logo ospite<input id="ftAwayLogo" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          <label class="wide">Partita
+            <select id="ftMatch">
+              <option value="">Seleziona una partita</option>
+              <?php foreach ($partiteGrafiche as $partita): ?>
+                <option value="<?= (int)$partita['id'] ?>"><?= htmlspecialchars(($partita['torneo'] ?? '') . ' — ' . ($partita['squadra_casa'] ?? '') . ' ' . ($partita['gol_casa'] ?? '-') . '-' . ($partita['gol_ospite'] ?? '-') . ' ' . ($partita['squadra_ospite'] ?? '') . ((int)($partita['giocata'] ?? 0) === 1 ? '' : ' (non giocata)'), ENT_QUOTES, 'UTF-8') ?></option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+          <label class="wide">Torneo<input id="ftTournament" value="" readonly></label>
+          <label>Squadra casa<input id="ftHome" value="" readonly></label>
+          <label>Squadra ospite<input id="ftAway" value="" readonly></label>
+          <label>Gol casa<input id="ftHomeScore" type="number" min="0" value="0" readonly></label>
+          <label>Gol ospite<input id="ftAwayScore" type="number" min="0" value="0" readonly></label>
           <label class="wide">Foto pre-match dei capitani<input id="ftCaptains" type="file" accept="image/png,image/jpeg,image/webp"></label>
-          <label>Giornata / fase<input id="ftRound" value="GIORNATA 1"></label>
-          <label>Data<input id="ftDate" type="date"></label>
+          <label class="wide">Giornata / fase<input id="ftRound" value="" readonly></label>
         </div>
       </div>
 
@@ -107,14 +133,15 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
 <script>
 const $ = id => document.getElementById(id);
 const W=1080,H=1350,GOLD='#e8bd45',BG='#07131f',PANEL='#102438',MUTED='#aebdca';
+const matches=<?= json_encode($partiteGrafiche, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const imageState={ftHomeLogo:null,ftAwayLogo:null,ftCaptains:null,mvpPhoto:null,mvpLogo:null,brand:null};
-const imageFields=Object.keys(imageState).filter(key=>key!=='brand');
+const imageFields=['ftCaptains','mvpPhoto','mvpLogo'];
 const safeName=value=>String(value||'grafica').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
 const upper=(value,fallback='')=>String(value||fallback).trim().toUpperCase();
 
 function loadImage(src){return new Promise(resolve=>{if(!src)return resolve(null);const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src=src;});}
 function fileImage(file){return new Promise((resolve,reject)=>{if(!file)return resolve(null);const reader=new FileReader();reader.onload=async()=>resolve(await loadImage(reader.result));reader.onerror=reject;reader.readAsDataURL(file);});}
-function cover(ctx,img,x,y,w,h){if(!img?.naturalWidth)return;const scale=Math.max(w/img.naturalWidth,h/img.naturalHeight);const sw=w/scale,sh=h/scale,sx=(img.naturalWidth-sw)/2,sy=(img.naturalHeight-sh)/2;ctx.drawImage(img,sx,sy,sw,sh,x,y,w,h);}
+function cover(ctx,img,x,y,w,h,position='top'){if(!img?.naturalWidth)return;const scale=Math.max(w/img.naturalWidth,h/img.naturalHeight);const sw=w/scale,sh=h/scale,sx=(img.naturalWidth-sw)/2;let sy=0;if(position==='center')sy=(img.naturalHeight-sh)/2;else if(position==='bottom')sy=img.naturalHeight-sh;sy=Math.max(0,Math.min(sy,img.naturalHeight-sh));ctx.drawImage(img,sx,sy,sw,sh,x,y,w,h);}
 function contain(ctx,img,x,y,w,h){if(!img?.naturalWidth)return;const scale=Math.min(w/img.naturalWidth,h/img.naturalHeight);const dw=img.naturalWidth*scale,dh=img.naturalHeight*scale;ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh);}
 function roundedRect(ctx,x,y,w,h,r,fill){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fillStyle=fill;ctx.fill();}
 function fitText(ctx,text,maxWidth,startSize,minSize=22,weight=800){let size=startSize;do{ctx.font=`${weight} ${size}px Arial`;if(ctx.measureText(text).width<=maxWidth)break;size-=2;}while(size>minSize);return size;}
@@ -125,24 +152,42 @@ function placeholder(ctx,x,y,w,h,label){roundedRect(ctx,x,y,w,h,18,'#172b3d');ct
 function drawFulltime(){const c=$('fulltimeCanvas'),ctx=c.getContext('2d');background(ctx);brandHeader(ctx,$('ftTournament').value,'FULL TIME');const photo={x:48,y:205,w:984,h:600};if(imageState.ftCaptains){ctx.save();ctx.beginPath();ctx.roundRect(photo.x,photo.y,photo.w,photo.h,22);ctx.clip();cover(ctx,imageState.ftCaptains,photo.x,photo.y,photo.w,photo.h);const g=ctx.createLinearGradient(0,photo.y+280,0,photo.y+photo.h);g.addColorStop(0,'transparent');g.addColorStop(1,'#07131fe8');ctx.fillStyle=g;ctx.fillRect(photo.x,photo.y,photo.w,photo.h);ctx.restore();}else placeholder(ctx,photo.x,photo.y,photo.w,photo.h,'CARICA LA FOTO DEI DUE CAPITANI');
   roundedRect(ctx,48,765,984,430,22,PANEL);ctx.fillStyle=GOLD;ctx.fillRect(48,765,984,6);contain(ctx,imageState.ftHomeLogo||imageState.brand,80,835,155,155);contain(ctx,imageState.ftAwayLogo||imageState.brand,845,835,155,155);
   const home=upper($('ftHome').value,'SQUADRA CASA'),away=upper($('ftAway').value,'SQUADRA OSPITE');ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.textAlign='left';fitText(ctx,home,260,34,20,800);ctx.fillText(home,80,1045,260);ctx.textAlign='right';fitText(ctx,away,260,34,20,800);ctx.fillText(away,1000,1045,260);
-  ctx.textAlign='center';ctx.fillStyle=GOLD;ctx.font='900 118px Arial';ctx.fillText(`${$('ftHomeScore').value||0} - ${$('ftAwayScore').value||0}`,W/2,910);ctx.fillStyle='#fff';ctx.font='800 25px Arial';ctx.fillText(upper($('ftRound').value,'PARTITA'),W/2,1038);const date=$('ftDate').value?new Intl.DateTimeFormat('it-IT',{day:'2-digit',month:'long',year:'numeric'}).format(new Date($('ftDate').value+'T12:00:00')).toUpperCase():'';ctx.fillStyle=MUTED;ctx.font='650 22px Arial';ctx.fillText(date,W/2,1080);ctx.textBaseline='alphabetic';footer(ctx);
+  ctx.textAlign='center';ctx.fillStyle=GOLD;ctx.font='900 118px Arial';ctx.fillText(`${$('ftHomeScore').value||0} - ${$('ftAwayScore').value||0}`,W/2,910);ctx.fillStyle=MUTED;ctx.font='750 23px Arial';ctx.fillText(upper($('ftRound').value,'PARTITA'),W/2,1120);ctx.textBaseline='alphabetic';footer(ctx,$('ftTournament').value);
 }
 function drawMvp(){const c=$('mvpCanvas'),ctx=c.getContext('2d');background(ctx);brandHeader(ctx,$('mvpTournament').value,'MVP');const photo={x:48,y:205,w:984,h:760};if(imageState.mvpPhoto){ctx.save();ctx.beginPath();ctx.roundRect(photo.x,photo.y,photo.w,photo.h,22);ctx.clip();cover(ctx,imageState.mvpPhoto,photo.x,photo.y,photo.w,photo.h);const g=ctx.createLinearGradient(0,photo.y+350,0,photo.y+photo.h);g.addColorStop(0,'transparent');g.addColorStop(1,'#07131ff5');ctx.fillStyle=g;ctx.fillRect(photo.x,photo.y,photo.w,photo.h);ctx.restore();}else placeholder(ctx,photo.x,photo.y,photo.w,photo.h,'CARICA LA FOTO DEL GIOCATORE');
-  const name=`${upper($('mvpName').value,'NOME')} ${upper($('mvpSurname').value,'COGNOME')}`;ctx.fillStyle='#fff';ctx.textAlign='center';fitText(ctx,name,820,66,32,900);ctx.fillText(name,W/2,1035,820);const team=upper($('mvpTeam').value,'NOME SQUADRA');ctx.fillStyle=GOLD;fitText(ctx,team,650,31,21,800);ctx.fillText(team,W/2,1088,650);contain(ctx,imageState.mvpLogo,72,992,105,105);const details=upper($('mvpDetails').value,'MAN OF THE MATCH');ctx.fillStyle=MUTED;ctx.font='700 22px Arial';ctx.fillText(details,W/2,1132);footer(ctx);
+  const name=`${upper($('mvpName').value,'NOME')} ${upper($('mvpSurname').value,'COGNOME')}`;ctx.fillStyle='#fff';ctx.textAlign='center';fitText(ctx,name,820,66,32,900);ctx.fillText(name,W/2,1035,820);const team=upper($('mvpTeam').value,'NOME SQUADRA');ctx.fillStyle=GOLD;fitText(ctx,team,650,31,21,800);ctx.fillText(team,W/2,1088,650);contain(ctx,imageState.mvpLogo,72,992,105,105);const details=upper($('mvpDetails').value,'MAN OF THE MATCH');ctx.fillStyle=MUTED;ctx.font='700 22px Arial';ctx.fillText(details,W/2,1132);footer(ctx,$('mvpTournament').value);
 }
-function footer(ctx){ctx.fillStyle=GOLD;ctx.fillRect(48,1258,W-96,2);ctx.fillStyle=MUTED;ctx.font='600 18px Arial';ctx.textAlign='left';ctx.fillText('TORNEI OLD SCHOOL',48,1300);ctx.textAlign='right';ctx.fillText('torneioldschool.it',W-48,1300);}
+function footer(ctx,tournament){ctx.fillStyle=GOLD;ctx.fillRect(48,1258,W-96,2);ctx.fillStyle=MUTED;ctx.font='600 18px Arial';ctx.textAlign='left';ctx.fillText(upper(tournament,'TORNEO'),48,1300,650);ctx.textAlign='right';ctx.fillText('torneioldschool.it',W-48,1300);}
 function drawAll(){drawFulltime();drawMvp();$('status').textContent='Anteprime aggiornate.';}
 async function updateImage(id){imageState[id]=await fileImage($(id).files?.[0]);drawAll();}
+async function selectMatch(){
+  const match=matches.find(item=>String(item.id)===String($('ftMatch').value));
+  if(!match){
+    $('ftTournament').value='';$('ftHome').value='';$('ftAway').value='';$('ftHomeScore').value=0;$('ftAwayScore').value=0;$('ftRound').value='';
+    imageState.ftHomeLogo=null;imageState.ftAwayLogo=null;drawFulltime();return;
+  }
+  $('ftTournament').value=match.torneo||'';
+  $('ftHome').value=match.squadra_casa||'';
+  $('ftAway').value=match.squadra_ospite||'';
+  $('ftHomeScore').value=match.gol_casa??0;
+  $('ftAwayScore').value=match.gol_ospite??0;
+  const phase=String(match.fase||'').toUpperCase();
+  $('ftRound').value=match.fase_round ? String(match.fase_round).replaceAll('_',' ') : (phase==='REGULAR' && match.giornata ? `GIORNATA ${match.giornata}` : phase);
+  [imageState.ftHomeLogo,imageState.ftAwayLogo]=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);
+  drawFulltime();
+  $('status').textContent='Dati e loghi caricati dalla partita selezionata.';
+}
 function download(canvasId,name){const canvas=$(canvasId);const a=document.createElement('a');a.download=name;a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove();}
 
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===button.dataset.panel));}));
 imageFields.forEach(id=>$(id).addEventListener('change',()=>updateImage(id).catch(()=>{$('status').textContent='Impossibile leggere questa immagine.';})));
+$('ftMatch').addEventListener('change',()=>selectMatch().catch(()=>{$('status').textContent='Impossibile caricare i dati della partita.';}));
 document.querySelectorAll('input:not([type=file])').forEach(input=>input.addEventListener('input',drawAll));
 $('generate').addEventListener('click',drawAll);
 $('reset').addEventListener('click',()=>{imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});drawAll();$('status').textContent='Immagini rimosse.';});
 document.querySelector('[data-download=fulltime]').addEventListener('click',()=>download('fulltimeCanvas',`fulltime-${safeName($('ftHome').value)}-${safeName($('ftAway').value)}.png`));
 document.querySelector('[data-download=mvp]').addEventListener('click',()=>download('mvpCanvas',`mvp-${safeName($('mvpName').value)}-${safeName($('mvpSurname').value)}.png`));
-(async()=>{imageState.brand=await loadImage('/img/logo_old_school.png');const now=new Date();$('ftDate').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;drawAll();})();
+(async()=>{imageState.brand=await loadImage('/img/logo_old_school.png');drawAll();})();
 </script>
 </body>
 </html>
