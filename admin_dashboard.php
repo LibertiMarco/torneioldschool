@@ -549,6 +549,12 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
             </div>
 
             <div class="admin-card">
+                <h3>Grafiche post partita</h3>
+                <p>Crea le grafiche Full Time con i capitani e MVP con foto e nome del giocatore.</p><br>
+                <a href="/api/grafiche_post_partita.php">Genera</a>
+            </div>
+
+            <div class="admin-card">
                 <h3>Crea giornata automatica</h3>
                 <p>Genera una nuova giornata di regular season partendo da classifica, slot e disponibilita.</p><br>
                 <a href="/api/crea_giornata_automatica.php">Apri</a>
