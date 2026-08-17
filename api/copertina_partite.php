@@ -47,15 +47,17 @@ if ($stmt && $stmt->execute()) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Copertina partite</title>
+  <link rel="stylesheet" href="/style.min.css?v=20251126">
   <style>
     :root{color-scheme:dark;font-family:Inter,Arial,sans-serif;--gold:#e8bd45;--muted:#aebdca}
     *{box-sizing:border-box}body{margin:0;background:#07111d;color:#fff}main{width:min(1500px,calc(100% - 28px));margin:28px auto 60px}a{color:#9bcaff}h1{margin:12px 0 6px}.intro{color:var(--muted)}
     .workspace{display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);gap:24px;align-items:start}.controls,.card{background:#101e2d;border:1px solid #ffffff12;border-radius:18px;box-shadow:0 18px 50px #0005}.controls{padding:18px;position:sticky;top:16px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:13px}.wide{grid-column:1/-1}label{display:grid;gap:6px;font-size:14px;font-weight:750}input,select,button{width:100%;border:1px solid #ffffff18;border-radius:10px;padding:11px 12px;font:inherit}input,select{background:#081522;color:#fff}input[type=file]{padding:8px;color:#bac8d5}input[type=range]{padding:4px 0;accent-color:var(--gold)}button{border:0;cursor:pointer;background:var(--gold);color:#101722;font-weight:850}.range-value{color:var(--muted);font-size:12px}.status{min-height:22px;margin-top:14px;color:#b9cad9}
     .previews{display:grid;grid-template-columns:minmax(280px,.75fr) minmax(360px,1.25fr);gap:22px}.card{padding:15px}.head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.head h2{margin:0;font-size:18px}.head button{width:auto;padding:9px 13px}canvas{display:block;width:100%;height:auto;margin:auto;background:#091522;box-shadow:0 12px 32px #0008}#reelCanvas{max-width:420px}#youtubeCanvas{max-width:720px}
     @media(max-width:1050px){.workspace{grid-template-columns:1fr}.controls{position:static}}@media(max-width:760px){.fields,.previews{grid-template-columns:1fr}.wide{grid-column:auto}}
+    body.with-site-header>main{margin-top:110px}
   </style>
 </head>
-<body>
+<body class="<?= $embedded ? 'is-embedded' : 'with-site-header' ?>">
 <?php if (!$embedded): ?><?php include __DIR__ . '/../includi/header.php'; ?><?php endif; ?>
 <main>
   <?php if (!$embedded): ?><a href="/admin_dashboard.php">Torna alla dashboard</a><?php endif; ?>

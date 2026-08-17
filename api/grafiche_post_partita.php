@@ -72,6 +72,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Generatore grafiche post partita</title>
+  <link rel="stylesheet" href="/style.min.css?v=20251126">
   <style>
     :root { color-scheme: dark; font-family: Inter, Arial, sans-serif; --bg:#07111d; --panel:#101e2d; --panel2:#152638; --gold:#e8bd45; --muted:#aebdca; }
     * { box-sizing:border-box; }
@@ -114,9 +115,10 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     .status { min-height:22px; margin:14px 0 0; color:#b9cad9; }
     @media(max-width:1050px){ .workspace{grid-template-columns:1fr}.controls{position:static}.previews{grid-template-columns:1fr 1fr} }
     @media(max-width:720px){ .previews{grid-template-columns:1fr}.fields{grid-template-columns:1fr}.wide{grid-column:auto}.actions{grid-template-columns:1fr} }
+    body.with-site-header>main{margin-top:110px}
   </style>
 </head>
-<body>
+<body class="<?= $embedded ? 'is-embedded' : 'with-site-header' ?>">
 <?php if (!$embedded): ?><?php include __DIR__ . '/../includi/header.php'; ?><?php endif; ?>
 <main>
   <?php if (!$embedded): ?><a href="/admin_dashboard.php">Torna alla dashboard</a><?php endif; ?>

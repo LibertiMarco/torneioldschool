@@ -7,15 +7,17 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Generatore grafiche</title>
+  <link rel="stylesheet" href="/style.min.css?v=20251126">
   <style>
     :root{color-scheme:dark;font-family:Inter,Arial,sans-serif;--bg:#07111d;--panel:#101e2d;--gold:#e8bd45;--muted:#aebdca}
     *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#13263a 0,var(--bg) 42%);color:#fff}main{width:min(1540px,calc(100% - 24px));margin:24px auto 50px}a{color:#9bcaff}h1{margin:12px 0 5px}.intro{margin:0 0 20px;color:var(--muted)}
     .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:10px;background:var(--panel);border:1px solid #ffffff12;border-radius:16px 16px 0 0}.tab{border:0;border-radius:10px;padding:14px 16px;background:#203449;color:#dbe7f2;font:800 15px inherit;cursor:pointer}.tab.active{background:var(--gold);color:#101722}
     .frames{background:#081522;border:1px solid #ffffff12;border-top:0;border-radius:0 0 16px 16px;overflow:hidden}.frame{display:none;width:100%;min-height:1450px;border:0;background:#07111d}.frame.active{display:block}
     @media(max-width:650px){.tabs{grid-template-columns:1fr}.frame{min-height:1750px}}
+    body.with-site-header>main{margin-top:110px}
   </style>
 </head>
-<body>
+<body class="with-site-header">
 <?php include __DIR__ . '/../includi/header.php'; ?>
 <main>
   <a href="/admin_dashboard.php">Torna alla dashboard</a>

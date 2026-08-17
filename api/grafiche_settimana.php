@@ -8,6 +8,7 @@ $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Grafiche partite giornaliere</title>
+  <link rel="stylesheet" href="/style.min.css?v=20251126">
   <style>
     :root { color-scheme: dark; font-family: Arial, sans-serif; }
     body { margin: 0; background: #08111f; color: #fff; }
@@ -22,9 +23,10 @@ $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
     .card { padding:18px; background:#111e31; border-radius:16px; overflow:auto; }
     .card-head { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:14px; }
     canvas { display:block; width:min(100%,540px); height:auto; margin:auto; background:#0d1b2d; box-shadow:0 10px 35px #0008; }
+    body.with-site-header>main{margin-top:110px}
   </style>
 </head>
-<body>
+<body class="<?= $embedded ? 'is-embedded' : 'with-site-header' ?>">
 <?php if (!$embedded): ?><?php include __DIR__ . '/../includi/header.php'; ?><?php endif; ?>
 <main>
   <?php if (!$embedded): ?><a href="/admin_dashboard.php">Torna alla dashboard</a><?php endif; ?>
