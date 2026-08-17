@@ -339,7 +339,9 @@ async function selectMatch(){
   drawFulltime();
   $('status').textContent='Dati e loghi caricati dalla partita selezionata.';
 }
-function download(canvasId,name){const canvas=$(canvasId);const a=document.createElement('a');a.download=name;a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove();}
+const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const canvasBlob=canvas=>new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Impossibile creare il PNG.')),'image/png'));
+async function download(canvasId,name){const canvas=$(canvasId),fallbackWindow=isIOS&&!navigator.share?window.open('about:blank','_blank'):null;try{const blob=await canvasBlob(canvas),file=new File([blob],name,{type:'image/png'});if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){await navigator.share({files:[file],title:name});$('status').textContent='Nel pannello Condividi scegli “Salva immagine”.';return}const url=URL.createObjectURL(blob);if(fallbackWindow){fallbackWindow.location.href=url;$('status').textContent='Tieni premuta l’immagine e scegli “Salva in Foto”.';setTimeout(()=>URL.revokeObjectURL(url),60000);return}const a=document.createElement('a');a.download=name;a.href=url;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}catch(error){if(fallbackWindow)fallbackWindow.close();if(error?.name!=='AbortError')$('status').textContent=error.message}}
 
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===button.dataset.panel));}));
 imageFields.forEach(id=>$(id).addEventListener('change',()=>updateImage(id).catch(()=>{$('status').textContent='Impossibile leggere questa immagine.';})));
@@ -351,8 +353,8 @@ document.querySelectorAll('input:not([type=file])').forEach(input=>input.addEven
 $('generate').addEventListener('click',drawAll);
 $('reset').addEventListener('click',()=>{imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});drawAll();$('status').textContent='Immagini rimosse.';});
 document.querySelector('[data-download=fulltime]').addEventListener('click',()=>download('fulltimeCanvas',`fulltime-${safeName($('ftHome').value)}-${safeName($('ftAway').value)}.png`));
-document.querySelector('[data-download=mvp]').addEventListener('click',()=>download('mvpCanvas',`mvp-${safeName($('mvpName').value)}-${safeName($('mvpSurname').value)}.png`));
-(async()=>{imageState.brand=await loadImage('/img/logo_old_school.png');populateTournaments();drawAll();})();
+document.querySelector('[data-download=mvp]').addEventListener('click',()=>download('mvpCanvas',`mvp-${safeName($('mvpNames').value)}.png`));
+(async()=>{imageState.brand=await loadImage('/img/logo_old_school.png');if(isIOS)document.querySelectorAll('[data-download]').forEach(button=>button.textContent='Salva immagine');populateTournaments();drawAll();})();
 <?php if (!$embedded): ?>fetch('/includi/footer.html').then(response=>response.text()).then(html=>{document.getElementById('footer-container').innerHTML=html;}).catch(()=>{});<?php endif; ?>
 </script>
 </body>
