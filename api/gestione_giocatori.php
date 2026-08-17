@@ -390,11 +390,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['associa_squadra'])) {
     $squadraAssoc = (int)($_POST['squadra_associa'] ?? 0);
     $giocatoriAssocRaw = $_POST['giocatore_associa'] ?? [];
     $giocatoriAssoc = array_filter(array_map('intval', (array)$giocatoriAssocRaw));
+    $ruoliAssoc = is_array($_POST['ruolo_associa_player'] ?? null) ? $_POST['ruolo_associa_player'] : [];
+    $capitanoAssocId = (int)($_POST['capitano_associa_player'] ?? 0);
+    $ruoliConsentiti = ['', 'Portiere', 'Difensore', 'Centrocampista', 'Attaccante'];
 
     if ($squadraAssoc && !empty($giocatoriAssoc)) {
-        $ruolo = trim($_POST['ruolo_associa'] ?? '');
-        $isCaptainRequested = isset($_POST['capitano_associa']) && $_POST['capitano_associa'] === '1';
-        $captainAssigned = false;
         $assocExists = false;
         $fotoAssoc = null;
 
@@ -417,18 +417,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['associa_squadra'])) {
                 $fotoAssoc = $fotoUpload ?? $fotoAttuale;
             }
 
+            $ruolo = trim((string)($ruoliAssoc[$giocatoreAssoc] ?? ''));
+            if (!in_array($ruolo, $ruoliConsentiti, true)) {
+                $ruolo = '';
+            }
+            $isCaptain = $capitanoAssocId > 0 && $capitanoAssocId === $giocatoreAssoc;
+
             $pivot->assegna(
                 $giocatoreAssoc,
                 $squadraAssoc,
                 $fotoAssoc,
                 ['ruolo' => $ruolo],
                 false,
-                $isCaptainRequested && !$captainAssigned
+                $isCaptain
             );
-
-            if ($isCaptainRequested && !$captainAssigned) {
-                $captainAssigned = true;
-            }
         }
 
         $redirectParams = $assocExists ? ['assoc_exists' => 1] : [];
@@ -864,6 +866,10 @@ $goalExtraTeamMapJson = htmlspecialchars(
         .assoc-player-copy { min-width: 0; }
         .assoc-player-name { display: block; color: #15293e; font-weight: 750; }
         .assoc-player-meta { display: block; margin-top: 2px; color: #6b7788; font-size: .8rem; }
+        .assoc-player-settings { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+        .assoc-player-role { width: auto; min-width: 165px; margin: 0; padding: 8px 10px; }
+        .assoc-captain-choice { display: inline-flex; align-items: center; gap: 5px; margin: 0; white-space: nowrap; font-size: .86rem; font-weight: 700; color: #394b60; }
+        .assoc-captain-choice input { width: 18px; height: 18px; margin: 0; accent-color: #c8102e; }
         .assoc-add-player, .assoc-remove-player {
             flex: 0 0 auto;
             border: 0;
@@ -888,6 +894,9 @@ $goalExtraTeamMapJson = htmlspecialchars(
                 flex-direction: row;
             }
             .assoc-player-result, .assoc-selected-player { padding: 12px 10px; }
+            .assoc-selected-player { align-items: flex-start; flex-direction: column; }
+            .assoc-player-settings { width: 100%; justify-content: space-between; }
+            .assoc-player-role { flex: 1 1 170px; min-width: 0; }
         }
     </style>
 </head>
@@ -1158,22 +1167,6 @@ $goalExtraTeamMapJson = htmlspecialchars(
           </div>
           <small>Puoi effettuare pi&ugrave; ricerche: i giocatori selezionati restano nella lista fino al salvataggio.</small>
       </div>
-      <div class="form-group">
-          <label>Ruolo in squadra</label>
-          <select name="ruolo_associa" id="ruolo_associa">
-              <option value="">-- Seleziona un ruolo --</option>
-              <option value="Portiere">Portiere</option>
-              <option value="Difensore">Difensore</option>
-              <option value="Centrocampista">Centrocampista</option>
-              <option value="Attaccante">Attaccante</option>
-          </select>
-      </div>
-
-      <div class="form-group">
-          <label><input type="checkbox" name="capitano_associa" id="capitano_associa" value="1"> Capitano della squadra</label>
-          <small id="capitano_associa_hint">Un solo capitano per squadra; un giocatore pu&ograve; essere capitano di squadre diverse. Se selezioni pi&ugrave; giocatori il flag verr&agrave; disabilitato.</small>
-      </div>
-
       <div class="form-group">
           <label>Foto specifica (opzionale)</label>
           <div class="file-upload">
@@ -1743,13 +1736,7 @@ async function fetchGiocatoriAssociatiIds(squadraId) {
 }
 
 function updateCaptainAvailability() {
-    if (!assocGiocatore || !assocCapitano) return;
-    const selectedCount = assocSelectedPlayersMap.size;
-    const shouldDisable = selectedCount > 1;
-    assocCapitano.disabled = shouldDisable;
-    if (shouldDisable) {
-        assocCapitano.checked = false;
-    }
+    return;
 }
 
 async function aggiornaGiocatoriDisponibiliPerAssociazione() {
@@ -1806,14 +1793,37 @@ function renderAssocSelectedPlayers() {
         name.textContent = buildPlayerLabel(player, "cognome");
         const meta = document.createElement("span");
         meta.className = "assoc-player-meta";
-        meta.textContent = `ID ${player.id}`;
+        meta.textContent = player.ruolo ? `Ruolo registrato: ${player.ruolo}` : "Ruolo non impostato";
         copy.append(name, meta);
+        const settings = document.createElement("div");
+        settings.className = "assoc-player-settings";
+        const role = document.createElement("select");
+        role.className = "assoc-player-role";
+        role.name = `ruolo_associa_player[${player.id}]`;
+        role.dataset.playerRole = player.id;
+        ["", "Portiere", "Difensore", "Centrocampista", "Attaccante"].forEach(value => {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = value || "-- Ruolo --";
+            role.appendChild(option);
+        });
+        role.value = player._assocRole ?? (isPortiereRuolo(player.ruolo) ? "Portiere" : "");
+        const captain = document.createElement("label");
+        captain.className = "assoc-captain-choice";
+        const captainRadio = document.createElement("input");
+        captainRadio.type = "checkbox";
+        captainRadio.name = "capitano_associa_player";
+        captainRadio.value = player.id;
+        captainRadio.dataset.playerCaptain = player.id;
+        captainRadio.checked = Boolean(player._assocCaptain);
+        captain.append(captainRadio, document.createTextNode("Capitano"));
         const remove = document.createElement("button");
         remove.type = "button";
         remove.className = "assoc-remove-player";
         remove.dataset.playerId = player.id;
         remove.textContent = "Rimuovi";
-        row.append(copy, remove);
+        settings.append(role, captain, remove);
+        row.append(copy, settings);
         assocSelectedPlayers.appendChild(row);
     });
     syncAssocHiddenSelect();
@@ -1847,7 +1857,7 @@ function renderAssocGiocatori(term = "") {
         name.textContent = buildPlayerLabel(player, "cognome");
         const meta = document.createElement("span");
         meta.className = "assoc-player-meta";
-        meta.textContent = `ID ${player.id}${player.ruolo ? ` · ${player.ruolo}` : ""}`;
+        meta.textContent = player.ruolo || "Ruolo non impostato";
         copy.append(name, meta);
         const add = document.createElement("button");
         add.type = "button";
@@ -2288,6 +2298,25 @@ assocSelectedPlayers?.addEventListener("click", e => {
     assocSelectedPlayersMap.delete(String(button.dataset.playerId || ""));
     renderAssocSelectedPlayers();
     renderAssocGiocatori(assocGiocatoreSearch?.value || "");
+});
+assocSelectedPlayers?.addEventListener("change", e => {
+    const roleSelect = e.target.closest("[data-player-role]");
+    if (roleSelect) {
+        const player = assocSelectedPlayersMap.get(String(roleSelect.dataset.playerRole || ""));
+        if (player) player._assocRole = roleSelect.value;
+        return;
+    }
+    const captainRadio = e.target.closest("[data-player-captain]");
+    if (captainRadio) {
+        assocSelectedPlayersMap.forEach(player => { player._assocCaptain = false; });
+        const player = assocSelectedPlayersMap.get(String(captainRadio.dataset.playerCaptain || ""));
+        if (captainRadio.checked) {
+            assocSelectedPlayers.querySelectorAll("[data-player-captain]").forEach(input => {
+                if (input !== captainRadio) input.checked = false;
+            });
+            if (player) player._assocCaptain = true;
+        }
+    }
 });
 updateCaptainAvailability();
 renderAssocSelectedPlayers();
