@@ -515,7 +515,7 @@ function stepper(field, label, value) {
 }
 
 function renderPlayerRow(player) {
-  const present = player.statistica_id ? Number(player.presenza) === 1 : true;
+  const present = player.statistica_id ? Number(player.presenza) === 1 : !player.partitaHaStatistiche;
   const vote = player.voto === null || player.voto === undefined ? "6" : player.voto;
   return `<div class="player-row ${present ? "is-present" : ""}" data-player-id="${Number(player.giocatore_id)}" data-team-id="${Number(player.squadra_id)}" data-side="${escapeHtml(player.lato)}">
     <label class="player-name">
@@ -560,6 +560,8 @@ async function loadLineup() {
   matchInfo = await matchResponse.json();
   const players = await lineupResponse.json();
   if (!lineupResponse.ok || !Array.isArray(players)) throw new Error(players?.error || "Distinta non disponibile");
+  const partitaHaStatistiche = players.some(player => Boolean(player.statistica_id));
+  players.forEach(player => { player.partitaHaStatistiche = partitaHaStatistiche; });
 
   document.getElementById("partitaInfo").innerHTML = `<b>${escapeHtml(matchInfo.squadra_casa)} - ${escapeHtml(matchInfo.squadra_ospite)}</b><br>${escapeHtml(matchInfo.data_partita || "")} | ${escapeHtml(String(matchInfo.ora_partita || "").slice(0,5))}<br><span style="font-size:14px;color:#444;">${escapeHtml(matchInfo.torneo || "")} - ${escapeHtml(matchInfo.fase || "REGULAR")}</span>`;
   document.getElementById("homeScoreName").textContent = matchInfo.squadra_casa || "Casa";
