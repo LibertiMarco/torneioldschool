@@ -105,6 +105,100 @@ if ($giocatore) {
     }
 }
 
+function premio_normalize(string $value): string {
+    $value = trim(mb_strtolower($value, 'UTF-8'));
+    if (function_exists('iconv')) {
+        $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+        if ($ascii !== false) $value = $ascii;
+    }
+    return trim(preg_replace('/[^a-z0-9]+/', ' ', $value) ?? '');
+}
+
+function premio_competizione_matches_team(string $competizione, array $team): bool {
+    $competitionKey = premio_normalize($competizione);
+    if ($competitionKey === '') return false;
+
+    $aliases = [
+        (string)($team['torneo'] ?? ''),
+        (string)($team['torneo_nome'] ?? ''),
+        (string)($team['torneo_file'] ?? ''),
+    ];
+    foreach ($aliases as $alias) {
+        $alias = preg_replace('/\.(php|html?)$/i', '', basename(str_replace('\\', '/', $alias))) ?? $alias;
+        $aliasKey = premio_normalize($alias);
+        if ($aliasKey === '') continue;
+        if ($competitionKey === $aliasKey) return true;
+        if (strlen($aliasKey) >= 5 && (str_contains($competitionKey, $aliasKey) || str_contains($aliasKey, $competitionKey))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function premio_team_category(string $premio): string {
+    $key = premio_normalize($premio);
+    if (str_contains($key, 'regular season')) return 'Regular Season';
+    if (str_contains($key, 'coppa gold')) return 'Coppa Gold';
+    if (str_contains($key, 'coppa silver')) return 'Coppa Silver';
+    if (str_contains($key, 'coppa bronzo') || str_contains($key, 'coppa bronze')) return 'Coppa Bronzo';
+    return '';
+}
+
+function fetch_player_awards(mysqli $conn, array $giocatore, array $teams, string $section): array {
+    if (empty($teams)) return [];
+    $check = $conn->query("SHOW TABLES LIKE 'albo'");
+    if (!$check || $check->num_rows === 0) return [];
+
+    $sql = "SELECT id, competizione, premio, vincitrice, vincitrice_logo, torneo_logo,
+                   link_torneo, inizio_anno, fine_anno
+            FROM albo
+            WHERE COALESCE(sezione, 'calcio') = ?
+            ORDER BY COALESCE(fine_anno, inizio_anno, 0) DESC, id DESC";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) return [];
+    $stmt->bind_param('s', $section);
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return [];
+    }
+
+    $playerName = premio_normalize(trim((string)($giocatore['nome'] ?? '') . ' ' . (string)($giocatore['cognome'] ?? '')));
+    $awards = [];
+    $seen = [];
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $winnerKey = premio_normalize((string)($row['vincitrice'] ?? ''));
+        $teamCategory = premio_team_category((string)($row['premio'] ?? ''));
+        foreach ($teams as $team) {
+            if (!premio_competizione_matches_team((string)$row['competizione'], $team)) continue;
+            $teamNameKey = premio_normalize((string)($team['nome'] ?? ''));
+            $isTeamAward = $teamCategory !== '' && $teamNameKey !== '' && $winnerKey === $teamNameKey;
+            $isIndividualAward = $teamCategory === '' && $playerName !== '' && $winnerKey === $playerName;
+            if (!$isTeamAward && !$isIndividualAward) continue;
+
+            $dedupeKey = (int)$row['id'] . ':' . ($isTeamAward ? 'team' : 'individual');
+            if (isset($seen[$dedupeKey])) break;
+            $seen[$dedupeKey] = true;
+            $awards[] = [
+                'id' => (int)$row['id'],
+                'tipo' => $isTeamAward ? 'Squadra' : 'Individuale',
+                'premio' => $isTeamAward ? $teamCategory : (string)$row['premio'],
+                'premio_originale' => (string)$row['premio'],
+                'competizione' => (string)$row['competizione'],
+                'squadra' => (string)($team['nome'] ?? ''),
+                'anno' => (string)($row['fine_anno'] ?: $row['inizio_anno'] ?: ''),
+                'logo' => $isTeamAward
+                    ? ((string)($row['vincitrice_logo'] ?? '') ?: (string)($team['logo'] ?? ''))
+                    : ((string)($row['torneo_logo'] ?? '') ?: (string)($giocatore['foto'] ?? '')),
+                'link' => resolve_torneo_link((string)($row['link_torneo'] ?? '')),
+            ];
+            break;
+        }
+    }
+    $stmt->close();
+    return $awards;
+}
+
 function format_match_datetime(?string $data, ?string $ora): string {
     if (empty($data)) return '';
     $dateTime = trim($data . ' ' . ($ora ?? ''));
@@ -261,6 +355,7 @@ function fetchMatches(mysqli $conn, int $playerId, array $teams, bool $future = 
 $playerId = (int)($giocatore['id'] ?? 0);
 $prossimePartite = $giocatore ? fetchMatches($conn, $playerId, $squadre, true) : [];
 $partiteGiocate  = $giocatore ? fetchMatches($conn, $playerId, $squadre, false) : [];
+$premiGiocatore  = $giocatore ? fetch_player_awards($conn, $giocatore, $squadre, $siteSection) : [];
 
 $seo = [
     'title' => 'Statistiche Giocatore',
@@ -302,6 +397,15 @@ $seo = [
         .team-head { display: flex; align-items: center; gap: 10px; }
         .team-head img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1px solid #e2e8f0; }
         .team-stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.95rem; color: #1a2d44; }
+        .awards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+        .award-card { display: flex; gap: 12px; align-items: center; min-height: 88px; padding: 13px; border: 1px solid #e2e8f0; border-radius: 12px; background: linear-gradient(145deg, #fff, #f8fafc); color: inherit; text-decoration: none; }
+        .award-card[href] { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+        .award-card[href]:hover { transform: translateY(-2px); border-color: #c9a227; box-shadow: 0 10px 24px rgba(15,31,51,.12); }
+        .award-icon { width: 62px; height: 62px; flex: 0 0 62px; object-fit: cover; border-radius: 12px; border: 1px solid #e1d18b; background: #fff; }
+        .award-info { min-width: 0; }
+        .award-info strong { display: block; color: #15293e; font-size: 1rem; }
+        .award-info small { display: block; color: #5f6b7b; margin-top: 3px; line-height: 1.35; }
+        .award-type { display: inline-block; margin-bottom: 5px; padding: 3px 7px; border-radius: 999px; background: #fff4c7; color: #765b00; font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
         .simple-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
         .simple-list li { padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; }
         .simple-list strong { color: #15293e; }
@@ -523,6 +627,28 @@ $seo = [
                     <span class="stat-chip">Media voto: <?= $giocatore['media_voti'] !== null ? h($giocatore['media_voti']) : 'N/D' ?></span>
                 </div>
             </div>
+        </section>
+
+        <section class="section-card">
+            <h3>Premi e trofei</h3>
+            <?php if (empty($premiGiocatore)): ?>
+                <p class="muted">Nessun premio presente nell'albo d'oro per questo giocatore o per le sue squadre.</p>
+            <?php else: ?>
+                <div class="awards-grid">
+                    <?php foreach ($premiGiocatore as $premio): ?>
+                        <?php $tag = $premio['link'] !== '' ? 'a' : 'div'; ?>
+                        <<?= $tag ?> class="award-card"<?= $premio['link'] !== '' ? ' href="' . h($premio['link']) . '"' : '' ?>>
+                            <img class="award-icon" src="<?= h($premio['logo'] ?: '/img/tornei/pallone.png') ?>" alt="" onerror="this.src='/img/tornei/pallone.png'">
+                            <div class="award-info">
+                                <span class="award-type"><?= h($premio['tipo']) ?></span>
+                                <strong><?= h($premio['premio']) ?></strong>
+                                <small><?= h($premio['competizione']) ?><?= $premio['anno'] !== '' ? ' &middot; ' . h($premio['anno']) : '' ?></small>
+                                <small>Con <?= h($premio['squadra']) ?></small>
+                            </div>
+                        </<?= $tag ?>>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </section>
 
         <section class="section-card">
