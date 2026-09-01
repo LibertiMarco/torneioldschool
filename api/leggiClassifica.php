@@ -1,6 +1,9 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: public, max-age=30, stale-while-revalidate=300');
+// La classifica cambia quando viene finalizzato un risultato: il browser deve
+// sempre validare la risposta, mentre la breve cache applicativa viene
+// invalidata esplicitamente dai flussi di salvataggio.
+header('Cache-Control: no-cache, must-revalidate');
 
 // --- CONNESSIONE DATABASE TRAMITE FILE ESTERNO ---
 require_once __DIR__ . '/../includi/db.php';

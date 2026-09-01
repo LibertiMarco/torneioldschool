@@ -70,3 +70,20 @@ if (!function_exists('tos_api_cache_delete')) {
         }
     }
 }
+
+if (!function_exists('tos_api_cache_delete_standings')) {
+    /**
+     * Invalida la classifica pubblica di un torneo dopo una modifica ai risultati.
+     */
+    function tos_api_cache_delete_standings(string $torneo): void
+    {
+        $torneo = trim($torneo);
+        if ($torneo === '') {
+            return;
+        }
+
+        tos_api_cache_delete(tos_api_cache_build_key('leggiClassifica', [
+            'torneo' => $torneo,
+        ]));
+    }
+}

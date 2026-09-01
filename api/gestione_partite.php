@@ -5,6 +5,7 @@ require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/partite_schema.php';
 require_once __DIR__ . '/../includi/push_notifications.php';
 require_once __DIR__ . '/../includi/torneo_phase_rules.php';
+require_once __DIR__ . '/../includi/api_cache.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   csrf_or_same_origin_require('admin_partite');
@@ -434,6 +435,7 @@ function ricostruisci_classifica_da_partite(mysqli $conn, string $torneo): void 
     }
   }
   $sel->close();
+  tos_api_cache_delete_standings($torneo);
 }
 
 function get_utenti_per_squadre(mysqli $conn, string $torneo, array $squadre): array {

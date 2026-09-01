@@ -6,6 +6,7 @@ class Partita {
     public function __construct() {
         require __DIR__ . '/../../includi/db.php';
         require_once __DIR__ . '/../../includi/partite_schema.php';
+        require_once __DIR__ . '/../../includi/api_cache.php';
         $this->conn = $conn;
         ensure_partite_phase_schema($this->conn);
     }
@@ -220,6 +221,7 @@ class Partita {
                 $vecchiDati['gol_casa'],
                 $vecchiDati['gol_ospite']
             );
+            tos_api_cache_delete_standings((string)$vecchiDati['torneo']);
         }
 
         if (
@@ -232,6 +234,7 @@ class Partita {
 
         $this->aggiornaStatistiche($torneo, $squadraCasa, $golCasa, $golOspite);
         $this->aggiornaStatistiche($torneo, $squadraOspite, $golOspite, $golCasa);
+        tos_api_cache_delete_standings((string)$torneo);
     }
 
     private function annullaVecchioRisultato($torneo, $squadraCasa, $squadraOspite, $golCasa, $golOspite) {
