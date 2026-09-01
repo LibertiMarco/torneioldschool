@@ -422,6 +422,76 @@ $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?
       color: #64748b;
       font-size: 0.94rem;
     }
+    .fos-rules {
+      margin-top: 24px;
+    }
+    .fos-rules-header {
+      margin-bottom: 18px;
+    }
+    .fos-rules-header h2 {
+      margin-bottom: 7px;
+    }
+    .fos-rules-header p {
+      margin-bottom: 0;
+    }
+    .fos-rules-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 18px;
+    }
+    .fos-rule {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 48px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #263b52;
+      font-weight: 700;
+    }
+    .fos-rule-value {
+      flex: 0 0 auto;
+      min-width: 54px;
+      padding: 6px 10px;
+      border-radius: 9px;
+      background: #0f4c81;
+      color: #fff;
+      text-align: center;
+      font-size: 1.05rem;
+      line-height: 1;
+    }
+    .fos-rule-value.malus {
+      background: #cf2634;
+    }
+    .fos-rule-value.neutral {
+      background: #334e68;
+    }
+    .fos-special-rules {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .fos-special-rule {
+      padding: 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #10243c, #183f68);
+      color: #fff;
+    }
+    .fos-special-rule strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #fff;
+      font-size: 1.1rem;
+    }
+    .fos-special-rule span {
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
     @media (max-width: 720px) {
       .fos-page {
         padding: 78px 14px 56px;
@@ -439,6 +509,10 @@ $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?
       }
       .fos-link-box input {
         flex-basis: auto;
+      }
+      .fos-rules-grid,
+      .fos-special-rules {
+        grid-template-columns: 1fr;
       }
     }
     @media (max-width: 640px) {
@@ -599,6 +673,46 @@ $latestLeadDate = $leadCount > 0 ? (string)($currentUserLeads[0]['created_at'] ?
       </aside>
     </div>
   <?php endif; ?>
+
+  <section class="fos-card fos-rules" aria-labelledby="fos-rules-title">
+    <div class="fos-rules-header">
+      <h2 id="fos-rules-title">Bonus &amp; Malus</h2>
+      <p>I punteggi ufficiali applicati in ogni giornata del Fanta Old School.</p>
+    </div>
+
+    <div class="fos-rules-grid">
+      <div class="fos-rule"><span>Gol segnato</span><strong class="fos-rule-value">+3</strong></div>
+      <div class="fos-rule"><span>Assist standard</span><strong class="fos-rule-value">+1</strong></div>
+      <div class="fos-rule"><span>Gol subito</span><strong class="fos-rule-value malus">-1</strong></div>
+      <div class="fos-rule"><span>Assist soft</span><strong class="fos-rule-value">+1</strong></div>
+      <div class="fos-rule"><span>Rigore segnato</span><strong class="fos-rule-value">+3</strong></div>
+      <div class="fos-rule"><span>Assist gold</span><strong class="fos-rule-value">+1</strong></div>
+      <div class="fos-rule"><span>Rigore sbagliato</span><strong class="fos-rule-value malus">-3</strong></div>
+      <div class="fos-rule"><span>Autogol</span><strong class="fos-rule-value malus">-2</strong></div>
+      <div class="fos-rule"><span>Rigore parato</span><strong class="fos-rule-value">+3</strong></div>
+      <div class="fos-rule"><span>Gol del pareggio</span><strong class="fos-rule-value neutral">0</strong></div>
+      <div class="fos-rule"><span>Ammonizione</span><strong class="fos-rule-value malus">-0,5</strong></div>
+      <div class="fos-rule"><span>Gol della vittoria</span><strong class="fos-rule-value neutral">0</strong></div>
+      <div class="fos-rule"><span>Espulsione</span><strong class="fos-rule-value malus">-1</strong></div>
+      <div class="fos-rule"><span>Porta inviolata</span><strong class="fos-rule-value">+1</strong></div>
+      <div class="fos-rule"><span>Player of the Match</span><strong class="fos-rule-value">+0,5</strong></div>
+    </div>
+
+    <div class="fos-special-rules">
+      <div class="fos-special-rule">
+        <strong>Massimo 5 sostituzioni</strong>
+        <span>Il limite massimo è di 5 sostituzioni per ogni giornata.</span>
+      </div>
+      <div class="fos-special-rule">
+        <strong>Nessun modificatore</strong>
+        <span>Non è previsto alcun modificatore di reparto o di formazione.</span>
+      </div>
+      <div class="fos-special-rule">
+        <strong>Formazione non inserita</strong>
+        <span>Se non inserisci la formazione, viene recuperata quella della giornata precedente.</span>
+      </div>
+    </div>
+  </section>
 </main>
 
 <div id="footer-container"></div>
