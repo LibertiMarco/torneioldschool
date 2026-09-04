@@ -3,11 +3,14 @@ class Partita {
     private $conn;
     private $table = "partite";
 
-    public function __construct() {
-        require __DIR__ . '/../../includi/db.php';
+    public function __construct(?mysqli $connection = null) {
+        if ($connection === null) {
+            require __DIR__ . '/../../includi/db.php';
+            $connection = $conn;
+        }
         require_once __DIR__ . '/../../includi/partite_schema.php';
         require_once __DIR__ . '/../../includi/api_cache.php';
-        $this->conn = $conn;
+        $this->conn = $connection;
         ensure_partite_phase_schema($this->conn);
     }
 

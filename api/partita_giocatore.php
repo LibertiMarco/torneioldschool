@@ -251,9 +251,12 @@ function aggiornaGolPartita(mysqli $conn, int $partitaId, bool $markAsPlayed = f
     ];
 }
 
-function aggiornaClassificaDaInfo(?array $info): void {
+function aggiornaClassificaDaInfo(mysqli $conn, ?array $info): void {
     if (!$info) return;
-    $partitaModel = new Partita();
+    // Usa la stessa connessione del salvataggio: durante la finalizzazione siamo
+    // dentro una transazione e una seconda connessione non vedrebbe ancora
+    // giocata=1, facendo saltare l'aggiornamento della classifica.
+    $partitaModel = new Partita($conn);
     $vecchi = [
         'torneo' => $info['torneo'],
         'squadra_casa' => $info['squadra_casa'],
@@ -609,7 +612,7 @@ if ($azione === 'save_bulk') {
             ricalcolaStatistiche($conn, $partitaId, (int)$giocatoreId);
         }
         $infoClassifica = aggiornaGolPartita($conn, $partitaId, $finalizza);
-        aggiornaClassificaDaInfo($infoClassifica);
+        aggiornaClassificaDaInfo($conn, $infoClassifica);
         $conn->commit();
     } catch (Throwable $e) {
         $conn->rollback();
@@ -690,7 +693,7 @@ if ($azione === 'add') {
 
     ricalcolaStatistiche($conn, $partita_id, $giocatore);
     $infoClassifica = aggiornaGolPartita($conn, $partita_id, $ultimaStatistica);
-    aggiornaClassificaDaInfo($infoClassifica);
+    aggiornaClassificaDaInfo($conn, $infoClassifica);
     inviaNotificaEsito($conn, $partita_id, $infoClassifica);
 
     echo json_encode(["success" => true, "message" => "Statistica aggiunta"]);
@@ -737,7 +740,7 @@ if ($azione === 'edit') {
     if ($rPrev) {
       ricalcolaStatistiche($conn, (int)$rPrev['partita_id'], (int)$rPrev['giocatore_id']);
       $infoClassifica = aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
-      aggiornaClassificaDaInfo($infoClassifica);
+      aggiornaClassificaDaInfo($conn, $infoClassifica);
       inviaNotificaEsito($conn, (int)$rPrev['partita_id'], $infoClassifica);
     }
     exit;
@@ -763,7 +766,7 @@ if ($azione === 'delete') {
     if ($rPrev) {
       ricalcolaStatistiche($conn, (int)$rPrev['partita_id'], (int)$rPrev['giocatore_id']);
       $infoClassifica = aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
-      aggiornaClassificaDaInfo($infoClassifica);
+      aggiornaClassificaDaInfo($conn, $infoClassifica);
       inviaNotificaEsito($conn, (int)$rPrev['partita_id'], $infoClassifica);
     }
 
