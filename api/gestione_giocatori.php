@@ -472,13 +472,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['modifica_associazione
 
 // --- DISSOCIA ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dissocia_squadra'])) {
-    $giocatoreId = (int)($_POST['giocatore_rimozione'] ?? $_POST['giocatore_rimozione_hidden'] ?? 0);
+    $ids = $_POST['giocatori_rimozione'] ?? [$_POST['giocatore_rimozione'] ?? $_POST['giocatore_rimozione_hidden'] ?? 0];
+    $ids = is_array($ids) ? array_unique(array_filter($ids, static function ($id) {
+        return is_scalar($id) && filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false;
+    })) : [];
     $squadraId = (int)($_POST['squadra_rimozione'] ?? $_POST['squadra_rimozione_hidden'] ?? 0);
 
-    if ($giocatoreId && $squadraId) {
-        $pivot->dissocia($giocatoreId, $squadraId);
+    $removed = 0;
+    $failed = !$ids || $squadraId <= 0;
+    if (!$failed) {
+        foreach ($ids as $id) {
+            try {
+                if ($pivot->esisteAssociazione((int)$id, $squadraId) && $pivot->dissocia((int)$id, $squadraId)) {
+                    $removed++;
+                } else {
+                    $failed = true;
+                }
+            } catch (Throwable $e) {
+                error_log('Rimozione associazione: ' . $e->getMessage());
+                $failed = true;
+            }
+        }
+        invalidateGoalExtraTeamCache($conn, $squadraId);
     }
-
+    $_SESSION['remove_assoc_result'] = ['removed' => $removed, 'failed' => $failed];
     redirectGestione('associazioni', ['assoc_op' => 'rimuovi']);
 }
 
@@ -913,6 +930,14 @@ $goalExtraTeamMapJson = htmlspecialchars(
 <?php endif; ?>
 <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
 <h1 class="admin-title">Gestione Giocatori</h1>
+<?php if (isset($_SESSION['remove_assoc_result'])):
+    $result = $_SESSION['remove_assoc_result'];
+    unset($_SESSION['remove_assoc_result']); ?>
+<div class="admin-alert <?= $result['failed'] ? 'error' : 'success' ?>">
+    Giocatori rimossi dalla squadra: <?= (int)$result['removed'] ?>.
+    <?php if ($result['failed']): ?>Una o più rimozioni non sono riuscite. Verifica la squadra e riprova per i giocatori ancora presenti.<?php endif; ?>
+</div>
+<?php endif; ?>
 
 <!--
 <form method="POST" style="margin: 12px 0 6px;">
@@ -1312,15 +1337,13 @@ $goalExtraTeamMapJson = htmlspecialchars(
       </div>
 
       <div class="form-group">
-          <label>Giocatore</label>
-          <select name="giocatore_rimozione" id="remGiocatore" required disabled>
-              <option value="">-- Seleziona un giocatore --</option>
-          </select>
+          <label>Giocatori da rimuovere</label>
       </div>
 
-      <input type="hidden" name="squadra_rimozione_hidden" id="remSquadraHidden">
-      <input type="hidden" name="giocatore_rimozione_hidden" id="remGiocatoreHidden">
-      <button type="button" class="btn-danger btn-remove-assoc">Rimuovi associazione</button>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="remSelectAll" disabled style="width:auto"> Seleziona tutti</label>
+      <div id="remPlayers" style="max-height:320px;overflow:auto" aria-live="polite">Seleziona una squadra.</div>
+      <p id="remCount" aria-live="polite">0 giocatori selezionati</p>
+      <button type="button" class="btn-danger btn-remove-assoc" disabled>Rimuovi selezionati</button>
   </form>
 </section>
 
@@ -1524,9 +1547,31 @@ const assocSubmitButton = document.getElementById("assocSubmitButton");
 const assocCapitano = document.getElementById("capitano_associa");
 const remTorneo = document.getElementById("remTorneo");
 const remSquadra = document.getElementById("remSquadra");
-const remGiocatore = document.getElementById("remGiocatore");
-const remSquadraHidden = document.getElementById("remSquadraHidden");
-const remGiocatoreHidden = document.getElementById("remGiocatoreHidden");
+const remPlayers = document.getElementById("remPlayers");
+const remSelectAll = document.getElementById("remSelectAll");
+let remLoadVersion = 0;
+function selectedRemovalPlayers() {
+    return Array.from(remPlayers.querySelectorAll('input:checked'));
+}
+function updateRemovalSelection() {
+    const count = selectedRemovalPlayers().length;
+    const total = remPlayers.querySelectorAll('input').length;
+    document.getElementById('remCount').textContent = `${count} giocatori selezionati`;
+    remSelectAll.disabled = total === 0;
+    remSelectAll.checked = total > 0 && count === total;
+    remSelectAll.indeterminate = count > 0 && count < total;
+    document.querySelector('.btn-remove-assoc').disabled = count === 0;
+}
+function resetRemovalPlayers(message = 'Seleziona una squadra.') {
+    remLoadVersion++;
+    remPlayers.textContent = message;
+    updateRemovalSelection();
+}
+remPlayers.addEventListener('change', updateRemovalSelection);
+remSelectAll.addEventListener('change', () => {
+    remPlayers.querySelectorAll('input').forEach(input => input.checked = remSelectAll.checked);
+    updateRemovalSelection();
+});
 const modAssocTorneo = document.getElementById("modAssocTorneo");
 const modAssocSquadra = document.getElementById("modAssocSquadra");
 const modAssocGiocatore = document.getElementById("modAssocGiocatore");
@@ -2194,17 +2239,15 @@ function closeRemoveAssocModal() {
 
 removeAssocButtons.forEach(btn => {
     btn.addEventListener("click", () => {
-        if (!remSquadra || !remGiocatore) return;
-        if (!remSquadra.value || !remGiocatore.value) {
-            alert("Seleziona sia la squadra sia il giocatore da rimuovere.");
+        if (!remSquadra || !remPlayers) return;
+        if (!remSquadra.value || !selectedRemovalPlayers().length) {
+            alert("Seleziona la squadra e almeno un giocatore da rimuovere.");
             return;
         }
-        if (remSquadraHidden) remSquadraHidden.value = remSquadra.value;
-        if (remGiocatoreHidden) remGiocatoreHidden.value = remGiocatore.value;
         const squadraName = remSquadra.selectedOptions[0]?.textContent?.trim() || "questa squadra";
-        const giocatoreName = remGiocatore.selectedOptions[0]?.textContent?.trim() || "questo giocatore";
+        const selected = selectedRemovalPlayers();
         if (removeAssocMessage) {
-            removeAssocMessage.textContent = `Vuoi rimuovere ${giocatoreName} da ${squadraName}?`;
+            removeAssocMessage.textContent = `Vuoi rimuovere ${selected.length} giocatori da ${squadraName}? ${selected.map(input => input.dataset.label).join(', ')}`;
         }
         openRemoveAssocModal();
     });
@@ -2242,15 +2285,40 @@ assocTorneo?.addEventListener("change", async () => {
 });
 
 remTorneo?.addEventListener("change", async () => {
+    resetRemovalPlayers();
     await loadSquadre(remSquadra, remTorneo.value);
-    resetSelect(remGiocatore, "-- Seleziona un giocatore --");
 });
 if (remTorneo?.value) {
     loadSquadre(remSquadra, remTorneo.value);
 }
 
 remSquadra?.addEventListener("change", async () => {
-    await loadGiocatori(remGiocatore, remSquadra.value, remTorneo.value);
+    resetRemovalPlayers(remSquadra.value ? 'Caricamento giocatori...' : 'Seleziona una squadra.');
+    if (!remSquadra.value) return;
+    const version = remLoadVersion;
+    try {
+        const res = await fetch(`${API_GIOCATORI_SQUADRA}?squadra_id=${encodeURIComponent(remSquadra.value)}&torneo=${encodeURIComponent(remTorneo.value)}`);
+        if (!res.ok) throw new Error('Caricamento non riuscito');
+        const players = await res.json();
+        if (!Array.isArray(players)) throw new Error('Risposta non valida');
+        if (version !== remLoadVersion) return;
+        remPlayers.textContent = players.length ? '' : 'Nessun giocatore in questa squadra.';
+        players.forEach(player => {
+            const label = document.createElement('label');
+            label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 0';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.name = 'giocatori_rimozione[]';
+            input.value = player.id;
+            input.dataset.label = buildPlayerLabel(player, 'nome');
+            input.style.width = 'auto';
+            label.append(input, document.createTextNode(input.dataset.label));
+            remPlayers.appendChild(label);
+        });
+        updateRemovalSelection();
+    } catch (err) {
+        if (version === remLoadVersion) resetRemovalPlayers('Impossibile caricare i giocatori. Seleziona nuovamente la squadra per riprovare.');
+    }
 });
 
 modAssocTorneo?.addEventListener("change", async () => {
