@@ -164,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endforeach; ?>
       <?php if (!$fields): ?><p>Aggiungi prima i campi in Gestione Partite → Campi.</p><?php endif; ?>
       </div>
-      <details class="aio-details"><summary>Come vengono distribuite le partite?</summary><p>I gironi si alternano per ogni giornata. Le gare dello stesso girone si giocano in parallelo; se i campi non bastano, proseguono nella fascia successiva di 15 minuti. Le partite mantengono il nome dell’impianto. Le squadre seguono l’ordine di creazione: con quattro squadre, 1–2 e 3–4, poi 1–3 e 2–4, infine 1–4 e 2–3.</p></details>
+      <details class="aio-details"><summary>Come vengono distribuite le partite?</summary><p>I gironi si alternano per ogni giornata. Le gare dello stesso girone si giocano in parallelo; se i campi non bastano, proseguono nella fascia successiva di 15 minuti. Le partite mantengono il nome dell’impianto. Le squadre seguono l’ordine di creazione: con quattro squadre, 1–2 e 3–4, poi 1–3 e 2–4, infine 1–4 e 2–3.</p><p>Per gli AllInOneNight con due gironi, la finalizzazione dell’ultima gara crea le semifinali 1ª A–2ª B e 1ª B–2ª A sui campi utilizzati, con orario arrotondato ai 5 minuti successivi (22:52 → 22:55). Con un solo campo la seconda semifinale inizia 15 minuti dopo. Una fase Gold già presente viene mantenuta. Quando entrambe le semifinali sono finalizzate, viene creata la finale tra le vincitrici, considerando gli eventuali rigori, sul campo della prima semifinale e con lo stesso arrotondamento ai 5 minuti.</p></details>
     </section>
     <div class="aio-actions">
     <button type="submit" name="azione" value="anteprima">Genera anteprima</button>

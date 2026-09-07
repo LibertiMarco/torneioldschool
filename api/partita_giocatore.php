@@ -6,6 +6,7 @@ require_once __DIR__ . '/../includi/push_notifications.php';
 require_once __DIR__ . '/../includi/partite_schema.php';
 require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 require_once __DIR__ . '/crud/partita.php';
+require_once __DIR__ . '/../includi/all_in_one_semifinals.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
@@ -623,8 +624,9 @@ if ($azione === 'save_bulk') {
         $delete->close();
     }
 
+    $semifinaliMessage = all_in_one_after_result($conn, $partitaId);
     inviaNotificaEsito($conn, $partitaId, $infoClassifica ?? null);
-    echo json_encode(['success' => true, 'message' => $finalizza ? 'Partita finalizzata' : 'Distinta salvata']);
+    echo json_encode(['success' => true, 'message' => trim(($finalizza ? 'Partita finalizzata. ' : 'Distinta salvata. ') . $semifinaliMessage)]);
     exit;
 }
 
@@ -694,6 +696,7 @@ if ($azione === 'add') {
     ricalcolaStatistiche($conn, $partita_id, $giocatore);
     $infoClassifica = aggiornaGolPartita($conn, $partita_id, $ultimaStatistica);
     aggiornaClassificaDaInfo($conn, $infoClassifica);
+    all_in_one_after_result($conn, $partita_id);
     inviaNotificaEsito($conn, $partita_id, $infoClassifica);
 
     echo json_encode(["success" => true, "message" => "Statistica aggiunta"]);
@@ -741,6 +744,7 @@ if ($azione === 'edit') {
       ricalcolaStatistiche($conn, (int)$rPrev['partita_id'], (int)$rPrev['giocatore_id']);
       $infoClassifica = aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
       aggiornaClassificaDaInfo($conn, $infoClassifica);
+      all_in_one_after_result($conn, (int)$rPrev['partita_id']);
       inviaNotificaEsito($conn, (int)$rPrev['partita_id'], $infoClassifica);
     }
     exit;
@@ -767,6 +771,7 @@ if ($azione === 'delete') {
       ricalcolaStatistiche($conn, (int)$rPrev['partita_id'], (int)$rPrev['giocatore_id']);
       $infoClassifica = aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
       aggiornaClassificaDaInfo($conn, $infoClassifica);
+      all_in_one_after_result($conn, (int)$rPrev['partita_id']);
       inviaNotificaEsito($conn, (int)$rPrev['partita_id'], $infoClassifica);
     }
 
