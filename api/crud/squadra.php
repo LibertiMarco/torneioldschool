@@ -25,6 +25,12 @@ class squadra {
         return $check && $check->num_rows > 0;
     }
 
+    private function requireGironeColumnForSelection(?string $girone): void {
+        if (!$this->hasGirone && $this->normalizeGirone($girone) !== null) {
+            throw new RuntimeException('Impossibile salvare il girone: la colonna squadre.girone non e disponibile. Verifica la struttura e i permessi del database.');
+        }
+    }
+
     private function normalizeGirone(?string $value): ?string {
         $value = strtoupper(trim((string)$value));
         $value = preg_replace('/^GIRONE\s+/u', '', $value);
@@ -175,6 +181,7 @@ class squadra {
     }
 
     public function crea($nome, $torneo, $logo = null, $girone = null) {
+        $this->requireGironeColumnForSelection($girone);
         if ($this->hasGirone) {
             $resolvedGirone = $this->resolvePreferredGironeForTorneo($torneo, $girone);
             $stmt = $this->conn->prepare("INSERT INTO {$this->table} (nome, torneo, girone, logo) VALUES (?, ?, ?, ?)");
@@ -188,6 +195,7 @@ class squadra {
     }
 
     public function aggiorna($id, $nome, $torneo, $punti, $giocate, $vinte, $pareggiate, $perse, $gol_fatti, $gol_subiti, $differenza_reti, $logo = null, $girone = null) {
+        $this->requireGironeColumnForSelection($girone);
         $existing = $this->getById($id) ?: [];
         $fields = ["nome=?", "torneo=?"];
         $types = "ss";

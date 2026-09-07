@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
 
 require_once __DIR__ . '/crud/Squadra.php';
 require_once __DIR__ . '/crud/torneo.php';
+require_once __DIR__ . '/../includi/squadra_gironi.php';
 require_once __DIR__ . '/../includi/image_optimizer.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -17,44 +18,6 @@ $errore = $_SESSION['flash_error'] ?? '';
 $successo = $_SESSION['flash_success'] ?? '';
 $defaultTab = $_SESSION['flash_tab'] ?? 'crea';
 unset($_SESSION['flash_error'], $_SESSION['flash_success'], $_SESSION['flash_tab']);
-
-function sanitizeTorneoSlugValue($value) {
-    $value = preg_replace('/\.(html?|php)$/i', '', $value);
-    $value = preg_replace('/[^A-Za-z0-9_-]/', '', $value);
-    return $value;
-}
-
-function parseTorneoConfigValue($value): array {
-    if (is_array($value)) {
-        return $value;
-    }
-    if (!is_string($value) || trim($value) === '') {
-        return [];
-    }
-    $decoded = json_decode($value, true);
-    return is_array($decoded) ? $decoded : [];
-}
-
-function buildGironeLabelsList(int $count): array {
-    $labels = [];
-    for ($i = 0; $i < $count; $i++) {
-        $n = $i;
-        $label = '';
-        do {
-            $label = chr(65 + ($n % 26)) . $label;
-            $n = intdiv($n, 26) - 1;
-        } while ($n >= 0);
-        $labels[] = $label;
-    }
-    return $labels;
-}
-
-function normalizeGironeValue($value): string {
-    $value = strtoupper(trim((string)$value));
-    $value = preg_replace('/^GIRONE\s+/u', '', $value);
-    $value = preg_replace('/^GRUPPO\s+/u', '', $value);
-    return substr($value, 0, 32);
-}
 
 function normalizeSquadraReuseKey($value): string {
     $value = preg_replace('/\s+/u', ' ', trim((string)$value));
@@ -78,44 +41,6 @@ function shouldReplaceEsportReuseEntry(array $current, array $candidate): bool {
     }
 
     return (int)($candidate['id'] ?? 0) > (int)($current['id'] ?? 0);
-}
-
-function torneoHasGironiConfig(array $config): bool {
-    $formato = strtolower(trim((string)($config['formato'] ?? $config['formula_torneo'] ?? '')));
-    $numeroGironi = max(0, (int)($config['numero_gironi'] ?? 0));
-
-    if ($formato === 'girone') {
-        return true;
-    }
-
-    if ($formato === 'campionato' || $formato === 'eliminazione') {
-        return false;
-    }
-
-    return $numeroGironi > 0;
-}
-
-function getGironeInfoForTorneo(Torneo $torneoModel, string $torneoSlug): array {
-    if ($torneoSlug === '') {
-        return ['is_girone' => false, 'labels' => []];
-    }
-
-    $torneoRow = $torneoModel->getBySlug($torneoSlug);
-    if (!$torneoRow) {
-        return ['is_girone' => false, 'labels' => []];
-    }
-
-    $config = parseTorneoConfigValue($torneoRow['config'] ?? null);
-    $numeroGironi = max(0, (int)($config['numero_gironi'] ?? 0));
-
-    if (!torneoHasGironiConfig($config) || $numeroGironi <= 0) {
-        return ['is_girone' => false, 'labels' => []];
-    }
-
-    return [
-        'is_girone' => true,
-        'labels' => buildGironeLabelsList($numeroGironi),
-    ];
 }
 
 function salvaScudetto($nomeSquadra, $torneoSlug, $fieldName) {
@@ -226,6 +151,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } elseif ($riusaEsportId <= 0) {
                     $errore = 'Seleziona un girone valido per questo torneo.';
                 }
+            } elseif ($girone !== '') {
+                $errore = 'Il girone selezionato non corrisponde alla configurazione del torneo. Ricarica la pagina e riprova.';
             }
 
             // Se l'admin ha scelto un logo da una squadra esistente, lo usiamo come default
@@ -291,6 +218,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $gironeSelezionato = $girone;
                 }
+            } elseif ($girone !== '') {
+                $errore = 'Il girone selezionato non corrisponde alla configurazione del torneo. Ricarica la pagina e riprova.';
             }
 
             $logo = salvaScudetto($nome, $torneo, 'scudetto_mod');
