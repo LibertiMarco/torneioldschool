@@ -15,8 +15,11 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Solo admin o sysadmin
-if (!user_has_admin_access((string)($_SESSION['ruolo'] ?? ''))) {
+// Solo admin o sysadmin. La singola pagina che espone una vista limitata ai
+// grafici puo abilitarli esplicitamente prima di includere questo guard.
+$currentRole = trim((string)($_SESSION['ruolo'] ?? ''));
+$graphicsAccessAllowed = !empty($allowGraphicsAccess) && $currentRole === 'grafico';
+if (!user_has_admin_access($currentRole) && !$graphicsAccessAllowed) {
     header('Location: ' . login_with_base_path('/index.php'));
     exit;
 }
