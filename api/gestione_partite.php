@@ -1452,6 +1452,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   <section class="admin-container">
     <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
     <h1 class="admin-title">Gestione Partite</h1>
+    <p><a href="/api/crea_calendario_allinone.php">Genera calendario gironi AllInOneNight</a></p>
 
     <div class="tab-buttons">
       <button type="button" data-tab="crea" class="<?= $tabAttiva === 'crea' ? 'active' : '' ?>">Crea</button>
