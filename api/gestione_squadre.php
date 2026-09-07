@@ -203,6 +203,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $riusaEsportId = (int)($_POST['riusa_esport_id'] ?? 0);
         $logoEsistenteId = (int)($_POST['logo_esistente'] ?? 0);
         $squadraRiutilizzata = $riusaEsportId > 0 ? $squadra->getById($riusaEsportId) : null;
+        $squadraLogo = $logoEsistenteId > 0 ? $squadra->getById($logoEsistenteId) : null;
+
+        if ($squadraLogo && !empty($squadraLogo['logo'])) {
+            $nome = trim((string)($squadraLogo['nome'] ?? ''));
+        }
 
         if ($nome === '' && $squadraRiutilizzata) {
             $nome = trim((string)($squadraRiutilizzata['nome'] ?? ''));
@@ -229,7 +234,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $logo = (string)$squadraRiutilizzata['logo'];
             }
             if ($logoEsistenteId > 0) {
-                $squadraOrig = $squadra->getById($logoEsistenteId);
+                $squadraOrig = $squadraLogo;
                 if ($squadraOrig && !empty($squadraOrig['logo'])) {
                     $logo = $squadraOrig['logo'];
                 }
@@ -376,6 +381,7 @@ if (is_array($resFiltro)) {
 }
 
 $squadreList = [];
+$logoReuseMap = [];
 $esportReuseList = [];
 $esportReuseMap = [];
 if ($resSquadre = $squadra->getAll()) {
@@ -387,6 +393,16 @@ if ($resSquadre = $squadra->getAll()) {
         }
         if (($torneoSectionBySlug[$torneoSlug] ?? 'calcio') === $adminSection) {
             $squadreList[] = $r;
+            if (trim((string)($r['logo'] ?? '')) !== '') {
+                $logoKey = normalizeSquadraReuseKey($nome);
+                $logoLabel = $torneoLabelAllBySlug[$torneoSlug] ?? $torneoSlug;
+                $labels = $logoReuseMap[$logoKey]['tornei_labels'] ?? [];
+                $labels[] = $logoLabel;
+                if (!isset($logoReuseMap[$logoKey]) || (int)$r['id'] > (int)$logoReuseMap[$logoKey]['id']) {
+                    $logoReuseMap[$logoKey] = $r;
+                }
+                $logoReuseMap[$logoKey]['tornei_labels'] = array_values(array_unique($labels));
+            }
         }
 
         if (($torneoSectionBySlug[$torneoSlug] ?? 'calcio') !== 'esport') {
@@ -424,6 +440,10 @@ if ($resSquadre = $squadra->getAll()) {
     }
 }
 
+$logoReuseList = array_values($logoReuseMap);
+usort($logoReuseList, static function(array $left, array $right): int {
+    return strcasecmp($left['nome'], $right['nome']);
+});
 $esportReuseList = array_values($esportReuseMap);
 usort($esportReuseList, static function(array $left, array $right): int {
     return strcasecmp((string)($left['nome'] ?? ''), (string)($right['nome'] ?? ''));
@@ -613,16 +633,15 @@ unset($reuseRow);
             <small id="logo_esistente_feedback" class="search-feedback hidden">Nessuna squadra trovata con questo filtro.</small>
             <select name="logo_esistente" id="logo_esistente">
               <option value="">-- Nessuno, caricherà un nuovo scudetto --</option>
-              <?php foreach ($squadreList as $row): ?>
-                <?php if (!empty($row['logo'])): ?>
-                  <?php $torneoLabel = $torneoLabelBySlug[$row['torneo']] ?? $row['torneo']; ?>
-                  <option value="<?= (int)$row['id'] ?>">
-                    <?= htmlspecialchars($row['nome']) ?> (<?= htmlspecialchars($torneoLabel) ?>)
+              <?php foreach ($logoReuseList as $row): ?>
+                  <option value="<?= (int)$row['id'] ?>"
+                    data-team-name="<?= htmlspecialchars(trim($row['nome']), ENT_QUOTES, 'UTF-8') ?>"
+                    data-filter-text="<?= htmlspecialchars($row['nome'] . ' ' . implode(' ', $row['tornei_labels']), ENT_QUOTES, 'UTF-8') ?>">
+                    <?= htmlspecialchars($row['nome']) ?>
                   </option>
-                <?php endif; ?>
               <?php endforeach; ?>
             </select>
-            <small>Seleziona una squadra esistente per copiare il suo scudetto senza doverlo ricaricare.</small>
+            <small>Seleziona uno scudetto per compilare automaticamente anche il nome della squadra.</small>
           </div>
           <div class="form-group">
             <label>Immagine / Scudetto</label>
@@ -980,6 +999,13 @@ unset($reuseRow);
         var select = document.getElementById('logo_esistente');
         var feedback = document.getElementById('logo_esistente_feedback');
         initFilterableSelect(searchInput, select, feedback, 'Nessun scudetto disponibile da riutilizzare');
+        if (!select) return;
+        select.addEventListener('change', function() {
+          var option = select.options[select.selectedIndex];
+          var nomeInput = document.getElementById('crea_nome');
+          var teamName = option ? option.getAttribute('data-team-name') : '';
+          if (nomeInput && teamName) nomeInput.value = teamName;
+        });
       }
 
       function initEsportReuseSelector() {
