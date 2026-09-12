@@ -112,6 +112,12 @@ $headerNavLinks = [
 ];
 ?>
 
+<!-- Compatibilita con i tabelloni che non attivano il pannello delle gare uniche. -->
+<style>
+  .bracket-match .leg-contents > .leg-content:only-child {
+    display: block;
+  }
+</style>
 <header class="site-header" data-auth="<?= $isLoggedIn ? '1' : '0' ?>" data-section="<?= htmlspecialchars($headerCurrentSection) ?>">
 
     <!-- HAMBURGER (solo mobile) -->
