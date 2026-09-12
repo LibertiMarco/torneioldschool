@@ -870,7 +870,7 @@ async function caricaPlayoff() {
           group.sort((a, b) => (legOrder[(a.fase_leg || "").toUpperCase()] || 99) - (legOrder[(b.fase_leg || "").toUpperCase()] || 99));
           const hasAndata = group.some(p => (p.fase_leg || "").toUpperCase() === "ANDATA");
           const hasRitorno = group.some(p => (p.fase_leg || "").toUpperCase() === "RITORNO");
-          const defaultLeg = hasAndata ? "ANDATA" : (group[0].fase_leg || "").toUpperCase() || "ANDATA";
+          const defaultLeg = hasAndata ? "ANDATA" : (group[0].fase_leg || "").toUpperCase() || "UNICA";
 
           const match = document.createElement("div");
           match.className = "bracket-match";
