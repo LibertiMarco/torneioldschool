@@ -220,8 +220,8 @@ try {
         $referenceDate = new DateTimeImmutable('today', $timezone);
     }
 
-    // Il giorno richiesto seleziona i tornei da mostrare; per ciascuno vengono
-    // poi incluse tutte le partite della settimana corrente.
+    // Il giorno richiesto seleziona i tornei anche se tutte le partite sono
+    // gia giocate; per ciascuno viene inclusa l'intera settimana selezionata.
     $targetDate = $referenceDate->format('Y-m-d');
     $fromDate = $referenceDate->modify('monday this week')->format('Y-m-d');
     $toDate = $referenceDate->modify('sunday this week')->format('Y-m-d');
@@ -350,7 +350,7 @@ try {
                 'id' => $tournamentId,
                 'nome' => (string)$row['torneo_nome'],
                 'codice' => (string)$row['torneo_codice'],
-                'ha_partite_da_giocare_oggi' => false,
+                'ha_partite_nel_giorno' => false,
                 'gruppi' => [],
                 'ordine_gruppi' => [],
             ];
@@ -391,8 +391,8 @@ try {
             ];
         }
 
-        if ((string)$row['data_partita'] === $targetDate && (int)$row['giocata'] !== 1) {
-            $tournaments[$tournamentKey]['ha_partite_da_giocare_oggi'] = true;
+        if ((string)$row['data_partita'] === $targetDate) {
+            $tournaments[$tournamentKey]['ha_partite_nel_giorno'] = true;
         }
 
         if ((int)$row['giocata'] !== 1) {
@@ -448,7 +448,7 @@ try {
 
     foreach ($tournamentOrder as $tournamentKey) {
         $tournament = $tournaments[$tournamentKey];
-        if (empty($tournament['ha_partite_da_giocare_oggi'])) {
+        if (empty($tournament['ha_partite_nel_giorno'])) {
             continue;
         }
         $tournamentSlug = get_grafiche_settimana_slug(
