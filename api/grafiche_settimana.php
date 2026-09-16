@@ -31,7 +31,7 @@ $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
 <main>
   <?php if (!$embedded): ?><a href="/admin_dashboard.php">Torna alla dashboard</a><?php endif; ?>
   <h1><?= $embedded ? 'MATCHDAY' : 'Grafiche partite giornaliere' ?></h1>
-  <p>Il giorno selezionato individua i tornei da pubblicare; ogni PNG contiene tutte le loro partite della settimana, incluse quelle già giocate. Grafica con stemmi, fasce tricolori e calendario diviso per giorno.</p>
+  <p>Il giorno selezionato individua i tornei da pubblicare; ogni PNG contiene tutte le loro partite della settimana, incluse quelle già giocate. Grafica con stemmi, colori della competizione e calendario diviso per giorno.</p>
   <div class="toolbar">
     <label>Giorno delle partite <input id="date" type="date"></label>
     <button id="generate" type="button">Genera grafiche</button>
@@ -40,7 +40,7 @@ $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
   <div class="status" id="status"></div><div class="grid" id="grid"></div>
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
-<script src="/api/matchday-renderer.js?v=20260916"></script>
+<script src="/api/matchday-renderer.js?v=20260916-2"></script>
 <script>
 const dateInput = document.getElementById('date');
 const today = new Date();

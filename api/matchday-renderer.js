@@ -1,6 +1,41 @@
 /* Shared canvas renderer: the preview and downloaded PNG are the same image. */
 window.MatchdayRenderer = (() => {
-  const ink = '#08243b', green = '#008447', red = '#e30724';
+  const ink = '#08243b';
+  // Competition-inspired accents; the paper and match rows always stay white.
+  // Specific aliases precede the generic "Liga" name to avoid collisions.
+  const palettes = [
+    {aliases: ['coppaitalia', 'supercoppaitaliana'], primary: '#008447', secondary: '#e30724', accent: '#e30724'},
+    {aliases: ['eredivisie'], primary: '#003bdb', secondary: '#071b41', accent: '#e83e52'},
+    {aliases: ['premierleague', 'premiership'], primary: '#37003c', secondary: '#00ff85', accent: '#37003c'},
+    {aliases: ['bundesliga'], primary: '#d20515', secondary: '#202020', accent: '#d20515'},
+    {aliases: ['ligaportugal', 'primeiraliga'], primary: '#006b46', secondary: '#e9c348', accent: '#006b46'},
+    {aliases: ['laliga', 'ligasantander', 'ligaespanola', 'primera division'], primary: '#ff4b44', secondary: '#242424', accent: '#ff4b44'},
+    {aliases: ['ligue1', 'ligue2'], primary: '#12233f', secondary: '#245bff', accent: '#245bff'},
+    {aliases: ['seriea'], primary: '#0055b8', secondary: '#00a8e0', accent: '#0055b8'},
+    {aliases: ['serieb'], primary: '#00653a', secondary: '#009b62', accent: '#00653a'},
+    {aliases: ['championsleague', 'champions'], primary: '#071b57', secondary: '#1859df', accent: '#1859df'},
+    {aliases: ['europaleague'], primary: '#191919', secondary: '#f58220', accent: '#f58220'},
+    {aliases: ['conferenceleague', 'conference'], primary: '#123b24', secondary: '#28bf50', accent: '#123b24'},
+    {aliases: ['saudileague', 'saudiproleague', 'saudi'], primary: '#006747', secondary: '#b5d334', accent: '#006747'},
+    {aliases: ['coppadafrica', 'africacup'], primary: '#006747', secondary: '#cfaa40', accent: '#006747'},
+    {aliases: ['mondiale', 'worldcup'], primary: '#193c70', secondary: '#c39b45', accent: '#193c70'}
+  ];
+  const normalizeName = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  function tournamentTheme(tournament) {
+    const name = normalizeName(tournament.nome), compact = name.replace(/[^a-z0-9]/g, '');
+    const palette = palettes.find(item => item.aliases.some(alias => compact.includes(alias.replace(/[^a-z0-9]/g, ''))));
+    if (palette) return palette;
+    if (/(^|[^a-z])liga([^a-z]|$)/.test(name)) return palettes.find(item => item.aliases.includes('laliga'));
+    return {primary: ink, secondary: '#b38a38', accent: ink};
+  }
+  function onColor(color) {
+    const rgb = color.slice(1).match(/.{2}/g).map(hex => {
+      const value = parseInt(hex, 16) / 255;
+      return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+    });
+    const luminance = rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
+    return luminance > .179 ? '#101820' : '#ffffff';
+  }
   const display = 'Impact, "Arial Narrow", sans-serif';
   const imageCache = new Map();
   function loadImage(src) {
@@ -77,6 +112,7 @@ window.MatchdayRenderer = (() => {
     return info.join('  •  ');
   }
   async function drawTournament(tournament, week) {
+    const theme = tournamentTheme(tournament);
     const days = groupDays(tournament), matches = days.flatMap(day => day.matches);
     const count = matches.length;
     const width = 1080, headerH = 450, footerH = 130, dayH = 66, dayGap = 20;
@@ -97,8 +133,8 @@ window.MatchdayRenderer = (() => {
     ctx.strokeStyle = '#08243b06'; ctx.lineWidth = 1;
     for (let x = -height; x < width; x += 38) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + height, height); ctx.stroke(); }
     for (const y of [48, 111]) {
-      ctx.fillStyle = green; ctx.fillRect(0, y, width / 2, 36);
-      ctx.fillStyle = red; ctx.fillRect(width / 2, y, width / 2, 36);
+      ctx.fillStyle = theme.primary; ctx.fillRect(0, y, width / 2, 36);
+      ctx.fillStyle = theme.secondary; ctx.fillRect(width / 2, y, width / 2, 36);
     }
     ctx.fillStyle = '#fbfcfa'; ctx.beginPath(); ctx.arc(540, 116, 112, 0, Math.PI * 2); ctx.fill();
     if (!contained(ctx, brand, 451, 27, 178, 178)) text(ctx, 'TOS', 540, 116, 155, 76);
@@ -112,23 +148,23 @@ window.MatchdayRenderer = (() => {
       ctx.save(); ctx.translate(540 - natural * scale / 2, 331); ctx.scale(scale, 1);
       let x = 0;
       words.forEach((word, i) => {
-        text(ctx, word, x, 0, ctx.measureText(word).width + 1, 112, i === 0 ? green : (i === words.length - 1 && words.length > 2 ? red : ink), 'left');
+        text(ctx, word, x, 0, ctx.measureText(word).width + 1, 112, i === 0 ? theme.primary : (i === words.length - 1 && words.length > 2 ? theme.accent : ink), 'left');
         x += ctx.measureText(`${word} `).width;
       });
       ctx.restore();
     } else {
-      titleLines.forEach((line, i) => text(ctx, line, 540, 289 + i * 72, 980, 76, i === 0 ? green : ink));
+      titleLines.forEach((line, i) => text(ctx, line, 540, 289 + i * 72, 980, 76, i === 0 ? theme.primary : ink));
     }
     const dates = days.map(day => day.date).filter(Boolean);
     const first = dates[0] || week.dal, last = dates[dates.length - 1] || week.al;
     text(ctx, first === last ? dateLabel(first, true) : `${dateLabel(first, true)}  —  ${dateLabel(last, true)}`, 540, titleLines.length > 1 ? 421 : 413, 940, 29);
     let y = headerH, index = 0;
     for (const [dayIndex, day] of days.entries()) {
-      const color = dayIndex % 2 === 0 ? green : red;
+      const color = dayIndex % 2 === 0 ? theme.primary : theme.secondary;
       ctx.fillStyle = color; ctx.fillRect(38, y, 1004, dayH);
-      text(ctx, dateLabel(day.date), 62, y + dayH / 2, 575, 32, '#fff', 'left');
+      text(ctx, dateLabel(day.date), 62, y + dayH / 2, 575, 32, onColor(color), 'left');
       const sections = [...new Set(day.matches.map(match => match.section).filter(Boolean))];
-      if (sections.length === 1) text(ctx, sections[0].toUpperCase(), 1020, y + dayH / 2, 350, 21, '#fff', 'right');
+      if (sections.length === 1) text(ctx, sections[0].toUpperCase(), 1020, y + dayH / 2, 350, 21, onColor(color), 'right');
       y += dayH;
       for (const match of day.matches) {
         const extra = extraInfo(match), mixed = sections.length > 1;
@@ -141,12 +177,12 @@ window.MatchdayRenderer = (() => {
           const cy = y + 350, result = match.risultato;
           crest(ctx, match.squadra_casa, homeLogo, 120, cy, 260);
           crest(ctx, match.squadra_ospite, awayLogo, 700, cy, 260);
-          text(ctx, result ? `${result.gol_casa} – ${result.gol_ospite}` : 'VS', 540, cy, 230, 84, red);
+          text(ctx, result ? `${result.gol_casa} – ${result.gol_ospite}` : 'VS', 540, cy, 230, 84, theme.accent);
           for (const [squad, x] of [[match.squadra_casa, 250], [match.squadra_ospite, 830]]) {
             lines(ctx, squad.nome, 390, 46).forEach((line, i) => text(ctx, line, x, cy + 205 + i * 54, 390, 46));
           }
-          ctx.fillStyle = red; ctx.fillRect(425, y + 710, 230, 66);
-          text(ctx, match.ora || 'DA DEFINIRE', 540, y + 743, 210, match.ora ? 48 : 30, '#fff');
+          ctx.fillStyle = theme.accent; ctx.fillRect(425, y + 710, 230, 66);
+          text(ctx, match.ora || 'DA DEFINIRE', 540, y + 743, 210, match.ora ? 48 : 30, onColor(theme.accent));
           text(ctx, match.campo || 'Luogo da definire', 540, y + 830, 910, 38);
           if (extra) text(ctx, extra, 540, y + 930, 930, 24, '#40586a', 'center', 'Arial, sans-serif');
           y += rowH;
@@ -160,8 +196,9 @@ window.MatchdayRenderer = (() => {
         team(ctx, match.squadra_ospite, awayLogo, 1025 - logoSize, cy, logoSize, 'right', 906, 213, fontSize);
         const result = match.risultato;
         const label = result ? `${result.gol_casa} – ${result.gol_ospite}` : (match.ora || 'DA DEFINIRE');
-        ctx.fillStyle = result ? ink : red; ctx.fillRect(454, cy - 34, 172, 44);
-        text(ctx, label, 540, cy - 12, 158, match.ora || result ? 35 : 22, '#fff');
+        const badgeColor = result ? theme.primary : theme.accent;
+        ctx.fillStyle = badgeColor; ctx.fillRect(454, cy - 34, 172, 44);
+        text(ctx, label, 540, cy - 12, 158, match.ora || result ? 35 : 22, onColor(badgeColor));
         text(ctx, match.campo || 'Luogo da definire', 540, cy + 30, 253, 23);
         if (details) text(ctx, details, 540, y + rowH - 17, 934, 18, '#40586a', 'center', 'Arial, sans-serif');
         y += rowH;
@@ -169,8 +206,8 @@ window.MatchdayRenderer = (() => {
       y += dayGap;
     }
     text(ctx, 'IL CALCIO, QUELLO VERO.', 540, height - 108, 900, 23);
-    ctx.fillStyle = green; ctx.fillRect(0, height - 72, 516, 26);
-    ctx.fillStyle = red; ctx.fillRect(564, height - 72, 516, 26);
+    ctx.fillStyle = theme.primary; ctx.fillRect(0, height - 72, 516, 26);
+    ctx.fillStyle = theme.secondary; ctx.fillRect(564, height - 72, 516, 26);
     text(ctx, 'TORNEIOLDSCHOOL.IT', 540, height - 23, 900, 16, '#40586a', 'center', 'Arial, sans-serif');
     return canvas;
   }
