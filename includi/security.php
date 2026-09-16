@@ -334,6 +334,28 @@ if (!isset($_SESSION['user_id']) && !empty($_COOKIE[REMEMBER_COOKIE_NAME])) {
     }
 }
 
+// Il ruolo puo cambiare mentre l'utente e gia collegato, anche con "ricorda".
+// Verificarlo a ogni richiesta prima dei guard e della costruzione del menu.
+if (isset($_SESSION['user_id'])) {
+    require_once __DIR__ . '/session_role.php';
+    unset($_SESSION['ruolo']);
+    try {
+        $roleConnection = tos_remember_db_connect();
+        if (!($roleConnection instanceof mysqli)) {
+            throw new RuntimeException('Connessione per verifica ruolo non disponibile.');
+        }
+        if (!tos_refresh_session_role($roleConnection, $_SESSION)) {
+            tos_clear_remember_cookie($isHttps);
+            session_regenerate_id(true);
+        }
+    } catch (Throwable $e) {
+        error_log('session role refresh: ' . $e->getMessage());
+        http_response_code(503);
+        header('Cache-Control: no-store');
+        exit('Verifica dei permessi temporaneamente non disponibile. Riprova tra poco.');
+    }
+}
+
 // Basic CSRF utilities
 if (!function_exists('csrf_get_token')) {
     function csrf_get_token(string $key = 'default'): string
