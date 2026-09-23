@@ -16,6 +16,23 @@ function partita_giocatore_json_error(string $message, int $status = 400): void 
     exit;
 }
 
+function partita_giocatore_diffidato(mysqli $conn, int $giocatoreId, int $squadraId, int $partitaId): bool {
+    $stmt = $conn->prepare("SELECT pg.cartellino_giallo, pg.cartellino_rosso
+        FROM partita_giocatore pg JOIN partite p ON p.id = pg.partita_id
+        WHERE pg.giocatore_id = ? AND pg.squadra_id = ? AND pg.partita_id <> ?
+        ORDER BY p.data_partita ASC, p.ora_partita ASC, p.id ASC");
+    if (!$stmt) return false;
+    $stmt->bind_param('iii', $giocatoreId, $squadraId, $partitaId);
+    if (!$stmt->execute()) { $stmt->close(); return false; }
+    $count = 0; $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        if ((int)$row['cartellino_rosso'] > 0) $count = 0;
+        elseif ((int)$row['cartellino_giallo'] > 0) { $count++; if ($count >= 3) $count = 0; }
+    }
+    $stmt->close();
+    return $count >= 2;
+}
+
 if (!isset($_SESSION['user_id'])) {
     partita_giocatore_json_error('Non autenticato', 401);
 }
@@ -537,7 +554,10 @@ if ($azione === 'lineup') {
     $stmt->execute();
     $rows = $stmt->get_result();
     $out = [];
-    while ($row = $rows->fetch_assoc()) { $out[] = $row; }
+    while ($row = $rows->fetch_assoc()) {
+        $row['diffidato'] = partita_giocatore_diffidato($conn, (int)$row['giocatore_id'], (int)$row['squadra_id'], $partitaId) ? 1 : 0;
+        $out[] = $row;
+    }
     $stmt->close();
     echo json_encode($out, JSON_UNESCAPED_UNICODE);
     exit;

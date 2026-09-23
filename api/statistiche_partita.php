@@ -406,6 +406,7 @@ body.stats-admin-page .admin-container {
 .player-row:last-child { border-bottom: 0; }
 .player-row:not(.is-present) { opacity: .55; background: #f5f5f5; }
 .player-name { display: flex; gap: 9px; align-items: center; font-weight: 750; min-width: 0; }
+.disciplinary-tag { display: inline-block; padding: 2px 7px; border-radius: 999px; background: #fff3cd; color: #856404; border: 1px solid #ffe08a; font-size: .68rem; font-weight: 800; white-space: nowrap; }
 .presence-toggle { width: 20px; height: 20px; accent-color: #15293e; flex: 0 0 auto; }
 .stat-stepper { display: grid; grid-template-columns: 32px 1fr 32px; align-items: center; border: 1px solid #ccd5df; border-radius: 9px; overflow: hidden; }
 .stat-control-label { display: none; }
@@ -520,7 +521,7 @@ function renderPlayerRow(player) {
   return `<div class="player-row ${present ? "is-present" : ""}" data-player-id="${Number(player.giocatore_id)}" data-team-id="${Number(player.squadra_id)}" data-side="${escapeHtml(player.lato)}">
     <label class="player-name">
       <input class="presence-toggle" type="checkbox" data-field="presenza" ${present ? "checked" : ""}>
-      <span>${escapeHtml(`${player.cognome || ""} ${player.nome || ""}`.trim())}</span>${playerBadges(player)}
+      <span>${escapeHtml(`${player.cognome || ""} ${player.nome || ""}`.trim())}</span>${playerBadges(player)}${Number(player.diffidato) ? '<span class="disciplinary-tag">DIFFIDATO</span>' : ''}
     </label>
     ${stepper("goal", "Gol", player.goal)}
     ${stepper("assist", "Assist", player.assist)}
