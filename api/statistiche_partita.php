@@ -516,7 +516,7 @@ function stepper(field, label, value) {
 
 function renderPlayerRow(player) {
   const present = player.statistica_id ? Number(player.presenza) === 1 : !player.partitaHaStatistiche;
-  const vote = player.voto === null || player.voto === undefined ? "6" : player.voto;
+  const vote = player.voto === null || player.voto === undefined || player.voto === "" ? 6 : Number(player.voto);
   return `<div class="player-row ${present ? "is-present" : ""}" data-player-id="${Number(player.giocatore_id)}" data-team-id="${Number(player.squadra_id)}" data-side="${escapeHtml(player.lato)}">
     <label class="player-name">
       <input class="presence-toggle" type="checkbox" data-field="presenza" ${present ? "checked" : ""}>
@@ -527,7 +527,12 @@ function renderPlayerRow(player) {
     ${stepper("autogol", "Autogol", player.autogol)}
     <label class="event-toggle" title="Cartellino giallo"><input type="checkbox" data-field="cartellino_giallo" ${Number(player.cartellino_giallo) ? "checked" : ""}> 🟨</label>
     <label class="event-toggle" title="Cartellino rosso"><input type="checkbox" data-field="cartellino_rosso" ${Number(player.cartellino_rosso) ? "checked" : ""}> 🟥</label>
-    <input class="vote-input" type="number" min="0" max="10" step="0.5" inputmode="decimal" data-field="voto" value="${escapeHtml(vote)}" aria-label="Voto">
+    <select class="vote-input" data-field="voto" aria-label="Voto">
+      ${Array.from({length: 21}, (_, index) => {
+        const value = index / 2;
+        return `<option value="${value}"${vote === value ? " selected" : ""}>${String(value).replace(".", ",")}</option>`;
+      }).join("")}
+    </select>
   </div>`;
 }
 
