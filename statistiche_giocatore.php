@@ -37,6 +37,38 @@ function fetch_player_team_stats(mysqli $conn, int $giocatoreId, array $team): a
     return $stats;
 }
 
+function fetch_player_team_disciplinary_status(mysqli $conn, int $giocatoreId, array $team, string $section): bool {
+    $teamId = (int)($team['id'] ?? 0);
+    $teamName = trim((string)($team['nome'] ?? ''));
+    $torneo = trim((string)($team['torneo'] ?? ''));
+    if ($teamId <= 0 || $teamName === '' || $torneo === '') return false;
+
+    $sql = "SELECT pg.cartellino_giallo, pg.cartellino_rosso
+            FROM partita_giocatore pg
+            JOIN partite p ON p.id = pg.partita_id
+            LEFT JOIN tornei t ON (t.filetorneo = p.torneo OR t.filetorneo = CONCAT(p.torneo, '.php') OR t.nome = p.torneo)
+            WHERE pg.giocatore_id = ? AND p.torneo = ?
+              AND COALESCE(t.sezione, 'calcio') = ?
+              AND (pg.squadra_id = ? OR (pg.squadra_id IS NULL AND (? = p.squadra_casa OR ? = p.squadra_ospite)))
+            ORDER BY p.data_partita ASC, p.ora_partita ASC, p.id ASC";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) return false;
+    $stmt->bind_param('ississ', $giocatoreId, $torneo, $section, $teamId, $teamName, $teamName);
+    if (!$stmt->execute()) { $stmt->close(); return false; }
+    $result = $stmt->get_result();
+    $yellowRun = 0;
+    while ($row = $result->fetch_assoc()) {
+        if ((int)$row['cartellino_rosso'] > 0) {
+            $yellowRun = 0;
+        } elseif ((int)$row['cartellino_giallo'] > 0) {
+            $yellowRun++;
+            if ($yellowRun >= 3) $yellowRun = 0;
+        }
+    }
+    $stmt->close();
+    return $yellowRun >= 2;
+}
+
 function resolve_torneo_link(?string $value): string {
     $value = trim((string)$value);
     if ($value === '' || $value === '0') {
@@ -98,7 +130,9 @@ if ($giocatore) {
         if ($stmt->execute()) {
             $res = $stmt->get_result();
             while ($row = $res->fetch_assoc()) {
-                $squadre[] = array_merge($row, fetch_player_team_stats($conn, (int)$giocatore['id'], $row));
+            $squadre[] = array_merge($row, fetch_player_team_stats($conn, (int)$giocatore['id'], $row), [
+                'diffidato' => fetch_player_team_disciplinary_status($conn, (int)$giocatore['id'], $row, $siteSection),
+            ]);
             }
         }
         $stmt->close();
@@ -564,6 +598,7 @@ $seo = [
         .team-card-link:focus-visible { outline: 3px solid rgba(21,41,62,0.22); outline-offset: 2px; }
         .team-head { display: flex; align-items: center; gap: 10px; }
         .team-head img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1px solid #e2e8f0; }
+        .disciplinary-tag { display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 999px; background: #fff3cd; color: #856404; border: 1px solid #ffe08a; font-size: .68rem; font-weight: 800; vertical-align: middle; }
         .team-stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.95rem; color: #1a2d44; }
         .awards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
         .award-card { display: flex; gap: 12px; align-items: center; min-height: 88px; padding: 13px; border: 1px solid #e2e8f0; border-radius: 12px; background: linear-gradient(145deg, #fff, #f8fafc); color: inherit; text-decoration: none; }
@@ -840,7 +875,8 @@ $seo = [
                                     <img src="<?= h($s['logo']) ?>" alt="Logo <?= h($s['nome']) ?>">
                                 <?php endif; ?>
                                 <div>
-                                    <strong><?= h($s['nome']) ?></strong><br>
+                                    <strong><?= h($s['nome']) ?></strong>
+                                    <?php if (!empty($s['diffidato'])): ?><span class="disciplinary-tag" title="Due cartellini gialli: diffidato">DIFFIDATO</span><?php endif; ?><br>
                                     <small><?= h($torneoNome) ?><?= $s['is_captain'] ? ' - Capitano' : '' ?></small>
                                 </div>
                             </div>
