@@ -2,6 +2,11 @@
 require_once __DIR__ . '/../includi/graphics_guard.php';
 require_once __DIR__ . '/../includi/db.php';
 $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
+$torneiGrafiche = [];
+$torneiResult = $conn->query('SELECT id, nome FROM tornei ORDER BY nome');
+if ($torneiResult) {
+  $torneiGrafiche = $torneiResult->fetch_all(MYSQLI_ASSOC);
+}
 
 $partiteGrafiche = [];
 $partiteStmt = $conn->prepare(
@@ -85,7 +90,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     .intro { color:var(--muted); margin-top:0; }
     .workspace { display:grid; grid-template-columns:minmax(320px,430px) minmax(0,1fr); gap:24px; align-items:start; }
     .controls,.preview-card { background:rgba(16,30,45,.96); border:1px solid #ffffff12; border-radius:18px; box-shadow:0 18px 50px #0005; }
-    .controls { padding:18px; position:sticky; top:16px; }
+    .controls { padding:18px; }
     .tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:18px; }
     .tab { background:#203449; color:#dbe7f2; }
     .tab.active { background:var(--gold); color:#101722; }
@@ -115,6 +120,14 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     .preview-head button { width:auto; padding:9px 13px; }
     canvas { display:block; width:100%; max-width:540px; height:auto; margin:auto; background:#0a1724; box-shadow:0 12px 32px #0008; }
     .status { min-height:22px; margin:14px 0 0; color:#b9cad9; }
+    .template-editor { margin:16px 0; padding:12px; border:1px solid #ffffff26; border-radius:12px; }
+    .template-editor summary { cursor:pointer; font-weight:800; }
+    .template-editor fieldset { margin:12px 0 0; padding:0; border:0; min-width:0; }
+    .template-check { display:flex; align-items:center; gap:8px; }
+    .template-check input { width:auto; }
+    button:disabled,fieldset:disabled { opacity:.55; cursor:default; }
+    @media(min-width:1051px){ .previews{position:sticky;top:16px}body.with-site-header .previews{top:100px} }
+    @media(max-height:900px){ .controls{position:static} }
     @media(max-width:1050px){ .workspace{grid-template-columns:minmax(0,52%) minmax(0,48%);gap:10px}.controls{position:sticky;top:8px;padding:12px}body.with-site-header .controls{top:90px}.previews{grid-template-columns:1fr;gap:12px}.preview-card{padding:8px}.preview-head{align-items:flex-start;flex-direction:column}.preview-head button{width:100%;font-size:12px} }
     @media(max-width:720px){ main{width:min(100% - 10px,1440px);margin-left:auto;margin-right:auto}.fields{grid-template-columns:1fr}.wide{grid-column:auto}.actions{grid-template-columns:1fr}.tabs{gap:5px}.tab{padding:9px 5px;font-size:11px}label{font-size:12px}input,select,button{padding:8px 7px;font-size:12px}.preview-head h2{font-size:14px} }
     body.with-site-header>main{margin-top:110px}
@@ -125,10 +138,11 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 <main>
   <?php if (!$embedded): ?><a href="/admin_dashboard.php">Torna alla dashboard</a><?php endif; ?>
   <h1><?= $embedded ? 'FULLTIME E MVP' : 'Grafiche post partita' ?></h1>
-  <p class="intro">Genera anteprime Full Time e MVP in formato Instagram 1080 × 1350. In questa versione di prova i dati non vengono salvati.</p>
+  <p class="intro">Crea Full Time e MVP in formato 1080 × 1350 con una tua base per ogni torneo. Basi e posizioni vengono salvate; foto e modifiche al risultato restano nella grafica.</p>
 
   <div class="workspace">
     <section class="controls">
+      <label>Torneo<select id="ftTournamentSelect"><option value="">Seleziona il torneo</option></select></label>
       <div class="tabs">
         <button type="button" class="tab active" data-panel="fulltimePanel">Full Time</button>
         <button type="button" class="tab" data-panel="mvpPanel">MVP</button>
@@ -136,7 +150,6 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 
       <div id="fulltimePanel" class="panel active">
         <div class="fields">
-          <label class="wide">Torneo<select id="ftTournamentSelect"><option value="">Seleziona il torneo</option></select></label>
           <label>Fase<select id="ftPhase" disabled><option value="">Seleziona la fase</option></select></label>
           <label>Giornata / turno<select id="ftRoundSelect" disabled><option value="">Seleziona la giornata</option></select></label>
           <label class="wide">Partita<select id="ftMatch" disabled><option value="">Seleziona la partita</option></select></label>
@@ -145,6 +158,8 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
           <label>Squadra ospite<input id="ftAway" value="" readonly></label>
           <label>Gol casa<input id="ftHomeScore" type="number" min="0" value="0" readonly></label>
           <label>Gol ospite<input id="ftAwayScore" type="number" min="0" value="0" readonly></label>
+          <label>Logo casa (facoltativo)<input id="ftHomeLogo" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          <label>Logo ospite (facoltativo)<input id="ftAwayLogo" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label class="wide">Foto pre-match dei capitani<input id="ftCaptains" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label>Zoom foto <span class="range-value" id="ftZoomValue">100%</span><input id="ftZoom" type="range" min="100" max="250" value="100"></label>
           <label>Posizione orizzontale <span class="range-value" id="ftXValue">50%</span><input id="ftX" type="range" min="0" max="100" value="50"></label>
@@ -172,7 +187,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 
       <div class="actions">
         <button id="generate" type="button">Aggiorna entrambe</button>
-        <button id="reset" class="secondary" type="button">Rimuovi immagini</button>
+        <button id="reset" class="secondary" type="button">Rimuovi foto e loghi caricati</button>
       </div>
       <p class="hint">Suggerimento: usa fotografie verticali o con spazio intorno ai soggetti. Il generatore centra e ritaglia automaticamente le immagini.</p>
       <div id="status" class="status" aria-live="polite"></div>
@@ -191,9 +206,12 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
   </div>
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
+<script src="grafiche_basi.js?v=20260926"></script>
 <script>
 const $ = id => document.getElementById(id);
 const W=1080,H=1350;
+const graphicsTemplatesCsrf=<?= json_encode(csrf_get_token('graphics_templates')) ?>;
+const tournaments=<?= json_encode($torneiGrafiche, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 let GOLD='#e8bd45',BG='#07131f',PANEL='#102438',MUTED='#aebdca';
 let TOURNAMENT_STYLE={motif:0,variant:0,monogram:'OS',concept:'modern'};
 const tournamentThemes=[
@@ -209,7 +227,8 @@ const tournamentThemes=[
 const matches=<?= json_encode($partiteGrafiche, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const matchPlayers=<?= json_encode($giocatoriGrafiche, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const imageState={ftHomeLogo:null,ftAwayLogo:null,ftCaptains:null,mvpPhoto:null,brand:null};
-const imageFields=['ftCaptains','mvpPhoto'];
+const imageFields=['ftCaptains','mvpPhoto','ftHomeLogo','ftAwayLogo'];
+let matchLoadVersion=0;
 const safeName=value=>String(value||'grafica').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
 const upper=(value,fallback='')=>String(value||fallback).trim().toUpperCase();
 
@@ -260,7 +279,7 @@ function drawMvpClassic(){const tournament=matches.find(item=>String(item.torneo
   const names=upper($('mvpNames').value,'SELEZIONA MVP').split(' • ').filter(Boolean);ctx.fillStyle='#fff';ctx.textAlign='center';if(names.length===1){fitText(ctx,names[0],900,58,30,900);ctx.fillText(names[0],W/2,1045,900);}else if(names.length===2){names.forEach((name,index)=>{fitText(ctx,name,900,42,27,900);ctx.fillText(name,W/2,1025+(index*48),900);});}else{const joined=names.join(' • ');fitText(ctx,joined,920,38,23,900);ctx.fillText(joined,W/2,1050,920);}
   const team=upper($('mvpTeam').value,'SQUADRA');ctx.fillStyle=GOLD;ctx.textAlign='center';fitText(ctx,team,820,30,18,800);ctx.fillText(team,W/2,1150,820);const details=upper($('mvpDetails').value,'MAN OF THE MATCH');ctx.fillStyle=MUTED;ctx.font='700 20px Arial';ctx.fillText(details,W/2,1215);footer(ctx,$('mvpTournament').value);
 }
-function currentMatch(){return matches.find(item=>String(item.id)===String($('ftMatch').value))||matches.find(item=>String(item.torneo)===$('ftTournamentSelect').value)||null;}
+function currentMatch(){return matches.find(item=>String(item.id)===String($('ftMatch').value))||null;}
 function layoutFamily(concept){if(['international','italian','desert','africa'].includes(concept))return'editorial';if(['champions','cup','festive'].includes(concept))return'cinematic';return'dynamic';}
 function prepareTheme(name,match=null){applyTournamentTheme(match?.torneo_id??match?.torneo??name,name);return layoutFamily(TOURNAMENT_STYLE.concept);}
 function photoFrame(ctx,img,x,y,w,h,prefix,radius=28,border=true){ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,radius);ctx.clip();if(img)cover(ctx,img,x,y,w,h,cropValues(prefix));else placeholder(ctx,x,y,w,h,prefix==='ft'?'CARICA LA FOTO DEI DUE CAPITANI':'CARICA LA FOTO MVP');ctx.restore();if(border){ctx.strokeStyle='#fff';ctx.lineWidth=5;ctx.beginPath();ctx.roundRect(x,y,w,h,radius);ctx.stroke();}}
@@ -286,39 +305,39 @@ function ornateArch(ctx){ctx.save();ctx.strokeStyle=GOLD;ctx.lineWidth=22;ctx.sh
 function drawFulltimeRoyal(){const match=currentMatch(),name=$('ftTournament').value,c=$('fulltimeCanvas'),ctx=c.getContext('2d');prepareTheme(name,match);const g=ctx.createLinearGradient(0,0,W,H);g.addColorStop(0,'#721111');g.addColorStop(.48,'#d53b17');g.addColorStop(1,'#180303');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);glow(ctx,W/2,430,500,'#ffb52b');ornateArch(ctx);if(imageState.ftCaptains)cover(ctx,imageState.ftCaptains,125,260,830,790,cropValues('ft'));else placeholder(ctx,125,260,830,790,'CARICA LA FOTO DEI CAPITANI');contain(ctx,imageState.brand,35,30,105,105);ctx.fillStyle='#ffe6a0';ctx.textAlign='right';ctx.font='900 23px Arial';ctx.fillText(upper(name,'TORNEO'),1030,70,650);scoreBoard(ctx,920);ctx.fillStyle='#fff';ctx.strokeStyle='#ed2b1e';ctx.lineWidth=14;ctx.textAlign='center';ctx.font='900 96px Impact, Arial';ctx.strokeText('FULL TIME',W/2,1240);ctx.fillText('FULL TIME',W/2,1240);footer(ctx,name)}
 function drawFulltimeChampions(){const match=currentMatch(),name=$('ftTournament').value,c=$('fulltimeCanvas'),ctx=c.getContext('2d');prepareTheme(name,match);ctx.fillStyle='#020b2b';ctx.fillRect(0,0,W,H);stadium(ctx);for(let i=0;i<8;i++){ctx.strokeStyle=i%2?GOLD:'#276cff';ctx.globalAlpha=.2;ctx.lineWidth=18;ctx.beginPath();ctx.moveTo(-100+i*160,0);ctx.lineTo(340+i*150,H);ctx.stroke()}ctx.globalAlpha=1;posterHeader(ctx,'FULL TIME',name);if(imageState.ftCaptains)cover(ctx,imageState.ftCaptains,85,155,910,960,cropValues('ft'));else placeholder(ctx,85,155,910,960,'CARICA LA FOTO DEI CAPITANI');const vignette=ctx.createLinearGradient(0,700,0,1170);vignette.addColorStop(0,'transparent');vignette.addColorStop(1,'#020617');ctx.fillStyle=vignette;ctx.fillRect(0,650,W,530);scoreBoard(ctx,930);footer(ctx,name)}
 function drawFulltimeTech(){const match=currentMatch(),name=$('ftTournament').value,c=$('fulltimeCanvas'),ctx=c.getContext('2d');prepareTheme(name,match);background(ctx);ctx.fillStyle=GOLD;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(400,0);ctx.lineTo(160,H);ctx.lineTo(0,H);ctx.fill();ctx.globalAlpha=.18;ctx.fillStyle='#fff';for(let y=0;y<H;y+=55)ctx.fillRect(0,y,W,2);ctx.globalAlpha=1;if(imageState.ftCaptains){ctx.save();ctx.beginPath();ctx.moveTo(250,110);ctx.lineTo(1040,110);ctx.lineTo(1040,1090);ctx.lineTo(80,1090);ctx.closePath();ctx.clip();cover(ctx,imageState.ftCaptains,80,110,960,980,cropValues('ft'));ctx.restore()}else placeholder(ctx,250,150,780,900,'CARICA LA FOTO');ctx.fillStyle='#05080ddd';ctx.fillRect(0,0,W,175);posterHeader(ctx,'FULL TIME',name);scoreBoard(ctx,930);footer(ctx,name)}
-function drawFulltime(){prepareTheme($('ftTournament').value,currentMatch());const {concept,motif,variant}=TOURNAMENT_STYLE;if(['italian','desert','africa','festive'].includes(concept))return (motif+variant)%2?drawFulltimeEditorial():drawFulltimeRoyal();if(['champions','cup'].includes(concept))return (motif+variant)%2?drawFulltimeCinematic():drawFulltimeChampions();if(['speed','esport','urban','german','premier'].includes(concept))return (motif+variant)%2?drawFulltimeDynamic():drawFulltimeTech();return [drawFulltimePoster,drawFulltimeEditorial,drawFulltimeCinematic][(motif+variant)%3]();}
+function drawFulltime(){if(customTemplates.draw('ft'))return;prepareTheme($('ftTournament').value,currentMatch());const {concept,motif,variant}=TOURNAMENT_STYLE;if(['italian','desert','africa','festive'].includes(concept))return (motif+variant)%2?drawFulltimeEditorial():drawFulltimeRoyal();if(['champions','cup'].includes(concept))return (motif+variant)%2?drawFulltimeCinematic():drawFulltimeChampions();if(['speed','esport','urban','german','premier'].includes(concept))return (motif+variant)%2?drawFulltimeDynamic():drawFulltimeTech();return [drawFulltimePoster,drawFulltimeEditorial,drawFulltimeCinematic][(motif+variant)%3]();}
 function drawMvpRoyal(){const match=currentMatch(),name=$('mvpTournament').value,c=$('mvpCanvas'),ctx=c.getContext('2d');prepareTheme(name,match);const g=ctx.createLinearGradient(0,0,W,H);g.addColorStop(0,'#450607');g.addColorStop(.55,'#b52617');g.addColorStop(1,'#180102');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);glow(ctx,W/2,400,500,'#ffb02e');ctx.globalAlpha=.16;ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='900 300px Impact, Arial';ctx.fillText('MVP',W/2,360);ctx.globalAlpha=1;ornateArch(ctx);if(imageState.mvpPhoto)cover(ctx,imageState.mvpPhoto,150,245,780,775,cropValues('mvp'));else placeholder(ctx,150,245,780,775,'CARICA LA FOTO MVP');contain(ctx,imageState.brand,35,30,105,105);ctx.fillStyle='#ffe4a1';ctx.textAlign='right';ctx.font='900 22px Arial';ctx.fillText(upper(name,'TORNEO'),1030,68,650);roundedRect(ctx,70,950,940,255,5,'#130304e8');ctx.fillStyle=GOLD;ctx.fillRect(70,950,940,12);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='italic 900 25px Arial';ctx.fillText('MAN OF THE MATCH',W/2,1005);drawMvpNameBlock(ctx,W/2,1090,850,'center');ctx.fillStyle=GOLD;fitText(ctx,upper($('mvpTeam').value,'SQUADRA'),780,29,16,900);ctx.fillText(upper($('mvpTeam').value,'SQUADRA'),W/2,1160,780);footer(ctx,name)}
 function drawMvpTech(){const match=currentMatch(),name=$('mvpTournament').value,c=$('mvpCanvas'),ctx=c.getContext('2d');prepareTheme(name,match);background(ctx);ctx.fillStyle='#f3f5f7';ctx.beginPath();ctx.moveTo(0,90);ctx.lineTo(875,0);ctx.lineTo(1040,1180);ctx.lineTo(130,1270);ctx.closePath();ctx.fill();ctx.globalAlpha=.12;ctx.fillStyle=GOLD;for(let i=0;i<7;i++)slash(ctx,-120+i*210,100,85,1120);ctx.globalAlpha=1;ctx.fillStyle='#09121d';ctx.textAlign='center';ctx.font='italic 900 310px Impact, Arial';ctx.fillText('MVP',W/2,340);if(imageState.mvpPhoto)cover(ctx,imageState.mvpPhoto,120,260,840,790,cropValues('mvp'));else placeholder(ctx,120,260,840,790,'CARICA LA FOTO MVP');contain(ctx,imageState.brand,35,30,105,105);ctx.fillStyle='#09121d';ctx.textAlign='right';ctx.font='900 21px Arial';ctx.fillText(upper(name,'TORNEO'),1030,66,650);slash(ctx,20,945,1040,155,'#07111c');ctx.fillStyle='#fff';ctx.textAlign='center';drawMvpNameBlock(ctx,W/2,1035,890,'center');ctx.fillStyle=GOLD;fitText(ctx,upper($('mvpTeam').value,'SQUADRA'),760,28,16,900);ctx.fillText(upper($('mvpTeam').value,'SQUADRA'),W/2,1100,760);ctx.fillStyle='#07111c';ctx.font='italic 900 28px Arial';ctx.fillText('MAN OF THE MATCH',W/2,1175);footer(ctx,name)}
-function drawMvp(){prepareTheme($('mvpTournament').value,currentMatch());const {concept,motif,variant}=TOURNAMENT_STYLE;if(['italian','desert','africa','festive'].includes(concept))return (motif+variant)%2?drawMvpEditorial():drawMvpRoyal();if(['champions','cup'].includes(concept))return (motif+variant)%2?drawMvpCinematic():drawMvpPoster();if(['speed','esport','urban','german','premier'].includes(concept))return (motif+variant)%2?drawMvpDynamic():drawMvpTech();return [drawMvpPoster,drawMvpEditorial,drawMvpCinematic][(motif+variant)%3]();}
+function drawMvp(){if(customTemplates.draw('mvp'))return;prepareTheme($('mvpTournament').value,currentMatch());const {concept,motif,variant}=TOURNAMENT_STYLE;if(['italian','desert','africa','festive'].includes(concept))return (motif+variant)%2?drawMvpEditorial():drawMvpRoyal();if(['champions','cup'].includes(concept))return (motif+variant)%2?drawMvpCinematic():drawMvpPoster();if(['speed','esport','urban','german','premier'].includes(concept))return (motif+variant)%2?drawMvpDynamic():drawMvpTech();return [drawMvpPoster,drawMvpEditorial,drawMvpCinematic][(motif+variant)%3]();}
 function footer(ctx,tournament){ctx.fillStyle=GOLD;ctx.fillRect(48,1258,W-96,2);ctx.fillStyle=MUTED;ctx.font='600 18px Arial';ctx.textAlign='left';ctx.fillText(upper(tournament,'TORNEO'),48,1300,650);ctx.textAlign='right';ctx.fillText('torneioldschool.it',W-48,1300);}
 function drawAll(){updateCropLabels();drawFulltime();drawMvp();$('status').textContent='Anteprime aggiornate.';}
-async function updateImage(id){imageState[id]=await fileImage($(id).files?.[0]);drawAll();}
+async function updateImage(id){const file=$(id).files?.[0],version=matchLoadVersion;if(!file)return;const img=await fileImage(file);if(!img)throw new Error('Immagine non valida.');if(version!==matchLoadVersion)return;imageState[id]=img;drawAll();}
 function uniqueBy(items,keyFn){const map=new Map();items.forEach(item=>{const key=keyFn(item);if(key&&!map.has(key))map.set(key,item);});return [...map.entries()];}
 function setOptions(select,placeholder,options){select.innerHTML='';select.append(new Option(placeholder,''));options.forEach(([value,label])=>select.append(new Option(label,value)));select.disabled=options.length===0;}
 function roundKey(match){return match.fase_round ? `round:${match.fase_round}` : `day:${match.giornata??''}`;}
 function roundLabel(match){return match.fase_round ? String(match.fase_round).replaceAll('_',' ') : (match.giornata ? `GIORNATA ${match.giornata}` : 'TURNO UNICO');}
 function populateTournaments(){
-  const tournaments=uniqueBy(matches,item=>String(item.torneo||'')).map(([key,item])=>[key,item.torneo_nome||item.torneo]);
-  setOptions($('ftTournamentSelect'),'Seleziona il torneo',tournaments);
+  setOptions($('ftTournamentSelect'),'Seleziona il torneo',tournaments.map(item=>[String(item.id),item.nome]));
 }
 function selectTournament(){
   const tournament=$('ftTournamentSelect').value;
-  const filtered=matches.filter(item=>String(item.torneo)===tournament);
+  const filtered=matches.filter(item=>String(item.torneo_id)===tournament);
   const phases=uniqueBy(filtered,item=>String(item.fase||'')).map(([key])=>[key,key.replaceAll('_',' ')]);
   setOptions($('ftPhase'),'Seleziona la fase',phases);
   setOptions($('ftRoundSelect'),'Seleziona la giornata',[]);
   setOptions($('ftMatch'),'Seleziona la partita',[]);
   clearMatch();
+  customTemplates.selectTournament(tournament);
 }
 function selectPhase(){
-  const filtered=matches.filter(item=>String(item.torneo)===$('ftTournamentSelect').value&&String(item.fase)===$('ftPhase').value);
+  const filtered=matches.filter(item=>String(item.torneo_id)===$('ftTournamentSelect').value&&String(item.fase)===$('ftPhase').value);
   const rounds=uniqueBy(filtered,roundKey).map(([key,item])=>[key,roundLabel(item)]);
   setOptions($('ftRoundSelect'),'Seleziona la giornata',rounds);
   setOptions($('ftMatch'),'Seleziona la partita',[]);
   clearMatch();
 }
 function selectRound(){
-  const filtered=matches.filter(item=>String(item.torneo)===$('ftTournamentSelect').value&&String(item.fase)===$('ftPhase').value&&roundKey(item)===$('ftRoundSelect').value);
+  const filtered=matches.filter(item=>String(item.torneo_id)===$('ftTournamentSelect').value&&String(item.fase)===$('ftPhase').value&&roundKey(item)===$('ftRoundSelect').value);
   const games=filtered.map(item=>[String(item.id),`${item.squadra_casa} ${item.gol_casa??0}-${item.gol_ospite??0} ${item.squadra_ospite}${Number(item.giocata)===1?'':' (non terminata)'}`]);
   setOptions($('ftMatch'),'Seleziona la partita',games);
   clearMatch();
@@ -354,13 +373,18 @@ async function updateMvpSelection(){
   drawMvp();
 }
 function clearMatch(){
-  $('ftTournament').value='';$('ftHome').value='';$('ftAway').value='';$('ftHomeScore').value=0;$('ftAwayScore').value=0;$('ftRound').value='';
+  matchLoadVersion++;
+  imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});
+  const tournament=tournaments.find(item=>String(item.id)===$('ftTournamentSelect').value);
+  $('ftTournament').value=tournament?.nome||'';$('ftHome').value='';$('ftAway').value='';$('ftHomeScore').value=0;$('ftAwayScore').value=0;$('ftRound').value='';
   $('ftHomeScore').readOnly=true;$('ftAwayScore').readOnly=true;
-  $('mvpTournament').value='';imageState.ftHomeLogo=null;imageState.ftAwayLogo=null;resetMvpSelection();drawFulltime();
+  $('mvpTournament').value=tournament?.nome||'';imageState.ftHomeLogo=null;imageState.ftAwayLogo=null;resetMvpSelection();drawFulltime();
 }
 async function selectMatch(){
   const match=matches.find(item=>String(item.id)===String($('ftMatch').value));
   if(!match){clearMatch();return;}
+  clearMatch();
+  const version=matchLoadVersion;
   $('ftTournament').value=match.torneo_nome||match.torneo||'';
   $('mvpTournament').value=match.torneo_nome||match.torneo||'';
   $('ftHome').value=match.squadra_casa||'';
@@ -372,7 +396,9 @@ async function selectMatch(){
   $('ftAwayScore').readOnly=finished;
   const phase=String(match.fase||'').toUpperCase();
   $('ftRound').value=match.fase_round ? String(match.fase_round).replaceAll('_',' ') : (phase==='REGULAR' && match.giornata ? `GIORNATA ${match.giornata}` : phase);
-  [imageState.ftHomeLogo,imageState.ftAwayLogo]=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);
+  const logos=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);
+  if(version!==matchLoadVersion)return;
+  [imageState.ftHomeLogo,imageState.ftAwayLogo]=logos;
   renderMvpPlayers(match);
   drawFulltime();
   $('status').textContent=finished?'Partita terminata: risultato caricato e bloccato.':'Partita non terminata degli ultimi 7 giorni: puoi modificare i gol solo nella grafica.';
@@ -389,9 +415,10 @@ $('ftRoundSelect').addEventListener('change',selectRound);
 $('ftMatch').addEventListener('change',()=>selectMatch().catch(()=>{$('status').textContent='Impossibile caricare i dati della partita.';}));
 document.querySelectorAll('input:not([type=file])').forEach(input=>input.addEventListener('input',drawAll));
 $('generate').addEventListener('click',drawAll);
-$('reset').addEventListener('click',()=>{imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});drawAll();$('status').textContent='Immagini rimosse.';});
-document.querySelector('[data-download=fulltime]').addEventListener('click',()=>download('fulltimeCanvas',`fulltime-${safeName($('ftHome').value)}-${safeName($('ftAway').value)}.png`));
-document.querySelector('[data-download=mvp]').addEventListener('click',()=>download('mvpCanvas',`mvp-${safeName($('mvpNames').value)}.png`));
+$('reset').addEventListener('click',async()=>{const version=++matchLoadVersion;imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});drawAll();const match=currentMatch();if(match){const logos=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);if(version!==matchLoadVersion)return;[imageState.ftHomeLogo,imageState.ftAwayLogo]=logos;}drawAll();$('status').textContent='Foto rimosse e loghi originali ripristinati. Basi conservate.';});
+document.querySelector('[data-download=fulltime]').addEventListener('click',()=>{if(customTemplates.ready('ft'))download('fulltimeCanvas',`fulltime-${safeName($('ftHome').value)}-${safeName($('ftAway').value)}.png`);});
+document.querySelector('[data-download=mvp]').addEventListener('click',()=>{if(customTemplates.ready('mvp'))download('mvpCanvas',`mvp-${safeName($('mvpNames').value)}.png`);});
+customTemplates.init();
 (async()=>{imageState.brand=await loadImage('/img/logo_old_school.png');if(isIOS)document.querySelectorAll('[data-download]').forEach(button=>button.textContent='Salva immagine');populateTournaments();drawAll();})();
 <?php if (!$embedded): ?>fetch('/includi/footer.html').then(response=>response.text()).then(html=>{document.getElementById('footer-container').innerHTML=html;}).catch(()=>{});<?php endif; ?>
 </script>
