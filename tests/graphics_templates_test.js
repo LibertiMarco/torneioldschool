@@ -16,7 +16,7 @@ function node(id) {
 const sandbox = {
   console,Set,Map,FormData:class {constructor(){this.data={};}append(k,v){this.data[k]=v;}},
   Option:class {constructor(text,value){this.text=text;this.value=value;}},
-  document:{createElement:()=>node('generated-'+nodes.size)},window:{addEventListener(){}},
+  document:{createElement:()=>node('generated-'+nodes.size)},window:{addEventListener(){},parent:{postMessage(){}},location:{origin:'http://localhost'}},
   $:node,W:1080,H:1350,graphicsTemplatesCsrf:'token',
   loadImage:async src=>({src,naturalWidth:1080,naturalHeight:1350}),
   fileImage:async file=>({src:file.name,naturalWidth:1080,naturalHeight:1350}),
@@ -35,7 +35,7 @@ vm.runInContext(source+'\nthis.templates=customTemplates;',sandbox);
 const templates=sandbox.templates;
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 (async()=>{
-  templates.init();
+  templates.init({editor:true});
   assert(node('ftBaseControls').disabled,'No tournament must disable upload');
   responses.set('1',{ft:{image:'base-one',layout:{}},mvp:{image:'mvp-one',layout:{}}});
   responses.set('2',{ft:{image:'base-two',layout:{}},mvp:null});
@@ -67,6 +67,21 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
   assert(sandbox.draws>draws,'Returning to a pending tournament did not refresh');
   assert.strictEqual(node('ftBaseControls').disabled,false);
   assert(templates.draw('ft'));assert.strictEqual(calls.pop(),'base-three');
+  // The production generator loads templates without creating editor controls.
+  const readerSandbox={...sandbox,document:{createElement(){throw new Error('Editor appeared in generator');}}};
+  vm.createContext(readerSandbox);
+  vm.runInContext(source+'\nthis.templates=customTemplates;',readerSandbox);
+  const reader=readerSandbox.templates;
+  reader.init();
+  await reader.selectTournament('1');
+  assert(reader.draw('ft'));assert.strictEqual(calls.pop(),'base-one');
+  const photo={src:'match-photo'};readerSandbox.imageState.ftCaptains=photo;
+  responses.set('1',{ft:{image:'updated-base',layout:{}},mvp:null});
+  await reader.reload('1');
+  assert(reader.draw('ft'));assert.strictEqual(calls.pop(),'updated-base');
+  assert.strictEqual(readerSandbox.imageState.ftCaptains,photo,'Refreshing templates discarded the match photo');
+  responses.set('1',{ft:null,mvp:null});
+  await reader.reload();assert.strictEqual(reader.draw('ft'),false,'Removed template remained cached');
   // Parse the PHP page's inline JS with inert fixture values; no database or session required.
   const page=fs.readFileSync(path.join(__dirname,'../api/grafiche_post_partita.php'),'utf8');
   const inline=page.match(/<script>\s*([\s\S]*?)<\/script>/)[1]

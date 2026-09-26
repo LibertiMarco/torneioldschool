@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includi/graphics_guard.php';
 require_once __DIR__ . '/../includi/db.php';
 $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
+$templateEditor = isset($_GET['templates']) && $_GET['templates'] === '1';
 $torneiGrafiche = [];
 $torneiResult = $conn->query('SELECT id, nome FROM tornei ORDER BY nome');
 if ($torneiResult) {
@@ -9,6 +10,7 @@ if ($torneiResult) {
 }
 
 $partiteGrafiche = [];
+if (!$templateEditor) {
 $partiteStmt = $conn->prepare(
   "SELECT p.id, p.torneo,
           (SELECT t.id FROM tornei t
@@ -52,8 +54,10 @@ if ($partiteStmt && $partiteStmt->execute()) {
   }
   $partiteStmt->close();
 }
+}
 
 $giocatoriGrafiche = [];
+if (!$templateEditor) {
 $giocatoriStmt = $conn->prepare(
   "SELECT pg.partita_id, g.id, g.nome, g.cognome,
           s.id AS squadra_id, s.nome AS squadra_nome
@@ -72,13 +76,14 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
   }
   $giocatoriStmt->close();
 }
+}
 ?>
 <!doctype html>
 <html lang="it">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Generatore grafiche post partita</title>
+  <title><?= $templateEditor ? 'Template grafiche Full Time e MVP' : 'Generatore grafiche post partita' ?></title>
   <link rel="stylesheet" href="/style.min.css?v=20251126">
   <style>
     :root { color-scheme: dark; font-family: Inter, Arial, sans-serif; --bg:#07111d; --panel:#101e2d; --panel2:#152638; --gold:#e8bd45; --muted:#aebdca; }
@@ -137,18 +142,20 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 <?php if (!$embedded): ?><?php include __DIR__ . '/../includi/header.php'; ?><?php endif; ?>
 <main>
   <?php if (!$embedded): ?><a href="/admin_dashboard.php">Torna alla dashboard</a><?php endif; ?>
-  <h1><?= $embedded ? 'FULLTIME E MVP' : 'Grafiche post partita' ?></h1>
-  <p class="intro">Crea Full Time e MVP in formato 1080 × 1350 con una tua base per ogni torneo. Basi e posizioni vengono salvate; foto e modifiche al risultato restano nella grafica.</p>
+  <h1><?= $templateEditor ? 'Template grafiche Full Time e MVP' : ($embedded ? 'FULLTIME E MVP' : 'Grafiche post partita') ?></h1>
+  <p class="intro"><?= $templateEditor ? 'Imposta e salva le basi e le posizioni per ogni torneo. Le anteprime mostrano dati di esempio e gli spazi per foto e loghi.' : 'Seleziona la partita e aggiungi le foto: i template salvati per il torneo vengono applicati automaticamente.' ?></p>
 
   <div class="workspace">
     <section class="controls">
       <label>Torneo<select id="ftTournamentSelect"><option value="">Seleziona il torneo</option></select></label>
+      <?php if (!$templateEditor): ?><p id="templateStatus" class="hint" aria-live="polite"></p><?php endif; ?>
       <div class="tabs">
         <button type="button" class="tab active" data-panel="fulltimePanel">Full Time</button>
         <button type="button" class="tab" data-panel="mvpPanel">MVP</button>
       </div>
 
       <div id="fulltimePanel" class="panel active">
+        <div <?= $templateEditor ? 'hidden' : '' ?>>
         <div class="fields">
           <label>Fase<select id="ftPhase" disabled><option value="">Seleziona la fase</option></select></label>
           <label>Giornata / turno<select id="ftRoundSelect" disabled><option value="">Seleziona la giornata</option></select></label>
@@ -166,9 +173,11 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
           <label class="wide">Posizione verticale <span class="range-value" id="ftYValue">0%</span><input id="ftY" type="range" min="0" max="100" value="0"></label>
           <label class="wide">Giornata / fase<input id="ftRound" value="" readonly></label>
         </div>
+        </div>
       </div>
 
       <div id="mvpPanel" class="panel">
+        <div <?= $templateEditor ? 'hidden' : '' ?>>
         <div class="fields">
           <label class="wide">Torneo<input id="mvpTournament" value="" readonly></label>
           <div class="wide">
@@ -183,33 +192,37 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
           <label class="wide">Posizione verticale <span class="range-value" id="mvpYValue">0%</span><input id="mvpY" type="range" min="0" max="100" value="0"></label>
           <label>Dettaglio (facoltativo)<input id="mvpDetails" value="MAN OF THE MATCH"></label>
         </div>
+        </div>
       </div>
 
+      <div <?= $templateEditor ? 'hidden' : '' ?>>
       <div class="actions">
         <button id="generate" type="button">Aggiorna entrambe</button>
         <button id="reset" class="secondary" type="button">Rimuovi foto e loghi caricati</button>
       </div>
       <p class="hint">Suggerimento: usa fotografie verticali o con spazio intorno ai soggetti. Il generatore centra e ritaglia automaticamente le immagini.</p>
+      </div>
       <div id="status" class="status" aria-live="polite"></div>
     </section>
 
     <section class="previews">
       <article class="preview-card">
-        <div class="preview-head"><h2>Full Time</h2><button type="button" data-download="fulltime">Scarica PNG</button></div>
+        <div class="preview-head"><h2>Full Time</h2><button type="button" data-download="fulltime" <?= $templateEditor ? 'hidden' : '' ?>>Scarica PNG</button></div>
         <canvas id="fulltimeCanvas" width="1080" height="1350"></canvas>
       </article>
       <article class="preview-card">
-        <div class="preview-head"><h2>MVP</h2><button type="button" data-download="mvp">Scarica PNG</button></div>
+        <div class="preview-head"><h2>MVP</h2><button type="button" data-download="mvp" <?= $templateEditor ? 'hidden' : '' ?>>Scarica PNG</button></div>
         <canvas id="mvpCanvas" width="1080" height="1350"></canvas>
       </article>
     </section>
   </div>
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
-<script src="grafiche_basi.js?v=20260926"></script>
+<script src="grafiche_basi.js?v=20260926-tabs"></script>
 <script>
 const $ = id => document.getElementById(id);
 const W=1080,H=1350;
+const templateEditor=<?= json_encode($templateEditor) ?>;
 const graphicsTemplatesCsrf=<?= json_encode(csrf_get_token('graphics_templates')) ?>;
 const tournaments=<?= json_encode($torneiGrafiche, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 let GOLD='#e8bd45',BG='#07131f',PANEL='#102438',MUTED='#aebdca';
@@ -321,6 +334,7 @@ function populateTournaments(){
 }
 function selectTournament(){
   const tournament=$('ftTournamentSelect').value;
+  if(templateEditor){setTemplatePreview();customTemplates.selectTournament(tournament);return;}
   const filtered=matches.filter(item=>String(item.torneo_id)===tournament);
   const phases=uniqueBy(filtered,item=>String(item.fase||'')).map(([key])=>[key,key.replaceAll('_',' ')]);
   setOptions($('ftPhase'),'Seleziona la fase',phases);
@@ -328,6 +342,13 @@ function selectTournament(){
   setOptions($('ftMatch'),'Seleziona la partita',[]);
   clearMatch();
   customTemplates.selectTournament(tournament);
+}
+function setTemplatePreview(){
+  const tournament=tournaments.find(item=>String(item.id)===$('ftTournamentSelect').value);
+  $('ftTournament').value=$('mvpTournament').value=tournament?.nome||'';
+  $('ftHome').value='SQUADRA CASA';$('ftAway').value='SQUADRA OSPITE';
+  $('ftHomeScore').value=3;$('ftAwayScore').value=2;$('ftRound').value='GIORNATA 1';
+  $('mvpNames').value='NOME GIOCATORE';$('mvpTeam').value='SQUADRA MVP';
 }
 function selectPhase(){
   const filtered=matches.filter(item=>String(item.torneo_id)===$('ftTournamentSelect').value&&String(item.fase)===$('ftPhase').value);
@@ -418,7 +439,11 @@ $('generate').addEventListener('click',drawAll);
 $('reset').addEventListener('click',async()=>{const version=++matchLoadVersion;imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});drawAll();const match=currentMatch();if(match){const logos=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);if(version!==matchLoadVersion)return;[imageState.ftHomeLogo,imageState.ftAwayLogo]=logos;}drawAll();$('status').textContent='Foto rimosse e loghi originali ripristinati. Basi conservate.';});
 document.querySelector('[data-download=fulltime]').addEventListener('click',()=>{if(customTemplates.ready('ft'))download('fulltimeCanvas',`fulltime-${safeName($('ftHome').value)}-${safeName($('ftAway').value)}.png`);});
 document.querySelector('[data-download=mvp]').addEventListener('click',()=>{if(customTemplates.ready('mvp'))download('mvpCanvas',`mvp-${safeName($('mvpNames').value)}.png`);});
-customTemplates.init();
+customTemplates.init({editor:templateEditor});
+if(templateEditor)setTemplatePreview();
+window.addEventListener('message',event=>{
+  if(!templateEditor&&event.origin===window.location.origin&&event.source===window.parent&&event.data?.type==='graphics-templates-refresh')customTemplates.reload(event.data.torneoId);
+});
 (async()=>{imageState.brand=await loadImage('/img/logo_old_school.png');if(isIOS)document.querySelectorAll('[data-download]').forEach(button=>button.textContent='Salva immagine');populateTournaments();drawAll();})();
 <?php if (!$embedded): ?>fetch('/includi/footer.html').then(response=>response.text()).then(html=>{document.getElementById('footer-container').innerHTML=html;}).catch(()=>{});<?php endif; ?>
 </script>

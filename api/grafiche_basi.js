@@ -7,11 +7,14 @@ const customTemplates = (() => {
     : {photo:element(100,200,880,820),homeLogo:element(70,1100,130,130),awayLogo:element(880,1100,130,130),names:element(70,1030,940,100,54),team:element(210,1150,660,70,32),details:element(150,1240,780,60,26)};
   const state = new Map();
   let currentId = '';
+  let editor = false;
   const fresh = type => ({image:null,file:null,layout:defaults(type),dirty:false,busy:false,loading:false,error:''});
   const pair = () => state.get(currentId);
   const message = text => { $('status').textContent = text; };
 
-  function init() {
+  function init(options = {}) {
+    editor = options.editor === true;
+    if (!editor) return;
     for (const type of ['ft','mvp']) {
       const box = document.createElement('details');
       box.className = 'template-editor'; box.open = true;
@@ -44,6 +47,14 @@ const customTemplates = (() => {
     });
   }
   function refresh(type) {
+    if (!editor) {
+      const items = pair();
+      const status = $('templateStatus');
+      if (status) status.textContent = !items ? '' : items.ft.error || items.mvp.error ||
+        (items.ft.loading || items.mvp.loading ? 'Caricamento dei template del torneo…' :
+          ['ft','mvp'].map(key => `${key === 'ft' ? 'Full Time' : 'MVP'}: ${items[key].image ? 'template del torneo' : 'grafica automatica'}`).join(' · '));
+      return;
+    }
     const item = pair()?.[type];
     $(type+'BaseControls').disabled = !item || item.loading || item.busy || !!item.error;
     const rect = (item?.layout || defaults(type))[$(type+'Element').value];
@@ -119,6 +130,7 @@ const customTemplates = (() => {
       await request('grafiche_basi.php',{method:'POST',body});
       if(remove) Object.assign(item,fresh(type));
       item.file=null;item.dirty=false;
+      if (window.parent !== window) window.parent.postMessage({type:'graphics-template-saved',torneoId:id},window.location.origin);
       if(id===currentId) {drawAll();message(remove?'Grafica automatica ripristinata per questo torneo.':'Base e posizioni salvate per questo torneo.');}
     } catch(error) {message(error.message);}
     finally {item.busy=false;if(id===currentId)refresh(type);}
@@ -149,8 +161,16 @@ const customTemplates = (() => {
     const texts=type==='ft'?{score:`${$('ftHomeScore').value||0} – ${$('ftAwayScore').value||0}`,home:$('ftHome').value,away:$('ftAway').value,round:$('ftRound').value}:{names:$('mvpNames').value,team:$('mvpTeam').value,details:$('mvpDetails').value};
     for (const [key,r] of Object.entries(item.layout)) {
       if(!r.visible) continue;
-      if(key==='photo') cover(ctx,imageState[type==='ft'?'ftCaptains':'mvpPhoto'],r.x,r.y,r.w,r.h,cropValues(type));
-      else if(key==='homeLogo'||key==='awayLogo') contain(ctx,logos[key==='homeLogo'?0:1],r.x,r.y,r.w,r.h);
+      if(key==='photo') {
+        const photo=imageState[type==='ft'?'ftCaptains':'mvpPhoto'];
+        if(editor&&!photo) guide(ctx,r,'FOTO GIOCATORI');
+        else cover(ctx,photo,r.x,r.y,r.w,r.h,cropValues(type));
+      }
+      else if(key==='homeLogo'||key==='awayLogo') {
+        const logo=logos[key==='homeLogo'?0:1];
+        if(editor&&!logo) guide(ctx,r,key==='homeLogo'?'LOGO 1':'LOGO 2');
+        else contain(ctx,logo,r.x,r.y,r.w,r.h);
+      }
       else text(ctx,texts[key],r);
     }
     ctx.restore();return true;
@@ -160,5 +180,15 @@ const customTemplates = (() => {
     if(item?.loading||item?.error) {message(item.error||'Attendi il caricamento della base.');return false;}
     return true;
   }
-  return {init,selectTournament,draw,ready};
+  function guide(ctx,r,label) {
+    ctx.save();ctx.fillStyle='#ffffff20';ctx.fillRect(r.x,r.y,r.w,r.h);
+    ctx.strokeStyle='#e8bd45';ctx.lineWidth=3;ctx.setLineDash([12,8]);ctx.strokeRect(r.x,r.y,r.w,r.h);
+    text(ctx,label,{...r,font:Math.min(30,r.font),color:'#ffffff'});ctx.restore();
+  }
+  async function reload(id = currentId) {
+    if(editor||!id) return;
+    state.delete(String(id));
+    if(String(id)===currentId) await selectTournament(currentId);
+  }
+  return {init,selectTournament,draw,ready,reload};
 })();
