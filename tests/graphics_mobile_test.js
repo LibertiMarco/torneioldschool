@@ -6,6 +6,9 @@ const page=fs.readFileSync(path.join(__dirname,'../api/grafiche_post_partita.php
 // Exercise decoding under the production policy: local previews must work without blob:.
 const htaccess=fs.readFileSync(path.join(__dirname,'../.htaccess'),'utf8');
 const policy=htaccess.match(/Header set Content-Security-Policy "([^"]+)"/)[1];
+assert(policy.includes("'wasm-unsafe-eval'"),'CSP must permit the on-device segmentation runtime');
+assert(policy.match(/script-src ([^;]+)/)[1].includes('https://cdn.jsdelivr.net'),'CSP must allow the pinned MediaPipe script');
+assert(policy.match(/connect-src ([^;]+)/)[1].includes('https://cdn.jsdelivr.net'),'CSP must allow MediaPipe runtime/model assets');
 const imageSources=policy.match(/(?:^|;)\s*img-src\s+([^;]+)/)[1].split(/\s+/);
 const fileImageSource=page.slice(page.indexOf('function readImageData('),page.indexOf('function cover('));
 const renders=[],canvases=[];
@@ -35,11 +38,18 @@ vm.createContext(sandbox);vm.runInContext(fileImageSource,sandbox);
   assert.strictEqual(await sandbox.fileImage({invalid:true}),null);
   failEncode=false;
   const fields={ftCaptains:{files:[{width:4032,height:3024,type:'image/jpeg'}]},mvpPhoto:{files:[{width:600,height:800,type:'image/png'}]},status:{}};
+  for(const id of ['ftPhotoActions','mvpPhotoActions','ftRemoveBg','mvpRemoveBg','ftRestorePhoto','mvpRestorePhoto'])fields[id]={hidden:true,disabled:false};
   sandbox.$=id=>fields[id];sandbox.matchLoadVersion=0;sandbox.imageState={};sandbox.drawAll=()=>{sandbox.draws=(sandbox.draws||0)+1;};
   vm.runInContext(page.match(/async function updateImage\(id\)\{[^\n]+/)[0],sandbox);
   await sandbox.updateImage('ftCaptains');await sandbox.updateImage('mvpPhoto');
   assert.strictEqual(sandbox.imageState.ftCaptains.naturalWidth,2048);
   assert.strictEqual(sandbox.imageState.mvpPhoto.naturalHeight,800);
+  assert.strictEqual(sandbox.imageState.ftCaptainsOriginal,sandbox.imageState.ftCaptains,'Full Time original photo was not kept for restore');
+  assert.strictEqual(sandbox.imageState.mvpPhotoOriginal,sandbox.imageState.mvpPhoto,'MVP original photo was not kept for restore');
+  assert.strictEqual(fields.ftPhotoActions.hidden,false,'Full Time background removal option did not appear after upload');
+  assert.strictEqual(fields.mvpPhotoActions.hidden,false,'MVP background removal option did not appear after upload');
+  assert.strictEqual(fields.ftRemoveBg.hidden,false,'Full Time background removal button stayed hidden');
+  assert.strictEqual(fields.ftRestorePhoto.hidden,true,'Restore button appeared before processing');
   assert.strictEqual(sandbox.draws,2,'Both photo inputs must update the previews');
   console.log('Photo inputs, CSP-compatible decoding, resizing, transparency, read errors and memory cleanup: OK');
   const parentPage=fs.readFileSync(path.join(__dirname,'../api/generatore_grafiche.php'),'utf8');

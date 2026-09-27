@@ -117,6 +117,8 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     button { border:0; cursor:pointer; background:var(--gold); color:#101722; font-weight:850; }
     .secondary { background:#263d53; color:#fff; }
     .actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
+    .remove-bg-actions { display:flex; gap:8px; margin-top:8px; }
+    .remove-bg-actions button { flex:1; font-size:13px; }
     .hint { color:var(--muted); font-size:13px; line-height:1.45; margin:14px 0 0; }
     .previews { display:grid; grid-template-columns:repeat(2,minmax(280px,1fr)); gap:22px; }
     .preview-card { padding:15px; }
@@ -180,6 +182,8 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
           <label>Logo casa (facoltativo)<input id="ftHomeLogo" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label>Logo ospite (facoltativo)<input id="ftAwayLogo" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label class="wide">Foto pre-match dei capitani<input id="ftCaptains" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          <div id="ftPhotoActions" class="wide remove-bg-actions" hidden><button id="ftRemoveBg" type="button">Rimuovi sfondo</button><button id="ftRestorePhoto" class="secondary" type="button" hidden>Ripristina originale</button></div>
+          <p class="wide hint" style="margin:0">La foto viene elaborata sul dispositivo. Il primo utilizzo scarica il modello di segmentazione.</p>
           <label>Zoom foto <span class="range-value" id="ftZoomValue">100%</span><input id="ftZoom" type="range" min="100" max="250" value="100"></label>
           <label>Posizione orizzontale <span class="range-value" id="ftXValue">50%</span><input id="ftX" type="range" min="0" max="100" value="50"></label>
           <label class="wide">Posizione verticale <span class="range-value" id="ftYValue">0%</span><input id="ftY" type="range" min="0" max="100" value="0"></label>
@@ -199,6 +203,8 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
           <label class="wide">Selezione<input id="mvpNames" value="" readonly></label>
           <label class="wide">Squadra<input id="mvpTeam" value="" readonly></label>
           <label class="wide">Foto MVP<input id="mvpPhoto" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          <div id="mvpPhotoActions" class="wide remove-bg-actions" hidden><button id="mvpRemoveBg" type="button">Rimuovi sfondo</button><button id="mvpRestorePhoto" class="secondary" type="button" hidden>Ripristina originale</button></div>
+          <p class="wide hint" style="margin:0">La foto viene elaborata sul dispositivo. Il primo utilizzo scarica il modello di segmentazione.</p>
           <label>Zoom foto <span class="range-value" id="mvpZoomValue">100%</span><input id="mvpZoom" type="range" min="100" max="250" value="100"></label>
           <label>Posizione orizzontale <span class="range-value" id="mvpXValue">50%</span><input id="mvpX" type="range" min="0" max="100" value="50"></label>
           <label class="wide">Posizione verticale <span class="range-value" id="mvpYValue">0%</span><input id="mvpY" type="range" min="0" max="100" value="0"></label>
@@ -251,7 +257,7 @@ const tournamentThemes=[
 ];
 const matches=<?= json_encode($partiteGrafiche, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const matchPlayers=<?= json_encode($giocatoriGrafiche, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-const imageState={ftHomeLogo:null,ftAwayLogo:null,ftCaptains:null,mvpPhoto:null,brand:null};
+const imageState={ftHomeLogo:null,ftAwayLogo:null,ftCaptains:null,mvpPhoto:null,brand:null,ftCaptainsOriginal:null,mvpPhotoOriginal:null};
 const imageFields=['ftCaptains','mvpPhoto','ftHomeLogo','ftAwayLogo'];
 let matchLoadVersion=0;
 const safeName=value=>String(value||'grafica').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
@@ -363,7 +369,13 @@ function drawMvpTech(){const match=currentMatch(),name=$('mvpTournament').value,
 function drawMvp(){if(customTemplates.draw('mvp'))return;prepareTheme($('mvpTournament').value,currentMatch());const {concept,motif,variant}=TOURNAMENT_STYLE;if(['italian','desert','africa','festive'].includes(concept))return (motif+variant)%2?drawMvpEditorial():drawMvpRoyal();if(['champions','cup'].includes(concept))return (motif+variant)%2?drawMvpCinematic():drawMvpPoster();if(['speed','esport','urban','german','premier'].includes(concept))return (motif+variant)%2?drawMvpDynamic():drawMvpTech();return [drawMvpPoster,drawMvpEditorial,drawMvpCinematic][(motif+variant)%3]();}
 function footer(ctx,tournament){ctx.fillStyle=GOLD;ctx.fillRect(48,1258,W-96,2);ctx.fillStyle=MUTED;ctx.font='600 18px Arial';ctx.textAlign='left';ctx.fillText(upper(tournament,'TORNEO'),48,1300,650);ctx.textAlign='right';ctx.fillText('torneioldschool.it',W-48,1300);}
 function drawAll(){updateCropLabels();drawFulltime();drawMvp();$('status').textContent='Anteprime aggiornate.';}
-async function updateImage(id){const file=$(id).files?.[0],version=matchLoadVersion;if(!file)return;$('status').textContent='Preparazione immagine…';const img=await fileImage(file,2048);if(!img)throw new Error('Formato della foto non leggibile. Usa una foto JPG, PNG o WebP.');if(version!==matchLoadVersion)return;imageState[id]=img;drawAll();}
+async function updateImage(id){const file=$(id).files?.[0],version=matchLoadVersion;if(!file)return;$('status').textContent='Preparazione immagine…';const img=await fileImage(file,2048);if(!img)throw new Error('Formato della foto non leggibile. Usa una foto JPG, PNG o WebP.');if(version!==matchLoadVersion)return;imageState[id]=img;if(id==='ftCaptains'||id==='mvpPhoto'){imageState[id+'Original']=img;$(id==='ftCaptains'?'ftPhotoActions':'mvpPhotoActions').hidden=false;$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto').hidden=true;const removeButton=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg');removeButton.hidden=false;removeButton.disabled=false;}drawAll();}
+let selfieSegmentationPromise=null;
+let backgroundRemovalBusy=false;
+const mediaPipeBase='https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/';
+function loadSelfieSegmentation(){if(selfieSegmentationPromise)return selfieSegmentationPromise;selfieSegmentationPromise=new Promise((resolve,reject)=>{if(window.SelfieSegmentation)return resolve();const script=document.createElement('script');script.src=mediaPipeBase+'selfie_segmentation.js';script.crossOrigin='anonymous';script.onload=()=>window.SelfieSegmentation?resolve():reject(new Error('Componente di rimozione sfondo non disponibile.'));script.onerror=()=>reject(new Error('Impossibile scaricare il componente. Controlla la connessione e riprova.'));document.head.appendChild(script);}).then(()=>{const segmenter=new SelfieSegmentation({locateFile:file=>mediaPipeBase+file});segmenter.setOptions({modelSelection:0});return segmenter;}).catch(error=>{selfieSegmentationPromise=null;throw error;});return selfieSegmentationPromise;}
+async function removePhotoBackground(id){const original=imageState[id+'Original'];if(!original||backgroundRemovalBusy)return;const version=matchLoadVersion,button=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg'),restore=$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto');backgroundRemovalBusy=true;button.disabled=true;$('status').textContent='Rimozione sfondo in corso… Al primo utilizzo viene scaricato il modello.';try{const segmenter=await loadSelfieSegmentation();const mask=await new Promise((resolve,reject)=>{let settled=false;const timer=setTimeout(()=>{if(!settled){settled=true;reject(new Error('La rimozione sta impiegando troppo. Riprova con una foto più piccola.'));}},45000);segmenter.onResults(results=>{if(settled)return;settled=true;clearTimeout(timer);results.segmentationMask?resolve(results.segmentationMask):reject(new Error('Non è stato possibile riconoscere il soggetto.'));});segmenter.send({image:original}).catch(error=>{if(!settled){settled=true;clearTimeout(timer);reject(error);}});});if(version!==matchLoadVersion||imageState[id+'Original']!==original)return;const w=original.naturalWidth,h=original.naturalHeight,canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(original,0,0,w,h);const maskScale=Math.min(1,1024/Math.max(w,h)),maskWidth=Math.max(1,Math.round(w*maskScale)),maskHeight=Math.max(1,Math.round(h*maskScale)),maskCanvas=document.createElement('canvas');maskCanvas.width=maskWidth;maskCanvas.height=maskHeight;const maskCtx=maskCanvas.getContext('2d',{willReadFrequently:true});maskCtx.filter='blur(0.6px)';maskCtx.drawImage(mask,0,0,maskWidth,maskHeight);maskCtx.filter='none';const maskData=maskCtx.getImageData(0,0,maskWidth,maskHeight),pixels=maskData.data;for(let i=0;i<pixels.length;i+=4){const alpha=pixels[i];pixels[i]=255;pixels[i+1]=255;pixels[i+2]=255;pixels[i+3]=alpha;}maskCtx.putImageData(maskData,0,0);ctx.globalCompositeOperation='destination-in';ctx.drawImage(maskCanvas,0,0,w,h);const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('Impossibile creare la foto trasparente.')),'image/png'));canvas.width=maskCanvas.width=1;const cutout=await loadImage(await readImageData(blob));if(!cutout)throw new Error('Impossibile leggere la foto senza sfondo.');if(version!==matchLoadVersion||imageState[id+'Original']!==original)return;imageState[id]=cutout;button.hidden=true;restore.hidden=false;drawAll();$('status').textContent='Sfondo rimosso. La foto è stata elaborata sul dispositivo.';}catch(error){$('status').textContent=error.message||'Rimozione sfondo non riuscita.';button.disabled=false;}finally{backgroundRemovalBusy=false;}}
+function restoreOriginalPhoto(id){imageState[id]=imageState[id+'Original'];const button=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg'),restore=$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto');button.hidden=false;button.disabled=false;restore.hidden=true;drawAll();$('status').textContent='Foto originale ripristinata.';}
 function uniqueBy(items,keyFn){const map=new Map();items.forEach(item=>{const key=keyFn(item);if(key&&!map.has(key))map.set(key,item);});return [...map.entries()];}
 function setOptions(select,placeholder,options){select.innerHTML='';select.append(new Option(placeholder,''));options.forEach(([value,label])=>select.append(new Option(label,value)));select.disabled=options.length===0;}
 function roundKey(match){return match.fase_round ? `round:${match.fase_round}` : `day:${match.giornata??''}`;}
@@ -435,6 +447,7 @@ async function updateMvpSelection(){
 function clearMatch(){
   matchLoadVersion++;
   imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});
+  imageState.ftCaptainsOriginal=imageState.mvpPhotoOriginal=null;['ft','mvp'].forEach(prefix=>{$(prefix+'PhotoActions').hidden=true;$(prefix+'RemoveBg').hidden=false;$(prefix+'RemoveBg').disabled=false;$(prefix+'RestorePhoto').hidden=true;});
   const tournament=tournaments.find(item=>String(item.id)===$('ftTournamentSelect').value);
   $('ftTournament').value=tournament?.nome||'';$('ftHome').value='';$('ftAway').value='';$('ftHomeScore').value=0;$('ftAwayScore').value=0;$('ftRound').value='';
   $('ftHomeScore').readOnly=true;$('ftAwayScore').readOnly=true;
@@ -469,6 +482,10 @@ async function download(canvasId,name){const canvas=$(canvasId),fallbackWindow=i
 
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===button.dataset.panel));}));
 imageFields.forEach(id=>$(id).addEventListener('change',()=>updateImage(id).catch(error=>{$('status').textContent=error.message||'Impossibile leggere questa immagine.';$(id).value='';})));
+$('ftRemoveBg').addEventListener('click',()=>removePhotoBackground('ftCaptains'));
+$('mvpRemoveBg').addEventListener('click',()=>removePhotoBackground('mvpPhoto'));
+$('ftRestorePhoto').addEventListener('click',()=>restoreOriginalPhoto('ftCaptains'));
+$('mvpRestorePhoto').addEventListener('click',()=>restoreOriginalPhoto('mvpPhoto'));
 $('ftTournamentSelect').addEventListener('change',selectTournament);
 $('ftPhase').addEventListener('change',selectPhase);
 $('ftRoundSelect').addEventListener('change',selectRound);
@@ -481,7 +498,7 @@ function queueInputDraw(){
 }
 document.querySelectorAll('input:not([type=file])').forEach(input=>input.addEventListener('input',queueInputDraw));
 $('generate').addEventListener('click',drawAll);
-$('reset').addEventListener('click',async()=>{const version=++matchLoadVersion;imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});drawAll();const match=currentMatch();if(match){const logos=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);if(version!==matchLoadVersion)return;[imageState.ftHomeLogo,imageState.ftAwayLogo]=logos;}drawAll();$('status').textContent='Foto rimosse e loghi originali ripristinati. Basi conservate.';});
+$('reset').addEventListener('click',async()=>{const version=++matchLoadVersion;imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});imageState.ftCaptainsOriginal=imageState.mvpPhotoOriginal=null;['ft','mvp'].forEach(prefix=>{$(prefix+'PhotoActions').hidden=true;$(prefix+'RemoveBg').hidden=false;$(prefix+'RemoveBg').disabled=false;$(prefix+'RestorePhoto').hidden=true;});drawAll();const match=currentMatch();if(match){const logos=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);if(version!==matchLoadVersion)return;[imageState.ftHomeLogo,imageState.ftAwayLogo]=logos;}drawAll();$('status').textContent='Foto rimosse e loghi originali ripristinati. Basi conservate.';});
 document.querySelector('[data-download=fulltime]').addEventListener('click',()=>{if(customTemplates.ready('ft'))download('fulltimeCanvas',`fulltime-${safeName($('ftHome').value)}-${safeName($('ftAway').value)}.png`);});
 document.querySelector('[data-download=mvp]').addEventListener('click',()=>{if(customTemplates.ready('mvp'))download('mvpCanvas',`mvp-${safeName($('mvpNames').value)}.png`);});
 customTemplates.init({editor:templateEditor});
