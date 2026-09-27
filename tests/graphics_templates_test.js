@@ -5,7 +5,9 @@ const path = require('path');
 const nodes = new Map();
 const calls = [];
 const responses = new Map();
+const textCalls = [];
 const context = new Proxy({}, {get: (target,key) => target[key] || (()=>{}), set:(target,key,value)=>(target[key]=value,true)});
+context.fillText=(value,x,y)=>textCalls.push({value,x,y,color:context.fillStyle});
 function node(id) {
   if(!nodes.has(id)) nodes.set(id, {id,value:'',listeners:{},files:[],checked:false,
     addEventListener(event,fn){this.listeners[event]=fn;},
@@ -24,7 +26,7 @@ const sandbox = {
   contain(ctx,img){if(img)calls.push(img.src);},
   drawAll(){sandbox.draws=(sandbox.draws||0)+1;},
   fetch:async(url,options)=>{
-    if(options) {sandbox.lastPost=options.body.data;return {ok:true,json:async()=>({ok:true})};}
+    if(options?.method==='POST') {sandbox.lastPost=options.body.data;return {ok:!sandbox.failSave,json:async()=>sandbox.failSave?{error:'Salvataggio non riuscito'}:sandbox.unconfirmedSave?{}:{ok:true}};}
     const id=url.split('=')[1];
     return {ok:true,json:async()=>responses.has(id)?await responses.get(id):{ft:null,mvp:null}};
   }
@@ -53,6 +55,17 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
   assert.strictEqual(sandbox.lastPost.torneo_id,'1');
   assert.strictEqual(sandbox.lastPost.type,'ft');
   assert.strictEqual(sandbox.lastPost.base.name,'draft-one');
+  const savedLayout=JSON.parse(sandbox.lastPost.layout);
+  assert(savedLayout.homeScore&&savedLayout.awayScore&&!savedLayout.score,'Separate scores missing from saved template');
+  sandbox.failSave=true;
+  node('ftSaveBase').listeners.click();await tick();
+  assert.strictEqual(node('ftBaseStatus').textContent,'Salvataggio non riuscito','Save error was hidden');
+  sandbox.failSave=false;sandbox.unconfirmedSave=true;
+  node('ftSaveBase').listeners.click();await tick();
+  assert(node('ftBaseStatus').textContent.includes('non ha confermato'),'Unconfirmed save reported success');
+  sandbox.unconfirmedSave=false;
+  node('ftSaveBase').listeners.click();await tick();
+  assert.strictEqual(node('ftBaseStatus').textContent,'Base salvata per questo torneo.','Retry did not succeed');
   node('ftRemoveBase').listeners.click();await tick();
   assert.strictEqual(templates.draw('ft'),false);
   assert(templates.draw('mvp'),'Reset removed the MVP base');
@@ -82,6 +95,18 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
   assert.strictEqual(readerSandbox.imageState.ftCaptains,photo,'Refreshing templates discarded the match photo');
   responses.set('1',{ft:null,mvp:null});
   await reader.reload();assert.strictEqual(reader.draw('ft'),false,'Removed template remained cached');
+  const oldScore={x:100,y:600,w:501,h:100,font:70,color:'#123456',visible:true};
+  responses.set('1',{ft:{image:'legacy-base',layout:{score:oldScore}},mvp:null});
+  await reader.reload();
+  node('ftHomeScore').value='0';node('ftAwayScore').value='12';textCalls.length=0;
+  reader.draw('ft');
+  assert.deepStrictEqual(textCalls.map(call=>call.value),['0','12'],'Scores were joined or separated by a dash');
+  assert.strictEqual(textCalls[0].x,225);assert.strictEqual(textCalls[1].x,475.5);
+  assert.strictEqual(textCalls[0].color,'#123456','Legacy score style lost');
+  responses.set('1',{ft:{image:'split-base',layout:{homeScore:{...oldScore,x:50,color:'#abcdef'},awayScore:{...oldScore,x:700,y:900,visible:false}}},mvp:null});
+  await reader.reload();textCalls.length=0;reader.draw('ft');
+  assert.deepStrictEqual(textCalls.map(call=>call.value),['0'],'Score visibility is not independent');
+  assert.strictEqual(textCalls[0].x,300.5);assert.strictEqual(textCalls[0].color,'#abcdef');
   // Parse the PHP page's inline JS with inert fixture values; no database or session required.
   const page=fs.readFileSync(path.join(__dirname,'../api/grafiche_post_partita.php'),'utf8');
   const inline=page.match(/<script>\s*([\s\S]*?)<\/script>/)[1]

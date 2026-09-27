@@ -1,16 +1,28 @@
 /* Basi personalizzate: le foto delle partite restano locali, base e layout si salvano sul server. */
 const customTemplates = (() => {
-  const labels = {photo:'Foto giocatori',homeLogo:'Logo casa / squadra MVP',awayLogo:'Logo ospite / secondo MVP',score:'Risultato',home:'Nome squadra casa',away:'Nome squadra ospite',round:'Giornata / fase',names:'Nomi MVP',team:'Squadra MVP',details:'Dettaglio MVP'};
+  const labels = {photo:'Foto giocatori',homeLogo:'Logo casa / squadra MVP',awayLogo:'Logo ospite / secondo MVP',homeScore:'Gol squadra casa',awayScore:'Gol squadra ospite',home:'Nome squadra casa',away:'Nome squadra ospite',round:'Giornata / fase',names:'Nomi MVP',team:'Squadra MVP',details:'Dettaglio MVP'};
   const element = (x,y,w,h,font=40,visible=true) => ({x,y,w,h,font,visible,color:'#ffffff'});
   const defaults = type => type === 'ft'
-    ? {photo:element(80,220,920,700),homeLogo:element(80,950,180,180),awayLogo:element(820,950,180,180),score:element(290,980,500,140,110),home:element(30,1150,400,60,34),away:element(650,1150,400,60,34),round:element(180,1240,720,60,26)}
+    ? {photo:element(80,220,920,700),homeLogo:element(80,950,180,180),awayLogo:element(820,950,180,180),homeScore:element(290,980,250,140,110),awayScore:element(540,980,250,140,110),home:element(30,1150,400,60,34),away:element(650,1150,400,60,34),round:element(180,1240,720,60,26)}
     : {photo:element(100,200,880,820),homeLogo:element(70,1100,130,130),awayLogo:element(880,1100,130,130),names:element(70,1030,940,100,54),team:element(210,1150,660,70,32),details:element(150,1240,780,60,26)};
   const state = new Map();
   let currentId = '';
   let editor = false;
-  const fresh = type => ({image:null,file:null,layout:defaults(type),dirty:false,busy:false,loading:false,error:''});
+  const fresh = type => ({image:null,file:null,layout:defaults(type),dirty:false,busy:false,loading:false,error:'',saveError:''});
   const pair = () => state.get(currentId);
   const message = text => { $('status').textContent = text; };
+
+  function normalizeLayout(type, saved = {}) {
+    const layout = {...saved};
+    // Preserve the old result's position and styling when opening an existing template.
+    if (type === 'ft' && layout.score) {
+      const old = layout.score, half = Math.floor(old.w / 2);
+      if (!layout.homeScore) layout.homeScore = {...old,w:Math.max(1,half)};
+      if (!layout.awayScore) layout.awayScore = {...old,x:Math.min(1080,old.x+half),w:Math.max(1,old.w-half)};
+    }
+    delete layout.score;
+    return {...defaults(type),...layout};
+  }
 
   function init(options = {}) {
     editor = options.editor === true;
@@ -62,7 +74,7 @@ const customTemplates = (() => {
     $(type+'Visible').checked=rect.visible;
     $(type+'SaveBase').disabled=!item?.image;
     $(type+'RemoveBase').disabled=!item?.image;
-    $(type+'BaseStatus').textContent = !item ? 'Seleziona un torneo per configurare le basi.' : item.error || (item.loading?'Caricamento della base…':item.busy?'Salvataggio…':item.dirty?'Modifiche in anteprima: premi Salva base e posizioni.':item.image?'Base salvata per questo torneo.':'Nessuna base salvata: viene usata la grafica automatica.');
+    $(type+'BaseStatus').textContent = !item ? 'Seleziona un torneo per configurare le basi.' : item.error || item.saveError || (item.loading?'Caricamento della base…':item.busy?'Salvataggio…':item.dirty?'Modifiche in anteprima: premi Salva base e posizioni.':item.image?'Base salvata per questo torneo.':'Nessuna base salvata: viene usata la grafica automatica.');
   }
   async function selectTournament(id) {
     currentId=String(id||'');
@@ -79,7 +91,7 @@ const customTemplates = (() => {
           const img=await loadImage(data[type].image);
           if(!img) throw new Error('Impossibile caricare la base salvata. Riseleziona il torneo per riprovare.');
           items[type].image=img;
-          items[type].layout={...defaults(type),...data[type].layout};
+          items[type].layout=normalizeLayout(type,data[type].layout);
         }
       }));
     } catch(error) {for(const item of Object.values(items)) item.error=error.message;}
@@ -87,7 +99,7 @@ const customTemplates = (() => {
     if(pair()===items) {['ft','mvp'].forEach(refresh);drawAll();}
   }
   async function request(url, options) {
-    const response=await fetch(url,options);
+    const response=await fetch(url,{...options,cache:'no-store'});
     let data;
     try {data=await response.json();} catch(error) {throw new Error('Sessione scaduta o risposta non valida: ricarica la pagina.');}
     if(!response.ok) throw new Error(data.error||'Impossibile salvare la base.');
@@ -96,12 +108,12 @@ const customTemplates = (() => {
   async function upload(type) {
     const item=pair()?.[type], id=currentId, file=$(type+'Base').files[0];
     if(!item||!file) return;
-    item.busy=true;refresh(type);
+    item.busy=true;item.saveError='';refresh(type);
     try {
       if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>8*1024*1024) throw new Error('Usa PNG, JPG o WebP, massimo 8 MB.');
       const img=await fileImage(file);
       if(!img || img.naturalWidth*img.naturalHeight>16000000) throw new Error('Immagine non valida o superiore a 16 megapixel.');
-      item.image=img; item.file=file; item.dirty=true;
+      item.image=img; item.file=file; item.dirty=true;item.saveError='';
       if(id===currentId) {refresh(type);drawAll();}
     } catch(error) {message(error.message);}
     finally {item.busy=false;$(type+'Base').value='';if(id===currentId)refresh(type);}
@@ -121,18 +133,19 @@ const customTemplates = (() => {
   async function save(type, remove) {
     const item=pair()?.[type], id=currentId;
     if(!item||item.busy||item.loading) return;
-    item.busy=true;refresh(type);
+    item.busy=true;item.saveError='';refresh(type);
     const body=new FormData();
     body.append('_csrf',graphicsTemplatesCsrf);body.append('torneo_id',id);body.append('type',type);
     body.append('action',remove?'remove':'save');body.append('layout',JSON.stringify(item.layout));
     if(item.file&&!remove) body.append('base',item.file);
     try {
-      await request('grafiche_basi.php',{method:'POST',body});
+      const result=await request('grafiche_basi.php',{method:'POST',body});
+      if(result.ok!==true)throw new Error('Il server non ha confermato il salvataggio. Riprova.');
       if(remove) Object.assign(item,fresh(type));
       item.file=null;item.dirty=false;
       if (window.parent !== window) window.parent.postMessage({type:'graphics-template-saved',torneoId:id},window.location.origin);
       if(id===currentId) {drawAll();message(remove?'Grafica automatica ripristinata per questo torneo.':'Base e posizioni salvate per questo torneo.');}
-    } catch(error) {message(error.message);}
+    } catch(error) {item.saveError=error.message;message(error.message);}
     finally {item.busy=false;if(id===currentId)refresh(type);}
   }
   function text(ctx,value,r) {
@@ -158,7 +171,7 @@ const customTemplates = (() => {
       teams.has($('ftHome').value)?imageState.ftHomeLogo:teams.has($('ftAway').value)?imageState.ftAwayLogo:null,
       teams.size>1?imageState.ftAwayLogo:null
     ];
-    const texts=type==='ft'?{score:`${$('ftHomeScore').value||0} – ${$('ftAwayScore').value||0}`,home:$('ftHome').value,away:$('ftAway').value,round:$('ftRound').value}:{names:$('mvpNames').value,team:$('mvpTeam').value,details:$('mvpDetails').value};
+    const texts=type==='ft'?{homeScore:String($('ftHomeScore').value||0),awayScore:String($('ftAwayScore').value||0),home:$('ftHome').value,away:$('ftAway').value,round:$('ftRound').value}:{names:$('mvpNames').value,team:$('mvpTeam').value,details:$('mvpDetails').value};
     for (const [key,r] of Object.entries(item.layout)) {
       if(!r.visible) continue;
       if(key==='photo') {

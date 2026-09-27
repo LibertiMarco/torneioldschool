@@ -28,8 +28,13 @@ try {
     }
     $stmt->close();
     $directory = tos_runtime_path('graphics-templates');
+    $localDirectory = __DIR__ . '/../cache/graphics-templates';
     if ($method === 'GET') {
-        echo json_encode(['ft' => graphics_template_read($directory . '/' . $id . '-ft.json'), 'mvp' => graphics_template_read($directory . '/' . $id . '-mvp.json')], JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $templates = [];
+        foreach (['ft', 'mvp'] as $format) {
+            $templates[$format] = graphics_template_load($directory . '/' . $id . '-' . $format . '.json', $localDirectory . '/' . $id . '-' . $format . '.json');
+        }
+        echo json_encode($templates, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         exit;
     }
     $type = $input['type'] ?? '';
@@ -37,15 +42,16 @@ try {
         throw new InvalidArgumentException('Formato non valido.');
     }
     $path = $directory . '/' . $id . '-' . $type . '.json';
+    $localPath = $localDirectory . '/' . $id . '-' . $type . '.json';
     if (($input['action'] ?? '') === 'remove') {
-        graphics_template_write($path, null);
+        graphics_template_store($path, $localPath, null);
     } else {
         $layout = json_decode($input['layout'] ?? '', true, 16, JSON_THROW_ON_ERROR);
         if (!is_array($layout)) {
             throw new InvalidArgumentException('Posizioni non valide.');
         }
         $layout = graphics_template_layout($layout, $type);
-        $previous = graphics_template_read($path);
+        $previous = graphics_template_load($path, $localPath);
         $image = $previous['image'] ?? null;
         if (isset($_FILES['base']) && $_FILES['base']['error'] !== UPLOAD_ERR_NO_FILE) {
             if ($_FILES['base']['error'] !== UPLOAD_ERR_OK) {
@@ -59,7 +65,7 @@ try {
         if (!$image) {
             throw new InvalidArgumentException('Carica prima una base.');
         }
-        graphics_template_write($path, ['image' => $image, 'layout' => $layout]);
+        graphics_template_store($path, $localPath, ['image' => $image, 'layout' => $layout]);
     }
     echo json_encode(['ok' => true]);
 } catch (InvalidArgumentException | JsonException $error) {
@@ -68,5 +74,5 @@ try {
 } catch (Throwable $error) {
     error_log('graphics_templates: ' . $error->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => 'Impossibile leggere o salvare le basi. Riprova.']);
+    echo json_encode(['error' => $error instanceof GraphicsTemplateStorageException ? $error->getMessage() : 'Impossibile leggere o salvare le basi. Riprova.']);
 }

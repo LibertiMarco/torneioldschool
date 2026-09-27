@@ -1,9 +1,11 @@
 <?php
+class GraphicsTemplateStorageException extends RuntimeException {}
 // Basi e posizioni condivise dagli operatori, separate per torneo e formato.
 function graphics_template_layout(array $layout, string $type): array
 {
+    $legacyScore = $type === 'ft' && isset($layout['score']) && !isset($layout['homeScore']) && !isset($layout['awayScore']);
     $keys = $type === 'ft'
-        ? ['photo', 'homeLogo', 'awayLogo', 'score', 'home', 'away', 'round']
+        ? array_merge(['photo', 'homeLogo', 'awayLogo'], $legacyScore ? ['score'] : ['homeScore', 'awayScore'], ['home', 'away', 'round'])
         : ['photo', 'homeLogo', 'awayLogo', 'names', 'team', 'details'];
     $clean = [];
     foreach ($keys as $key) {
@@ -25,6 +27,13 @@ function graphics_template_layout(array $layout, string $type): array
         $row['color'] = $item['color'];
         $clean[$key] = $row;
     }
+    if ($legacyScore) {
+        $old = $clean['score'];
+        $half = (int)floor($old['w'] / 2);
+        $clean['homeScore'] = array_replace($old, ['w' => max(1, $half)]);
+        $clean['awayScore'] = array_replace($old, ['x' => min(1080, $old['x'] + $half), 'w' => max(1, $old['w'] - $half)]);
+    }
+    unset($clean['score']);
     return $clean;
 }
 
@@ -45,31 +54,66 @@ function graphics_template_image(string $bytes): string
 
 function graphics_template_read(string $path): ?array
 {
-    if (!is_file($path)) {
+    if (!@is_file($path)) {
         return null;
     }
-    $data = json_decode(file_get_contents($path), true, 32, JSON_THROW_ON_ERROR);
+    $json = @file_get_contents($path);
+    if ($json === false) {
+        throw new GraphicsTemplateStorageException('Impossibile leggere la base salvata.');
+    }
+    $data = json_decode($json, true, 32, JSON_THROW_ON_ERROR);
     return $data ?: null;
 }
 
 function graphics_template_write(string $path, ?array $data): void
 {
     $dir = dirname($path);
-    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
-        throw new RuntimeException('Impossibile creare la cartella delle basi.');
+    if (!@is_dir($dir) && !@mkdir($dir, 0775, true) && !@is_dir($dir)) {
+        throw new GraphicsTemplateStorageException('Impossibile creare la cartella delle basi.');
     }
-    $temp = tempnam($dir, 'base-');
+    if (!@is_writable($dir)) {
+        throw new GraphicsTemplateStorageException('La cartella delle basi non è scrivibile.');
+    }
+    $temp = @tempnam($dir, 'base-');
     if ($temp === false) {
-        throw new RuntimeException('Impossibile salvare la base.');
+        throw new GraphicsTemplateStorageException('Impossibile salvare la base.');
     }
     try {
         $json = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-        if (file_put_contents($temp, $json, LOCK_EX) === false || !rename($temp, $path)) {
-            throw new RuntimeException('Impossibile salvare la base.');
+        if (@file_put_contents($temp, $json, LOCK_EX) !== strlen($json) || !@rename($temp, $path)) {
+            throw new GraphicsTemplateStorageException('Impossibile salvare la base.');
+        }
+        clearstatcache(true, $path);
+        if (@file_get_contents($path) !== $json) {
+            throw new GraphicsTemplateStorageException('Verifica del salvataggio della base non riuscita.');
         }
     } finally {
         if (is_file($temp)) {
-            unlink($temp);
+            @unlink($temp);
         }
+    }
+}
+
+// The local directory is protected by the site's /cache access-denial rule.
+// Once used, it remains authoritative, including null records for removed bases.
+function graphics_template_load(string $runtimePath, string $localPath): ?array
+{
+    return graphics_template_read(@is_file($localPath) ? $localPath : $runtimePath);
+}
+
+function graphics_template_store(string $runtimePath, string $localPath, ?array $data): void
+{
+    if (!@is_file($localPath)) {
+        try {
+            graphics_template_write($runtimePath, $data);
+            return;
+        } catch (GraphicsTemplateStorageException $error) {
+            error_log('graphics_templates runtime storage: ' . $error->getMessage());
+        }
+    }
+    try {
+        graphics_template_write($localPath, $data);
+    } catch (GraphicsTemplateStorageException $error) {
+        throw new GraphicsTemplateStorageException('Salvataggio non riuscito: verifica spazio disponibile e permessi della cartella delle basi sul server.');
     }
 }
