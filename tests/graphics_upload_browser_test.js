@@ -53,7 +53,28 @@ document.getElementById('runPhotoTest').onclick=async()=>{
     window.fetch=async()=>({ok:true,json:async()=>({ft:{image:base.toDataURL(),layout:{}},mvp:{image:base.toDataURL(),layout:{}}})});
     try{await customTemplates.selectTournament('fixture');}finally{window.fetch=originalFetch;}
     verifyPixels('fulltimeCanvas','magenta');verifyPixels('mvpCanvas','green');
-    result.textContent='PASS: foto capitani e MVP visibili; grafica automatica e template; ridimensionamento; esportazione PNG; CSP senza blob.';
+    // Exercise actual canvas readback, soft-alpha refinement and PNG decoding.
+    const mask=document.createElement('canvas');mask.width=600;mask.height=800;
+    const maskCtx=mask.getContext('2d'),gradient=maskCtx.createLinearGradient(0,0,600,0);
+    gradient.addColorStop(0,'rgba(255,255,255,0.07)');gradient.addColorStop(.4,'rgba(255,255,255,0.07)');
+    gradient.addColorStop(.6,'white');gradient.addColorStop(1,'white');
+    maskCtx.fillStyle=gradient;maskCtx.fillRect(0,0,600,800);
+    const original=imageState.mvpPhoto;
+    const model={onResults(callback){this.callback=callback;},async send(){this.callback({segmentationMask:mask});}};
+    selfieSegmentationPromise=Promise.resolve(model);
+    const started=performance.now();
+    await removePhotoBackground('mvpPhoto');
+    const elapsed=Math.round(performance.now()-started);
+    expect(imageState.mvpPhoto!==original,'Rimozione sfondo fallita: '+$('status').textContent);
+    const cutout=document.createElement('canvas');cutout.width=600;cutout.height=800;
+    cutout.getContext('2d').drawImage(imageState.mvpPhoto,0,0);
+    const rgba=cutout.getContext('2d').getImageData(0,400,600,1).data;
+    expect(rgba[50*4+3]<5,'Residui di sfondo ancora presenti');
+    expect(rgba[300*4+3]>50&&rgba[300*4+3]<220,'Bordi morbidi persi');
+    expect(rgba[550*4+3]===255,'Soggetto diventato trasparente');
+    expect(rgba[550*4+1]===255,'Colore della foto alterato');
+    restoreOriginalPhoto('mvpPhoto');expect(imageState.mvpPhoto===original,'Ripristino originale fallito');
+    result.textContent='PASS: foto capitani e MVP; template; ridimensionamento; PNG; CSP senza blob; rifinitura alpha; colori; ripristino. Ritaglio 600×800: '+elapsed+' ms.';
   }catch(error){result.textContent='FAIL: '+error.message;}
 };
 </script></body>`);
@@ -67,5 +88,7 @@ http.createServer((req,res)=>{
     res.setHeader('Content-Type','text/html; charset=utf-8');res.end(fixture());
   }else if(req.url.startsWith('/grafiche_basi.js')){
     res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fs.readFileSync(path.join(root,'api/grafiche_basi.js')));
+  }else if(req.url.startsWith('/grafiche_scontorno.js')){
+    res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fs.readFileSync(path.join(root,'api/grafiche_scontorno.js')));
   }else{res.statusCode=404;res.end();}
 }).listen(8765,'127.0.0.1',()=>console.log('Graphics photo browser test: http://127.0.0.1:8765'));

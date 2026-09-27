@@ -184,7 +184,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
           <label class="wide">Foto pre-match dei capitani<input id="ftCaptains" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <div id="ftPhotoActions" class="wide remove-bg-actions" hidden><button id="ftRemoveBg" type="button">Rimuovi sfondo</button><button id="ftRestorePhoto" class="secondary" type="button" hidden>Ripristina originale</button></div>
           <p class="wide hint" style="margin:0">La foto viene elaborata sul dispositivo. Il primo utilizzo scarica il modello di segmentazione.</p>
-          <label>Zoom foto <span class="range-value" id="ftZoomValue">100%</span><input id="ftZoom" type="range" min="100" max="250" value="100"></label>
+          <label>Zoom foto <span class="range-value" id="ftZoomValue">100%</span><input id="ftZoom" type="range" min="10" max="250" value="100"></label>
           <label>Posizione orizzontale <span class="range-value" id="ftXValue">50%</span><input id="ftX" type="range" min="0" max="100" value="50"></label>
           <label class="wide">Posizione verticale <span class="range-value" id="ftYValue">0%</span><input id="ftY" type="range" min="0" max="100" value="0"></label>
           <label class="wide">Giornata / fase<input id="ftRound" value="" readonly></label>
@@ -205,7 +205,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
           <label class="wide">Foto MVP<input id="mvpPhoto" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <div id="mvpPhotoActions" class="wide remove-bg-actions" hidden><button id="mvpRemoveBg" type="button">Rimuovi sfondo</button><button id="mvpRestorePhoto" class="secondary" type="button" hidden>Ripristina originale</button></div>
           <p class="wide hint" style="margin:0">La foto viene elaborata sul dispositivo. Il primo utilizzo scarica il modello di segmentazione.</p>
-          <label>Zoom foto <span class="range-value" id="mvpZoomValue">100%</span><input id="mvpZoom" type="range" min="100" max="250" value="100"></label>
+          <label>Zoom foto <span class="range-value" id="mvpZoomValue">100%</span><input id="mvpZoom" type="range" min="10" max="250" value="100"></label>
           <label>Posizione orizzontale <span class="range-value" id="mvpXValue">50%</span><input id="mvpX" type="range" min="0" max="100" value="50"></label>
           <label class="wide">Posizione verticale <span class="range-value" id="mvpYValue">0%</span><input id="mvpY" type="range" min="0" max="100" value="0"></label>
           <label>Dettaglio (facoltativo)<input id="mvpDetails" value="MAN OF THE MATCH"></label>
@@ -218,7 +218,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
         <button id="generate" type="button">Aggiorna entrambe</button>
         <button id="reset" class="secondary" type="button">Rimuovi foto e loghi caricati</button>
       </div>
-      <p class="hint">Suggerimento: usa fotografie verticali o con spazio intorno ai soggetti. Il generatore centra e ritaglia automaticamente le immagini.</p>
+      <p class="hint">Riduci lo zoom sotto il 100% per rimpicciolire la foto, anche se è già senza sfondo. Usa i controlli di posizione per sistemarla nella grafica.</p>
       </div>
       <div id="status" class="status" aria-live="polite"></div>
     </section>
@@ -237,6 +237,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="grafiche_basi.js?v=20260927-score-save"></script>
+<script src="grafiche_scontorno.js?v=20260927-refine"></script>
 <script>
 const $ = id => document.getElementById(id);
 const W=1080,H=1350;
@@ -292,7 +293,7 @@ async function fileImage(file,maxSide=0){
     if(canvas){canvas.width=1;canvas.height=1;}
   }
 }
-function cover(ctx,img,x,y,w,h,crop={}){if(!img?.naturalWidth)return;const zoom=Math.max(1,Number(crop.zoom||100)/100);const scale=Math.max(w/img.naturalWidth,h/img.naturalHeight)*zoom;const sw=w/scale,sh=h/scale;const px=Math.max(0,Math.min(100,Number(crop.x??50)))/100,py=Math.max(0,Math.min(100,Number(crop.y??0)))/100;const sx=(img.naturalWidth-sw)*px,sy=(img.naturalHeight-sh)*py;ctx.drawImage(img,sx,sy,sw,sh,x,y,w,h);}
+function cover(ctx,img,x,y,w,h,crop={}){if(!img?.naturalWidth)return;const zoom=Math.max(.1,Number(crop.zoom||100)/100);const scale=Math.max(w/img.naturalWidth,h/img.naturalHeight)*zoom;const sw=w/scale,sh=h/scale;const px=Math.max(0,Math.min(100,Number(crop.x??50)))/100,py=Math.max(0,Math.min(100,Number(crop.y??0)))/100;const sx=(img.naturalWidth-sw)*px,sy=(img.naturalHeight-sh)*py;ctx.drawImage(img,sx,sy,sw,sh,x,y,w,h);}
 const visibleImageBounds=new WeakMap();
 function imageBounds(img){if(!img?.naturalWidth)return null;if(visibleImageBounds.has(img))return visibleImageBounds.get(img);let bounds={left:0,right:img.naturalWidth};try{const sample=document.createElement('canvas'),maxSide=320,scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));sample.width=Math.max(1,Math.round(img.naturalWidth*scale));sample.height=Math.max(1,Math.round(img.naturalHeight*scale));const sampleCtx=sample.getContext('2d',{willReadFrequently:true});sampleCtx.drawImage(img,0,0,sample.width,sample.height);const pixels=sampleCtx.getImageData(0,0,sample.width,sample.height).data;let left=sample.width,right=-1;for(let py=0;py<sample.height;py++){for(let px=0;px<sample.width;px++){if(pixels[(py*sample.width+px)*4+3]>12){left=Math.min(left,px);right=Math.max(right,px)}}}if(right>=left)bounds={left:left/scale,right:(right+1)/scale}}catch(error){}visibleImageBounds.set(img,bounds);return bounds}
 function contain(ctx,img,x,y,w,h){if(!img?.naturalWidth)return x+w/2;const scale=Math.min(w/img.naturalWidth,h/img.naturalHeight),dw=img.naturalWidth*scale,dh=img.naturalHeight*scale,dx=x+(w-dw)/2;ctx.drawImage(img,dx,y+(h-dh)/2,dw,dh);const bounds=imageBounds(img);return dx+((bounds.left+bounds.right)/2)*scale;}
@@ -374,7 +375,61 @@ let selfieSegmentationPromise=null;
 let backgroundRemovalBusy=false;
 const mediaPipeBase='https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/';
 function loadSelfieSegmentation(){if(selfieSegmentationPromise)return selfieSegmentationPromise;selfieSegmentationPromise=new Promise((resolve,reject)=>{if(window.SelfieSegmentation)return resolve();const script=document.createElement('script');script.src=mediaPipeBase+'selfie_segmentation.js';script.crossOrigin='anonymous';script.onload=()=>window.SelfieSegmentation?resolve():reject(new Error('Componente di rimozione sfondo non disponibile.'));script.onerror=()=>reject(new Error('Impossibile scaricare il componente. Controlla la connessione e riprova.'));document.head.appendChild(script);}).then(()=>{const segmenter=new SelfieSegmentation({locateFile:file=>mediaPipeBase+file});segmenter.setOptions({modelSelection:0});return segmenter;}).catch(error=>{selfieSegmentationPromise=null;throw error;});return selfieSegmentationPromise;}
-async function removePhotoBackground(id){const original=imageState[id+'Original'];if(!original||backgroundRemovalBusy)return;const version=matchLoadVersion,button=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg'),restore=$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto');backgroundRemovalBusy=true;button.disabled=true;$('status').textContent='Rimozione sfondo in corso… Al primo utilizzo viene scaricato il modello.';try{const segmenter=await loadSelfieSegmentation();const mask=await new Promise((resolve,reject)=>{let settled=false;const timer=setTimeout(()=>{if(!settled){settled=true;reject(new Error('La rimozione sta impiegando troppo. Riprova con una foto più piccola.'));}},45000);segmenter.onResults(results=>{if(settled)return;settled=true;clearTimeout(timer);results.segmentationMask?resolve(results.segmentationMask):reject(new Error('Non è stato possibile riconoscere il soggetto.'));});segmenter.send({image:original}).catch(error=>{if(!settled){settled=true;clearTimeout(timer);reject(error);}});});if(version!==matchLoadVersion||imageState[id+'Original']!==original)return;const w=original.naturalWidth,h=original.naturalHeight,canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');ctx.drawImage(original,0,0,w,h);/* Keep MediaPipe's soft segmentation in the mask alpha channel for smoother edges. */ctx.globalCompositeOperation='destination-in';ctx.drawImage(mask,0,0,w,h);const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('Impossibile creare la foto trasparente.')),'image/png'));canvas.width=1;const cutout=await loadImage(await readImageData(blob));if(!cutout)throw new Error('Impossibile leggere la foto senza sfondo.');if(version!==matchLoadVersion||imageState[id+'Original']!==original)return;imageState[id]=cutout;button.hidden=true;restore.hidden=false;drawAll();$('status').textContent='Sfondo rimosso. La foto è stata elaborata sul dispositivo.';}catch(error){$('status').textContent=error.message||'Rimozione sfondo non riuscita.';button.disabled=false;}finally{backgroundRemovalBusy=false;}}
+async function removePhotoBackground(id) {
+  const original=imageState[id+'Original'];
+  if(!original||backgroundRemovalBusy)return;
+  const version=matchLoadVersion,button=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg'),restore=$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto');
+  const isCurrent=()=>version===matchLoadVersion&&imageState[id+'Original']===original;
+  let mask=null,canvas=null,segmenter=null;
+  backgroundRemovalBusy=true;
+  ['ftRemoveBg','mvpRemoveBg'].forEach(key=>$(key).disabled=true);
+  $('status').textContent='Rimozione sfondo e rifinitura dei bordi… Al primo utilizzo viene scaricato il modello.';
+  try {
+    segmenter=await loadSelfieSegmentation();
+    await new Promise((resolve,reject)=>{
+      let settled=false,received=false,sent=false;
+      const finish=error=>{
+        if(settled)return;
+        if(!error&&(!received||!sent))return;
+        settled=true;clearTimeout(timer);
+        error?reject(error):resolve();
+      };
+      const timer=setTimeout(()=>finish(new Error('La rimozione sta impiegando troppo. Riprova con una foto più piccola.')),45000);
+      segmenter.onResults(results=>{
+        if(settled)return;
+        try {
+          if(!results.segmentationMask)throw new Error('Non è stato possibile riconoscere il soggetto.');
+          if(isCurrent())mask=GraphicsCutout.createMask(original,results.segmentationMask);
+          received=true;finish();
+        } catch(error) { finish(error); }
+      });
+      Promise.resolve().then(()=>segmenter.send({image:original})).then(()=>{sent=true;finish();},finish);
+    });
+    if(!isCurrent())return;
+    const w=original.naturalWidth,h=original.naturalHeight;
+    canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(original,0,0,w,h);
+    ctx.globalCompositeOperation='destination-in';
+    ctx.drawImage(mask,0,0,w,h);
+    const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('Impossibile creare la foto trasparente.')),'image/png'));
+    const cutout=await loadImage(await readImageData(blob));
+    if(!cutout)throw new Error('Impossibile leggere la foto senza sfondo.');
+    if(!isCurrent())return;
+    imageState[id]=cutout;button.hidden=true;restore.hidden=false;drawAll();
+    $('status').textContent='Sfondo rimosso e bordi rifiniti. La foto è stata elaborata sul dispositivo.';
+  } catch(error) {
+    // Discard a failed/timed-out model so late results cannot affect a retry.
+    selfieSegmentationPromise=null;
+    if(segmenter)Promise.resolve().then(()=>segmenter.close()).catch(()=>{});
+    if(isCurrent())$('status').textContent=error.message||'Rimozione sfondo non riuscita.';
+  } finally {
+    if(mask)mask.width=mask.height=1;
+    if(canvas)canvas.width=canvas.height=1;
+    backgroundRemovalBusy=false;
+    ['ftRemoveBg','mvpRemoveBg'].forEach(key=>$(key).disabled=false);
+  }
+}
 function restoreOriginalPhoto(id){imageState[id]=imageState[id+'Original'];const button=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg'),restore=$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto');button.hidden=false;button.disabled=false;restore.hidden=true;drawAll();$('status').textContent='Foto originale ripristinata.';}
 function uniqueBy(items,keyFn){const map=new Map();items.forEach(item=>{const key=keyFn(item);if(key&&!map.has(key))map.set(key,item);});return [...map.entries()];}
 function setOptions(select,placeholder,options){select.innerHTML='';select.append(new Option(placeholder,''));options.forEach(([value,label])=>select.append(new Option(label,value)));select.disabled=options.length===0;}
