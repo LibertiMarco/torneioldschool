@@ -136,6 +136,18 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     @media(max-width:1050px){ .workspace{grid-template-columns:minmax(0,52%) minmax(0,48%);gap:10px}.controls{position:sticky;top:8px;padding:12px}body.with-site-header .controls{top:90px}.previews{grid-template-columns:1fr;gap:12px}.preview-card{padding:8px}.preview-head{align-items:flex-start;flex-direction:column}.preview-head button{width:100%;font-size:12px} }
     @media(max-width:720px){ main{width:min(100% - 10px,1440px);margin-left:auto;margin-right:auto}.fields{grid-template-columns:1fr}.wide{grid-column:auto}.actions{grid-template-columns:1fr}.tabs{gap:5px}.tab{padding:9px 5px;font-size:11px}label{font-size:12px}input,select,button{padding:8px 7px;font-size:12px}.preview-head h2{font-size:14px} }
     body.with-site-header>main{margin-top:110px}
+    html,body{height:auto}body{display:block}
+    body.is-embedded{display:flow-root;min-height:0}
+    canvas{touch-action:pan-y pinch-zoom}
+    @media(max-width:1050px){.controls,.previews{position:static}}
+    @media(max-width:720px){
+      .workspace{grid-template-columns:minmax(0,1fr);gap:18px}
+      .previews{grid-template-columns:minmax(0,1fr)}
+      .controls{min-width:0;padding:14px}
+      input,select{min-width:0;font-size:16px}
+      button{min-height:44px;font-size:14px}
+      .tab{font-size:14px}.preview-head{flex-direction:row;align-items:center}.preview-head button{width:auto}
+    }
   </style>
 </head>
 <body class="<?= $embedded ? 'is-embedded' : 'with-site-header' ?>">
@@ -246,7 +258,28 @@ const safeName=value=>String(value||'grafica').normalize('NFD').replace(/[\u0300
 const upper=(value,fallback='')=>String(value||fallback).trim().toUpperCase();
 
 function loadImage(src){return new Promise(resolve=>{if(!src)return resolve(null);const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src=src;});}
-function fileImage(file){return new Promise((resolve,reject)=>{if(!file)return resolve(null);const reader=new FileReader();reader.onload=async()=>resolve(await loadImage(reader.result));reader.onerror=reject;reader.readAsDataURL(file);});}
+async function fileImage(file,maxSide=0){
+  if(!file)return null;
+  const url=URL.createObjectURL(file);
+  let canvas=null,resizedUrl=null;
+  try{
+    const img=await loadImage(url);
+    if(!img||!maxSide||Math.max(img.naturalWidth,img.naturalHeight)<=maxSide)return img;
+    const scale=maxSide/Math.max(img.naturalWidth,img.naturalHeight);
+    canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+    canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+    canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+    img.src='';
+    const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('Impossibile preparare la foto.')),file.type==='image/jpeg'?'image/jpeg':'image/png',.94));
+    resizedUrl=URL.createObjectURL(blob);
+    return await loadImage(resizedUrl);
+  }finally{
+    URL.revokeObjectURL(url);
+    if(resizedUrl)URL.revokeObjectURL(resizedUrl);
+    if(canvas){canvas.width=1;canvas.height=1;}
+  }
+}
 function cover(ctx,img,x,y,w,h,crop={}){if(!img?.naturalWidth)return;const zoom=Math.max(1,Number(crop.zoom||100)/100);const scale=Math.max(w/img.naturalWidth,h/img.naturalHeight)*zoom;const sw=w/scale,sh=h/scale;const px=Math.max(0,Math.min(100,Number(crop.x??50)))/100,py=Math.max(0,Math.min(100,Number(crop.y??0)))/100;const sx=(img.naturalWidth-sw)*px,sy=(img.naturalHeight-sh)*py;ctx.drawImage(img,sx,sy,sw,sh,x,y,w,h);}
 const visibleImageBounds=new WeakMap();
 function imageBounds(img){if(!img?.naturalWidth)return null;if(visibleImageBounds.has(img))return visibleImageBounds.get(img);let bounds={left:0,right:img.naturalWidth};try{const sample=document.createElement('canvas'),maxSide=320,scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));sample.width=Math.max(1,Math.round(img.naturalWidth*scale));sample.height=Math.max(1,Math.round(img.naturalHeight*scale));const sampleCtx=sample.getContext('2d',{willReadFrequently:true});sampleCtx.drawImage(img,0,0,sample.width,sample.height);const pixels=sampleCtx.getImageData(0,0,sample.width,sample.height).data;let left=sample.width,right=-1;for(let py=0;py<sample.height;py++){for(let px=0;px<sample.width;px++){if(pixels[(py*sample.width+px)*4+3]>12){left=Math.min(left,px);right=Math.max(right,px)}}}if(right>=left)bounds={left:left/scale,right:(right+1)/scale}}catch(error){}visibleImageBounds.set(img,bounds);return bounds}
@@ -324,7 +357,7 @@ function drawMvpTech(){const match=currentMatch(),name=$('mvpTournament').value,
 function drawMvp(){if(customTemplates.draw('mvp'))return;prepareTheme($('mvpTournament').value,currentMatch());const {concept,motif,variant}=TOURNAMENT_STYLE;if(['italian','desert','africa','festive'].includes(concept))return (motif+variant)%2?drawMvpEditorial():drawMvpRoyal();if(['champions','cup'].includes(concept))return (motif+variant)%2?drawMvpCinematic():drawMvpPoster();if(['speed','esport','urban','german','premier'].includes(concept))return (motif+variant)%2?drawMvpDynamic():drawMvpTech();return [drawMvpPoster,drawMvpEditorial,drawMvpCinematic][(motif+variant)%3]();}
 function footer(ctx,tournament){ctx.fillStyle=GOLD;ctx.fillRect(48,1258,W-96,2);ctx.fillStyle=MUTED;ctx.font='600 18px Arial';ctx.textAlign='left';ctx.fillText(upper(tournament,'TORNEO'),48,1300,650);ctx.textAlign='right';ctx.fillText('torneioldschool.it',W-48,1300);}
 function drawAll(){updateCropLabels();drawFulltime();drawMvp();$('status').textContent='Anteprime aggiornate.';}
-async function updateImage(id){const file=$(id).files?.[0],version=matchLoadVersion;if(!file)return;const img=await fileImage(file);if(!img)throw new Error('Immagine non valida.');if(version!==matchLoadVersion)return;imageState[id]=img;drawAll();}
+async function updateImage(id){const file=$(id).files?.[0],version=matchLoadVersion;if(!file)return;$('status').textContent='Preparazione immagine…';const img=await fileImage(file,2048);if(!img)throw new Error('Immagine non valida.');if(version!==matchLoadVersion)return;imageState[id]=img;drawAll();}
 function uniqueBy(items,keyFn){const map=new Map();items.forEach(item=>{const key=keyFn(item);if(key&&!map.has(key))map.set(key,item);});return [...map.entries()];}
 function setOptions(select,placeholder,options){select.innerHTML='';select.append(new Option(placeholder,''));options.forEach(([value,label])=>select.append(new Option(label,value)));select.disabled=options.length===0;}
 function roundKey(match){return match.fase_round ? `round:${match.fase_round}` : `day:${match.giornata??''}`;}
@@ -434,7 +467,13 @@ $('ftTournamentSelect').addEventListener('change',selectTournament);
 $('ftPhase').addEventListener('change',selectPhase);
 $('ftRoundSelect').addEventListener('change',selectRound);
 $('ftMatch').addEventListener('change',()=>selectMatch().catch(()=>{$('status').textContent='Impossibile caricare i dati della partita.';}));
-document.querySelectorAll('input:not([type=file])').forEach(input=>input.addEventListener('input',drawAll));
+let inputDrawPending=false;
+function queueInputDraw(){
+  if(inputDrawPending)return;
+  inputDrawPending=true;
+  requestAnimationFrame(()=>{inputDrawPending=false;drawAll();});
+}
+document.querySelectorAll('input:not([type=file])').forEach(input=>input.addEventListener('input',queueInputDraw));
 $('generate').addEventListener('click',drawAll);
 $('reset').addEventListener('click',async()=>{const version=++matchLoadVersion;imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});drawAll();const match=currentMatch();if(match){const logos=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);if(version!==matchLoadVersion)return;[imageState.ftHomeLogo,imageState.ftAwayLogo]=logos;}drawAll();$('status').textContent='Foto rimosse e loghi originali ripristinati. Basi conservate.';});
 document.querySelector('[data-download=fulltime]').addEventListener('click',()=>{if(customTemplates.ready('ft'))download('fulltimeCanvas',`fulltime-${safeName($('ftHome').value)}-${safeName($('ftAway').value)}.png`);});
@@ -445,6 +484,27 @@ window.addEventListener('message',event=>{
   if(!templateEditor&&event.origin===window.location.origin&&event.source===window.parent&&event.data?.type==='graphics-templates-refresh')customTemplates.reload(event.data.torneoId);
 });
 (async()=>{imageState.brand=await loadImage('/img/logo_old_school.png');if(isIOS)document.querySelectorAll('[data-download]').forEach(button=>button.textContent='Salva immagine');populateTournaments();drawAll();})();
+// Size the embedded page to its content so touch scrolling belongs to the outer page.
+if(window.parent!==window){
+  const main=document.querySelector('main');
+  let heightQueued=false,lastHeight=0;
+  function reportHeight(){
+    if(heightQueued)return;
+    heightQueued=true;
+    requestAnimationFrame(()=>{
+      heightQueued=false;
+      if(!main.getBoundingClientRect().width)return;
+      const style=getComputedStyle(main);
+      const height=Math.ceil(main.getBoundingClientRect().height+parseFloat(style.marginTop)+parseFloat(style.marginBottom));
+      if(Math.abs(height-lastHeight)>1){lastHeight=height;window.parent.postMessage({type:'graphics-frame-height',height},window.location.origin);}
+    });
+  }
+  if(typeof ResizeObserver!=='undefined')new ResizeObserver(reportHeight).observe(main);
+  window.addEventListener('load',reportHeight);
+  window.addEventListener('resize',reportHeight);
+  if(document.fonts)document.fonts.ready.then(reportHeight);
+  reportHeight();
+}
 <?php if (!$embedded): ?>fetch('/includi/footer.html').then(response=>response.text()).then(html=>{document.getElementById('footer-container').innerHTML=html;}).catch(()=>{});<?php endif; ?>
 </script>
 </body>

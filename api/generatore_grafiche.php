@@ -15,6 +15,8 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
     .frames{background:#081522;border:1px solid #ffffff12;border-top:0;border-radius:0 0 16px 16px;overflow:hidden}.frame{display:none;width:100%;min-height:1450px;border:0;background:#07111d}.frame.active{display:block}
     @media(max-width:650px){.tabs{grid-template-columns:1fr}.frame{min-height:1750px}}
     body.with-site-header>main{margin-top:110px}
+    html,body{height:auto}body{display:block}
+    .frame.auto-height{min-height:0}
   </style>
 </head>
 <body class="with-site-header">
@@ -46,6 +48,15 @@ document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click
   else if(frame.id==='postMatchFrame')frame.contentWindow.postMessage({type:'graphics-templates-refresh'},window.location.origin);
 }));
 window.addEventListener('message',event=>{
+  if(event.origin!==window.location.origin)return;
+  if(event.data?.type==='graphics-frame-height'){
+    const frame=['postMatchFrame','templatesFrame'].map(id=>document.getElementById(id)).find(item=>item.contentWindow===event.source);
+    const height=event.data.height;
+    if(frame&&Number.isFinite(height)&&height>0&&height<30000){
+      frame.classList.add('auto-height');frame.style.height=Math.ceil(height)+'px';frame.setAttribute('scrolling','no');
+    }
+    return;
+  }
   const templates=document.getElementById('templatesFrame');
   if(event.origin!==window.location.origin||event.source!==templates.contentWindow||event.data?.type!=='graphics-template-saved')return;
   const graphics=document.getElementById('postMatchFrame');
