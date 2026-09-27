@@ -3,19 +3,23 @@ const vm=require('vm');
 const assert=require('assert');
 const path=require('path');
 const page=fs.readFileSync(path.join(__dirname,'../api/grafiche_post_partita.php'),'utf8');
-const fileImageSource=page.match(/async function fileImage\(file,maxSide=0\)\{[\s\S]*?\n\}/)[0];
-const urls=new Map(),revoked=[],renders=[];
-let nextUrl=0,failEncode=false;
+// Exercise decoding under the production policy: local previews must work without blob:.
+const htaccess=fs.readFileSync(path.join(__dirname,'../.htaccess'),'utf8');
+const policy=htaccess.match(/Header set Content-Security-Policy "([^"]+)"/)[1];
+const imageSources=policy.match(/(?:^|;)\s*img-src\s+([^;]+)/)[1].split(/\s+/);
+const fileImageSource=page.slice(page.indexOf('function readImageData('),page.indexOf('function cover('));
+const renders=[],canvases=[];
+let failEncode=false;
 const sandbox={
-  URL:{createObjectURL(value){const url='blob:'+ ++nextUrl;urls.set(url,value);return url;},revokeObjectURL(url){revoked.push(url);}},
-  loadImage:async url=>{const source=urls.get(url);return source.invalid?null:{naturalWidth:source.width,naturalHeight:source.height,src:url};},
-  document:{createElement(){const canvas={width:0,height:0,getContext:()=>({drawImage(){}}),toBlob(callback,type){renders.push({width:canvas.width,height:canvas.height,type});callback(failEncode?null:{width:canvas.width,height:canvas.height,type});}};return canvas;}}
+  FileReader:class {readAsDataURL(file){if(file.readError)return this.onerror();if(file.abort)return this.onabort();this.result='data:'+file.type+';base64,'+Buffer.from(JSON.stringify(file)).toString('base64');this.onload();}},
+  loadImage:async url=>{assert(imageSources.includes(url.split(':')[0]+':'),'CSP blocked photo');const source=JSON.parse(Buffer.from(url.split(',')[1],'base64'));return source.invalid?null:{naturalWidth:source.width,naturalHeight:source.height,src:url};},
+  document:{createElement(){const canvas={width:0,height:0,getContext:()=>({drawImage(){}}),toBlob(callback,type){renders.push({width:canvas.width,height:canvas.height,type});callback(failEncode?null:{width:canvas.width,height:canvas.height,type});}};canvases.push(canvas);return canvas;}}
 };
 vm.createContext(sandbox);vm.runInContext(fileImageSource,sandbox);
 (async()=>{
   const landscape=await sandbox.fileImage({width:4032,height:3024,type:'image/jpeg'},2048);
   assert.strictEqual(landscape.naturalWidth,2048);assert.strictEqual(landscape.naturalHeight,1536);
-  assert.strictEqual(revoked.length,2,'Photo URLs leaked after resizing');
+  assert(landscape.src.startsWith('data:image/jpeg;'),'Resized photo must remain compatible with CSP');
   const portrait=await sandbox.fileImage({width:3024,height:4032,type:'image/png'},2048);
   assert.strictEqual(portrait.naturalWidth,1536);assert.strictEqual(portrait.naturalHeight,2048);
   assert.strictEqual(renders[1].type,'image/png','Transparent player cutouts must preserve alpha');
@@ -23,11 +27,21 @@ vm.createContext(sandbox);vm.runInContext(fileImageSource,sandbox);
   assert.strictEqual(small.naturalWidth,600);assert.strictEqual(renders.length,2,'Small photos should not be re-encoded');
   const base=await sandbox.fileImage({width:3000,height:3750,type:'image/png'});
   assert.strictEqual(base.naturalWidth,3000,'Template validation must still see original dimensions');
-  const revokedBeforeFailure=revoked.length;
   failEncode=true;
   await assert.rejects(sandbox.fileImage({width:4032,height:3024,type:'image/jpeg'},2048));
-  assert.strictEqual(revoked.length,revokedBeforeFailure+1,'Photo URL leaked after encoder failure');
-  console.log('Mobile photo resizing, aspect ratio, transparency and memory cleanup: OK');
+  assert(canvases.every(canvas=>canvas.width===1&&canvas.height===1),'Resize canvas memory was not released');
+  await assert.rejects(sandbox.fileImage({readError:true}),/Impossibile leggere/);
+  await assert.rejects(sandbox.fileImage({abort:true}),/interrotto/);
+  assert.strictEqual(await sandbox.fileImage({invalid:true}),null);
+  failEncode=false;
+  const fields={ftCaptains:{files:[{width:4032,height:3024,type:'image/jpeg'}]},mvpPhoto:{files:[{width:600,height:800,type:'image/png'}]},status:{}};
+  sandbox.$=id=>fields[id];sandbox.matchLoadVersion=0;sandbox.imageState={};sandbox.drawAll=()=>{sandbox.draws=(sandbox.draws||0)+1;};
+  vm.runInContext(page.match(/async function updateImage\(id\)\{[^\n]+/)[0],sandbox);
+  await sandbox.updateImage('ftCaptains');await sandbox.updateImage('mvpPhoto');
+  assert.strictEqual(sandbox.imageState.ftCaptains.naturalWidth,2048);
+  assert.strictEqual(sandbox.imageState.mvpPhoto.naturalHeight,800);
+  assert.strictEqual(sandbox.draws,2,'Both photo inputs must update the previews');
+  console.log('Photo inputs, CSP-compatible decoding, resizing, transparency, read errors and memory cleanup: OK');
   const parentPage=fs.readFileSync(path.join(__dirname,'../api/generatore_grafiche.php'),'utf8');
   const parentScript=parentPage.match(/<script>\s*([\s\S]*?)<\/script>/)[1];
   const frames={};

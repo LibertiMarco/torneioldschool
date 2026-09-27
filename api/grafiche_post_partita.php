@@ -258,12 +258,21 @@ const safeName=value=>String(value||'grafica').normalize('NFD').replace(/[\u0300
 const upper=(value,fallback='')=>String(value||fallback).trim().toUpperCase();
 
 function loadImage(src){return new Promise(resolve=>{if(!src)return resolve(null);const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src=src;});}
+function readImageData(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=()=>reject(new Error('Impossibile leggere la foto. Prova a selezionarla di nuovo.'));
+    reader.onabort=()=>reject(new Error('Caricamento della foto interrotto. Selezionala di nuovo.'));
+    reader.readAsDataURL(file);
+  });
+}
 async function fileImage(file,maxSide=0){
   if(!file)return null;
-  const url=URL.createObjectURL(file);
-  let canvas=null,resizedUrl=null;
+  // data: is allowed by the site's image policy, including older server configurations.
+  let canvas=null;
   try{
-    const img=await loadImage(url);
+    const img=await loadImage(await readImageData(file));
     if(!img||!maxSide||Math.max(img.naturalWidth,img.naturalHeight)<=maxSide)return img;
     const scale=maxSide/Math.max(img.naturalWidth,img.naturalHeight);
     canvas=document.createElement('canvas');
@@ -272,11 +281,8 @@ async function fileImage(file,maxSide=0){
     canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
     img.src='';
     const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('Impossibile preparare la foto.')),file.type==='image/jpeg'?'image/jpeg':'image/png',.94));
-    resizedUrl=URL.createObjectURL(blob);
-    return await loadImage(resizedUrl);
+    return await loadImage(await readImageData(blob));
   }finally{
-    URL.revokeObjectURL(url);
-    if(resizedUrl)URL.revokeObjectURL(resizedUrl);
     if(canvas){canvas.width=1;canvas.height=1;}
   }
 }
@@ -357,7 +363,7 @@ function drawMvpTech(){const match=currentMatch(),name=$('mvpTournament').value,
 function drawMvp(){if(customTemplates.draw('mvp'))return;prepareTheme($('mvpTournament').value,currentMatch());const {concept,motif,variant}=TOURNAMENT_STYLE;if(['italian','desert','africa','festive'].includes(concept))return (motif+variant)%2?drawMvpEditorial():drawMvpRoyal();if(['champions','cup'].includes(concept))return (motif+variant)%2?drawMvpCinematic():drawMvpPoster();if(['speed','esport','urban','german','premier'].includes(concept))return (motif+variant)%2?drawMvpDynamic():drawMvpTech();return [drawMvpPoster,drawMvpEditorial,drawMvpCinematic][(motif+variant)%3]();}
 function footer(ctx,tournament){ctx.fillStyle=GOLD;ctx.fillRect(48,1258,W-96,2);ctx.fillStyle=MUTED;ctx.font='600 18px Arial';ctx.textAlign='left';ctx.fillText(upper(tournament,'TORNEO'),48,1300,650);ctx.textAlign='right';ctx.fillText('torneioldschool.it',W-48,1300);}
 function drawAll(){updateCropLabels();drawFulltime();drawMvp();$('status').textContent='Anteprime aggiornate.';}
-async function updateImage(id){const file=$(id).files?.[0],version=matchLoadVersion;if(!file)return;$('status').textContent='Preparazione immagine…';const img=await fileImage(file,2048);if(!img)throw new Error('Immagine non valida.');if(version!==matchLoadVersion)return;imageState[id]=img;drawAll();}
+async function updateImage(id){const file=$(id).files?.[0],version=matchLoadVersion;if(!file)return;$('status').textContent='Preparazione immagine…';const img=await fileImage(file,2048);if(!img)throw new Error('Formato della foto non leggibile. Usa una foto JPG, PNG o WebP.');if(version!==matchLoadVersion)return;imageState[id]=img;drawAll();}
 function uniqueBy(items,keyFn){const map=new Map();items.forEach(item=>{const key=keyFn(item);if(key&&!map.has(key))map.set(key,item);});return [...map.entries()];}
 function setOptions(select,placeholder,options){select.innerHTML='';select.append(new Option(placeholder,''));options.forEach(([value,label])=>select.append(new Option(label,value)));select.disabled=options.length===0;}
 function roundKey(match){return match.fase_round ? `round:${match.fase_round}` : `day:${match.giornata??''}`;}
@@ -462,7 +468,7 @@ const canvasBlob=canvas=>new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?
 async function download(canvasId,name){const canvas=$(canvasId),fallbackWindow=isIOS&&!navigator.share?window.open('about:blank','_blank'):null;try{const blob=await canvasBlob(canvas),file=new File([blob],name,{type:'image/png'});if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){await navigator.share({files:[file],title:name});$('status').textContent='Nel pannello Condividi scegli “Salva immagine”.';return}const url=URL.createObjectURL(blob);if(fallbackWindow){fallbackWindow.location.href=url;$('status').textContent='Tieni premuta l’immagine e scegli “Salva in Foto”.';setTimeout(()=>URL.revokeObjectURL(url),60000);return}const a=document.createElement('a');a.download=name;a.href=url;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}catch(error){if(fallbackWindow)fallbackWindow.close();if(error?.name!=='AbortError')$('status').textContent=error.message}}
 
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===button.dataset.panel));}));
-imageFields.forEach(id=>$(id).addEventListener('change',()=>updateImage(id).catch(()=>{$('status').textContent='Impossibile leggere questa immagine.';})));
+imageFields.forEach(id=>$(id).addEventListener('change',()=>updateImage(id).catch(error=>{$('status').textContent=error.message||'Impossibile leggere questa immagine.';$(id).value='';})));
 $('ftTournamentSelect').addEventListener('change',selectTournament);
 $('ftPhase').addEventListener('change',selectPhase);
 $('ftRoundSelect').addEventListener('change',selectRound);
