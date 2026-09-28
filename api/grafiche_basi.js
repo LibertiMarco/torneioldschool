@@ -161,12 +161,6 @@ const customTemplates = (() => {
     ctx.restore();
   }
   const overlayCache=new WeakMap();
-  const logoProtection = rect => {
-    if (!rect) return null;
-    const padX=Math.min(64,Math.max(18,rect.w*0.28));
-    const padY=Math.min(64,Math.max(18,rect.h*0.28));
-    return {x:Math.max(0,rect.x-padX),y:Math.max(0,rect.y-padY),w:Math.min(W,rect.x+rect.w+padX)-Math.max(0,rect.x-padX),h:Math.min(H,rect.y+rect.h+padY)-Math.max(0,rect.y-padY),visible:rect.visible};
-  };
   function graphicOverlay(img,hole=null,protectedRects=[]) {
     const signature=[hole?[hole.x,hole.y,hole.w,hole.h].join(','):'none',...protectedRects.map(r=>[r.x,r.y,r.w,r.h,r.visible].join(','))].join('|');
     let variants=overlayCache.get(img);if(!variants){variants=new Map();overlayCache.set(img,variants);}
@@ -210,7 +204,7 @@ const customTemplates = (() => {
     // decorations can be composited above the player photo.
     if(photo&&photoRect?.visible){
       cover(ctx,photo,photoRect.x,photoRect.y,photoRect.w,photoRect.h,cropValues(type));
-      ctx.drawImage(graphicOverlay(item.image,photoRect,[logoProtection(item.layout.homeLogo),logoProtection(item.layout.awayLogo)]),0,0,W,H);
+      ctx.drawImage(graphicOverlay(item.image,photoRect,[item.layout.homeLogo,item.layout.awayLogo]),0,0,W,H);
     }
     const teams=new Set([...$('mvpPlayers').querySelectorAll('input:checked')].map(input=>input._mvpData.team));
     const logos=type==='ft'?[imageState.ftHomeLogo,imageState.ftAwayLogo]:[
