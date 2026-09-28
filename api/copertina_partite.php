@@ -29,6 +29,10 @@ $stmt = $conn->prepare(
    LEFT JOIN squadre sc ON sc.nome=p.squadra_casa AND sc.torneo=p.torneo
    LEFT JOIN squadre so ON so.nome=p.squadra_ospite AND so.torneo=p.torneo
    WHERE (p.giocata=1 OR (p.giocata=0 AND p.data_partita BETWEEN DATE_SUB(CURDATE(),INTERVAL 7 DAY) AND CURDATE()))
+      AND EXISTS (SELECT 1 FROM tornei ta
+        WHERE (ta.nome=p.torneo OR ta.filetorneo=p.torneo
+           OR REPLACE(REPLACE(ta.filetorneo,'.php',''),'.html','')=REPLACE(REPLACE(p.torneo,'.php',''),'.html',''))
+          AND ta.stato='in corso')
      AND NOT EXISTS (SELECT 1 FROM tornei tx
        WHERE (tx.nome=p.torneo OR tx.filetorneo=p.torneo
           OR REPLACE(REPLACE(tx.filetorneo,'.php',''),'.html','')=REPLACE(REPLACE(p.torneo,'.php',''),'.html',''))
