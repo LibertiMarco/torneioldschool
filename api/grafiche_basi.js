@@ -180,18 +180,6 @@ const customTemplates = (() => {
       const key=[];
       for(const [x,y] of [[0,0],[W-1,0],[0,H-1],[W-1,H-1]]){const i=(y*W+x)*4;key.push([data[i],data[i+1],data[i+2]]);}
       const nearBackground=(i)=>key.some(([r,g,b])=>Math.abs(data[i]-r)+Math.abs(data[i+1]-g)+Math.abs(data[i+2]-b)<54);
-      const detectedProtection=protectedRects.map(rect=>{
-        if(!rect) return null;
-        const padX=Math.max(24,Math.min(110,rect.w*.55)),padY=Math.max(24,Math.min(110,rect.h*.55));
-        const sx=Math.max(0,Math.floor(rect.x-padX)),ex=Math.min(W,Math.ceil(rect.x+rect.w+padX));
-        const sy=Math.max(0,Math.floor(rect.y-padY)),ey=Math.min(H,Math.ceil(rect.y+rect.h+padY));
-        let minX=ex,minY=ey,maxX=-1,maxY=-1;
-        for(let y=sy;y<ey;y++)for(let x=sx;x<ex;x++){
-          const p=(y*W+x)*4;
-          if(!nearBackground(p)){minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);}
-        }
-        return maxX>=minX?{x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1,visible:rect.visible}:rect;
-      });
       const seen=new Uint8Array(W*H),queue=new Int32Array(W*H);let head=0,tail=0;
       for(let x=0;x<W;x++){if(nearBackground(x*4)){seen[x]=1;queue[tail++]=x;}const p=(H-1)*W+x;if(nearBackground(p*4)){seen[p]=1;queue[tail++]=p;}}
       for(let y=1;y<H-1;y++)for(const x of [0,W-1]){const p=y*W+x;if(nearBackground(p*4)&&!seen[p]){seen[p]=1;queue[tail++]=p;}}
@@ -203,7 +191,7 @@ const customTemplates = (() => {
       // Logo frames are part of the uploaded graphic. Restore their complete
       // rectangles after removing the photo window backing, so the player
       // image can never show through the shield squares.
-      for(const rect of detectedProtection)if(rect?.visible!==false)for(let y=Math.max(0,Math.floor(rect.y));y<Math.min(H,Math.ceil(rect.y+rect.h));y++)for(let x=Math.max(0,Math.floor(rect.x));x<Math.min(W,Math.ceil(rect.x+rect.w));x++){const p=y*W+x;data[p*4+3]=originalAlpha[p*4+3];}
+      for(const rect of protectedRects)if(rect?.visible!==false)for(let y=Math.max(0,Math.floor(rect.y));y<Math.min(H,Math.ceil(rect.y+rect.h));y++)for(let x=Math.max(0,Math.floor(rect.x));x<Math.min(W,Math.ceil(rect.x+rect.w));x++){const p=y*W+x;data[p*4+3]=originalAlpha[p*4+3];}
       layer.getContext('2d').putImageData(pixels,0,0);
     }catch(error){layer.width=layer.height=1;variants.set(signature,img);return img;}
     variants.set(signature,layer);return layer;
