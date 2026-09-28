@@ -166,6 +166,23 @@ const customTemplates = (() => {
     const canvas=$(type==='ft'?'fulltimeCanvas':'mvpCanvas'),ctx=canvas.getContext('2d');
     ctx.save();ctx.clearRect(0,0,W,H);ctx.fillStyle='#07111d';ctx.fillRect(0,0,W,H);
     contain(ctx,item.image,0,0,W,H);
+    const photoRect=item.layout.photo;
+    const photo=imageState[type==='ft'?'ftCaptains':'mvpPhoto'];
+    // The uploaded base is the background layer. Draw the photo into its
+    // configured window, then restore the base around that window so frames,
+    // borders and decorations always stay above the players.
+    if(photo&&photoRect?.visible){
+      cover(ctx,photo,photoRect.x,photoRect.y,photoRect.w,photoRect.h,cropValues(type));
+      ctx.save();
+      const slices=[
+        [0,0,W,photoRect.y],
+        [0,photoRect.y+photoRect.h,W,H-(photoRect.y+photoRect.h)],
+        [0,photoRect.y,photoRect.x,photoRect.h],
+        [photoRect.x+photoRect.w,photoRect.y,W-(photoRect.x+photoRect.w),photoRect.h]
+      ];
+      for(const [x,y,w,h] of slices)if(w>0&&h>0){ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();contain(ctx,item.image,0,0,W,H);ctx.restore();}
+      ctx.restore();
+    }
     const teams=new Set([...$('mvpPlayers').querySelectorAll('input:checked')].map(input=>input._mvpData.team));
     const logos=type==='ft'?[imageState.ftHomeLogo,imageState.ftAwayLogo]:[
       teams.has($('ftHome').value)?imageState.ftHomeLogo:teams.has($('ftAway').value)?imageState.ftAwayLogo:null,
@@ -174,11 +191,7 @@ const customTemplates = (() => {
     const texts=type==='ft'?{homeScore:String($('ftHomeScore').value||0),awayScore:String($('ftAwayScore').value||0),home:$('ftHome').value,away:$('ftAway').value,round:$('ftRound').value}:{names:$('mvpNames').value,team:$('mvpTeam').value,details:$('mvpDetails').value};
     for (const [key,r] of Object.entries(item.layout)) {
       if(!r.visible) continue;
-      if(key==='photo') {
-        const photo=imageState[type==='ft'?'ftCaptains':'mvpPhoto'];
-        if(editor&&!photo) guide(ctx,r,'FOTO GIOCATORI');
-        else cover(ctx,photo,r.x,r.y,r.w,r.h,cropValues(type));
-      }
+      if(key==='photo') { if(editor&&!photo) guide(ctx,r,'FOTO GIOCATORI'); }
       else if(key==='homeLogo'||key==='awayLogo') {
         const logo=logos[key==='homeLogo'?0:1];
         if(editor&&!logo) guide(ctx,r,key==='homeLogo'?'LOGO 1':'LOGO 2');
