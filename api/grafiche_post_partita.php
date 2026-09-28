@@ -4,11 +4,7 @@ require_once __DIR__ . '/../includi/db.php';
 $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
 $templateEditor = isset($_GET['templates']) && $_GET['templates'] === '1';
 $torneiGrafiche = [];
-$torneiResult = $conn->query(
-  $templateEditor
-    ? 'SELECT id, nome FROM tornei ORDER BY nome'
-    : "SELECT id, nome FROM tornei WHERE stato IN ('in corso', 'programmato') ORDER BY nome"
-);
+$torneiResult = $conn->query("SELECT id, nome FROM tornei WHERE stato IN ('in corso', 'programmato') ORDER BY nome");
 if ($torneiResult) {
   $torneiGrafiche = $torneiResult->fetch_all(MYSQLI_ASSOC);
 }
