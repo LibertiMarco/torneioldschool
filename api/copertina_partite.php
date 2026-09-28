@@ -32,7 +32,7 @@ $stmt = $conn->prepare(
       AND EXISTS (SELECT 1 FROM tornei ta
         WHERE (ta.nome=p.torneo OR ta.filetorneo=p.torneo
            OR REPLACE(REPLACE(ta.filetorneo,'.php',''),'.html','')=REPLACE(REPLACE(p.torneo,'.php',''),'.html',''))
-          AND ta.stato='in corso')
+          AND ta.stato IN ('in corso','programmato'))
      AND NOT EXISTS (SELECT 1 FROM tornei tx
        WHERE (tx.nome=p.torneo OR tx.filetorneo=p.torneo
           OR REPLACE(REPLACE(tx.filetorneo,'.php',''),'.html','')=REPLACE(REPLACE(p.torneo,'.php',''),'.html',''))

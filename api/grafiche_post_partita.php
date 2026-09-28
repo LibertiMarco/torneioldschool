@@ -7,7 +7,7 @@ $torneiGrafiche = [];
 $torneiResult = $conn->query(
   $templateEditor
     ? 'SELECT id, nome FROM tornei ORDER BY nome'
-    : "SELECT id, nome FROM tornei WHERE stato = 'in corso' ORDER BY nome"
+    : "SELECT id, nome FROM tornei WHERE stato IN ('in corso', 'programmato') ORDER BY nome"
 );
 if ($torneiResult) {
   $torneiGrafiche = $torneiResult->fetch_all(MYSQLI_ASSOC);
