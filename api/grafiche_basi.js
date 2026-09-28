@@ -160,6 +160,11 @@ const customTemplates = (() => {
     });
     ctx.restore();
   }
+  function containRounded(ctx,img,x,y,w,h) {
+    if(!img?.naturalWidth) return;
+    const radius=Math.min(w,h)*0.12;
+    ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,radius);ctx.clip();contain(ctx,img,x,y,w,h);ctx.restore();
+  }
   const overlayCache=new WeakMap();
   function graphicOverlay(img,hole=null,protectedRects=[]) {
     const signature=[hole?[hole.x,hole.y,hole.w,hole.h].join(','):'none',...protectedRects.map(r=>[r.x,r.y,r.w,r.h,r.visible].join(','))].join('|');
@@ -218,7 +223,7 @@ const customTemplates = (() => {
       else if(key==='homeLogo'||key==='awayLogo') {
         const logo=logos[key==='homeLogo'?0:1];
         if(editor&&!logo) guide(ctx,r,key==='homeLogo'?'LOGO 1':'LOGO 2');
-        else contain(ctx,logo,r.x,r.y,r.w,r.h);
+        else containRounded(ctx,logo,r.x,r.y,r.w,r.h);
       }
       else text(ctx,texts[key],r);
     }
