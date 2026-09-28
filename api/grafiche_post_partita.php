@@ -236,7 +236,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
   </div>
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
-<script src="grafiche_basi.js?v=20260927-score-save"></script>
+<script src="grafiche_basi.js?v=20260928-layered-overlay"></script>
 <script src="grafiche_scontorno.js?v=20260927-modnet"></script>
 <script>
 const $ = id => document.getElementById(id);
