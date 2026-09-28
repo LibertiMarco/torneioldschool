@@ -161,8 +161,8 @@ const customTemplates = (() => {
     ctx.restore();
   }
   const overlayCache=new WeakMap();
-  function graphicOverlay(img,hole=null) {
-    const signature=hole?[hole.x,hole.y,hole.w,hole.h].join(','):'none';
+  function graphicOverlay(img,hole=null,protectedRects=[]) {
+    const signature=[hole?[hole.x,hole.y,hole.w,hole.h].join(','):'none',...protectedRects.map(r=>[r.x,r.y,r.w,r.h,r.visible].join(','))].join('|');
     let variants=overlayCache.get(img);if(!variants){variants=new Map();overlayCache.set(img,variants);}
     if(variants.has(signature))return variants.get(signature);
     const layer=document.createElement('canvas');layer.width=W;layer.height=H;
@@ -181,6 +181,10 @@ const customTemplates = (() => {
       // backing is not connected to the canvas edge. Remove that backing too;
       // coloured and dark parts of the square remain opaque above the photo.
       if(hole)for(let y=Math.max(0,Math.floor(hole.y));y<Math.min(H,Math.ceil(hole.y+hole.h));y++)for(let x=Math.max(0,Math.floor(hole.x));x<Math.min(W,Math.ceil(hole.x+hole.w));x++){const p=y*W+x;if(nearBackground(p*4)&&data[p*4+3]>0)data[p*4+3]=0;}
+      // Logo frames are part of the uploaded graphic. Restore their complete
+      // rectangles after removing the photo window backing, so the player
+      // image can never show through the shield squares.
+      for(const rect of protectedRects)if(rect?.visible!==false)for(let y=Math.max(0,Math.floor(rect.y));y<Math.min(H,Math.ceil(rect.y+rect.h));y++)for(let x=Math.max(0,Math.floor(rect.x));x<Math.min(W,Math.ceil(rect.x+rect.w));x++){const p=y*W+x;data[p*4+3]=pixels.data[p*4+3];}
       layer.getContext('2d').putImageData(pixels,0,0);
     }catch(error){layer.width=layer.height=1;variants.set(signature,img);return img;}
     variants.set(signature,layer);return layer;
@@ -198,7 +202,7 @@ const customTemplates = (() => {
     // decorations can be composited above the player photo.
     if(photo&&photoRect?.visible){
       cover(ctx,photo,photoRect.x,photoRect.y,photoRect.w,photoRect.h,cropValues(type));
-      ctx.drawImage(graphicOverlay(item.image,photoRect),0,0,W,H);
+      ctx.drawImage(graphicOverlay(item.image,photoRect,[item.layout.homeLogo,item.layout.awayLogo]),0,0,W,H);
     }
     const teams=new Set([...$('mvpPlayers').querySelectorAll('input:checked')].map(input=>input._mvpData.team));
     const logos=type==='ft'?[imageState.ftHomeLogo,imageState.ftAwayLogo]:[
