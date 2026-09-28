@@ -176,6 +176,8 @@ const customTemplates = (() => {
       const source=document.createElement('canvas');source.width=W;source.height=H;
       const sourceCtx=source.getContext('2d',{willReadFrequently:true});sourceCtx.drawImage(img,0,0,W,H);
       const pixels=sourceCtx.getImageData(0,0,W,H),data=pixels.data;
+      const originalAlpha=new Uint8Array(data.length);
+      for(let i=3;i<data.length;i+=4) originalAlpha[i]=data[i];
       const key=[];
       for(const [x,y] of [[0,0],[W-1,0],[0,H-1],[W-1,H-1]]){const i=(y*W+x)*4;key.push([data[i],data[i+1],data[i+2]]);}
       const nearBackground=(i)=>key.some(([r,g,b])=>Math.abs(data[i]-r)+Math.abs(data[i+1]-g)+Math.abs(data[i+2]-b)<54);
@@ -190,7 +192,7 @@ const customTemplates = (() => {
       // Logo frames are part of the uploaded graphic. Restore their complete
       // rectangles after removing the photo window backing, so the player
       // image can never show through the shield squares.
-      for(const rect of protectedRects)if(rect?.visible!==false)for(let y=Math.max(0,Math.floor(rect.y));y<Math.min(H,Math.ceil(rect.y+rect.h));y++)for(let x=Math.max(0,Math.floor(rect.x));x<Math.min(W,Math.ceil(rect.x+rect.w));x++){const p=y*W+x;data[p*4+3]=pixels.data[p*4+3];}
+      for(const rect of protectedRects)if(rect?.visible!==false)for(let y=Math.max(0,Math.floor(rect.y));y<Math.min(H,Math.ceil(rect.y+rect.h));y++)for(let x=Math.max(0,Math.floor(rect.x));x<Math.min(W,Math.ceil(rect.x+rect.w));x++){const p=y*W+x;data[p*4+3]=originalAlpha[p*4+3];}
       layer.getContext('2d').putImageData(pixels,0,0);
     }catch(error){layer.width=layer.height=1;variants.set(signature,img);return img;}
     variants.set(signature,layer);return layer;
