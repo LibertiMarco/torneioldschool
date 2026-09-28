@@ -160,6 +160,31 @@ const customTemplates = (() => {
     });
     ctx.restore();
   }
+  const overlayCache=new WeakMap();
+  function graphicOverlay(img,hole=null) {
+    const signature=hole?[hole.x,hole.y,hole.w,hole.h].join(','):'none';
+    let variants=overlayCache.get(img);if(!variants){variants=new Map();overlayCache.set(img,variants);}
+    if(variants.has(signature))return variants.get(signature);
+    const layer=document.createElement('canvas');layer.width=W;layer.height=H;
+    try {
+      const source=document.createElement('canvas');source.width=W;source.height=H;
+      const sourceCtx=source.getContext('2d',{willReadFrequently:true});sourceCtx.drawImage(img,0,0,W,H);
+      const pixels=sourceCtx.getImageData(0,0,W,H),data=pixels.data;
+      const key=[];
+      for(const [x,y] of [[0,0],[W-1,0],[0,H-1],[W-1,H-1]]){const i=(y*W+x)*4;key.push([data[i],data[i+1],data[i+2]]);}
+      const nearBackground=(i)=>key.some(([r,g,b])=>Math.abs(data[i]-r)+Math.abs(data[i+1]-g)+Math.abs(data[i+2]-b)<54);
+      const seen=new Uint8Array(W*H),queue=new Int32Array(W*H);let head=0,tail=0;
+      for(let x=0;x<W;x++){if(nearBackground(x*4)){seen[x]=1;queue[tail++]=x;}const p=(H-1)*W+x;if(nearBackground(p*4)){seen[p]=1;queue[tail++]=p;}}
+      for(let y=1;y<H-1;y++)for(const x of [0,W-1]){const p=y*W+x;if(nearBackground(p*4)&&!seen[p]){seen[p]=1;queue[tail++]=p;}}
+      while(head<tail){const p=queue[head++],x=p%W,y=(p/W)|0;data[p*4+3]=0;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||nx>=W||ny<0||ny>=H)continue;const q=ny*W+nx;if(!seen[q]&&nearBackground(q*4)){seen[q]=1;queue[tail++]=q;}}}
+      // The photo window can be enclosed by a square/frame, so its white
+      // backing is not connected to the canvas edge. Remove that backing too;
+      // coloured and dark parts of the square remain opaque above the photo.
+      if(hole)for(let y=Math.max(0,Math.floor(hole.y));y<Math.min(H,Math.ceil(hole.y+hole.h));y++)for(let x=Math.max(0,Math.floor(hole.x));x<Math.min(W,Math.ceil(hole.x+hole.w));x++){const p=y*W+x;if(nearBackground(p*4)&&data[p*4+3]>0)data[p*4+3]=0;}
+      layer.getContext('2d').putImageData(pixels,0,0);
+    }catch(error){layer.width=layer.height=1;variants.set(signature,img);return img;}
+    variants.set(signature,layer);return layer;
+  }
   function draw(type) {
     const item=pair()?.[type];
     if(!item?.image) return false;
@@ -168,20 +193,12 @@ const customTemplates = (() => {
     contain(ctx,item.image,0,0,W,H);
     const photoRect=item.layout.photo;
     const photo=imageState[type==='ft'?'ftCaptains':'mvpPhoto'];
-    // The uploaded base is the background layer. Draw the photo into its
-    // configured window, then restore the base around that window so frames,
-    // borders and decorations always stay above the players.
+    // The uploaded base is first used as a background. Then its continuous
+    // background is made transparent so baked-in squares, frames, logos and
+    // decorations can be composited above the player photo.
     if(photo&&photoRect?.visible){
       cover(ctx,photo,photoRect.x,photoRect.y,photoRect.w,photoRect.h,cropValues(type));
-      ctx.save();
-      const slices=[
-        [0,0,W,photoRect.y],
-        [0,photoRect.y+photoRect.h,W,H-(photoRect.y+photoRect.h)],
-        [0,photoRect.y,photoRect.x,photoRect.h],
-        [photoRect.x+photoRect.w,photoRect.y,W-(photoRect.x+photoRect.w),photoRect.h]
-      ];
-      for(const [x,y,w,h] of slices)if(w>0&&h>0){ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();contain(ctx,item.image,0,0,W,H);ctx.restore();}
-      ctx.restore();
+      ctx.drawImage(graphicOverlay(item.image,photoRect),0,0,W,H);
     }
     const teams=new Set([...$('mvpPlayers').querySelectorAll('input:checked')].map(input=>input._mvpData.team));
     const logos=type==='ft'?[imageState.ftHomeLogo,imageState.ftAwayLogo]:[

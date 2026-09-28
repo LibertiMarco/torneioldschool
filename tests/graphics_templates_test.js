@@ -81,7 +81,7 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
   assert.strictEqual(node('ftBaseControls').disabled,false);
   assert(templates.draw('ft'));assert.strictEqual(calls.pop(),'base-three');
   // The production generator loads templates without creating editor controls.
-  const readerSandbox={...sandbox,document:{createElement(){throw new Error('Editor appeared in generator');}}};
+  const readerSandbox={...sandbox,document:{createElement(name){if(name==='details')throw new Error('Editor appeared in generator');return node('generated-'+nodes.size);}}};
   vm.createContext(readerSandbox);
   vm.runInContext(source+'\nthis.templates=customTemplates;',readerSandbox);
   const reader=readerSandbox.templates;
