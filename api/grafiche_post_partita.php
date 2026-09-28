@@ -237,7 +237,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="grafiche_basi.js?v=20260927-score-save"></script>
-<script src="grafiche_scontorno.js?v=20260927-refine"></script>
+<script src="grafiche_scontorno.js?v=20260927-modnet"></script>
 <script>
 const $ = id => document.getElementById(id);
 const W=1080,H=1350;
@@ -293,7 +293,18 @@ async function fileImage(file,maxSide=0){
     if(canvas){canvas.width=1;canvas.height=1;}
   }
 }
-function cover(ctx,img,x,y,w,h,crop={}){if(!img?.naturalWidth)return;const zoom=Math.max(.1,Number(crop.zoom||100)/100);const scale=Math.max(w/img.naturalWidth,h/img.naturalHeight)*zoom;const sw=w/scale,sh=h/scale;const px=Math.max(0,Math.min(100,Number(crop.x??50)))/100,py=Math.max(0,Math.min(100,Number(crop.y??0)))/100;const sx=(img.naturalWidth-sw)*px,sy=(img.naturalHeight-sh)*py;ctx.drawImage(img,sx,sy,sw,sh,x,y,w,h);}
+function cover(ctx,img,x,y,w,h,crop={}) {
+  if(!img?.naturalWidth||!img.naturalHeight)return;
+  const zoom=Math.max(.1,Math.min(2.5,Number(crop.zoom||100)/100));
+  // Scale the whole image uniformly; keep source pixels intact below 100%.
+  const scale=Math.max(w/img.naturalWidth,h/img.naturalHeight)*zoom;
+  const dw=img.naturalWidth*scale,dh=img.naturalHeight*scale;
+  const px=Math.max(0,Math.min(100,Number(crop.x??50)))/100;
+  const py=Math.max(0,Math.min(100,Number(crop.y??0)))/100;
+  ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+  ctx.drawImage(img,x+(w-dw)*px,y+(h-dh)*py,dw,dh);
+  ctx.restore();
+}
 const visibleImageBounds=new WeakMap();
 function imageBounds(img){if(!img?.naturalWidth)return null;if(visibleImageBounds.has(img))return visibleImageBounds.get(img);let bounds={left:0,right:img.naturalWidth};try{const sample=document.createElement('canvas'),maxSide=320,scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));sample.width=Math.max(1,Math.round(img.naturalWidth*scale));sample.height=Math.max(1,Math.round(img.naturalHeight*scale));const sampleCtx=sample.getContext('2d',{willReadFrequently:true});sampleCtx.drawImage(img,0,0,sample.width,sample.height);const pixels=sampleCtx.getImageData(0,0,sample.width,sample.height).data;let left=sample.width,right=-1;for(let py=0;py<sample.height;py++){for(let px=0;px<sample.width;px++){if(pixels[(py*sample.width+px)*4+3]>12){left=Math.min(left,px);right=Math.max(right,px)}}}if(right>=left)bounds={left:left/scale,right:(right+1)/scale}}catch(error){}visibleImageBounds.set(img,bounds);return bounds}
 function contain(ctx,img,x,y,w,h){if(!img?.naturalWidth)return x+w/2;const scale=Math.min(w/img.naturalWidth,h/img.naturalHeight),dw=img.naturalWidth*scale,dh=img.naturalHeight*scale,dx=x+(w-dw)/2;ctx.drawImage(img,dx,y+(h-dh)/2,dw,dh);const bounds=imageBounds(img);return dx+((bounds.left+bounds.right)/2)*scale;}
@@ -371,40 +382,18 @@ function drawMvp(){if(customTemplates.draw('mvp'))return;prepareTheme($('mvpTour
 function footer(ctx,tournament){ctx.fillStyle=GOLD;ctx.fillRect(48,1258,W-96,2);ctx.fillStyle=MUTED;ctx.font='600 18px Arial';ctx.textAlign='left';ctx.fillText(upper(tournament,'TORNEO'),48,1300,650);ctx.textAlign='right';ctx.fillText('torneioldschool.it',W-48,1300);}
 function drawAll(){updateCropLabels();drawFulltime();drawMvp();$('status').textContent='Anteprime aggiornate.';}
 async function updateImage(id){const file=$(id).files?.[0],version=matchLoadVersion;if(!file)return;$('status').textContent='Preparazione immagine…';const img=await fileImage(file,2048);if(!img)throw new Error('Formato della foto non leggibile. Usa una foto JPG, PNG o WebP.');if(version!==matchLoadVersion)return;imageState[id]=img;if(id==='ftCaptains'||id==='mvpPhoto'){imageState[id+'Original']=img;$(id==='ftCaptains'?'ftPhotoActions':'mvpPhotoActions').hidden=false;$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto').hidden=true;const removeButton=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg');removeButton.hidden=false;removeButton.disabled=false;}drawAll();}
-let selfieSegmentationPromise=null;
 let backgroundRemovalBusy=false;
-const mediaPipeBase='https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/';
-function loadSelfieSegmentation(){if(selfieSegmentationPromise)return selfieSegmentationPromise;selfieSegmentationPromise=new Promise((resolve,reject)=>{if(window.SelfieSegmentation)return resolve();const script=document.createElement('script');script.src=mediaPipeBase+'selfie_segmentation.js';script.crossOrigin='anonymous';script.onload=()=>window.SelfieSegmentation?resolve():reject(new Error('Componente di rimozione sfondo non disponibile.'));script.onerror=()=>reject(new Error('Impossibile scaricare il componente. Controlla la connessione e riprova.'));document.head.appendChild(script);}).then(()=>{const segmenter=new SelfieSegmentation({locateFile:file=>mediaPipeBase+file});segmenter.setOptions({modelSelection:0});return segmenter;}).catch(error=>{selfieSegmentationPromise=null;throw error;});return selfieSegmentationPromise;}
 async function removePhotoBackground(id) {
   const original=imageState[id+'Original'];
   if(!original||backgroundRemovalBusy)return;
   const version=matchLoadVersion,button=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg'),restore=$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto');
   const isCurrent=()=>version===matchLoadVersion&&imageState[id+'Original']===original;
-  let mask=null,canvas=null,segmenter=null;
+  let mask=null,canvas=null;
   backgroundRemovalBusy=true;
   ['ftRemoveBg','mvpRemoveBg'].forEach(key=>$(key).disabled=true);
-  $('status').textContent='Rimozione sfondo e rifinitura dei bordi… Al primo utilizzo viene scaricato il modello.';
+  $('status').textContent='Rimozione sfondo in corso… Al primo utilizzo viene scaricato il modello (26 MB).';
   try {
-    segmenter=await loadSelfieSegmentation();
-    await new Promise((resolve,reject)=>{
-      let settled=false,received=false,sent=false;
-      const finish=error=>{
-        if(settled)return;
-        if(!error&&(!received||!sent))return;
-        settled=true;clearTimeout(timer);
-        error?reject(error):resolve();
-      };
-      const timer=setTimeout(()=>finish(new Error('La rimozione sta impiegando troppo. Riprova con una foto più piccola.')),45000);
-      segmenter.onResults(results=>{
-        if(settled)return;
-        try {
-          if(!results.segmentationMask)throw new Error('Non è stato possibile riconoscere il soggetto.');
-          if(isCurrent())mask=GraphicsCutout.createMask(original,results.segmentationMask);
-          received=true;finish();
-        } catch(error) { finish(error); }
-      });
-      Promise.resolve().then(()=>segmenter.send({image:original})).then(()=>{sent=true;finish();},finish);
-    });
+    mask=await GraphicsCutout.createMask(original);
     if(!isCurrent())return;
     const w=original.naturalWidth,h=original.naturalHeight;
     canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
@@ -419,9 +408,6 @@ async function removePhotoBackground(id) {
     imageState[id]=cutout;button.hidden=true;restore.hidden=false;drawAll();
     $('status').textContent='Sfondo rimosso e bordi rifiniti. La foto è stata elaborata sul dispositivo.';
   } catch(error) {
-    // Discard a failed/timed-out model so late results cannot affect a retry.
-    selfieSegmentationPromise=null;
-    if(segmenter)Promise.resolve().then(()=>segmenter.close()).catch(()=>{});
     if(isCurrent())$('status').textContent=error.message||'Rimozione sfondo non riuscita.';
   } finally {
     if(mask)mask.width=mask.height=1;

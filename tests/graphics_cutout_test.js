@@ -2,40 +2,41 @@ const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
 const assert = require('assert');
-const sandbox = {};
+const sandbox = {URL, document:{currentScript:{src:'http://localhost/api/grafiche_scontorno.js'}}};
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../api/grafiche_scontorno.js'), 'utf8') + '\nthis.cutout = GraphicsCutout;', sandbox);
-const refine = sandbox.cutout.refineAlpha;
-function fixture(width, height, pixel) {
-  const photo = new Uint8ClampedArray(width * height * 4), mask = photo.slice();
-  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-    const [colour, alpha, sourceAlpha = 255] = pixel(x, y), i = (y * width + x) * 4;
-    photo.set([...colour, sourceAlpha], i);
-    // MediaPipe confidence is alpha. RGB must not be mistaken for confidence.
-    mask.set([255, 0, 0, alpha], i);
-  }
-  return {photo, mask, result: refine(photo, mask, width, height)};
+const {geometry, cleanMatte} = sandbox.cutout;
+for (const [w,h] of [[400,1800],[2400,600],[600,800],[500,500],[1,500]]) {
+  const g = geometry(w,h);
+  assert(Math.abs(g.dw / g.dh - w / h) < 1e-8, 'Preprocessing stretches the photo');
+  assert.strictEqual(g.width % 32,0);assert.strictEqual(g.height % 32,0);
+  assert(g.width<=768&&g.height<=768,'Unbounded mobile inference size');
+  assert(g.dw<=g.width&&g.dh<=g.height&&g.x>=0&&g.y>=0);
 }
-const flat = alpha => fixture(8, 8, () => [[100, 80, 60], alpha]).result;
-assert(flat(0).every(a => a === 0));
-assert(flat(255).every(a => a === 255));
-assert(flat(20).every(a => a < 5), 'Faint background haze remains');
-assert(flat(235).every(a => a > 250), 'Confident subject should be opaque');
-assert(flat(128).every(a => a > 110 && a < 145), 'Soft edges became binary');
-const ramp = Array.from({length:256}, (_, a) => flat(a)[0]);
-assert(ramp.every((a, i) => !i || a >= ramp[i - 1]), 'Alpha curve must be monotonic');
-const edge = fixture(21, 9, x => [x < 10 ? [20, 150, 30] : [230, 50, 40], x < 9 ? 0 : x === 9 ? 70 : x === 10 ? 180 : 255]);
-assert(edge.result[4 * 21 + 9] < 50, 'Background halo was not reduced at colour boundary');
-assert(edge.result[4 * 21 + 10] > 205, 'Subject edge did not follow its colour boundary');
-// A thin strand should survive between background pixels of a different colour.
-const hair = fixture(9, 9, x => [x === 4 ? [10, 10, 10] : [230, 230, 230], x === 4 ? 190 : 0]);
-assert(hair.result[4 * 9 + 4] > 190, 'Narrow subject detail was eroded');
-// Retain two disconnected people; no largest-component assumption.
-const people = fixture(30, 10, x => [[60, 80, 120], (x >= 3 && x <= 8) || (x >= 20 && x <= 26) ? 255 : 0]);
-assert.strictEqual(people.result[5 * 30 + 5], 255);
-assert.strictEqual(people.result[5 * 30 + 23], 255);
-assert.strictEqual(people.result[5 * 30 + 15], 0);
-assert(fixture(4, 4, () => [[0, 0, 0], 255, 0]).result.every(a => a === 0), 'Source transparency was filled');
-assert.strictEqual(fixture(1, 1, () => [[0, 0, 0], 128]).result.length, 1);
-assert.strictEqual(edge.mask[(4 * 21 + 9) * 4 + 3], 70, 'Input mask was mutated');
-console.log('Cutout refinement: haze, colour boundaries, soft alpha, thin details, multiple people and transparency OK');
+const w=40,h=30,alpha=new Float32Array(w*h);
+for(let y=5;y<25;y++)for(let x=3;x<12;x++)alpha[y*w+x]=1;
+for(let y=8;y<22;y++)for(let x=26;x<36;x++)alpha[y*w+x]=.95;
+for(let y=10;y<20;y++)for(let x=17;x<21;x++)alpha[y*w+x]=.45;
+alpha[4*w+5]=.5;
+alpha[0]=.04;
+const out=cleanMatte(alpha,w,h);
+assert.strictEqual(out[10*w+5],255,'First person removed');
+assert(out[10*w+30]>245,'Second disconnected person removed');
+assert.strictEqual(out[12*w+18],0,'Detached ghost silhouette remains');
+assert(out[4*w+5]>90&&out[4*w+5]<180,'Connected soft detail became binary');
+assert.strictEqual(out[0],0,'Faint haze remains');
+assert(cleanMatte(new Float32Array(100).fill(.4),10,10).every(a=>a===0),'An uncertain mask must not become a ghost photo');
+const page=fs.readFileSync(path.join(__dirname,'../api/grafiche_post_partita.php'),'utf8');
+vm.runInContext(page.slice(page.indexOf('function cover('),page.indexOf('const visibleImageBounds=')),sandbox);
+for(const [iw,ih] of [[400,1800],[2400,600],[600,800]])for(const zoom of [10,50,100,250]) {
+  let call,clip,restored=false;
+  const ctx={save(){},beginPath(){},rect(...args){clip=args;},clip(){},drawImage(...args){call=args;},restore(){restored=true;}};
+  sandbox.cover(ctx,{naturalWidth:iw,naturalHeight:ih},20,30,600,800,{zoom,x:50,y:50});
+  assert.strictEqual(call.length,5,'Do not use oversized source crop rectangles');
+  const [,dx,dy,dw,dh]=call;
+  assert(Math.abs(dw/dh-iw/ih)<1e-8,'Aspect ratio changed');
+  assert(Math.abs(dw/iw-dh/ih)<1e-8,'Width and height scaled differently');
+  assert(Math.abs(dx+dw/2-320)<1e-8&&Math.abs(dy+dh/2-430)<1e-8,'Position drifted');
+  assert.deepStrictEqual(clip,[20,30,600,800]);assert(restored);
+}
+console.log('Proportional zoom 10-250%, portrait/landscape padding, multiple subjects, ghost removal and soft edges: OK');

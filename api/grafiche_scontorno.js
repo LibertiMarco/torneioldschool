@@ -1,67 +1,105 @@
-/* Refine MediaPipe's soft alpha using the photo as a colour guide.
- * No erosion: narrow details and separate people must remain in the mask. */
+/* MODNet portrait matting. Photos stay on the device; inference runs in a worker. */
 'use strict';
 const GraphicsCutout = (() => {
-  function refineAlpha(photo, mask, width, height) {
-    const output = new Uint8ClampedArray(width * height);
-    // A small, fixed number of samples keeps 2048px mobile uploads affordable.
-    const step = Math.max(1, Math.round(Math.max(width, height) / 768));
-    const neighbours = [];
-    for (let dy = -2; dy <= 2; dy++) {
-      for (let dx = -2; dx <= 2; dx++) {
-        neighbours.push([dx * step, dy * step, Math.exp(-(dx * dx + dy * dy) / 4)]);
-      }
-    }
-    const colourWeights = new Float32Array(766);
-    for (let d = 0; d < colourWeights.length; d++) colourWeights[d] = Math.exp(-d * d / (2 * 60 * 60));
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const pixel = y * width + x, i = pixel * 4, alpha = mask[i + 3];
-        if (!photo[i + 3] || alpha <= 8) { output[pixel] = 0; continue; }
-        if (alpha >= 247) { output[pixel] = 255; continue; }
-        let total = 0, weightSum = 0;
-        for (const [dx, dy, spatialWeight] of neighbours) {
-          const nx = x + dx, ny = y + dy;
-          if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
-          const j = (ny * width + nx) * 4;
-          if (!photo[j + 3]) continue;
-          const distance = Math.abs(photo[i] - photo[j]) + Math.abs(photo[i + 1] - photo[j + 1]) + Math.abs(photo[i + 2] - photo[j + 2]);
-          const weight = spatialWeight * colourWeights[distance];
-          total += mask[j + 3] * weight;
-          weightSum += weight;
-        }
-        // A continuous curve removes faint background haze without a hard cut.
-        const confidence = Math.max(0, Math.min(1, (total / weightSum / 255 - .06) / .88));
-        output[pixel] = Math.round(255 * confidence * confidence * (3 - 2 * confidence));
-      }
-    }
-    return output;
-  }
+  const workerUrl = new URL('grafiche_scontorno_worker.js?v=20260927-modnet', document.currentScript.src);
+  let worker = null, pending = null, serial = 0, idleTimer = null;
 
-  function createMask(original, segmentationMask) {
-    const canvas = document.createElement('canvas');
-    canvas.width = original.naturalWidth;
-    canvas.height = original.naturalHeight;
+  function dispose() {
+    clearTimeout(idleTimer);
+    if (worker) worker.terminate();
+    worker = null;
+  }
+  function infer(data, width, height) {
+    if (pending) return Promise.reject(new Error('Attendi la rimozione sfondo in corso.'));
+    clearTimeout(idleTimer);
+    return new Promise((resolve, reject) => {
+      const id = ++serial;
+      const finish = (error, result) => {
+        if (pending?.id !== id) return;
+        clearTimeout(pending.timer);pending = null;
+        if (error) { dispose();reject(error); }
+        else { idleTimer = setTimeout(dispose, 90000);resolve(result); }
+      };
+      pending = {id, timer:setTimeout(() => finish(new Error('La rimozione sta impiegando troppo. Controlla la connessione e riprova.')), 120000)};
+      try {
+        if (!worker) worker = new Worker(workerUrl);
+        worker.onmessage = event => {
+          if (event.data.id !== id) return;
+          finish(event.data.error ? new Error(event.data.error) : null, event.data);
+        };
+        worker.onerror = event => { event.preventDefault();finish(new Error('Impossibile avviare la rimozione sfondo. Controlla la connessione e riprova.')); };
+        worker.postMessage({id, data, width, height}, [data.buffer]);
+      } catch (error) { finish(error); }
+    });
+  }
+  function geometry(width, height) {
+    // Preserve the aspect ratio and pad to multiples of 32 for MODNet.
+    const scale = Math.min(512 / Math.min(width, height), 768 / Math.max(width, height));
+    const dw = width * scale, dh = height * scale;
+    const w = Math.max(32, Math.ceil(dw / 32) * 32), h = Math.max(32, Math.ceil(dh / 32) * 32);
+    return {width:w, height:h, x:(w - dw) / 2, y:(h - dh) / 2, dw, dh};
+  }
+  function cleanMatte(alpha, width, height) {
+    // Remove detached, uncertain silhouettes, keeping ALL confident subjects.
+    const out = new Uint8ClampedArray(alpha.length), seen = new Uint8Array(alpha.length);
+    const queue = new Int32Array(alpha.length);
+    for (let start = 0; start < alpha.length; start++) {
+      if (seen[start] || !(alpha[start] > .08)) continue;
+      let head = 0, tail = 1, solid = 0;
+      queue[0] = start;seen[start] = 1;
+      while (head < tail) {
+        const p = queue[head++], x = p % width, y = Math.floor(p / width);
+        if (alpha[p] >= .85) solid++;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          if ((!dx && !dy) || x + dx < 0 || x + dx >= width || y + dy < 0 || y + dy >= height) continue;
+          const q = p + dy * width + dx;
+          if (!seen[q] && alpha[q] > .08) { seen[q] = 1;queue[tail++] = q; }
+        }
+      }
+      if (solid < 4) continue;
+      for (let i = 0; i < tail; i++) {
+        const p = queue[i];
+        const value = Math.max(0, Math.min(1, (alpha[p] - .08) / .88));
+        out[p] = Math.round(value * 255);
+      }
+    }
+    return out;
+  }
+  function maskFromMatte(original, result, g) {
+    if (result.width !== g.width || result.height !== g.height || result.alpha.length !== g.width * g.height) throw new Error('Maschera di ritaglio non valida.');
+    const small = document.createElement('canvas'), mask = document.createElement('canvas');
+    small.width = g.width;small.height = g.height;
+    mask.width = original.naturalWidth;mask.height = original.naturalHeight;
     try {
-      const ctx = canvas.getContext('2d', {willReadFrequently: true});
-      ctx.drawImage(original, 0, 0, canvas.width, canvas.height);
-      const photo = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Copy during onResults: the model may reuse its backing texture later.
-      ctx.drawImage(segmentationMask, 0, 0, canvas.width, canvas.height);
-      const mask = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const alpha = refineAlpha(photo.data, mask.data, canvas.width, canvas.height);
+      const ctx = small.getContext('2d'), pixels = ctx.createImageData(g.width, g.height);
+      const alpha = cleanMatte(result.alpha, g.width, g.height);
+      if (!alpha.some(value => value > 128)) throw new Error('Non è stato possibile riconoscere una persona. Prova una foto più ravvicinata.');
       for (let p = 0; p < alpha.length; p++) {
         const i = p * 4;
-        mask.data[i] = mask.data[i + 1] = mask.data[i + 2] = 255;
-        mask.data[i + 3] = alpha[p];
+        pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = 255;
+        pixels.data[i + 3] = alpha[p];
       }
-      ctx.putImageData(mask, 0, 0);
-      return canvas;
-    } catch (error) {
-      canvas.width = canvas.height = 1;
-      throw error;
-    }
+      ctx.putImageData(pixels, 0, 0);
+      const output = mask.getContext('2d');output.imageSmoothingEnabled = true;output.imageSmoothingQuality = 'high';
+      output.drawImage(small, g.x, g.y, g.dw, g.dh, 0, 0, mask.width, mask.height);
+      return mask;
+    } catch (error) { mask.width = mask.height = 1;throw error; }
+    finally { small.width = small.height = 1; }
   }
-  return {refineAlpha, createMask};
+  async function createMask(original) {
+    const g = geometry(original.naturalWidth, original.naturalHeight), canvas = document.createElement('canvas');
+    canvas.width = g.width;canvas.height = g.height;
+    let data;
+    try {
+      const ctx = canvas.getContext('2d', {willReadFrequently:true});
+      ctx.fillStyle = '#808080';ctx.fillRect(0, 0, g.width, g.height);
+      ctx.drawImage(original, g.x, g.y, g.dw, g.dh);
+      const rgba = ctx.getImageData(0, 0, g.width, g.height).data, size = g.width * g.height;
+      data = new Float32Array(size * 3);
+      for (let p = 0; p < size; p++) for (let c = 0; c < 3; c++) data[c * size + p] = rgba[p * 4 + c] / 127.5 - 1;
+    } finally { canvas.width = canvas.height = 1; }
+    const result = await infer(data, g.width, g.height);
+    return maskFromMatte(original, result, g);
+  }
+  return {createMask, geometry, cleanMatte, maskFromMatte};
 })();
