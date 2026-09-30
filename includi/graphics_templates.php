@@ -25,6 +25,13 @@ function graphics_template_layout(array $layout, string $type): array
             throw new InvalidArgumentException('Colore non valido.');
         }
         $row['color'] = $item['color'];
+        if ($type === 'ft' && in_array($key, ['homeLogo', 'awayLogo'], true)) {
+            $radius = $item['radius'] ?? 12;
+            if (!is_numeric($radius) || !is_finite((float)$radius) || $radius < 0 || $radius > 50) {
+                throw new InvalidArgumentException('Arrotondamento logo non valido.');
+            }
+            $row['radius'] = (float)$radius;
+        }
         $clean[$key] = $row;
     }
     if ($legacyScore) {

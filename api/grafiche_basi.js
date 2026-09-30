@@ -21,6 +21,9 @@ const customTemplates = (() => {
       if (!layout.awayScore) layout.awayScore = {...old,x:Math.min(1080,old.x+half),w:Math.max(1,old.w-half)};
     }
     delete layout.score;
+    if (type === 'ft') {
+      for (const key of ['homeLogo','awayLogo']) layout[key] = {...layout[key],radius:Number.isFinite(Number(layout[key]?.radius))?Math.max(0,Math.min(50,Number(layout[key].radius))):12};
+    }
     return {...defaults(type),...layout};
   }
 
@@ -42,6 +45,7 @@ const customTemplates = (() => {
           <label>Altezza (px)<input id="${type}LayoutH" type="number" min="1" max="1350"></label>
           <label>Dimensione testo<input id="${type}LayoutFont" type="number" min="12" max="240"></label>
           <label>Colore testo<input id="${type}LayoutColor" type="color" value="#ffffff"></label>
+          ${type==='ft'?'<label id="ftLogoRadiusField" hidden>Arrotondamento angoli logo <span class="range-value" id="ftLogoRadiusValue">12%</span><input id="ftLogoRadius" type="range" min="0" max="50" value="12"></label>':''}
         </div><div class="actions"><button id="${type}SaveBase" type="button">Salva base e posizioni</button><button id="${type}RemoveBase" type="button" class="secondary">Usa grafica automatica</button></div></fieldset>
         <p id="${type}BaseStatus" class="hint" aria-live="polite"></p>`;
       $(type==='ft'?'fulltimePanel':'mvpPanel').prepend(box);
@@ -51,6 +55,7 @@ const customTemplates = (() => {
       $(type+'SaveBase').addEventListener('click',()=>save(type,false));
       $(type+'RemoveBase').addEventListener('click',()=>save(type,true));
       ['X','Y','W','H','Font','Color'].forEach(field=>$(type+'Layout'+field).addEventListener('input',()=>edit(type)));
+      if (type==='ft') $('ftLogoRadius').addEventListener('input',()=>edit(type));
       $(type+'Visible').addEventListener('change',()=>edit(type));
       refresh(type);
     }
@@ -71,6 +76,13 @@ const customTemplates = (() => {
     $(type+'BaseControls').disabled = !item || item.loading || item.busy || !!item.error;
     const rect = (item?.layout || defaults(type))[$(type+'Element').value];
     ['X','Y','W','H','Font','Color'].forEach(field=>{$(type+'Layout'+field).value=rect[field.toLowerCase()];});
+    if(type==='ft') {
+      const isLogo=['homeLogo','awayLogo'].includes($('ftElement').value);
+      $('ftLogoRadiusField').hidden=!isLogo;
+      $('ftLogoRadiusField').style.display=isLogo?'grid':'none';
+      $('ftLogoRadius').value=rect.radius??12;
+      $('ftLogoRadiusValue').textContent=`${rect.radius??12}%`;
+    }
     $(type+'Visible').checked=rect.visible;
     $(type+'SaveBase').disabled=!item?.image;
     $(type+'RemoveBase').disabled=!item?.image;
@@ -128,6 +140,10 @@ const customTemplates = (() => {
       rect[field.toLowerCase()]=Number(input.value);
     }
     rect.color=$(type+'LayoutColor').value; rect.visible=$(type+'Visible').checked;
+    if(type==='ft'&&['homeLogo','awayLogo'].includes($('ftElement').value)) {
+      rect.radius=Number($('ftLogoRadius').value);
+      $('ftLogoRadiusValue').textContent=`${rect.radius}%`;
+    }
     item.dirty=true; refresh(type);drawAll();
   }
   async function save(type, remove) {
@@ -160,10 +176,10 @@ const customTemplates = (() => {
     });
     ctx.restore();
   }
-  function containRounded(ctx,img,x,y,w,h) {
+  function containRounded(ctx,img,x,y,w,h,radius=12) {
     if(!img?.naturalWidth) return;
-    const radius=Math.min(w,h)*0.12;
-    ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,radius);ctx.clip();contain(ctx,img,x,y,w,h);ctx.restore();
+    const cornerRadius=Math.min(w,h)*Math.max(0,Math.min(50,radius))/100;
+    ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,cornerRadius);ctx.clip();contain(ctx,img,x,y,w,h);ctx.restore();
   }
   const overlayCache=new WeakMap();
   function graphicOverlay(img,hole=null,protectedRects=[]) {
@@ -223,7 +239,7 @@ const customTemplates = (() => {
       else if(key==='homeLogo'||key==='awayLogo') {
         const logo=logos[key==='homeLogo'?0:1];
         if(editor&&!logo) guide(ctx,r,key==='homeLogo'?'LOGO 1':'LOGO 2');
-        else containRounded(ctx,logo,r.x,r.y,r.w,r.h);
+        else containRounded(ctx,logo,r.x,r.y,r.w,r.h,r.radius??12);
       }
       else text(ctx,texts[key],r);
     }
