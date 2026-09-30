@@ -3,7 +3,7 @@ const customTemplates = (() => {
   const labels = {photo:'Foto giocatori',homeLogo:'Logo casa / squadra MVP',awayLogo:'Logo ospite / secondo MVP',homeScore:'Gol squadra casa',awayScore:'Gol squadra ospite',home:'Nome squadra casa',away:'Nome squadra ospite',round:'Giornata / fase',names:'Nomi MVP',team:'Squadra MVP',details:'Dettaglio MVP'};
   const element = (x,y,w,h,font=40,visible=true) => ({x,y,w,h,font,visible,color:'#ffffff'});
   const defaults = type => type === 'ft'
-    ? {photo:element(80,220,920,700),homeLogo:element(80,950,180,180),awayLogo:element(820,950,180,180),homeScore:element(290,980,250,140,110),awayScore:element(540,980,250,140,110),home:element(30,1150,400,60,34),away:element(650,1150,400,60,34),round:element(180,1240,720,60,26)}
+    ? {photo:element(80,220,920,700),homeLogo:{...element(80,950,180,180),radius:12},awayLogo:{...element(820,950,180,180),radius:12},homeScore:element(290,980,250,140,110),awayScore:element(540,980,250,140,110),home:element(30,1150,400,60,34),away:element(650,1150,400,60,34),round:element(180,1240,720,60,26)}
     : {photo:element(100,200,880,820),homeLogo:element(70,1100,130,130),awayLogo:element(880,1100,130,130),names:element(70,1030,940,100,54),team:element(210,1150,660,70,32),details:element(150,1240,780,60,26)};
   const state = new Map();
   let currentId = '';
@@ -55,7 +55,7 @@ const customTemplates = (() => {
       $(type+'SaveBase').addEventListener('click',()=>save(type,false));
       $(type+'RemoveBase').addEventListener('click',()=>save(type,true));
       ['X','Y','W','H','Font','Color'].forEach(field=>$(type+'Layout'+field).addEventListener('input',()=>edit(type)));
-      if (type==='ft') $('ftLogoRadius').addEventListener('input',()=>edit(type));
+      if (type==='ft') $('ftLogoRadius').addEventListener('input',()=>edit(type,true));
       $(type+'Visible').addEventListener('change',()=>edit(type));
       refresh(type);
     }
@@ -80,8 +80,9 @@ const customTemplates = (() => {
       const isLogo=['homeLogo','awayLogo'].includes($('ftElement').value);
       $('ftLogoRadiusField').hidden=!isLogo;
       $('ftLogoRadiusField').style.display=isLogo?'grid':'none';
-      $('ftLogoRadius').value=rect.radius??12;
-      $('ftLogoRadiusValue').textContent=`${rect.radius??12}%`;
+      const radius=rect.radius??12;
+      $('ftLogoRadius').value=radius;
+      $('ftLogoRadiusValue').textContent=`${radius}%`;
     }
     $(type+'Visible').checked=rect.visible;
     $(type+'SaveBase').disabled=!item?.image;
@@ -130,7 +131,7 @@ const customTemplates = (() => {
     } catch(error) {message(error.message);}
     finally {item.busy=false;$(type+'Base').value='';if(id===currentId)refresh(type);}
   }
-  function edit(type) {
+  function edit(type, logoRadius=false) {
     const item=pair()?.[type];
     if(!item||item.loading||item.busy) return;
     const rect=item.layout[$(type+'Element').value];
@@ -140,7 +141,7 @@ const customTemplates = (() => {
       rect[field.toLowerCase()]=Number(input.value);
     }
     rect.color=$(type+'LayoutColor').value; rect.visible=$(type+'Visible').checked;
-    if(type==='ft'&&['homeLogo','awayLogo'].includes($('ftElement').value)) {
+    if(type==='ft'&&logoRadius&&['homeLogo','awayLogo'].includes($('ftElement').value)) {
       rect.radius=Number($('ftLogoRadius').value);
       $('ftLogoRadiusValue').textContent=`${rect.radius}%`;
     }
@@ -181,9 +182,15 @@ const customTemplates = (() => {
     const cornerRadius=Math.min(w,h)*Math.max(0,Math.min(50,radius))/100;
     ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,cornerRadius);ctx.clip();contain(ctx,img,x,y,w,h);ctx.restore();
   }
+  function cutSquareCorners(ctx,rect) {
+    if(!rect||rect.radius==null||rect.visible===false||!rect.w||!rect.h) return;
+    const radius=Math.min(rect.w,rect.h)*Math.max(0,Math.min(50,rect.radius??12))/100;
+    if(radius<=0) return;
+    ctx.save();ctx.globalCompositeOperation='destination-out';ctx.beginPath();ctx.rect(rect.x,rect.y,rect.w,rect.h);ctx.roundRect(rect.x,rect.y,rect.w,rect.h,radius);ctx.fill('evenodd');ctx.restore();
+  }
   const overlayCache=new WeakMap();
   function graphicOverlay(img,hole=null,protectedRects=[]) {
-    const signature=[hole?[hole.x,hole.y,hole.w,hole.h].join(','):'none',...protectedRects.map(r=>[r.x,r.y,r.w,r.h,r.visible].join(','))].join('|');
+    const signature=[hole?[hole.x,hole.y,hole.w,hole.h].join(','):'none',...protectedRects.map(r=>[r.x,r.y,r.w,r.h,r.visible,r.radius].join(','))].join('|');
     let variants=overlayCache.get(img);if(!variants){variants=new Map();overlayCache.set(img,variants);}
     if(variants.has(signature))return variants.get(signature);
     const layer=document.createElement('canvas');layer.width=W;layer.height=H;
@@ -209,6 +216,7 @@ const customTemplates = (() => {
       // image can never show through the shield squares.
       for(const rect of protectedRects)if(rect?.visible!==false)for(let y=Math.max(0,Math.floor(rect.y));y<Math.min(H,Math.ceil(rect.y+rect.h));y++)for(let x=Math.max(0,Math.floor(rect.x));x<Math.min(W,Math.ceil(rect.x+rect.w));x++){const p=y*W+x;data[p*4+3]=originalAlpha[p*4+3];}
       layer.getContext('2d').putImageData(pixels,0,0);
+      protectedRects.forEach(rect=>cutSquareCorners(layer.getContext('2d'),rect));
     }catch(error){layer.width=layer.height=1;variants.set(signature,img);return img;}
     variants.set(signature,layer);return layer;
   }
@@ -218,6 +226,7 @@ const customTemplates = (() => {
     const canvas=$(type==='ft'?'fulltimeCanvas':'mvpCanvas'),ctx=canvas.getContext('2d');
     ctx.save();ctx.clearRect(0,0,W,H);ctx.fillStyle='#07111d';ctx.fillRect(0,0,W,H);
     contain(ctx,item.image,0,0,W,H);
+    if(type==='ft') [item.layout.homeLogo,item.layout.awayLogo].forEach(rect=>cutSquareCorners(ctx,rect));
     const photoRect=item.layout.photo;
     const photo=imageState[type==='ft'?'ftCaptains':'mvpPhoto'];
     // The uploaded base is first used as a background. Then its continuous
@@ -251,8 +260,9 @@ const customTemplates = (() => {
     return true;
   }
   function guide(ctx,r,label) {
-    ctx.save();ctx.fillStyle='#ffffff20';ctx.fillRect(r.x,r.y,r.w,r.h);
-    ctx.strokeStyle='#e8bd45';ctx.lineWidth=3;ctx.setLineDash([12,8]);ctx.strokeRect(r.x,r.y,r.w,r.h);
+    const rounded=label.startsWith('LOGO'),radius=rounded?Math.min(r.w,r.h)*(r.radius??12)/100:0;
+    ctx.save();ctx.fillStyle='#ffffff20';ctx.beginPath();rounded?ctx.roundRect(r.x,r.y,r.w,r.h,radius):ctx.rect(r.x,r.y,r.w,r.h);ctx.fill();
+    ctx.strokeStyle='#e8bd45';ctx.lineWidth=3;ctx.setLineDash([12,8]);ctx.beginPath();rounded?ctx.roundRect(r.x,r.y,r.w,r.h,radius):ctx.rect(r.x,r.y,r.w,r.h);ctx.stroke();
     text(ctx,label,{...r,font:Math.min(30,r.font),color:'#ffffff'});ctx.restore();
   }
   async function reload(id = currentId) {
