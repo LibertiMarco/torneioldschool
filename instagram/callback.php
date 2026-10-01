@@ -55,14 +55,17 @@ function instagram_oauth_request(string $url, array $fields = [], bool $post = f
 
 $state = (string)($_GET['state'] ?? '');
 $stateIsValid = false;
+$oauthContext = null;
 $pendingStates = $_SESSION['instagram_publish_oauth_states'] ?? [];
 if (is_array($pendingStates) && $state !== '') {
-    foreach ($pendingStates as $expectedState => $createdAt) {
-        if (!is_string($expectedState) || !is_numeric($createdAt)) {
+    foreach ($pendingStates as $expectedState => $pendingContext) {
+        if (!is_string($expectedState)) {
             continue;
         }
-        if ((int)$createdAt >= time() - 600 && hash_equals($expectedState, $state)) {
+        $createdAt = is_array($pendingContext) ? ($pendingContext['created_at'] ?? null) : $pendingContext;
+        if (is_numeric($createdAt) && (int)$createdAt >= time() - 600 && hash_equals($expectedState, $state)) {
             $stateIsValid = true;
+            $oauthContext = is_array($pendingContext) ? $pendingContext : null;
             unset($pendingStates[$expectedState]);
             break;
         }
@@ -87,6 +90,11 @@ $code = trim((string)($_GET['code'] ?? ''));
 $appId = trim((string)getenv('INSTAGRAM_APP_ID'));
 $appSecret = trim((string)getenv('INSTAGRAM_APP_SECRET'));
 $redirectUri = trim((string)getenv('INSTAGRAM_REDIRECT_URI'));
+// Use exactly the app ID and redirect URI sent in the authorization request.
+if (is_array($oauthContext)) {
+    $appId = trim((string)($oauthContext['app_id'] ?? $appId));
+    $redirectUri = trim((string)($oauthContext['redirect_uri'] ?? $redirectUri));
+}
 if ($code === '' || $appId === '' || $appSecret === '' || $redirectUri === '') {
     instagram_oauth_json(['ok' => false, 'error' => 'Mancano il codice OAuth o le credenziali Instagram Login del server.'], 400);
 }

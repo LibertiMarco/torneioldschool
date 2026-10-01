@@ -28,11 +28,16 @@ if (!is_array($pendingStates)) {
 // Keep several recent attempts so opening the link again in another tab does
 // not invalidate an authorization flow that is already waiting at Instagram.
 foreach ($pendingStates as $pendingState => $createdAt) {
-    if (!is_string($pendingState) || !is_numeric($createdAt) || (int)$createdAt < $now - 600) {
+    $createdAtValue = is_array($createdAt) ? ($createdAt['created_at'] ?? null) : $createdAt;
+    if (!is_string($pendingState) || !is_numeric($createdAtValue) || (int)$createdAtValue < $now - 600) {
         unset($pendingStates[$pendingState]);
     }
 }
-$pendingStates[$state] = $now;
+$pendingStates[$state] = [
+    'created_at' => $now,
+    'app_id' => $appId,
+    'redirect_uri' => $redirectUri,
+];
 $_SESSION['instagram_publish_oauth_states'] = $pendingStates;
 // Keep the former key temporarily for compatibility with an in-flight flow.
 $_SESSION['instagram_publish_oauth_state'] = $state;
