@@ -58,6 +58,14 @@ try {
     // ignora eventuali errori di lettura config
 }
 
+// Il Brasileirão usa una classifica unica da 22 squadre: prime 16 in Gold,
+// successive 6 in Silver. Manteniamo la pagina coerente con queste fasce.
+if ($torneoSlug === 'Brasilerao') {
+    $torneoConfig['totale_squadre'] = 22;
+    $torneoConfig['qualificati_gold'] = 16;
+    $torneoConfig['qualificati_silver'] = 6;
+}
+
 if ($torneoSection !== content_current_section()) {
     $targetPath = '/tornei/' . basename((string)($_SERVER['SCRIPT_NAME'] ?? ($torneoSlug . '.php')));
     header('Location: ' . content_url_for_section($torneoSection, $targetPath), true, 301);
