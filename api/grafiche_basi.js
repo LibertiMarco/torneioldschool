@@ -243,7 +243,10 @@ const customTemplates = (() => {
       else if(key==='homeLogo'||key==='awayLogo') {
         const logo=logos[key==='homeLogo'?0:1];
         if(editor&&!logo) guide(ctx,r,key==='homeLogo'?'LOGO 1':'LOGO 2');
-        else contain(ctx,logo,r.x,r.y,r.w,r.h);
+        else {
+          contain(ctx,logo,r.x,r.y,r.w,r.h);
+          if(type==='ft') cutSquareCorners(ctx,r);
+        }
       }
       else text(ctx,texts[key],r);
     }
