@@ -204,12 +204,11 @@ const customTemplates = (() => {
     contain(ctx,item.image,0,0,W,H);
     const photoRect=item.layout.photo;
     const photo=imageState[type==='ft'?'ftCaptains':'mvpPhoto'];
-    // The uploaded base is first used as a background. Then its continuous
-    // background is made transparent so baked-in squares, frames, logos and
-    // decorations can be composited above the player photo.
+    // Draw the cutout base first, then place the captain photo over its photo
+    // window. Editable logos and text are drawn afterward and stay in front.
     if(photo&&photoRect?.visible){
-      cover(ctx,photo,photoRect.x,photoRect.y,photoRect.w,photoRect.h,cropValues(type));
       ctx.drawImage(graphicOverlay(item.image,photoRect,[item.layout.homeLogo,item.layout.awayLogo]),0,0,W,H);
+      cover(ctx,photo,photoRect.x,photoRect.y,photoRect.w,photoRect.h,cropValues(type));
     }
     const teams=new Set([...$('mvpPlayers').querySelectorAll('input:checked')].map(input=>input._mvpData.team));
     const logos=type==='ft'?[imageState.ftHomeLogo,imageState.ftAwayLogo]:[
