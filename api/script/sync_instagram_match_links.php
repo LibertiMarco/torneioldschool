@@ -4,11 +4,42 @@ declare(strict_types=1);
 /**
  * Trova i Reel pubblicati ieri, abbina la didascalia alle partite del giorno
  * e salva il permalink in partite.link_instagram.
- * Eseguibile solo da CLI; per pianificarlo usare il cron del server.
+ * CLI per cron; da web è accessibile solo agli amministratori autenticati.
  */
-if (PHP_SAPI !== 'cli') {
-    http_response_code(404);
-    exit;
+$isCli = PHP_SAPI === 'cli';
+if (!$isCli) {
+    require_once __DIR__ . '/../../includi/admin_guard.php';
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+        header('Content-Type: text/html; charset=utf-8');
+        require_once __DIR__ . '/../../includi/security.php';
+        $defaultDate = (new DateTimeImmutable('yesterday', new DateTimeZone('Europe/Rome')))->format('Y-m-d');
+        $csrf = htmlspecialchars(csrf_get_token('instagram_match_sync'), ENT_QUOTES, 'UTF-8');
+        $date = htmlspecialchars($defaultDate, ENT_QUOTES, 'UTF-8');
+        echo '<!doctype html><html lang="it"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            . '<title>Sincronizza link Instagram</title><style>body{font:16px Arial,sans-serif;background:#0b1420;color:#f4f7fb;margin:0;padding:24px}'
+            . '.box{max-width:620px;margin:6vh auto;padding:24px;background:#142235;border-radius:14px}label{display:block;margin:18px 0 8px}'
+            . 'input,button{font:inherit;padding:12px;border-radius:8px;border:1px solid #53677e}input{display:block;margin-top:8px;background:#fff;color:#111}'
+            . '.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}button{cursor:pointer;font-weight:bold}.dry{background:#f2c94c;color:#111}'
+            . '.apply{background:#176b45;color:#fff}small{color:#bdcce0}</style><main class="box"><h1>Sincronizza link Instagram</h1>'
+            . '<p>Controlla i Reel di ieri e abbinali alle partite. La prova non cambia il database; il salvataggio aggiorna solo partite senza link.</p>'
+            . '<form method="post"><input type="hidden" name="_csrf" value="' . $csrf . '">'
+            . '<label for="date">Giorno dei Reel</label><input id="date" type="date" name="date" value="' . $date . '" required>'
+            . '<div class="actions"><button class="dry" name="mode" value="dry-run">Controlla senza salvare</button>'
+            . '<button class="apply" name="mode" value="apply" onclick="return confirm(\'Salvare i link Instagram trovati nelle partite?\')">Salva i link trovati</button></div>'
+            . '<p><small>Pagina riservata agli amministratori. Gli abbinamenti ambigui vengono saltati.</small></p></form></main></html>';
+        exit;
+    }
+    require_once __DIR__ . '/../../includi/security.php';
+    if (!csrf_is_valid((string)($_POST['_csrf'] ?? ''), 'instagram_match_sync')) {
+        http_response_code(400);
+        exit('Sessione scaduta o richiesta non valida. Ricarica la pagina e riprova.');
+    }
+    if (!in_array((string)($_POST['mode'] ?? ''), ['dry-run', 'apply'], true)) {
+        http_response_code(400);
+        exit('Modalità di esecuzione non valida.');
+    }
+    header('Content-Type: text/plain; charset=utf-8');
+    @set_time_limit(300);
 }
 
 require_once __DIR__ . '/../../includi/env_loader.php';
@@ -18,7 +49,12 @@ date_default_timezone_set('Europe/Rome');
 
 function sync_instagram_log(string $message): void
 {
-    fwrite(STDOUT, '[' . date('Y-m-d H:i:s') . '] ' . $message . PHP_EOL);
+    $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . PHP_EOL;
+    if (PHP_SAPI === 'cli') {
+        fwrite(STDOUT, $line);
+    } else {
+        echo $line;
+    }
 }
 
 function sync_instagram_fail(string $message, int $code = 1): never
@@ -259,12 +295,18 @@ function sync_instagram_fetch_yesterdays_reels(string $userId, string $token, st
     return $reels;
 }
 
-$dryRun = in_array('--dry-run', $argv, true);
+$dryRun = $isCli
+    ? in_array('--dry-run', $argv, true)
+    : (string)($_POST['mode'] ?? '') === 'dry-run';
 $requestedDate = null;
-foreach ($argv as $argument) {
-    if (str_starts_with($argument, '--date=')) {
-        $requestedDate = substr($argument, 7);
+if ($isCli) {
+    foreach ($argv as $argument) {
+        if (str_starts_with($argument, '--date=')) {
+            $requestedDate = substr($argument, 7);
+        }
     }
+} elseif (isset($_POST['date'])) {
+    $requestedDate = trim((string)$_POST['date']);
 }
 $yesterday = (new DateTimeImmutable('yesterday', new DateTimeZone('Europe/Rome')))->setTime(0, 0);
 $targetDay = $yesterday;
