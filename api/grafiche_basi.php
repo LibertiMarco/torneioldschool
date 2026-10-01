@@ -65,7 +65,26 @@ try {
         if (!$image) {
             throw new InvalidArgumentException('Carica prima una base.');
         }
-        graphics_template_store($path, $localPath, ['image' => $image, 'layout' => $layout]);
+        $scoreOverlay = !empty($input['remove_score_overlay']) ? null : ($previous['score_overlay'] ?? null);
+        if (isset($_FILES['score_overlay']) && $_FILES['score_overlay']['error'] !== UPLOAD_ERR_NO_FILE) {
+            if ($type !== 'ft') {
+                throw new InvalidArgumentException('Il livello box è disponibile solo per il Full Time.');
+            }
+            if ($_FILES['score_overlay']['error'] !== UPLOAD_ERR_OK) {
+                throw new InvalidArgumentException('Caricamento del livello box non riuscito: verifica il limite upload del server.');
+            }
+            if (!is_uploaded_file($_FILES['score_overlay']['tmp_name'])) {
+                throw new InvalidArgumentException('Caricamento del livello box non valido.');
+            }
+            $scoreOverlay = graphics_template_image(file_get_contents($_FILES['score_overlay']['tmp_name']));
+            $overlayInfo = getimagesizefromstring(file_get_contents($_FILES['score_overlay']['tmp_name']));
+            if (!in_array($overlayInfo['mime'] ?? '', ['image/png', 'image/webp'], true)) {
+                throw new InvalidArgumentException('Il livello box deve essere un PNG o WebP trasparente.');
+            }
+        }
+        $record = ['image' => $image, 'layout' => $layout];
+        if ($type === 'ft' && $scoreOverlay !== null) $record['score_overlay'] = $scoreOverlay;
+        graphics_template_store($path, $localPath, $record);
     }
     echo json_encode(['ok' => true]);
 } catch (InvalidArgumentException | JsonException $error) {

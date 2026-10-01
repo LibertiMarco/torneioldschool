@@ -8,7 +8,7 @@ const customTemplates = (() => {
   const state = new Map();
   let currentId = '';
   let editor = false;
-  const fresh = type => ({image:null,file:null,layout:defaults(type),dirty:false,busy:false,loading:false,error:'',saveError:''});
+  const fresh = type => ({image:null,file:null,scoreOverlay:null,scoreOverlayFile:null,clearScoreOverlay:false,layout:defaults(type),dirty:false,busy:false,loading:false,error:'',saveError:''});
   const pair = () => state.get(currentId);
   const message = text => { $('status').textContent = text; };
 
@@ -34,6 +34,7 @@ const customTemplates = (() => {
         <p class="hint">Carica la tua grafica, poi posiziona gli elementi. Consigliato: 1080 × 1350 px; PNG, JPG o WebP, massimo 8 MB. Per giocatori scontornati usa foto PNG trasparenti.</p>
         <fieldset id="${type}BaseControls"><div class="fields">
           <label class="wide">Immagine di base<input id="${type}Base" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          ${type==='ft'?'<label class="wide">Livello box risultato (PNG/WebP trasparente, 1080 x 1350 px)<input id="ftScoreOverlay" type="file" accept="image/png,image/webp"></label><div class="wide actions"><button id="ftRemoveScoreOverlay" type="button" class="secondary">Rimuovi livello box</button><span id="ftScoreOverlayStatus" class="hint" aria-live="polite"></span></div>':''}
           <label class="wide">Elemento da posizionare<select id="${type}Element"></select></label>
           <label class="wide template-check"><input id="${type}Visible" type="checkbox"> Mostra elemento</label>
           <label>Posizione X (px)<input id="${type}LayoutX" type="number" min="0" max="1080"></label>
@@ -48,6 +49,10 @@ const customTemplates = (() => {
       Object.keys(defaults(type)).forEach(key => $(type+'Element').append(new Option(labels[key],key)));
       $(type+'Element').addEventListener('change',()=>refresh(type));
       $(type+'Base').addEventListener('change',()=>upload(type));
+      if(type==='ft'){
+        $('ftScoreOverlay').addEventListener('change',()=>uploadScoreOverlay());
+        $('ftRemoveScoreOverlay').addEventListener('click',clearScoreOverlay);
+      }
       $(type+'SaveBase').addEventListener('click',()=>save(type,false));
       $(type+'RemoveBase').addEventListener('click',()=>save(type,true));
       ['X','Y','W','H','Font','Color'].forEach(field=>$(type+'Layout'+field).addEventListener('input',()=>edit(type)));
@@ -74,6 +79,10 @@ const customTemplates = (() => {
     $(type+'Visible').checked=rect.visible;
     $(type+'SaveBase').disabled=!item?.image;
     $(type+'RemoveBase').disabled=!item?.image;
+    if(type==='ft'){
+      $('ftRemoveScoreOverlay').disabled=!item?.scoreOverlay||!item?.image||item.loading||item.busy;
+      $('ftScoreOverlayStatus').textContent=item?.scoreOverlay?'Livello box presente: viene sovrapposto a base e foto, sotto loghi e testi.':'Nessun livello box caricato.';
+    }
     $(type+'BaseStatus').textContent = !item ? 'Seleziona un torneo per configurare le basi.' : item.error || item.saveError || (item.loading?'Caricamento della base…':item.busy?'Salvataggio…':item.dirty?'Modifiche in anteprima: premi Salva base e posizioni.':item.image?'Base salvata per questo torneo.':'Nessuna base salvata: viene usata la grafica automatica.');
   }
   async function selectTournament(id) {
@@ -92,6 +101,10 @@ const customTemplates = (() => {
           if(!img) throw new Error('Impossibile caricare la base salvata. Riseleziona il torneo per riprovare.');
           items[type].image=img;
           items[type].layout=normalizeLayout(type,data[type].layout);
+          if(type==='ft'&&data[type].score_overlay){
+            items[type].scoreOverlay=await loadImage(data[type].score_overlay);
+            if(!items[type].scoreOverlay) throw new Error('Impossibile caricare il livello box salvato. Riseleziona il torneo per riprovare.');
+          }
         }
       }));
     } catch(error) {for(const item of Object.values(items)) item.error=error.message;}
@@ -118,6 +131,27 @@ const customTemplates = (() => {
     } catch(error) {message(error.message);}
     finally {item.busy=false;$(type+'Base').value='';if(id===currentId)refresh(type);}
   }
+  async function uploadScoreOverlay() {
+    const item=pair()?.ft,id=currentId,file=$('ftScoreOverlay').files[0];
+    if(!item||!file)return;
+    item.busy=true;item.saveError='';refresh('ft');
+    try {
+      if(!['image/png','image/webp'].includes(file.type)||file.size>8*1024*1024) throw new Error('Usa un PNG o WebP trasparente, massimo 8 MB.');
+      const img=await fileImage(file);
+      if(!img||img.naturalWidth*img.naturalHeight>16000000) throw new Error('Immagine non valida o superiore a 16 megapixel.');
+      item.scoreOverlay=img;item.scoreOverlayFile=file;item.clearScoreOverlay=false;item.dirty=true;
+    } catch(error) {message(error.message);}
+    finally {
+      $('ftScoreOverlay').value='';item.busy=false;
+      if(id===currentId){refresh('ft');drawAll();}
+    }
+  }
+  function clearScoreOverlay() {
+    const item=pair()?.ft;
+    if(!item||item.loading||item.busy)return;
+    item.scoreOverlay=null;item.scoreOverlayFile=null;item.clearScoreOverlay=true;item.dirty=true;
+    refresh('ft');drawAll();
+  }
   function edit(type) {
     const item=pair()?.[type];
     if(!item||item.loading||item.busy) return;
@@ -138,11 +172,15 @@ const customTemplates = (() => {
     body.append('_csrf',graphicsTemplatesCsrf);body.append('torneo_id',id);body.append('type',type);
     body.append('action',remove?'remove':'save');body.append('layout',JSON.stringify(item.layout));
     if(item.file&&!remove) body.append('base',item.file);
+    if(type==='ft'&&!remove){
+      if(item.scoreOverlayFile)body.append('score_overlay',item.scoreOverlayFile);
+      if(item.clearScoreOverlay)body.append('remove_score_overlay','1');
+    }
     try {
       const result=await request('grafiche_basi.php',{method:'POST',body});
       if(result.ok!==true)throw new Error('Il server non ha confermato il salvataggio. Riprova.');
       if(remove) Object.assign(item,fresh(type));
-      item.file=null;item.dirty=false;
+      item.file=null;item.scoreOverlayFile=null;item.clearScoreOverlay=false;item.dirty=false;
       if (window.parent !== window) window.parent.postMessage({type:'graphics-template-saved',torneoId:id},window.location.origin);
       if(id===currentId) {drawAll();message(remove?'Grafica automatica ripristinata per questo torneo.':'Base e posizioni salvate per questo torneo.');}
     } catch(error) {item.saveError=error.message;message(error.message);}
@@ -210,6 +248,7 @@ const customTemplates = (() => {
       ctx.drawImage(graphicOverlay(item.image,photoRect,[item.layout.homeLogo,item.layout.awayLogo]),0,0,W,H);
       cover(ctx,photo,photoRect.x,photoRect.y,photoRect.w,photoRect.h,cropValues(type));
     }
+    if(type==='ft'&&pair()?.ft.scoreOverlay)ctx.drawImage(pair().ft.scoreOverlay,0,0,W,H);
     const teams=new Set([...$('mvpPlayers').querySelectorAll('input:checked')].map(input=>input._mvpData.team));
     const logos=type==='ft'?[imageState.ftHomeLogo,imageState.ftAwayLogo]:[
       teams.has($('ftHome').value)?imageState.ftHomeLogo:teams.has($('ftAway').value)?imageState.ftAwayLogo:null,
