@@ -94,7 +94,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     a { color:#9bcaff; }
     h1 { margin:12px 0 6px; }
     .intro { color:var(--muted); margin-top:0; }
-    .workspace { display:grid; grid-template-columns:minmax(320px,430px) minmax(0,1fr); gap:24px; align-items:start; }
+    .workspace { display:grid; grid-template-columns:minmax(320px,430px) minmax(0,1fr); gap:20px; align-items:start; }
     .controls,.preview-card { background:rgba(16,30,45,.96); border:1px solid #ffffff12; border-radius:18px; box-shadow:0 18px 50px #0005; }
     .controls { padding:18px; }
     .tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:18px; }
@@ -121,8 +121,9 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     .remove-bg-actions { display:flex; gap:8px; margin-top:8px; }
     .remove-bg-actions button { flex:1; font-size:13px; }
     .hint { color:var(--muted); font-size:13px; line-height:1.45; margin:14px 0 0; }
-    .previews { display:grid; grid-template-columns:repeat(2,minmax(280px,1fr)); gap:22px; }
+    .previews { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; min-width:0; }
     .preview-card { padding:15px; }
+    .preview-card[hidden] { display:none !important; }
     .preview-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
     .preview-head h2 { margin:0; font-size:18px; }
     .preview-head button { width:auto; padding:9px 13px; }
@@ -130,7 +131,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     .preview-actions .instagram-publish { background:#b33782; color:#fff; }
     .instagram-caption-label { display:block; max-width:540px; margin:0 auto 6px; color:var(--muted); font-size:13px; }
     .instagram-caption { display:block; width:100%; max-width:540px; min-height:72px; margin:0 auto 12px; resize:vertical; border:1px solid #ffffff18; border-radius:10px; padding:10px 12px; background:#0a1724; color:#fff; font:inherit; }
-    canvas { display:block; width:100%; max-width:540px; height:auto; margin:auto; background:#0a1724; box-shadow:0 12px 32px #0008; }
+    canvas { display:block; width:auto; max-width:100%; max-height:calc(100dvh - 250px); height:auto; margin:auto; background:#0a1724; box-shadow:0 12px 32px #0008; }
     .status { min-height:22px; margin:14px 0 0; color:#b9cad9; }
     .template-editor { margin:16px 0; padding:12px; border:1px solid #ffffff26; border-radius:12px; }
     .template-editor summary { cursor:pointer; font-weight:800; }
@@ -138,18 +139,22 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     .template-check { display:flex; align-items:center; gap:8px; }
     .template-check input { width:auto; }
     button:disabled,fieldset:disabled { opacity:.55; cursor:default; }
-    @media(min-width:1051px){ .previews{position:sticky;top:16px}body.with-site-header .previews{top:100px} }
+    @media(min-width:761px){ .previews{position:sticky;top:16px}body.with-site-header .previews{top:100px} }
     @media(max-height:900px){ .controls{position:static} }
-    @media(max-width:1050px){ .workspace{grid-template-columns:minmax(0,52%) minmax(0,48%);gap:10px}.controls{position:sticky;top:8px;padding:12px}body.with-site-header .controls{top:90px}.previews{grid-template-columns:1fr;gap:12px}.preview-card{padding:8px}.preview-head{align-items:flex-start;flex-direction:column}.preview-actions{width:100%}.preview-head button{width:100%;font-size:12px} }
+    @media(min-width:761px) and (max-width:1050px){ .workspace{grid-template-columns:minmax(280px,0.9fr) minmax(0,1.1fr);gap:14px}.controls{padding:14px}.previews{top:12px}body.with-site-header .previews{top:92px}.preview-card{padding:10px}.preview-head{align-items:flex-start;flex-direction:column}.preview-actions{width:100%}.preview-head button{width:auto;font-size:12px}canvas{max-height:calc(100dvh - 280px)} }
     @media(max-width:720px){ main{width:min(100% - 10px,1440px);margin-left:auto;margin-right:auto}.fields{grid-template-columns:1fr}.wide{grid-column:auto}.actions{grid-template-columns:1fr}.tabs{gap:5px}.tab{padding:9px 5px;font-size:11px}label{font-size:12px}input,select,button{padding:8px 7px;font-size:12px}.preview-head h2{font-size:14px} }
     body.with-site-header>main{margin-top:110px}
     html,body{height:auto}body{display:block}
     body.is-embedded{display:flow-root;min-height:0}
     canvas{touch-action:pan-y pinch-zoom}
-    @media(max-width:1050px){.controls,.previews{position:static}}
-    @media(max-width:720px){
-      .workspace{grid-template-columns:minmax(0,1fr);gap:18px}
-      .previews{grid-template-columns:minmax(0,1fr)}
+    @media(max-width:760px){
+      .workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;gap:12px}
+      .previews{grid-row:1;position:sticky;top:0;z-index:20;grid-template-columns:minmax(0,1fr);gap:0;padding:4px;background:var(--bg);max-height:40dvh;overflow:auto}
+      body.with-site-header .previews{top:78px;max-height:calc(40dvh - 78px)}
+      .preview-card{padding:8px}
+      .preview-card canvas{max-height:15dvh;width:auto}
+      .instagram-caption{min-height:48px;margin-bottom:6px}
+      .controls{grid-row:2}
       .controls{min-width:0;padding:14px}
       input,select{min-width:0;font-size:16px}
       button{min-height:44px;font-size:14px}
@@ -230,12 +235,12 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     </section>
 
     <section class="previews">
-      <article class="preview-card">
+      <article class="preview-card" data-preview="fulltime">
         <div class="preview-head"><h2>Full Time</h2><div class="preview-actions"><button type="button" data-download="fulltime" <?= $templateEditor ? 'hidden' : '' ?>>Scarica PNG</button><?php if ($canPublishInstagram): ?><button type="button" class="instagram-publish" data-publish="fulltime">Pubblica su Instagram</button><?php endif; ?></div></div>
         <?php if ($canPublishInstagram): ?><label class="instagram-caption-label" for="instagramCaptionFulltime">Didascalia Instagram (facoltativa)</label><textarea class="instagram-caption" id="instagramCaptionFulltime" maxlength="2200" rows="3" placeholder="Aggiungi una didascalia al post"></textarea><?php endif; ?>
         <canvas id="fulltimeCanvas" width="1080" height="1350"></canvas>
       </article>
-      <article class="preview-card">
+      <article class="preview-card" data-preview="mvp" hidden>
         <div class="preview-head"><h2>MVP</h2><div class="preview-actions"><button type="button" data-download="mvp" <?= $templateEditor ? 'hidden' : '' ?>>Scarica PNG</button><?php if ($canPublishInstagram): ?><button type="button" class="instagram-publish" data-publish="mvp">Pubblica su Instagram</button><?php endif; ?></div></div>
         <?php if ($canPublishInstagram): ?><label class="instagram-caption-label" for="instagramCaptionMvp">Didascalia Instagram (facoltativa)</label><textarea class="instagram-caption" id="instagramCaptionMvp" maxlength="2200" rows="3" placeholder="Aggiungi una didascalia al post"></textarea><?php endif; ?>
         <canvas id="mvpCanvas" width="1080" height="1350"></canvas>
@@ -577,7 +582,13 @@ async function publishInstagram(canvasId,captionId,button){
   finally{button.disabled=false;button.textContent=originalText;}
 }
 
-document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===button.dataset.panel));}));
+function selectConfiguratorPanel(button){
+  document.querySelectorAll('.tab').forEach(item=>item.classList.toggle('active',item===button));
+  document.querySelectorAll('.panel').forEach(panel=>panel.classList.toggle('active',panel.id===button.dataset.panel));
+  const preview=button.dataset.panel==='mvpPanel'?'mvp':'fulltime';
+  document.querySelectorAll('[data-preview]').forEach(card=>{card.hidden=card.dataset.preview!==preview;});
+}
+document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>selectConfiguratorPanel(button)));
 imageFields.forEach(id=>$(id).addEventListener('change',()=>updateImage(id).catch(error=>{$('status').textContent=error.message||'Impossibile leggere questa immagine.';$(id).value='';})));
 $('ftRemoveBg').addEventListener('click',()=>removePhotoBackground('ftCaptains'));
 $('mvpRemoveBg').addEventListener('click',()=>removePhotoBackground('mvpPhoto'));
