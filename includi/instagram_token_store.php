@@ -3,6 +3,45 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/env_loader.php';
 
+function tos_instagram_token_refresh_interval_seconds(): int
+{
+    return 30 * 86400;
+}
+
+/** Normalize older token records to the monthly refresh cadence. */
+function tos_instagram_token_refresh_schedule(array $state, ?int $now = null): array
+{
+    $now ??= time();
+    $original = $state;
+    $retryAt = (int)($state['refresh_retry_at'] ?? 0);
+    if ($retryAt > $now) {
+        return ['state' => $state, 'due' => false, 'changed' => false];
+    }
+    if ($retryAt > 0) {
+        unset($state['refresh_retry_at']);
+    }
+
+    $issuedAt = (int)($state['issued_at'] ?? 0);
+    $refreshAfter = (int)($state['refresh_after'] ?? 0);
+    if ($issuedAt > 0) {
+        $monthlyRefresh = $issuedAt + tos_instagram_token_refresh_interval_seconds();
+        if ($refreshAfter <= 0 || $refreshAfter > $monthlyRefresh) {
+            $refreshAfter = $monthlyRefresh;
+        }
+    } elseif ($refreshAfter <= 0) {
+        // For a token supplied through server environment settings its issue date
+        // is unknown; begin the 30-day cadence from when this server first sees it.
+        $refreshAfter = $now + tos_instagram_token_refresh_interval_seconds();
+    }
+
+    $state['refresh_after'] = $refreshAfter;
+    return [
+        'state' => $state,
+        'due' => $refreshAfter <= $now,
+        'changed' => $state !== $original,
+    ];
+}
+
 /** Store token state outside the web root so PHP can refresh it without exposing it. */
 function tos_instagram_token_state_path(): string
 {

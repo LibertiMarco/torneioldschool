@@ -65,10 +65,13 @@ function instagram_refresh_access_token_state(array $state): array
         return ['ok' => false, 'error' => 'Token Instagram non disponibile sul server.'];
     }
 
-    $refreshAfter = (int)($state['refresh_after'] ?? 0);
     $expiresAt = (int)($state['expires_at'] ?? 0);
-    $expiresSoon = $expiresAt > 0 && $expiresAt <= $now + (15 * 86400);
-    if ($refreshAfter > $now && !$expiresSoon) {
+    $schedule = tos_instagram_token_refresh_schedule($state, $now);
+    $state = $schedule['state'];
+    if (!$schedule['due']) {
+        if ($schedule['changed'] && !tos_save_instagram_token_state($state)) {
+            return ['ok' => false, 'error' => 'Non è stato possibile salvare la prossima data di rinnovo del token nel runtime privato.'];
+        }
         return ['ok' => true, 'state' => $state];
     }
 
@@ -83,7 +86,8 @@ function instagram_refresh_access_token_state(array $state): array
         $state['access_token'] = $newToken;
         $state['issued_at'] = $now;
         $state['expires_at'] = $now + $expiresIn;
-        $state['refresh_after'] = $now + (45 * 86400);
+        $state['refresh_after'] = $now + tos_instagram_token_refresh_interval_seconds();
+        unset($state['refresh_retry_at']);
         if (!tos_save_instagram_token_state($state)) {
             return ['ok' => false, 'error' => 'Instagram ha rinnovato il token, ma il server non riesce a salvarlo. Verifica i permessi della cartella runtime privata.'];
         }
@@ -94,6 +98,7 @@ function instagram_refresh_access_token_state(array $state): array
     // For a manually configured token with unknown age, retry tomorrow and let this
     // publication continue with the current token.
     $state['refresh_after'] = $now + 86400;
+    $state['refresh_retry_at'] = $state['refresh_after'];
     tos_save_instagram_token_state($state);
     if ($expiresAt > 0 && $expiresAt <= $now + 86400) {
         return ['ok' => false, 'error' => 'Il token Instagram sta per scadere e il rinnovo automatico non è riuscito. Ricollega Instagram dal generatore.'];
@@ -126,13 +131,17 @@ if ($accessToken === '' || $instagramUserId === '') {
 }
 
 if ($storedTokenState === null) {
+    $firstSeenAt = time();
     $storedTokenState = [
         'access_token' => $accessToken,
         'user_id' => $instagramUserId,
         'issued_at' => 0,
         'expires_at' => 0,
-        'refresh_after' => 0,
+        'refresh_after' => $firstSeenAt + tos_instagram_token_refresh_interval_seconds(),
     ];
+    if (!tos_save_instagram_token_state($storedTokenState)) {
+        instagram_publish_json(['ok' => false, 'error' => 'Il token è presente ma non è stato possibile salvare la pianificazione del rinnovo nel runtime privato.'], 503);
+    }
 }
 $tokenRefresh = instagram_refresh_access_token_state($storedTokenState);
 if (!$tokenRefresh['ok']) {

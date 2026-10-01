@@ -102,9 +102,13 @@ function sync_instagram_refresh_token(array $state): array
     if ($token === '') {
         return ['ok' => false, 'error' => 'Token Instagram non disponibile. Ricollega il profilo dal generatore.'];
     }
-    $refreshAfter = (int)($state['refresh_after'] ?? 0);
     $expiresAt = (int)($state['expires_at'] ?? 0);
-    if ($refreshAfter > $now && ($expiresAt === 0 || $expiresAt > $now + 15 * 86400)) {
+    $schedule = tos_instagram_token_refresh_schedule($state, $now);
+    $state = $schedule['state'];
+    if (!$schedule['due']) {
+        if ($schedule['changed'] && !tos_save_instagram_token_state($state)) {
+            return ['ok' => false, 'error' => 'Non è stato possibile salvare la prossima data di rinnovo del token nel runtime privato.'];
+        }
         return ['ok' => true, 'state' => $state];
     }
 
@@ -119,7 +123,8 @@ function sync_instagram_refresh_token(array $state): array
         $state['access_token'] = $newToken;
         $state['issued_at'] = $now;
         $state['expires_at'] = $now + $expiresIn;
-        $state['refresh_after'] = $now + 45 * 86400;
+        $state['refresh_after'] = $now + tos_instagram_token_refresh_interval_seconds();
+        unset($state['refresh_retry_at']);
         if (!tos_save_instagram_token_state($state)) {
             return ['ok' => false, 'error' => 'Token rinnovato, ma non è stato possibile salvarlo nel runtime privato.'];
         }
@@ -127,6 +132,7 @@ function sync_instagram_refresh_token(array $state): array
     }
 
     $state['refresh_after'] = $now + 86400;
+    $state['refresh_retry_at'] = $state['refresh_after'];
     tos_save_instagram_token_state($state);
     if ($expiresAt > 0 && $expiresAt <= $now + 86400) {
         return ['ok' => false, 'error' => 'Il token Instagram sta per scadere e il rinnovo automatico non è riuscito. Ricollega Instagram dal generatore.'];
@@ -331,7 +337,16 @@ if ($state === null) {
     if ($envToken === '' || $envUserId === '') {
         sync_instagram_fail('Collegamento Instagram assente sul server. Collega il profilo dal generatore e salva il token nel runtime privato.');
     }
-    $state = ['access_token' => $envToken, 'user_id' => $envUserId, 'issued_at' => 0, 'expires_at' => 0, 'refresh_after' => 0];
+    $state = [
+        'access_token' => $envToken,
+        'user_id' => $envUserId,
+        'issued_at' => 0,
+        'expires_at' => 0,
+        'refresh_after' => time() + tos_instagram_token_refresh_interval_seconds(),
+    ];
+    if (!tos_save_instagram_token_state($state)) {
+        sync_instagram_fail('Impossibile salvare il token e la pianificazione del rinnovo nel runtime privato.');
+    }
 }
 $refreshed = sync_instagram_refresh_token($state);
 if (!$refreshed['ok']) {

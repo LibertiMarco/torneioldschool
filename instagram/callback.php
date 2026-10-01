@@ -180,7 +180,7 @@ $tokenStored = tos_save_instagram_token_state([
     'user_id' => $userId,
     'issued_at' => time(),
     'expires_at' => time() + $tokenExpiresIn,
-    'refresh_after' => time() + (45 * 86400),
+    'refresh_after' => time() + tos_instagram_token_refresh_interval_seconds(),
 ]);
 
 instagram_oauth_json([
