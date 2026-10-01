@@ -36,7 +36,7 @@ $partiteStmt = $conn->prepare(
    LEFT JOIN squadre so ON so.nome = p.squadra_ospite AND so.torneo = p.torneo
    WHERE (p.giocata = 1
       OR (p.giocata = 0
-          AND p.data_partita BETWEEN DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND CURDATE()))
+          AND p.data_partita >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)))
      AND NOT EXISTS (
        SELECT 1
        FROM tornei tx

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/../includi/env_loader.php';
+require_once __DIR__ . '/oauth_config.php';
 
 $appId = trim((string)getenv('INSTAGRAM_APP_ID'));
 $redirectUri = trim((string)getenv('INSTAGRAM_REDIRECT_URI'));
@@ -10,6 +11,13 @@ if ($appId === '' || $redirectUri === '') {
     http_response_code(500);
     header('Content-Type: text/plain; charset=utf-8');
     exit("Config Instagram Login mancante: definisci INSTAGRAM_APP_ID e INSTAGRAM_REDIRECT_URI sul server e registra lo stesso redirect nella configurazione Instagram Login di Meta.\n");
+}
+
+$secretError = instagram_oauth_secret_error((string)getenv('INSTAGRAM_APP_SECRET'));
+if ($secretError !== null) {
+    http_response_code(500);
+    header('Content-Type: text/plain; charset=utf-8');
+    exit($secretError);
 }
 
 $redirectParts = parse_url($redirectUri);

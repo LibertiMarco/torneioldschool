@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/../includi/env_loader.php';
+require_once __DIR__ . '/../includi/instagram_token_store.php';
+require_once __DIR__ . '/oauth_config.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -99,6 +101,11 @@ if ($code === '' || $appId === '' || $appSecret === '' || $redirectUri === '') {
     instagram_oauth_json(['ok' => false, 'error' => 'Mancano il codice OAuth o le credenziali Instagram Login del server.'], 400);
 }
 
+$secretError = instagram_oauth_secret_error($appSecret);
+if ($secretError !== null) {
+    instagram_oauth_json(['ok' => false, 'error' => $secretError, 'stage' => 'configuration'], 500);
+}
+
 $short = instagram_oauth_request('https://api.instagram.com/oauth/access_token', [
     'client_id' => $appId,
     'client_secret' => $appSecret,
@@ -107,7 +114,28 @@ $short = instagram_oauth_request('https://api.instagram.com/oauth/access_token',
     'code' => $code,
 ], true);
 if (!$short['ok']) {
-    instagram_oauth_json(['ok' => false, 'error' => $short['error'] ?? 'Instagram non ha rilasciato il token iniziale.'], 502);
+    // Only public configuration and status metadata: never return the code,
+    // state, app secret, tokens, request body, or the raw response here.
+    $apiError = (string)($short['error'] ?? 'Instagram non ha rilasciato il token iniziale.');
+    $apiError = str_replace([$appSecret, $code], '[omesso]', $apiError);
+    instagram_oauth_json([
+        'ok' => false,
+        'error' => $apiError,
+        'stage' => 'authorization_code_exchange',
+        'diagnostics' => [
+            'version' => 'instagram-oauth-3',
+            'app_id' => $appId,
+            'redirect_uri' => $redirectUri,
+            'authorization_context_saved' => is_array($oauthContext),
+            'configuration_matches_authorization' => (
+                $appId === trim((string)getenv('INSTAGRAM_APP_ID'))
+                && $redirectUri === trim((string)getenv('INSTAGRAM_REDIRECT_URI'))
+            ),
+            'authorization_age_seconds' => isset($oauthContext['created_at'])
+                ? max(0, time() - (int)$oauthContext['created_at']) : null,
+            'http_status' => $short['status'] ?? null,
+        ],
+    ], 502);
 }
 
 $shortToken = trim((string)($short['data']['access_token'] ?? ''));
@@ -146,6 +174,15 @@ if ($longToken === '' || $userId === '') {
     instagram_oauth_json(['ok' => false, 'error' => 'Instagram non ha restituito il token lungo o l’ID del profilo.'], 502);
 }
 
+$tokenExpiresIn = max(0, (int)($long['data']['expires_in'] ?? 5184000));
+$tokenStored = tos_save_instagram_token_state([
+    'access_token' => $longToken,
+    'user_id' => $userId,
+    'issued_at' => time(),
+    'expires_at' => time() + $tokenExpiresIn,
+    'refresh_after' => time() + (45 * 86400),
+]);
+
 instagram_oauth_json([
     'ok' => true,
     'account' => [
@@ -161,7 +198,14 @@ instagram_oauth_json([
         'INSTAGRAM_ACCESS_TOKEN' => $longToken,
         'INSTAGRAM_USER_ID' => $userId,
     ],
+    'token_storage' => [
+        'saved_on_server' => $tokenStored,
+        'automatic_refresh' => $tokenStored,
+    ],
     'notes' => [
+        $tokenStored
+            ? 'Token salvato in un file server privato; verrà rinnovato automaticamente prima della scadenza.'
+            : 'Salvataggio automatico non disponibile; configura il token sul server e rendi scrivibile la cartella runtime privata.',
         'Il token è segreto: configurarlo solo sul server, mai nel codice pubblico o in chat.',
         'Il token Instagram Login è a lunga durata ma ha una scadenza; ricollegare o aggiornare il token prima della scadenza.',
     ],

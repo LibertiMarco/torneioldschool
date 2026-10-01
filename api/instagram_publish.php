@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includi/security.php';
 require_once __DIR__ . '/../includi/user_features.php';
 require_once __DIR__ . '/../includi/env_loader.php';
+require_once __DIR__ . '/../includi/instagram_token_store.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -56,6 +57,50 @@ function instagram_graph_request(string $url, array $fields = [], bool $post = f
     ];
 }
 
+function instagram_refresh_access_token_state(array $state): array
+{
+    $now = time();
+    $accessToken = trim((string)($state['access_token'] ?? ''));
+    if ($accessToken === '') {
+        return ['ok' => false, 'error' => 'Token Instagram non disponibile sul server.'];
+    }
+
+    $refreshAfter = (int)($state['refresh_after'] ?? 0);
+    $expiresAt = (int)($state['expires_at'] ?? 0);
+    $expiresSoon = $expiresAt > 0 && $expiresAt <= $now + (15 * 86400);
+    if ($refreshAfter > $now && !$expiresSoon) {
+        return ['ok' => true, 'state' => $state];
+    }
+
+    $refreshUrl = 'https://graph.instagram.com/refresh_access_token?' . http_build_query([
+        'grant_type' => 'ig_refresh_token',
+        'access_token' => $accessToken,
+    ]);
+    $refresh = instagram_graph_request($refreshUrl);
+    $newToken = $refresh['ok'] ? trim((string)($refresh['data']['access_token'] ?? '')) : '';
+    if ($newToken !== '') {
+        $expiresIn = max(0, (int)($refresh['data']['expires_in'] ?? 5184000));
+        $state['access_token'] = $newToken;
+        $state['issued_at'] = $now;
+        $state['expires_at'] = $now + $expiresIn;
+        $state['refresh_after'] = $now + (45 * 86400);
+        if (!tos_save_instagram_token_state($state)) {
+            return ['ok' => false, 'error' => 'Instagram ha rinnovato il token, ma il server non riesce a salvarlo. Verifica i permessi della cartella runtime privata.'];
+        }
+        return ['ok' => true, 'state' => $state];
+    }
+
+    // Meta only permits a refresh once a long-lived token is at least 24 hours old.
+    // For a manually configured token with unknown age, retry tomorrow and let this
+    // publication continue with the current token.
+    $state['refresh_after'] = $now + 86400;
+    tos_save_instagram_token_state($state);
+    if ($expiresAt > 0 && $expiresAt <= $now + 86400) {
+        return ['ok' => false, 'error' => 'Il token Instagram sta per scadere e il rinnovo automatico non è riuscito. Ricollega Instagram dal generatore.'];
+    }
+    return ['ok' => true, 'state' => $state];
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Allow: POST');
     instagram_publish_json(['ok' => false, 'error' => 'Metodo non consentito.'], 405);
@@ -70,14 +115,31 @@ if (!csrf_is_valid((string)($_POST['_csrf'] ?? ''), 'instagram_publish')) {
     instagram_publish_json(['ok' => false, 'error' => 'Sessione scaduta. Ricarica il generatore e riprova.'], 400);
 }
 
-$accessToken = trim((string)getenv('INSTAGRAM_ACCESS_TOKEN'));
-$instagramUserId = trim((string)getenv('INSTAGRAM_USER_ID'));
+$storedTokenState = tos_load_instagram_token_state();
+$accessToken = trim((string)($storedTokenState['access_token'] ?? getenv('INSTAGRAM_ACCESS_TOKEN')));
+$instagramUserId = trim((string)($storedTokenState['user_id'] ?? getenv('INSTAGRAM_USER_ID')));
 if ($accessToken === '' || $instagramUserId === '') {
     instagram_publish_json([
         'ok' => false,
         'error' => 'Collegamento Instagram non configurato: servono INSTAGRAM_ACCESS_TOKEN e INSTAGRAM_USER_ID con il permesso di pubblicazione.',
     ], 503);
 }
+
+if ($storedTokenState === null) {
+    $storedTokenState = [
+        'access_token' => $accessToken,
+        'user_id' => $instagramUserId,
+        'issued_at' => 0,
+        'expires_at' => 0,
+        'refresh_after' => 0,
+    ];
+}
+$tokenRefresh = instagram_refresh_access_token_state($storedTokenState);
+if (!$tokenRefresh['ok']) {
+    instagram_publish_json(['ok' => false, 'error' => $tokenRefresh['error']], 503);
+}
+$accessToken = (string)$tokenRefresh['state']['access_token'];
+$instagramUserId = trim((string)($tokenRefresh['state']['user_id'] ?? $instagramUserId));
 if (!isset($_FILES['image']) || !is_array($_FILES['image']) || (int)($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
     instagram_publish_json(['ok' => false, 'error' => 'Impossibile ricevere la grafica. Riprova.'], 400);
 }
