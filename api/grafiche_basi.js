@@ -3,7 +3,7 @@ const customTemplates = (() => {
   const labels = {photo:'Foto giocatori',homeLogo:'Logo casa / squadra MVP',awayLogo:'Logo ospite / secondo MVP',homeScore:'Gol squadra casa',awayScore:'Gol squadra ospite',home:'Nome squadra casa',away:'Nome squadra ospite',round:'Giornata / fase',names:'Nomi MVP',team:'Squadra MVP',details:'Dettaglio MVP'};
   const element = (x,y,w,h,font=40,visible=true) => ({x,y,w,h,font,visible,color:'#ffffff'});
   const defaults = type => type === 'ft'
-    ? {photo:element(80,220,920,700),homeLogo:{...element(80,950,180,180),radius:12},awayLogo:{...element(820,950,180,180),radius:12},homeScore:element(290,980,250,140,110),awayScore:element(540,980,250,140,110),home:element(30,1150,400,60,34),away:element(650,1150,400,60,34),round:element(180,1240,720,60,26)}
+    ? {photo:element(80,220,920,700),homeLogo:element(80,950,180,180),awayLogo:element(820,950,180,180),homeScore:element(290,980,250,140,110),awayScore:element(540,980,250,140,110),home:element(30,1150,400,60,34),away:element(650,1150,400,60,34),round:element(180,1240,720,60,26)}
     : {photo:element(100,200,880,820),homeLogo:element(70,1100,130,130),awayLogo:element(880,1100,130,130),names:element(70,1030,940,100,54),team:element(210,1150,660,70,32),details:element(150,1240,780,60,26)};
   const state = new Map();
   let currentId = '';
@@ -21,9 +21,6 @@ const customTemplates = (() => {
       if (!layout.awayScore) layout.awayScore = {...old,x:Math.min(1080,old.x+half),w:Math.max(1,old.w-half)};
     }
     delete layout.score;
-    if (type === 'ft') {
-      for (const key of ['homeLogo','awayLogo']) layout[key] = {...layout[key],radius:Number.isFinite(Number(layout[key]?.radius))?Math.max(0,Math.min(50,Number(layout[key].radius))):12};
-    }
     return {...defaults(type),...layout};
   }
 
@@ -45,7 +42,6 @@ const customTemplates = (() => {
           <label>Altezza (px)<input id="${type}LayoutH" type="number" min="1" max="1350"></label>
           <label>Dimensione testo<input id="${type}LayoutFont" type="number" min="12" max="240"></label>
           <label>Colore testo<input id="${type}LayoutColor" type="color" value="#ffffff"></label>
-          ${type==='ft'?'<label id="ftLogoRadiusField" hidden>Arrotondamento angoli logo <span class="range-value" id="ftLogoRadiusValue">12%</span><input id="ftLogoRadius" type="range" min="0" max="50" value="12"></label>':''}
         </div><div class="actions"><button id="${type}SaveBase" type="button">Salva base e posizioni</button><button id="${type}RemoveBase" type="button" class="secondary">Usa grafica automatica</button></div></fieldset>
         <p id="${type}BaseStatus" class="hint" aria-live="polite"></p>`;
       $(type==='ft'?'fulltimePanel':'mvpPanel').prepend(box);
@@ -55,7 +51,6 @@ const customTemplates = (() => {
       $(type+'SaveBase').addEventListener('click',()=>save(type,false));
       $(type+'RemoveBase').addEventListener('click',()=>save(type,true));
       ['X','Y','W','H','Font','Color'].forEach(field=>$(type+'Layout'+field).addEventListener('input',()=>edit(type)));
-      if (type==='ft') $('ftLogoRadius').addEventListener('input',()=>edit(type,true));
       $(type+'Visible').addEventListener('change',()=>edit(type));
       refresh(type);
     }
@@ -76,14 +71,6 @@ const customTemplates = (() => {
     $(type+'BaseControls').disabled = !item || item.loading || item.busy || !!item.error;
     const rect = (item?.layout || defaults(type))[$(type+'Element').value];
     ['X','Y','W','H','Font','Color'].forEach(field=>{$(type+'Layout'+field).value=rect[field.toLowerCase()];});
-    if(type==='ft') {
-      const isLogo=['homeLogo','awayLogo'].includes($('ftElement').value);
-      $('ftLogoRadiusField').hidden=!isLogo;
-      $('ftLogoRadiusField').style.display=isLogo?'grid':'none';
-      const radius=rect.radius??12;
-      $('ftLogoRadius').value=radius;
-      $('ftLogoRadiusValue').textContent=`${radius}%`;
-    }
     $(type+'Visible').checked=rect.visible;
     $(type+'SaveBase').disabled=!item?.image;
     $(type+'RemoveBase').disabled=!item?.image;
@@ -131,7 +118,7 @@ const customTemplates = (() => {
     } catch(error) {message(error.message);}
     finally {item.busy=false;$(type+'Base').value='';if(id===currentId)refresh(type);}
   }
-  function edit(type, logoRadius=false) {
+  function edit(type) {
     const item=pair()?.[type];
     if(!item||item.loading||item.busy) return;
     const rect=item.layout[$(type+'Element').value];
@@ -141,10 +128,6 @@ const customTemplates = (() => {
       rect[field.toLowerCase()]=Number(input.value);
     }
     rect.color=$(type+'LayoutColor').value; rect.visible=$(type+'Visible').checked;
-    if(type==='ft'&&logoRadius&&['homeLogo','awayLogo'].includes($('ftElement').value)) {
-      rect.radius=Number($('ftLogoRadius').value);
-      $('ftLogoRadiusValue').textContent=`${rect.radius}%`;
-    }
     item.dirty=true; refresh(type);drawAll();
   }
   async function save(type, remove) {
@@ -177,41 +160,14 @@ const customTemplates = (() => {
     });
     ctx.restore();
   }
-  function drawLogoInRoundedFrame(ctx,img,rect) {
+  function containRounded(ctx,img,x,y,w,h) {
     if(!img?.naturalWidth) return;
-    const scale=Math.min(rect.w/img.naturalWidth,rect.h/img.naturalHeight);
-    const w=img.naturalWidth*scale,h=img.naturalHeight*scale;
-    const x=rect.x+(rect.w-w)/2,y=rect.y+(rect.h-h)/2;
-    const radius=Math.min(w,h)*Math.max(0,Math.min(50,rect.radius??12))/100;
-    ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,radius);ctx.clip();
-    ctx.drawImage(img,x,y,w,h);
-    ctx.restore();
-  }
-  function cutSquareCorners(ctx,rect) {
-    if(!rect||rect.radius==null||rect.visible===false||!rect.w||!rect.h) return;
-    const radius=Math.min(rect.w,rect.h)*Math.max(0,Math.min(50,rect.radius??12))/100;
-    if(radius<=0) return;
-    const x=Math.max(0,Math.floor(rect.x)),y=Math.max(0,Math.floor(rect.y));
-    const right=Math.min(ctx.canvas.width,Math.ceil(rect.x+rect.w)),bottom=Math.min(ctx.canvas.height,Math.ceil(rect.y+rect.h));
-    const w=right-x,h=bottom-y;if(w<=0||h<=0)return;
-    const layer=document.createElement('canvas');layer.width=w;layer.height=h;
-    const layerCtx=layer.getContext('2d');layerCtx.drawImage(ctx.canvas,x,y,w,h,0,0,w,h);
-    layerCtx.globalCompositeOperation='destination-in';layerCtx.beginPath();
-    layerCtx.roundRect(rect.x-x,rect.y-y,rect.w,rect.h,radius);layerCtx.fill();
-    ctx.clearRect(x,y,w,h);ctx.drawImage(layer,x,y);
-  }
-  function logoBackingBounds(rects) {
-    return rects.map(rect=>{
-      if(!rect||rect.visible===false)return rect;
-      const padX=Math.min(42,Math.max(8,rect.w*.18)),padY=Math.min(42,Math.max(8,rect.h*.18));
-      const x=Math.max(0,rect.x-padX),y=Math.max(0,rect.y-padY);
-      const right=Math.min(W,rect.x+rect.w+padX),bottom=Math.min(H,rect.y+rect.h+padY);
-      return {...rect,x,y,w:right-x,h:bottom-y};
-    });
+    const radius=Math.min(w,h)*0.12;
+    ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,radius);ctx.clip();contain(ctx,img,x,y,w,h);ctx.restore();
   }
   const overlayCache=new WeakMap();
-  function graphicOverlay(img,hole=null,protectedRects=[],maskRects=protectedRects) {
-    const signature=[hole?[hole.x,hole.y,hole.w,hole.h].join(','):'none',...protectedRects.map(r=>[r.x,r.y,r.w,r.h,r.visible,r.radius].join(',')),...maskRects.map(r=>[r.x,r.y,r.w,r.h,r.visible,r.radius].join(','))].join('|');
+  function graphicOverlay(img,hole=null,protectedRects=[]) {
+    const signature=[hole?[hole.x,hole.y,hole.w,hole.h].join(','):'none',...protectedRects.map(r=>[r.x,r.y,r.w,r.h,r.visible].join(','))].join('|');
     let variants=overlayCache.get(img);if(!variants){variants=new Map();overlayCache.set(img,variants);}
     if(variants.has(signature))return variants.get(signature);
     const layer=document.createElement('canvas');layer.width=W;layer.height=H;
@@ -237,7 +193,6 @@ const customTemplates = (() => {
       // image can never show through the shield squares.
       for(const rect of protectedRects)if(rect?.visible!==false)for(let y=Math.max(0,Math.floor(rect.y));y<Math.min(H,Math.ceil(rect.y+rect.h));y++)for(let x=Math.max(0,Math.floor(rect.x));x<Math.min(W,Math.ceil(rect.x+rect.w));x++){const p=y*W+x;data[p*4+3]=originalAlpha[p*4+3];}
       layer.getContext('2d').putImageData(pixels,0,0);
-      maskRects.forEach(rect=>cutSquareCorners(layer.getContext('2d'),rect));
     }catch(error){layer.width=layer.height=1;variants.set(signature,img);return img;}
     variants.set(signature,layer);return layer;
   }
@@ -247,9 +202,6 @@ const customTemplates = (() => {
     const canvas=$(type==='ft'?'fulltimeCanvas':'mvpCanvas'),ctx=canvas.getContext('2d');
     ctx.save();ctx.clearRect(0,0,W,H);ctx.fillStyle='#07111d';ctx.fillRect(0,0,W,H);
     contain(ctx,item.image,0,0,W,H);
-    const logoRects=type==='ft'?[item.layout.homeLogo,item.layout.awayLogo]:[];
-    const logoMasks=type==='ft'?logoBackingBounds(logoRects):[];
-    logoMasks.forEach(rect=>cutSquareCorners(ctx,rect));
     const photoRect=item.layout.photo;
     const photo=imageState[type==='ft'?'ftCaptains':'mvpPhoto'];
     // The uploaded base is first used as a background. Then its continuous
@@ -257,7 +209,7 @@ const customTemplates = (() => {
     // decorations can be composited above the player photo.
     if(photo&&photoRect?.visible){
       cover(ctx,photo,photoRect.x,photoRect.y,photoRect.w,photoRect.h,cropValues(type));
-      ctx.drawImage(graphicOverlay(item.image,photoRect,logoRects,logoMasks),0,0,W,H);
+      ctx.drawImage(graphicOverlay(item.image,photoRect,[item.layout.homeLogo,item.layout.awayLogo]),0,0,W,H);
     }
     const teams=new Set([...$('mvpPlayers').querySelectorAll('input:checked')].map(input=>input._mvpData.team));
     const logos=type==='ft'?[imageState.ftHomeLogo,imageState.ftAwayLogo]:[
@@ -271,12 +223,7 @@ const customTemplates = (() => {
       else if(key==='homeLogo'||key==='awayLogo') {
         const logo=logos[key==='homeLogo'?0:1];
         if(editor&&!logo) guide(ctx,r,key==='homeLogo'?'LOGO 1':'LOGO 2');
-        else {
-          if(type==='ft') {
-            drawLogoInRoundedFrame(ctx,logo,r);
-            cutSquareCorners(ctx,logoMasks[key==='homeLogo'?0:1]||r);
-          } else contain(ctx,logo,r.x,r.y,r.w,r.h);
-        }
+        else containRounded(ctx,logo,r.x,r.y,r.w,r.h);
       }
       else text(ctx,texts[key],r);
     }
@@ -288,9 +235,8 @@ const customTemplates = (() => {
     return true;
   }
   function guide(ctx,r,label) {
-    const rounded=label.startsWith('LOGO'),radius=rounded?Math.min(r.w,r.h)*(r.radius??12)/100:0;
-    ctx.save();ctx.fillStyle='#ffffff20';ctx.beginPath();rounded?ctx.roundRect(r.x,r.y,r.w,r.h,radius):ctx.rect(r.x,r.y,r.w,r.h);ctx.fill();
-    ctx.strokeStyle='#e8bd45';ctx.lineWidth=3;ctx.setLineDash([12,8]);ctx.beginPath();rounded?ctx.roundRect(r.x,r.y,r.w,r.h,radius):ctx.rect(r.x,r.y,r.w,r.h);ctx.stroke();
+    ctx.save();ctx.fillStyle='#ffffff20';ctx.fillRect(r.x,r.y,r.w,r.h);
+    ctx.strokeStyle='#e8bd45';ctx.lineWidth=3;ctx.setLineDash([12,8]);ctx.strokeRect(r.x,r.y,r.w,r.h);
     text(ctx,label,{...r,font:Math.min(30,r.font),color:'#ffffff'});ctx.restore();
   }
   async function reload(id = currentId) {
