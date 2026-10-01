@@ -1574,6 +1574,7 @@ if ($lista instanceof mysqli_result) {
                 [campionatoInput, numeroGironiInput, squadrePerGironeInput].forEach(el => {
                     if (!el) return;
                     el.addEventListener('input', () => {
+                        if (totaleInput) totaleInput.dataset.auto = '1';
                         updateTotale();
                         updateEliminate(false);
                         syncRegole(false);
