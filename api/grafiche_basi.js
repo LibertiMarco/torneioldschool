@@ -1,14 +1,14 @@
 /* Basi personalizzate: le foto delle partite restano locali, base e layout si salvano sul server. */
 const customTemplates = (() => {
-  const labels = {photo:'Foto giocatori',scoreOverlay:'Livello box risultato',homeLogo:'Logo casa / squadra MVP',awayLogo:'Logo ospite / secondo MVP',homeScore:'Gol squadra casa',awayScore:'Gol squadra ospite',home:'Nome squadra casa',away:'Nome squadra ospite',round:'Giornata / fase',names:'Nomi MVP',team:'Squadra MVP',details:'Dettaglio MVP'};
+  const labels = {photo:'Foto giocatori',homeLogo:'Logo casa / squadra MVP',awayLogo:'Logo ospite / secondo MVP',homeScore:'Gol squadra casa',awayScore:'Gol squadra ospite',home:'Nome squadra casa',away:'Nome squadra ospite',round:'Giornata / fase',names:'Nomi MVP',team:'Squadra MVP',details:'Dettaglio MVP'};
   const element = (x,y,w,h,font=40,visible=true) => ({x,y,w,h,font,visible,color:'#ffffff'});
   const defaults = type => type === 'ft'
-    ? {photo:element(80,220,920,700),scoreOverlay:element(0,0,1080,1350),homeLogo:element(80,950,180,180),awayLogo:element(820,950,180,180),homeScore:element(290,980,250,140,110),awayScore:element(540,980,250,140,110),home:element(30,1150,400,60,34),away:element(650,1150,400,60,34),round:element(180,1240,720,60,26)}
+    ? {photo:element(80,220,920,700),homeLogo:element(80,950,180,180),awayLogo:element(820,950,180,180),homeScore:element(290,980,250,140,110),awayScore:element(540,980,250,140,110),home:element(30,1150,400,60,34),away:element(650,1150,400,60,34),round:element(180,1240,720,60,26)}
     : {photo:element(100,200,880,820),homeLogo:element(70,1100,130,130),awayLogo:element(880,1100,130,130),names:element(70,1030,940,100,54),team:element(210,1150,660,70,32),details:element(150,1240,780,60,26)};
   const state = new Map();
   let currentId = '';
   let editor = false;
-  const fresh = type => ({image:null,file:null,scoreOverlay:null,scoreOverlayFile:null,clearScoreOverlay:false,layout:defaults(type),dirty:false,busy:false,loading:false,error:'',saveError:''});
+  const fresh = type => ({image:null,file:null,overlays:[],selectedOverlayId:'',layout:defaults(type),dirty:false,busy:false,loading:false,error:'',saveError:''});
   const pair = () => state.get(currentId);
   const message = text => { $('status').textContent = text; };
 
@@ -21,6 +21,7 @@ const customTemplates = (() => {
       if (!layout.awayScore) layout.awayScore = {...old,x:Math.min(1080,old.x+half),w:Math.max(1,old.w-half)};
     }
     delete layout.score;
+    delete layout.scoreOverlay;
     return {...defaults(type),...layout};
   }
 
@@ -34,7 +35,7 @@ const customTemplates = (() => {
         <p class="hint">Carica la tua grafica, poi posiziona gli elementi. Consigliato: 1080 × 1350 px; PNG, JPG o WebP, massimo 8 MB. Per giocatori scontornati usa foto PNG trasparenti.</p>
         <fieldset id="${type}BaseControls"><div class="fields">
           <label class="wide">Immagine di base<input id="${type}Base" type="file" accept="image/png,image/jpeg,image/webp"></label>
-          ${type==='ft'?'<label class="wide">Livello box risultato (PNG/WebP trasparente, 1080 x 1350 px)<input id="ftScoreOverlay" type="file" accept="image/png,image/webp"></label><div class="wide actions"><button id="ftRemoveScoreOverlay" type="button" class="secondary">Rimuovi livello box</button><span id="ftScoreOverlayStatus" class="hint" aria-live="polite">Scegli “Livello box risultato” e imposta X/Y per spostarlo. Dimensioni originali bloccate.</span></div>':''}
+          ${type==='ft'?'<label class="wide">Aggiungi immagini livello (selezione multipla)<input id="ftOverlayFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple></label><label class="wide">Immagine selezionata<select id="ftOverlaySelect"></select></label><label class="wide">Livello<select id="ftOverlayLayer"><option value="behind_graphic">Dietro la grafica</option><option value="between_graphic_photo">Tra grafica e foto</option><option value="between_photo_content">Sopra grafica e foto, sotto loghi e testi</option><option value="front">Davanti a tutto</option></select></label><label>Posizione X (px)<input id="ftOverlayX" type="number" step="1"></label><label>Posizione Y (px)<input id="ftOverlayY" type="number" step="1"></label><label>Larghezza (px, proporzionale)<input id="ftOverlayW" type="number" min="0.01" step="any"></label><label>Altezza (px, proporzionale)<input id="ftOverlayH" type="number" min="0.01" step="any"></label><div class="wide actions"><button id="ftRemoveOverlay" type="button" class="secondary">Rimuovi immagine selezionata</button><span id="ftOverlayStatus" class="hint" aria-live="polite">Carica una o più immagini. Le misure iniziali corrispondono ai pixel del file.</span></div>':''}
           <label class="wide">Elemento da posizionare<select id="${type}Element"></select></label>
           <label class="wide template-check"><input id="${type}Visible" type="checkbox"> Mostra elemento</label>
           <label>Posizione X (px)<input id="${type}LayoutX" type="number" min="0" max="1080"></label>
@@ -50,8 +51,26 @@ const customTemplates = (() => {
       $(type+'Element').addEventListener('change',()=>refresh(type));
       $(type+'Base').addEventListener('change',()=>upload(type));
       if(type==='ft'){
-        $('ftScoreOverlay').addEventListener('change',()=>uploadScoreOverlay());
-        $('ftRemoveScoreOverlay').addEventListener('click',clearScoreOverlay);
+        $('ftOverlayFiles').addEventListener('change',()=>uploadOverlays());
+        $('ftOverlaySelect').addEventListener('change',()=>{const item=pair()?.ft;if(item){item.selectedOverlayId=$('ftOverlaySelect').value;refresh('ft');drawAll();}});
+        $('ftOverlayLayer').addEventListener('change',()=>editSelectedOverlay());
+        ['X','Y','W','H'].forEach(field=>$('ftOverlay'+field).addEventListener('change',()=>editSelectedOverlay(field)));
+        $('ftRemoveOverlay').addEventListener('click',removeSelectedOverlay);
+        const canvas=$('fulltimeCanvas');let drag=null;canvas.style.touchAction='none';
+        const point=event=>{const rect=canvas.getBoundingClientRect();return{x:(event.clientX-rect.left)*W/rect.width,y:(event.clientY-rect.top)*H/rect.height};};
+        canvas.addEventListener('pointerdown',event=>{
+          const item=pair()?.ft,layer=item?.overlays.find(entry=>entry.id===item.selectedOverlayId);
+          if(!layer||item.busy||item.loading)return;
+          const p=point(event);if(p.x<layer.x||p.y<layer.y||p.x>layer.x+layer.w||p.y>layer.y+layer.h)return;
+          drag={pointerId:event.pointerId,dx:p.x-layer.x,dy:p.y-layer.y};canvas.setPointerCapture(event.pointerId);event.preventDefault();
+        });
+        canvas.addEventListener('pointermove',event=>{
+          if(!drag||drag.pointerId!==event.pointerId)return;
+          const item=pair()?.ft,layer=item?.overlays.find(entry=>entry.id===item.selectedOverlayId);if(!layer)return;
+          const p=point(event);layer.x=Math.round(p.x-drag.dx);layer.y=Math.round(p.y-drag.dy);item.dirty=true;refreshOverlays(item);drawAll();
+        });
+        const stopDrag=event=>{if(drag&&drag.pointerId===event.pointerId){drag=null;if(canvas.hasPointerCapture(event.pointerId))canvas.releasePointerCapture(event.pointerId);}};
+        canvas.addEventListener('pointerup',stopDrag);canvas.addEventListener('pointercancel',stopDrag);
       }
       $(type+'SaveBase').addEventListener('click',()=>save(type,false));
       $(type+'RemoveBase').addEventListener('click',()=>save(type,true));
@@ -76,21 +95,12 @@ const customTemplates = (() => {
     $(type+'BaseControls').disabled = !item || item.loading || item.busy || !!item.error;
     const rect = (item?.layout || defaults(type))[$(type+'Element').value];
     ['X','Y','W','H','Font','Color'].forEach(field=>{$(type+'Layout'+field).value=rect[field.toLowerCase()];});
-    const fixedOverlay=type==='ft'&&$(type+'Element').value==='scoreOverlay';
-    for(const field of ['X','Y','W','H']){
-      const input=$(type+'Layout'+field);
-      input.min=fixedOverlay?(field==='X'?-1080:-1350):0;
-      input.max=fixedOverlay?(field==='X'?1080:1350):field==='Y'||field==='H'?1350:field==='X'||field==='W'?1080:240;
-      input.disabled=fixedOverlay&&field!=='X'&&field!=='Y';
-    }
-    for(const field of ['Font','Color'])$(type+'Layout'+field).disabled=fixedOverlay;
     $(type+'Visible').disabled=!item||item.loading||item.busy;
     $(type+'Visible').checked=rect.visible;
     $(type+'SaveBase').disabled=!item?.image;
     $(type+'RemoveBase').disabled=!item?.image;
     if(type==='ft'){
-      $('ftRemoveScoreOverlay').disabled=!item?.scoreOverlay||!item?.image||item.loading||item.busy;
-      $('ftScoreOverlayStatus').textContent=item?.scoreOverlay?'Livello box presente: viene sovrapposto a base e foto, sotto loghi e testi.':'Nessun livello box. Seleziona l’elemento per impostare la posizione X/Y.';
+      refreshOverlays(item);
     }
     $(type+'BaseStatus').textContent = !item ? 'Seleziona un torneo per configurare le basi.' : item.error || item.saveError || (item.loading?'Caricamento della base…':item.busy?'Salvataggio…':item.dirty?'Modifiche in anteprima: premi Salva base e posizioni.':item.image?'Base salvata per questo torneo.':'Nessuna base salvata: viene usata la grafica automatica.');
   }
@@ -110,9 +120,12 @@ const customTemplates = (() => {
           if(!img) throw new Error('Impossibile caricare la base salvata. Riseleziona il torneo per riprovare.');
           items[type].image=img;
           items[type].layout=normalizeLayout(type,data[type].layout);
-          if(type==='ft'&&data[type].score_overlay){
-            items[type].scoreOverlay=await loadImage(data[type].score_overlay);
-            if(!items[type].scoreOverlay) throw new Error('Impossibile caricare il livello box salvato. Riseleziona il torneo per riprovare.');
+          if(type==='ft'){
+            const legacy=data[type].score_overlay?[{id:'legacy-score-overlay',name:'Box risultato',image:data[type].score_overlay,x:data[type].layout?.scoreOverlay?.x||0,y:data[type].layout?.scoreOverlay?.y||0,w:data[type].layout?.scoreOverlay?.w||1080,h:data[type].layout?.scoreOverlay?.h||1350,layer:'between_photo_content'}]:[];
+            const saved=data[type].overlays||legacy;
+            items[type].overlays=await Promise.all(saved.map(async layer=>({...layer,image:await loadImage(layer.image),file:null,sourceWidth:Number(layer.source_width||layer.w),sourceHeight:Number(layer.source_height||layer.h)})));
+            if(items[type].overlays.some(layer=>!layer.image)) throw new Error('Impossibile caricare un livello immagine salvato. Riseleziona il torneo per riprovare.');
+            items[type].selectedOverlayId=items[type].overlays[0]?.id||'';
           }
         }
       }));
@@ -140,38 +153,76 @@ const customTemplates = (() => {
     } catch(error) {message(error.message);}
     finally {item.busy=false;$(type+'Base').value='';if(id===currentId)refresh(type);}
   }
-  async function uploadScoreOverlay() {
-    const item=pair()?.ft,id=currentId,file=$('ftScoreOverlay').files[0];
-    if(!item||!file)return;
+  function refreshOverlays(item) {
+    const select=$('ftOverlaySelect'),layers=item?.overlays||[],selected=layers.find(layer=>layer.id===item?.selectedOverlayId)||layers[0]||null;
+    select.replaceChildren(new Option(layers.length?'Seleziona immagine':'Nessuna immagine caricata',''));
+    for(const [index,layer] of layers.entries())select.add(new Option(`${index+1}. ${layer.name||'Livello immagine'}`,layer.id));
+    if(selected){item.selectedOverlayId=selected.id;select.value=selected.id;}
+    const disabled=!item||item.loading||item.busy||!selected;
+    select.disabled=!item||item.loading||item.busy||!layers.length;
+    $('ftOverlayLayer').disabled=disabled;
+    $('ftRemoveOverlay').disabled=disabled;
+    for(const field of ['X','Y','W','H']){
+      const input=$('ftOverlay'+field);input.disabled=disabled;input.min=field==='X'||field==='Y'?-100000:.01;input.max=100000;
+      input.value=selected?selected[field.toLowerCase()]||0:'';
+    }
+    $('ftOverlayLayer').value=selected?.layer||'between_photo_content';
+    $('ftOverlayStatus').textContent=selected?`${layers.length} ${layers.length===1?'immagine caricata':'immagini caricate'}. Dimensioni iniziali: ${selected.sourceWidth} × ${selected.sourceHeight} px.`:'Carica una o più immagini. Le misure iniziali corrispondono ai pixel del file.';
+  }
+  async function uploadOverlays() {
+    const item=pair()?.ft,id=currentId,files=Array.from($('ftOverlayFiles').files||[]);
+    if(!item||!files.length)return;
     item.busy=true;item.saveError='';refresh('ft');
     try {
-      if(!['image/png','image/webp'].includes(file.type)||file.size>8*1024*1024) throw new Error('Usa un PNG o WebP trasparente, massimo 8 MB.');
-      const img=await fileImage(file);
-      if(!img||img.naturalWidth!==W||img.naturalHeight!==H) throw new Error('Il livello box deve essere esattamente 1080 × 1350 px per mantenere le misure originali.');
-      item.scoreOverlay=img;item.scoreOverlayFile=file;item.clearScoreOverlay=false;item.dirty=true;
+      for(const file of files){
+        if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>8*1024*1024) throw new Error('Usa PNG, JPG o WebP, massimo 8 MB per immagine.');
+        const img=await fileImage(file);
+        if(!img||img.naturalWidth*img.naturalHeight>16000000) throw new Error(`Immagine non valida o superiore a 16 megapixel: ${file.name}`);
+        const idValue=globalThis.crypto?.randomUUID?.()||`overlay-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        item.overlays.push({id:idValue,name:file.name,image:img,file,sourceWidth:img.naturalWidth,sourceHeight:img.naturalHeight,x:0,y:0,w:img.naturalWidth,h:img.naturalHeight,layer:'between_photo_content'});
+        item.selectedOverlayId=idValue;item.dirty=true;
+      }
     } catch(error) {message(error.message);}
     finally {
-      $('ftScoreOverlay').value='';item.busy=false;
+      $('ftOverlayFiles').value='';item.busy=false;
       if(id===currentId){refresh('ft');drawAll();}
     }
   }
-  function clearScoreOverlay() {
+  function editSelectedOverlay(field='layer') {
+    const item=pair()?.ft;
+    const selected=item?.overlays.find(layer=>layer.id===item.selectedOverlayId);
+    if(!selected||item.loading||item.busy)return;
+    if(field==='layer')selected.layer=$('ftOverlayLayer').value;
+    else if(field==='X'||field==='Y'){
+      const input=$('ftOverlay'+field);if(!input.checkValidity()||input.value==='')return;
+      selected[field.toLowerCase()]=Number(input.value);
+    }else if(field==='W'||field==='H'){
+      const input=$('ftOverlay'+field);if(!input.checkValidity()||input.value==='')return;
+      const ratio=selected.sourceWidth/selected.sourceHeight,value=Math.max(1,Number(input.value));
+      selected[field.toLowerCase()]=value;
+      if(field==='W'){selected.h=Math.max(.01,Number((value/ratio).toFixed(3)));$('ftOverlayH').value=selected.h;}
+      else{selected.w=Math.max(.01,Number((value*ratio).toFixed(3)));$('ftOverlayW').value=selected.w;}
+    }
+    item.dirty=true;
+    refresh('ft');drawAll();
+  }
+  function removeSelectedOverlay() {
     const item=pair()?.ft;
     if(!item||item.loading||item.busy)return;
-    item.scoreOverlay=null;item.scoreOverlayFile=null;item.clearScoreOverlay=true;item.dirty=true;
+    item.overlays=item.overlays.filter(layer=>layer.id!==item.selectedOverlayId);
+    item.selectedOverlayId=item.overlays[0]?.id||'';item.dirty=true;
     refresh('ft');drawAll();
   }
   function edit(type) {
     const item=pair()?.[type];
     if(!item||item.loading||item.busy) return;
     const rect=item.layout[$(type+'Element').value];
-    const fixedOverlay=type==='ft'&&$(type+'Element').value==='scoreOverlay';
-    for (const field of fixedOverlay?['X','Y']:['X','Y','W','H','Font']) {
+    for (const field of ['X','Y','W','H','Font']) {
       const input=$(type+'Layout'+field);
       if(!input.checkValidity() || input.value==='') return;
       rect[field.toLowerCase()]=Number(input.value);
     }
-    if(!fixedOverlay)rect.color=$(type+'LayoutColor').value;
+    rect.color=$(type+'LayoutColor').value;
     rect.visible=$(type+'Visible').checked;
     item.dirty=true; refresh(type);drawAll();
   }
@@ -184,14 +235,14 @@ const customTemplates = (() => {
     body.append('action',remove?'remove':'save');body.append('layout',JSON.stringify(item.layout));
     if(item.file&&!remove) body.append('base',item.file);
     if(type==='ft'&&!remove){
-      if(item.scoreOverlayFile)body.append('score_overlay',item.scoreOverlayFile);
-      if(item.clearScoreOverlay)body.append('remove_score_overlay','1');
+      body.append('overlays',JSON.stringify(item.overlays.map(({id,name,x,y,w,h,layer,sourceWidth,sourceHeight})=>({id,name,x,y,w,h,layer,source_width:sourceWidth,source_height:sourceHeight}))));
+      item.overlays.forEach((overlay,index)=>{if(overlay.file)body.append(`overlay_files[${index}]`,overlay.file);});
     }
     try {
       const result=await request('grafiche_basi.php',{method:'POST',body});
       if(result.ok!==true)throw new Error('Il server non ha confermato il salvataggio. Riprova.');
       if(remove) Object.assign(item,fresh(type));
-      item.file=null;item.scoreOverlayFile=null;item.clearScoreOverlay=false;item.dirty=false;
+      item.file=null;for(const overlay of item.overlays)overlay.file=null;item.dirty=false;
       if (window.parent !== window) window.parent.postMessage({type:'graphics-template-saved',torneoId:id},window.location.origin);
       if(id===currentId) {drawAll();message(remove?'Grafica automatica ripristinata per questo torneo.':'Base e posizioni salvate per questo torneo.');}
     } catch(error) {item.saveError=error.message;message(error.message);}
@@ -250,6 +301,8 @@ const customTemplates = (() => {
     if(!item?.image) return false;
     const canvas=$(type==='ft'?'fulltimeCanvas':'mvpCanvas'),ctx=canvas.getContext('2d');
     ctx.save();ctx.clearRect(0,0,W,H);ctx.fillStyle='#07111d';ctx.fillRect(0,0,W,H);
+    const drawOverlayLevel=level=>{if(type==='ft')for(const overlay of pair()?.ft.overlays||[])if(overlay.layer===level&&overlay.image)ctx.drawImage(overlay.image,overlay.x,overlay.y,overlay.w,overlay.h);};
+    drawOverlayLevel('behind_graphic');
     contain(ctx,item.image,0,0,W,H);
     const photoRect=item.layout.photo;
     const photo=imageState[type==='ft'?'ftCaptains':'mvpPhoto'];
@@ -257,10 +310,10 @@ const customTemplates = (() => {
     // window. Editable logos and text are drawn afterward and stay in front.
     if(photo&&photoRect?.visible){
       ctx.drawImage(graphicOverlay(item.image,photoRect,[item.layout.homeLogo,item.layout.awayLogo]),0,0,W,H);
+      drawOverlayLevel('between_graphic_photo');
       cover(ctx,photo,photoRect.x,photoRect.y,photoRect.w,photoRect.h,cropValues(type));
-    }
-    const scoreOverlay=item.layout.scoreOverlay;
-    if(type==='ft'&&item.layout.scoreOverlay?.visible&&pair()?.ft.scoreOverlay)ctx.drawImage(pair().ft.scoreOverlay,scoreOverlay.x,scoreOverlay.y);
+    }else drawOverlayLevel('between_graphic_photo');
+    drawOverlayLevel('between_photo_content');
     const teams=new Set([...$('mvpPlayers').querySelectorAll('input:checked')].map(input=>input._mvpData.team));
     const logos=type==='ft'?[imageState.ftHomeLogo,imageState.ftAwayLogo]:[
       teams.has($('ftHome').value)?imageState.ftHomeLogo:teams.has($('ftAway').value)?imageState.ftAwayLogo:null,
@@ -270,13 +323,17 @@ const customTemplates = (() => {
     for (const [key,r] of Object.entries(item.layout)) {
       if(!r.visible) continue;
       if(key==='photo') { if(editor&&!photo) guide(ctx,r,'FOTO GIOCATORI'); }
-      else if(key==='scoreOverlay') { /* The upload is optional; keep the base preview unobstructed. */ }
       else if(key==='homeLogo'||key==='awayLogo') {
         const logo=logos[key==='homeLogo'?0:1];
         if(editor&&!logo) guide(ctx,r,key==='homeLogo'?'LOGO 1':'LOGO 2');
         else containRounded(ctx,logo,r.x,r.y,r.w,r.h);
       }
       else text(ctx,texts[key],r);
+    }
+    drawOverlayLevel('front');
+    if(editor&&type==='ft'){
+      const selected=pair()?.ft.overlays.find(overlay=>overlay.id===pair()?.ft.selectedOverlayId);
+      if(selected){ctx.save();ctx.strokeStyle='#ffd54a';ctx.lineWidth=5;ctx.setLineDash([16,10]);ctx.strokeRect(selected.x,selected.y,selected.w,selected.h);ctx.restore();}
     }
     ctx.restore();return true;
   }

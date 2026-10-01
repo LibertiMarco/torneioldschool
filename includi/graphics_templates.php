@@ -5,23 +5,16 @@ function graphics_template_layout(array $layout, string $type): array
 {
     $legacyScore = $type === 'ft' && isset($layout['score']) && !isset($layout['homeScore']) && !isset($layout['awayScore']);
     $keys = $type === 'ft'
-        ? array_merge(['photo', 'scoreOverlay', 'homeLogo', 'awayLogo'], $legacyScore ? ['score'] : ['homeScore', 'awayScore'], ['home', 'away', 'round'])
+        ? array_merge(['photo', 'homeLogo', 'awayLogo'], $legacyScore ? ['score'] : ['homeScore', 'awayScore'], ['home', 'away', 'round'])
         : ['photo', 'homeLogo', 'awayLogo', 'names', 'team', 'details'];
     $clean = [];
     foreach ($keys as $key) {
         $item = $layout[$key] ?? null;
-        if ($key === 'scoreOverlay' && !is_array($item)) {
-            $item = ['x' => 0, 'y' => 0, 'w' => 1080, 'h' => 1350, 'font' => 40, 'visible' => true, 'color' => '#ffffff'];
-        }
         if (!is_array($item)) {
             throw new InvalidArgumentException('Posizioni degli elementi incomplete.');
         }
         $row = ['visible' => !empty($item['visible'])];
         $ranges = ['x' => [0, 1080], 'y' => [0, 1350], 'w' => [1, 1080], 'h' => [1, 1350], 'font' => [12, 240]];
-        if ($key === 'scoreOverlay') {
-            $ranges['x'] = [-1080, 1080];
-            $ranges['y'] = [-1350, 1350];
-        }
         foreach ($ranges as $field => $limits) {
             $value = $item[$field] ?? null;
             if (!is_numeric($value) || !is_finite((float)$value) || $value < $limits[0] || $value > $limits[1]) {
