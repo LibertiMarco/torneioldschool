@@ -69,9 +69,9 @@ function fetch_json(string $url, array $options = []): array
     ];
 }
 
-function exchange_short_lived(string $appId, string $appSecret, string $redirectUri, string $code): array
+function exchange_short_lived(string $appId, string $appSecret, string $redirectUri, string $code, string $graphVersion): array
 {
-    $url = 'https://graph.facebook.com/v20.0/oauth/access_token?' . http_build_query([
+    $url = 'https://graph.facebook.com/' . $graphVersion . '/oauth/access_token?' . http_build_query([
         'client_id' => $appId,
         'redirect_uri' => $redirectUri,
         'client_secret' => $appSecret,
@@ -81,9 +81,9 @@ function exchange_short_lived(string $appId, string $appSecret, string $redirect
     return fetch_json($url);
 }
 
-function exchange_long_lived(string $appId, string $appSecret, string $shortToken): array
+function exchange_long_lived(string $appId, string $appSecret, string $shortToken, string $graphVersion): array
 {
-    $url = 'https://graph.facebook.com/v20.0/oauth/access_token?' . http_build_query([
+    $url = 'https://graph.facebook.com/' . $graphVersion . '/oauth/access_token?' . http_build_query([
         'grant_type' => 'fb_exchange_token',
         'client_id' => $appId,
         'client_secret' => $appSecret,
@@ -93,9 +93,9 @@ function exchange_long_lived(string $appId, string $appSecret, string $shortToke
     return fetch_json($url);
 }
 
-function fetch_pages(string $userToken): array
+function fetch_pages(string $userToken, string $graphVersion): array
 {
-    $url = 'https://graph.facebook.com/v20.0/me/accounts?' . http_build_query([
+    $url = 'https://graph.facebook.com/' . $graphVersion . '/me/accounts?' . http_build_query([
         'access_token' => $userToken,
         'fields' => 'id,name,category,access_token',
         'limit' => 50,
@@ -104,9 +104,9 @@ function fetch_pages(string $userToken): array
     return fetch_json($url);
 }
 
-function fetch_page_details(string $pageId, string $pageToken): array
+function fetch_page_details(string $pageId, string $pageToken, string $graphVersion): array
 {
-    $url = 'https://graph.facebook.com/v20.0/' . rawurlencode($pageId) . '?' . http_build_query([
+    $url = 'https://graph.facebook.com/' . $graphVersion . '/' . rawurlencode($pageId) . '?' . http_build_query([
         'fields' => 'id,name,fan_count,followers_count,instagram_business_account',
         'access_token' => $pageToken,
     ]);
@@ -144,6 +144,10 @@ if ($state === null || $expectedState === '' || !hash_equals($expectedState, $st
 $appId = trim((string)getenv('META_APP_ID'));
 $appSecret = trim((string)getenv('META_APP_SECRET'));
 $redirectUri = trim((string)getenv('META_REDIRECT_URI'));
+$graphVersion = trim((string)(getenv('META_GRAPH_API_VERSION') ?: 'v26.0'));
+if (!preg_match('/^v\d+\.\d+$/', $graphVersion)) {
+    meta_json(['ok' => false, 'error' => 'META_GRAPH_API_VERSION non è configurata correttamente.'], 500);
+}
 
 if ($appId === '' || $appSecret === '' || $redirectUri === '') {
     meta_json([
@@ -152,7 +156,7 @@ if ($appId === '' || $appSecret === '' || $redirectUri === '') {
     ], 400);
 }
 
-$short = exchange_short_lived($appId, $appSecret, $redirectUri, $code);
+$short = exchange_short_lived($appId, $appSecret, $redirectUri, $code, $graphVersion);
 if (!$short['ok']) {
     meta_json([
         'ok' => false,
@@ -170,7 +174,7 @@ if ($shortToken === '') {
     ], 502);
 }
 
-$long = exchange_long_lived($appId, $appSecret, $shortToken);
+$long = exchange_long_lived($appId, $appSecret, $shortToken, $graphVersion);
 if (!$long['ok']) {
     meta_json([
         'ok' => false,
@@ -188,7 +192,7 @@ if ($longToken === '') {
     ], 502);
 }
 
-$pagesRes = fetch_pages($longToken);
+$pagesRes = fetch_pages($longToken, $graphVersion);
 if (!$pagesRes['ok']) {
     meta_json([
         'ok' => false,
@@ -224,7 +228,7 @@ if ($pageToken === '') {
     ], 502);
 }
 
-$pageDetails = fetch_page_details((string)$selectedPage['id'], $pageToken);
+$pageDetails = fetch_page_details((string)$selectedPage['id'], $pageToken, $graphVersion);
 
 $igId = null;
 $fanCount = null;

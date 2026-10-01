@@ -177,7 +177,11 @@ function fetch_instagram(array $cfg): array
         return social_result(null, 'Config Instagram mancante');
     }
 
-    $url = 'https://graph.facebook.com/v20.0/' . rawurlencode($igUserId) . '?' . http_build_query([
+    $graphVersion = trim((string)(getenv('META_GRAPH_API_VERSION') ?: 'v26.0'));
+    if (!preg_match('/^v\d+\.\d+$/', $graphVersion)) {
+        return social_result(null, 'Versione Meta API non configurata correttamente');
+    }
+    $url = 'https://graph.facebook.com/' . $graphVersion . '/' . rawurlencode($igUserId) . '?' . http_build_query([
         'fields' => 'followers_count',
         'access_token' => $token,
     ]);
@@ -199,7 +203,11 @@ function fetch_facebook(array $cfg): array
         return social_result(null, 'Config Facebook mancante');
     }
 
-    $url = 'https://graph.facebook.com/v20.0/' . rawurlencode($pageId) . '?' . http_build_query([
+    $graphVersion = trim((string)(getenv('META_GRAPH_API_VERSION') ?: 'v26.0'));
+    if (!preg_match('/^v\d+\.\d+$/', $graphVersion)) {
+        return social_result(null, 'Versione Meta API non configurata correttamente');
+    }
+    $url = 'https://graph.facebook.com/' . $graphVersion . '/' . rawurlencode($pageId) . '?' . http_build_query([
         'fields' => 'fan_count',
         'access_token' => $token,
     ]);

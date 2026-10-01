@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
 require_once __DIR__ . '/../includi/db.php';
 $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
 $templateEditor = isset($_GET['templates']) && $_GET['templates'] === '1';
+$canPublishInstagram = user_has_admin_access(trim((string)($_SESSION['ruolo'] ?? ''))) && !$templateEditor;
 $torneiGrafiche = [];
 $torneiResult = $conn->query("SELECT id, nome FROM tornei WHERE stato IN ('in corso', 'programmato') ORDER BY nome");
 if ($torneiResult) {
@@ -125,6 +126,10 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     .preview-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
     .preview-head h2 { margin:0; font-size:18px; }
     .preview-head button { width:auto; padding:9px 13px; }
+    .preview-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+    .preview-actions .instagram-publish { background:#b33782; color:#fff; }
+    .instagram-caption-label { display:block; max-width:540px; margin:0 auto 6px; color:var(--muted); font-size:13px; }
+    .instagram-caption { display:block; width:100%; max-width:540px; min-height:72px; margin:0 auto 12px; resize:vertical; border:1px solid #ffffff18; border-radius:10px; padding:10px 12px; background:#0a1724; color:#fff; font:inherit; }
     canvas { display:block; width:100%; max-width:540px; height:auto; margin:auto; background:#0a1724; box-shadow:0 12px 32px #0008; }
     .status { min-height:22px; margin:14px 0 0; color:#b9cad9; }
     .template-editor { margin:16px 0; padding:12px; border:1px solid #ffffff26; border-radius:12px; }
@@ -135,7 +140,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     button:disabled,fieldset:disabled { opacity:.55; cursor:default; }
     @media(min-width:1051px){ .previews{position:sticky;top:16px}body.with-site-header .previews{top:100px} }
     @media(max-height:900px){ .controls{position:static} }
-    @media(max-width:1050px){ .workspace{grid-template-columns:minmax(0,52%) minmax(0,48%);gap:10px}.controls{position:sticky;top:8px;padding:12px}body.with-site-header .controls{top:90px}.previews{grid-template-columns:1fr;gap:12px}.preview-card{padding:8px}.preview-head{align-items:flex-start;flex-direction:column}.preview-head button{width:100%;font-size:12px} }
+    @media(max-width:1050px){ .workspace{grid-template-columns:minmax(0,52%) minmax(0,48%);gap:10px}.controls{position:sticky;top:8px;padding:12px}body.with-site-header .controls{top:90px}.previews{grid-template-columns:1fr;gap:12px}.preview-card{padding:8px}.preview-head{align-items:flex-start;flex-direction:column}.preview-actions{width:100%}.preview-head button{width:100%;font-size:12px} }
     @media(max-width:720px){ main{width:min(100% - 10px,1440px);margin-left:auto;margin-right:auto}.fields{grid-template-columns:1fr}.wide{grid-column:auto}.actions{grid-template-columns:1fr}.tabs{gap:5px}.tab{padding:9px 5px;font-size:11px}label{font-size:12px}input,select,button{padding:8px 7px;font-size:12px}.preview-head h2{font-size:14px} }
     body.with-site-header>main{margin-top:110px}
     html,body{height:auto}body{display:block}
@@ -221,15 +226,18 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
       <p class="hint">Riduci lo zoom sotto il 100% per rimpicciolire la foto, anche se è già senza sfondo. Usa i controlli di posizione per sistemarla nella grafica.</p>
       </div>
       <div id="status" class="status" aria-live="polite"></div>
+      <?php if ($canPublishInstagram): ?><p class="hint">Per attivare la pubblicazione, <a href="/meta/login.php" target="_blank" rel="noopener">autorizza il permesso Instagram con Meta</a>, poi configura <code>META_PAGE_TOKEN</code> e <code>META_IG_USER_ID</code> sul server.</p><?php endif; ?>
     </section>
 
     <section class="previews">
       <article class="preview-card">
-        <div class="preview-head"><h2>Full Time</h2><button type="button" data-download="fulltime" <?= $templateEditor ? 'hidden' : '' ?>>Scarica PNG</button></div>
+        <div class="preview-head"><h2>Full Time</h2><div class="preview-actions"><button type="button" data-download="fulltime" <?= $templateEditor ? 'hidden' : '' ?>>Scarica PNG</button><?php if ($canPublishInstagram): ?><button type="button" class="instagram-publish" data-publish="fulltime">Pubblica su Instagram</button><?php endif; ?></div></div>
+        <?php if ($canPublishInstagram): ?><label class="instagram-caption-label" for="instagramCaptionFulltime">Didascalia Instagram (facoltativa)</label><textarea class="instagram-caption" id="instagramCaptionFulltime" maxlength="2200" rows="3" placeholder="Aggiungi una didascalia al post"></textarea><?php endif; ?>
         <canvas id="fulltimeCanvas" width="1080" height="1350"></canvas>
       </article>
       <article class="preview-card">
-        <div class="preview-head"><h2>MVP</h2><button type="button" data-download="mvp" <?= $templateEditor ? 'hidden' : '' ?>>Scarica PNG</button></div>
+        <div class="preview-head"><h2>MVP</h2><div class="preview-actions"><button type="button" data-download="mvp" <?= $templateEditor ? 'hidden' : '' ?>>Scarica PNG</button><?php if ($canPublishInstagram): ?><button type="button" class="instagram-publish" data-publish="mvp">Pubblica su Instagram</button><?php endif; ?></div></div>
+        <?php if ($canPublishInstagram): ?><label class="instagram-caption-label" for="instagramCaptionMvp">Didascalia Instagram (facoltativa)</label><textarea class="instagram-caption" id="instagramCaptionMvp" maxlength="2200" rows="3" placeholder="Aggiungi una didascalia al post"></textarea><?php endif; ?>
         <canvas id="mvpCanvas" width="1080" height="1350"></canvas>
       </article>
     </section>
@@ -240,6 +248,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 <script src="grafiche_scontorno.js?v=20260927-modnet"></script>
 <script>
 const $ = id => document.getElementById(id);
+const instagramPublishCsrf = <?= json_encode($canPublishInstagram ? csrf_get_token('instagram_publish') : '') ?>;
 const W=1080,H=1350;
 const templateEditor=<?= json_encode($templateEditor) ?>;
 const graphicsTemplatesCsrf=<?= json_encode(csrf_get_token('graphics_templates')) ?>;
@@ -421,6 +430,28 @@ function uniqueBy(items,keyFn){const map=new Map();items.forEach(item=>{const ke
 function setOptions(select,placeholder,options){select.innerHTML='';select.append(new Option(placeholder,''));options.forEach(([value,label])=>select.append(new Option(label,value)));select.disabled=options.length===0;}
 function roundKey(match){return match.fase_round ? `round:${match.fase_round}` : `day:${match.giornata??''}`;}
 function roundLabel(match){return match.fase_round ? String(match.fase_round).replaceAll('_',' ') : (match.giornata ? `GIORNATA ${match.giornata}` : 'TURNO UNICO');}
+let lastGeneratedFulltimeCaption='';
+let lastGeneratedMvpCaption='';
+function updateFulltimeCaption(force=false){
+  const field=$('instagramCaptionFulltime');
+  if(!field)return;
+  const caption=`FULL TIME | ${upper($('ftTournament').value)} | ${upper($('ftRound').value)} | ${upper($('ftHome').value)} ${$('ftHomeScore').value||0} - ${$('ftAwayScore').value||0} ${upper($('ftAway').value)}`;
+  if(force||!field.value||field.value===lastGeneratedFulltimeCaption)field.value=caption;
+  lastGeneratedFulltimeCaption=caption;
+}
+function updateMvpCaption(force=false){
+  const field=$('instagramCaptionMvp');
+  if(!field)return;
+  const name=$('mvpNames').value.trim();
+  if(!name){
+    if(force||!field.value||field.value===lastGeneratedMvpCaption)field.value='';
+    lastGeneratedMvpCaption='';
+    return;
+  }
+  const caption=`🌟MVP | ${upper($('ftHome').value)} ${$('ftHomeScore').value||0} - ${$('ftAwayScore').value||0} ${upper($('ftAway').value)} | ${name}`;
+  if(force||!field.value||field.value===lastGeneratedMvpCaption)field.value=caption;
+  lastGeneratedMvpCaption=caption;
+}
 function populateTournaments(){
   setOptions($('ftTournamentSelect'),'Seleziona il torneo',tournaments.map(item=>[String(item.id),item.nome]));
 }
@@ -468,6 +499,7 @@ function addMvpOption(container,value,label,data,type='player'){
     if(input.checked&&type==='group')all.forEach(other=>{if(other!==input)other.checked=false;});
     if(input.checked&&type==='player')all.filter(other=>other.dataset.type==='group').forEach(other=>other.checked=false);
     await updateMvpSelection();
+    updateMvpCaption();
   });
 }
 function renderMvpPlayers(match){
@@ -491,6 +523,10 @@ function clearMatch(){
   imageState.ftCaptainsOriginal=imageState.mvpPhotoOriginal=null;['ft','mvp'].forEach(prefix=>{$(prefix+'PhotoActions').hidden=true;$(prefix+'RemoveBg').hidden=false;$(prefix+'RemoveBg').disabled=false;$(prefix+'RestorePhoto').hidden=true;});
   const tournament=tournaments.find(item=>String(item.id)===$('ftTournamentSelect').value);
   $('ftTournament').value=tournament?.nome||'';$('ftHome').value='';$('ftAway').value='';$('ftHomeScore').value=0;$('ftAwayScore').value=0;$('ftRound').value='';
+  if($('instagramCaptionFulltime'))$('instagramCaptionFulltime').value='';
+  if($('instagramCaptionMvp'))$('instagramCaptionMvp').value='';
+  lastGeneratedFulltimeCaption='';
+  lastGeneratedMvpCaption='';
   $('ftHomeScore').readOnly=true;$('ftAwayScore').readOnly=true;
   $('mvpTournament').value=tournament?.nome||'';imageState.ftHomeLogo=null;imageState.ftAwayLogo=null;resetMvpSelection();drawFulltime();
 }
@@ -510,6 +546,7 @@ async function selectMatch(){
   $('ftAwayScore').readOnly=finished;
   const phase=String(match.fase||'').toUpperCase();
   $('ftRound').value=match.fase_round ? String(match.fase_round).replaceAll('_',' ') : (phase==='REGULAR' && match.giornata ? `GIORNATA ${match.giornata}` : phase);
+  updateFulltimeCaption(true);
   const logos=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);
   if(version!==matchLoadVersion)return;
   [imageState.ftHomeLogo,imageState.ftAwayLogo]=logos;
@@ -520,6 +557,25 @@ async function selectMatch(){
 const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const canvasBlob=canvas=>new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Impossibile creare il PNG.')),'image/png'));
 async function download(canvasId,name){const canvas=$(canvasId),fallbackWindow=isIOS&&!navigator.share?window.open('about:blank','_blank'):null;try{const blob=await canvasBlob(canvas),file=new File([blob],name,{type:'image/png'});if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){await navigator.share({files:[file],title:name});$('status').textContent='Nel pannello Condividi scegli “Salva immagine”.';return}const url=URL.createObjectURL(blob);if(fallbackWindow){fallbackWindow.location.href=url;$('status').textContent='Tieni premuta l’immagine e scegli “Salva in Foto”.';setTimeout(()=>URL.revokeObjectURL(url),60000);return}const a=document.createElement('a');a.download=name;a.href=url;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}catch(error){if(fallbackWindow)fallbackWindow.close();if(error?.name!=='AbortError')$('status').textContent=error.message}}
+async function publishInstagram(canvasId,captionId,button){
+  if(button.disabled)return;
+  button.disabled=true;
+  const originalText=button.textContent;
+  button.textContent='Pubblicazione…';
+  $('status').textContent='Invio della grafica a Instagram…';
+  try{
+    const blob=await canvasBlob($(canvasId));
+    const form=new FormData();
+    form.append('image',blob,`${canvasId}.png`);
+    form.append('caption',$(captionId).value.trim());
+    form.append('_csrf',instagramPublishCsrf);
+    const response=await fetch('/api/instagram_publish.php',{method:'POST',body:form,credentials:'same-origin'});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok||!result.ok)throw new Error(result.error||'Instagram non ha accettato la pubblicazione.');
+    $('status').textContent=result.permalink?'Grafica pubblicata su Instagram: '+result.permalink:'Grafica pubblicata su Instagram.';
+  }catch(error){$('status').textContent=error?.message||'Errore durante la pubblicazione su Instagram.';}
+  finally{button.disabled=false;button.textContent=originalText;}
+}
 
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===button.dataset.panel));}));
 imageFields.forEach(id=>$(id).addEventListener('change',()=>updateImage(id).catch(error=>{$('status').textContent=error.message||'Impossibile leggere questa immagine.';$(id).value='';})));
@@ -531,6 +587,8 @@ $('ftTournamentSelect').addEventListener('change',selectTournament);
 $('ftPhase').addEventListener('change',selectPhase);
 $('ftRoundSelect').addEventListener('change',selectRound);
 $('ftMatch').addEventListener('change',()=>selectMatch().catch(()=>{$('status').textContent='Impossibile caricare i dati della partita.';}));
+$('ftHomeScore').addEventListener('input',()=>{updateFulltimeCaption();updateMvpCaption();});
+$('ftAwayScore').addEventListener('input',()=>{updateFulltimeCaption();updateMvpCaption();});
 let inputDrawPending=false;
 function queueInputDraw(){
   if(inputDrawPending)return;
@@ -542,6 +600,11 @@ $('generate').addEventListener('click',drawAll);
 $('reset').addEventListener('click',async()=>{const version=++matchLoadVersion;imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});imageState.ftCaptainsOriginal=imageState.mvpPhotoOriginal=null;['ft','mvp'].forEach(prefix=>{$(prefix+'PhotoActions').hidden=true;$(prefix+'RemoveBg').hidden=false;$(prefix+'RemoveBg').disabled=false;$(prefix+'RestorePhoto').hidden=true;});drawAll();const match=currentMatch();if(match){const logos=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);if(version!==matchLoadVersion)return;[imageState.ftHomeLogo,imageState.ftAwayLogo]=logos;}drawAll();$('status').textContent='Foto rimosse e loghi originali ripristinati. Basi conservate.';});
 document.querySelector('[data-download=fulltime]').addEventListener('click',()=>{if(customTemplates.ready('ft'))download('fulltimeCanvas',`fulltime-${safeName($('ftHome').value)}-${safeName($('ftAway').value)}.png`);});
 document.querySelector('[data-download=mvp]').addEventListener('click',()=>{if(customTemplates.ready('mvp'))download('mvpCanvas',`mvp-${safeName($('mvpNames').value)}.png`);});
+document.querySelectorAll('[data-publish]').forEach(button=>button.addEventListener('click',()=>{
+  const type=button.dataset.publish;
+  if(!customTemplates.ready(type==='fulltime'?'ft':'mvp'))return;
+  publishInstagram(type==='fulltime'?'fulltimeCanvas':'mvpCanvas',type==='fulltime'?'instagramCaptionFulltime':'instagramCaptionMvp',button);
+}));
 customTemplates.init({editor:templateEditor});
 if(templateEditor)setTemplatePreview();
 window.addEventListener('message',event=>{

@@ -6,9 +6,13 @@ require_once __DIR__ . '/../includi/env_loader.php';
 
 $appId = trim((string)getenv('META_APP_ID'));
 $redirectUri = trim((string)getenv('META_REDIRECT_URI'));
+$graphVersion = trim((string)(getenv('META_GRAPH_API_VERSION') ?: 'v26.0'));
+if (!preg_match('/^v\d+\.\d+$/', $graphVersion)) {
+    $graphVersion = 'v26.0';
+}
 $scope = isset($_GET['scope']) && $_GET['scope'] !== ''
     ? $_GET['scope']
-    : 'pages_show_list,pages_read_engagement,pages_read_user_content,instagram_basic';
+    : 'pages_show_list,pages_read_engagement,pages_read_user_content,instagram_basic,instagram_content_publish';
 $state = bin2hex(random_bytes(16));
 $_SESSION['meta_oauth_state'] = $state;
 
@@ -23,7 +27,7 @@ if ($appId === '') {
     exit("Config mancante: definisci META_APP_ID e META_REDIRECT_URI in includi/env.local.php.\nRedirect: {$redirectUri}");
 }
 
-$authUrl = 'https://www.facebook.com/v20.0/dialog/oauth?' . http_build_query([
+$authUrl = 'https://www.facebook.com/' . rawurlencode($graphVersion) . '/dialog/oauth?' . http_build_query([
     'client_id' => $appId,
     'redirect_uri' => $redirectUri,
     'scope' => $scope,
@@ -73,7 +77,7 @@ $authUrl = 'https://www.facebook.com/v20.0/dialog/oauth?' . http_build_query([
       appId      : <?php echo json_encode($appId); ?>,
       cookie     : true,
       xfbml      : false,
-      version    : 'v20.0'
+      version    : <?php echo json_encode($graphVersion); ?>
     });
   };
 
