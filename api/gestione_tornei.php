@@ -116,6 +116,20 @@ function buildTorneoConfigFromRequest(array $src): array {
     return $config;
 }
 
+function applyBrasileraoCupConfig(array $config, string $slug): array {
+    if (strcasecmp($slug, 'Brasilerao') !== 0) {
+        return $config;
+    }
+
+    // Questi valori devono essere salvati nel DB perché il file pagina viene
+    // rigenerato dal template ogni volta che si modifica il torneo.
+    $config['campionato_squadre'] = 22;
+    $config['totale_squadre'] = 22;
+    $config['qualificati_gold'] = 16;
+    $config['qualificati_silver'] = 6;
+    return $config;
+}
+
 function aggiornaGironiSquadreTorneo(?mysqli $dbConn, string $torneoSlug, array $gironiMap): void {
     if ($torneoSlug === '' || empty($gironiMap)) {
         return;
@@ -474,6 +488,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     $formulaTorneo = $_POST['formula_torneo'] ?? '';
     $faseFinale = $_POST['fase_finale'] ?? '';
     $config = buildTorneoConfigFromRequest($_POST);
+    $config = applyBrasileraoCupConfig($config, $slug);
 
     $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
     if ($torneo->crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $sezione, $img, $squadre_complete, $config)) {
@@ -509,6 +524,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $faseFinale = (string)($_POST['fase_finale'] ?? '');
     $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
     $config = buildTorneoConfigFromRequest($_POST);
+    $config = applyBrasileraoCupConfig($config, $slug);
     $torneo->aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $sezione, $squadre_complete, $config);
     creaFileTorneoDaTemplate($nome, $slug, $formulaTorneo, $faseFinale, $sezione);
 
