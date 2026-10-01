@@ -226,7 +226,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
       <p class="hint">Riduci lo zoom sotto il 100% per rimpicciolire la foto, anche se è già senza sfondo. Usa i controlli di posizione per sistemarla nella grafica.</p>
       </div>
       <div id="status" class="status" aria-live="polite"></div>
-      <?php if ($canPublishInstagram): ?><p class="hint">Per attivare la pubblicazione, <a href="/meta/login.php" target="_blank" rel="noopener">autorizza il permesso Instagram con Meta</a>, poi configura <code>META_PAGE_TOKEN</code> e <code>META_IG_USER_ID</code> sul server.</p><?php endif; ?>
+      <?php if ($canPublishInstagram): ?><p class="hint">Per attivare la pubblicazione, <a href="/instagram/login.php" target="_blank" rel="noopener">collega direttamente Instagram</a>, poi configura <code>INSTAGRAM_ACCESS_TOKEN</code> e <code>INSTAGRAM_USER_ID</code> sul server.</p><?php endif; ?>
     </section>
 
     <section class="previews">

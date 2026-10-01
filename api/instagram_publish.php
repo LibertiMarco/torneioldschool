@@ -70,12 +70,12 @@ if (!csrf_is_valid((string)($_POST['_csrf'] ?? ''), 'instagram_publish')) {
     instagram_publish_json(['ok' => false, 'error' => 'Sessione scaduta. Ricarica il generatore e riprova.'], 400);
 }
 
-$accessToken = trim((string)getenv('META_PAGE_TOKEN'));
-$instagramUserId = trim((string)getenv('META_IG_USER_ID'));
+$accessToken = trim((string)getenv('INSTAGRAM_ACCESS_TOKEN'));
+$instagramUserId = trim((string)getenv('INSTAGRAM_USER_ID'));
 if ($accessToken === '' || $instagramUserId === '') {
     instagram_publish_json([
         'ok' => false,
-        'error' => 'Collegamento Instagram non configurato: servono META_PAGE_TOKEN e META_IG_USER_ID con il permesso di pubblicazione.',
+        'error' => 'Collegamento Instagram non configurato: servono INSTAGRAM_ACCESS_TOKEN e INSTAGRAM_USER_ID con il permesso di pubblicazione.',
     ], 503);
 }
 if (!isset($_FILES['image']) || !is_array($_FILES['image']) || (int)($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
@@ -111,9 +111,9 @@ if (($originParts['scheme'] ?? '') !== 'https' || $host === '' || filter_var($ho
     instagram_publish_json(['ok' => false, 'error' => 'Il sito deve avere un indirizzo HTTPS pubblico perché Instagram possa scaricare l’immagine.'], 503);
 }
 
-$graphVersion = trim((string)(getenv('META_GRAPH_API_VERSION') ?: 'v26.0'));
+$graphVersion = trim((string)(getenv('INSTAGRAM_GRAPH_API_VERSION') ?: 'v26.0'));
 if (!preg_match('/^v\d+\.\d+$/', $graphVersion)) {
-    instagram_publish_json(['ok' => false, 'error' => 'META_GRAPH_API_VERSION non è configurata correttamente.'], 503);
+    instagram_publish_json(['ok' => false, 'error' => 'INSTAGRAM_GRAPH_API_VERSION non è configurata correttamente.'], 503);
 }
 
 $publicDir = dirname(__DIR__) . '/img/instagram-publish';
@@ -135,7 +135,7 @@ $containerId = null;
 try {
     $basePath = tos_detect_base_path();
     $imageUrl = rtrim($origin, '/') . $basePath . '/img/instagram-publish/' . rawurlencode($fileName);
-    $createUrl = 'https://graph.facebook.com/' . $graphVersion . '/' . rawurlencode($instagramUserId) . '/media';
+    $createUrl = 'https://graph.instagram.com/' . $graphVersion . '/' . rawurlencode($instagramUserId) . '/media';
     $container = instagram_graph_request($createUrl, [
         'image_url' => $imageUrl,
         'caption' => $caption,
@@ -150,7 +150,7 @@ try {
         throw new RuntimeException('Instagram non ha restituito il codice della pubblicazione.');
     }
 
-    $statusUrl = 'https://graph.facebook.com/' . $graphVersion . '/' . rawurlencode($containerId) . '?' . http_build_query([
+    $statusUrl = 'https://graph.instagram.com/' . $graphVersion . '/' . rawurlencode($containerId) . '?' . http_build_query([
         'fields' => 'status_code',
         'access_token' => $accessToken,
     ]);
@@ -174,7 +174,7 @@ try {
         throw new RuntimeException('Instagram sta impiegando troppo tempo a elaborare la grafica. Riprova tra poco.');
     }
 
-    $publishUrl = 'https://graph.facebook.com/' . $graphVersion . '/' . rawurlencode($instagramUserId) . '/media_publish';
+    $publishUrl = 'https://graph.instagram.com/' . $graphVersion . '/' . rawurlencode($instagramUserId) . '/media_publish';
     $published = instagram_graph_request($publishUrl, [
         'creation_id' => $containerId,
         'access_token' => $accessToken,
