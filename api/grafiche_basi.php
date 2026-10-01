@@ -76,10 +76,14 @@ try {
             if (!is_uploaded_file($_FILES['score_overlay']['tmp_name'])) {
                 throw new InvalidArgumentException('Caricamento del livello box non valido.');
             }
-            $scoreOverlay = graphics_template_image(file_get_contents($_FILES['score_overlay']['tmp_name']));
-            $overlayInfo = getimagesizefromstring(file_get_contents($_FILES['score_overlay']['tmp_name']));
+            $overlayBytes = file_get_contents($_FILES['score_overlay']['tmp_name']);
+            $scoreOverlay = graphics_template_image($overlayBytes);
+            $overlayInfo = getimagesizefromstring($overlayBytes);
             if (!in_array($overlayInfo['mime'] ?? '', ['image/png', 'image/webp'], true)) {
                 throw new InvalidArgumentException('Il livello box deve essere un PNG o WebP trasparente.');
+            }
+            if (($overlayInfo[0] ?? 0) !== 1080 || ($overlayInfo[1] ?? 0) !== 1350) {
+                throw new InvalidArgumentException('Il livello box deve essere esattamente 1080 x 1350 px per mantenere le misure originali.');
             }
         }
         $record = ['image' => $image, 'layout' => $layout];

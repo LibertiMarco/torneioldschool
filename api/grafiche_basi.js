@@ -1,9 +1,9 @@
 /* Basi personalizzate: le foto delle partite restano locali, base e layout si salvano sul server. */
 const customTemplates = (() => {
-  const labels = {photo:'Foto giocatori',homeLogo:'Logo casa / squadra MVP',awayLogo:'Logo ospite / secondo MVP',homeScore:'Gol squadra casa',awayScore:'Gol squadra ospite',home:'Nome squadra casa',away:'Nome squadra ospite',round:'Giornata / fase',names:'Nomi MVP',team:'Squadra MVP',details:'Dettaglio MVP'};
+  const labels = {photo:'Foto giocatori',scoreOverlay:'Livello box risultato',homeLogo:'Logo casa / squadra MVP',awayLogo:'Logo ospite / secondo MVP',homeScore:'Gol squadra casa',awayScore:'Gol squadra ospite',home:'Nome squadra casa',away:'Nome squadra ospite',round:'Giornata / fase',names:'Nomi MVP',team:'Squadra MVP',details:'Dettaglio MVP'};
   const element = (x,y,w,h,font=40,visible=true) => ({x,y,w,h,font,visible,color:'#ffffff'});
   const defaults = type => type === 'ft'
-    ? {photo:element(80,220,920,700),homeLogo:element(80,950,180,180),awayLogo:element(820,950,180,180),homeScore:element(290,980,250,140,110),awayScore:element(540,980,250,140,110),home:element(30,1150,400,60,34),away:element(650,1150,400,60,34),round:element(180,1240,720,60,26)}
+    ? {photo:element(80,220,920,700),scoreOverlay:element(0,0,1080,1350),homeLogo:element(80,950,180,180),awayLogo:element(820,950,180,180),homeScore:element(290,980,250,140,110),awayScore:element(540,980,250,140,110),home:element(30,1150,400,60,34),away:element(650,1150,400,60,34),round:element(180,1240,720,60,26)}
     : {photo:element(100,200,880,820),homeLogo:element(70,1100,130,130),awayLogo:element(880,1100,130,130),names:element(70,1030,940,100,54),team:element(210,1150,660,70,32),details:element(150,1240,780,60,26)};
   const state = new Map();
   let currentId = '';
@@ -34,7 +34,7 @@ const customTemplates = (() => {
         <p class="hint">Carica la tua grafica, poi posiziona gli elementi. Consigliato: 1080 × 1350 px; PNG, JPG o WebP, massimo 8 MB. Per giocatori scontornati usa foto PNG trasparenti.</p>
         <fieldset id="${type}BaseControls"><div class="fields">
           <label class="wide">Immagine di base<input id="${type}Base" type="file" accept="image/png,image/jpeg,image/webp"></label>
-          ${type==='ft'?'<label class="wide">Livello box risultato (PNG/WebP trasparente, 1080 x 1350 px)<input id="ftScoreOverlay" type="file" accept="image/png,image/webp"></label><div class="wide actions"><button id="ftRemoveScoreOverlay" type="button" class="secondary">Rimuovi livello box</button><span id="ftScoreOverlayStatus" class="hint" aria-live="polite"></span></div>':''}
+          ${type==='ft'?'<label class="wide">Livello box risultato (PNG/WebP trasparente, 1080 x 1350 px)<input id="ftScoreOverlay" type="file" accept="image/png,image/webp"></label><div class="wide actions"><button id="ftRemoveScoreOverlay" type="button" class="secondary">Rimuovi livello box</button><span id="ftScoreOverlayStatus" class="hint" aria-live="polite">Scegli “Livello box risultato” e imposta X/Y per spostarlo. Dimensioni originali bloccate.</span></div>':''}
           <label class="wide">Elemento da posizionare<select id="${type}Element"></select></label>
           <label class="wide template-check"><input id="${type}Visible" type="checkbox"> Mostra elemento</label>
           <label>Posizione X (px)<input id="${type}LayoutX" type="number" min="0" max="1080"></label>
@@ -76,12 +76,21 @@ const customTemplates = (() => {
     $(type+'BaseControls').disabled = !item || item.loading || item.busy || !!item.error;
     const rect = (item?.layout || defaults(type))[$(type+'Element').value];
     ['X','Y','W','H','Font','Color'].forEach(field=>{$(type+'Layout'+field).value=rect[field.toLowerCase()];});
+    const fixedOverlay=type==='ft'&&$(type+'Element').value==='scoreOverlay';
+    for(const field of ['X','Y','W','H']){
+      const input=$(type+'Layout'+field);
+      input.min=fixedOverlay?(field==='X'?-1080:-1350):0;
+      input.max=fixedOverlay?(field==='X'?1080:1350):field==='Y'||field==='H'?1350:field==='X'||field==='W'?1080:240;
+      input.disabled=fixedOverlay&&field!=='X'&&field!=='Y';
+    }
+    for(const field of ['Font','Color'])$(type+'Layout'+field).disabled=fixedOverlay;
+    $(type+'Visible').disabled=!item||item.loading||item.busy;
     $(type+'Visible').checked=rect.visible;
     $(type+'SaveBase').disabled=!item?.image;
     $(type+'RemoveBase').disabled=!item?.image;
     if(type==='ft'){
       $('ftRemoveScoreOverlay').disabled=!item?.scoreOverlay||!item?.image||item.loading||item.busy;
-      $('ftScoreOverlayStatus').textContent=item?.scoreOverlay?'Livello box presente: viene sovrapposto a base e foto, sotto loghi e testi.':'Nessun livello box caricato.';
+      $('ftScoreOverlayStatus').textContent=item?.scoreOverlay?'Livello box presente: viene sovrapposto a base e foto, sotto loghi e testi.':'Nessun livello box. Seleziona l’elemento per impostare la posizione X/Y.';
     }
     $(type+'BaseStatus').textContent = !item ? 'Seleziona un torneo per configurare le basi.' : item.error || item.saveError || (item.loading?'Caricamento della base…':item.busy?'Salvataggio…':item.dirty?'Modifiche in anteprima: premi Salva base e posizioni.':item.image?'Base salvata per questo torneo.':'Nessuna base salvata: viene usata la grafica automatica.');
   }
@@ -138,7 +147,7 @@ const customTemplates = (() => {
     try {
       if(!['image/png','image/webp'].includes(file.type)||file.size>8*1024*1024) throw new Error('Usa un PNG o WebP trasparente, massimo 8 MB.');
       const img=await fileImage(file);
-      if(!img||img.naturalWidth*img.naturalHeight>16000000) throw new Error('Immagine non valida o superiore a 16 megapixel.');
+      if(!img||img.naturalWidth!==W||img.naturalHeight!==H) throw new Error('Il livello box deve essere esattamente 1080 × 1350 px per mantenere le misure originali.');
       item.scoreOverlay=img;item.scoreOverlayFile=file;item.clearScoreOverlay=false;item.dirty=true;
     } catch(error) {message(error.message);}
     finally {
@@ -156,12 +165,14 @@ const customTemplates = (() => {
     const item=pair()?.[type];
     if(!item||item.loading||item.busy) return;
     const rect=item.layout[$(type+'Element').value];
-    for (const field of ['X','Y','W','H','Font']) {
+    const fixedOverlay=type==='ft'&&$(type+'Element').value==='scoreOverlay';
+    for (const field of fixedOverlay?['X','Y']:['X','Y','W','H','Font']) {
       const input=$(type+'Layout'+field);
       if(!input.checkValidity() || input.value==='') return;
       rect[field.toLowerCase()]=Number(input.value);
     }
-    rect.color=$(type+'LayoutColor').value; rect.visible=$(type+'Visible').checked;
+    if(!fixedOverlay)rect.color=$(type+'LayoutColor').value;
+    rect.visible=$(type+'Visible').checked;
     item.dirty=true; refresh(type);drawAll();
   }
   async function save(type, remove) {
@@ -248,7 +259,8 @@ const customTemplates = (() => {
       ctx.drawImage(graphicOverlay(item.image,photoRect,[item.layout.homeLogo,item.layout.awayLogo]),0,0,W,H);
       cover(ctx,photo,photoRect.x,photoRect.y,photoRect.w,photoRect.h,cropValues(type));
     }
-    if(type==='ft'&&pair()?.ft.scoreOverlay)ctx.drawImage(pair().ft.scoreOverlay,0,0,W,H);
+    const scoreOverlay=item.layout.scoreOverlay;
+    if(type==='ft'&&item.layout.scoreOverlay?.visible&&pair()?.ft.scoreOverlay)ctx.drawImage(pair().ft.scoreOverlay,scoreOverlay.x,scoreOverlay.y);
     const teams=new Set([...$('mvpPlayers').querySelectorAll('input:checked')].map(input=>input._mvpData.team));
     const logos=type==='ft'?[imageState.ftHomeLogo,imageState.ftAwayLogo]:[
       teams.has($('ftHome').value)?imageState.ftHomeLogo:teams.has($('ftAway').value)?imageState.ftAwayLogo:null,
@@ -258,6 +270,7 @@ const customTemplates = (() => {
     for (const [key,r] of Object.entries(item.layout)) {
       if(!r.visible) continue;
       if(key==='photo') { if(editor&&!photo) guide(ctx,r,'FOTO GIOCATORI'); }
+      else if(key==='scoreOverlay') { /* The upload is optional; keep the base preview unobstructed. */ }
       else if(key==='homeLogo'||key==='awayLogo') {
         const logo=logos[key==='homeLogo'?0:1];
         if(editor&&!logo) guide(ctx,r,key==='homeLogo'?'LOGO 1':'LOGO 2');
