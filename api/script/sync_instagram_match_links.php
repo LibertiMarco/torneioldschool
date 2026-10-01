@@ -229,15 +229,15 @@ function sync_instagram_fetch_yesterdays_reels(string $userId, string $token, st
     $after = null;
     $reels = [];
     $pages = 0;
-    $hasProductType = true;
+    $pageLimit = 10;
+    $seenCursors = [];
 
-    do {
-        $fields = $hasProductType
-            ? 'id,caption,media_type,media_product_type,permalink,timestamp'
-            : 'id,caption,media_type,permalink,timestamp';
+    while (true) {
+        // Le didascalie vengono lette singolarmente solo per i Reel del giorno.
+        // Questo evita risposte troppo grandi per profili con molti contenuti.
         $params = [
-            'fields' => $fields,
-            'limit' => 100,
+            'fields' => 'id,media_type,permalink,timestamp',
+            'limit' => $pageLimit,
             'access_token' => $token,
         ];
         if ($after !== null) {
@@ -246,10 +246,11 @@ function sync_instagram_fetch_yesterdays_reels(string $userId, string $token, st
         $url = 'https://graph.instagram.com/' . rawurlencode($apiVersion) . '/' . rawurlencode($userId)
             . '/media?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
         $response = sync_instagram_request($url);
-        if (!$response['ok'] && $hasProductType) {
+        if (!$response['ok']) {
             $error = strtolower((string)($response['error'] ?? ''));
-            if (str_contains($error, 'media_product_type') || str_contains($error, 'field')) {
-                $hasProductType = false;
+            if (str_contains($error, 'reduce the amount of data') && $pageLimit > 1) {
+                $pageLimit = max(1, intdiv($pageLimit, 2));
+                sync_instagram_log("Instagram richiede meno dati: nuovo tentativo con {$pageLimit} contenuti per pagina.");
                 continue;
             }
         }
@@ -276,7 +277,19 @@ function sync_instagram_fetch_yesterdays_reels(string $userId, string $token, st
             if ($createdTs >= $end || !sync_instagram_is_reel($media)) {
                 continue;
             }
-            if (trim((string)($media['caption'] ?? '')) === '' || trim((string)($media['permalink'] ?? '')) === '') {
+            $mediaId = trim((string)($media['id'] ?? ''));
+            if ($mediaId === '' || trim((string)($media['permalink'] ?? '')) === '') {
+                continue;
+            }
+            $captionUrl = 'https://graph.instagram.com/' . rawurlencode($apiVersion) . '/' . rawurlencode($mediaId)
+                . '?' . http_build_query(['fields' => 'caption', 'access_token' => $token], '', '&', PHP_QUERY_RFC3986);
+            $captionResponse = sync_instagram_request($captionUrl);
+            if (!$captionResponse['ok']) {
+                $message = str_replace($token, '[token omesso]', (string)($captionResponse['error'] ?? 'Lettura della didascalia non riuscita.'));
+                sync_instagram_fail('Instagram API (didascalia Reel ' . $mediaId . '): ' . $message);
+            }
+            $media['caption'] = (string)($captionResponse['data']['caption'] ?? '');
+            if (trim($media['caption']) === '') {
                 continue;
             }
             $reels[] = $media;
@@ -294,9 +307,18 @@ function sync_instagram_fetch_yesterdays_reels(string $userId, string $token, st
                 }
             }
         }
-        $after = $hasNext ? $cursor : null;
+        $after = $hasNext && ($oldestTimestamp === null || $oldestTimestamp >= $start) ? $cursor : null;
         $pages++;
-    } while ($after !== null && $pages < 5 && ($oldestTimestamp === null || $oldestTimestamp >= $start));
+        if ($after !== null) {
+            if (isset($seenCursors[$after]) || $pages >= 100) {
+                sync_instagram_fail('Lettura Instagram incompleta: limite di paginazione raggiunto. Nessun link salvato.');
+            }
+            $seenCursors[$after] = true;
+        }
+        if ($after === null) {
+            break;
+        }
+    }
 
     return $reels;
 }
