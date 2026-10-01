@@ -191,34 +191,23 @@ const customTemplates = (() => {
     if(!rect||rect.radius==null||rect.visible===false||!rect.w||!rect.h) return;
     const radius=Math.min(rect.w,rect.h)*Math.max(0,Math.min(50,rect.radius??12))/100;
     if(radius<=0) return;
-    ctx.save();ctx.globalCompositeOperation='destination-out';ctx.beginPath();ctx.rect(rect.x,rect.y,rect.w,rect.h);ctx.roundRect(rect.x,rect.y,rect.w,rect.h,radius);ctx.fill('evenodd');ctx.restore();
+    const x=Math.max(0,Math.floor(rect.x)),y=Math.max(0,Math.floor(rect.y));
+    const right=Math.min(ctx.canvas.width,Math.ceil(rect.x+rect.w)),bottom=Math.min(ctx.canvas.height,Math.ceil(rect.y+rect.h));
+    const w=right-x,h=bottom-y;if(w<=0||h<=0)return;
+    const layer=document.createElement('canvas');layer.width=w;layer.height=h;
+    const layerCtx=layer.getContext('2d');layerCtx.drawImage(ctx.canvas,x,y,w,h,0,0,w,h);
+    layerCtx.globalCompositeOperation='destination-in';layerCtx.beginPath();
+    layerCtx.roundRect(rect.x-x,rect.y-y,rect.w,rect.h,radius);layerCtx.fill();
+    ctx.clearRect(x,y,w,h);ctx.drawImage(layer,x,y);
   }
-  const backingBoundsCache=new WeakMap();
-  function logoBackingBounds(img,rects) {
-    const signature=rects.map(r=>[r.x,r.y,r.w,r.h,r.radius,r.visible].join(',')).join('|');
-    let variants=backingBoundsCache.get(img);if(!variants){variants=new Map();backingBoundsCache.set(img,variants);}
-    if(variants.has(signature))return variants.get(signature);
-    let result=rects;
-    try {
-      const source=document.createElement('canvas');source.width=W;source.height=H;
-      const sourceCtx=source.getContext('2d',{willReadFrequently:true});contain(sourceCtx,img,0,0,W,H);
-      const data=sourceCtx.getImageData(0,0,W,H).data;
-      const key=[];for(const [x,y] of [[0,0],[W-1,0],[0,H-1],[W-1,H-1]]){const p=(y*W+x)*4;key.push([data[p],data[p+1],data[p+2]]);}
-      const isPageBackground=p=>key.some(([r,g,b])=>Math.abs(data[p]-r)+Math.abs(data[p+1]-g)+Math.abs(data[p+2]-b)<12);
-      result=rects.map(rect=>{
-        if(!rect||rect.visible===false)return rect;
-        const padX=Math.max(8,Math.min(36,rect.w*.15)),padY=Math.max(8,Math.min(36,rect.h*.15));
-        const sx=Math.max(0,Math.floor(rect.x-padX)),ex=Math.min(W,Math.ceil(rect.x+rect.w+padX));
-        const sy=Math.max(0,Math.floor(rect.y-padY)),ey=Math.min(H,Math.ceil(rect.y+rect.h+padY));
-        let minX=ex,minY=ey,maxX=-1,maxY=-1;
-        for(let y=sy;y<ey;y++)for(let x=sx;x<ex;x++){
-          const p=(y*W+x)*4;
-          if(data[p+3]>0&&!isPageBackground(p)){minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);}
-        }
-        return maxX>=minX?{...rect,x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1}:rect;
-      });
-    } catch(error) { result=rects; }
-    variants.set(signature,result);return result;
+  function logoBackingBounds(rects) {
+    return rects.map(rect=>{
+      if(!rect||rect.visible===false)return rect;
+      const padX=Math.min(42,Math.max(8,rect.w*.18)),padY=Math.min(42,Math.max(8,rect.h*.18));
+      const x=Math.max(0,rect.x-padX),y=Math.max(0,rect.y-padY);
+      const right=Math.min(W,rect.x+rect.w+padX),bottom=Math.min(H,rect.y+rect.h+padY);
+      return {...rect,x,y,w:right-x,h:bottom-y};
+    });
   }
   const overlayCache=new WeakMap();
   function graphicOverlay(img,hole=null,protectedRects=[],maskRects=protectedRects) {
@@ -259,7 +248,7 @@ const customTemplates = (() => {
     ctx.save();ctx.clearRect(0,0,W,H);ctx.fillStyle='#07111d';ctx.fillRect(0,0,W,H);
     contain(ctx,item.image,0,0,W,H);
     const logoRects=type==='ft'?[item.layout.homeLogo,item.layout.awayLogo]:[];
-    const logoMasks=type==='ft'?logoBackingBounds(item.image,logoRects):[];
+    const logoMasks=type==='ft'?logoBackingBounds(logoRects):[];
     logoMasks.forEach(rect=>cutSquareCorners(ctx,rect));
     const photoRect=item.layout.photo;
     const photo=imageState[type==='ft'?'ftCaptains':'mvpPhoto'];
