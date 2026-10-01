@@ -193,9 +193,36 @@ const customTemplates = (() => {
     if(radius<=0) return;
     ctx.save();ctx.globalCompositeOperation='destination-out';ctx.beginPath();ctx.rect(rect.x,rect.y,rect.w,rect.h);ctx.roundRect(rect.x,rect.y,rect.w,rect.h,radius);ctx.fill('evenodd');ctx.restore();
   }
+  const backingBoundsCache=new WeakMap();
+  function logoBackingBounds(img,rects) {
+    const signature=rects.map(r=>[r.x,r.y,r.w,r.h,r.radius,r.visible].join(',')).join('|');
+    let variants=backingBoundsCache.get(img);if(!variants){variants=new Map();backingBoundsCache.set(img,variants);}
+    if(variants.has(signature))return variants.get(signature);
+    let result=rects;
+    try {
+      const source=document.createElement('canvas');source.width=W;source.height=H;
+      const sourceCtx=source.getContext('2d',{willReadFrequently:true});contain(sourceCtx,img,0,0,W,H);
+      const data=sourceCtx.getImageData(0,0,W,H).data;
+      const key=[];for(const [x,y] of [[0,0],[W-1,0],[0,H-1],[W-1,H-1]]){const p=(y*W+x)*4;key.push([data[p],data[p+1],data[p+2]]);}
+      const isPageBackground=p=>key.some(([r,g,b])=>Math.abs(data[p]-r)+Math.abs(data[p+1]-g)+Math.abs(data[p+2]-b)<12);
+      result=rects.map(rect=>{
+        if(!rect||rect.visible===false)return rect;
+        const padX=Math.max(8,Math.min(36,rect.w*.15)),padY=Math.max(8,Math.min(36,rect.h*.15));
+        const sx=Math.max(0,Math.floor(rect.x-padX)),ex=Math.min(W,Math.ceil(rect.x+rect.w+padX));
+        const sy=Math.max(0,Math.floor(rect.y-padY)),ey=Math.min(H,Math.ceil(rect.y+rect.h+padY));
+        let minX=ex,minY=ey,maxX=-1,maxY=-1;
+        for(let y=sy;y<ey;y++)for(let x=sx;x<ex;x++){
+          const p=(y*W+x)*4;
+          if(data[p+3]>0&&!isPageBackground(p)){minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);}
+        }
+        return maxX>=minX?{...rect,x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1}:rect;
+      });
+    } catch(error) { result=rects; }
+    variants.set(signature,result);return result;
+  }
   const overlayCache=new WeakMap();
-  function graphicOverlay(img,hole=null,protectedRects=[]) {
-    const signature=[hole?[hole.x,hole.y,hole.w,hole.h].join(','):'none',...protectedRects.map(r=>[r.x,r.y,r.w,r.h,r.visible,r.radius].join(','))].join('|');
+  function graphicOverlay(img,hole=null,protectedRects=[],maskRects=protectedRects) {
+    const signature=[hole?[hole.x,hole.y,hole.w,hole.h].join(','):'none',...protectedRects.map(r=>[r.x,r.y,r.w,r.h,r.visible,r.radius].join(',')),...maskRects.map(r=>[r.x,r.y,r.w,r.h,r.visible,r.radius].join(','))].join('|');
     let variants=overlayCache.get(img);if(!variants){variants=new Map();overlayCache.set(img,variants);}
     if(variants.has(signature))return variants.get(signature);
     const layer=document.createElement('canvas');layer.width=W;layer.height=H;
@@ -221,7 +248,7 @@ const customTemplates = (() => {
       // image can never show through the shield squares.
       for(const rect of protectedRects)if(rect?.visible!==false)for(let y=Math.max(0,Math.floor(rect.y));y<Math.min(H,Math.ceil(rect.y+rect.h));y++)for(let x=Math.max(0,Math.floor(rect.x));x<Math.min(W,Math.ceil(rect.x+rect.w));x++){const p=y*W+x;data[p*4+3]=originalAlpha[p*4+3];}
       layer.getContext('2d').putImageData(pixels,0,0);
-      protectedRects.forEach(rect=>cutSquareCorners(layer.getContext('2d'),rect));
+      maskRects.forEach(rect=>cutSquareCorners(layer.getContext('2d'),rect));
     }catch(error){layer.width=layer.height=1;variants.set(signature,img);return img;}
     variants.set(signature,layer);return layer;
   }
@@ -232,7 +259,8 @@ const customTemplates = (() => {
     ctx.save();ctx.clearRect(0,0,W,H);ctx.fillStyle='#07111d';ctx.fillRect(0,0,W,H);
     contain(ctx,item.image,0,0,W,H);
     const logoRects=type==='ft'?[item.layout.homeLogo,item.layout.awayLogo]:[];
-    logoRects.forEach(rect=>cutSquareCorners(ctx,rect));
+    const logoMasks=type==='ft'?logoBackingBounds(item.image,logoRects):[];
+    logoMasks.forEach(rect=>cutSquareCorners(ctx,rect));
     const photoRect=item.layout.photo;
     const photo=imageState[type==='ft'?'ftCaptains':'mvpPhoto'];
     // The uploaded base is first used as a background. Then its continuous
@@ -240,7 +268,7 @@ const customTemplates = (() => {
     // decorations can be composited above the player photo.
     if(photo&&photoRect?.visible){
       cover(ctx,photo,photoRect.x,photoRect.y,photoRect.w,photoRect.h,cropValues(type));
-      ctx.drawImage(graphicOverlay(item.image,photoRect,logoRects),0,0,W,H);
+      ctx.drawImage(graphicOverlay(item.image,photoRect,logoRects,logoMasks),0,0,W,H);
     }
     const teams=new Set([...$('mvpPlayers').querySelectorAll('input:checked')].map(input=>input._mvpData.team));
     const logos=type==='ft'?[imageState.ftHomeLogo,imageState.ftAwayLogo]:[
@@ -257,7 +285,7 @@ const customTemplates = (() => {
         else {
           if(type==='ft') {
             drawLogoInRoundedFrame(ctx,logo,r);
-            cutSquareCorners(ctx,r);
+            cutSquareCorners(ctx,logoMasks[key==='homeLogo'?0:1]||r);
           } else contain(ctx,logo,r.x,r.y,r.w,r.h);
         }
       }
