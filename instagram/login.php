@@ -20,6 +20,21 @@ if (!is_array($redirectParts) || strtolower((string)($redirectParts['scheme'] ??
 }
 
 $state = bin2hex(random_bytes(24));
+$now = time();
+$pendingStates = $_SESSION['instagram_publish_oauth_states'] ?? [];
+if (!is_array($pendingStates)) {
+    $pendingStates = [];
+}
+// Keep several recent attempts so opening the link again in another tab does
+// not invalidate an authorization flow that is already waiting at Instagram.
+foreach ($pendingStates as $pendingState => $createdAt) {
+    if (!is_string($pendingState) || !is_numeric($createdAt) || (int)$createdAt < $now - 600) {
+        unset($pendingStates[$pendingState]);
+    }
+}
+$pendingStates[$state] = $now;
+$_SESSION['instagram_publish_oauth_states'] = $pendingStates;
+// Keep the former key temporarily for compatibility with an in-flight flow.
 $_SESSION['instagram_publish_oauth_state'] = $state;
 $authUrl = 'https://www.instagram.com/oauth/authorize?' . http_build_query([
     'client_id' => $appId,

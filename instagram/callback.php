@@ -54,9 +54,29 @@ function instagram_oauth_request(string $url, array $fields = [], bool $post = f
 }
 
 $state = (string)($_GET['state'] ?? '');
-$expectedState = (string)($_SESSION['instagram_publish_oauth_state'] ?? '');
+$stateIsValid = false;
+$pendingStates = $_SESSION['instagram_publish_oauth_states'] ?? [];
+if (is_array($pendingStates) && $state !== '') {
+    foreach ($pendingStates as $expectedState => $createdAt) {
+        if (!is_string($expectedState) || !is_numeric($createdAt)) {
+            continue;
+        }
+        if ((int)$createdAt >= time() - 600 && hash_equals($expectedState, $state)) {
+            $stateIsValid = true;
+            unset($pendingStates[$expectedState]);
+            break;
+        }
+    }
+}
+$_SESSION['instagram_publish_oauth_states'] = $pendingStates;
+
+// Support a flow started just before this change was deployed.
+$legacyState = (string)($_SESSION['instagram_publish_oauth_state'] ?? '');
+if (!$stateIsValid && $state !== '' && $legacyState !== '' && hash_equals($legacyState, $state)) {
+    $stateIsValid = true;
+}
 unset($_SESSION['instagram_publish_oauth_state']);
-if ($state === '' || $expectedState === '' || !hash_equals($expectedState, $state)) {
+if ($state === '' || !$stateIsValid) {
     instagram_oauth_json(['ok' => false, 'error' => 'Verifica OAuth non valida. Riapri il collegamento dal generatore.'], 400);
 }
 if (!empty($_GET['error'])) {
