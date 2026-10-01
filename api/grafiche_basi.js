@@ -177,6 +177,13 @@ const customTemplates = (() => {
     });
     ctx.restore();
   }
+  function drawLogoInRoundedFrame(ctx,img,rect) {
+    if(!img?.naturalWidth) return;
+    const radius=Math.min(rect.w,rect.h)*Math.max(0,Math.min(50,rect.radius??12))/100;
+    ctx.save();ctx.beginPath();ctx.roundRect(rect.x,rect.y,rect.w,rect.h,radius);ctx.clip();
+    contain(ctx,img,rect.x,rect.y,rect.w,rect.h);
+    ctx.restore();
+  }
   function cutSquareCorners(ctx,rect) {
     if(!rect||rect.radius==null||rect.visible===false||!rect.w||!rect.h) return;
     const radius=Math.min(rect.w,rect.h)*Math.max(0,Math.min(50,rect.radius??12))/100;
@@ -244,8 +251,10 @@ const customTemplates = (() => {
         const logo=logos[key==='homeLogo'?0:1];
         if(editor&&!logo) guide(ctx,r,key==='homeLogo'?'LOGO 1':'LOGO 2');
         else {
-          contain(ctx,logo,r.x,r.y,r.w,r.h);
-          if(type==='ft') cutSquareCorners(ctx,r);
+          if(type==='ft') {
+            drawLogoInRoundedFrame(ctx,logo,r);
+            cutSquareCorners(ctx,r);
+          } else contain(ctx,logo,r.x,r.y,r.w,r.h);
         }
       }
       else text(ctx,texts[key],r);
