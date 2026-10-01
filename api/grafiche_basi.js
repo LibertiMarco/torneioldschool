@@ -179,9 +179,12 @@ const customTemplates = (() => {
   }
   function drawLogoInRoundedFrame(ctx,img,rect) {
     if(!img?.naturalWidth) return;
-    const radius=Math.min(rect.w,rect.h)*Math.max(0,Math.min(50,rect.radius??12))/100;
-    ctx.save();ctx.beginPath();ctx.roundRect(rect.x,rect.y,rect.w,rect.h,radius);ctx.clip();
-    contain(ctx,img,rect.x,rect.y,rect.w,rect.h);
+    const scale=Math.min(rect.w/img.naturalWidth,rect.h/img.naturalHeight);
+    const w=img.naturalWidth*scale,h=img.naturalHeight*scale;
+    const x=rect.x+(rect.w-w)/2,y=rect.y+(rect.h-h)/2;
+    const radius=Math.min(w,h)*Math.max(0,Math.min(50,rect.radius??12))/100;
+    ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,radius);ctx.clip();
+    ctx.drawImage(img,x,y,w,h);
     ctx.restore();
   }
   function cutSquareCorners(ctx,rect) {
@@ -228,7 +231,8 @@ const customTemplates = (() => {
     const canvas=$(type==='ft'?'fulltimeCanvas':'mvpCanvas'),ctx=canvas.getContext('2d');
     ctx.save();ctx.clearRect(0,0,W,H);ctx.fillStyle='#07111d';ctx.fillRect(0,0,W,H);
     contain(ctx,item.image,0,0,W,H);
-    if(type==='ft') [item.layout.homeLogo,item.layout.awayLogo].forEach(rect=>cutSquareCorners(ctx,rect));
+    const logoRects=type==='ft'?[item.layout.homeLogo,item.layout.awayLogo]:[];
+    logoRects.forEach(rect=>cutSquareCorners(ctx,rect));
     const photoRect=item.layout.photo;
     const photo=imageState[type==='ft'?'ftCaptains':'mvpPhoto'];
     // The uploaded base is first used as a background. Then its continuous
@@ -236,7 +240,7 @@ const customTemplates = (() => {
     // decorations can be composited above the player photo.
     if(photo&&photoRect?.visible){
       cover(ctx,photo,photoRect.x,photoRect.y,photoRect.w,photoRect.h,cropValues(type));
-      ctx.drawImage(graphicOverlay(item.image,photoRect,[item.layout.homeLogo,item.layout.awayLogo]),0,0,W,H);
+      ctx.drawImage(graphicOverlay(item.image,photoRect,logoRects),0,0,W,H);
     }
     const teams=new Set([...$('mvpPlayers').querySelectorAll('input:checked')].map(input=>input._mvpData.team));
     const logos=type==='ft'?[imageState.ftHomeLogo,imageState.ftAwayLogo]:[
