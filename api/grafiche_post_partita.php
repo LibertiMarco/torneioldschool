@@ -148,17 +148,16 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     body.is-embedded{display:flow-root;min-height:0}
     canvas{touch-action:pan-y pinch-zoom}
     @media(max-width:760px){
-      .workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;gap:12px}
-      .previews{grid-row:1;position:sticky;top:0;z-index:20;grid-template-columns:minmax(0,1fr);gap:0;padding:4px;background:var(--bg);max-height:40dvh;overflow:auto}
-      body.with-site-header .previews{top:78px;max-height:calc(40dvh - 78px)}
+      .workspace{grid-template-columns:minmax(0,52%) minmax(0,48%);gap:10px}
+      .previews{position:sticky;top:8px;grid-template-columns:minmax(0,1fr);gap:12px}
+      body.with-site-header .previews{top:90px}
       .preview-card{padding:8px}
-      .preview-card canvas{max-height:15dvh;width:auto}
+      .preview-card canvas{width:100%;height:auto;max-height:none}
       .instagram-caption{min-height:48px;margin-bottom:6px}
-      .controls{grid-row:2}
-      .controls{min-width:0;padding:14px}
+      .controls{min-width:0;padding:12px}
       input,select{min-width:0;font-size:16px}
       button{min-height:44px;font-size:14px}
-      .tab{font-size:14px}.preview-head{flex-direction:row;align-items:center}.preview-head button{width:auto}
+      .tab{font-size:14px}.preview-head{flex-direction:column;align-items:flex-start}.preview-actions{width:100%}.preview-head button{width:100%;font-size:12px}
     }
   </style>
 </head>
