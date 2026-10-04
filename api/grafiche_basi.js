@@ -32,7 +32,7 @@ const customTemplates = (() => {
       const box = document.createElement('details');
       box.className = 'template-editor'; box.open = true;
       box.innerHTML = `<summary>Base personalizzata ${type==='ft'?'Full Time':'MVP'}</summary>
-        <p class="hint">Carica la tua grafica, poi posiziona gli elementi. Consigliato: 1080 × 1350 px; PNG, JPG o WebP, massimo 8 MB. Per giocatori scontornati usa foto PNG trasparenti.</p>
+        <p class="hint">Carica la tua grafica, poi seleziona un elemento e trascinalo nell?anteprima con il dito o il mouse, oppure usa i campi X e Y. Usa due dita per ingrandire o rimpicciolire l?elemento selezionato. Consigliato: 1080 × 1350 px; PNG, JPG o WebP, massimo 8 MB. Per giocatori scontornati usa foto PNG trasparenti.</p>
         <fieldset id="${type}BaseControls"><div class="fields">
           <label class="wide">Immagine di base<input id="${type}Base" type="file" accept="image/png,image/jpeg,image/webp"></label>
           ${type==='ft'?'<label class="wide">Aggiungi immagini livello (selezione multipla)<input id="ftOverlayFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple></label><label class="wide">Immagine selezionata<select id="ftOverlaySelect"></select></label><label class="wide">Livello<select id="ftOverlayLayer"><option value="behind_graphic">Dietro la grafica</option><option value="between_graphic_photo">Tra grafica e foto</option><option value="between_photo_content">Sopra grafica e foto, sotto loghi e testi</option><option value="front">Davanti a tutto</option></select></label><label>Posizione X (px)<input id="ftOverlayX" type="number" step="1"></label><label>Posizione Y (px)<input id="ftOverlayY" type="number" step="1"></label><label>Larghezza (px, proporzionale)<input id="ftOverlayW" type="number" min="0.01" step="any"></label><label>Altezza (px, proporzionale)<input id="ftOverlayH" type="number" min="0.01" step="any"></label><div class="wide actions"><button id="ftRemoveOverlay" type="button" class="secondary">Rimuovi immagine selezionata</button><span id="ftOverlayStatus" class="hint" aria-live="polite">Carica una o più immagini. Le misure iniziali corrispondono ai pixel del file.</span></div>':''}
@@ -48,7 +48,7 @@ const customTemplates = (() => {
         <p id="${type}BaseStatus" class="hint" aria-live="polite"></p>`;
       $(type==='ft'?'fulltimePanel':'mvpPanel').prepend(box);
       Object.keys(defaults(type)).forEach(key => $(type+'Element').append(new Option(labels[key],key)));
-      $(type+'Element').addEventListener('change',()=>refresh(type));
+      $(type+'Element').addEventListener('change',()=>{refresh(type);drawAll();});
       $(type+'Base').addEventListener('change',()=>upload(type));
       if(type==='ft'){
         $('ftOverlayFiles').addEventListener('change',()=>uploadOverlays());
@@ -56,22 +56,57 @@ const customTemplates = (() => {
         $('ftOverlayLayer').addEventListener('change',()=>editSelectedOverlay());
         ['X','Y','W','H'].forEach(field=>$('ftOverlay'+field).addEventListener('change',()=>editSelectedOverlay(field)));
         $('ftRemoveOverlay').addEventListener('click',removeSelectedOverlay);
-        const canvas=$('fulltimeCanvas');let drag=null;canvas.style.touchAction='none';
-        const point=event=>{const rect=canvas.getBoundingClientRect();return{x:(event.clientX-rect.left)*W/rect.width,y:(event.clientY-rect.top)*H/rect.height};};
-        canvas.addEventListener('pointerdown',event=>{
-          const item=pair()?.ft,layer=item?.overlays.find(entry=>entry.id===item.selectedOverlayId);
-          if(!layer||item.busy||item.loading)return;
-          const p=point(event);if(p.x<layer.x||p.y<layer.y||p.x>layer.x+layer.w||p.y>layer.y+layer.h)return;
-          drag={pointerId:event.pointerId,dx:p.x-layer.x,dy:p.y-layer.y};canvas.setPointerCapture(event.pointerId);event.preventDefault();
-        });
-        canvas.addEventListener('pointermove',event=>{
-          if(!drag||drag.pointerId!==event.pointerId)return;
-          const item=pair()?.ft,layer=item?.overlays.find(entry=>entry.id===item.selectedOverlayId);if(!layer)return;
-          const p=point(event);layer.x=Math.round(p.x-drag.dx);layer.y=Math.round(p.y-drag.dy);item.dirty=true;refreshOverlays(item);drawAll();
-        });
-        const stopDrag=event=>{if(drag&&drag.pointerId===event.pointerId){drag=null;if(canvas.hasPointerCapture(event.pointerId))canvas.releasePointerCapture(event.pointerId);}};
-        canvas.addEventListener('pointerup',stopDrag);canvas.addEventListener('pointercancel',stopDrag);
       }
+      const canvas=$(type==='ft'?'fulltimeCanvas':'mvpCanvas');let drag=null;const pointers=new Map();
+      canvas.style.touchAction='none';
+      const point=event=>{const rect=canvas.getBoundingClientRect();return{x:(event.clientX-rect.left)*W/rect.width,y:(event.clientY-rect.top)*H/rect.height};};
+      const contains=(r,p)=>r&&p.x>=r.x&&p.y>=r.y&&p.x<=r.x+r.w&&p.y<=r.y+r.h;
+      canvas.addEventListener('pointerdown',event=>{
+        const item=pair()?.[type];
+        if(event.button>0||!item?.image||item.busy||item.loading||item.error)return;
+        if(drag){
+          if(event.pointerType!=='touch'||pointers.size!==1||item!==drag.item||currentId!==drag.torneo)return;
+          pointers.set(event.pointerId,point(event));canvas.setPointerCapture(event.pointerId);
+          const [a,b]=[...pointers.values()];
+          drag.pinch={distance:Math.max(1,Math.hypot(b.x-a.x,b.y-a.y)),cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,...drag.target};
+          event.preventDefault();return;
+        }
+        if(event.isPrimary===false)return;
+        const p=point(event),selected=item.layout[$(type+'Element').value];
+        const overlay=type==='ft'?item.overlays.find(entry=>entry.id===item.selectedOverlayId):null;
+        const isLayout=selected?.visible&&contains(selected,p);
+        const target=isLayout?selected:contains(overlay,p)?overlay:null;
+        if(!target)return;
+        drag={pointerId:event.pointerId,torneo:currentId,item,target,isLayout,dx:p.x-target.x,dy:p.y-target.y};
+        pointers.set(event.pointerId,p);canvas.setPointerCapture(event.pointerId);event.preventDefault();
+      });
+      canvas.addEventListener('pointermove',event=>{
+        if(!drag||!pointers.has(event.pointerId))return;
+        const item=pair()?.[type];
+        if(currentId!==drag.torneo||item!==drag.item||item.busy||item.loading||item.error){stopDrag(event);return;}
+        const p=point(event),target=drag.target;
+        pointers.set(event.pointerId,p);
+        if(drag.pinch&&pointers.size===2){
+          const [a,b]=[...pointers.values()],start=drag.pinch;
+          let scale=Math.hypot(b.x-a.x,b.y-a.y)/start.distance;
+          const textElement=drag.isLayout&&!['photo','homeLogo','awayLogo'].includes($(type+'Element').value);
+          const minimum=Math.max(1/start.w,1/start.h,textElement?12/start.font:0);
+          const maximum=drag.isLayout?Math.min(W/start.w,H/start.h,textElement?240/start.font:Infinity):Infinity;
+          scale=Math.max(minimum,Math.min(maximum,scale));
+          target.w=Math.max(1,Math.round(start.w*scale));target.h=Math.max(1,Math.round(start.h*scale));
+          if(textElement)target.font=Math.max(12,Math.min(240,Math.round(start.font*scale)));
+          target.x=Math.round((a.x+b.x)/2+(start.x-start.cx)*scale);
+          target.y=Math.round((a.y+b.y)/2+(start.y-start.cy)*scale);
+        }else{target.x=Math.round(p.x-drag.dx);target.y=Math.round(p.y-drag.dy);}
+        if(drag.isLayout){target.x=Math.max(0,Math.min(W,target.x));target.y=Math.max(0,Math.min(H,target.y));}
+        item.dirty=true;refresh(type);drawAll();
+      });
+      const stopDrag=event=>{
+        if(!drag||!pointers.has(event.pointerId))return;
+        const captured=[...pointers.keys()];drag=null;pointers.clear();
+        for(const id of captured)if(canvas.hasPointerCapture(id))canvas.releasePointerCapture(id);
+      };
+      canvas.addEventListener('pointerup',stopDrag);canvas.addEventListener('pointercancel',stopDrag);canvas.addEventListener('lostpointercapture',stopDrag);
       $(type+'SaveBase').addEventListener('click',()=>save(type,false));
       $(type+'RemoveBase').addEventListener('click',()=>save(type,true));
       ['X','Y','W','H','Font','Color'].forEach(field=>$(type+'Layout'+field).addEventListener('input',()=>edit(type)));
@@ -331,6 +366,10 @@ const customTemplates = (() => {
       else text(ctx,texts[key],r);
     }
     drawOverlayLevel('front');
+    if(editor){
+      const selected=item.layout[$(type+'Element').value];
+      if(selected?.visible){ctx.save();ctx.strokeStyle='#55dfff';ctx.lineWidth=4;ctx.setLineDash([12,8]);ctx.strokeRect(selected.x,selected.y,selected.w,selected.h);ctx.restore();}
+    }
     if(editor&&type==='ft'){
       const selected=pair()?.ft.overlays.find(overlay=>overlay.id===pair()?.ft.selectedOverlayId);
       if(selected){ctx.save();ctx.strokeStyle='#ffd54a';ctx.lineWidth=5;ctx.setLineDash([16,10]);ctx.strokeRect(selected.x,selected.y,selected.w,selected.h);ctx.restore();}

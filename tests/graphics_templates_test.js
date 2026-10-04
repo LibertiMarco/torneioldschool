@@ -9,9 +9,9 @@ const textCalls = [];
 const context = new Proxy({}, {get: (target,key) => target[key] || (()=>{}), set:(target,key,value)=>(target[key]=value,true)});
 context.fillText=(value,x,y)=>textCalls.push({value,x,y,color:context.fillStyle});
 function node(id) {
-  if(!nodes.has(id)) nodes.set(id, {id,value:'',listeners:{},files:[],checked:false,
+  if(!nodes.has(id)) nodes.set(id, {id,value:'',style:{},getBoundingClientRect(){return {left:0,top:0,width:540,height:675};},setPointerCapture(id){(this.captures||(this.captures=new Set())).add(id);this.capture=id;},hasPointerCapture(id){return this.captures?.has(id);},releasePointerCapture(id){this.captures.delete(id);this.capture=null;},listeners:{},files:[],checked:false,
     addEventListener(event,fn){this.listeners[event]=fn;},
-    append(option){if(!this.value)this.value=option.value;}, prepend(){},
+    replaceChildren(){this.value="";}, append(option){if(!this.value)this.value=option.value;}, prepend(){},
     querySelectorAll(){return [];}, checkValidity(){return true;}, getContext(){return context;}});
   return nodes.get(id);
 }
@@ -44,6 +44,36 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
   await templates.selectTournament('1');
   assert(templates.draw('ft'));assert.strictEqual(calls.pop(),'base-one');
   assert(templates.draw('mvp'));assert.strictEqual(calls.pop(),'mvp-one');
+  for(const [type,id] of [['ft','fulltimeCanvas'],['mvp','mvpCanvas']]){
+    const canvas=node(id),x=Number(node(type+'LayoutX').value),y=Number(node(type+'LayoutY').value);
+    const event={pointerId:7,isPrimary:true,button:0,clientX:(x+20)/2,clientY:(y+20)/2,preventDefault(){}};
+    canvas.listeners.pointerdown(event);
+    canvas.listeners.pointermove({...event,clientX:event.clientX+30,clientY:event.clientY+40});
+    assert.strictEqual(Number(node(type+'LayoutX').value),x+60,'Preview scaling');
+    assert.strictEqual(Number(node(type+'LayoutY').value),y+80);
+    canvas.listeners.pointercancel(event);
+    canvas.listeners.pointermove({...event,clientX:0,clientY:0});
+    assert.strictEqual(Number(node(type+'LayoutX').value),x+60,'Cancelled gesture');
+    assert.strictEqual(canvas.capture,null);
+    canvas.listeners.pointerdown({...event,clientX:(x+80)/2,clientY:(y+100)/2});
+    canvas.listeners.pointermove({...event,clientX:-100,clientY:-100});
+    assert.strictEqual(Number(node(type+'LayoutX').value),0);
+    assert.strictEqual(Number(node(type+'LayoutY').value),0);
+    canvas.listeners.pointerup(event);
+    const w=Number(node(type+'LayoutW').value),h=Number(node(type+'LayoutH').value);
+    const first={...event,pointerType:'touch',clientX:10,clientY:10};
+    const second={...first,pointerId:8,isPrimary:false,clientX:110};
+    canvas.listeners.pointerdown(first);canvas.listeners.pointerdown(second);
+    canvas.listeners.pointermove({...second,clientX:60});
+    assert.strictEqual(Number(node(type+'LayoutW').value),Math.round(w/2),'Pinch shrinks width');
+    assert.strictEqual(Number(node(type+'LayoutH').value),Math.round(h/2),'Pinch preserves proportions');
+    canvas.listeners.pointermove(second);
+    assert.strictEqual(Number(node(type+'LayoutW').value),w,'Pinch enlarges width');
+    canvas.listeners.pointerup(second);
+    assert.strictEqual(canvas.captures.size,0,'Both fingers released');
+
+  }
+
   node('ftBase').files=[{name:'draft-one',type:'image/png',size:20}];
   node('ftBase').listeners.change();await tick();
   await templates.selectTournament('2');
