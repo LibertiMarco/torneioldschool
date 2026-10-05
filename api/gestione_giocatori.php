@@ -930,7 +930,6 @@ $goalExtraTeamMapJson = htmlspecialchars(
 <?php endif; ?>
 <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
 <h1 class="admin-title">Gestione Giocatori</h1>
-<a class="btn-primary" href="/api/import_giocatori.php">IMPORT GIOCATORI</a>
 <?php if (isset($_SESSION['remove_assoc_result'])):
     $result = $_SESSION['remove_assoc_result'];
     unset($_SESSION['remove_assoc_result']); ?>
@@ -969,6 +968,7 @@ $goalExtraTeamMapJson = htmlspecialchars(
     <label for="azione">Seleziona azione:</label>
         <select id="azione" class="operation-picker">
           <option value="crea" <?php if(($currentAction ?? 'crea') === 'crea') echo 'selected'; ?>>Aggiungi Giocatore</option>
+          <option value="import">IMPORT GIOCATORI</option>
           <option value="associazioni" <?php if(($currentAction ?? '') === 'associazioni') echo 'selected'; ?>>Associazione Calciatore-Squadra</option>
           <option value="gol_extra" <?php if(($currentAction ?? '') === 'gol_extra') echo 'selected'; ?>>Gol Extra Admin</option>
           <option value="modifica" <?php if(($currentAction ?? '') === 'modifica') echo 'selected'; ?>>Modifica Giocatore</option>
@@ -1435,6 +1435,10 @@ const goalExtraDeletedAlert = document.getElementById('goalExtraDeletedAlert');
 const goalExtraErrorAlert = document.getElementById('goalExtraErrorAlert');
 
 function mostraSezione(val) {
+    if (val === 'import') {
+        window.location.assign('/api/import_giocatori.php');
+        return;
+    }
     [formCrea, formModifica, formElimina, formAssociazioni, formGolExtra].forEach(f => f && f.classList.add('hidden'));
     if (val === 'crea' && formCrea) formCrea.classList.remove('hidden');
     if (val === 'modifica' && formModifica) formModifica.classList.remove('hidden');

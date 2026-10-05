@@ -1,0 +1,71 @@
+.players-import {
+    margin: 0;
+    padding: 36px 24px 64px;
+    background: #f3f6fa;
+    color: #15293e;
+    font-family: Arial, sans-serif;
+    line-height: 1.5;
+}
+.players-import *, .players-import *::before, .players-import *::after { box-sizing: border-box; }
+.players-import main { width: 100%; max-width: 1120px; margin: 0 auto; }
+.players-import .import-header { margin-bottom: 28px; }
+.players-import .import-back { display: inline-block; color: #53657a; font-size: 14px; font-weight: 600; text-decoration: none; margin-bottom: 26px; }
+.players-import .import-back:hover { color: #c1121f; }
+.players-import .import-eyebrow { margin: 0 0 6px; color: #c1121f; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.players-import h1 { margin: 0; font-size: clamp(28px, 4vw, 40px); line-height: 1.2; letter-spacing: -.035em; }
+.players-import h2 { font-size: 22px; line-height: 1.35; margin: 30px 0 10px; }
+.players-import .import-intro { margin: 12px 0 24px; color: #64748b; }
+.players-import .import-steps { display: flex; flex-wrap: wrap; gap: 12px 32px; padding: 0; margin: 0; list-style: none; }
+.players-import .import-steps li { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
+.players-import .import-steps span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #e5ebf3; color: #15293e; font-size: 12px; }
+.players-import .import-form { display: block; width: 100%; max-width: none; margin: 20px 0 32px; padding: 28px; background: #fff; border: 1px solid #e1e7ef; border-radius: 16px; box-shadow: 0 8px 28px #15293e06; }
+.players-import .import-team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid #e8edf4; }
+.players-import label { display: block; margin: 0 0 18px; color: #15293e; font-size: 14px; font-weight: 600; }
+.players-import .import-team-grid label { margin: 0; }
+.players-import input, .players-import select, .players-import textarea, .players-import button { font: inherit; }
+.players-import select, .players-import input[type="text"], .players-import textarea { display: block; width: 100%; margin-top: 8px; padding: 12px 14px; border: 1px solid #d5deea; border-radius: 9px; color: #15293e; background: #fff; font-size: 14px; font-weight: 400; transition: border-color .15s, box-shadow .15s; }
+.players-import select { min-height: 46px; cursor: pointer; }
+.players-import textarea { min-height: 190px; resize: vertical; line-height: 1.7; }
+.players-import textarea::placeholder { color: #94a3b8; }
+.players-import input:focus-visible, .players-import select:focus-visible, .players-import textarea:focus-visible { outline: 0; border-color: #375d88; box-shadow: 0 0 0 3px #375d881c; }
+.players-import fieldset { min-width: 0; padding: 0; border: 0; }
+.players-import legend { float: left; width: 100%; padding: 0; margin-bottom: 16px; font-size: 19px; font-weight: 700; }
+.players-import legend + * { clear: both; }
+.players-import .import-upload { padding: 24px; text-align: center; border: 1.5px dashed #bdcadb; border-radius: 12px; background: #f8fafd; }
+.players-import .import-upload-title { display: block; font-size: 16px; }
+.players-import .import-hint { display: block; margin-top: 6px; color: #64748b; font-size: 13px; font-weight: 400; line-height: 1.6; }
+.players-import input[type="file"] { display: block; width: 100%; max-width: 440px; margin: 18px auto 0; color: #64748b; font-size: 13px; }
+.players-import input[type="file"]::file-selector-button { margin-right: 12px; padding: 9px 14px; border: 1px solid #cad5e3; border-radius: 7px; background: #fff; color: #15293e; font-weight: 600; cursor: pointer; }
+.players-import #image-preview { display: block; max-width: 100%; max-height: 380px; margin: 16px auto; border: 1px solid #e1e7ef; border-radius: 10px; object-fit: contain; }
+.players-import [hidden] { display: none !important; }
+.players-import button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 11px 20px; border: 1px solid #15293e; border-radius: 9px; background: #15293e; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; }
+.players-import button:hover:not(:disabled) { background: #244665; }
+.players-import button:focus-visible, .players-import .import-back:focus-visible { outline: 3px solid #91b3dd; outline-offset: 3px; }
+.players-import button:disabled, .players-import select:disabled { cursor: not-allowed; opacity: .5; }
+.players-import fieldset:disabled .import-upload { opacity: .55; }
+.players-import .import-secondary, .players-import #ocr { background: #fff; color: #15293e; border-color: #cad5e3; }
+.players-import .import-secondary:hover:not(:disabled), .players-import #ocr:hover:not(:disabled) { background: #edf2f8; }
+.players-import #ocr-status { min-height: 24px; margin: 12px 0 20px; font-size: 13px; color: #53657a; }
+.players-import .import-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; padding-top: 22px; margin-top: 22px; border-top: 1px solid #e8edf4; }
+.players-import .import-alert { margin: 20px 0; padding: 20px 24px; border: 1px solid #c9ddcf; border-radius: 12px; background: #f0f8f3; }
+.players-import .import-alert h2 { margin: 0 0 12px; font-size: 20px; }
+.players-import .import-alert ul { margin: 0; padding-left: 20px; line-height: 1.9; }
+.players-import .import-alert[role="alert"] { color: #9d2633; background: #fff2f3; border-color: #edcdd2; }
+.players-import .table-wrap { overflow-x: auto; border: 1px solid #e1e7ef; border-radius: 10px; }
+.players-import table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.players-import th { padding: 14px 12px; background: #f3f6fa; color: #53657a; font-size: 12px; font-weight: 700; text-align: left; white-space: nowrap; }
+.players-import td { padding: 14px 12px; border-top: 1px solid #e8edf4; vertical-align: middle; }
+.players-import tbody tr:hover { background: #fafcff; }
+.players-import td input[type="text"] { min-width: 130px; margin: 0; padding: 9px 10px; }
+.players-import td input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: #15293e; cursor: pointer; }
+.players-import td strong { display: block; min-width: 220px; color: #a16a14; font-size: 12px; }
+.players-import td select { min-width: 240px; max-width: 340px; }
+@media (max-width: 640px) {
+    .players-import { padding: 22px 14px 40px; }
+    .players-import .import-form { padding: 18px; border-radius: 12px; }
+    .players-import .import-team-grid { grid-template-columns: 1fr; gap: 16px; }
+    .players-import .import-steps { gap: 12px; flex-direction: column; }
+    .players-import .import-upload { padding: 18px 12px; }
+    .players-import .import-actions { flex-direction: column; }
+    .players-import .import-actions button { width: 100%; }
+}
