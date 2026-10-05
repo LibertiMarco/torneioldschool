@@ -3,6 +3,13 @@ class Giocatore {
     private $conn;
     private $table = "giocatori";
 
+    public static function formattaNome(string $value): string {
+        $value = trim(preg_replace('/\s+/u', ' ', $value));
+        return function_exists('mb_convert_case')
+            ? mb_convert_case($value, MB_CASE_TITLE, 'UTF-8')
+            : ucwords(strtolower($value), " \t\r\n\f\v-'");
+    }
+
     public function __construct(?mysqli $connection = null) {
         if ($connection) { $this->conn = $connection; return; }
         require __DIR__ . '/../../includi/db.php';
@@ -47,6 +54,8 @@ class Giocatore {
 
     // ✅ CREA GIOCATORE
     public function crea($nome, $cognome, $ruolo, $presenze, $reti, $gialli, $rossi, $media_voti, $foto) {
+        $nome = self::formattaNome($nome);
+        $cognome = self::formattaNome($cognome);
         $stmt = $this->conn->prepare("
             INSERT INTO {$this->table}
             (nome, cognome, ruolo, presenze, reti, gialli, rossi, media_voti, foto)
