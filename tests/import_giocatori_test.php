@@ -19,6 +19,19 @@ expect_import(import_player_key(' MARIO ', 'ROSSI') === import_player_key('Mario
 expect_import(import_player_key('Nicolò', 'Dè  Luca') === import_player_key('NICOLÒ', 'DÈ Luca'), 'Unicode');
 $index = import_player_index([['id'=>1, 'nome'=>'Mario', 'cognome'=>'Rossi'], ['id'=>2, 'nome'=>' MARIO ', 'cognome'=>'ROSSI']]);
 expect_import(count($index[import_player_key('Mario','Rossi')]) === 2, 'Omonimi preservati');
+$suggestionIndex = import_player_index([
+    ['id' => 1, 'nome' => 'Mario', 'cognome' => 'Iannicelli'],
+    ['id' => 2, 'nome' => 'Mario', 'cognome' => 'Iannicelli'],
+    ['id' => 3, 'nome' => 'Luca', 'cognome' => 'Iannicelli'],
+    ['id' => 4, 'nome' => 'Mario', 'cognome' => 'Bianchi'],
+]);
+$suggestions = import_player_suggestions('Mario', 'Ignicelli', $suggestionIndex);
+expect_import(count($suggestions) === 1 && $suggestions[0]['cognome'] === 'Iannicelli', 'Ignicelli suggerisce Iannicelli con lo stesso nome, senza duplicare gli omonimi');
+expect_import(!isset($suggestionIndex[import_player_key('Mario', 'Ignicelli')]), 'Una somiglianza non diventa una corrispondenza esatta');
+expect_import(import_player_suggestions('Paolo', 'Ignicelli', $suggestionIndex) === [], 'Nessuna proposta quando entrambi i campi differiscono');
+expect_import(import_player_suggestions('Mario', 'Verdi', $suggestionIndex) === [], 'Nessuna proposta per un cognome diverso');
+expect_import(import_player_distance('Nicolò', 'NICOLO') === 1, 'Distanza Unicode corretta');
+expect_import(import_player_suggestions('Li', 'Wu', import_player_index([['id' => 1, 'nome' => 'Li', 'cognome' => 'Xu']])) === [], 'Nomi corti senza suggerimenti troppo generici');
 echo "OK: parser, ruoli, normalizzazione, omonimie\n";
 if (in_array('--database', $argv, true)) {
     require __DIR__ . '/../includi/db.php';

@@ -60,6 +60,13 @@
 .players-import td input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: #15293e; cursor: pointer; }
 .players-import td strong { display: block; min-width: 220px; color: #a16a14; font-size: 12px; }
 .players-import td select { min-width: 240px; max-width: 340px; }
+.players-import .import-ocr-option { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+.players-import .import-ocr-option input { width: 18px; height: 18px; accent-color: #15293e; }
+.players-import .import-suggestions { min-width: 230px; padding: 12px; background: #fff8eb; border: 1px solid #f0ddb6; border-radius: 8px; }
+.players-import .import-suggestion { display: block; margin: 8px 0; min-height: 34px; padding: 6px 10px; background: white; color: #15293e; border-color: #dac9a7; font-size: 12px; text-align: left; }
+.players-import .import-suggestion:hover:not(:disabled) { background: #f4ead7; }
+.players-import .import-suggestions label { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0 0; font-size: 12px; font-weight: 400; }
+.players-import .import-suggestions input { flex: 0 0 auto; }
 @media (max-width: 640px) {
     .players-import { padding: 22px 14px 40px; }
     .players-import .import-form { padding: 18px; border-radius: 12px; }
