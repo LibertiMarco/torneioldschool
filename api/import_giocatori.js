@@ -1,3 +1,4 @@
+(() => {
 const tournament = document.getElementById('torneo');
 const team = document.getElementById('team');
 const controls = document.getElementById('image-controls');
@@ -114,3 +115,5 @@ ocrButton.addEventListener('click', async () => {
         try { if (worker) await worker.terminate(); } finally { ocrButton.disabled = false; }
     }
 });
+
+})();

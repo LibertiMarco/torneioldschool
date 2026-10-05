@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/api_cache.php';
@@ -9,6 +9,7 @@ require_once __DIR__ . '/crud/Squadra.php';
 require_once __DIR__ . '/crud/SquadraGiocatore.php';
 require_once __DIR__ . '/crud/torneo.php';
 require_once __DIR__ . '/../includi/image_optimizer.php';
+require_once __DIR__ . '/../includi/import_giocatori_panel.php';
 $giocatore = new Giocatore();
 $squadraModel = new Squadra();
 $pivot = new SquadraGiocatore();
@@ -77,7 +78,12 @@ $currentAssocOp = isset($_GET['assoc_op']) ? trim($_GET['assoc_op']) : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = $_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-    if (!csrf_is_valid($token, 'admin_giocatori')) {
+    $csrfScope = $currentAction === 'import' ? 'import_giocatori' : 'admin_giocatori';
+    if (!csrf_is_valid($token, $csrfScope)) {
+        if ($currentAction === 'import') {
+            http_response_code(400);
+            exit('Sessione scaduta: ricarica Gestione Giocatori e riprova.');
+        }
         if (!tos_request_is_same_origin()) {
             http_response_code(400);
             exit('Richiesta non autorizzata.');
@@ -89,8 +95,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+ob_start();
+render_import_giocatori_panel($conn, $adminSection);
+$importPanelHtml = ob_get_clean();
+
 // Azzera tutte le statistiche globali e per squadra
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['azzera_totali'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $currentAction !== 'import' && isset($_POST['azzera_totali'])) {
     $okReset = $giocatore->azzeraStatisticheTotali();
     $redirectParams = $okReset ? ['reset_stats' => 1] : ['reset_stats_err' => 1];
     redirectGestione($currentAction, $redirectParams);
@@ -327,7 +337,7 @@ if (!empty($torneiStatusBySlug)) {
 }
 
 // --- CREA ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $currentAction !== 'import' && isset($_POST['crea'])) {
     $nome = trim($_POST['nome']);
     $cognome = trim($_POST['cognome']);
     if ($giocatore->esistePerNomeCognome($nome, $cognome)) {
@@ -350,7 +360,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
 }
 
 // --- AGGIORNA ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $currentAction !== 'import' && isset($_POST['aggiorna'])) {
     $id = (int)$_POST['id'];
     $record = $giocatore->getById($id);
     if (!$record) {
@@ -386,7 +396,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
 }
 
 // --- ASSOCIA GIOCATORE A SQUADRA ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['associa_squadra'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $currentAction !== 'import' && isset($_POST['associa_squadra'])) {
     $squadraAssoc = (int)($_POST['squadra_associa'] ?? 0);
     $giocatoriAssocRaw = $_POST['giocatore_associa'] ?? [];
     $giocatoriAssoc = array_filter(array_map('intval', (array)$giocatoriAssocRaw));
@@ -441,7 +451,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['associa_squadra'])) {
     redirectGestione('associazioni', ['assoc_op' => 'aggiungi']);
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['modifica_associazione'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $currentAction !== 'import' && isset($_POST['modifica_associazione'])) {
     $giocatoreAssoc = (int)($_POST['mod_assoc_giocatore'] ?? 0);
     $squadraAssoc = (int)($_POST['mod_assoc_squadra'] ?? 0);
     if ($giocatoreAssoc && $squadraAssoc) {
@@ -471,7 +481,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['modifica_associazione
     }
 
 // --- DISSOCIA ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dissocia_squadra'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $currentAction !== 'import' && isset($_POST['dissocia_squadra'])) {
     $ids = $_POST['giocatori_rimozione'] ?? [$_POST['giocatore_rimozione'] ?? $_POST['giocatore_rimozione_hidden'] ?? 0];
     $ids = is_array($ids) ? array_unique(array_filter($ids, static function ($id) {
         return is_scalar($id) && filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false;
@@ -499,7 +509,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['dissocia_squadra'])) 
     redirectGestione('associazioni', ['assoc_op' => 'rimuovi']);
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiungi_goal_extra'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $currentAction !== 'import' && isset($_POST['aggiungi_goal_extra'])) {
     $giocatoreExtraId = (int)($_POST['goal_extra_giocatore'] ?? 0);
     $squadraExtraId = (int)($_POST['goal_extra_squadra'] ?? 0);
     $goalExtraValue = max(0, (int)($_POST['goal_extra_valore'] ?? 0));
@@ -539,7 +549,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiungi_goal_extra']
     redirectGestione('gol_extra', ['goal_extra_saved' => 1]);
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['elimina_goal_extra'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $currentAction !== 'import' && isset($_POST['elimina_goal_extra'])) {
     $goalExtraEntryId = (int)($_POST['goal_extra_id'] ?? 0);
     $deletedGoalExtra = giocatore_goal_extra_delete($conn, $goalExtraEntryId);
 
@@ -561,7 +571,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['elimina_goal_extra'])
 }
 
 // --- ELIMINA ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['elimina'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $currentAction !== 'import' && isset($_POST['elimina'])) {
     $idElimina = (int)$_POST['elimina'];
     $recordElimina = $giocatore->getById($idElimina);
     if ($giocatore->elimina($idElimina) && $recordElimina && isset($recordElimina['foto'])) {
@@ -643,6 +653,7 @@ $goalExtraTeamMapJson = htmlspecialchars(
     <meta name="robots" content="noindex, nofollow">
     <title>Gestione Giocatori</title>
     <link rel="stylesheet" href="/style.min.css?v=20251126">
+    <link rel="stylesheet" href="/api/import_giocatori.css?v=4">
     <link rel="icon" type="image/png" href="/img/logo_old_school.png">
     <link rel="apple-touch-icon" href="/img/logo_old_school.png">
     <style>
@@ -968,7 +979,7 @@ $goalExtraTeamMapJson = htmlspecialchars(
     <label for="azione">Seleziona azione:</label>
         <select id="azione" class="operation-picker">
           <option value="crea" <?php if(($currentAction ?? 'crea') === 'crea') echo 'selected'; ?>>Aggiungi Giocatore</option>
-          <option value="import">IMPORT GIOCATORI</option>
+          <option value="import" <?php if(($currentAction ?? '') === 'import') echo 'selected'; ?>>IMPORT GIOCATORI</option>
           <option value="associazioni" <?php if(($currentAction ?? '') === 'associazioni') echo 'selected'; ?>>Associazione Calciatore-Squadra</option>
           <option value="gol_extra" <?php if(($currentAction ?? '') === 'gol_extra') echo 'selected'; ?>>Gol Extra Admin</option>
           <option value="modifica" <?php if(($currentAction ?? '') === 'modifica') echo 'selected'; ?>>Modifica Giocatore</option>
@@ -977,6 +988,7 @@ $goalExtraTeamMapJson = htmlspecialchars(
       </div>
 <input type="hidden" id="currentAction" value="<?= htmlspecialchars($currentAction) ?>">
 <input type="hidden" id="assocOpParam" value="<?= htmlspecialchars($currentAssocOp) ?>">
+<?= $importPanelHtml ?>
 
 <!-- ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FORM CREA -->
 <form method="POST" class="admin-form form-crea" enctype="multipart/form-data">
@@ -1428,6 +1440,7 @@ const formModifica = document.querySelector('.form-modifica');
 const formElimina = document.querySelector('.form-elimina');
 const formAssociazioni = document.querySelector('.form-associazioni');
 const formGolExtra = document.querySelector('.form-gol-extra');
+const formImport = document.querySelector('.form-import');
 const duplicateAlert = document.getElementById('duplicateAlert');
 const assocAlert = document.getElementById('assocAlert');
 const goalExtraSavedAlert = document.getElementById('goalExtraSavedAlert');
@@ -1435,11 +1448,8 @@ const goalExtraDeletedAlert = document.getElementById('goalExtraDeletedAlert');
 const goalExtraErrorAlert = document.getElementById('goalExtraErrorAlert');
 
 function mostraSezione(val) {
-    if (val === 'import') {
-        window.location.assign('/api/import_giocatori.php');
-        return;
-    }
-    [formCrea, formModifica, formElimina, formAssociazioni, formGolExtra].forEach(f => f && f.classList.add('hidden'));
+    [formCrea, formModifica, formElimina, formAssociazioni, formGolExtra, formImport].forEach(f => f && f.classList.add('hidden'));
+    if (val === 'import' && formImport) formImport.classList.remove('hidden');
     if (val === 'crea' && formCrea) formCrea.classList.remove('hidden');
     if (val === 'modifica' && formModifica) formModifica.classList.remove('hidden');
     if (val === 'elimina' && formElimina) formElimina.classList.remove('hidden');
