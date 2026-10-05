@@ -4,6 +4,7 @@ window.MatchdayRenderer = (() => {
   // Competition-inspired accents; the paper and match rows always stay white.
   // Specific aliases precede the generic "Liga" name to avoid collisions.
   const palettes = [
+    {competition: 'brasileirao', aliases: ['brasileirao', 'brasilerao', 'campeonatobrasileiro', 'brasileiro', 'brazilianleague'], primary: '#008447', secondary: '#ffdf00', accent: '#008447'},
     {aliases: ['coppaitalia', 'supercoppaitaliana'], primary: '#008447', secondary: '#e30724', accent: '#e30724'},
     {aliases: ['eredivisie'], primary: '#003bdb', secondary: '#071b41', accent: '#e83e52'},
     {aliases: ['premierleague', 'premiership'], primary: '#37003c', secondary: '#00ff85', accent: '#37003c'},
@@ -211,5 +212,5 @@ window.MatchdayRenderer = (() => {
     text(ctx, 'TORNEIOLDSCHOOL.IT', 540, height - 23, 900, 16, '#40586a', 'center', 'Arial, sans-serif');
     return canvas;
   }
-  return {drawTournament};
+  return {drawTournament, tournamentTheme};
 })();
