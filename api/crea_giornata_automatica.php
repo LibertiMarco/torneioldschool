@@ -573,6 +573,38 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         line-height: 1.25;
       }
     }
+
+    .auto-card { background:#fff; box-shadow:none; }
+    .auto-card h2 { font-size:1.15rem; }
+    .auto-btn { min-height:44px; }
+    .auto-team-item:has(input:checked), .auto-weekday-option:has(input:checked) { background:#edf6ff; border-color:#4583b7; }
+    summary:focus-visible { outline:3px solid #4583b7; outline-offset:3px; }
+    .auto-availability-team { padding:0; }
+    .auto-availability-team summary { display:flex; align-items:center; gap:12px; cursor:pointer; padding:16px; min-height:52px; }
+    .auto-availability-team summary::before { content:'+'; font-size:20px; color:#4583b7; }
+    .auto-availability-team[open] summary::before { content:'-'; }
+    .auto-availability-summary { margin-left:auto; color:#526477; font-size:.85rem; text-align:right; }
+    .auto-availability-rows { padding:16px; }
+    #dataCard summary { cursor:pointer; font-weight:700; color:#15293e; }
+    #actionsCard { position:sticky; bottom:12px; z-index:10; display:flex; align-items:center; justify-content:space-between; gap:16px; box-shadow:0 6px 22px #15293e20; }
+    #actionsCard.auto-hidden { display:none; }
+    #generationSummary { line-height:1.5; color:#344b60; font-size:.9rem; }
+    #previewCard { scroll-margin-top:110px; }
+    @media(max-width:700px) {
+      .auto-matchday-container { padding:18px 12px; }
+      .auto-card { padding:16px; }
+      #actionsCard { flex-direction:column; align-items:stretch; bottom:8px; padding:12px; gap:8px; }
+      #actionsCard .auto-actions, #generatePreviewBtn { width:100%; }
+      .auto-availability-team summary { flex-wrap:wrap; gap:8px; }
+      .auto-availability-summary { flex-basis:100%; text-align:left; margin-left:22px; }
+      .auto-preview-table { min-width:0; width:100%; }
+      .auto-preview-table thead { display:none; }
+      .auto-preview-table tr[data-row-index] { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:14px 0; border-bottom:2px solid #dbe5ee; }
+      .auto-preview-table tr[data-row-index] td { display:block; padding:0; border:0; min-width:0; }
+      .auto-preview-table td[data-label]::before { content:attr(data-label); display:block; font-size:.8rem; font-weight:700; margin-bottom:5px; color:#526477; }
+      .auto-preview-table td:nth-child(7), .auto-preview-table td:nth-child(8) { grid-column:1 / -1; }
+      .auto-preview-table input, .auto-preview-table select { width:100%; min-width:0; min-height:44px; }
+    }
   </style>
 </head>
 <body>
@@ -589,7 +621,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
 
     <div class="auto-grid">
       <section class="auto-card auto-card--wide">
-        <h2>Configurazione</h2>
+        <h2>1. Scegli il torneo</h2>
         <div class="auto-form-grid">
           <div class="auto-form-group">
             <label for="tournamentSelect">Torneo</label>
@@ -621,8 +653,8 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       <section class="auto-card auto-card--half auto-hidden" id="teamsCard">
         <div class="auto-team-toolbar">
           <div>
-            <h2>Squadre coinvolte</h2>
-            <p style="margin: 6px 0 0;">Solo le squadre selezionate verranno considerate nella generazione automatica.</p>
+            <h2>Squadre che giocano</h2>
+            <p style="margin: 6px 0 0;">Tutte le squadre selezionate devono giocare una volta. Seleziona un numero pari di partecipanti.</p>
           </div>
           <div class="auto-actions">
             <button type="button" class="auto-btn auto-btn-secondary" id="selectAllTeamsBtn">Seleziona tutte</button>
@@ -635,7 +667,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       <section class="auto-card auto-card--half auto-hidden" id="slotsCard">
         <div class="auto-slot-toolbar">
           <div>
-            <h2>Slot disponibili</h2>
+            <h2>2. Aggiungi gli orari</h2>
             <p style="margin: 6px 0 0;">Seleziona data, ora, campo e capienza, poi aggiungi lo slot alla lista.</p>
           </div>
         </div>
@@ -659,7 +691,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
             </div>
           </div>
           <div class="auto-slot-editor-actions">
-            <button type="button" class="auto-btn auto-btn-secondary" id="addSlotBtn">Aggiungi slot selezionato</button>
+            <button type="button" class="auto-btn auto-btn-secondary" id="addSlotBtn">Aggiungi orario</button>
           </div>
         </div>
         <div id="slotList" class="auto-slot-list"></div>
@@ -668,14 +700,15 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       <section class="auto-card auto-hidden" id="availabilityCard">
         <div class="auto-slot-toolbar">
           <div>
-            <h2>Disponibilità opzionali per squadra</h2>
+            <h2>Disponibilità delle squadre</h2>
+            <p>Apri solo le squadre con vincoli. Senza selezioni, possono giocare in qualsiasi slot. Giorni e orari selezionati sono obbligatori; gli orari preferiti sono facoltativi.</p>
           </div>
         </div>
         <div id="availabilityList" class="auto-availability-list"></div>
       </section>
 
       <section class="auto-card auto-hidden" id="dataCard">
-        <h2>Dati regular season già presenti</h2>
+        <details><summary>Consulta la classifica attuale</summary>
         <div class="auto-grid">
           <div class="auto-card auto-card--wide" style="padding:0;">
             <div style="padding:22px 22px 12px;">
@@ -684,22 +717,24 @@ require_once __DIR__ . '/../includi/admin_guard.php';
             <div class="auto-table-wrap" id="classificaWrap"></div>
           </div>
         </div>
+        </details>
       </section>
 
       <section class="auto-card auto-hidden" id="actionsCard">
+        <div id="generationSummary" role="status" aria-live="polite"></div>
         <div class="auto-actions">
-          <button type="button" class="auto-btn auto-btn-primary" id="generatePreviewBtn">Genera preview</button>
+          <button type="button" class="auto-btn auto-btn-primary" id="generatePreviewBtn">Trova le partite</button>
         </div>
       </section>
 
       <section class="auto-card auto-hidden" id="previewCard">
         <div class="auto-preview-toolbar">
           <div>
-            <h2>Preview partite</h2>
+            <h2>3. Controlla e conferma</h2>
             <p style="margin: 6px 0 0;">Puoi modificare manualmente casa, ospite, data, ora e campo. Ogni cambio viene rivalidato.</p>
           </div>
           <div class="auto-actions">
-            <button type="button" class="auto-btn auto-btn-secondary" id="revalidatePreviewBtn">Rivalida preview</button>
+            <button type="button" class="auto-btn auto-btn-secondary" id="revalidatePreviewBtn">Ricontrolla</button>
             <button type="button" class="auto-btn auto-btn-primary" id="createMatchesBtn" disabled>Crea partite</button>
           </div>
         </div>
@@ -846,6 +881,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         snapshot[teamId].push({
           dates,
           times,
+          preferred_times: Array.from(row.querySelectorAll('[data-role="preferred-time-option"]:checked')).map(input => input.value).filter(Boolean),
         });
       });
     });
@@ -1103,15 +1139,18 @@ require_once __DIR__ . '/../includi/admin_guard.php';
   function mergeAvailabilityRules(rules = []) {
     const mergedDates = new Set();
     const mergedTimes = new Set();
+    const preferredTimes = new Set();
 
     (Array.isArray(rules) ? rules : []).forEach(rule => {
       normalizeAvailabilityDates(rule).forEach(date => mergedDates.add(date));
       normalizeAvailabilityTimes(rule).forEach(time => mergedTimes.add(time));
+      (rule.preferred_times || []).forEach(time => preferredTimes.add(time));
     });
 
     return {
       dates: Array.from(mergedDates),
       times: Array.from(mergedTimes),
+      preferred_times: Array.from(preferredTimes),
     };
   }
 
@@ -1179,6 +1218,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
   }
 
   function addAvailabilityRow(container, rule = {}) {
+    const preferredTimes = new Set(rule.preferred_times || []);
     const selectedDates = new Set(normalizeAvailabilityDates(rule));
     const dateOptions = availableSlotDateOptions();
     const selectedTimes = new Set(normalizeAvailabilityTimes(rule));
@@ -1187,7 +1227,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     row.className = 'auto-availability-row';
     row.innerHTML = `
       <div class="auto-form-group">
-        <label>Giorni</label>
+        <label>Giorni disponibili (obbligatori)</label>
         <div class="auto-weekday-picker">
           ${dateOptions.length
             ? dateOptions.map(option => `
@@ -1200,7 +1240,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         </div>
       </div>
       <div class="auto-form-group">
-        <label>Orari</label>
+        <label>Orari disponibili (obbligatori)</label>
         <div class="auto-weekday-picker">
           ${timeOptions.length
             ? timeOptions.map(option => `
@@ -1213,6 +1253,11 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         </div>
       </div>
     `;
+    const preferences = document.createElement('div');
+    preferences.className = 'auto-form-group';
+    preferences.style.gridColumn = '1 / -1';
+    preferences.innerHTML = `<label>Orari preferiti (facoltativi)</label><div class="auto-weekday-picker">${timeOptions.map(option => `<label class="auto-weekday-option"><input type="checkbox" data-role="preferred-time-option" value="${escapeAttr(option.value)}" ${preferredTimes.has(option.value) ? 'checked' : ''}><span>${escapeHtml(option.label)}</span></label>`).join('')}</div>`;
+    row.appendChild(preferences);
     container.appendChild(row);
   }
 
@@ -1220,6 +1265,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     const selected = selectedTeamIds();
     const teams = teamMap();
     const snapshot = snapshotAvailabilityFromDom();
+    const opened = new Set(Array.from(els.availabilityList.querySelectorAll('details[open]')).map(block => block.dataset.teamId));
     state.selectedTeams = selected;
 
     els.availabilityList.innerHTML = selected.length
@@ -1232,15 +1278,12 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         return;
       }
 
-      const block = document.createElement('section');
+      const block = document.createElement('details');
       block.className = 'auto-availability-team';
+      block.open = opened.has(String(teamId));
       block.dataset.teamId = String(teamId);
       block.innerHTML = `
-        <header>
-          <div>
-            <h4>${escapeHtml(team.nome)}</h4>
-          </div>
-        </header>
+        <summary><strong>${escapeHtml(team.nome)}</strong><span class="auto-availability-summary"></span></summary>
         <div class="auto-availability-rows"></div>
       `;
 
@@ -1252,6 +1295,27 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     });
 
     els.availabilityCard.classList.toggle('auto-hidden', !selected.length);
+    updateCompactSummary();
+  }
+
+  function updateCompactSummary() {
+    els.availabilityList.querySelectorAll('.auto-availability-team').forEach(block => {
+      const chosen = role => Array.from(block.querySelectorAll('input[data-role="' + role + '"]:checked'));
+      const dates = chosen('availability-date-option');
+      const times = chosen('availability-time-option');
+      const preferred = chosen('preferred-time-option');
+      const parts = [];
+      if (dates.length) parts.push(dates.length + ' giorni');
+      if (times.length) parts.push(times.map(input => input.value.slice(0, 5)).join(', '));
+      if (!parts.length) parts.push('Qualsiasi slot');
+      if (preferred.length) parts.push('Preferisce ' + preferred.map(input => input.value.slice(0, 5)).join(', '));
+      block.querySelector('.auto-availability-summary').textContent = parts.join(' / ');
+    });
+    const count = selectedTeamIds().length;
+    const capacity = state.slots.reduce((sum, slot) => sum + Number(slot.quantita || 1), 0);
+    const matches = Math.floor(count / 2);
+    const hint = count < 2 ? 'Seleziona almeno 2 squadre.' : count % 2 ? 'Seleziona un numero pari di squadre.' : capacity < matches ? 'Aggiungi ancora ' + (matches - capacity) + ' posti partita.' : 'Disponibilità e slot occupati saranno verificati.';
+    document.getElementById('generationSummary').textContent = count + ' squadre / ' + matches + ' partite / ' + capacity + ' posti negli slot inseriti. ' + hint;
   }
 
   function renderClassifica() {
@@ -1316,26 +1380,26 @@ require_once __DIR__ . '/../includi/admin_guard.php';
 
     els.previewTableBody.innerHTML = rows.map((row, index) => `
       <tr data-row-index="${index}">
-        <td>
+        <td data-label="Casa">
           <select data-field="home_team_id">${previewTeamOptions(row.home_team_id)}</select>
         </td>
-        <td>
+        <td data-label="Ospite">
           <select data-field="away_team_id">${previewTeamOptions(row.away_team_id)}</select>
         </td>
-        <td>
+        <td data-label="Data">
           <input type="date" data-field="data" value="${escapeAttr(row.data || '')}">
         </td>
-        <td>
+        <td data-label="Ora">
           <input type="time" data-field="ora" value="${escapeAttr((row.ora || '').slice(0, 5))}">
         </td>
-        <td>
+        <td data-label="Campo">
           <select data-field="campo" ${availableFields().length ? '' : 'disabled'}>
             ${fieldSelectOptions(row.campo || '')}
           </select>
         </td>
-        <td>${row.giornata ?? ''}</td>
-        <td>Regular season</td>
-        <td>
+        <td data-label="Giornata">${row.giornata ?? ''}</td>
+        <td data-label="Fase">Regular season</td>
+        <td data-label="Avvisi">
           <div class="auto-preview-notes">
             ${(row.warnings || []).map(note => `<span class="auto-note auto-note--warn">${escapeHtml(note)}</span>`).join('')}
             ${(row.errors || []).map(note => `<span class="auto-note auto-note--error">${escapeHtml(note)}</span>`).join('')}
@@ -1390,6 +1454,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     renderPreviewMessages(previewAlertPayload(data));
     els.previewCard.classList.remove('auto-hidden');
     els.createMatchesBtn.disabled = !data.valid || !(data.rows || []).length;
+    els.createMatchesBtn.textContent = 'Conferma e crea ' + (data.rows || []).length + ' partite';
   }
 
   async function loadTournaments() {
@@ -1451,17 +1516,26 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       renderAlerts([{ type: 'error', text: 'Seleziona un torneo prima di generare la preview.' }]);
       return;
     }
+    if (payload.selected_team_ids.length < 2 || payload.selected_team_ids.length % 2 !== 0) {
+      renderAlerts([{ type: 'error', text: 'Seleziona un numero pari di squadre: tutte devono giocare una volta.' }]);
+      return;
+    }
 
-    renderAlerts([{ type: 'info', text: 'Generazione preview in corso...' }]);
+    els.generatePreviewBtn.disabled = true;
+    els.createMatchesBtn.disabled = true;
+    renderAlerts([{ type: 'info', text: 'Ricerca della giornata completa migliore per disponibilità e preferenze...' }]);
     try {
       const data = await apiRequest('preview', {
         method: 'POST',
         body: payload,
       });
       renderPreviewData(data);
+      els.previewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
       renderAlerts([{ type: data.valid ? 'success' : 'error', text: data.valid ? 'Preview generata correttamente.' : 'Preview generata con avvisi o errori da correggere.' }]);
     } catch (error) {
       renderAlerts([{ type: 'error', text: error.message }]);
+    } finally {
+      els.generatePreviewBtn.disabled = false;
     }
   }
 
@@ -1534,6 +1608,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       input.checked = true;
     });
     renderAvailability();
+    if (state.preview) schedulePreviewValidation();
   });
 
   els.clearTeamsBtn.addEventListener('click', () => {
@@ -1541,6 +1616,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       input.checked = false;
     });
     renderAvailability();
+    if (state.preview) schedulePreviewValidation();
   });
 
   els.teamsList.addEventListener('change', event => {
@@ -1570,6 +1646,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
   });
 
   els.availabilityList.addEventListener('change', () => {
+    updateCompactSummary();
     if (state.preview) {
       schedulePreviewValidation();
     }

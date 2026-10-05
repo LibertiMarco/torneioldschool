@@ -1,4 +1,26 @@
 <?php
+require_once __DIR__ . '/auto_matchday_optimizer.php';
+
+function auto_matchday_save_matches(mysqli $conn, array $payload): array {
+    // Revalidate against a locked, current schedule before writing the entire day.
+    try {
+        if (!$conn->query('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE') || !$conn->begin_transaction()) {
+            throw new RuntimeException('Impossibile avviare il salvataggio della giornata.');
+        }
+        $lock = $conn->query('SELECT id FROM partite FOR UPDATE');
+        if (!$lock) throw new RuntimeException('Impossibile verificare il calendario corrente.');
+        $lock->free();
+        $result = auto_matchday_save_matches_locked($conn, $payload);
+        if (!empty($result['success'])) {
+            if (!$conn->commit()) throw new RuntimeException('Salvataggio della giornata non riuscito.');
+        } else $conn->rollback();
+        return $result;
+    } catch (Throwable $error) {
+        $conn->rollback();
+        error_log('Salvataggio giornata automatica: ' . $error->getMessage());
+        return auto_matchday_json_error('Salvataggio non riuscito. Rigenera la proposta e riprova.', 500);
+    }
+}
 
 if (!function_exists('auto_matchday_has_column')) {
     function auto_matchday_has_column(mysqli $conn, string $table, string $column): bool
@@ -704,12 +726,17 @@ if (!function_exists('auto_matchday_normalize_availability_rules')) {
 
                 $startTime = auto_matchday_normalize_time($rule['start_time'] ?? '');
                 $endTime = auto_matchday_normalize_time($rule['end_time'] ?? '');
+                $preferredTimes = [];
+                foreach ((array)($rule['preferred_times'] ?? []) as $value) {
+                    $time = auto_matchday_normalize_time((string)$value);
+                    if ($time !== '' && !in_array($time, $preferredTimes, true)) $preferredTimes[] = $time;
+                }
 
                 if ($startTime !== '' && $endTime === '') {
                     $endTime = $startTime;
                 }
 
-                if (empty($dates) && empty($times) && empty($weekdays) && $startTime === '' && $endTime === '') {
+                if (empty($dates) && empty($times) && empty($weekdays) && $startTime === '' && $endTime === '' && !$preferredTimes) {
                     continue;
                 }
 
@@ -720,6 +747,7 @@ if (!function_exists('auto_matchday_normalize_availability_rules')) {
                     'weekdays' => $weekdays,
                     'start_time' => $startTime,
                     'end_time' => $endTime,
+                    'preferred_times' => $preferredTimes,
                 ];
             }
         }
@@ -957,19 +985,6 @@ if (!function_exists('auto_matchday_pair_key')) {
     }
 }
 
-if (!function_exists('auto_matchday_team_unpaired_penalty')) {
-    function auto_matchday_team_unpaired_penalty(array $team, array $history, bool $expectedBye): int
-    {
-        $teamId = (int)($team['id'] ?? 0);
-        $byeCount = (int)($history[$teamId]['bye_count'] ?? 0);
-        $matchesCount = (int)($history[$teamId]['matches_count'] ?? 0);
-        $position = (int)($team['posizione'] ?? 999);
-
-        $base = $expectedBye ? 150 : 1000;
-        return $base + ($byeCount * 60) - ($matchesCount * 4) + max(0, 40 - $position);
-    }
-}
-
 if (!function_exists('auto_matchday_orientation_penalty')) {
     function auto_matchday_orientation_penalty(array $team, array $history, string $desiredVenue): int
     {
@@ -1099,332 +1114,6 @@ if (!function_exists('auto_matchday_candidate_pair')) {
     }
 }
 
-if (!function_exists('auto_matchday_sort_candidate_pairs')) {
-    function auto_matchday_sort_candidate_pairs(array &$pairs): void
-    {
-        usort($pairs, static function (array $left, array $right): int {
-            if ($left['score'] !== $right['score']) {
-                return $left['score'] <=> $right['score'];
-            }
-            if ($left['rank_gap'] !== $right['rank_gap']) {
-                return $left['rank_gap'] <=> $right['rank_gap'];
-            }
-            if ($left['points_gap'] !== $right['points_gap']) {
-                return $left['points_gap'] <=> $right['points_gap'];
-            }
-            return strcmp((string)$left['pair_key'], (string)$right['pair_key']);
-        });
-    }
-}
-
-if (!function_exists('auto_matchday_find_best_pairing')) {
-    function auto_matchday_find_best_pairing(
-        array $remainingTeamIds,
-        array $teamsById,
-        array $history,
-        array $pairCounts,
-        array $pairHistory,
-        bool $allowReturn,
-        int &$visitedNodes,
-        int $nodeLimit = 12000
-    ): array {
-        $remainingTeamIds = array_values(array_unique(array_map('intval', $remainingTeamIds)));
-        sort($remainingTeamIds, SORT_NUMERIC);
-
-        if (empty($remainingTeamIds)) {
-            return [
-                'pairs' => [],
-                'unpaired' => [],
-                'score' => 0,
-            ];
-        }
-
-        if ($visitedNodes >= $nodeLimit) {
-            return [
-                'pairs' => [],
-                'unpaired' => $remainingTeamIds,
-                'score' => 50000 + (count($remainingTeamIds) * 1000),
-            ];
-        }
-
-        $visitedNodes++;
-
-        $pivotId = 0;
-        $pivotCandidates = [];
-        $pivotCount = null;
-
-        foreach ($remainingTeamIds as $teamId) {
-            $team = $teamsById[$teamId] ?? null;
-            if (!$team) {
-                continue;
-            }
-
-            $candidatePairs = [];
-            foreach ($remainingTeamIds as $otherId) {
-                if ($otherId === $teamId) {
-                    continue;
-                }
-                $other = $teamsById[$otherId] ?? null;
-                if (!$other) {
-                    continue;
-                }
-                $candidate = auto_matchday_candidate_pair($team, $other, $history, $pairCounts, $pairHistory, $allowReturn);
-                if ($candidate !== null) {
-                    $candidatePairs[] = $candidate;
-                }
-            }
-
-            auto_matchday_sort_candidate_pairs($candidatePairs);
-            $candidateCount = count($candidatePairs);
-            if ($pivotCount === null || $candidateCount < $pivotCount) {
-                $pivotId = $teamId;
-                $pivotCandidates = $candidatePairs;
-                $pivotCount = $candidateCount;
-            }
-        }
-
-        if ($pivotId <= 0 || !isset($teamsById[$pivotId])) {
-            return [
-                'pairs' => [],
-                'unpaired' => $remainingTeamIds,
-                'score' => 50000 + (count($remainingTeamIds) * 1000),
-            ];
-        }
-
-        $pivotTeam = $teamsById[$pivotId];
-        $expectedBye = count($remainingTeamIds) % 2 === 1;
-        $best = null;
-
-        foreach ($pivotCandidates as $candidate) {
-            $nextRemaining = array_values(array_filter(
-                $remainingTeamIds,
-                static fn(int $id): bool => $id !== (int)$candidate['team_a']['id'] && $id !== (int)$candidate['team_b']['id']
-            ));
-
-            $branch = auto_matchday_find_best_pairing(
-                $nextRemaining,
-                $teamsById,
-                $history,
-                $pairCounts,
-                $pairHistory,
-                $allowReturn,
-                $visitedNodes,
-                $nodeLimit
-            );
-
-            $result = [
-                'pairs' => array_merge([$candidate], $branch['pairs']),
-                'unpaired' => $branch['unpaired'],
-                'score' => $candidate['score'] + (int)$branch['score'],
-            ];
-
-            if ($best === null || auto_matchday_compare_pairing_results($result, $best) < 0) {
-                $best = $result;
-            }
-        }
-
-        $skipRemaining = array_values(array_filter(
-            $remainingTeamIds,
-            static fn(int $id): bool => $id !== $pivotId
-        ));
-        $skipBranch = auto_matchday_find_best_pairing(
-            $skipRemaining,
-            $teamsById,
-            $history,
-            $pairCounts,
-            $pairHistory,
-            $allowReturn,
-            $visitedNodes,
-            $nodeLimit
-        );
-        $skipResult = [
-            'pairs' => $skipBranch['pairs'],
-            'unpaired' => array_merge([$pivotId], $skipBranch['unpaired']),
-            'score' => auto_matchday_team_unpaired_penalty($pivotTeam, $history, $expectedBye) + (int)$skipBranch['score'],
-        ];
-
-        if ($best === null || auto_matchday_compare_pairing_results($skipResult, $best) < 0) {
-            $best = $skipResult;
-        }
-
-        return $best ?? [
-            'pairs' => [],
-            'unpaired' => $remainingTeamIds,
-            'score' => 50000 + (count($remainingTeamIds) * 1000),
-        ];
-    }
-}
-
-if (!function_exists('auto_matchday_compare_pairing_results')) {
-    function auto_matchday_compare_pairing_results(array $left, array $right): int
-    {
-        $leftUnpaired = count($left['unpaired'] ?? []);
-        $rightUnpaired = count($right['unpaired'] ?? []);
-        if ($leftUnpaired !== $rightUnpaired) {
-            return $leftUnpaired <=> $rightUnpaired;
-        }
-
-        $leftScore = (int)($left['score'] ?? 0);
-        $rightScore = (int)($right['score'] ?? 0);
-        if ($leftScore !== $rightScore) {
-            return $leftScore <=> $rightScore;
-        }
-
-        return 0;
-    }
-}
-
-if (!function_exists('auto_matchday_pair_alternative_warning')) {
-    function auto_matchday_pair_alternative_warning(
-        array $homeTeam,
-        array $awayTeam,
-        array $selectedTeamsById,
-        array $pairCounts,
-        bool $allowReturn
-    ): ?string {
-        $homeId = (int)($homeTeam['id'] ?? 0);
-        $awayId = (int)($awayTeam['id'] ?? 0);
-        if ($homeId <= 0 || $awayId <= 0) {
-            return null;
-        }
-
-        $chosenGap = abs((int)($homeTeam['posizione'] ?? 999) - (int)($awayTeam['posizione'] ?? 999));
-        $chosenPointsGap = abs((int)($homeTeam['punti'] ?? 0) - (int)($awayTeam['punti'] ?? 0));
-        $maxAllowed = $allowReturn ? 2 : 1;
-
-        foreach ($selectedTeamsById as $teamId => $team) {
-            $teamId = (int)$teamId;
-            if ($teamId <= 0 || $teamId === $homeId || $teamId === $awayId) {
-                continue;
-            }
-
-            $candidateGap = abs((int)($homeTeam['posizione'] ?? 999) - (int)($team['posizione'] ?? 999));
-            $candidatePointsGap = abs((int)($homeTeam['punti'] ?? 0) - (int)($team['punti'] ?? 0));
-            if ($candidateGap > $chosenGap || ($candidateGap === $chosenGap && $candidatePointsGap >= $chosenPointsGap)) {
-                continue;
-            }
-
-            $pairKey = auto_matchday_pair_key($homeId, $teamId);
-            $existingCount = (int)($pairCounts[$pairKey] ?? 0);
-            if ($existingCount >= $maxAllowed) {
-                return 'Abbinamento alternativo perché quello migliore era già presente';
-            }
-        }
-
-        return null;
-    }
-}
-
-if (!function_exists('auto_matchday_assign_slots')) {
-    function auto_matchday_assign_slots(
-        array $pairs,
-        array $slots,
-        array $availabilityRules,
-        array $teamsById,
-        array $pairCounts,
-        bool $allowReturn
-    ): array {
-        $result = [];
-        $usedSlotKeys = [];
-
-        $pairsForAssignment = $pairs;
-        foreach ($pairsForAssignment as &$pair) {
-            $perfectCount = 0;
-            foreach ($slots as $slot) {
-                $homeRules = $availabilityRules[(int)$pair['home']['id']] ?? [];
-                $awayRules = $availabilityRules[(int)$pair['away']['id']] ?? [];
-                $homeAvailability = auto_matchday_slot_matches_team_rules($slot, $homeRules);
-                $awayAvailability = auto_matchday_slot_matches_team_rules($slot, $awayRules);
-
-                if ($homeAvailability['matched'] && $awayAvailability['matched']) {
-                    $perfectCount++;
-                }
-            }
-            $pair['perfect_slot_count'] = $perfectCount;
-        }
-        unset($pair);
-
-        usort($pairsForAssignment, static function (array $left, array $right): int {
-            if (($left['perfect_slot_count'] ?? 0) !== ($right['perfect_slot_count'] ?? 0)) {
-                return ($left['perfect_slot_count'] ?? 0) <=> ($right['perfect_slot_count'] ?? 0);
-            }
-            return ($left['score'] ?? 0) <=> ($right['score'] ?? 0);
-        });
-
-        foreach ($pairsForAssignment as $pair) {
-            $bestSlot = null;
-            $bestScore = null;
-            $bestWarnings = [];
-            $homeRules = $availabilityRules[(int)$pair['home']['id']] ?? [];
-            $awayRules = $availabilityRules[(int)$pair['away']['id']] ?? [];
-
-            foreach ($slots as $slot) {
-                if (isset($usedSlotKeys[$slot['key']])) {
-                    continue;
-                }
-
-                $homeAvailability = auto_matchday_slot_matches_team_rules($slot, $homeRules);
-                $awayAvailability = auto_matchday_slot_matches_team_rules($slot, $awayRules);
-                $slotWarnings = [];
-                $score = (int)($slot['sort_index'] ?? 0);
-
-                if ($homeAvailability['has_rules'] && !$homeAvailability['matched']) {
-                    $score += 200;
-                    $slotWarnings[] = 'Disponibilità non perfettamente rispettata';
-                }
-                if ($awayAvailability['has_rules'] && !$awayAvailability['matched']) {
-                    $score += 200;
-                    $slotWarnings[] = 'Disponibilità non perfettamente rispettata';
-                }
-
-                $slotWarnings = array_values(array_unique($slotWarnings));
-
-                if ($bestScore === null || $score < $bestScore) {
-                    $bestSlot = $slot;
-                    $bestScore = $score;
-                    $bestWarnings = $slotWarnings;
-                }
-            }
-
-            $row = [
-                'home_team_id' => (int)$pair['home']['id'],
-                'away_team_id' => (int)$pair['away']['id'],
-                'data' => '',
-                'ora' => '',
-                'campo' => '',
-                'generated_signature' => (int)$pair['home']['id'] . ':' . (int)$pair['away']['id'],
-                'generated_warnings' => [],
-            ];
-
-            $alternativeWarning = auto_matchday_pair_alternative_warning(
-                $pair['home'],
-                $pair['away'],
-                $teamsById,
-                $pairCounts,
-                $allowReturn
-            );
-            if ($alternativeWarning !== null) {
-                $row['generated_warnings'][] = $alternativeWarning;
-            }
-
-            if ($bestSlot !== null) {
-                $usedSlotKeys[$bestSlot['key']] = true;
-                $row['data'] = $bestSlot['data'];
-                $row['ora'] = $bestSlot['ora'];
-                $row['campo'] = $bestSlot['campo'];
-                $row['generated_warnings'] = array_values(array_unique(array_merge($row['generated_warnings'], $bestWarnings)));
-            } else {
-                $row['generated_warnings'][] = 'Numero di slot insufficiente';
-                $row['generated_warnings'][] = 'Slot non disponibile';
-            }
-
-            $result[] = $row;
-        }
-
-        return $result;
-    }
-}
-
 if (!function_exists('auto_matchday_validate_preview_rows')) {
     function auto_matchday_validate_preview_rows(
         array $rows,
@@ -1435,7 +1124,8 @@ if (!function_exists('auto_matchday_validate_preview_rows')) {
         bool $allowReturn,
         int $giornata,
         array $availabilityRules,
-        array $slotCapacityMap = []
+        array $slotCapacityMap = [],
+        array $existingMatches = []
     ): array {
         $validatedRows = [];
         $previewPairCounts = [];
@@ -1502,6 +1192,7 @@ if (!function_exists('auto_matchday_validate_preview_rows')) {
 
             $slotKey = auto_matchday_slot_key($date, $time, $field);
             if ($slotKey !== '') {
+                if (!isset($slotCapacityMap[$slotKey])) $entry['errors'][] = 'Slot non incluso nelle disponibilità configurate';
                 $previewSlotUsage[$slotKey][] = $index;
                 if (isset($occupiedSlots[$slotKey])) {
                     $occupied = $occupiedSlots[$slotKey];
@@ -1526,7 +1217,7 @@ if (!function_exists('auto_matchday_validate_preview_rows')) {
                     ($homeAvailability['has_rules'] && !$homeAvailability['matched']) ||
                     ($awayAvailability['has_rules'] && !$awayAvailability['matched'])
                 ) {
-                    $entry['warnings'][] = 'Disponibilità non perfettamente rispettata';
+                    $entry['errors'][] = 'Disponibilità obbligatoria non rispettata';
                 }
             }
 
@@ -1622,7 +1313,24 @@ if (!function_exists('auto_matchday_validate_preview_rows')) {
             }
         }
 
-        $isValid = true;
+        $missing = [];
+        foreach ($selectedTeamsById as $id => $team) {
+            if (!isset($previewTeamUsage[$id])) $missing[] = $team['nome'];
+        }
+        if ($missing) $globalMessages[] = 'Devono giocare tutte le squadre selezionate. Mancano: ' . implode(', ', $missing) . '.';
+        if (count($selectedTeamsById) % 2) $globalMessages[] = 'Seleziona un numero pari di squadre: non sono previsti riposi automatici.';
+        $isValid = !$missing && count($selectedTeamsById) >= 2 && count($selectedTeamsById) % 2 === 0;
+        $selectedNames = [];
+        foreach ($selectedTeamsById as $team) $selectedNames[mb_strtolower(trim($team['nome']), 'UTF-8')] = true;
+        foreach ($existingMatches as $match) {
+            if ((int)($match['giornata'] ?? 0) !== $giornata) continue;
+            foreach (['squadra_casa', 'squadra_ospite'] as $side) {
+                if (isset($selectedNames[mb_strtolower(trim((string)($match[$side] ?? '')), 'UTF-8')])) {
+                    $globalMessages[] = $match[$side] . ' ha già una partita nella giornata ' . $giornata . '.';
+                    $isValid = false;
+                }
+            }
+        }
         foreach ($validatedRows as &$row) {
             $row['warnings'] = array_values(array_unique($row['warnings']));
             $row['errors'] = array_values(array_unique($row['errors']));
@@ -1690,7 +1398,7 @@ if (!function_exists('auto_matchday_generate_preview')) {
 
         $allTeams = $context['data']['squadre'] ?? [];
         $selectedTeams = auto_matchday_prepare_selected_teams($allTeams, $selectedTeamIds);
-        if (count($selectedTeams) < 2) {
+        if (count($selectedTeams) < 2 || count($selectedTeams) !== count($selectedTeamIds)) {
             return auto_matchday_json_error('Le squadre selezionate non appartengono al torneo indicato.', 400);
         }
 
@@ -1705,45 +1413,12 @@ if (!function_exists('auto_matchday_generate_preview')) {
             $selectedTeamMap[(int)$team['id']] = $team;
         }
 
-        $visitedNodes = 0;
-        $pairingResult = auto_matchday_find_best_pairing(
-            array_keys($selectedTeamMap),
-            $selectedTeamMap,
-            $teamHistory,
-            $pairCounts,
-            $pairHistory,
-            $allowReturn,
-            $visitedNodes
-        );
-
-        $generatedRows = auto_matchday_assign_slots(
-            $pairingResult['pairs'] ?? [],
-            $normalizedSlots['slots'],
-            $availabilityRules,
-            $selectedTeamMap,
-            $pairCounts,
-            $allowReturn
-        );
-
-        foreach (($pairingResult['unpaired'] ?? []) as $teamId) {
-            $team = $selectedTeamMap[(int)$teamId] ?? null;
-            if (!$team) {
-                continue;
-            }
-            $generatedRows[] = [
-                'home_team_id' => (int)$team['id'],
-                'away_team_id' => 0,
-                'data' => '',
-                'ora' => '',
-                'campo' => '',
-                'generated_signature' => (int)$team['id'] . ':0',
-                'generated_warnings' => [count($selectedTeamMap) % 2 === 1
-                    ? 'Squadra a riposo'
-                    : 'Impossibile creare un abbinamento valido per questa squadra'],
-            ];
-        }
-
         $occupiedSlots = auto_matchday_fetch_global_occupied_slots($conn);
+        $solution = auto_matchday_optimize_schedule(
+            $selectedTeamMap, $teamHistory, $pairCounts, $pairHistory,
+            $normalizedSlots['slots'], $availabilityRules, $occupiedSlots, $allowReturn
+        );
+        $generatedRows = $solution['rows'];
         $validation = auto_matchday_validate_preview_rows(
             $generatedRows,
             $selectedTeamMap,
@@ -1753,36 +1428,11 @@ if (!function_exists('auto_matchday_generate_preview')) {
             $allowReturn,
             $giornata,
             $availabilityRules,
-            $slotCapacityMap
+            $slotCapacityMap,
+            $regularMatches
         );
 
-        $messages = $validation['messages'];
-        if ($normalizedSlots['duplicate_count'] > 0) {
-            $messages[] = 'Sono stati ignorati ' . $normalizedSlots['duplicate_count'] . ' slot duplicati.';
-        }
-        if (count($normalizedSlots['slots']) < count($pairingResult['pairs'] ?? [])) {
-            $messages[] = 'Numero di slot insufficiente per tutte le partite generate.';
-        }
-
-        if (count($pairingResult['unpaired'] ?? []) === 1 && count($selectedTeamMap) % 2 === 1) {
-            $restTeamId = (int)$pairingResult['unpaired'][0];
-            if (isset($selectedTeamMap[$restTeamId])) {
-                $messages[] = 'Squadra a riposo: ' . $selectedTeamMap[$restTeamId]['nome'];
-            }
-        }
-
-        if (count($pairingResult['unpaired'] ?? []) > 1) {
-            $names = [];
-            foreach ($pairingResult['unpaired'] as $teamId) {
-                if (isset($selectedTeamMap[(int)$teamId])) {
-                    $names[] = $selectedTeamMap[(int)$teamId]['nome'];
-                }
-            }
-            if (!empty($names)) {
-                $messages[] = 'Impossibile completare un abbinamento valido per: ' . implode(', ', $names);
-            }
-        }
-
+        $messages = array_merge($solution['messages'], $validation['messages']);
         return [
             'success' => true,
             'data' => [
@@ -1792,7 +1442,8 @@ if (!function_exists('auto_matchday_generate_preview')) {
                 'selected_team_ids' => array_values(array_keys($selectedTeamMap)),
                 'rows' => $validation['rows'],
                 'messages' => array_values(array_unique($messages)),
-                'valid' => $validation['valid'],
+                'valid' => $solution['complete'] && $solution['optimal'] && $validation['valid'],
+                'optimal' => $solution['optimal'],
             ],
         ];
     }
@@ -1827,7 +1478,7 @@ if (!function_exists('auto_matchday_validate_payload')) {
 
         $allTeams = $context['data']['squadre'] ?? [];
         $selectedTeams = auto_matchday_prepare_selected_teams($allTeams, $selectedTeamIds);
-        if (empty($selectedTeams)) {
+        if (empty($selectedTeams) || count($selectedTeams) !== count($selectedTeamIds)) {
             return auto_matchday_json_error('Le squadre selezionate non appartengono al torneo indicato.', 400);
         }
 
@@ -1844,7 +1495,8 @@ if (!function_exists('auto_matchday_validate_payload')) {
             $allowReturn,
             $giornata,
             $availabilityRules,
-            $slotCapacityMap
+            $slotCapacityMap,
+            $regularMatches
         );
 
         return [
@@ -1859,8 +1511,8 @@ if (!function_exists('auto_matchday_validate_payload')) {
     }
 }
 
-if (!function_exists('auto_matchday_save_matches')) {
-    function auto_matchday_save_matches(mysqli $conn, array $payload): array
+if (!function_exists('auto_matchday_save_matches_locked')) {
+    function auto_matchday_save_matches_locked(mysqli $conn, array $payload): array
     {
         $validation = auto_matchday_validate_payload($conn, $payload);
         if (empty($validation['success'])) {
@@ -1914,7 +1566,7 @@ if (!function_exists('auto_matchday_save_matches')) {
 
         $created = 0;
         $createdIds = [];
-        $conn->begin_transaction();
+
 
         try {
             foreach ($rows as $row) {
@@ -1957,9 +1609,9 @@ if (!function_exists('auto_matchday_save_matches')) {
                 $createdIds[] = (int)$stmt->insert_id;
             }
 
-            $conn->commit();
+
         } catch (Throwable $e) {
-            $conn->rollback();
+
             $stmt->close();
             return auto_matchday_json_error($e->getMessage(), 500, ['data' => $validation['data']]);
         }
