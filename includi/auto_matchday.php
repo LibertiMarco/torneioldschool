@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/auto_matchday_optimizer.php';
+require_once __DIR__ . '/player_match_conflicts.php';
 
 function auto_matchday_save_matches(mysqli $conn, array $payload): array {
     // Revalidate against a locked, current schedule before writing the entire day.
@@ -1432,6 +1433,7 @@ if (!function_exists('auto_matchday_generate_preview')) {
             $regularMatches
         );
 
+        $validation['rows'] = player_match_conflicts_for_preview($conn, $validation['rows']);
         $messages = array_merge($solution['messages'], $validation['messages']);
         return [
             'success' => true,
@@ -1504,7 +1506,7 @@ if (!function_exists('auto_matchday_validate_payload')) {
             'data' => [
                 'valid' => $validation['valid'],
                 'giornata' => $giornata,
-                'rows' => $validation['rows'],
+                'rows' => player_match_conflicts_for_preview($conn, $validation['rows']),
                 'messages' => $validation['messages'],
             ],
         ];
