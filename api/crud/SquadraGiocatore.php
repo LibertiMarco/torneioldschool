@@ -5,9 +5,21 @@ class SquadraGiocatore {
     private $conn;
     private $table = "squadre_giocatori";
 
-    public function __construct() {
+    public function __construct(?mysqli $connection = null) {
+        if ($connection) { $this->conn = $connection; return; }
         require __DIR__ . '/../../includi/db.php';
         $this->conn = $conn;
+    }
+
+    // Import: insert only, without resetting statistics or any existing captain.
+    public function aggiungiDaImport(int $giocatoreId, int $squadraId, bool $portiere, bool $capitano): bool {
+        $stmt = $this->conn->prepare('INSERT INTO squadre_giocatori (giocatore_id, squadra_id, ruolo, is_captain) VALUES (?, ?, ?, ?)');
+        $ruolo = $portiere ? 'Portiere' : '';
+        $captain = $capitano ? 1 : 0;
+        $stmt->bind_param('iisi', $giocatoreId, $squadraId, $ruolo, $captain);
+        $ok = $stmt->execute();
+        $stmt->close();
+        return $ok;
     }
 
     public function assegna($giocatoreId, $squadraId, $foto = null, array $stats = [], $forzaRimozioneFoto = false, $isCaptain = false) {

@@ -930,6 +930,7 @@ $goalExtraTeamMapJson = htmlspecialchars(
 <?php endif; ?>
 <a class="admin-back-link" href="/admin_dashboard.php">Torna alla dashboard</a>
 <h1 class="admin-title">Gestione Giocatori</h1>
+<a class="btn-primary" href="/api/import_giocatori.php">IMPORT GIOCATORI</a>
 <?php if (isset($_SESSION['remove_assoc_result'])):
     $result = $_SESSION['remove_assoc_result'];
     unset($_SESSION['remove_assoc_result']); ?>

@@ -10,3 +10,5 @@ Il generatore Full Time/MVP usa MODNet per lo scontorno delle persone. Il modell
 - ONNX Runtime Web `1.17.3`, caricato su richiesta da jsDelivr: https://www.npmjs.com/package/onnxruntime-web/v/1.17.3 — licenza MIT: https://github.com/microsoft/onnxruntime/blob/v1.17.3/LICENSE.
 
 La prima rimozione scarica il modello (circa 26 MB) e il runtime WebAssembly. Il worker viene chiuso dopo 90 secondi di inattività; il modello può essere conservato nella cache HTTP del browser.
+
+Import Giocatori usa [Tesseract.js 5.1.1](https://github.com/naptha/tesseract.js) (Apache-2.0), caricato da jsDelivr, con le lingue italiana e inglese. Il motore WebAssembly e i dati delle lingue vengono scaricati al primo utilizzo. Il riconoscimento avviene nel browser: al sito viene inviato solo il testo da controllare, senza caricare la foto nel database o inviarla a un servizio OCR.

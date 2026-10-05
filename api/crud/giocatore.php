@@ -3,7 +3,8 @@ class Giocatore {
     private $conn;
     private $table = "giocatori";
 
-    public function __construct() {
+    public function __construct(?mysqli $connection = null) {
+        if ($connection) { $this->conn = $connection; return; }
         require __DIR__ . '/../../includi/db.php';
         $this->conn = $conn;
     }
