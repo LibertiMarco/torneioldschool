@@ -40,7 +40,7 @@ $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
   <div class="status" id="status"></div><div class="grid" id="grid"></div>
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
-<script src="/api/matchday-renderer.js?v=20261005-brasileirao"></script>
+<script src="/api/matchday-renderer.js?v=20261005-mcleague"></script>
 <script>
 const dateInput = document.getElementById('date');
 const today = new Date();

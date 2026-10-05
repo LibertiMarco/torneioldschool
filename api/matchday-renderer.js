@@ -4,6 +4,7 @@ window.MatchdayRenderer = (() => {
   // Competition-inspired accents; the paper and match rows always stay white.
   // Specific aliases precede the generic "Liga" name to avoid collisions.
   const palettes = [
+    {competition: 'mcleague', aliases: ['mcleague'], primary: '#ffd400', secondary: '#171b22', accent: '#171b22', title: '#171b22'},
     {competition: 'brasileirao', aliases: ['brasileirao', 'brasilerao', 'campeonatobrasileiro', 'brasileiro', 'brazilianleague'], primary: '#008447', secondary: '#ffdf00', accent: '#008447'},
     {aliases: ['coppaitalia', 'supercoppaitaliana'], primary: '#008447', secondary: '#e30724', accent: '#e30724'},
     {aliases: ['eredivisie'], primary: '#003bdb', secondary: '#071b41', accent: '#e83e52'},
@@ -149,12 +150,12 @@ window.MatchdayRenderer = (() => {
       ctx.save(); ctx.translate(540 - natural * scale / 2, 331); ctx.scale(scale, 1);
       let x = 0;
       words.forEach((word, i) => {
-        text(ctx, word, x, 0, ctx.measureText(word).width + 1, 112, i === 0 ? theme.primary : (i === words.length - 1 && words.length > 2 ? theme.accent : ink), 'left');
+        text(ctx, word, x, 0, ctx.measureText(word).width + 1, 112, i === 0 ? (theme.title || theme.primary) : (i === words.length - 1 && words.length > 2 ? theme.accent : ink), 'left');
         x += ctx.measureText(`${word} `).width;
       });
       ctx.restore();
     } else {
-      titleLines.forEach((line, i) => text(ctx, line, 540, 289 + i * 72, 980, 76, i === 0 ? theme.primary : ink));
+      titleLines.forEach((line, i) => text(ctx, line, 540, 289 + i * 72, 980, 76, i === 0 ? (theme.title || theme.primary) : ink));
     }
     const dates = days.map(day => day.date).filter(Boolean);
     const first = dates[0] || week.dal, last = dates[dates.length - 1] || week.al;
