@@ -229,8 +229,11 @@ function round_to_giornata(?string $roundLabel, array $map): ?int {
   return $map[$key] ?? null;
 }
 
-function round_supports_two_legs(?string $roundLabel): bool {
+function round_supports_two_legs(?string $roundLabel, string $torneo = '', string $fase = ''): bool {
   if ($roundLabel === null) return false;
+  if (strtoupper(trim($roundLabel)) === 'FINALE'
+      && strtolower(preg_replace('/[^a-z0-9]/i', '', $torneo)) === 'mcleague'
+      && strtoupper(trim($fase)) === 'SILVER') return true;
   return in_array(
     strtoupper(trim($roundLabel)),
     ['TRENTADUESIMI', 'SEDICESIMI', 'OTTAVI', 'QUARTI', 'SEMIFINALE'],
@@ -655,8 +658,8 @@ function squadraHaGiaPartita(
     );
 
     // consenti andata/ritorno sullo stesso accoppiamento per i turni a doppia sfida
-    $isTwoLegTarget = round_supports_two_legs($targetRound);
-    $isTwoLegRow = round_supports_two_legs($rowRound);
+    $isTwoLegTarget = round_supports_two_legs($targetRound, $torneo, $fase);
+    $isTwoLegRow = round_supports_two_legs($rowRound, $torneo, $fase);
     $hasLegPair = in_array($targetLeg, ['ANDATA', 'RITORNO'], true) && in_array($rowLeg, ['ANDATA', 'RITORNO'], true);
     if ($isTwoLegTarget && $isTwoLegRow && $targetRound === $rowRound && $samePair && $hasLegPair) {
       if ($rowLeg !== $targetLeg) {
@@ -812,7 +815,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           if ($stmt->execute()) {
             $successo = 'Partita creata correttamente.';
             // crea automaticamente il ritorno per i turni a doppia sfida impostati come andata
-            if (round_supports_two_legs($faseRound) && strtoupper($faseLeg) === 'ANDATA') {
+            if (round_supports_two_legs($faseRound, $torneo, $fase) && strtoupper($faseLeg) === 'ANDATA') {
               if (!squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $ospite, $casa, null, $faseRound, 'RITORNO')) {
                 $stmtR = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, decisa_rigori, rigori_casa, rigori_ospite, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
                 if ($stmtR) {
@@ -1972,7 +1975,11 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     'FINALE': 1,
   };
   const twoLegRounds = new Set(['TRENTADUESIMI', 'SEDICESIMI', 'OTTAVI', 'QUARTI', 'SEMIFINALE']);
-  const isTwoLegRound = (roundVal) => twoLegRounds.has((roundVal || '').toUpperCase());
+  const isTwoLegRound = (roundVal, torneoSlug = '', phase = '') => twoLegRounds.has((roundVal || '').toUpperCase()) || (
+    String(roundVal || '').toUpperCase() === 'FINALE'
+    && String(torneoSlug).replace(/[^a-z0-9]/gi, '').toLowerCase() === 'mcleague'
+    && String(phase).toUpperCase() === 'SILVER'
+  );
   const roundLabelFromGiornata = Object.fromEntries(Object.entries(roundLabelMap).map(([k,v]) => [String(v), k]));
   const roundLabelByKey = roundLabelFromGiornata;
   const basePhaseOptions = <?php echo json_encode($fasiAmmesseConBronzo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
@@ -2157,7 +2164,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     const giornataVal = getGiornataTarget();
     const legVal = (document.getElementById('faseLegCrea')?.value || '').toUpperCase();
     const roundVal = (roundCrea?.value || '').toUpperCase();
-    const isReturnMatch = faseVal !== 'REGULAR' && isTwoLegRound(roundVal) && legVal === 'RITORNO';
+    const isReturnMatch = faseVal !== 'REGULAR' && isTwoLegRound(roundVal, torneoVal, faseVal) && legVal === 'RITORNO';
     const casaSel = document.getElementById('squadraCasaCrea');
     const ospSel = document.getElementById('squadraOspiteCrea');
     const resetSelect = (sel, placeholder) => {
@@ -2207,6 +2214,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
       syncPhaseSelectOptions(faseCrea, torneoCrea.value || '');
       syncCreateGiornataOptions(torneoCrea.value || '');
       syncMatchFieldSelect(campoCrea, torneoCrea.value || '', campoCrea?.value || '', false);
+      refreshCreateLayout();
       populateSquadreFiltrate();
     });
   }
@@ -2293,7 +2301,8 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
       if (!isRoundPhase) roundSelect.value = '';
     }
     const roundVal = (roundSelect?.value || '').toUpperCase();
-    const isLegRound = isRoundPhase && isTwoLegRound(roundVal);
+    const tournamentSelect = faseSelect?.closest('form')?.querySelector('select[name="torneo"], select[name="torneo_mod"]');
+    const isLegRound = isRoundPhase && isTwoLegRound(roundVal, tournamentSelect?.value || '', phaseVal);
 
     if (legWrap) legWrap.classList.toggle('hidden', !isLegRound);
     if (legSelect) {
@@ -2541,6 +2550,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   const refreshModLayout = () => {
     if (faseModSelect) toggleRoundGiornata(faseModSelect, 'giornataWrapperMod', 'roundWrapperMod', 'legWrapperMod', 'faseLegMod');
   };
+  document.getElementById('torneo_mod')?.addEventListener('change', refreshModLayout);
   if (faseModSelect) {
     faseModSelect.addEventListener('change', refreshModLayout);
     refreshModLayout();

@@ -1015,7 +1015,8 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
       giornataDiv.appendChild(titolo);
 
             const partiteGiornata = dataFiltrata[numGiornata] || [];
-      const isSemifinale = fase !== "REGULAR" && String(numGiornata) === "2";
+      const isTwoLegStage = (fase !== "REGULAR" && String(numGiornata) === "2") || (fase === "SILVER" && String(numGiornata) === "1");
+      const legStageLabel = String(numGiornata) === "1" ? "Finale" : "Semifinali";
 
       const renderPartita = (container, partita) => {
         const partitaDiv = document.createElement("div");
@@ -1086,7 +1087,7 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         container.appendChild(partitaDiv);
       };
 
-      if (isSemifinale && partiteGiornata.length) {
+      if (isTwoLegStage && partiteGiornata.length) {
         const legs = {};
         partiteGiornata.forEach(p => {
           const leg = (p.fase_leg || "").toUpperCase();
@@ -1098,16 +1099,16 @@ async function caricaCalendario(giornataSelezionata = "", faseSelezionata = "REG
         const hasRitorno = (legs.RITORNO || []).length > 0;
         if (hasAndata && hasRitorno) {
           const h4a = document.createElement("h4");
-          h4a.textContent = "Semifinali Andata";
+          h4a.textContent = `${legStageLabel} Andata`;
           giornataDiv.appendChild(h4a);
           legs.ANDATA.forEach(p => renderPartita(giornataDiv, p));
           const h4r = document.createElement("h4");
-          h4r.textContent = "Semifinali Ritorno";
+          h4r.textContent = `${legStageLabel} Ritorno`;
           giornataDiv.appendChild(h4r);
           legs.RITORNO.forEach(p => renderPartita(giornataDiv, p));
         } else {
           const h4 = document.createElement("h4");
-          h4.textContent = "Semifinali";
+          h4.textContent = legStageLabel;
           giornataDiv.appendChild(h4);
           partiteGiornata.forEach(p => renderPartita(giornataDiv, p));
         }
