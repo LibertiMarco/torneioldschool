@@ -7,7 +7,11 @@ window.PhotoTouchEditor = (() => {
   };
   function transform(type, image, frame, rect) {
     const s = state(type);
-    if (s.image !== image) Object.assign(s, {image, sx:1, sy:1, dx:0, dy:0});
+    if (s.image !== image) {
+      if (s.stop) s.stop();
+      Object.assign(s, {image, sx:1, sy:1, dx:0, dy:0});
+      if (s.autoEnable) s.active = true;
+    }
     const box = {x:rect.x+s.dx, y:rect.y+s.dy, w:rect.w*s.sx, h:rect.h*s.sy};
     Object.assign(s, {frame, base:rect, box});
     refresh(s);
@@ -16,29 +20,36 @@ window.PhotoTouchEditor = (() => {
   function refresh(s) {
     if (!s.selection) return;
     s.layer.hidden = !s.active || !s.box;
+    s.layer.style.display = s.layer.hidden ? 'none' : 'block';
+    s.button.disabled = !s.box;
+    s.button.textContent = s.active && s.box ? 'Termina modifica foto' : 'Modifica foto con touch';
+    s.button.setAttribute('aria-pressed', String(s.active && !!s.box));
+    s.wrap.style.touchAction = s.active && s.box ? 'none' : 'pan-y pinch-zoom';
     if (!s.box) return;
     const b=s.box, f=s.frame;
     const x=Math.max(f.x,b.x), y=Math.max(f.y,b.y);
     const right=Math.min(f.x+f.w,b.x+b.w), bottom=Math.min(f.y+f.h,b.y+b.h);
     s.selection.style.cssText=`position:absolute;left:${x/1080*100}%;top:${y/1350*100}%;width:${Math.max(0,right-x)/1080*100}%;height:${Math.max(0,bottom-y)/1350*100}%;border:2px solid #55dfff;box-sizing:border-box;touch-action:none;cursor:move;pointer-events:auto;`;
   }
-  function init() {
+  function init(options = {}) {
     for (const type of ['ft','mvp']) {
       const s=state(type), canvas=document.getElementById(type==='ft'?'fulltimeCanvas':'mvpCanvas');
+      s.autoEnable = options.autoEnable === true;
       const wrap=document.createElement('div');
       wrap.style.cssText='position:relative;width:min(100%,540px);margin:auto;';
       canvas.before(wrap);wrap.append(canvas);canvas.style.width='100%';canvas.style.maxHeight='none';
       const button=document.createElement('button');button.type='button';button.textContent='Modifica foto con touch';button.setAttribute('aria-pressed','false');
       const hint=document.createElement('p');hint.className='hint';hint.textContent='Trascina la foto per spostarla. Usa due dita per lo zoom, gli angoli per ridimensionare, i lati per modificare solo larghezza o altezza.';
       wrap.before(button,hint);
-      const layer=document.createElement('div');layer.style.cssText='position:absolute;inset:0;overflow:hidden;pointer-events:none;';layer.hidden=true;
-      const selection=document.createElement('div');selection.style.pointerEvents='auto';layer.append(selection);wrap.append(layer);Object.assign(s,{layer,selection});
+      const layer=document.createElement('div');layer.style.cssText='position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:10;touch-action:none;';layer.hidden=true;
+      const selection=document.createElement('div');selection.style.pointerEvents='auto';layer.append(selection);wrap.append(layer);Object.assign(s,{layer,selection,button,wrap});
       for (const [key,x,y] of [['nw',0,0],['n',50,0],['ne',100,0],['e',100,50],['se',100,100],['s',50,100],['sw',0,100],['w',0,50]]) {
         const handle=document.createElement('span');handle.dataset.handle=key;handle.style.cssText=`position:absolute;left:${x}%;top:${y}%;width:36px;height:36px;transform:translate(${x===0?0:x===100?-100:-50}%,${y===0?0:y===100?-100:-50}%);background:#55dfff;border:2px solid #08243b;border-radius:6px;box-sizing:border-box;touch-action:none;cursor:${key}-resize;pointer-events:auto;`;selection.append(handle);
       }
       const pointers=new Map();let gesture=null;
       const point=e=>{const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*1080/r.width,y:(e.clientY-r.top)*1350/r.height};};
       const stop=()=>{const ids=[...pointers.keys()];pointers.clear();gesture=null;for(const id of ids)if(selection.hasPointerCapture(id))selection.releasePointerCapture(id);};
+      s.stop = stop;
       button.addEventListener('click',()=>{stop();s.active=!s.active;button.textContent=s.active?'Termina modifica foto':'Modifica foto con touch';button.setAttribute('aria-pressed',String(s.active));refresh(s);});
       selection.addEventListener('pointerdown',e=>{
         if(e.button>0||!s.box||pointers.size>=2)return;
@@ -70,7 +81,7 @@ window.PhotoTouchEditor = (() => {
   }
   function sync(type,image) {
     const s=state(type);
-    if(!image)s.box=null;
+    if(!image){if(s.stop)s.stop();s.box=null;s.image=null;}
     refresh(s);
   }
   return {init,transform,sync};
