@@ -62,7 +62,9 @@ window.MatchdayRenderer = (() => {
   function text(ctx, value, x, y, maxWidth, size, color = ink, align = 'center', family = display) {
     ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'middle';
     ctx.font = `${family === display ? '400' : '700'} ${size}px ${family}`;
-    ctx.fillText(String(value), x, y, maxWidth);
+    const measured = ctx.measureText(String(value)).width;
+    if (measured > maxWidth) ctx.font = `${family === display ? '400' : '700'} ${size * maxWidth / measured}px ${family}`;
+    ctx.fillText(String(value), x, y);
   }
   function lines(ctx, value, maxWidth, size, family = display) {
     ctx.font = `400 ${size}px ${family}`;
@@ -122,7 +124,7 @@ window.MatchdayRenderer = (() => {
     // Keep every export in Story format, including full 22-team matchdays.
     const hasDetails = matches.some(match => match.risultato || match.risultato_andata)
       || days.some(day => new Set(day.matches.map(match => match.section)).size > 1);
-    const rowH = count === 1 ? 1100 : Math.max(hasDetails ? 128 : 104, Math.min(380, Math.floor((1920 - headerH - footerH - days.length * (dayH + dayGap)) / Math.max(count, 1))));
+    const rowH = count === 1 ? 1100 : Math.max(hasDetails ? 90 : 80, Math.min(380, Math.floor((1920 - headerH - footerH - days.length * (dayH + dayGap)) / Math.max(count, 1))));
     const scheduleH = count * rowH + days.length * (dayH + dayGap);
     const scheduleScale = Math.min(1, (height - headerH - footerH) / Math.max(scheduleH, 1));
     const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
@@ -136,35 +138,36 @@ window.MatchdayRenderer = (() => {
     // Very light diagonal paper pattern, kept clear of the match rows.
     ctx.strokeStyle = '#08243b06'; ctx.lineWidth = 1;
     for (let x = -height; x < width; x += 38) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + height, height); ctx.stroke(); }
-    ctx.save();
-    ctx.scale(1, headerH / 450);
-    for (const y of [48, 111]) {
-      ctx.fillStyle = theme.primary; ctx.fillRect(0, y, width / 2, 36);
-      ctx.fillStyle = theme.secondary; ctx.fillRect(width / 2, y, width / 2, 36);
+    const compact = count >= 10;
+    for (const y of compact ? [38, 83] : [48, 111]) {
+      ctx.fillStyle = theme.primary; ctx.fillRect(0, y, width / 2, compact ? 26 : 36);
+      ctx.fillStyle = theme.secondary; ctx.fillRect(width / 2, y, width / 2, compact ? 26 : 36);
     }
-    ctx.fillStyle = '#fbfcfa'; ctx.beginPath(); ctx.arc(540, 116, 112, 0, Math.PI * 2); ctx.fill();
-    if (!contained(ctx, brand, 451, 27, 178, 178)) text(ctx, 'TOS', 540, 116, 155, 76);
-    text(ctx, 'T O R N E I   O L D   S C H O O L', 540, 244, 920, 24);
+    const brandSize = compact ? 128 : 178, brandY = compact ? 80 : 116;
+    ctx.fillStyle = '#fbfcfa'; ctx.beginPath(); ctx.arc(540, brandY, compact ? 78 : 112, 0, Math.PI * 2); ctx.fill();
+    if (!contained(ctx, brand, 540 - brandSize / 2, brandY - brandSize / 2, brandSize, brandSize)) text(ctx, 'TOS', 540, brandY, brandSize, compact ? 54 : 76);
+    text(ctx, 'T O R N E I   O L D   S C H O O L', 540, compact ? 172 : 244, 920, compact ? 21 : 24);
     const title = String(tournament.nome || 'MATCHDAY').toUpperCase();
-    const titleLines = lines(ctx, title, 980, 112);
+    const titleSize = compact ? 86 : 112;
+    const titleLines = lines(ctx, title, 980, titleSize);
     if (titleLines.length === 1) {
       const words = title.split(/\s+/);
-      ctx.font = `400 112px ${display}`;
-      const natural = ctx.measureText(title).width, scale = Math.min(1, 980 / natural);
-      ctx.save(); ctx.translate(540 - natural * scale / 2, 331); ctx.scale(scale, 1);
+      ctx.font = `400 ${titleSize}px ${display}`;
+      const natural = ctx.measureText(title).width, fittedSize = titleSize * Math.min(1, 980 / natural);
+      ctx.font = `400 ${fittedSize}px ${display}`;
+      ctx.save(); ctx.translate(540 - ctx.measureText(title).width / 2, compact ? 238 : 331);
       let x = 0;
       words.forEach((word, i) => {
-        text(ctx, word, x, 0, ctx.measureText(word).width + 1, 112, i === 0 ? (theme.title || theme.primary) : (i === words.length - 1 && words.length > 2 ? theme.accent : ink), 'left');
+        text(ctx, word, x, 0, ctx.measureText(word).width + 1, fittedSize, i === 0 ? (theme.title || theme.primary) : (i === words.length - 1 && words.length > 2 ? theme.accent : ink), 'left');
         x += ctx.measureText(`${word} `).width;
       });
       ctx.restore();
     } else {
-      titleLines.forEach((line, i) => text(ctx, line, 540, 289 + i * 72, 980, 76, i === 0 ? (theme.title || theme.primary) : ink));
+      titleLines.forEach((line, i) => text(ctx, line, 540, (compact ? 218 : 289) + i * (compact ? 52 : 72), 980, compact ? 54 : 76, i === 0 ? (theme.title || theme.primary) : ink));
     }
     const dates = days.map(day => day.date).filter(Boolean);
     const first = dates[0] || week.dal, last = dates[dates.length - 1] || week.al;
-    text(ctx, first === last ? dateLabel(first, true) : `${dateLabel(first, true)}  —  ${dateLabel(last, true)}`, 540, titleLines.length > 1 ? 421 : 413, 940, 29);
-    ctx.restore();
+    text(ctx, first === last ? dateLabel(first, true) : `${dateLabel(first, true)}  ?  ${dateLabel(last, true)}`, 540, compact ? 309 : titleLines.length > 1 ? 421 : 413, 940, compact ? 25 : 29);
     ctx.save();
     ctx.translate(width * (1 - scheduleScale) / 2, headerH * (1 - scheduleScale));
     ctx.scale(scheduleScale, scheduleScale);
@@ -200,7 +203,7 @@ window.MatchdayRenderer = (() => {
         }
         const cy = y + (rowH - (details ? 27 : 0)) / 2;
         const logoSize = Math.min(100, rowH - (details ? 44 : 22));
-        const fontSize = rowH < 125 ? 29 : 34;
+        const fontSize = rowH < 105 ? 25 : rowH < 125 ? 29 : 34;
         for (const x of [401, 679]) { ctx.beginPath(); ctx.moveTo(x, y + 14); ctx.lineTo(x, y + rowH - (details ? 34 : 14)); ctx.stroke(); }
         team(ctx, match.squadra_casa, homeLogo, 55, cy, logoSize, 'left', 174, 213, fontSize);
         team(ctx, match.squadra_ospite, awayLogo, 1025 - logoSize, cy, logoSize, 'right', 906, 213, fontSize);

@@ -249,6 +249,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="grafiche_basi.js?v=20261004-touch-pinch-elements"></script>
+<script src="grafiche_foto_touch.js?v=20261006"></script>
 <script src="grafiche_scontorno.js?v=20260927-modnet"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -315,7 +316,8 @@ function cover(ctx,img,x,y,w,h,crop={}) {
   const px=Math.max(0,Math.min(100,Number(crop.x??50)))/100;
   const py=Math.max(0,Math.min(100,Number(crop.y??0)))/100;
   ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
-  ctx.drawImage(img,x+(w-dw)*px,y+(h-dh)*py,dw,dh);
+  const box=crop.prefix?PhotoTouchEditor.transform(crop.prefix,img,{x,y,w,h},{x:x+(w-dw)*px,y:y+(h-dh)*py,w:dw,h:dh}):{x:x+(w-dw)*px,y:y+(h-dh)*py,w:dw,h:dh};
+  ctx.drawImage(img,box.x,box.y,box.w,box.h);
   ctx.restore();
 }
 const visibleImageBounds=new WeakMap();
@@ -326,7 +328,7 @@ function fitText(ctx,text,maxWidth,startSize,minSize=22,weight=800){let size=sta
 function tournamentConcept(name){const value=String(name||'').toLowerCase();if(/formula|racing|motorsport|f1/.test(value))return'speed';if(/esport|gaming|ea fc|playstation|fifa open/.test(value))return'esport';if(/christmas|natale|xmas/.test(value))return'festive';if(/africa|african/.test(value))return'africa';if(/saudi|arabia|riyadh/.test(value))return'desert';if(/bundes|german|tedesc/.test(value))return'german';if(/premier|english|inghilterra/.test(value))return'premier';if(/champions|europe|europa/.test(value))return'champions';if(/mondial|world|intercontinental|intercontinentale|nazioni/.test(value))return'international';if(/serie\s*[abc]|italia|italian|calcio/.test(value))return'italian';if(/supercup|supercoppa|coppa|cup/.test(value))return'cup';if(/weekend|short|night/.test(value))return'urban';return'modern';}
 function applyTournamentTheme(value,name=''){let hash=2166136261;const key=String(value||name||'torneo');for(let i=0;i<key.length;i++){hash^=key.charCodeAt(i);hash=Math.imul(hash,16777619);}const seed=Math.abs(hash),theme=tournamentThemes[seed%tournamentThemes.length];BG=theme.bg;GOLD=theme.accent;PANEL=theme.panel;MUTED=theme.muted;const words=upper(name,'OS').split(/\s+/).filter(word=>word.length>2&&!['DEL','DELLA','DI'].includes(word));TOURNAMENT_STYLE={motif:Math.floor(seed/8)%6,variant:Math.floor(seed/48)%4,monogram:(words.slice(0,3).map(word=>word[0]).join('')||'OS').slice(0,3),concept:tournamentConcept(name)};}
 function photoRadius(){return({international:72,champions:10,italian:26,premier:4,german:0,desert:42,africa:34,festive:55,speed:28,esport:6,cup:46,urban:18,modern:22})[TOURNAMENT_STYLE.concept]??22;}
-function cropValues(prefix){return{zoom:$(prefix+'Zoom').value,x:$(prefix+'X').value,y:$(prefix+'Y').value};}
+function cropValues(prefix){return{prefix,zoom:$(prefix+'Zoom').value,x:$(prefix+'X').value,y:$(prefix+'Y').value};}
 function updateCropLabels(){['ft','mvp'].forEach(prefix=>{$(prefix+'ZoomValue').textContent=$(prefix+'Zoom').value+'%';$(prefix+'XValue').textContent=$(prefix+'X').value+'%';$(prefix+'YValue').textContent=$(prefix+'Y').value+'%';});}
 function background(ctx){const gradient=ctx.createLinearGradient(0,0,W,H);gradient.addColorStop(0,'#10263a');gradient.addColorStop(.5,BG);gradient.addColorStop(1,'#050d15');ctx.fillStyle=gradient;ctx.fillRect(0,0,W,H);ctx.fillStyle=GOLD;ctx.fillRect(0,0,14,H);drawTournamentPattern(ctx);}
 function drawTournamentPattern(ctx){const style=TOURNAMENT_STYLE;ctx.save();ctx.globalAlpha=.075;ctx.strokeStyle='#fff';ctx.fillStyle='#fff';ctx.lineWidth=2;
@@ -393,7 +395,7 @@ function drawMvpRoyal(){const match=currentMatch(),name=$('mvpTournament').value
 function drawMvpTech(){const match=currentMatch(),name=$('mvpTournament').value,c=$('mvpCanvas'),ctx=c.getContext('2d');prepareTheme(name,match);background(ctx);ctx.fillStyle='#f3f5f7';ctx.beginPath();ctx.moveTo(0,90);ctx.lineTo(875,0);ctx.lineTo(1040,1180);ctx.lineTo(130,1270);ctx.closePath();ctx.fill();ctx.globalAlpha=.12;ctx.fillStyle=GOLD;for(let i=0;i<7;i++)slash(ctx,-120+i*210,100,85,1120);ctx.globalAlpha=1;ctx.fillStyle='#09121d';ctx.textAlign='center';ctx.font='italic 900 310px Impact, Arial';ctx.fillText('MVP',W/2,340);if(imageState.mvpPhoto)cover(ctx,imageState.mvpPhoto,120,260,840,790,cropValues('mvp'));else placeholder(ctx,120,260,840,790,'CARICA LA FOTO MVP');contain(ctx,imageState.brand,35,30,105,105);ctx.fillStyle='#09121d';ctx.textAlign='right';ctx.font='900 21px Arial';ctx.fillText(upper(name,'TORNEO'),1030,66,650);slash(ctx,20,945,1040,155,'#07111c');ctx.fillStyle='#fff';ctx.textAlign='center';drawMvpNameBlock(ctx,W/2,1035,890,'center');ctx.fillStyle=GOLD;fitText(ctx,upper($('mvpTeam').value,'SQUADRA'),760,28,16,900);ctx.fillText(upper($('mvpTeam').value,'SQUADRA'),W/2,1100,760);ctx.fillStyle='#07111c';ctx.font='italic 900 28px Arial';ctx.fillText('MAN OF THE MATCH',W/2,1175);footer(ctx,name)}
 function drawMvp(){if(customTemplates.draw('mvp'))return;prepareTheme($('mvpTournament').value,currentMatch());const {concept,motif,variant}=TOURNAMENT_STYLE;if(['italian','desert','africa','festive'].includes(concept))return (motif+variant)%2?drawMvpEditorial():drawMvpRoyal();if(['champions','cup'].includes(concept))return (motif+variant)%2?drawMvpCinematic():drawMvpPoster();if(['speed','esport','urban','german','premier'].includes(concept))return (motif+variant)%2?drawMvpDynamic():drawMvpTech();return [drawMvpPoster,drawMvpEditorial,drawMvpCinematic][(motif+variant)%3]();}
 function footer(ctx,tournament){ctx.fillStyle=GOLD;ctx.fillRect(48,1258,W-96,2);ctx.fillStyle=MUTED;ctx.font='600 18px Arial';ctx.textAlign='left';ctx.fillText(upper(tournament,'TORNEO'),48,1300,650);ctx.textAlign='right';ctx.fillText('torneioldschool.it',W-48,1300);}
-function drawAll(){updateCropLabels();drawFulltime();drawMvp();$('status').textContent='Anteprime aggiornate.';}
+function drawAll(){updateCropLabels();drawFulltime();drawMvp();PhotoTouchEditor.sync('ft',imageState.ftCaptains);PhotoTouchEditor.sync('mvp',imageState.mvpPhoto);$('status').textContent='Anteprime aggiornate.';}
 async function updateImage(id){const file=$(id).files?.[0],version=matchLoadVersion;if(!file)return;$('status').textContent='Preparazione immagine…';const img=await fileImage(file,2048);if(!img)throw new Error('Formato della foto non leggibile. Usa una foto JPG, PNG o WebP.');if(version!==matchLoadVersion)return;imageState[id]=img;if(id==='ftCaptains'||id==='mvpPhoto'){imageState[id+'Original']=img;$(id==='ftCaptains'?'ftPhotoActions':'mvpPhotoActions').hidden=false;$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto').hidden=true;const removeButton=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg');removeButton.hidden=false;removeButton.disabled=false;}drawAll();}
 let backgroundRemovalBusy=false;
 async function removePhotoBackground(id) {
@@ -616,6 +618,7 @@ document.querySelectorAll('[data-publish]').forEach(button=>button.addEventListe
   publishInstagram(type==='fulltime'?'fulltimeCanvas':'mvpCanvas',type==='fulltime'?'instagramCaptionFulltime':'instagramCaptionMvp',button);
 }));
 customTemplates.init({editor:templateEditor});
+PhotoTouchEditor.init();
 if(templateEditor)setTemplatePreview();
 window.addEventListener('message',event=>{
   if(!templateEditor&&event.origin===window.location.origin&&event.source===window.parent&&event.data?.type==='graphics-templates-refresh')customTemplates.reload(event.data.torneoId);
