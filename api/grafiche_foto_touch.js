@@ -44,7 +44,9 @@ window.PhotoTouchEditor = (() => {
       const layer=document.createElement('div');layer.style.cssText='position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:10;touch-action:none;';layer.hidden=true;
       const selection=document.createElement('div');selection.style.pointerEvents='auto';layer.append(selection);wrap.append(layer);Object.assign(s,{layer,selection,button,wrap});
       for (const [key,x,y] of [['nw',0,0],['n',50,0],['ne',100,0],['e',100,50],['se',100,100],['s',50,100],['sw',0,100],['w',0,50]]) {
-        const handle=document.createElement('span');handle.dataset.handle=key;handle.style.cssText=`position:absolute;left:${x}%;top:${y}%;width:36px;height:36px;transform:translate(${x===0?0:x===100?-100:-50}%,${y===0?0:y===100?-100:-50}%);background:#55dfff;border:2px solid #08243b;border-radius:6px;box-sizing:border-box;touch-action:none;cursor:${key}-resize;pointer-events:auto;`;selection.append(handle);
+        const handle=document.createElement('span');handle.dataset.handle=key;handle.style.cssText=`position:absolute;left:${x}%;top:${y}%;width:36px;height:36px;transform:translate(${x===0?0:x===100?-100:-50}%,${y===0?0:y===100?-100:-50}%);touch-action:none;cursor:${key}-resize;pointer-events:auto;`;
+        const marker=document.createElement('span');marker.style.cssText=`position:absolute;left:${x===0?0:x===100?26:13}px;top:${y===0?0:y===100?26:13}px;width:10px;height:10px;background:#55dfff;border:1px solid #08243b;border-radius:2px;box-sizing:border-box;pointer-events:none;`;
+        handle.append(marker);selection.append(handle);
       }
       const pointers=new Map();let gesture=null;
       const point=e=>{const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*1080/r.width,y:(e.clientY-r.top)*1350/r.height};};
