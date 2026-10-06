@@ -50,9 +50,9 @@ document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click
 window.addEventListener('message',event=>{
   if(event.origin!==window.location.origin)return;
   if(event.data?.type==='graphics-frame-height'){
-    const frame=['postMatchFrame','templatesFrame'].map(id=>document.getElementById(id)).find(item=>item.contentWindow===event.source);
+    const frame=['matchdayFrame','postMatchFrame','templatesFrame','coversFrame'].map(id=>document.getElementById(id)).find(item=>item&&item.contentWindow===event.source);
     const height=event.data.height;
-    if(frame&&Number.isFinite(height)&&height>0&&height<30000){
+    if(frame&&Number.isFinite(height)&&height>0&&height<=10000000){
       frame.classList.add('auto-height');frame.style.height=Math.ceil(height)+'px';frame.setAttribute('scrolling','no');
     }
     return;

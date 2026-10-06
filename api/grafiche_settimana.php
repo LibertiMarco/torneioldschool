@@ -20,10 +20,13 @@ $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
     button { cursor:pointer; background:#f2c94c; color:#101722; font-weight:800; }
     .status { min-height:24px; color:#bfd0e5; }
     .grid { display:grid; gap:28px; }
-    .card { padding:18px; background:#111e31; border-radius:16px; overflow:auto; }
+    .card { padding:18px; background:#111e31; border-radius:16px; min-width:0; }
     .card-head { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:14px; }
     canvas { display:block; width:min(100%,540px); height:auto; margin:auto; background:#0d1b2d; box-shadow:0 10px 35px #0008; }
     body.with-site-header>main{margin-top:110px}
+    html,body{height:auto}body{display:block}
+    body.is-embedded{display:flow-root;min-height:0}
+    canvas{touch-action:pan-y pinch-zoom}
   </style>
 </head>
 <body class="<?= $embedded ? 'is-embedded' : 'with-site-header' ?>">
@@ -41,6 +44,7 @@ $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="/api/matchday-renderer.js?v=20261006-story-proportions"></script>
+<script src="/api/grafiche_frame_height.js?v=20261006"></script>
 <script>
 const dateInput = document.getElementById('date');
 const today = new Date();

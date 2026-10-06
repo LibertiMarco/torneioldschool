@@ -59,6 +59,10 @@ if ($stmt && $stmt->execute()) {
     .previews{display:grid;grid-template-columns:minmax(280px,.75fr) minmax(360px,1.25fr);gap:22px}.card{padding:15px}.head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.head h2{margin:0;font-size:18px}.head button{width:auto;padding:9px 13px}canvas{display:block;width:100%;height:auto;margin:auto;background:#091522;box-shadow:0 12px 32px #0008}#reelCanvas{max-width:420px}#youtubeCanvas{max-width:720px}
     @media(max-width:1050px){.workspace{grid-template-columns:minmax(0,52%) minmax(0,48%);gap:10px}.controls{position:sticky;top:8px;padding:12px}body.with-site-header .controls{top:90px}.previews{grid-template-columns:1fr;gap:12px}.card{padding:8px}.head{align-items:flex-start;flex-direction:column}.head button{width:100%;font-size:12px}}@media(max-width:760px){main{width:min(100% - 10px,1500px);margin-left:auto;margin-right:auto}.fields{grid-template-columns:1fr}.wide{grid-column:auto}label{font-size:12px}input,select,button{padding:8px 7px;font-size:12px}.head h2{font-size:14px}}
     body.with-site-header>main{margin-top:110px}
+    html,body{height:auto}body{display:block}
+    body.is-embedded{display:flow-root;min-height:0}
+    html,body{height:auto}body{display:block}
+    body.is-embedded{display:flow-root;min-height:0}
   </style>
 </head>
 <body class="<?= $embedded ? 'is-embedded' : 'with-site-header' ?>">
@@ -91,6 +95,7 @@ if ($stmt && $stmt->execute()) {
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="/api/matchday-renderer.js?v=20261006-story-proportions"></script>
+<script src="/api/grafiche_frame_height.js?v=20261006"></script>
 <script>
 const matches=<?= json_encode($partite,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
 const $=id=>document.getElementById(id);let selected=null,photo=null,brand=null,homeLogo=null,awayLogo=null,tournamentLogo=null;
