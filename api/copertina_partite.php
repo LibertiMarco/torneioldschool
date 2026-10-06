@@ -90,7 +90,7 @@ if ($stmt && $stmt->execute()) {
   </div>
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
-<script src="/api/matchday-renderer.js?v=20261005-mcleague"></script>
+<script src="/api/matchday-renderer.js?v=20261006-story"></script>
 <script>
 const matches=<?= json_encode($partite,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
 const $=id=>document.getElementById(id);let selected=null,photo=null,brand=null,homeLogo=null,awayLogo=null,tournamentLogo=null;

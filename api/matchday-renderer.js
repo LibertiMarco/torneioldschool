@@ -117,12 +117,14 @@ window.MatchdayRenderer = (() => {
     const theme = tournamentTheme(tournament);
     const days = groupDays(tournament), matches = days.flatMap(day => day.matches);
     const count = matches.length;
-    const width = 1080, headerH = 450, footerH = 130, dayH = 66, dayGap = 20;
-    // Grow unusually busy schedules rather than shrinking names into unreadable rows.
+    const width = 1080, height = 1920, headerH = count >= 10 ? 330 : 450;
+    const footerH = 130, dayH = count >= 10 ? 48 : 66, dayGap = count >= 10 ? 12 : 20;
+    // Keep every export in Story format, including full 22-team matchdays.
     const hasDetails = matches.some(match => match.risultato || match.risultato_andata)
       || days.some(day => new Set(day.matches.map(match => match.section)).size > 1);
     const rowH = count === 1 ? 1100 : Math.max(hasDetails ? 128 : 104, Math.min(380, Math.floor((1920 - headerH - footerH - days.length * (dayH + dayGap)) / Math.max(count, 1))));
-    const height = Math.max(1920, headerH + footerH + count * rowH + days.length * (dayH + dayGap));
+    const scheduleH = count * rowH + days.length * (dayH + dayGap);
+    const scheduleScale = Math.min(1, (height - headerH - footerH) / Math.max(scheduleH, 1));
     const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
     const ctx = canvas.getContext('2d');
     const logoSource = squad => squad.logo_url_assoluto || squad.logo;
@@ -134,6 +136,8 @@ window.MatchdayRenderer = (() => {
     // Very light diagonal paper pattern, kept clear of the match rows.
     ctx.strokeStyle = '#08243b06'; ctx.lineWidth = 1;
     for (let x = -height; x < width; x += 38) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + height, height); ctx.stroke(); }
+    ctx.save();
+    ctx.scale(1, headerH / 450);
     for (const y of [48, 111]) {
       ctx.fillStyle = theme.primary; ctx.fillRect(0, y, width / 2, 36);
       ctx.fillStyle = theme.secondary; ctx.fillRect(width / 2, y, width / 2, 36);
@@ -160,6 +164,10 @@ window.MatchdayRenderer = (() => {
     const dates = days.map(day => day.date).filter(Boolean);
     const first = dates[0] || week.dal, last = dates[dates.length - 1] || week.al;
     text(ctx, first === last ? dateLabel(first, true) : `${dateLabel(first, true)}  —  ${dateLabel(last, true)}`, 540, titleLines.length > 1 ? 421 : 413, 940, 29);
+    ctx.restore();
+    ctx.save();
+    ctx.translate(width * (1 - scheduleScale) / 2, headerH * (1 - scheduleScale));
+    ctx.scale(scheduleScale, scheduleScale);
     let y = headerH, index = 0;
     for (const [dayIndex, day] of days.entries()) {
       const color = dayIndex % 2 === 0 ? theme.primary : theme.secondary;
@@ -207,6 +215,7 @@ window.MatchdayRenderer = (() => {
       }
       y += dayGap;
     }
+    ctx.restore();
     text(ctx, 'IL CALCIO, QUELLO VERO.', 540, height - 108, 900, 23);
     ctx.fillStyle = theme.primary; ctx.fillRect(0, height - 72, 516, 26);
     ctx.fillStyle = theme.secondary; ctx.fillRect(564, height - 72, 516, 26);
