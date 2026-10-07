@@ -9,8 +9,8 @@ const policy = fs.readFileSync(path.join(root,'.htaccess'),'utf8').match(/Header
 function fixture() {
   let page = fs.readFileSync(path.join(root, 'api/grafiche_post_partita.php'), 'utf8');
   page = page.slice(page.indexOf('<!doctype html>'));
-  for (const [name, value] of Object.entries({templateEditor:'false', graphicsTemplatesCsrf:'"test"', tournaments:'[]', matches:'[]', matchPlayers:'{}'})) {
-    page = page.replace(new RegExp('const '+name+'=<\\?=[\\s\\S]*?\\?>;'), 'const '+name+'='+value+';');
+  for (const [name, value] of Object.entries({instagramPublishCsrf:'"test"',templateEditor:'false', graphicsTemplatesCsrf:'"test"', tournaments:'[]', matches:'[]', matchPlayers:'{}'})) {
+    page = page.replace(new RegExp('const '+name+'\\s*=\\s*<\\?=[\\s\\S]*?\\?>;'), 'const '+name+'='+value+';');
   }
   page = page.replace(/<\?php if \(!\$embedded\): \?>fetch\([\s\S]*?<\?php endif; \?>/, '');
   page = page.replace(/<\?[\s\S]*?\?>/g, '');
@@ -48,6 +48,24 @@ document.getElementById('runPhotoTest').onclick=async()=>{
     await upload('ftCaptains',4032,3024,'#ff00ff');
     await upload('mvpPhoto',600,800,'#00ff00');
     verifyPixels('fulltimeCanvas','magenta');verifyPixels('mvpCanvas','green');
+    for(const [type,id] of [['ft','fulltimeCanvas'],['mvp','mvpCanvas']]){
+      document.querySelector('[data-panel="'+(type==='ft'?'fulltimePanel':'mvpPanel')+'"]').click();
+      const canvas=document.getElementById(id),wrap=canvas.parentElement,selection=wrap.lastElementChild.firstElementChild;
+      const image=imageState[type==='ft'?'ftCaptains':'mvpPhoto'];
+      for(const key of ['n','ne','e','se','s','sw','w','nw']){
+        const handle=selection.querySelector('[data-handle="'+key+'"]');
+        const event=(name,x,y)=>new PointerEvent(name,{bubbles:true,pointerId:1,clientX:x,clientY:y,button:0});
+        // Synthetic events do not create native pointer capture.
+        const capture=selection.setPointerCapture;selection.setPointerCapture=()=>{};
+        try{handle.dispatchEvent(event('pointerdown',200,300));handle.dispatchEvent(event('pointermove',240,330));handle.dispatchEvent(event('pointerup',240,330));}finally{selection.setPointerCapture=capture;}
+        const b=PhotoTouchEditor.transform(type,image,{x:0,y:0,w:1080,h:1350},{x:0,y:0,w:image.naturalWidth,h:image.naturalHeight});
+        expect(Math.abs(b.w/b.h-image.naturalWidth/image.naturalHeight)<1e-8,type+': proporzioni alterate da '+key);
+        drawAll();
+      }
+      const blob=await canvasBlob(canvas),decoded=await createImageBitmap(blob);
+      expect(decoded.width===1080&&decoded.height===1350,'Dimensioni PNG errate');decoded.close();
+    }
+    document.querySelector('[data-panel="fulltimePanel"]').click();
     const base=document.createElement('canvas');base.width=1080;base.height=1350;
     base.getContext('2d').fillRect(0,0,1080,1350);
     const originalFetch=window.fetch;
@@ -125,6 +143,8 @@ http.createServer((req,res)=>{
   res.setHeader('Cache-Control','no-store');
   if(req.url==='/'){
     res.setHeader('Content-Type','text/html; charset=utf-8');res.end(fixture());
+  }else if(req.url.startsWith('/grafiche_foto_touch.js')){
+    res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fs.readFileSync(path.join(root,'api/grafiche_foto_touch.js')));
   }else if(req.url.startsWith('/grafiche_basi.js')){
     res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fs.readFileSync(path.join(root,'api/grafiche_basi.js')));
   }else if(req.url.startsWith('/grafiche_scontorno.js')){

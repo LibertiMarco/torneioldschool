@@ -39,7 +39,7 @@ window.PhotoTouchEditor = (() => {
       wrap.style.cssText='position:relative;width:min(100%,540px);margin:auto;';
       canvas.before(wrap);wrap.append(canvas);canvas.style.width='100%';canvas.style.maxHeight='none';
       const button=document.createElement('button');button.type='button';button.textContent='Modifica foto con touch';button.setAttribute('aria-pressed','false');
-      const hint=document.createElement('p');hint.className='hint';hint.textContent='Trascina la foto per spostarla. Usa due dita per lo zoom, gli angoli per ridimensionare, i lati per modificare solo larghezza o altezza.';
+      const hint=document.createElement('p');hint.className='hint';hint.textContent='Trascina la foto per spostarla. Usa due dita per lo zoom o le maniglie per ridimensionare mantenendo le proporzioni originali.';
       wrap.before(button,hint);
       const layer=document.createElement('div');layer.style.cssText='position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:10;touch-action:none;';layer.hidden=true;
       const selection=document.createElement('div');selection.style.pointerEvents='auto';layer.append(selection);wrap.append(layer);Object.assign(s,{layer,selection,button,wrap});
@@ -69,10 +69,16 @@ window.PhotoTouchEditor = (() => {
           const [a,c]=[...pointers.values()],scale=Math.max(.05,Math.min(20,Math.hypot(c.x-a.x,c.y-a.y)/g.distance));
           b.w*=scale;b.h*=scale;b.x=(a.x+c.x)/2+(g.box.x-g.center.x)*scale;b.y=(a.y+c.y)/2+(g.box.y-g.center.y)*scale;
         }else if(g.handle){
-          if(g.handle.includes('e'))b.w=Math.max(20,Math.min(21600,b.w+dx));
-          if(g.handle.includes('s'))b.h=Math.max(20,Math.min(27000,b.h+dy));
-          if(g.handle.includes('w')){b.w=Math.max(20,Math.min(21600,g.box.w-dx));b.x=g.box.x+g.box.w-b.w;}
-          if(g.handle.includes('n')){b.h=Math.max(20,Math.min(27000,g.box.h-dy));b.y=g.box.y+g.box.h-b.h;}
+          const horizontal=/[ew]/.test(g.handle),vertical=/[ns]/.test(g.handle);
+          const dw=g.handle.includes('w')?-dx:dx,dh=g.handle.includes('n')?-dy:dy;
+          // Project corner movement onto the image diagonal; side handles use
+          // their own axis. One scale preserves the photo ratio on every handle.
+          let scale=horizontal&&vertical?1+(dw*g.box.w+dh*g.box.h)/(g.box.w*g.box.w+g.box.h*g.box.h):
+            horizontal?1+dw/g.box.w:1+dh/g.box.h;
+          scale=Math.max(Math.max(20/g.box.w,20/g.box.h),Math.min(Math.min(21600/g.box.w,27000/g.box.h),scale));
+          b.w=g.box.w*scale;b.h=g.box.h*scale;
+          b.x=g.box.x+(g.handle.includes('w')?g.box.w-b.w:horizontal?0:(g.box.w-b.w)/2);
+          b.y=g.box.y+(g.handle.includes('n')?g.box.h-b.h:vertical?0:(g.box.h-b.h)/2);
         }else{b.x+=dx;b.y+=dy;}
         Object.assign(s,{sx:b.w/g.base.w,sy:b.h/g.base.h,dx:b.x-g.base.x,dy:b.y-g.base.y});
         drawAll();

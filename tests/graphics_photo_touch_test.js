@@ -28,11 +28,19 @@ for(const [type,id] of [['ft','fulltimeCanvas'],['mvp','mvpCanvas']]){
   button.listeners.click();assert.equal(layer.hidden,false);
   const event=(pointerId,x,y,target=selection)=>({pointerId,clientX:x/2,clientY:y/2,button:0,target,preventDefault(){},stopPropagation(){}});
   const drag=(key,dx,dy)=>{const handle=selection.children.find(n=>n.dataset.handle===key)||selection;selection.listeners.pointerdown(event(1,300,400,handle));selection.listeners.pointermove(event(1,300+dx,400+dy,handle));selection.listeners.pointerup(event(1,300+dx,400+dy,handle));};
-  drag('e',100,90);assert.equal(box.w,900);assert.equal(box.h,700,'Horizontal handle changed height');
-  drag('s',90,100);assert.equal(box.w,900,'Vertical handle changed width');assert.equal(box.h,800);
-  drag('nw',50,60);assert.equal(box.x,100);assert.equal(box.y,260);assert.equal(box.w,850);assert.equal(box.h,740);
-  drag('',40,30);assert.equal(box.x,140);assert.equal(box.y,290);assert.equal(box.w,850);
-  selection.listeners.pointerdown(event(1,200,400));selection.listeners.pointerdown(event(2,400,400));selection.listeners.pointermove(event(2,600,400));assert.equal(box.w,1700);assert.equal(box.h,1480);
+  const ratio=base.w/base.h;
+  const proportional=()=>assert(Math.abs(box.w/box.h-ratio)<1e-10,'Photo aspect ratio changed');
+  for(const key of ['e','s','nw','n','ne','se','sw','w']){
+    const before={...box};
+    drag(key,50,60);proportional();
+    if(key.includes('w'))assert(Math.abs(box.x+box.w-before.x-before.w)<1e-8,'Opposite horizontal edge moved');
+    if(key.includes('n'))assert(Math.abs(box.y+box.h-before.y-before.h)<1e-8,'Opposite vertical edge moved');
+  }
+  drag('se',-100000,-100000);proportional();assert(Math.min(box.w,box.h)>=20-1e-8);
+  drag('se',100000,100000);proportional();assert(box.w<=21600&&box.h<=27000);
+  const beforeMove={...box};drag('',40,30);assert.equal(box.x,beforeMove.x+40);assert.equal(box.y,beforeMove.y+30);assert.equal(box.w,beforeMove.w);
+  const beforePinch={...box};
+  selection.listeners.pointerdown(event(1,200,400));selection.listeners.pointerdown(event(2,400,400));selection.listeners.pointermove(event(2,600,400));assert.equal(box.w,beforePinch.w*2);assert.equal(box.h,beforePinch.h*2);proportional();
   selection.listeners.pointercancel(event(2,600,400));assert.equal(selection.captures.size,0);
   const old=box.x;selection.listeners.pointermove(event(1,900,900));assert.equal(box.x,old,'Cancelled gesture continued');
   editor.sync(type,null);assert.equal(layer.hidden,true);
@@ -44,6 +52,7 @@ for(const [type,id] of [['ft','fulltimeCanvas'],['mvp','mvpCanvas']]){
   drag('',80,120);assert.equal(rendered.x,130);assert.equal(rendered.y,320);assert.equal(rendered.image,uploaded,'Dragged a template rather than the uploaded photo');
   assert.equal(rendered.w,800);assert.equal(rendered.h,700);
   sandbox.drawAll();assert.equal(rendered.x,130,'Export redraw lost photo position');
-  drag('e',100,0);assert.equal(rendered.w,900);assert.equal(rendered.h,700,'Final photo height changed with horizontal handle');
+  drag('e',100,0);assert.equal(rendered.w,900);assert.equal(rendered.h,787.5,'Final photo did not scale proportionally');
+  sandbox.drawAll();assert.equal(rendered.h,787.5,'Export redraw lost photo proportions');
 }
-console.log('PASS: Full Time and MVP photo drag, independent dimensions, corners, pinch, cancellation and reset.');
+console.log('PASS: Full Time and MVP photo drag, all eight proportional handles, limits, pinch, cancellation, reset and export redraw.');

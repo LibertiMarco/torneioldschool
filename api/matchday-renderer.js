@@ -167,7 +167,7 @@ window.MatchdayRenderer = (() => {
     }
     const dates = days.map(day => day.date).filter(Boolean);
     const first = dates[0] || week.dal, last = dates[dates.length - 1] || week.al;
-    text(ctx, first === last ? dateLabel(first, true) : `${dateLabel(first, true)}  ?  ${dateLabel(last, true)}`, 540, compact ? 309 : titleLines.length > 1 ? 421 : 413, 940, compact ? 25 : 29);
+    text(ctx, first === last ? dateLabel(first, true) : `${dateLabel(first, true)} - ${dateLabel(last, true)}`, 540, compact ? 309 : titleLines.length > 1 ? 421 : 413, 940, compact ? 25 : 29);
     ctx.save();
     ctx.translate(width * (1 - scheduleScale) / 2, headerH * (1 - scheduleScale));
     ctx.scale(scheduleScale, scheduleScale);
