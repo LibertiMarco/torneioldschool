@@ -108,7 +108,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     input,select,button { width:100%; border:1px solid #ffffff18; border-radius:10px; padding:11px 12px; font:inherit; }
     input,select { background:#081522; color:#fff; }
     input[readonly] { color:#b9c9d7; background:#0b1926; }
-    input[type=file] { padding:8px; color:#bac8d5; }
+
     input[type=range] { padding:4px 0; accent-color:var(--gold); }
     .range-value { color:var(--muted); font-size:12px; font-weight:600; }
     .player-options { display:grid; gap:8px; max-height:260px; overflow:auto; padding:10px; background:#081522; border:1px solid #ffffff18; border-radius:10px; }
@@ -160,6 +160,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
       .tab{font-size:14px}.preview-head{flex-direction:column;align-items:flex-start}.preview-actions{width:100%}.preview-head button{width:100%;font-size:12px}
     }
   </style>
+  <link rel="stylesheet" href="/api/grafiche_file_inputs.css?v=20261007">
 </head>
 <body class="<?= $embedded ? 'is-embedded' : 'with-site-header' ?>">
 <?php if (!$embedded): ?><?php include __DIR__ . '/../includi/header.php'; ?><?php endif; ?>

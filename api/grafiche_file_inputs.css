@@ -1,0 +1,48 @@
+/* Shared upload controls for the graphics editors, including template uploads. */
+input[type=file] {
+  min-width:0;
+  max-width:100%;
+  padding:5px;
+  border:1px solid #ffffff24;
+  border-radius:12px;
+  background:#081522;
+  color:#bac8d5;
+  font-size:13px;
+  cursor:pointer;
+  transition:border-color .18s,box-shadow .18s;
+}
+input[type=file]::file-selector-button {
+  margin-right:12px;
+  padding:10px 14px;
+  border:1px solid #ffffff24;
+  border-radius:8px;
+  background:linear-gradient(135deg,#f3d68b,var(--gold,#e8bd45));
+  color:#101722;
+  font:inherit;
+  font-weight:800;
+  cursor:pointer;
+  box-shadow:0 2px 8px #0003;
+  transition:filter .18s,box-shadow .18s;
+}
+input[type=file]:not(:disabled):hover {
+  border-color:var(--gold,#e8bd45);
+}
+input[type=file]:not(:disabled):hover::file-selector-button {
+  filter:brightness(1.08);
+  box-shadow:0 3px 12px #0004;
+}
+input[type=file]:focus-visible {
+  outline:2px solid var(--gold,#e8bd45);
+  outline-offset:3px;
+}
+input[type=file]:disabled,
+input[type=file]:disabled::file-selector-button {
+  cursor:not-allowed;
+  opacity:.55;
+}
+@media(max-width:760px) {
+  input[type=file]::file-selector-button {
+    margin-right:8px;
+    padding:9px 10px;
+  }
+}
