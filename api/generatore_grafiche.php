@@ -11,7 +11,7 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
   <style>
     :root{color-scheme:dark;font-family:Inter,Arial,sans-serif;--bg:#07111d;--panel:#101e2d;--gold:#e8bd45;--muted:#aebdca}
     *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#13263a 0,var(--bg) 42%);color:#fff}main{width:min(1540px,calc(100% - 24px));margin:24px auto 50px}a{color:#9bcaff}h1{margin:12px 0 5px}.intro{margin:0 0 20px;color:var(--muted)}
-    .tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:10px;background:var(--panel);border:1px solid #ffffff12;border-radius:16px 16px 0 0}.tab{border:0;border-radius:10px;padding:14px 16px;background:#203449;color:#dbe7f2;font:800 15px inherit;cursor:pointer}.tab.active{background:var(--gold);color:#101722}
+    .tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;padding:10px;background:var(--panel);border:1px solid #ffffff12;border-radius:16px 16px 0 0}.tab{border:0;border-radius:10px;padding:14px 16px;background:#203449;color:#dbe7f2;font:800 15px inherit;cursor:pointer}.tab.active{background:var(--gold);color:#101722}
     .frames{background:#081522;border:1px solid #ffffff12;border-top:0;border-radius:0 0 16px 16px;overflow:hidden}.frame{display:none;width:100%;min-height:1450px;border:0;background:#07111d}.frame.active{display:block}
     @media(max-width:650px){.tabs{grid-template-columns:1fr}.frame{min-height:1750px}}
     body.with-site-header>main{margin-top:110px}
@@ -30,12 +30,14 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
     <button class="tab" type="button" data-target="postMatchFrame">FULLTIME E MVP</button>
     <button class="tab" type="button" data-target="templatesFrame">Template grafiche Full Time e MVP</button>
     <button class="tab" type="button" data-target="coversFrame">COPERTINE</button>
+    <button class="tab" type="button" data-target="standingsFrame">Classifiche</button>
   </nav>
   <section class="frames">
     <iframe id="matchdayFrame" class="frame active" title="Generatore Matchday" src="/api/grafiche_settimana.php?embed=1"></iframe>
     <iframe id="postMatchFrame" class="frame" title="Generatore Fulltime e MVP" data-src="/api/grafiche_post_partita.php?embed=1"></iframe>
     <iframe id="templatesFrame" class="frame" title="Template grafiche Full Time e MVP" data-src="/api/grafiche_post_partita.php?embed=1&amp;templates=1"></iframe>
     <iframe id="coversFrame" class="frame" title="Generatore copertine" data-src="/api/copertina_partite.php?embed=1"></iframe>
+    <iframe id="standingsFrame" class="frame" title="Generatore classifiche" data-src="/api/grafiche_classifiche.php?embed=1"></iframe>
   </section>
 </main>
 <div id="footer-container"></div>
@@ -50,7 +52,7 @@ document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click
 window.addEventListener('message',event=>{
   if(event.origin!==window.location.origin)return;
   if(event.data?.type==='graphics-frame-height'){
-    const frame=['matchdayFrame','postMatchFrame','templatesFrame','coversFrame'].map(id=>document.getElementById(id)).find(item=>item&&item.contentWindow===event.source);
+    const frame=['matchdayFrame','postMatchFrame','templatesFrame','coversFrame','standingsFrame'].map(id=>document.getElementById(id)).find(item=>item&&item.contentWindow===event.source);
     const height=event.data.height;
     if(frame&&Number.isFinite(height)&&height>0&&height<=10000000){
       frame.classList.add('auto-height');frame.style.height=Math.ceil(height)+'px';frame.setAttribute('scrolling','no');

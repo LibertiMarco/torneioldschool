@@ -225,5 +225,5 @@ window.MatchdayRenderer = (() => {
     text(ctx, 'TORNEIOLDSCHOOL.IT', 540, height - 23, 900, 16, '#40586a', 'center', 'Arial, sans-serif');
     return canvas;
   }
-  return {drawTournament, tournamentTheme};
+  return {drawTournament, tournamentTheme, loadImage, contained, text};
 })();

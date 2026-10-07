@@ -44,6 +44,7 @@ $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="/api/matchday-renderer.js?v=20261007-date-range"></script>
+<script src="/api/grafiche_downloads.js?v=20261007"></script>
 <script src="/api/grafiche_frame_height.js?v=20261006"></script>
 <script>
 const dateInput = document.getElementById('date');
@@ -57,49 +58,7 @@ let generated = [];
 const drawTournament = window.MatchdayRenderer.drawTournament;
 const safeName = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
 
-const isIPhoneSafari = /iP(hone|ad|od)/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
-const canvasToBlob = canvas => new Promise((resolve,reject) => canvas.toBlob(
-  blob => blob ? resolve(blob) : reject(new Error('Impossibile creare il file PNG.')),
-  'image/png'
-));
-async function saveImage(item) {
-  let fallbackWindow=null;
-  if(isIPhoneSafari && !navigator.share) fallbackWindow=window.open('about:blank','_blank');
-  try {
-    const blob=await canvasToBlob(item.canvas);
-    const file=new File([blob],item.name,{type:'image/png'});
-    if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))) {
-      await navigator.share({files:[file],title:item.name});
-      return;
-    }
-    const url=URL.createObjectURL(blob);
-    if(fallbackWindow) {
-      fallbackWindow.location.href=url;
-      setTimeout(()=>URL.revokeObjectURL(url),60000);
-      return;
-    }
-    const a=document.createElement('a'); a.download=item.name; a.href=url; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),2000);
-  } catch(error) {
-    if(fallbackWindow) fallbackWindow.close();
-    if(error?.name!=='AbortError') throw error;
-  }
-}
-async function saveAllImages() {
-  if(isIPhoneSafari) {
-    const files=await Promise.all(generated.map(async item => new File(
-      [await canvasToBlob(item.canvas)],item.name,{type:'image/png'}
-    )));
-    if(navigator.share && (!navigator.canShare || navigator.canShare({files}))) {
-      await navigator.share({files,title:'Grafiche Tornei Old School'});
-      return;
-    }
-    throw new Error('Questa versione di iOS non supporta il salvataggio multiplo. Usa “Salva immagine” su ogni grafica.');
-  }
-  generated.forEach((item,index)=>setTimeout(
-    ()=>saveImage(item).catch(error=>{statusEl.textContent=error.message}),index*350
-  ));
-}
+const {isIPhoneSafari, saveImage} = GraphicsDownloads;
 async function generate() {
   statusEl.textContent='Recupero partite e generazione immagini…'; grid.innerHTML=''; generated=[]; downloadAll.hidden=true;
   try {
@@ -122,6 +81,6 @@ async function generate() {
   } catch(error) { statusEl.textContent=error.message; }
 }
 document.getElementById('generate').onclick=generate;
-downloadAll.onclick=async()=>{try{await saveAllImages()}catch(error){if(error?.name!=='AbortError')statusEl.textContent=error.message}};
+downloadAll.onclick=async()=>{try{await GraphicsDownloads.saveAllImages(generated,error=>{statusEl.textContent=error.message})}catch(error){if(error?.name!=='AbortError')statusEl.textContent=error.message}};
 <?php if (!$embedded): ?>fetch('/includi/footer.html').then(response=>response.text()).then(html=>{document.getElementById('footer-container').innerHTML=html;}).catch(()=>{});<?php endif; ?>
 </script></body></html>
