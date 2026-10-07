@@ -8,6 +8,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/torneo_phase_rules.php';
+require_once __DIR__ . '/includi/diffidati.php';
 require_once __DIR__ . '/includi/seo.php';
 require_once __DIR__ . '/includi/content_sections.php';
 
@@ -43,30 +44,7 @@ function fetch_player_team_disciplinary_status(mysqli $conn, int $giocatoreId, a
     $torneo = trim((string)($team['torneo'] ?? ''));
     if ($teamId <= 0 || $teamName === '' || $torneo === '') return false;
 
-    $sql = "SELECT pg.cartellino_giallo, pg.cartellino_rosso
-            FROM partita_giocatore pg
-            JOIN partite p ON p.id = pg.partita_id
-            LEFT JOIN tornei t ON (t.filetorneo = p.torneo OR t.filetorneo = CONCAT(p.torneo, '.php') OR t.nome = p.torneo)
-            WHERE pg.giocatore_id = ? AND p.torneo = ?
-              AND COALESCE(t.sezione, 'calcio') = ?
-              AND (pg.squadra_id = ? OR (pg.squadra_id IS NULL AND (? = p.squadra_casa OR ? = p.squadra_ospite)))
-            ORDER BY p.data_partita ASC, p.ora_partita ASC, p.id ASC";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) return false;
-    $stmt->bind_param('ississ', $giocatoreId, $torneo, $section, $teamId, $teamName, $teamName);
-    if (!$stmt->execute()) { $stmt->close(); return false; }
-    $result = $stmt->get_result();
-    $yellowRun = 0;
-    while ($row = $result->fetch_assoc()) {
-        if ((int)$row['cartellino_rosso'] > 0) {
-            $yellowRun = 0;
-        } elseif ((int)$row['cartellino_giallo'] > 0) {
-            $yellowRun++;
-            if ($yellowRun >= 3) $yellowRun = 0;
-        }
-    }
-    $stmt->close();
-    return $yellowRun >= 2;
+    return count(diffidati_fetch($conn, $torneo, $giocatoreId, $teamId)) > 0;
 }
 
 function resolve_torneo_link(?string $value): string {

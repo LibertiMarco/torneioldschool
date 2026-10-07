@@ -1,9 +1,10 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/security.php';
 require_once __DIR__ . '/../includi/user_features.php';
 require_once __DIR__ . '/../includi/push_notifications.php';
 require_once __DIR__ . '/../includi/partite_schema.php';
+require_once __DIR__ . '/../includi/diffidati.php';
 require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 require_once __DIR__ . '/crud/partita.php';
 require_once __DIR__ . '/../includi/all_in_one_semifinals.php';
@@ -17,20 +18,14 @@ function partita_giocatore_json_error(string $message, int $status = 400): void 
 }
 
 function partita_giocatore_diffidato(mysqli $conn, int $giocatoreId, int $squadraId, int $partitaId): bool {
-    $stmt = $conn->prepare("SELECT pg.cartellino_giallo, pg.cartellino_rosso
-        FROM partita_giocatore pg JOIN partite p ON p.id = pg.partita_id
-        WHERE pg.giocatore_id = ? AND pg.squadra_id = ? AND pg.partita_id <> ?
-        ORDER BY p.data_partita ASC, p.ora_partita ASC, p.id ASC");
+    $stmt = $conn->prepare("SELECT torneo FROM partite WHERE id = ?");
     if (!$stmt) return false;
-    $stmt->bind_param('iii', $giocatoreId, $squadraId, $partitaId);
+    $stmt->bind_param('i', $partitaId);
     if (!$stmt->execute()) { $stmt->close(); return false; }
-    $count = 0; $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-        if ((int)$row['cartellino_rosso'] > 0) $count = 0;
-        elseif ((int)$row['cartellino_giallo'] > 0) { $count++; if ($count >= 3) $count = 0; }
-    }
+    $partita = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-    return $count >= 2;
+    if (!$partita) return false;
+    return count(diffidati_fetch($conn, (string)$partita['torneo'], $giocatoreId, $squadraId)) > 0;
 }
 
 if (!isset($_SESSION['user_id'])) {
