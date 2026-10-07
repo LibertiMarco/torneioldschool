@@ -355,10 +355,21 @@ const customTemplates = (() => {
       teams.size>1?imageState.ftAwayLogo:null
     ];
     const texts=type==='ft'?{homeScore:String($('ftHomeScore').value||0),awayScore:String($('ftAwayScore').value||0),home:$('ftHome').value,away:$('ftAway').value,round:$('ftRound').value}:{names:$('mvpNames').value,team:$('mvpTeam').value,details:$('mvpDetails').value};
+    const logoSlots=type==='mvp'?['homeLogo','awayLogo'].filter(key=>item.layout[key]?.visible):[];
+    const sharedLogos=logos.filter(Boolean);
     for (const [key,r] of Object.entries(item.layout)) {
       if(!r.visible) continue;
       if(key==='photo') { if(editor&&!photo) guide(ctx,r,'FOTO GIOCATORI'); }
       else if(key==='homeLogo'||key==='awayLogo') {
+        // Fit both MVP teams into a single crest window without changing
+        // the template layout stored for this tournament.
+        if(type==='mvp'&&logoSlots.length===1&&sharedLogos.length){
+          if(sharedLogos.length===2){
+            containRounded(ctx,sharedLogos[0],r.x,r.y,r.w/2,r.h/2);
+            containRounded(ctx,sharedLogos[1],r.x+r.w/2,r.y+r.h/2,r.w/2,r.h/2);
+          }else containRounded(ctx,sharedLogos[0],r.x,r.y,r.w,r.h);
+          continue;
+        }
         const logo=logos[key==='homeLogo'?0:1];
         if(editor&&!logo) guide(ctx,r,key==='homeLogo'?'LOGO 1':'LOGO 2');
         else containRounded(ctx,logo,r.x,r.y,r.w,r.h);

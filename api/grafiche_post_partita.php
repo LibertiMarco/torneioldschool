@@ -248,7 +248,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
   </div>
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
-<script src="grafiche_basi.js?v=20261004-touch-pinch-elements"></script>
+<script src="grafiche_basi.js?v=20261007-mvp-shared-logo"></script>
 <script src="grafiche_foto_touch.js?v=20261007-aspect-ratio"></script>
 <script src="grafiche_scontorno.js?v=20260927-modnet"></script>
 <script>
@@ -448,7 +448,7 @@ function updateFulltimeCaption(force=false){
 function updateMvpCaption(force=false){
   const field=$('instagramCaptionMvp');
   if(!field)return;
-  const name=$('mvpNames').value.trim();
+  const name=upper($('mvpNames').value);
   if(!name){
     if(force||!field.value||field.value===lastGeneratedMvpCaption)field.value='';
     lastGeneratedMvpCaption='';
@@ -513,13 +513,14 @@ function renderMvpPlayers(match){
   addMvpOption(container,'group:home',`IL GRUPPO (${match.squadra_casa})`,{name:'IL GRUPPO',team:match.squadra_casa},'group');
   addMvpOption(container,'group:away',`IL GRUPPO (${match.squadra_ospite})`,{name:'IL GRUPPO',team:match.squadra_ospite},'group');
   const players=matchPlayers[String(match.id)]||[];
-  players.forEach(player=>addMvpOption(container,`player:${player.id}`,`${player.nome} ${player.cognome} — ${player.squadra_nome}`,{name:`${player.nome} ${player.cognome}`,team:player.squadra_nome}));
+  players.forEach(player=>addMvpOption(container,`player:${player.id}`,`${player.nome} ${player.cognome} — ${player.squadra_nome}`,{name:`${player.nome} ${player.cognome}`,surname:player.cognome,team:player.squadra_nome}));
   if(!players.length){const note=document.createElement('div');note.className='player-empty';note.textContent='Nessun giocatore presente nel tabellino: puoi comunque scegliere uno dei due gruppi.';container.append(note);}
   $('mvpNames').value='';$('mvpTeam').value='';drawMvp();
 }
 async function updateMvpSelection(){
   const selected=[...$('mvpPlayers').querySelectorAll('input[type=checkbox]:checked')].map(input=>input._mvpData);
-  $('mvpNames').value=selected.map(item=>item.name).join(' • ');
+  const names=selected.map(item=>upper(selected.length>1?item.surname||item.name:item.name));
+  $('mvpNames').value=names.length>1?`${names.slice(0,-1).join(', ')} E ${names[names.length-1]}`:names[0]||'';
   $('mvpTeam').value=[...new Set(selected.map(item=>item.team).filter(Boolean))].join(' / ');
   drawMvp();
 }

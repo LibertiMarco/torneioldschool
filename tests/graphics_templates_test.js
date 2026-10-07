@@ -6,6 +6,7 @@ const nodes = new Map();
 const calls = [];
 const responses = new Map();
 const textCalls = [];
+const logoCalls = [];
 const context = new Proxy({}, {get: (target,key) => target[key] || (()=>{}), set:(target,key,value)=>(target[key]=value,true)});
 context.fillText=(value,x,y)=>textCalls.push({value,x,y,color:context.fillStyle});
 function node(id) {
@@ -23,7 +24,7 @@ const sandbox = {
   loadImage:async src=>({src,naturalWidth:1080,naturalHeight:1350}),
   fileImage:async file=>({src:file.name,naturalWidth:1080,naturalHeight:1350}),
   imageState:{},cropValues:()=>({}),fitText(){},cover(){},
-  contain(ctx,img){if(img)calls.push(img.src);},
+  contain(ctx,img,x,y,w,h){if(img){calls.push(img.src);if(img.src==='home-crest'||img.src==='away-crest')logoCalls.push({src:img.src,x,y,w,h});}},
   drawAll(){sandbox.draws=(sandbox.draws||0)+1;},
   fetch:async(url,options)=>{
     if(options?.method==='POST') {sandbox.lastPost=options.body.data;return {ok:!sandbox.failSave,json:async()=>sandbox.failSave?{error:'Salvataggio non riuscito'}:sandbox.unconfirmedSave?{}:{ok:true}};}
@@ -137,10 +138,40 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
   await reader.reload();textCalls.length=0;reader.draw('ft');
   assert.deepStrictEqual(textCalls.map(call=>call.value),['0'],'Score visibility is not independent');
   assert.strictEqual(textCalls[0].x,300.5);assert.strictEqual(textCalls[0].color,'#abcdef');
+  // Single-window MVP templates must render both selected teams, including
+  // when the only visible slot is the legacy second-logo slot.
+  node('ftHome').value='Casa';node('ftAway').value='Ospite';
+  const home={team:'Casa'},away={team:'Ospite'};
+  let selected=[home,away];
+  node('mvpPlayers').querySelectorAll=()=>selected.map(data=>({_mvpData:data}));
+  readerSandbox.imageState.ftHomeLogo={src:'home-crest',naturalWidth:100,naturalHeight:100};
+  readerSandbox.imageState.ftAwayLogo={src:'away-crest',naturalWidth:100,naturalHeight:100};
+  const slot={x:100,y:200,w:200,h:160,visible:true};
+  for(const key of ['homeLogo','awayLogo']){
+    const other=key==='homeLogo'?'awayLogo':'homeLogo';
+    responses.set('1',{mvp:{image:'mvp-single-slot',layout:{[key]:slot,[other]:{...slot,visible:false}}}});
+    await reader.reload();logoCalls.length=0;reader.draw('mvp');
+    assert.deepStrictEqual(logoCalls,[{src:'home-crest',x:100,y:200,w:100,h:80},{src:'away-crest',x:200,y:280,w:100,h:80}]);
+    logoCalls.length=0;reader.draw('mvp');assert.strictEqual(logoCalls.length,2,'Export redraw lost a crest');
+    selected=[away];logoCalls.length=0;reader.draw('mvp');
+    assert.deepStrictEqual(logoCalls,[{src:'away-crest',x:100,y:200,w:200,h:160}]);
+    selected=[home,home];logoCalls.length=0;reader.draw('mvp');assert.strictEqual(logoCalls.length,1,'Same team crest duplicated');
+    selected=[home,away];
+  }
+  responses.set('1',{mvp:{image:'mvp-two-slots',layout:{homeLogo:slot,awayLogo:{...slot,x:500}}}});
+  await reader.reload();logoCalls.length=0;reader.draw('mvp');
+  assert.deepStrictEqual(logoCalls,[{src:'home-crest',x:100,y:200,w:200,h:160},{src:'away-crest',x:500,y:200,w:200,h:160}]);
   // Parse the PHP page's inline JS with inert fixture values; no database or session required.
   const page=fs.readFileSync(path.join(__dirname,'../api/grafiche_post_partita.php'),'utf8');
   const inline=page.match(/<script>\s*([\s\S]*?)<\/script>/)[1]
     .replace(/<\?=([\s\S]*?)\?>/g,'[]').replace(/<\?php[\s\S]*?\?>/g,'');
   new vm.Script(inline);
+  const selectionSandbox={$:node,upper:value=>String(value||'').trim().toUpperCase(),drawMvp(){}};
+  vm.createContext(selectionSandbox);
+  vm.runInContext(page.slice(page.indexOf('async function updateMvpSelection(){'),page.indexOf('function clearMatch(){')),selectionSandbox);
+  const ferrara={name:'Mario Ferrara',surname:'Ferrara',team:'Casa'},liberti={name:'Marco Liberti',surname:'Liberti',team:'Ospite'},totore={name:'Paolo Totore',surname:'Totore',team:'Casa'};
+  for(const [players,label] of [[[ferrara],'MARIO FERRARA'],[[ferrara,liberti],'FERRARA E LIBERTI'],[[ferrara,liberti,totore],'FERRARA, LIBERTI E TOTORE'],[[ferrara,{name:'Luca De Luca',surname:'De Luca',team:'Casa'}],'FERRARA E DE LUCA'],[[],'']]){
+    selected=players;await selectionSandbox.updateMvpSelection();assert.strictEqual(node('mvpNames').value,label);
+  }
   console.log('Graphics template tournament isolation, drafts, save/reset, async switching and JS syntax: OK');
 })().catch(error=>{console.error(error);process.exitCode=1;});
