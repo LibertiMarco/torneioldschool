@@ -12,6 +12,7 @@ try {
             WHERE tx.nome = codes.torneo OR tx.filetorneo = codes.torneo
                OR REPLACE(REPLACE(tx.filetorneo, '.php', ''), '.html', '') = REPLACE(REPLACE(codes.torneo, '.php', ''), '.html', '')
             ORDER BY tx.id DESC LIMIT 1)
+        WHERE t.stato = 'in corso'
         ORDER BY nome, codice");
     if (!$result) throw new RuntimeException('Impossibile recuperare i tornei');
     $tournaments = $result->fetch_all(MYSQLI_ASSOC);
