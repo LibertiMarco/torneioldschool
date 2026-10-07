@@ -13,7 +13,7 @@ window.StandingsRenderer = (() => {
   async function draw(tournament, rows, format, group='', updated='') {
     const width=1080,height=format==='post'?1350:1920;
     // Paginate dense tables instead of shrinking their text to illegibility.
-    const perPage=format==='post'?12:20,pages=[];
+    const perPage=format==='post'?12:22,pages=[];
     const theme=tournamentTheme(tournament),ink='#08243b';
     const logoUrl=src=>!src?null:/^(https?:|data:|\/)/i.test(src)?src:'/'+src.replace(/^(\.\.\/)+/,'');
     const [brand,logos]=await Promise.all([loadImage('/img/logo_old_school.png'),Promise.all(rows.map(row=>loadImage(logoUrl(row.logo))))]);

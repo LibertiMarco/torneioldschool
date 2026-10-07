@@ -43,7 +43,7 @@ try {
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="/api/matchday-renderer.js?v=20261007-standings"></script>
-<script src="/api/classifiche-renderer.js?v=20261007"></script>
+<script src="/api/classifiche-renderer.js?v=20261007-story-22"></script>
 <script src="/api/grafiche_downloads.js?v=20261007"></script>
 <script src="/api/grafiche_frame_height.js?v=20261006"></script>
 <script src="/api/grafiche_classifiche.js?v=20261007"></script>

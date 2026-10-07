@@ -42,7 +42,7 @@ if(process.argv.includes('--serve')){
     const renderer=sandbox.window.StandingsRenderer;
     const groups=renderer.groups([{nome:'B1',girone:'B'},{nome:'A1',girone:'A'},{nome:'A2',girone:'A'}]);
     assert.equal(groups[0][0],'A');assert.equal(groups[0][1][1].nome,'A2','Ranking order lost');
-    for(const [format,height,pages] of [['story',1920,2],['post',1350,2]]){
+    for(const [format,height,pages] of [['story',1920,1],['post',1350,2]]){
       labels.length=0;
       const result=await renderer.draw(tournament,rows,format,'','07/10/2026');
       assert.equal(result.length,pages);assert(result.every(c=>c.width===1080&&c.height===height));
