@@ -2,12 +2,12 @@
 declare(strict_types=1);
 
 /**
- * Trova i Reel pubblicati ieri, abbina la didascalia alle partite del giorno
+ * Trova i Reel pubblicati ieri, abbina torneo/giornata/squadre/risultato
  * e salva il permalink in partite.link_instagram.
  * CLI per cron; da web è accessibile solo agli amministratori autenticati.
  */
 $isCli = PHP_SAPI === 'cli';
-if (!$isCli) {
+if (!$isCli && !defined('TOS_INSTAGRAM_SYNC_LIBRARY')) {
     require_once __DIR__ . '/../../includi/admin_guard.php';
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
         header('Content-Type: text/html; charset=utf-8');
@@ -21,7 +21,7 @@ if (!$isCli) {
             . 'input,button{font:inherit;padding:12px;border-radius:8px;border:1px solid #53677e}input{display:block;margin-top:8px;background:#fff;color:#111}'
             . '.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}button{cursor:pointer;font-weight:bold}.dry{background:#f2c94c;color:#111}'
             . '.apply{background:#176b45;color:#fff}small{color:#bdcce0}</style><main class="box"><h1>Sincronizza link Instagram</h1>'
-            . '<p>Controlla i Reel di ieri e abbinali alle partite. La prova non cambia il database; il salvataggio aggiorna solo partite senza link.</p>'
+            . '<p>Abbina i Reel alle partite tramite torneo, giornata, squadre e risultato, anche se pubblicati dopo la gara. La prova non cambia il database; il salvataggio aggiorna solo partite senza link.</p>'
             . '<form method="post"><input type="hidden" name="_csrf" value="' . $csrf . '">'
             . '<label for="date">Giorno dei Reel</label><input id="date" type="date" name="date" value="' . $date . '" required>'
             . '<div class="actions"><button class="dry" name="mode" value="dry-run">Controlla senza salvare</button>'
@@ -44,11 +44,13 @@ if (!$isCli) {
 
 require_once __DIR__ . '/../../includi/env_loader.php';
 require_once __DIR__ . '/../../includi/instagram_token_store.php';
+require_once __DIR__ . '/../../includi/match_video_sync.php';
 
 date_default_timezone_set('Europe/Rome');
 
 function sync_instagram_log(string $message): void
 {
+    if (defined('TOS_INSTAGRAM_SYNC_LIBRARY')) return;
     $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . PHP_EOL;
     if (PHP_SAPI === 'cli') {
         fwrite(STDOUT, $line);
@@ -59,6 +61,7 @@ function sync_instagram_log(string $message): void
 
 function sync_instagram_fail(string $message, int $code = 1): never
 {
+    if (defined('TOS_INSTAGRAM_SYNC_LIBRARY')) throw new RuntimeException($message);
     sync_instagram_log('ERRORE: ' . $message);
     exit($code);
 }
@@ -222,10 +225,10 @@ function sync_instagram_is_reel(array $media): bool
     return preg_match('~instagram\.com/(?:reel|reels)/[^/?]+~', $permalink) === 1;
 }
 
-function sync_instagram_fetch_yesterdays_reels(string $userId, string $token, string $apiVersion, DateTimeImmutable $day): array
+function sync_instagram_fetch_yesterdays_reels(string $userId, string $token, string $apiVersion, DateTimeImmutable $day, ?DateTimeImmutable $lastDay = null): array
 {
     $start = $day->setTime(0, 0)->getTimestamp();
-    $end = $day->modify('+1 day')->setTime(0, 0)->getTimestamp();
+    $end = ($lastDay ?? $day)->modify('+1 day')->setTime(0, 0)->getTimestamp();
     $after = null;
     $reels = [];
     $pages = 0;
@@ -236,7 +239,7 @@ function sync_instagram_fetch_yesterdays_reels(string $userId, string $token, st
         // Le didascalie vengono lette singolarmente solo per i Reel del giorno.
         // Questo evita risposte troppo grandi per profili con molti contenuti.
         $params = [
-            'fields' => 'id,media_type,permalink,timestamp',
+            'fields' => 'id,media_type,media_product_type,permalink,timestamp',
             'limit' => $pageLimit,
             'access_token' => $token,
         ];
@@ -323,6 +326,8 @@ function sync_instagram_fetch_yesterdays_reels(string $userId, string $token, st
     return $reels;
 }
 
+if (defined('TOS_INSTAGRAM_SYNC_LIBRARY')) return;
+
 $dryRun = $isCli
     ? in_array('--dry-run', $argv, true)
     : (string)($_POST['mode'] ?? '') === 'dry-run';
@@ -387,7 +392,8 @@ sync_instagram_log('Reel trovati per il giorno: ' . count($reels) . '.');
 
 require_once __DIR__ . '/../../includi/db.php';
 $stmt = $conn->prepare("SELECT p.id, p.torneo, COALESCE(t.nome, p.torneo) AS torneo_nome,
-        p.squadra_casa, p.squadra_ospite, p.link_instagram
+        p.squadra_casa, p.squadra_ospite, p.link_instagram,
+        p.giornata,p.fase_round,p.gol_casa,p.gol_ospite,p.giocata,p.data_partita
     FROM partite p
     LEFT JOIN tornei t ON t.id = (
         SELECT t2.id FROM tornei t2
@@ -398,7 +404,7 @@ $stmt = $conn->prepare("SELECT p.id, p.torneo, COALESCE(t.nome, p.torneo) AS tor
                  (t2.filetorneo = CONCAT(p.torneo, '.php')) DESC,
                  t2.id ASC LIMIT 1
     )
-    WHERE p.data_partita = ?
+    WHERE p.data_partita <= ?
     ORDER BY p.id ASC");
 if (!$stmt) {
     sync_instagram_fail('Query delle partite non disponibile.');
@@ -420,8 +426,15 @@ sync_instagram_log('Partite nel database per il giorno: ' . count($matches) . '.
 $candidatesByReel = [];
 foreach ($reels as $reel) {
     $caption = (string)$reel['caption'];
+    $identity = video_sync_parse($caption);
     $candidateIds = [];
     foreach ($matches as $match) {
+        if ($identity !== null) {
+            if (video_sync_match($identity,$match,$targetDate)) $candidateIds[] = (int)$match['id'];
+            continue;
+        }
+        // Retain the old caption matching only for games played on the selected day.
+        if ($match['data_partita'] !== $targetDate) continue;
         if (!sync_instagram_caption_matches_tournament($caption, $match['_tournament_aliases'])) {
             continue;
         }
@@ -473,7 +486,7 @@ foreach ($linksByMatch as $matchId => $links) {
         continue;
     }
     $permalink = trim((string)$links[0]['permalink']);
-    if (!preg_match('~^https://(?:www\.)?instagram\.com/(?:reel|reels)/[^/?#]+/?$~i', $permalink)) {
+    if (!preg_match('~^https://(?:www\.)?instagram\.com/(?:reel|reels|p)/[^/?#]+/?$~i', $permalink)) {
         $unmatched++;
         continue;
     }

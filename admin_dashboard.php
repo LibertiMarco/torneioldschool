@@ -518,6 +518,11 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
         <div class="cards-container">
             <?php if (!$graphicsOnly): ?>
             <div class="admin-card">
+                  <h3>Video delle partite</h3>
+                  <p>Recupera i link dei Reel Instagram e dei video YouTube e collegali alle gare.</p><br>
+                  <a href="/api/sincronizza_video_partite.php">Sincronizza link</a>
+              </div>
+              <div class="admin-card">
                 <h3>Gestione Tornei <?= $adminIsEsport ? 'ESPORT' : 'SPORT' ?></h3>
                 <p>Crea, modifica o elimina esclusivamente i tornei <?= $adminIsEsport ? 'esport' : 'sportivi' ?>.</p><br>
                 <a href="/api/gestione_tornei.php">Gestisci</a>
