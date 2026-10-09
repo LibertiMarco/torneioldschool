@@ -29,18 +29,26 @@ window.PhotoTouchEditor = (() => {
     const b=s.box, f=s.frame;
     const x=Math.max(f.x,b.x), y=Math.max(f.y,b.y);
     const right=Math.min(f.x+f.w,b.x+b.w), bottom=Math.min(f.y+f.h,b.y+b.h);
-    s.selection.style.cssText=`position:absolute;left:${x/1080*100}%;top:${y/1350*100}%;width:${Math.max(0,right-x)/1080*100}%;height:${Math.max(0,bottom-y)/1350*100}%;border:2px solid #55dfff;box-sizing:border-box;touch-action:none;cursor:move;pointer-events:auto;`;
+    s.selection.style.cssText=`position:absolute;left:${x/s.width*100}%;top:${y/s.height*100}%;width:${Math.max(0,right-x)/s.width*100}%;height:${Math.max(0,bottom-y)/s.height*100}%;border:2px solid #55dfff;box-sizing:border-box;touch-action:none;cursor:move;pointer-events:auto;`;
   }
   function init(options = {}) {
-    for (const type of ['ft','mvp']) {
-      const s=state(type), canvas=document.getElementById(type==='ft'?'fulltimeCanvas':'mvpCanvas');
+    const canvases=options.canvases||[{type:'ft',id:'fulltimeCanvas'},{type:'mvp',id:'mvpCanvas'}];
+    const redraw=options.onChange||(()=>drawAll());
+    for (const {type,id,maxWidth=540} of canvases) {
+      const s=state(type), canvas=document.getElementById(id);
+      s.width=canvas.width||1080;s.height=canvas.height||1350;
       s.autoEnable = options.autoEnable === true;
       const wrap=document.createElement('div');
-      wrap.style.cssText='position:relative;width:min(100%,540px);margin:auto;';
+      wrap.style.cssText=`position:relative;width:min(100%,${maxWidth}px);margin:auto;`;
       canvas.before(wrap);wrap.append(canvas);canvas.style.width='100%';canvas.style.maxHeight='none';
       const button=document.createElement('button');button.type='button';button.textContent='Modifica foto con touch';button.setAttribute('aria-pressed','false');
       const hint=document.createElement('p');hint.className='hint';hint.textContent='Trascina la foto per spostarla. Usa due dita per lo zoom o le maniglie per ridimensionare mantenendo le proporzioni originali.';
       wrap.before(button,hint);
+      if(options.resetButton){
+        const resetButton=document.createElement('button');resetButton.type='button';resetButton.textContent='Ripristina foto';
+        wrap.before(resetButton);
+        resetButton.addEventListener('click',()=>{reset(type);redraw();});
+      }
       const layer=document.createElement('div');layer.style.cssText='position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:10;touch-action:none;';layer.hidden=true;
       const selection=document.createElement('div');selection.style.pointerEvents='auto';layer.append(selection);wrap.append(layer);Object.assign(s,{layer,selection,button,wrap});
       for (const [key,x,y] of [['nw',0,0],['n',50,0],['ne',100,0],['e',100,50],['se',100,100],['s',50,100],['sw',0,100],['w',0,50]]) {
@@ -49,7 +57,7 @@ window.PhotoTouchEditor = (() => {
         handle.append(marker);selection.append(handle);
       }
       const pointers=new Map();let gesture=null;
-      const point=e=>{const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*1080/r.width,y:(e.clientY-r.top)*1350/r.height};};
+      const point=e=>{const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*s.width/r.width,y:(e.clientY-r.top)*s.height/r.height};};
       const stop=()=>{const ids=[...pointers.keys()];pointers.clear();gesture=null;for(const id of ids)if(selection.hasPointerCapture(id))selection.releasePointerCapture(id);};
       s.stop = stop;
       button.addEventListener('click',()=>{stop();s.active=!s.active;button.textContent=s.active?'Termina modifica foto':'Modifica foto con touch';button.setAttribute('aria-pressed',String(s.active));refresh(s);});
@@ -75,13 +83,13 @@ window.PhotoTouchEditor = (() => {
           // their own axis. One scale preserves the photo ratio on every handle.
           let scale=horizontal&&vertical?1+(dw*g.box.w+dh*g.box.h)/(g.box.w*g.box.w+g.box.h*g.box.h):
             horizontal?1+dw/g.box.w:1+dh/g.box.h;
-          scale=Math.max(Math.max(20/g.box.w,20/g.box.h),Math.min(Math.min(21600/g.box.w,27000/g.box.h),scale));
+          scale=Math.max(Math.max(20/g.box.w,20/g.box.h),Math.min(Math.min(s.width*20/g.box.w,s.height*20/g.box.h),scale));
           b.w=g.box.w*scale;b.h=g.box.h*scale;
           b.x=g.box.x+(g.handle.includes('w')?g.box.w-b.w:horizontal?0:(g.box.w-b.w)/2);
           b.y=g.box.y+(g.handle.includes('n')?g.box.h-b.h:vertical?0:(g.box.h-b.h)/2);
         }else{b.x+=dx;b.y+=dy;}
         Object.assign(s,{sx:b.w/g.base.w,sy:b.h/g.base.h,dx:b.x-g.base.x,dy:b.y-g.base.y});
-        drawAll();
+        redraw();
       });
       for(const event of ['pointerup','pointercancel','lostpointercapture'])selection.addEventListener(event,stop);
       refresh(s);
@@ -92,5 +100,8 @@ window.PhotoTouchEditor = (() => {
     if(!image){if(s.stop)s.stop();s.box=null;s.image=null;}
     refresh(s);
   }
-  return {init,transform,sync};
+  function reset(type) {
+    const s=state(type);if(s.stop)s.stop();Object.assign(s,{sx:1,sy:1,dx:0,dy:0});
+  }
+  return {init,transform,sync,reset};
 })();
