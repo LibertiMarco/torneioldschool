@@ -32,7 +32,7 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
     <button class="tab" type="button" data-target="templatesFrame">Template grafiche Full Time e MVP</button>
     <button class="tab" type="button" data-target="coversFrame">COPERTINE</button>
     <button class="tab" type="button" data-target="standingsFrame">Classifiche</button>
-    <button class="tab" type="button" data-target="presentationFrame">Presentazione Squadra</button>
+    <button class="tab" type="button" data-target="presentationFrame">Presentazione Squadre</button>
   </nav>
   <section class="frames">
     <iframe id="matchdayFrame" class="frame active" title="Generatore Matchday" src="/api/grafiche_settimana.php?embed=1"></iframe>
@@ -40,7 +40,7 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
     <iframe id="templatesFrame" class="frame" title="Template grafiche Full Time e MVP" data-src="/api/grafiche_post_partita.php?embed=1&amp;templates=1"></iframe>
     <iframe id="coversFrame" class="frame" title="Generatore copertine" data-src="/api/copertina_partite.php?embed=1"></iframe>
     <iframe id="standingsFrame" class="frame" title="Generatore classifiche" data-src="/api/grafiche_classifiche.php?embed=1"></iframe>
-    <iframe id="presentationFrame" class="frame" title="Presentazione Squadra" data-src="/api/grafiche_presentazione.php?embed=1"></iframe>
+    <iframe id="presentationFrame" class="frame" title="Presentazione Squadre" data-src="/api/grafiche_presentazione.php?embed=1"></iframe>
   </section>
 </main>
 <div id="footer-container"></div>

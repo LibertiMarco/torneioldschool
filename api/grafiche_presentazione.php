@@ -31,14 +31,14 @@ try {
 <!doctype html>
 <html lang="it"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Presentazione Squadra</title>
+<title>Presentazione Squadre</title>
 <link rel="stylesheet" href="/style.min.css?v=20251126">
-<link rel="stylesheet" href="/api/grafiche_presentazione.css?v=20261009">
+<link rel="stylesheet" href="/api/grafiche_presentazione.css?v=20261009-layout2">
 </head><body class="<?= $embedded ? 'is-embedded' : 'with-site-header' ?>">
 <?php if (!$embedded) include __DIR__ . '/../includi/header.php'; ?>
 <main>
 <?php if (!$embedded): ?><a href="/api/generatore_grafiche.php">Torna al generatore grafiche</a><?php endif; ?>
-<h1>Presentazione Squadra</h1>
+<h1>Presentazione Squadre</h1>
 <p class="intro">La tua squadra, l’identità del campionato. Post Instagram 4:5 · 1080 × 1350 px.</p>
 <div class="workspace">
 <section class="controls" aria-label="Selezione dati e modifica foto">
@@ -64,12 +64,12 @@ try {
 </section>
 <section class="preview" aria-label="Anteprima della grafica">
 <div class="preview-head"><h2>Anteprima</h2><span>1080 × 1350</span></div>
-<canvas id="presentationCanvas" width="1080" height="1350" aria-label="Presentazione squadra; modifica la foto con i controlli o trascinandola"></canvas>
+<canvas id="presentationCanvas" width="1080" height="1350" aria-label="Presentazione squadre; modifica la foto con i controlli o trascinandola"></canvas>
 <p class="hint" id="templateInfo">Seleziona il campionato e la squadra per iniziare.</p>
 </section>
 </div></main>
 <script src="/api/matchday-renderer.js?v=20261007-standings"></script>
-<script src="/api/presentazione-renderer.js?v=20261009"></script>
+<script src="/api/presentazione-renderer.js?v=20261009-layout2"></script>
 <script src="/api/grafiche_downloads.js?v=20261007"></script>
 <script src="/api/grafiche_presentazione.js?v=20261009"></script>
 <script src="/api/grafiche_frame_height.js?v=20261006"></script>

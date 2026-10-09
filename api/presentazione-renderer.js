@@ -144,9 +144,9 @@ window.PresentationRenderer = (() => {
     const travelX=Math.abs(w-iw)/2,travelY=Math.abs(h-ih)/2;
     return {x:x+(w-iw)/2+(transform.x??0)*travelX,y:y+(h-ih)/2+(transform.y??0)*travelY,w:iw,h:ih,travelX,travelY};
   }
-  function teamName(ctx,name,s) {
-    const available=s.layout==='center'?950:770;
-    ctx.font=`400 86px ${s.font}`;
+  function nameBlock(ctx,name,font,available,nominalSize) {
+    const weight=font===display?'400':'700';
+    ctx.font=`${weight} ${nominalSize}px ${font}`;
     let lines=[String(name).toUpperCase()];
     const words=lines[0].split(/\s+/);
     if(ctx.measureText(lines[0]).width>available&&words.length>1){
@@ -154,22 +154,34 @@ window.PresentationRenderer = (() => {
       for(let i=1;i<words.length;i++){const pair=[words.slice(0,i).join(' '),words.slice(i).join(' ')];const max=Math.max(...pair.map(v=>ctx.measureText(v).width));if(max<best){best=max;lines=pair;}}
     }
     const longest=Math.max(...lines.map(v=>ctx.measureText(v).width));
-    const size=Math.min(s.layout==='center'&&lines.length>1?50:86,86*available/Math.max(1,longest));
-    const x=s.layout==='center'?540:s.layout==='right'?840:240;
-    const y=s.layout==='center'?1238:1195;
-    lines.forEach((v,i)=>text(ctx,v,x,y+(i-(lines.length-1)/2)*size*1.14,available,size,'#ffffff',s.layout==='center'?'center':s.layout==='right'?'right':'left',s.font));
+    const size=Math.min(nominalSize,nominalSize*available/Math.max(1,longest));
+    return {lines,size,width:longest*size/nominalSize};
+  }
+  function tournamentName(ctx,name,s) {
+    const block=nameBlock(ctx,name,s.font,660,104),cy=174;
+    block.lines.forEach((v,i)=>text(ctx,v,540,cy+(i-(block.lines.length-1)/2)*block.size*1.06,660,block.size,'#ffffff','center',s.font));
+  }
+  function teamName(ctx,name,s,crest) {
+    const crestSize=140,gap=28,cy=1190;
+    const block=nameBlock(ctx,name,s.font,984-crestSize-gap,86);
+    const width=block.width+gap+crestSize;
+    const left=s.layout==='center'?(1080-width)/2:s.layout==='right'?1032-width:48;
+    const align=s.layout==='center'?'center':s.layout==='right'?'right':'left';
+    const x=left+(align==='center'?block.width/2:align==='right'?block.width:0);
+    block.lines.forEach((v,i)=>text(ctx,v,x,cy+(i-(block.lines.length-1)/2)*block.size*1.14,816,block.size,'#ffffff',align,s.font));
+    contained(ctx,crest,left+block.width+gap,cy-crestSize/2,crestSize,crestSize);
   }
   function draw(canvas,tournament,team,assets,transform={}) {
     const s=assets.style||identity(tournament,assets.competition);
     const ctx=canvas.getContext('2d');canvas.width=1080;canvas.height=1350;
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';background(ctx,s);
-    // White plates improve readability while leaving official logo pixels unchanged.
-    for(const x of [48,900]){ctx.fillStyle='#ffffff';ctx.fillRect(x,42,132,132);}
-    contained(ctx,assets.brand,56,50,116,116);contained(ctx,assets.competition,908,50,116,116);
-    text(ctx,'PRESENTAZIONE SQUADRA',540,81,650,23,s.accent,'center','Arial, sans-serif');
-    text(ctx,String(tournament.nome||'').toUpperCase(),540,143,660,52,'#ffffff','center',s.font);
-    const aligned=s.layout==='right'?1030:s.layout==='left'?50:540;
-    text(ctx,'LE SQUADRE DEL CAMPIONATO',aligned,246,940,22,s.accent,s.layout==='right'?'right':s.layout==='left'?'left':'center','Arial, sans-serif');
+    // Both logos share the tournament title's vertical center. The original
+    // Old School logo is drawn directly, without an added background plate.
+    contained(ctx,assets.brand,48,108,132,132);
+    ctx.fillStyle='#ffffff';ctx.fillRect(900,108,132,132);
+    contained(ctx,assets.competition,908,116,116,116);
+    text(ctx,'PRESENTAZIONE SQUADRE',540,54,660,26,s.accent,'center','Arial, sans-serif');
+    tournamentName(ctx,tournament.nome||'',s);
     const [x,y,w,h]=s.frame;
     ctx.fillStyle=s.accent;ctx.fillRect(x-3,y-3,w+6,h+6);
     ctx.fillStyle=s.bg;ctx.fillRect(x,y,w,h);
@@ -179,12 +191,7 @@ window.PresentationRenderer = (() => {
     if(assets.photo){rect=photoRect(assets.photo,s.frame,transform);ctx.drawImage(assets.photo,rect.x,rect.y,rect.w,rect.h);}
     else {text(ctx,'CARICA LA FOTO DELLA SQUADRA',540,y+h/2,w-70,32,'#becada','center','Arial, sans-serif');}
     ctx.restore();
-    const crestX=s.layout==='center'?501:s.layout==='right'?890:48;
-    const crestY=s.layout==='center'?1090:1118;
-    const crestSize=s.layout==='center'?78:140;
-    ctx.fillStyle='#ffffff';ctx.fillRect(crestX-8,crestY-8,crestSize+16,crestSize+16);
-    contained(ctx,assets.crest,crestX,crestY,crestSize,crestSize);
-    if(team)teamName(ctx,team.nome,s);
+    if(team)teamName(ctx,team.nome,s,assets.crest);
     line(ctx,[[48,1300],[1032,1300]],s.accent,2);
     text(ctx,'TORNEIOLDSCHOOL.IT',540,1326,960,17,'#cbd5df','center','Arial, sans-serif');
     return {style:s,rect};

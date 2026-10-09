@@ -1,4 +1,4 @@
-# Presentazione Squadra
+# Presentazione Squadre
 
 La sezione `/api/grafiche_presentazione.php` è caricata dal Generatore Grafiche con lo stesso controllo di accesso delle altre sezioni. Legge tutti i tornei e le squadre dal database esistente, senza modifiche allo schema. `tornei.img`, `squadre.logo` e `/img/logo_old_school.png` sono gli unici asset dei loghi; se uno manca o non è caricabile, il download viene disabilitato con un messaggio. Per URL esterni il server immagini deve consentire CORS, come per il renderer MATCHDAY.
 
