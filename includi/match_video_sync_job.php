@@ -168,3 +168,36 @@ function video_sync_open_database(): mysqli
     $conn->set_charset('utf8mb4');
     return $conn;
 }
+
+/** Save a short batch, rechecking the game and never overwriting an existing link. */
+function video_sync_write_links(mysqli $conn, array $writes): array
+{
+    if (!$conn->begin_transaction()) throw new RuntimeException('Impossibile avviare il salvataggio.');
+    $saved = 0; $preserved = 0; $links = [];
+    try {
+        foreach ($writes as $write) {
+            $platform = $write['row']['media']['platform'];$url = $write['row']['media']['url'];
+            if (!video_sync_result_match($write['row']['identity'],$write['match'],$write['row']['media']['date'])) throw new RuntimeException('Gara fuori dalla finestra di ricerca: ripeti la ricerca.');
+            if (!video_sync_valid_url($platform,$url)) throw new RuntimeException('Link video non valido.');
+            $field = 'link_'.$platform;
+            $lock = $conn->prepare('SELECT * FROM partite WHERE id=? FOR UPDATE');
+            if (!$lock) throw new RuntimeException('Impossibile verificare la partita.');
+            $lock->bind_param('i',$write['id']);
+            if (!$lock->execute()) throw new RuntimeException('Verifica della partita non riuscita.');
+            $current = $lock->get_result()->fetch_assoc();$lock->close();
+            if (!$current) throw new RuntimeException('Partita rimossa: ripeti la ricerca.');
+            foreach (['torneo','giornata','fase_round','squadra_casa','squadra_ospite','gol_casa','gol_ospite','giocata','data_partita'] as $name) {
+                if ((string)($current[$name] ?? '') !== (string)($write['match'][$name] ?? '')) throw new RuntimeException('Partita modificata: ripeti la ricerca.');
+            }
+            $existing = trim((string)($current[$field] ?? ''));
+            if ($existing !== '') {$preserved++;$links[$write['id']][$field] = $existing;continue;}
+            $update = $conn->prepare('UPDATE partite SET '.$field.'=? WHERE id=? AND ('.$field.' IS NULL OR TRIM('.$field.")='')");
+            if (!$update) throw new RuntimeException('Salvataggio dei link non disponibile.');
+            $update->bind_param('si',$url,$write['id']);
+            if (!$update->execute()) throw new RuntimeException('Salvataggio del link non riuscito.');
+            $saved += $update->affected_rows;$update->close();$links[$write['id']][$field] = $url;
+        }
+        if (!$conn->commit()) throw new RuntimeException('Conferma del salvataggio non riuscita.');
+    } catch (Throwable $e) {$conn->rollback();throw $e;}
+    return ['saved'=>$saved,'preserved'=>$preserved,'links'=>$links];
+}

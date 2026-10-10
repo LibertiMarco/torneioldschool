@@ -35,21 +35,47 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         } elseif ($action === 'step') {
             $job = $_SESSION['match_video_sync_job'] ?? null;
             if (!is_array($job) || !hash_equals($job['id'],(string)($_POST['job'] ?? '')) || $job['expires'] < time()) throw new RuntimeException('Ricerca scaduta o sostituita. Avviane una nuova.');
+            $job['expires'] = time()+1800;
             if ($job['index'] < count($job['sources'])) {
                 video_sync_job_step($job);
                 $_SESSION['match_video_sync_job'] = $job;
                 $reply = ['done'=>false,'job'=>$job['id'],'progress'=>video_sync_job_progress($job)];
+            } elseif (isset($job['apply_keys'])) {
+                $snapshot = $_SESSION['match_video_sync_plan'];
+                $keys = array_slice($job['apply_keys'],$job['apply_offset'],50);
+                if ($keys) {
+                    $writes = [];
+                    foreach ($keys as $key) {
+                        $row = $snapshot['rows'][$key];$match = $row['candidates'][0];
+                        $writes[] = ['row'=>$row,'match'=>$match,'id'=>(int)$match['id']];
+                    }
+                    $conn = video_sync_open_database();$result = video_sync_write_links($conn,$writes);$conn->close();
+                    $job['saved'] += $result['saved'];$job['preserved'] += $result['preserved'];$job['apply_offset'] += count($keys);
+                    foreach ($keys as $key) {
+                        $row =& $snapshot['rows'][$key];$id = $row['candidates'][0]['id'];$field = 'link_'.$row['media']['platform'];
+                        $row['candidates'][0][$field] = $result['links'][$id][$field];$row['automatic'] = false;$row['status'] = 'Link associato o già presente: conservato';
+                        unset($row);
+                    }
+                    $_SESSION['match_video_sync_job'] = $job;$_SESSION['match_video_sync_plan'] = $snapshot;
+                    $reply = ['done'=>false,'job'=>$job['id'],'progress'=>$job['saved'].' link associati · '.(count($job['apply_keys'])-$job['apply_offset']).' da elaborare'];
+                } else {
+                    $snapshot['message'] = count($snapshot['rows']).' contenuti letti. '.$job['saved'].' link associati automaticamente; '.$job['preserved'].' link già presenti conservati. I casi dubbi restano da scegliere.';
+                    $_SESSION['match_video_sync_plan'] = $snapshot;unset($_SESSION['match_video_sync_job']);
+                    $reply = ['done'=>true,'progress'=>$snapshot['message']];
+                }
             } else {
                 if ($job['media']) {
                     $conn = video_sync_open_database();
-                    $plan = video_sync_plan($job['media'],video_sync_load_matches($conn));
+                    $plan = video_sync_plan($job['media'],video_sync_load_matches($conn,$job['from'],$job['to']));
                     $conn->close();
                 }
                 $message = count($job['media']).' contenuti trovati; '.count(array_filter($plan,fn($row)=>$row['automatic'])).' abbinamenti univoci pronti da salvare.';
                 $_SESSION['match_video_sync_plan'] = ['expires'=>time()+1800,'rows'=>$plan,'message'=>$message,'errors'=>$job['errors'],
                     'from'=>$job['from'],'to'=>$job['to'],'platform'=>count($job['sources']) === 2 ? 'both' : $job['sources'][0]];
-                unset($_SESSION['match_video_sync_job']);
-                $reply = ['done'=>true,'progress'=>$message];
+                $job['apply_keys'] = array_keys(array_filter($plan,fn($row)=>$row['automatic']));
+                $job['apply_offset'] = 0;$job['saved'] = 0;$job['preserved'] = 0;
+                $_SESSION['match_video_sync_job'] = $job;
+                $reply = ['done'=>false,'job'=>$job['id'],'progress'=>'Abbinamento completato. Associazione dei link trovati…'];
             }
         } elseif ($action === 'save') {
             $snapshot = $_SESSION['match_video_sync_plan'] ?? null;
@@ -66,6 +92,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $candidate = null;
                 foreach ($row['candidates'] as $match) if ((int)$match['id'] === $id) $candidate = $match;
                 if ($candidate === null) throw new InvalidArgumentException('Scegli una partita fra le corrispondenze trovate.');
+                if (!video_sync_result_match($row['identity'],$candidate,$row['media']['date'])) throw new RuntimeException('Gara fuori dalla finestra di ricerca: ripeti la ricerca.');
                 $source = $row['media']['platform']; $target = $source.':'.$id;
                 if (isset($targets[$target])) throw new InvalidArgumentException('Hai scelto più video '.$source.' per la stessa gara. Selezionane uno solo.');
                 $targets[$target] = true;
@@ -129,8 +156,8 @@ label,.filters>*{min-width:0}label{grid-template-columns:minmax(0,1fr)}label inp
 .cover-preview{display:block;width:min(220px,100%);max-height:260px;object-fit:contain;margin:12px 0;border-radius:8px}
 </style></head><body><main>
 <a href="/admin_dashboard.php">Torna alla dashboard</a><h1>Sincronizza video delle partite</h1>
-<p>Cerca i Reel Instagram e i video pubblici YouTube. Torneo, giornata, squadre e risultato identificano la gara anche se il video è stato pubblicato giorni dopo.</p>
-<p class="help">Sono riconosciuti anche torneo e gara su righe separate, oppure CHAMPIONS LEAGUE | Napoli-Sporting Lisbona 5-7. Giornata e hashtag sono facoltativi; nei casi dubbi scegli la gara fra le corrispondenze.</p>
+<p>Cerca i Reel Instagram e i video pubblici YouTube. Squadre e risultato vengono confrontati con le gare del giorno di pubblicazione e di quello precedente, anche se torneo e giornata sono scritti diversamente.</p>
+<p class="help">La ricerca associa automaticamente i link delle corrispondenze uniche che non hanno già un link. I link presenti vengono conservati; nei casi dubbi scegli la gara o il video.</p>
 <?php foreach ($errors as $error): ?><p class="error" role="alert"><?= video_sync_escape($error) ?></p><?php endforeach; ?>
 <?php if ($message !== ''): ?><p class="status" role="status"><?= video_sync_escape($message) ?></p><?php endif; ?>
 <form id="videoSyncSearch" class="panel filters" method="post"><input type="hidden" name="_csrf" value="<?= video_sync_escape($csrf) ?>"><input type="hidden" name="action" value="scan">
@@ -146,7 +173,7 @@ $pageRows = array_slice($plan,($pageNumber-1)*100,100,true);
 ?><p>Pagina <?= $pageNumber ?> di <?= $pageCount ?> · <?= count($plan) ?> contenuti ancora da controllare. Il salvataggio riguarda questa pagina.</p>
 <nav aria-label="Pagine dei risultati"><?php if ($pageNumber > 1): ?><a href="?page=<?= $pageNumber-1 ?>">Pagina precedente</a> · <?php endif; ?><?php if ($pageNumber < $pageCount): ?><a href="?page=<?= $pageNumber+1 ?>">Pagina successiva</a><?php endif; ?></nav>
 <form method="post"><input type="hidden" name="_csrf" value="<?= video_sync_escape($csrf) ?>"><input type="hidden" name="action" value="save">
-<p>Gli abbinamenti univoci sono preselezionati. Per i casi dubbi scegli la gara e seleziona il contenuto. I link già presenti vengono conservati.</p>
+<p>Gli abbinamenti univoci sono già stati associati. Per i casi dubbi scegli la gara e seleziona il contenuto. I link già presenti vengono conservati.</p>
 <?php foreach ($pageRows as $key=>$row): $blocked = !$row['candidates'] || (count($row['candidates']) === 1 && trim((string)($row['candidates'][0]['link_'.$row['media']['platform']] ?? '')) !== ''); ?>
 <article class="result"><h2><a href="<?= video_sync_escape($row['media']['url']) ?>" target="_blank" rel="noopener noreferrer"><?= ucfirst($row['media']['platform']) ?> · <?= video_sync_escape($row['media']['date']) ?> · Apri contenuto</a></h2>
 <?php $thumbnail = video_sync_thumbnail_url($row['media']['thumbnail'] ?? ''); if ($thumbnail !== ''): ?><a href="<?= video_sync_escape($row['media']['url']) ?>" target="_blank" rel="noopener noreferrer"><img class="cover-preview" src="<?= video_sync_escape($thumbnail) ?>" alt="Copertina del contenuto" loading="lazy" referrerpolicy="no-referrer"></a><?php endif; ?>

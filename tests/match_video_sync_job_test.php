@@ -95,7 +95,7 @@ while ($job['index'] < 1) {
 job_expect(count($job['media']) === 2400 && !$job['errors'] && $bulkCalls === 48,'High-volume scan lost Reel or used too many requests');
 $matches = [];
 for ($i=0;$i<2400;$i++) $matches[] = ['id'=>$i+1,'torneo'=>'Brasilerao','torneo_nome'=>'Brasilerao','giornata'=>1,'fase_round'=>null,
-    'squadra_casa'=>'Ceara '.$i,'squadra_ospite'=>'Mirassol','gol_casa'=>5,'gol_ospite'=>3,'giocata'=>1,'data_partita'=>'2026-09-01','link_instagram'=>null,'link_youtube'=>null];
+    'squadra_casa'=>'Ceara '.$i,'squadra_ospite'=>'Mirassol','gol_casa'=>5,'gol_ospite'=>3,'giocata'=>1,'data_partita'=>$job['media'][$i]['date'],'link_instagram'=>null,'link_youtube'=>null];
 $plan = video_sync_plan($job['media'],$matches);
 job_expect(count($plan) === 2400 && count(array_filter($plan,fn($row)=>$row['automatic'])) === 2400,'High-volume match indexing failed');
 $job = video_sync_job_create('instagram','2026-09-10','2026-10-09');

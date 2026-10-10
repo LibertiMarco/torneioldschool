@@ -396,12 +396,14 @@ $stmt = $conn->prepare("SELECT p.id, p.torneo, COALESCE(t.nome, p.torneo) AS tor
                  (t2.filetorneo = CONCAT(p.torneo, '.php')) DESC,
                  t2.id ASC LIMIT 1
     )
-    WHERE p.data_partita <= ?
+    WHERE p.data_partita >= ? AND p.data_partita < ? AND p.giocata=1
     ORDER BY p.id ASC");
 if (!$stmt) {
     sync_instagram_fail('Query delle partite non disponibile.');
 }
-$stmt->bind_param('s', $targetDate);
+$matchStart = $targetDay->modify('-1 day')->format('Y-m-d');
+$matchEnd = $targetDay->modify('+1 day')->format('Y-m-d');
+$stmt->bind_param('ss', $matchStart,$matchEnd);
 if (!$stmt->execute()) {
     sync_instagram_fail('Lettura delle partite non riuscita.');
 }
@@ -418,22 +420,12 @@ sync_instagram_log('Partite nel database per il giorno: ' . count($matches) . '.
 $candidatesByReel = [];
 foreach ($reels as $reel) {
     $caption = (string)$reel['caption'];
-    $identity = video_sync_parse($caption);
+    $identity = video_sync_parse_result($caption);
     $candidateIds = [];
     foreach ($matches as $match) {
         if ($identity !== null) {
-            if (video_sync_match($identity,$match,$targetDate)) $candidateIds[] = (int)$match['id'];
+            if (video_sync_result_match($identity,$match,$targetDate)) $candidateIds[] = (int)$match['id'];
             continue;
-        }
-        // Retain the old caption matching only for games played on the selected day.
-        if ($match['data_partita'] !== $targetDate) continue;
-        if (!sync_instagram_caption_matches_tournament($caption, $match['_tournament_aliases'])) {
-            continue;
-        }
-        $homeFound = sync_instagram_caption_matches_team($caption, (string)$match['squadra_casa']);
-        $awayFound = sync_instagram_caption_matches_team($caption, (string)$match['squadra_ospite']);
-        if ($homeFound && $awayFound) {
-            $candidateIds[] = (int)$match['id'];
         }
     }
     $candidatesByReel[(string)$reel['id']] = [

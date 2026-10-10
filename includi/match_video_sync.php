@@ -152,7 +152,7 @@ function video_sync_valid_url(string $platform, string $url): bool
     return false;
 }
 
-function video_sync_plan(array $media, array $matches): array
+function video_sync_legacy_plan(array $media, array $matches): array
 {
     $rows = []; $seen = []; $counts = [];
     $index = [];
@@ -215,7 +215,79 @@ function video_sync_plan(array $media, array $matches): array
     return $rows;
 }
 
-function video_sync_load_matches(mysqli $conn): array
+/** Match result text without requiring a tournament or round label. */
+function video_sync_parse_result(string $text): ?array
+{
+    $found = [];
+    foreach (preg_split('/\R/u',html_entity_decode($text,ENT_QUOTES | ENT_HTML5,'UTF-8')) ?: [] as $line) {
+        $line = trim(preg_replace('/#[^\s|]+/u','',$line) ?? '');
+        $line = trim(preg_replace('/[\p{So}\x{FE0F}\x{200D}]/u','',$line) ?? '');
+        $parts = preg_split('/\s*\|\s*/u',$line);
+        $score = video_sync_parse_score(trim(end($parts)));
+        if ($score === null) continue;
+        $found[video_sync_result_key($score)] = $score;
+    }
+    return count($found) === 1 ? reset($found) : null;
+}
+
+function video_sync_result_key(array $score): string
+{
+    return json_encode(array_slice(video_sync_identity_key(['tournament'=>'','day'=>null,'round'=>null]+$score),3));
+}
+
+function video_sync_result_match(array $score, array $match, string $publicationDate): bool
+{
+    if ((int)($match['giocata'] ?? 0) !== 1 || !isset($match['gol_casa'],$match['gol_ospite'])) return false;
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/D',$publicationDate)) return false;
+    $day = DateTimeImmutable::createFromFormat('!Y-m-d',$publicationDate,new DateTimeZone('Europe/Rome'));
+    if (!$day || $day->format('Y-m-d') !== $publicationDate) return false;
+    if (!in_array(substr($match['data_partita'] ?? '',0,10),[$publicationDate,$day->modify('-1 day')->format('Y-m-d')],true)) return false;
+    return video_sync_result_key($score) === video_sync_result_key(['home'=>$match['squadra_casa'],'away'=>$match['squadra_ospite'],
+        'home_score'=>(int)$match['gol_casa'],'away_score'=>(int)$match['gol_ospite']]);
+}
+
+function video_sync_plan(array $media, array $matches): array
+{
+    $index = []; $rows = []; $counts = [];
+    foreach ($matches as $match) {
+        if ((int)($match['giocata'] ?? 0) !== 1 || !isset($match['gol_casa'],$match['gol_ospite'])) continue;
+        $score = ['home'=>$match['squadra_casa'],'away'=>$match['squadra_ospite'],'home_score'=>(int)$match['gol_casa'],'away_score'=>(int)$match['gol_ospite']];
+        $index[substr($match['data_partita'],0,10)][video_sync_result_key($score)][] = $match;
+    }
+    foreach ($media as $item) {
+        if (!video_sync_valid_url($item['platform'] ?? '',$item['url'] ?? '')) continue;
+        $key = hash('sha256',$item['platform'].':'.$item['id']);
+        if (isset($rows[$key])) continue;
+        $title = video_sync_parse_result($item['title'] ?? ''); $description = video_sync_parse_result($item['description'] ?? '');
+        $identity = $title ?? $description;
+        $conflict = $title !== null && $description !== null && video_sync_result_key($title) !== video_sync_result_key($description);
+        $candidates = [];
+        $date = (string)($item['date'] ?? '');
+        $day = DateTimeImmutable::createFromFormat('!Y-m-d',$date,new DateTimeZone('Europe/Rome'));
+        if ($identity !== null && !$conflict && $day && $day->format('Y-m-d') === $date) {
+            foreach ([$date,$day->modify('-1 day')->format('Y-m-d')] as $matchDay) {
+                foreach ($index[$matchDay][video_sync_result_key($identity)] ?? [] as $match) {
+                    $candidates[] = $match;
+                    $target = $item['platform'].':'.$match['id'];
+                    $counts[$target] = ($counts[$target] ?? 0)+1;
+                }
+            }
+        }
+        $rows[$key] = ['media'=>$item,'identity'=>$identity,'candidates'=>$candidates,'automatic'=>false,
+            'status'=>$conflict ? 'Titolo e descrizione riportano risultati diversi' : ($identity === null ? 'Risultato non riconosciuto' : (!$candidates ? 'Nessuna gara corrispondente nel giorno del video o in quello precedente' : 'Da verificare'))];
+    }
+    foreach ($rows as &$row) {
+        if (count($row['candidates']) !== 1) {if (count($row['candidates']) > 1) $row['status'] = 'Più gare compatibili nei due giorni: scegli la partita';continue;}
+        $match = $row['candidates'][0];$platform = $row['media']['platform'];
+        if (trim((string)($match['link_'.$platform] ?? '')) !== '') {$row['status'] = 'Link già presente: conservato';continue;}
+        if ($counts[$platform.':'.$match['id']] > 1) {$row['status'] = 'Più video per la stessa gara: scegli il contenuto';continue;}
+        $row['automatic'] = true;$row['status'] = 'Gara trovata: collegamento automatico';
+    }
+    unset($row);
+    return $rows;
+}
+
+function video_sync_load_matches(mysqli $conn, ?string $from = null, ?string $to = null): array
 {
     // Resolve tournament aliases once, rather than a correlated subquery for every game.
     $tournaments = $conn->query('SELECT id,nome,filetorneo FROM tornei ORDER BY id ASC');
@@ -227,7 +299,14 @@ function video_sync_load_matches(mysqli $conn): array
             $names[preg_replace('/\.(php|html)$/i','',(string)$alias)] = $tournament['nome'];
         }
     }
-    $result = $conn->query('SELECT id,torneo,giornata,fase_round,squadra_casa,squadra_ospite,gol_casa,gol_ospite,giocata,data_partita,link_instagram,link_youtube FROM partite WHERE giocata=1 ORDER BY data_partita DESC,id DESC');
+    $sql = 'SELECT id,torneo,giornata,fase_round,squadra_casa,squadra_ospite,gol_casa,gol_ospite,giocata,data_partita,link_instagram,link_youtube FROM partite WHERE giocata=1';
+    if ($from !== null && $to !== null) {
+        $start = (new DateTimeImmutable($from,new DateTimeZone('Europe/Rome')))->modify('-1 day')->format('Y-m-d');
+        $end = (new DateTimeImmutable($to,new DateTimeZone('Europe/Rome')))->modify('+1 day')->format('Y-m-d');
+        $stmt = $conn->prepare($sql.' AND data_partita>=? AND data_partita<? ORDER BY data_partita DESC,id DESC');
+        if (!$stmt) throw new RuntimeException('Impossibile cercare le partite per data.');
+        $stmt->bind_param('ss',$start,$end);$stmt->execute();$result = $stmt->get_result();
+    } else $result = $conn->query($sql.' ORDER BY data_partita DESC,id DESC');
     if (!$result) throw new RuntimeException('Impossibile leggere le partite dal database.');
     $matches = $result->fetch_all(MYSQLI_ASSOC);
     foreach ($matches as &$match) $match['torneo_nome'] = $names[$match['torneo']] ?? $names[preg_replace('/\.(php|html)$/i','',$match['torneo'])] ?? $match['torneo'];

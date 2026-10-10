@@ -109,6 +109,13 @@ void main() {
           matching: find.byType(Scrollable),
         ),
       );
+      await tester.scrollUntilVisible(
+        find.byType(TextField),
+        -400,
+        scrollable: find
+            .descendant(of: list, matching: find.byType(Scrollable))
+            .first,
+      );
       await tester.enterText(find.byType(TextField), 'Cup 1');
       await tester.pumpAndSettle();
       expect(find.text('Carica altri tornei'), findsNothing);

@@ -20,10 +20,10 @@ foreach ($formats as [$text,$tournament,$home,$away,$homeScore,$awayScore]) {
     $fixture = array_replace($match,['torneo'=>$tournament,'torneo_nome'=>$tournament,'squadra_casa'=>$home,'squadra_ospite'=>$away,'gol_casa'=>$homeScore,'gol_ospite'=>$awayScore]);
     video_expect(video_sync_match($parsed,$fixture),'New caption did not match its game');
     $mediaFixture = ['platform'=>'instagram','id'=>'format','url'=>'https://www.instagram.com/reel/format/','title'=>$text,'description'=>'','date'=>'2026-10-09'];
-    $newPlan = video_sync_plan([$mediaFixture],[$fixture]);
+    $newPlan = video_sync_legacy_plan([$mediaFixture],[$fixture]);
     video_expect(reset($newPlan)['automatic'],'Omitted-round index missed a unique game');
     $otherDay = array_replace($fixture,['id'=>999,'giornata'=>2]);
-    $newPlan = video_sync_plan([$mediaFixture],[$fixture,$otherDay]);
+    $newPlan = video_sync_legacy_plan([$mediaFixture],[$fixture,$otherDay]);
     video_expect(count(reset($newPlan)['candidates']) === 2 && !reset($newPlan)['automatic'],'Missing day guessed between matching games');
     if ($tournament === 'Champions League 2') video_expect(!video_sync_match($parsed,array_replace($fixture,['torneo'=>'Champions League','torneo_nome'=>'Champions League'])),'Edition 2 silently became day 2');
     if ($tournament === 'La Liga') video_expect(!video_sync_match($parsed,array_replace($fixture,['torneo_nome'=>'La Liga Calcio a 6'])),'Conflicting Calcio a 6/8 tournaments merged');
@@ -34,16 +34,16 @@ foreach ([['Napoli','Sporting Lisbona',5,7],['Galatasaray','Real Madrid',0,13]] 
         'squadra_casa'=>$home,'squadra_ospite'=>$away,'gol_casa'=>$homeGoals,'gol_ospite'=>$awayGoals]);
     $text = '🏆CHAMPIONS LEAGUE | '.$home.'-'.$away.' '.$homeGoals.'-'.$awayGoals;
     $item = ['platform'=>'instagram','id'=>'edition','url'=>'https://www.instagram.com/reel/edition/','title'=>$text,'description'=>'','date'=>'2026-10-10'];
-    $proposal = video_sync_plan([$item],[$game]);$row = reset($proposal);
+    $proposal = video_sync_legacy_plan([$item],[$game]);$row = reset($proposal);
     video_expect(count($row['candidates']) === 1 && !$row['automatic'] && $row['missing_edition'],'Omitted edition was not proposed for manual verification');
     $otherEdition = array_replace($game,['id'=>999,'torneo'=>'championsleague3','torneo_nome'=>'Champions League 3']);
-    $proposal = video_sync_plan([$item],[$game,$otherEdition]);$row = reset($proposal);
+    $proposal = video_sync_legacy_plan([$item],[$game,$otherEdition]);$row = reset($proposal);
     video_expect(count($row['candidates']) === 2 && !$row['automatic'],'Missing edition chose arbitrarily between tournaments');
     $explicit = array_replace($item,['title'=>'CHAMPIONS LEAGUE 2 | '.$home.'-'.$away.' '.$homeGoals.'-'.$awayGoals]);
-    $proposal = video_sync_plan([$explicit],[$game,$otherEdition]);$row = reset($proposal);
+    $proposal = video_sync_legacy_plan([$explicit],[$game,$otherEdition]);$row = reset($proposal);
     video_expect(count($row['candidates']) === 1 && $row['automatic'],'Explicit tournament edition was ignored');
-    $proposal = video_sync_plan([$explicit],[$otherEdition]);video_expect(!reset($proposal)['candidates'],'Edition 2 matched edition 3');
-    $proposal = video_sync_plan([$item],[array_replace($game,['gol_casa'=>$homeGoals+1])]);video_expect(!reset($proposal)['candidates'],'Edition fallback bypassed scores');
+    $proposal = video_sync_legacy_plan([$explicit],[$otherEdition]);video_expect(!reset($proposal)['candidates'],'Edition 2 matched edition 3');
+    $proposal = video_sync_legacy_plan([$item],[array_replace($game,['gol_casa'=>$homeGoals+1])]);video_expect(!reset($proposal)['candidates'],'Edition fallback bypassed scores');
 }
 video_expect(video_sync_tournament_base('Champions League 2026') === 'championsleague2026','A year was stripped as an edition');
 // Reel captions omit A/B; the game determines the division, never the first tournament returned.
@@ -54,16 +54,16 @@ $cups = [
 foreach ([['Napoli','Juve Stabia',2,4,101],['Modena','Sampdoria',6,4,102]] as [$home,$away,$homeGoals,$awayGoals,$expectedId]) {
     $text = '🇮🇹🏆COPPA ITALIA | '.$home.'-'.$away.' '.$homeGoals.'-'.$awayGoals;
     $item = ['platform'=>'instagram','id'=>'cup','url'=>'https://www.instagram.com/reel/cup/','title'=>$text,'description'=>'','date'=>'2026-10-09'];
-    $proposal = video_sync_plan([$item],$cups);$row = reset($proposal);
+    $proposal = video_sync_legacy_plan([$item],$cups);$row = reset($proposal);
     video_expect(count($row['candidates']) === 1 && $row['candidates'][0]['id'] === $expectedId && $row['automatic'],'The match did not select the correct cup division');
     $sameGame = array_replace($row['candidates'][0],['id'=>103,'torneo'=>'CoppaItaliaC','torneo_nome'=>'COPPA ITALIA C']);
-    $proposal = video_sync_plan([$item],array_merge($cups,[$sameGame]));$row = reset($proposal);
+    $proposal = video_sync_legacy_plan([$item],array_merge($cups,[$sameGame]));$row = reset($proposal);
     video_expect(count($row['candidates']) === 2 && !$row['automatic'],'An ambiguous cup division was selected automatically');
     $future = array_replace($sameGame,['data_partita'=>'2026-10-10']);
-    $proposal = video_sync_plan([$item],[$future]);video_expect(!reset($proposal)['candidates'],'A game after the Reel publication was selected');
+    $proposal = video_sync_legacy_plan([$item],[$future]);video_expect(!reset($proposal)['candidates'],'A game after the Reel publication was selected');
 }
 $explicitCup = ['platform'=>'instagram','id'=>'cup-a','url'=>'https://www.instagram.com/reel/cupA/','title'=>'COPPA ITALIA A | Modena-Sampdoria 6-4','description'=>'','date'=>'2026-10-09'];
-$proposal = video_sync_plan([$explicitCup],$cups);video_expect(!reset($proposal)['candidates'],'Explicit Cup A matched Cup B');
+$proposal = video_sync_legacy_plan([$explicitCup],$cups);video_expect(!reset($proposal)['candidates'],'Explicit Cup A matched Cup B');
 video_expect(video_sync_tournament_base('Coppa Italia') === 'coppaitalia','Italia was incorrectly shortened as a division');
 video_expect(video_sync_team_key('FC BARCELONA') === video_sync_team_key('Barcellona FC'),'Confirmed team alias failed');
 video_expect(video_sync_team_key('Barcelona Juniors') !== video_sync_team_key('Barcellona'),'Alias merged a different team');
@@ -89,19 +89,19 @@ video_expect(video_sync_match(video_sync_parse('BRASILERAO | FINALE | CEARA 5 - 
 video_expect(!video_sync_match($identity,array_replace($match,['fase_round'=>'FINALE'])),'Regular day matched a knockout');
 $ig = ['platform'=>'instagram','id'=>'ig-1','url'=>'https://www.instagram.com/reel/ABC123/','title'=>$caption,'description'=>'','date'=>'2026-10-09'];
 $yt = ['platform'=>'youtube','id'=>'abcdefghijk','url'=>'https://www.youtube.com/watch?v=abcdefghijk','title'=>$title,'description'=>'','date'=>'2026-10-08'];
-$plan = video_sync_plan([$ig,$yt],[$match]);
+$plan = video_sync_legacy_plan([$ig,$yt],[$match]);
 video_expect(count($plan) === 2 && count(array_filter($plan,fn($row)=>$row['automatic'])) === 2,'Both platform links should be ready');
-$repeat = video_sync_plan([$ig,$ig],[$match]);video_expect(count($repeat) === 1,'Duplicate media was not deduplicated');
+$repeat = video_sync_legacy_plan([$ig,$ig],[$match]);video_expect(count($repeat) === 1,'Duplicate media was not deduplicated');
 $duplicate = array_replace($match,['id'=>43,'data_partita'=>'2025-09-20']);
-$plan = video_sync_plan([$ig],[$match,$duplicate]);video_expect(!reset($plan)['automatic'] && count(reset($plan)['candidates']) === 2,'Different editions must remain ambiguous');
+$plan = video_sync_legacy_plan([$ig],[$match,$duplicate]);video_expect(!reset($plan)['automatic'] && count(reset($plan)['candidates']) === 2,'Different editions must remain ambiguous');
 $another = array_replace($ig,['id'=>'ig-2','url'=>'https://www.instagram.com/reel/DEF456/']);
-$plan = video_sync_plan([$ig,$another],[$match]);video_expect(count(array_filter($plan,fn($row)=>$row['automatic'])) === 0,'Two reels were assigned to the same match');
+$plan = video_sync_legacy_plan([$ig,$another],[$match]);video_expect(count(array_filter($plan,fn($row)=>$row['automatic'])) === 0,'Two reels were assigned to the same match');
 $linked = array_replace($match,['link_instagram'=>'https://www.instagram.com/reel/ORIGINAL/']);
-$plan = video_sync_plan([$ig],[$linked]);video_expect(!reset($plan)['automatic'] && str_contains(reset($plan)['status'],'conservato'),'Existing link would be overwritten');
-$plan = video_sync_plan([array_replace($yt,['title'=>'Video highlights','description'=>$caption])],[$match]);video_expect(reset($plan)['automatic'],'YouTube description fallback');
-$plan = video_sync_plan([array_replace($yt,['description'=>'brasilerao | giornata 1 | Ceará 5 – 3 Mirassol'])],[$match]);video_expect(reset($plan)['automatic'],'Case/accent differences created a false conflict');
-$plan = video_sync_plan([array_replace($yt,['description'=>'BRASILERAO | GIORNATA 1 | CEARA 2 - 3 MIRASSOL'])],[$match]);video_expect(!reset($plan)['automatic'] && !reset($plan)['candidates'],'Conflicting metadata was ignored');
-$plan = video_sync_plan([array_replace($yt,['title'=>"BRASILERAO\nCEARA-MIRASSOL 5-3",'description'=>$caption])],[$match]);video_expect(reset($plan)['automatic'] && reset($plan)['identity']['day'] === 1,'Compatible title/description did not retain the known day');
+$plan = video_sync_legacy_plan([$ig],[$linked]);video_expect(!reset($plan)['automatic'] && str_contains(reset($plan)['status'],'conservato'),'Existing link would be overwritten');
+$plan = video_sync_legacy_plan([array_replace($yt,['title'=>'Video highlights','description'=>$caption])],[$match]);video_expect(reset($plan)['automatic'],'YouTube description fallback');
+$plan = video_sync_legacy_plan([array_replace($yt,['description'=>'brasilerao | giornata 1 | Ceará 5 – 3 Mirassol'])],[$match]);video_expect(reset($plan)['automatic'],'Case/accent differences created a false conflict');
+$plan = video_sync_legacy_plan([array_replace($yt,['description'=>'BRASILERAO | GIORNATA 1 | CEARA 2 - 3 MIRASSOL'])],[$match]);video_expect(!reset($plan)['automatic'] && !reset($plan)['candidates'],'Conflicting metadata was ignored');
+$plan = video_sync_legacy_plan([array_replace($yt,['title'=>"BRASILERAO\nCEARA-MIRASSOL 5-3",'description'=>$caption])],[$match]);video_expect(reset($plan)['automatic'] && reset($plan)['identity']['day'] === 1,'Compatible title/description did not retain the known day');
 video_expect(!video_sync_valid_url('youtube','https://attacker.example/watch?v=abcdefghijk'),'Invalid video host');
 video_expect(!video_sync_valid_url('instagram','https://www.instagram.com.attacker.example/reel/abc/'),'Invalid Instagram host');
 video_expect(video_sync_valid_url('instagram','https://www.instagram.com/p/abc/'),'Official /p/ permalink for a verified Reel');

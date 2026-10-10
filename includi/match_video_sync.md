@@ -1,62 +1,79 @@
-# Sincronizzazione dei link video
+﻿# Sincronizzazione dei link video
 
-Aprire **Dashboard amministratore → Video delle partite → Sincronizza link**, oppure `/api/sincronizza_video_partite.php`. La pagina usa il controllo di accesso amministratore e CSRF del sito.
+Aprire **Dashboard amministratore → Video delle partite → Sincronizza link**.
 
-1. Scegliere le date di **pubblicazione** dei contenuti e Instagram, YouTube o entrambe le piattaforme.
-2. Avviare la ricerca: non salva link nelle partite. Per Instagram può rinnovare il token con il sistema già esistente.
-3. Controllare i risultati, scegliere la gara per i casi ambigui e selezionare un solo contenuto per gara/piattaforma.
-4. Salvare i link selezionati. Una transazione ricontrolla le partite e conserva i link già presenti, anche se aggiunti da un altro operatore dopo la ricerca.
+1. Scegliere le date di pubblicazione dei contenuti e Instagram, YouTube o entrambe.
+2. Premere **Cerca video e Reel**: vengono letti i contenuti, cercate le gare e associati automaticamente i link delle corrispondenze uniche senza un link già presente.
+3. Controllare il riepilogo. Nei casi dubbi scegliere la gara o un solo video per gara/piattaforma e premere **Salva i link selezionati**.
 
-## Formato riconosciuto
+## Regola di abbinamento
+
+Le squadre e il punteggio identificano la partita nel giorno di pubblicazione del video oppure nel giorno precedente, in Europe/Rome. Il nome del torneo e la giornata nella descrizione non sono vincolanti: il torneo corretto viene ricavato dalla partita nel database.
+
+La query del database limita le gare all'intervallo di pubblicazione selezionato, includendo il giorno precedente alla data iniziale. Un indice in memoria confronta ogni contenuto solo con le gare dei suoi due giorni: non vengono eseguite migliaia di query, una per ciascun Reel.
+
+- La partita deve essere conclusa (`giocata=1`) e avere entrambi i punteggi.
+- È ammesso l'ordine invertito delle squadre con il risultato invertito.
+- Accenti, maiuscole/minuscole, sigle societarie comuni e l'equivalenza confermata Barcelona/Barcellona vengono normalizzati.
+- Il link esistente della stessa piattaforma viene sempre conservato. Instagram e YouTube hanno campi distinti.
+- Più gare compatibili nei due giorni, oppure più video della stessa piattaforma per la stessa gara, richiedono una scelta manuale.
+- Una pubblicazione oltre il giorno successivo alla partita non viene collegata con questa regola.
+
+## Descrizioni
+
+Sono riconosciuti risultati come:
 
 ```text
-BRASILERAO | GIORNATA 1 | CEARA 5 - 3 MIRASSOL #highlightstorneioldschool #calcioa6 #torneioldschool
-```
+BRASILERAO | GIORNATA 1 | CEARA 5 - 3 MIRASSOL #highlightstorneioldschool
 
-Su YouTube il titolo può essere lo stesso senza hashtag. Se il titolo non contiene il formato, viene cercato nella descrizione. Sono riconosciuti accenti, maiuscole/minuscole, sigle societarie comuni, trattini dei risultati e l'ordine invertito delle squadre con il punteggio corrispondente. Sono supportati anche i turni eliminatori (`FINALE`, `SEMIFINALE`, ecc.). Un titolo e una descrizione che riportano gare diverse restano da correggere.
-
-L'abbinamento richiede torneo, entrambe le squadre e risultato di una gara terminata; giornata e turno vengono verificati quando sono indicati. La gara può essere stata giocata prima della pubblicazione. Se più edizioni del torneo contengono la stessa combinazione, il sistema non sceglie arbitrariamente: propone le gare compatibili. Contenuti generici come “Grande punizione” non vengono collegati senza informazioni sufficienti.
-
-Sono riconosciuti anche questi formati, senza giornata:
-
-```text
 CHAMPIONS LEAGUE 2
 BARCELONA-ARSENAL 7-5
 
 🏆CHAMPIONS LEAGUE | Napoli-Sporting Lisbona 5-7
 
+🇮🇹🏆COPPA ITALIA | Modena-Sampdoria 6-4
+
 LA LIGA CALCIO A 8 🇪🇸
 RAYO VALLECANO - BETIS SIVIGLIA 9-2...
+
+Napoli-Juve Stabia 2-4
 ```
 
-Quando la giornata manca, si confrontano torneo, squadre e risultato senza indovinare il turno: una corrispondenza unica può essere preselezionata, più gare compatibili richiedono la scelta dell'operatore. Il numero finale in `CHAMPIONS LEAGUE 2` rimane parte del nome del torneo, in attesa di confermare se indica una giornata. Emoji, bandiere, hashtag e puntini finali sono ignorati; l'etichetta `CALCIO A 8` può essere omessa nel nome del torneo del database, ma un'esplicita etichetta `Calcio a 6` non è compatibile.
+Il torneo e la giornata possono mancare o essere scritti diversamente. Sono comunque necessari nomi delle squadre e risultato leggibili; titoli generici come “Grande punizione” non bastano. Per YouTube il risultato viene cercato anche nella descrizione. Se titolo e descrizione riportano risultati diversi, il video non viene associato.
 
-Le copertine disponibili dalle API sono mostrate nei risultati con caricamento lazy e collegamento al contenuto. Servono per la verifica visiva; non vengono lette con OCR. La loro lettura aggiunge campi alle chiamate già presenti, senza chiamate API separate per ogni Reel.
+Le copertine disponibili dalle API vengono mostrate nei risultati per la verifica visiva, con caricamento lazy. Non vengono lette tramite OCR e non richiedono una chiamata API separata per ogni Reel.
 
-## Configurazione
+## Volume e salvataggio
 
-- Instagram: riutilizza il collegamento in `/instagram/login.php`, la memoria privata dei token e le impostazioni `INSTAGRAM_ACCESS_TOKEN`, `INSTAGRAM_USER_ID`, `INSTAGRAM_GRAPH_API_VERSION` già previste. Il profilo deve essere accessibile attraverso l'integrazione professionale configurata nell'app Meta. Recupera esclusivamente i media identificati come Reel.
-- YouTube: riutilizza `YOUTUBE_API_KEY` e `YOUTUBE_CHANNEL_ID` già presenti per le statistiche social. Il canale può essere indicato come ID `UC…`, `@handle`, URL `/channel/…`, URL `/@…` o username `/user/…`. Sono letti i video pubblici usando la playlist dei caricamenti e le [API ufficiali Google](https://developers.google.com/youtube/v3/guides/implementation/videos).
-- Le API vengono chiamate dal server; chiavi e token non sono inviati al browser. Gli errori rimuovono le credenziali dalle risposte.
-- Nessuna modifica allo schema: vengono aggiornati solamente `partite.link_instagram` e `partite.link_youtube`. Le anteprime durano 30 minuti nella sessione amministratore.
-- La dashboard legge una pagina per richiesta HTTP, con timeout API di 15 secondi e avanzamento visibile. Instagram richiede fino a 50 contenuti con didascalia per pagina, riducendo il blocco se Meta segnala una risposta troppo grande: nessuna chiamata separata per ogni didascalia. Gli errori temporanei vengono ritentati fino a tre volte, preservando lo stato della ricerca.
-- La dashboard consente fino a 1000 pagine per piattaforma; un ciclo di cursori o un elenco incompleto viene segnalato senza preparare link dalla piattaforma coinvolta. Il vecchio helper YouTube sincrono mantiene il limite di 100 pagine e non viene usato dalla dashboard.
-- I risultati sono divisi in pagine da 100. Ogni salvataggio riguarda la pagina corrente, così le migliaia di selezioni non superano il limite PHP dei campi POST. I contenuti rimanenti restano disponibili senza rifare la ricerca.
+La dashboard effettua al massimo una chiamata social per richiesta HTTP, con avanzamento visibile e timeout API di 15 secondi. Instagram richiede fino a 50 media con didascalia per pagina; se Meta richiede meno dati, il blocco viene ridotto. Gli errori temporanei vengono ritentati fino a tre volte preservando lo stato.
 
-Lo script precedente `/api/script/sync_instagram_match_links.php` continua a funzionare da CLI e da web. Per il formato strutturato abbina anche gare precedenti al giorno selezionato; per le vecchie didascalie libere mantiene il confronto sulle gare del medesimo giorno. Esempio di prova senza aggiornare link:
+La lettura consente fino a 1000 pagine per piattaforma. Un elenco incompleto non produce abbinamenti dalla piattaforma coinvolta. Il salvataggio automatico procede in blocchi da 50, ricontrollando le partite in una transazione e preservando i link inseriti da altri operatori. I risultati e i salvataggi manuali sono divisi in pagine da 100 per non superare i limiti PHP dei campi POST.
+
+Le anteprime e lo stato della ricerca sono conservati nella sessione amministratore. Non è stato configurato un nuovo cron. Lo script esistente `api/script/sync_instagram_match_links.php` usa la stessa finestra di due giorni; `--dry-run` cerca senza salvare.
+
+## Configurazione e distribuzione
+
+- Instagram: collegamento tramite `/instagram/login.php`, memoria privata dei token e impostazioni `INSTAGRAM_ACCESS_TOKEN`, `INSTAGRAM_USER_ID`, `INSTAGRAM_GRAPH_API_VERSION`.
+- YouTube: `YOUTUBE_API_KEY` e `YOUTUBE_CHANNEL_ID`. Sono letti solo i video pubblici.
+- Chiavi e token rimangono sul server; la pagina richiede accesso amministratore e CSRF.
+- Nessuna modifica allo schema: solo `partite.link_instagram` e `partite.link_youtube`.
+
+Caricare insieme questi file per aggiornare la regola e il salvataggio automatico:
 
 ```text
-php api/script/sync_instagram_match_links.php --date=2026-10-09 --dry-run
+includi/match_video_sync.php
+includi/match_video_sync_job.php
+api/sincronizza_video_partite.php
+api/script/sync_instagram_match_links.php
 ```
 
-Non è stato configurato un nuovo cron. L'esecuzione dalla dashboard avvia la lettura quando lo staff preme “Cerca video e Reel”.
+La pagina richiede inoltre il JavaScript già introdotto `api/sincronizza_video_partite.js` (versione 3).
 
 ## Verifiche
 
-`php tests/match_video_sync_test.php` verifica il testo fornito, pubblicazioni ritardate, accenti, giornata, risultato, turni, doppioni, ambiguità, conservazione dei link e lettura YouTube con risposte simulate, inclusi paginazione, privacy e fuso Europe/Rome. Non modifica il database e non pubblica contenuti.
+- `php tests/match_video_date_test.php`: giorno del video e precedente, cambio mese, descrizioni prive di torneo, squadre invertite, punteggi, alias, link già presenti e ambiguità.
+- `php tests/match_video_sync_job_test.php`: 2400 Reel, 48 chiamate simulate da 50 contenuti, 2400 abbinamenti, stato serializzato, retry, copertine e isolamento degli errori.
+- `php tests/match_video_sync_test.php`: parser, provider e verifiche del vecchio matcher mantenuto separatamente per regressione.
+- `node tests/match_video_sync_frontend_test.js` e `node tests/match_video_sync_browser_test.js`: flusso del browser, CSRF, endpoint e recupero dagli errori.
 
-Durante l'implementazione la configurazione YouTube locale ha risposto con il canale TORNEI OLD SCHOOL. In questo ambiente non era presente un collegamento Instagram utilizzabile e la connessione al database era rifiutata; lettura Instagram e salvataggio sul database reale rimangono da verificare sull'ambiente configurato.
-
-`php tests/match_video_sync_job_test.php` simula 80 Reel al giorno per 30 giorni: 2400 Reel e altrettanti abbinamenti, letti in 48 chiamate API da 50 contenuti, oltre al controllo di inizializzazione del token. Il numero reale delle pagine dipende da quanti media restituisce Meta e dagli altri post presenti nell'account. Verifica anche ripresa dallo stato serializzato, privacy, paginazione adattiva e isolamento degli errori.
-
-Per distribuire la correzione del timeout caricare insieme `api/sincronizza_video_partite.php`, `api/sincronizza_video_partite.js`, `includi/match_video_sync.php`, `includi/match_video_sync_job.php` e `api/script/sync_instagram_match_links.php`. Nessuna modifica alle credenziali o allo schema del database.
+In locale il collegamento Instagram e il database di produzione non sono accessibili. I test verificano la logica con fixture; il salvataggio sul database reale rimane da verificare sull'ambiente configurato.

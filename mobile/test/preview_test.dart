@@ -14,6 +14,7 @@ void main() {
     expect(find.text('Anteprima · dati dimostrativi'), findsOneWidget);
     await tester.tap(find.text('Tornei'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Old School Cup'));
     await tester.tap(find.text('Old School Cup'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Rose'));
