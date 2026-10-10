@@ -1,6 +1,11 @@
+Options -Indexes
+DirectoryIndex index.php
+
 # Flutter decodes static image bytes through a temporary blob URL on Safari.
 # Extend only img-src in the inherited policy; scripts and other directives stay intact.
 <IfModule mod_headers.c>
+  Header set X-Robots-Tag "noindex, nofollow"
+  Header set Cache-Control "no-store"
   Header edit Content-Security-Policy "(^|;[[:space:]]*)img-src " "$1img-src blob: "
   Header always edit Content-Security-Policy "(^|;[[:space:]]*)img-src " "$1img-src blob: "
 </IfModule>
