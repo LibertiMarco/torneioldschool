@@ -1,4 +1,4 @@
-﻿# Sincronizzazione dei link video
+# Sincronizzazione dei link video
 
 Aprire **Dashboard amministratore → Video delle partite → Sincronizza link**.
 
@@ -47,15 +47,7 @@ Le copertine disponibili dalle API vengono mostrate nei risultati per la verific
 
 Instagram: vengono cercate e mostrate soltanto pubblicazioni con durata verificata di almeno 30 secondi. Un Reel di 29,999 secondi viene escluso; uno di 30 secondi viene incluso. YouTube conserva il comportamento precedente.
 
-La lista Instagram viene letta con `media_url`. La durata viene ricavata dai metadati MP4 (`moov/mvhd`) con richieste Range da massimo 64 KiB: il contenuto video non viene scaricato interamente. Ogni passo della dashboard effettua al massimo una richiesta esterna, con timeout di 8 secondi per i metadati; gli eventuali blocchi `mdat` vengono saltati usando la loro dimensione. La ricerca dei metadati è limitata a 12 richieste per Reel. Le durate verificate, comprese quelle dei Reel brevi, sono memorizzate per 7 giorni nella directory runtime privata `reel-durations`; i dati già in cache vengono elaborati in blocco senza richieste al CDN.
-
-Reel privi di URL video o con durata non verificabile vengono esclusi, con un conteggio nel riepilogo. Questi errori non sono memorizzati in cache: una ricerca successiva può riprovare. Il filtro precede l'abbinamento e il salvataggio. I risultati Instagram delle ricerche precedenti senza durata verificata vengono rimossi: avviare una nuova ricerca dopo l'aggiornamento. Anche lo script CLI applica la stessa soglia.
-
-## Durata minima dei Reel
-
-Instagram: vengono cercate e mostrate soltanto pubblicazioni con durata verificata di almeno 30 secondi. Un Reel di 29,999 secondi viene escluso; uno di 30 secondi viene incluso. YouTube conserva il comportamento precedente.
-
-La lista Instagram viene letta con `media_url`. La durata viene ricavata dai metadati MP4 (`moov/mvhd`) con richieste Range da massimo 64 KiB: il contenuto video non viene scaricato interamente. Ogni passo della dashboard effettua al massimo una richiesta esterna, con timeout di 8 secondi per i metadati; gli eventuali blocchi `mdat` vengono saltati usando la loro dimensione. La ricerca dei metadati è limitata a 12 richieste per Reel. Le durate verificate, comprese quelle dei Reel brevi, sono memorizzate per 7 giorni nella directory runtime privata `reel-durations`; i dati già in cache vengono elaborati in blocco senza richieste al CDN.
+La lista Instagram viene letta con `media_url`. La durata viene ricavata dai metadati MP4 (`moov/mvhd`) con richieste Range da massimo 64 KiB: il contenuto video non viene scaricato interamente. Ogni passo della dashboard verifica fino a 8 Reel in parallelo con cURL multi, con timeout di 8 secondi per trasferimento e un limite complessivo di 9 secondi per il blocco; gli eventuali blocchi `mdat` vengono saltati usando la loro dimensione. La ricerca dei metadati è limitata a 12 richieste per Reel. Le durate verificate, comprese quelle dei Reel brevi, sono memorizzate per 7 giorni nella directory runtime privata `reel-durations`; i dati già in cache vengono elaborati in blocco senza richieste al CDN.
 
 Reel privi di URL video o con durata non verificabile vengono esclusi, con un conteggio nel riepilogo. Questi errori non sono memorizzati in cache: una ricerca successiva può riprovare. Il filtro precede l'abbinamento e il salvataggio. I risultati Instagram delle ricerche precedenti senza durata verificata vengono rimossi: avviare una nuova ricerca dopo l'aggiornamento. Anche lo script CLI applica la stessa soglia.
 
@@ -90,10 +82,10 @@ La pagina richiede inoltre il JavaScript già introdotto `api/sincronizza_video_
 ## Verifiche
 
 - `php tests/match_video_date_test.php`: giorno del video e precedente, cambio mese, descrizioni prive di torneo, squadre invertite, punteggi, alias, link già presenti e ambiguità.
-- `php tests/match_video_sync_job_test.php`: 2400 Reel, 48 chiamate simulate da 50 contenuti, 2400 abbinamenti, stato serializzato, retry, copertine e isolamento degli errori.
-- `php tests/match_video_duration_test.php`: MP4 v0/v1, metadati in testa/coda, soglia 29,999/30 secondi, durate sconosciute, cache e limite di una richiesta HTTP per passo.
-- `php tests/match_video_duration_test.php`: MP4 v0/v1, metadati in testa/coda, soglia 29,999/30 secondi, durate sconosciute, cache e limite di una richiesta HTTP per passo.
+- `php tests/match_video_sync_job_test.php`: 2400 Reel, 48 chiamate simulate da 50 contenuti, 2400 abbinamenti e 336 passi di lettura delle durate anziché 2400, stato serializzato, retry, copertine e isolamento degli errori.
+- `php tests/match_video_duration_test.php`: MP4 v0/v1, metadati in testa/coda, soglia 29,999/30 secondi, durate sconosciute, cache e limite di 8 verifiche parallele per passo.
 - `php tests/match_video_sync_test.php`: parser, provider e verifiche del vecchio matcher mantenuto separatamente per regressione.
+- `node tests/match_video_duration_parallel_test.js`: trasferimenti cURL reali contro un CDN locale simulato, confronto tempi sequenziali/paralleli, isolamento degli errori e limiti di lettura.
 - `node tests/match_video_sync_frontend_test.js` e `node tests/match_video_sync_browser_test.js`: flusso del browser, CSRF, endpoint e recupero dagli errori.
 
 In locale il collegamento Instagram e il database di produzione non sono accessibili. I test verificano la logica con fixture; il salvataggio sul database reale rimane da verificare sull'ambiente configurato.

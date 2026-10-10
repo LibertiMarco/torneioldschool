@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 const VIDEO_SYNC_REEL_MIN_SECONDS = 30.0;
 const VIDEO_SYNC_MP4_CHUNK = 65536;
+const VIDEO_SYNC_DURATION_CONCURRENCY = 8;
 
 function video_sync_reel_allowed(array $media): bool
 {
@@ -22,26 +23,70 @@ function video_sync_duration_url(string $url): bool
 /** One bounded request: no full video downloads, even when the CDN ignores Range. */
 function video_sync_duration_range(string $url, int $offset): string
 {
+    $results = video_sync_duration_ranges([['url'=>$url,'offset'=>$offset]]);
+    if (!is_string($results[0])) throw new RuntimeException('Metadati video non disponibili.');
+    return $results[0];
+}
+
+/** The same bounded transfer is used by serial CLI reads and parallel dashboard reads. */
+function video_sync_duration_handle(string $url, int $offset): array
+{
     if (!video_sync_duration_url($url) || $offset < 0 || $offset > 2147483647) throw new RuntimeException('Metadati video non disponibili.');
-    $body = ''; $contentRange = '';
+    $response = (object)['body'=>'','contentRange'=>'','offset'=>$offset];
     $ch = curl_init($url);
     curl_setopt_array($ch, [CURLOPT_FOLLOWLOCATION=>false, CURLOPT_CONNECTTIMEOUT=>3, CURLOPT_TIMEOUT=>8,
         CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS, CURLOPT_RANGE=>$offset.'-'.($offset+VIDEO_SYNC_MP4_CHUNK-1),
-        CURLOPT_HEADERFUNCTION=>static function($ch, $line) use (&$contentRange) {
-            if (stripos($line, 'Content-Range:') === 0) $contentRange = trim(substr($line,14));
+        CURLOPT_HEADERFUNCTION=>static function($ch, $line) use ($response) {
+            if (stripos($line, 'Content-Range:') === 0) $response->contentRange = trim(substr($line,14));
             return strlen($line);
         },
-        CURLOPT_WRITEFUNCTION=>static function($ch, $chunk) use (&$body) {
-            $remaining = VIDEO_SYNC_MP4_CHUNK-strlen($body);
-            $body .= substr($chunk,0,max(0,$remaining));
+        CURLOPT_WRITEFUNCTION=>static function($ch, $chunk) use ($response) {
+            $remaining = VIDEO_SYNC_MP4_CHUNK-strlen($response->body);
+            $response->body .= substr($chunk,0,max(0,$remaining));
             return strlen($chunk) > $remaining ? 0 : strlen($chunk);
         }]);
-    $ok = curl_exec($ch); $status = (int)curl_getinfo($ch,CURLINFO_HTTP_CODE); $error = curl_errno($ch); curl_close($ch);
-    if (!$ok && $error !== CURLE_WRITE_ERROR) throw new RuntimeException('Metadati video non disponibili.');
+    return [$ch,$response];
+}
+
+function video_sync_duration_response($ch, object $response, int $error): ?string
+{
+    $status = (int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
+    if ($error !== CURLE_OK && $error !== CURLE_WRITE_ERROR) return null;
     if ($status === 206) {
-        if (!preg_match('/^bytes (\d+)-(\d+)\/(\d+|\*)$/D',$contentRange,$m) || (int)$m[1] !== $offset) throw new RuntimeException('Intervallo video non valido.');
-    } elseif ($status !== 200 || $offset !== 0) throw new RuntimeException('Metadati video non disponibili.');
-    return $body;
+        if (!preg_match('/^bytes (\d+)-(\d+)\/(\d+|\*)$/D',$response->contentRange,$m) || (int)$m[1] !== $response->offset) return null;
+    } elseif ($status !== 200 || $response->offset !== 0) return null;
+    return $response->body;
+}
+
+/** Eight independent CDN probes share one wait, capped at nine seconds for the whole batch. */
+function video_sync_duration_ranges(array $requests, ?callable $createHandle = null): array
+{
+    if (count($requests) > VIDEO_SYNC_DURATION_CONCURRENCY) throw new InvalidArgumentException('Blocco durate troppo grande.');
+    $results = array_fill_keys(array_keys($requests),null);
+    if (!$requests) return $results;
+    $multi = curl_multi_init();$handles = [];$responses = [];$keys = [];
+    try {
+        foreach ($requests as $key=>$request) {
+            try {[$ch,$response] = ($createHandle ?? 'video_sync_duration_handle')($request['url'],$request['offset']);}
+            catch (Throwable $e) {continue;}
+            $handles[$key] = $ch;$responses[$key] = $response;$keys[is_object($ch) ? spl_object_id($ch) : (int)$ch] = $key;
+            curl_multi_add_handle($multi,$ch);
+        }
+        $deadline = microtime(true)+9;
+        do {
+            $status = curl_multi_exec($multi,$running);
+            while ($info = curl_multi_info_read($multi)) {
+                $key = $keys[is_object($info['handle']) ? spl_object_id($info['handle']) : (int)$info['handle']];
+                $results[$key] = video_sync_duration_response($info['handle'],$responses[$key],$info['result']);
+            }
+            if ($status !== CURLM_OK || !$running || microtime(true) >= $deadline) break;
+            if (curl_multi_select($multi,min(0.2,max(0.001,$deadline-microtime(true)))) === -1) usleep(1000);
+        } while (true);
+    } finally {
+        foreach ($handles as $ch) {curl_multi_remove_handle($multi,$ch);curl_close($ch);}
+        curl_multi_close($multi);
+    }
+    return $results;
 }
 
 function video_sync_mp4_u32(string $bytes, int $offset): int

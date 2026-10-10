@@ -3,7 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/match_video_sync.php';
 require_once __DIR__ . '/match_video_duration.php';
 
-/** Private session state: one external HTTP call at most per browser request. */
+/** Private session state: one social API call or up to eight parallel CDN probes per request. */
 function video_sync_job_create(string $platform, string $from, string $to): array
 {
     if (!in_array($platform,['both','instagram','youtube'],true)) throw new InvalidArgumentException('Piattaforma non valida.');
@@ -135,39 +135,52 @@ function video_sync_job_step(array &$job, ?callable $youtube = null, ?callable $
                 if ($s['pending_duration']) {$s['phase'] = 'duration';$s['duration_index'] = 0;}
                 elseif ($cursor === '') video_sync_job_next($job,true);
             } elseif ($s['phase'] === 'duration') {
-                $durationRange ??= 'video_sync_duration_range';
-                $requested = false;
-                do {
-                    $media = $s['pending_duration'][$s['duration_index']];
-                    $seconds = video_sync_duration_cached((string)$media['id']);
-                    $complete = $seconds !== null;
-                    if (!$complete) {
-                        if ($requested) break;
-                        $requested = true;
-                        $s['duration_probe'] ??= ['offset'=>0,'requests'=>0];
+                // Migrate an in-flight serial probe without repeating its earlier reads.
+                if (isset($s['duration_probe'])) {
+                    $s['duration_probes'][$s['duration_index']] = $s['duration_probe'];unset($s['duration_probe']);
+                }
+                $requests = [];
+                for ($i=$s['duration_index'];$i<count($s['pending_duration']);$i++) {
+                    if (array_key_exists('duration_seconds',$s['pending_duration'][$i])) continue;
+                    $seconds = video_sync_duration_cached((string)$s['pending_duration'][$i]['id']);
+                    if ($seconds !== null) {$s['pending_duration'][$i]['duration_seconds'] = $seconds;continue;}
+                    if (count($requests) >= VIDEO_SYNC_DURATION_CONCURRENCY) continue;
+                    $s['duration_probes'][$i] ??= ['offset'=>0,'requests'=>0];
+                    $requests[$i] = ['url'=>$s['pending_duration'][$i]['media_url'],'offset'=>$s['duration_probes'][$i]['offset']];
+                }
+                if ($durationRange === null) $responses = video_sync_duration_ranges($requests);
+                else {
+                    // Injected transports allow deterministic tests without contacting the CDN.
+                    $responses = [];
+                    foreach ($requests as $i=>$request) {
+                        try {$responses[$i] = $durationRange($request['url'],$request['offset']);}
+                        catch (Throwable $e) {$responses[$i] = null;}
+                    }
+                }
+                foreach ($requests as $i=>$request) {
+                    $probe =& $s['duration_probes'][$i];$probe['requests']++;
+                    $seconds = null;$complete = true;
+                    if (is_string($responses[$i] ?? null)) {
                         try {
-                            $probe =& $s['duration_probe'];
-                            $probe['requests']++;
-                            $seconds = video_sync_mp4_duration_step($durationRange($media['media_url'],$probe['offset']),$probe);
+                            $seconds = video_sync_mp4_duration_step($responses[$i],$probe);
                             $complete = $seconds !== null || $probe['requests'] >= 12;
-                            if ($seconds !== null) video_sync_duration_store((string)$media['id'],$seconds);
-                            unset($probe);
-                        } catch (Throwable $e) {$complete = true;}
+                            if ($seconds !== null) video_sync_duration_store((string)$s['pending_duration'][$i]['id'],$seconds);
+                        } catch (Throwable $e) {}
                     }
-                    if ($complete) {
-                        unset($media['media_url']);$media['duration_seconds'] = $seconds;
-                        if (video_sync_reel_allowed($media)) $s['media'][] = $media;
-                        else {
-                            $counter = $seconds === null ? 'duration_unknown' : 'duration_short';
-                            $job[$counter] = ($job[$counter] ?? 0)+1;
-                        }
-                        unset($s['duration_probe']);$s['duration_index']++;
-                        if ($s['duration_index'] >= count($s['pending_duration'])) {
-                            unset($s['pending_duration'],$s['duration_index']);$s['phase'] = 'page';
-                            if ($s['cursor'] === '') video_sync_job_next($job,true);
-                        }
-                    }
-                } while (($job['state']['phase'] ?? '') === 'duration');
+                    unset($probe);
+                    if ($complete) {$s['pending_duration'][$i]['duration_seconds'] = $seconds;unset($s['duration_probes'][$i]);}
+                }
+                // Preserve API order even when durations finish out of order.
+                while (isset($s['pending_duration'][$s['duration_index']]) && array_key_exists('duration_seconds',$s['pending_duration'][$s['duration_index']])) {
+                    $media = $s['pending_duration'][$s['duration_index']];unset($media['media_url']);
+                    if (video_sync_reel_allowed($media)) $s['media'][] = $media;
+                    else {$counter = $media['duration_seconds'] === null ? 'duration_unknown' : 'duration_short';$job[$counter] = ($job[$counter] ?? 0)+1;}
+                    $s['duration_index']++;
+                }
+                if ($s['duration_index'] >= count($s['pending_duration'])) {
+                    unset($s['pending_duration'],$s['duration_index'],$s['duration_probes']);$s['phase'] = 'page';
+                    if ($s['cursor'] === '') video_sync_job_next($job,true);
+                }
             }
         }
     } catch (Throwable $e) {

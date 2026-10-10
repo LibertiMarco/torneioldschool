@@ -95,13 +95,16 @@ $bulk = function($resource,$params,$state) use (&$bulkCalls) {
     return $response;
 };
 $job = video_sync_job_create('instagram','2026-09-10','2026-10-09');
+$bulkSteps = 0;
 while ($job['index'] < 1) {
     $before = $bulkCalls+$durationCalls;
     video_sync_job_step($job,null,$bulk,$instagramInit,$durationRange);
-    job_expect($bulkCalls+$durationCalls-$before <= 1,'High-volume scan made multiple HTTP calls per step');
+    job_expect($bulkCalls+$durationCalls-$before <= VIDEO_SYNC_DURATION_CONCURRENCY,'High-volume scan exceeded the parallel batch limit');
+    $bulkSteps++;
     $job = unserialize(serialize($job));
 }
 job_expect(count($job['media']) === 2400 && !$job['errors'] && $bulkCalls === 48 && $durationCalls === 2401,'High-volume scan lost Reel or used too many requests');
+job_expect($bulkSteps === 385,'Durations were not batched: expected 336 duration steps + 48 API pages + init');
 $matches = [];
 for ($i=0;$i<2400;$i++) $matches[] = ['id'=>$i+1,'torneo'=>'Brasilerao','torneo_nome'=>'Brasilerao','giornata'=>1,'fase_round'=>null,
     'squadra_casa'=>'Ceara '.$i,'squadra_ospite'=>'Mirassol','gol_casa'=>5,'gol_ospite'=>3,'giocata'=>1,'data_partita'=>$job['media'][$i]['date'],'link_instagram'=>null,'link_youtube'=>null];

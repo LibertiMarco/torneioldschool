@@ -50,7 +50,7 @@ $job = video_sync_job_create('instagram','2026-10-09','2026-10-09');$steps = 0;
 while ($job['index'] === 0) {
     $before = $apiCalls+$rangeCalls;
     video_sync_job_step($job,null,$instagram,$init,$range);
-    duration_expect($apiCalls+$rangeCalls-$before <= 1,'More than one HTTP request in a step');
+    duration_expect($apiCalls+$rangeCalls-$before <= VIDEO_SYNC_DURATION_CONCURRENCY,'Parallel batch exceeded concurrency limit');
     $job = unserialize(serialize($job));duration_expect(++$steps < 20,'Job failed to finish');
 }
 duration_expect(array_column($job['media'],'id') === ['boundary','long','end'] && ($job['duration_short'] ?? 0) === 1 && ($job['duration_unknown'] ?? 0) === 1,'Short/unknown Reel not excluded');
@@ -64,4 +64,4 @@ file_put_contents(video_sync_duration_cache_path('short'),json_encode(['seconds'
 duration_expect(video_sync_duration_cached('short') === null,'Expired cache used');
 foreach (glob($testRoot.'/reel-durations/*.json') as $file) unlink($file);
 rmdir($testRoot.'/reel-durations');rmdir($testRoot);
-echo "PASS: MP4 v0/v1, range seeking, 29.999/30 threshold, short/unknown exclusion, one HTTP request per step and cache\n";
+echo "PASS: MP4 v0/v1, range seeking, 29.999/30 threshold, short/unknown exclusion, bounded parallel batches and cache\n";
