@@ -22,8 +22,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Old School FC'));
     await tester.pumpAndSettle();
-    expect(find.text('Luca Rossi · Capitano'), findsOneWidget);
-    await tester.tap(find.text('Luca Rossi · Capitano'));
+    expect(find.text('Luca Rossi'), findsOneWidget);
+    await tester.ensureVisible(find.text('Luca Rossi'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Luca Rossi'));
     await tester.pumpAndSettle();
     expect(find.text('Media voti'), findsOneWidget);
     await tester.pageBack();

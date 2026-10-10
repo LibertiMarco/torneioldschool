@@ -366,7 +366,12 @@ class _TournamentPageState extends State<TournamentPage> {
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () => openPage(
                             context,
-                            TeamPage(api: widget.api, slug: slug, team: team),
+                            TeamPage(
+                              api: widget.api,
+                              slug: slug,
+                              team: team,
+                              initialTab: 'Rosa',
+                            ),
                           ),
                         ),
                       ),
