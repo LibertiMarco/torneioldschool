@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'details.dart';
-import 'home_dashboard.dart' show SiteImage, HomeBlock, articleText, openPage;
+import 'home_dashboard.dart' show SiteImage, HomeBlock, openPage;
+import 'tournament_rules.dart';
 import 'main.dart' show ErrorPanel;
 import 'theme.dart';
 import 'tournament_logic.dart';
@@ -386,19 +387,7 @@ class _TournamentPageState extends State<TournamentPage> {
               ],
               if (tab == 'Regole') ...[
                 title('Regole del Torneo'),
-                Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: Color(0xffdbe3f0)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: SelectableText(
-                      articleText(result.rules),
-                      style: const TextStyle(fontSize: 16, height: 1.7),
-                    ),
-                  ),
-                ),
+                TournamentRules(html: result.rules),
               ],
             ],
           ),
@@ -742,8 +731,10 @@ class MatchCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         onTap: match['id'] == null
             ? null
-            : () =>
-                  openPage(context, MatchPage(api: api, id: '${match['id']}')),
+            : () => openPage(
+                context,
+                MatchPage(api: api, id: '${match['id']}', previewMatch: match),
+              ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(

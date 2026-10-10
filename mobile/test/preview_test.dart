@@ -40,7 +40,19 @@ void main() {
     await tester.ensureVisible(find.text('3 : 1'));
     await tester.tap(find.text('3 : 1'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Referto giocatori'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Referto giocatori'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Luca Rossi'),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Luca Rossi'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
