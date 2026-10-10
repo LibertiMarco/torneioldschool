@@ -93,22 +93,22 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Carica altri tornei'),
         400,
-        scrollable: find.descendant(
-          of: list,
-          matching: find.byType(Scrollable),
-        ),
+        scrollable: find
+            .descendant(of: list, matching: find.byType(Scrollable))
+            .first,
       );
+      await tester.pumpAndSettle();
       expect(find.text('Cup 1'), findsNothing);
       await tester.tap(find.text('Carica altri tornei'));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.text('Cup 1'),
         200,
-        scrollable: find.descendant(
-          of: list,
-          matching: find.byType(Scrollable),
-        ),
+        scrollable: find
+            .descendant(of: list, matching: find.byType(Scrollable))
+            .first,
       );
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.byType(TextField),
         -400,
@@ -116,6 +116,7 @@ void main() {
             .descendant(of: list, matching: find.byType(Scrollable))
             .first,
       );
+      await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'Cup 1');
       await tester.pumpAndSettle();
       expect(find.text('Carica altri tornei'), findsNothing);
