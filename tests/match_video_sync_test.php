@@ -29,6 +29,42 @@ foreach ($formats as [$text,$tournament,$home,$away,$homeScore,$awayScore]) {
     if ($tournament === 'La Liga') video_expect(!video_sync_match($parsed,array_replace($fixture,['torneo_nome'=>'La Liga Calcio a 6'])),'Conflicting Calcio a 6/8 tournaments merged');
 }
 video_expect(video_sync_parse('CHAMPIONS LEAGUE | Napoli-Sporting Lisbona') === null,'A match without scores was accepted');
+foreach ([['Napoli','Sporting Lisbona',5,7],['Galatasaray','Real Madrid',0,13]] as [$home,$away,$homeGoals,$awayGoals]) {
+    $game = array_replace($match,['torneo'=>'championsleague2','torneo_nome'=>'Champions League 2','data_partita'=>'2026-10-09',
+        'squadra_casa'=>$home,'squadra_ospite'=>$away,'gol_casa'=>$homeGoals,'gol_ospite'=>$awayGoals]);
+    $text = '🏆CHAMPIONS LEAGUE | '.$home.'-'.$away.' '.$homeGoals.'-'.$awayGoals;
+    $item = ['platform'=>'instagram','id'=>'edition','url'=>'https://www.instagram.com/reel/edition/','title'=>$text,'description'=>'','date'=>'2026-10-10'];
+    $proposal = video_sync_plan([$item],[$game]);$row = reset($proposal);
+    video_expect(count($row['candidates']) === 1 && !$row['automatic'] && $row['missing_edition'],'Omitted edition was not proposed for manual verification');
+    $otherEdition = array_replace($game,['id'=>999,'torneo'=>'championsleague3','torneo_nome'=>'Champions League 3']);
+    $proposal = video_sync_plan([$item],[$game,$otherEdition]);$row = reset($proposal);
+    video_expect(count($row['candidates']) === 2 && !$row['automatic'],'Missing edition chose arbitrarily between tournaments');
+    $explicit = array_replace($item,['title'=>'CHAMPIONS LEAGUE 2 | '.$home.'-'.$away.' '.$homeGoals.'-'.$awayGoals]);
+    $proposal = video_sync_plan([$explicit],[$game,$otherEdition]);$row = reset($proposal);
+    video_expect(count($row['candidates']) === 1 && $row['automatic'],'Explicit tournament edition was ignored');
+    $proposal = video_sync_plan([$explicit],[$otherEdition]);video_expect(!reset($proposal)['candidates'],'Edition 2 matched edition 3');
+    $proposal = video_sync_plan([$item],[array_replace($game,['gol_casa'=>$homeGoals+1])]);video_expect(!reset($proposal)['candidates'],'Edition fallback bypassed scores');
+}
+video_expect(video_sync_tournament_base('Champions League 2026') === 'championsleague2026','A year was stripped as an edition');
+// Reel captions omit A/B; the game determines the division, never the first tournament returned.
+$cups = [
+    array_replace($match,['id'=>101,'torneo'=>'CoppaItaliaA','torneo_nome'=>'COPPA ITALIA A','data_partita'=>'2026-10-08','squadra_casa'=>'Napoli','squadra_ospite'=>'Juve Stabia','gol_casa'=>2,'gol_ospite'=>4]),
+    array_replace($match,['id'=>102,'torneo'=>'CoppaItaliaB','torneo_nome'=>'COPPA ITALIA B','data_partita'=>'2026-10-08','squadra_casa'=>'Modena','squadra_ospite'=>'Sampdoria','gol_casa'=>6,'gol_ospite'=>4]),
+];
+foreach ([['Napoli','Juve Stabia',2,4,101],['Modena','Sampdoria',6,4,102]] as [$home,$away,$homeGoals,$awayGoals,$expectedId]) {
+    $text = '🇮🇹🏆COPPA ITALIA | '.$home.'-'.$away.' '.$homeGoals.'-'.$awayGoals;
+    $item = ['platform'=>'instagram','id'=>'cup','url'=>'https://www.instagram.com/reel/cup/','title'=>$text,'description'=>'','date'=>'2026-10-09'];
+    $proposal = video_sync_plan([$item],$cups);$row = reset($proposal);
+    video_expect(count($row['candidates']) === 1 && $row['candidates'][0]['id'] === $expectedId && $row['automatic'],'The match did not select the correct cup division');
+    $sameGame = array_replace($row['candidates'][0],['id'=>103,'torneo'=>'CoppaItaliaC','torneo_nome'=>'COPPA ITALIA C']);
+    $proposal = video_sync_plan([$item],array_merge($cups,[$sameGame]));$row = reset($proposal);
+    video_expect(count($row['candidates']) === 2 && !$row['automatic'],'An ambiguous cup division was selected automatically');
+    $future = array_replace($sameGame,['data_partita'=>'2026-10-10']);
+    $proposal = video_sync_plan([$item],[$future]);video_expect(!reset($proposal)['candidates'],'A game after the Reel publication was selected');
+}
+$explicitCup = ['platform'=>'instagram','id'=>'cup-a','url'=>'https://www.instagram.com/reel/cupA/','title'=>'COPPA ITALIA A | Modena-Sampdoria 6-4','description'=>'','date'=>'2026-10-09'];
+$proposal = video_sync_plan([$explicitCup],$cups);video_expect(!reset($proposal)['candidates'],'Explicit Cup A matched Cup B');
+video_expect(video_sync_tournament_base('Coppa Italia') === 'coppaitalia','Italia was incorrectly shortened as a division');
 video_expect(video_sync_team_key('FC BARCELONA') === video_sync_team_key('Barcellona FC'),'Confirmed team alias failed');
 video_expect(video_sync_team_key('Barcelona Juniors') !== video_sync_team_key('Barcellona'),'Alias merged a different team');
 $barcelonaMatch = array_replace($match,['torneo'=>'Champions League 2','torneo_nome'=>'Champions League 2','squadra_casa'=>'FC Barcelona','squadra_ospite'=>'Arsenal','gol_casa'=>7,'gol_ospite'=>5]);

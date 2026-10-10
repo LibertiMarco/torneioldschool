@@ -31,6 +31,16 @@ function video_sync_tournament_key(string $name): string
     return str_replace(' ','',$name);
 }
 
+function video_sync_tournament_base(string $name): string
+{
+    $label = video_sync_normalize(preg_replace('/\.(php|html)$/i','',$name) ?? $name);
+    // An explicit standalone A/B/etc. suffix is a tournament division.
+    if (preg_match('/^(.+\S)\s+([a-z])$/D',$label,$parts)) return video_sync_tournament_key($parts[1]);
+    $key = video_sync_tournament_key($name);
+    // Only a short edition suffix: years and numbers inside the name stay intact.
+    return preg_match('/^(.+\D)([1-9]\d?)$/D',$key,$parts) ? $parts[1] : $key;
+}
+
 function video_sync_parse_score(string $line): ?array
 {
     $dash = '[-:\x{2013}\x{2014}]';
@@ -81,7 +91,7 @@ function video_sync_parse(string $text): ?array
     return null;
 }
 
-function video_sync_tournament_matches(string $caption, array $match): bool
+function video_sync_tournament_matches(string $caption, array $match, bool $allowMissingEdition = false): bool
 {
     $key = video_sync_tournament_key($caption);
     if (preg_match('/calcio a (\d{1,2})$/',video_sync_normalize($caption),$captionSport)) {
@@ -91,6 +101,8 @@ function video_sync_tournament_matches(string $caption, array $match): bool
     }
     foreach ([$match['torneo_nome'] ?? '', $match['torneo'] ?? ''] as $value) {
         if ($key !== '' && $key === video_sync_tournament_key((string)$value)) return true;
+        if ($allowMissingEdition && $key !== '' && $key === video_sync_tournament_base($caption)
+            && $key === video_sync_tournament_base((string)$value)) return true;
     }
     return false;
 }
@@ -119,9 +131,9 @@ function video_sync_thumbnail_url(string $url): string
     return preg_match('/(?:^|\.)(?:ytimg\.com|cdninstagram\.com|fbcdn\.net|fbsbx\.com)$/i',$parts['host'] ?? '') ? $url : '';
 }
 
-function video_sync_match(array $identity, array $match, string $publicationDate = ''): bool
+function video_sync_match(array $identity, array $match, string $publicationDate = '', bool $allowMissingEdition = false): bool
 {
-    if (!video_sync_tournament_matches($identity['tournament'], $match)) return false;
+    if (!video_sync_tournament_matches($identity['tournament'], $match,$allowMissingEdition)) return false;
     if ($identity['day'] !== null && ((int)($match['giornata'] ?? 0) !== $identity['day'] || ($match['fase_round'] ?? '') !== '')) return false;
     if ($identity['round'] !== null && ($match['fase_round'] ?? '') !== $identity['round']) return false;
     if ($publicationDate !== '' && ($match['data_partita'] ?? '') > $publicationDate) return false;
@@ -150,7 +162,9 @@ function video_sync_plan(array $media, array $matches): array
         $identity = ['tournament'=>'','day'=>$round === null ? (int)($match['giornata'] ?? 0) : null,'round'=>$round,
             'home'=>$match['squadra_casa'],'away'=>$match['squadra_ospite'],'home_score'=>(int)$match['gol_casa'],'away_score'=>(int)$match['gol_ospite']];
         $aliases = [];
-        foreach ([$match['torneo_nome'] ?? '',$match['torneo'] ?? ''] as $alias) {
+        $names = [$match['torneo_nome'] ?? '',$match['torneo'] ?? ''];
+        foreach ($names as $name) $names[] = video_sync_tournament_base((string)$name);
+        foreach (array_unique($names) as $alias) {
             $identity['tournament'] = preg_replace('/\.(php|html)$/i','',(string)$alias);
             // Index both the known round and captions that omit it, without scanning all games.
             foreach ([$identity,array_replace($identity,['day'=>null,'round'=>null])] as $variant) {
@@ -170,17 +184,18 @@ function video_sync_plan(array $media, array $matches): array
         $identity = $title ?? $description;
         $conflict = $title !== null && $description !== null && !video_sync_identities_compatible($title,$description);
         if (!$conflict && $title !== null && $description !== null && $title['day'] === null && $title['round'] === null) $identity = $description;
-        $candidates = [];
+        $candidates = []; $missingEdition = false;
         if ($identity !== null && !$conflict) foreach ($index[json_encode(video_sync_identity_key($identity))] ?? [] as $match) {
-            if (video_sync_match($identity, $match, $item['date'] ?? '')) {
+            if (video_sync_match($identity, $match, $item['date'] ?? '',true)) {
                 $candidates[] = $match;
+                if (!video_sync_tournament_matches($identity['tournament'],$match)) $missingEdition = true;
                 $target = $item['platform'] . ':' . $match['id'];
                 $counts[$target] = ($counts[$target] ?? 0) + 1;
             }
         }
         $rows[$key] = ['media'=>$item, 'identity'=>$identity, 'candidates'=>$candidates,
             'status'=>$conflict ? 'Titolo e descrizione discordanti' : ($identity === null ? 'Formato non riconosciuto' : (count($candidates) === 0 ? 'Nessuna partita corrispondente' : 'Da verificare')),
-            'automatic'=>false];
+            'missing_edition'=>$missingEdition,'automatic'=>false];
     }
     foreach ($rows as &$row) {
         if (count($row['candidates']) !== 1) {if (count($row['candidates']) > 1) $row['status'] = 'Più partite corrispondenti: scegli la gara'; continue;}
@@ -188,6 +203,12 @@ function video_sync_plan(array $media, array $matches): array
         $existing = trim((string)($match['link_' . $platform] ?? ''));
         if ($existing !== '') {$row['status'] = $existing === $row['media']['url'] ? 'Già collegato' : 'La partita ha già un link: conservato'; continue;}
         if ($counts[$platform . ':' . $match['id']] > 1) {$row['status'] = 'Più video per la stessa gara: scegli un solo contenuto'; continue;}
+        if ($row['missing_edition']) {
+            $letterDivision = preg_match('/\s+[a-z]$/D',video_sync_normalize($match['torneo_nome'] ?? '')) === 1;
+            $row['status'] = $letterDivision ? 'Corrispondenza unica trovata in '.$match['torneo_nome'] : 'Numero del torneo assente nella descrizione: verifica '.$match['torneo_nome'];
+            $row['automatic'] = $letterDivision;
+            continue;
+        }
         $row['status'] = 'Corrispondenza trovata'; $row['automatic'] = true;
     }
     unset($row);
