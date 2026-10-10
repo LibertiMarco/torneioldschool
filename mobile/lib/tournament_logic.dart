@@ -71,9 +71,10 @@ class TournamentData {
   int get teamCount {
     var total = stat(config['totale_squadre']);
     if (total <= 0) total = stat(config['campionato_squadre']);
-    if (total <= 0)
+    if (total <= 0) {
       total =
           stat(config['numero_gironi']) * stat(config['squadre_per_girone']);
+    }
     return total > 0 ? total : stat(layout['default_team_count'] ?? 18);
   }
 
@@ -165,11 +166,14 @@ class TournamentData {
     ),
   );
   String? cupForPosition(int position) {
-    if (!grouped && spareggioPlaces >= 2 && position <= spareggioPlaces)
+    if (!grouped && spareggioPlaces >= 2 && position <= spareggioPlaces) {
       return 'SPAREGGIO';
+    }
     if (legacy && !grouped && layout['legacy_silver_at_end'] == true) {
       if (position <= (cupPlaces['GOLD'] ?? 0)) return 'GOLD';
-      return position > teams.length - (cupPlaces['SILVER'] ?? 0) ? 'SILVER' : null;
+      return position > teams.length - (cupPlaces['SILVER'] ?? 0)
+          ? 'SILVER'
+          : null;
     }
     var end = 0;
     for (final entry in tableCupPlaces.entries) {
@@ -299,10 +303,14 @@ List<Map<String, dynamic>> orderStandings(
   return result;
 }
 
-String matchRound(Map<String, dynamic> match, String phase) =>
-    phase == 'REGULAR' || phase == 'SPAREGGIO'
-    ? '${match['giornata'] ?? 0}'
-    : '${match['fase_round'] ?? match['giornata'] ?? 'KO'}';
+String matchRound(Map<String, dynamic> match, String phase) {
+  if (phase == 'REGULAR' || phase == 'SPAREGGIO') {
+    return '${match['giornata'] ?? 0}';
+  }
+  final stage = '${match['fase_round'] ?? ''}'.trim();
+  return stage.isNotEmpty ? stage : '${match['giornata'] ?? 'KO'}';
+}
+
 const knockoutRounds = [
   'TRENTADUESIMI',
   'SEDICESIMI',

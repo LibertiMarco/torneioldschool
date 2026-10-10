@@ -14,7 +14,7 @@ Percorso da provare:
 
 0. In Home alternare Marcatori/Presenze, aprire la classifica completa, una notizia e l’albo completo; cambiare sezione e verificare il ranking EA FC. Aprire Tornei per i gruppi e i filtri.
 
-1. Aprire un torneo reale e passare fra Classifica, Partite e Squadre.
+1. Aprire un torneo reale e passare fra Classifica, Marcatori, Calendario, Rose e Regole (Marcatori solo per Calcio).
 2. Toccare una squadra, poi un giocatore, per vedere rosa e statistiche del torneo.
 3. Toccare una partita per vedere risultato e referto giocatori.
 4. Tornare alla home e aprire Account: mostra lo stesso account con cui si è entrati nel sito.
@@ -33,3 +33,5 @@ Il vecchio demo rimane opzionale solo per test automatici/offline, con `mobile/p
 L'anteprima non certifica il comportamento iOS di login, portachiavi, file e notifiche. Non è ancora la versione completa: mancano gli altri moduli elencati in `app-mobile.md`. Per provarla come app nativa sul proprio iPhone servirà una build macOS e poi installazione personale (ad esempio AltStore); TestFlight e pubblicazione sono rimandati.
 
 Per arrestare il server usare `Stop-Process -Id PID`, sostituendo PID con quello mostrato all'avvio e verificando che sia il processo PHP dell'anteprima.
+
+Le pagine torneo usano schede bianche, intestazioni blu, loghi e colori delle qualificazioni. Le statistiche scorrono orizzontalmente mantenendo visibili posizione e squadra. Gironi, soglie Gold/Silver/Bronzo, spareggi e regole vengono dalla configurazione e dai file pubblici del torneo tramite mobile_layout. A pari punti lo scontro diretto si applica solo a due squadre, poi differenza reti e gol fatti, come sul sito. Il calendario parte dalla giornata da giocare e permette di selezionare fase/giornata; le coppe sono raggruppate per turno. Le regole HTML sono convertite in testo leggibile.

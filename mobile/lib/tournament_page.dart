@@ -114,6 +114,12 @@ class _TournamentPageState extends State<TournamentPage> {
           'Rose',
           'Regole',
         ];
+        if (!tabs.contains(tab)) tab = 'Classifica';
+        if (!result.phases.contains(tablePhase)) tablePhase = 'REGULAR';
+        if (!result.phases.contains(calendarPhase)) {
+          calendarPhase = 'REGULAR';
+          round = null;
+        }
         return RefreshIndicator(
           onRefresh: refresh,
           child: ListView(
@@ -395,7 +401,7 @@ class _TournamentPageState extends State<TournamentPage> {
 }
 
 String roundLabel(String round, String phase) {
-  if (phase == 'REGULAR') {
+  if (phase == 'REGULAR' || phase == 'SPAREGGIO') {
     return round == '0' ? 'Giornata da definire' : 'Giornata $round';
   }
   const labels = {
@@ -505,14 +511,20 @@ class StandingsTable extends StatelessWidget {
                     ),
                     ...List.generate(count, (i) {
                       final team = i < teams.length ? teams[i] : null;
-                      final cup = data.cupForPosition(i + 1);
+                      final cup = team == null
+                          ? null
+                          : data.cupForPosition(i + 1);
                       return Row(
                         children: [
                           cell(
                             '${i + 1}',
                             width: 32,
                             color: cupColors[cup],
-                            textColor: cup == 'SPAREGGIO' ? Colors.white : cup == 'ELIMINATO' ? const Color(0xff8b1e2d) : null,
+                            textColor: cup == 'SPAREGGIO'
+                                ? Colors.white
+                                : cup == 'ELIMINATO'
+                                ? const Color(0xff8b1e2d)
+                                : null,
                             bold: true,
                           ),
                           SizedBox(
@@ -726,7 +738,20 @@ class MatchCard extends StatelessWidget {
               if ('${match['campo'] ?? ''}'.isNotEmpty)
                 Text('${match['campo']}', style: const TextStyle(fontSize: 12)),
               const SizedBox(height: 6),
-              const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text('Dettaglio e referto', style: TextStyle(color: siteRed, fontWeight: FontWeight.bold, fontSize: 12)), Icon(Icons.chevron_right, color: siteRed, size: 18)]),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Dettaglio e referto',
+                    style: TextStyle(
+                      color: siteRed,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, color: siteRed, size: 18),
+                ],
+              ),
             ],
           ),
         ),
@@ -808,7 +833,10 @@ class _TournamentScorersState extends State<TournamentScorers> {
                   ),
                   onTap: () => openPage(
                     context,
-                    PlayerPage(player: {...player, 'reti': player['gol']}),
+                    PlayerPage(
+                      api: widget.api,
+                      player: {...player, 'reti': player['gol']},
+                    ),
                   ),
                 ),
               );
