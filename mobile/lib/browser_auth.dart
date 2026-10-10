@@ -52,10 +52,12 @@ class BrowserAuth extends TosAuth {
     String path, {
     Map<String, dynamic>? body,
     Map<String, String>? query,
+    List<ApiUpload>? uploads,
   }) async {
     final action = switch (path) {
       'api/mobile/v1/admin/users.php' => 'users',
       'api/mobile/v1/admin/user_features.php' => 'features',
+      'api/mobile/v1/account.php' => 'account',
       _ => throw const ApiError(
         'Funzione non disponibile in questa anteprima.',
       ),
@@ -68,6 +70,7 @@ class BrowserAuth extends TosAuth {
         'app-preview/api.php',
         query: {...?query, 'action': action},
         body: body == null ? null : {...body, '_csrf': _csrf},
+        uploads: uploads,
       );
     } on ApiError catch (failure) {
       if (failure.status == 401 || failure.status == 403) {

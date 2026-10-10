@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/demo.dart';
+import 'package:tornei_old_school/api.dart';
 import 'package:tornei_old_school/details.dart';
 
 class TwoTeamReportApi extends DemoApi {
@@ -9,6 +10,7 @@ class TwoTeamReportApi extends DemoApi {
     String path, {
     Map<String, String>? query,
     String? accessToken,
+    List<ApiUpload>? uploads,
     Map<String, dynamic>? body,
   }) async {
     final result = await super.request(
@@ -40,7 +42,9 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(320, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
-      MaterialApp(home: MatchPage(api: TwoTeamReportApi(), id: '1')),
+      MaterialApp(
+        home: MatchPage(api: TwoTeamReportApi(), id: '1'),
+      ),
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Referto giocatori'), 200);

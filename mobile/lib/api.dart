@@ -11,6 +11,17 @@ class ApiError implements Exception {
   String toString() => message;
 }
 
+class ApiUpload {
+  const ApiUpload({
+    required this.field,
+    required this.filename,
+    required this.bytes,
+  });
+  final String field;
+  final String filename;
+  final Uint8List bytes;
+}
+
 class TosApi {
   TosApi({required this.baseUrl, http.Client? client})
     : client = client ?? http.Client() {
@@ -38,12 +49,32 @@ class TosApi {
     Map<String, String>? query,
     Map<String, dynamic>? body,
     String? accessToken,
+    List<ApiUpload>? uploads,
   }) async {
     final headers = <String, String>{'Accept': 'application/json'};
     if (accessToken != null) headers['Authorization'] = 'Bearer $accessToken';
     try {
       final http.Response response;
-      if (body == null) {
+      if (uploads != null && uploads.isNotEmpty) {
+        final request = http.MultipartRequest('POST', uri(path, query));
+        request.headers.addAll(headers);
+        request.fields.addAll(
+          (body ?? {}).map((key, value) => MapEntry(key, '$value')),
+        );
+        request.files.addAll(
+          uploads.map(
+            (file) => http.MultipartFile.fromBytes(
+              file.field,
+              file.bytes,
+              filename: file.filename,
+            ),
+          ),
+        );
+        response = await client
+            .send(request)
+            .then(http.Response.fromStream)
+            .timeout(const Duration(seconds: 90));
+      } else if (body == null) {
         response = await client
             .get(uri(path, query), headers: headers)
             .timeout(const Duration(seconds: 20));

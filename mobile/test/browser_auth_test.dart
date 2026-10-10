@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -47,6 +48,25 @@ void main() {
       );
       expect(jsonDecode(requests.last.body)['_csrf'], 'session-token');
       expect(requests.last.headers.containsKey('Authorization'), false);
+      await auth.authorized(
+        'api/mobile/v1/account.php',
+        body: {'nome': 'Marco', 'cognome': 'Demo', 'consenso_newsletter': 0},
+        uploads: [
+          ApiUpload(
+            field: 'avatar',
+            filename: 'profile.png',
+            bytes: Uint8List.fromList([1, 2, 3]),
+          ),
+        ],
+      );
+      expect(requests.last.url.queryParameters['action'], 'account');
+      expect(
+        requests.last.headers['content-type'],
+        startsWith('multipart/form-data;'),
+      );
+      expect(requests.last.body, contains('name="_csrf"'));
+      expect(requests.last.body, contains('session-token'));
+      expect(requests.last.body, contains('filename="profile.png"'));
       expect(() => auth.authorized('api/delete.php'), throwsA(isA<ApiError>()));
     },
   );

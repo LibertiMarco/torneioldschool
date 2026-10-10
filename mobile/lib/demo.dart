@@ -129,9 +129,34 @@ class DemoApi extends TosApi {
     Map<String, String>? query,
     Map<String, dynamic>? body,
     String? accessToken,
+    List<ApiUpload>? uploads,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 150));
     switch (path) {
+      case 'api/mobile/v1/account.php':
+        final user = users.first;
+        if (body != null && body['nome'] != null) {
+          user['nome'] = body['nome'];
+          user['cognome'] = body['cognome'];
+        }
+        return {
+          'profile': {
+            'id': user['id'],
+            'nome': user['nome'],
+            'cognome': user['cognome'],
+            'email': user['email'],
+            'avatar': '',
+          },
+          'consents': {
+            'newsletter': body?['consenso_newsletter'] == 1,
+            'marketing': body?['consenso_marketing'] == 1,
+            'tracking': body?['consenso_tracking'] == 1,
+          },
+          'player': {'id': 10, 'nome': 'Luca', 'cognome': 'Rossi', 'foto': ''},
+          'message': body == null
+              ? ''
+              : 'Impostazioni aggiornate con successo.',
+        };
       case 'api/mobile/v1/tournaments.php':
         final esport = query?['section'] == 'esport';
         return {
@@ -298,8 +323,9 @@ class DemoAuth extends TosAuth {
     String path, {
     Map<String, dynamic>? body,
     Map<String, String>? query,
+    List<ApiUpload>? uploads,
   }) {
     if (!admin) throw const ApiError('Accesso richiesto.', status: 401);
-    return api.request(path, body: body, query: query);
+    return api.request(path, body: body, query: query, uploads: uploads);
   }
 }

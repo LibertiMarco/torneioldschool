@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'auth.dart';
 import 'admin.dart';
+import 'account_page.dart';
 
 import 'demo.dart';
 import 'theme.dart';
@@ -161,7 +162,9 @@ class _HomePageState extends State<HomePage> {
               ],
             )
           : selectedPage == 2
-          ? _account(auth)
+          ? auth.user == null
+                ? _account(auth)
+                : AccountPage(auth: auth)
           : auth.admin
           ? AdminUsersPage(auth: auth)
           : const Center(

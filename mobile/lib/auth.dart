@@ -154,6 +154,7 @@ class TosAuth extends ChangeNotifier {
     String path, {
     Map<String, dynamic>? body,
     Map<String, String>? query,
+    List<ApiUpload>? uploads,
   }) async {
     if (_access == null) {
       throw const ApiError('Accesso richiesto.', status: 401);
@@ -165,6 +166,7 @@ class TosAuth extends ChangeNotifier {
         body: body,
         query: query,
         accessToken: attemptedAccess,
+        uploads: uploads,
       );
     } on ApiError catch (failure) {
       if (failure.status != 401) rethrow;
@@ -176,8 +178,20 @@ class TosAuth extends ChangeNotifier {
           if (identical(_refreshing, pending)) _refreshing = null;
         }
       }
-      return api.request(path, body: body, query: query, accessToken: _access);
+      return api.request(
+        path,
+        body: body,
+        query: query,
+        accessToken: _access,
+        uploads: uploads,
+      );
     }
+  }
+
+  void updateProfile(Map<String, dynamic> profile) {
+    if (user == null) return;
+    user = {...user!, ...profile};
+    notifyListeners();
   }
 
   Future<void> _clear() async {
