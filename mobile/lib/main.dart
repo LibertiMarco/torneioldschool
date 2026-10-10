@@ -3,9 +3,24 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'auth.dart';
 import 'admin.dart';
+import 'details.dart';
+import 'demo.dart';
+import 'theme.dart';
+import 'browser_runtime_stub.dart'
+    if (dart.library.js_interop) 'browser_runtime_web.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  if (const bool.fromEnvironment('TOS_PREVIEW')) {
+    final api = DemoApi();
+    runApp(TosApp(api: api, auth: DemoAuth(api)));
+    return;
+  }
+  if (const bool.fromEnvironment('TOS_WEB_PREVIEW')) {
+    final auth = createBrowserAuth();
+    runApp(TosApp(api: auth.api, auth: auth));
+    return;
+  }
   final api = TosApi(
     baseUrl: Uri.parse(
       const String.fromEnvironment(
@@ -25,11 +40,36 @@ class TosApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     title: 'Tornei Old School',
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff15293e)),
-      scaffoldBackgroundColor: const Color(0xfff4f6fb),
-    ),
+    builder: api.preview
+        ? (context, child) => Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Column(
+                children: [
+                  Material(
+                    color: const Color(0xffffe6a7),
+                    child: SafeArea(
+                      bottom: false,
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Text(
+                            'Anteprima · dati dimostrativi',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(child: child!),
+                ],
+              ),
+            ),
+          )
+        : null,
+    theme: siteTheme(),
     home: HomePage(api: api, auth: auth),
   );
 }
@@ -76,7 +116,15 @@ class _HomePageState extends State<HomePage> {
     final hasStaffAccess = auth.admin || auth.graphics;
     final selectedPage = page == 2 && !hasStaffAccess ? 1 : page;
     return Scaffold(
-      appBar: AppBar(title: const Text('Tornei Old School')),
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Image.asset('assets/logo_old_school.png', width: 34, height: 34),
+            const SizedBox(width: 12),
+            const Flexible(child: Text('Tornei Old School')),
+          ],
+        ),
+      ),
       body: selectedPage == 0
           ? Column(
               children: [
@@ -223,7 +271,13 @@ class _HomePageState extends State<HomePage> {
         FilledButton.icon(
           onPressed: auth.busy ? null : auth.login,
           icon: const Icon(Icons.login),
-          label: Text(auth.busy ? 'Accesso in corso…' : 'Accedi'),
+          label: Text(
+            auth.busy
+                ? 'Accesso in corso…'
+                : widget.api.preview
+                ? 'Accedi come admin demo'
+                : 'Accedi',
+          ),
         ),
       ] else ...[
         Text(
@@ -332,7 +386,7 @@ class _TournamentPageState extends State<TournamentPage> {
   );
   @override
   Widget build(BuildContext context) => DefaultTabController(
-    length: 2,
+    length: 3,
     child: Scaffold(
       appBar: AppBar(
         title: Text('${widget.tournament['nome']}'),
@@ -340,6 +394,7 @@ class _TournamentPageState extends State<TournamentPage> {
           tabs: [
             Tab(text: 'Classifica'),
             Tab(text: 'Partite'),
+            Tab(text: 'Squadre'),
           ],
         ),
       ),
@@ -361,33 +416,76 @@ class _TournamentPageState extends State<TournamentPage> {
                   '${row['punti']} pt',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => TeamPage(
+                      api: widget.api,
+                      slug: TosApi.tournamentSlug(widget.tournament),
+                      team: row,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
           _list(
             matches,
             (row, _) => Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${row['data_partita'] ?? 'Data da definire'} · ${row['ora_partita'] ?? ''}',
+              child: InkWell(
+                onTap: row['id'] == null
+                    ? null
+                    : () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              MatchPage(api: widget.api, id: '${row['id']}'),
+                        ),
+                      ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${row['data_partita'] ?? 'Data da definire'} · ${row['ora_partita'] ?? ''}',
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '${row['squadra_casa']} – ${row['squadra_ospite']}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        row['giocata'].toString() == '1'
+                            ? '${row['gol_casa']} : ${row['gol_ospite']}'
+                            : 'Da giocare',
+                      ),
+                      if (row['campo'] != null) Text('${row['campo']}'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          _list(
+            standings,
+            (row, _) => Card(
+              child: ListTile(
+                leading: const Icon(Icons.shield_outlined),
+                title: Text('${row['nome']}'),
+                subtitle: Text(
+                  row['girone'] == null
+                      ? 'Rosa e statistiche'
+                      : 'Girone ${row['girone']}',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => TeamPage(
+                      api: widget.api,
+                      slug: TosApi.tournamentSlug(widget.tournament),
+                      team: row,
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '${row['squadra_casa']} – ${row['squadra_ospite']}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      row['giocata'].toString() == '1'
-                          ? '${row['gol_casa']} : ${row['gol_ospite']}'
-                          : 'Da giocare',
-                    ),
-                    if (row['campo'] != null) Text('${row['campo']}'),
-                  ],
+                  ),
                 ),
               ),
             ),

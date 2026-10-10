@@ -1,0 +1,7 @@
+Options -Indexes
+<Files "index.html">
+  Require all denied
+</Files>
+<IfModule mod_mime.c>
+  AddType application/wasm .wasm
+</IfModule>

@@ -18,3 +18,43 @@ workflows:
         script: flutter build ios --release --no-codesign
     artifacts:
       - mobile/build/ios/iphoneos/*.app
+
+  # Avvio manuale dopo la configurazione descritta in docs/iphone-testflight.md.
+  ios-testflight:
+    name: iPhone Tornei Old School - TestFlight
+    instance_type: mac_mini_m2
+    working_directory: mobile
+    max_build_duration: 60
+    integrations:
+      app_store_connect: tos-app-store-connect
+    environment:
+      flutter: 3.47.7
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: it.torneioldschool.torneiOldSchool
+    scripts:
+      - name: Dipendenze
+        script: flutter pub get
+      - name: Analisi
+        script: flutter analyze
+      - name: Test
+        script: flutter test
+      - name: Configura firma Xcode
+        script: xcode-project use-profiles
+      - name: Compila IPA firmata
+        script: |
+          set -euo pipefail
+          flutter build ipa --release \
+            --build-number="$((BUILD_NUMBER + 1))" \
+            --dart-define=TOS_BASE_URL=https://torneioldschool.it \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - mobile/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false

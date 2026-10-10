@@ -1,0 +1,29 @@
+# Anteprima dell'app con dati reali
+
+L'anteprima principale è `https://torneioldschool.it/app-preview/`, accessibile da PC e Safari su iPhone. Richiede il login del sito come admin o sysadmin. Usa il database esistente tramite PHP: non contiene credenziali DB, dati dimostrativi o una copia del database.
+
+La palette deriva da `style.css`: blu `#15293e`, rosso `#d80000`, sfondo `#f4f4f4`. Il logo è quello del sito. Le schermate sono condivise con l'app nativa; la build web usa `TOS_WEB_PREVIEW=true`. La sessione browser usa il cookie HTTP-only esistente, senza salvare token mobile nel browser. Tutte le scritture richiedono CSRF e ruolo admin attuale; le modifiche confermate alle abilitazioni vengono salvate anche sul sito. Non sono state eseguite scritture di prova sui dati reali.
+
+Le API della preview risiedono in `app-preview/api.php` e usano gli stessi parametri DB del sito. Non dipendono dall'attivazione delle tabelle di sessione native. La build Android/iOS mantiene invece PKCE e le API `api/mobile/v1`, da attivare con `admin_mobile.php` prima del login sul dispositivo.
+
+Percorso da provare:
+
+1. Aprire un torneo reale e passare fra Classifica, Partite e Squadre.
+2. Toccare una squadra, poi un giocatore, per vedere rosa e statistiche del torneo.
+3. Toccare una partita per vedere risultato e referto giocatori.
+4. Tornare alla home e aprire Account: mostra lo stesso account con cui si è entrati nel sito.
+5. In Gestione aprire un account per consultare le abilitazioni. Salvare soltanto una modifica che si intende applicare anche sul sito; annullando la conferma non viene salvato nulla.
+
+Per aggiornare la preview compilare dalla cartella `mobile`:
+
+```powershell
+..\.mobile-tools\flutter\bin\flutter.bat build web --release --dart-define=TOS_WEB_PREVIEW=true --base-href=/app-preview/build/ --no-web-resources-cdn --no-wasm-dry-run
+```
+
+Copiare l'output verificato in `app-preview/build/` (senza file `.map` e log), poi pubblicare con il normale deploy Git. `app-preview/build/.htaccess` impedisce l'apertura diretta di `index.html`; l'ingresso è il PHP protetto. Gli asset compilati non contengono segreti. La configurazione CanvasKit e i font sono locali per rispettare la CSP del sito.
+
+Il vecchio demo rimane opzionale solo per test automatici/offline, con `mobile/preview.cmd -Demo`. In quella modalità compare il banner giallo e non si fanno chiamate al sito. Non è la versione da usare per provare il database reale. `mobile/preview.cmd` senza opzioni indica la preview reale.
+
+L'anteprima non certifica il comportamento iOS di login, portachiavi, file e notifiche. Non è ancora la versione completa: mancano gli altri moduli elencati in `app-mobile.md`. Per provarla come app nativa sul proprio iPhone servirà una build macOS e poi installazione personale (ad esempio AltStore); TestFlight e pubblicazione sono rimandati.
+
+Per arrestare il server usare `Stop-Process -Id PID`, sostituendo PID con quello mostrato all'avvio e verificando che sia il processo PHP dell'anteprima.

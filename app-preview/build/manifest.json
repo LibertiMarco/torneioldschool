@@ -1,0 +1,35 @@
+{
+    "name": "Tornei Old School · Anteprima",
+    "short_name": "Old School",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#f4f6fb",
+    "theme_color": "#15293e",
+    "description": "Anteprima di sviluppo dell'app Tornei Old School.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

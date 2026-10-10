@@ -6,7 +6,7 @@ Data: 10 ottobre 2026.
 
 Un'app per Android e iPhone con tutte le funzionalità del sito, comprese quelle amministrative. Account, dati, ruoli e abilitazioni devono essere condivisi con il sito. La prima versione da distribuire deve coprire l'intero perimetro; le fasi sotto descrivono l'ordine di sviluppo, non una riduzione del prodotto.
 
-Stato: ambiente Windows preparato e prima base Flutter/API implementata. Sono presenti navigazione Calcio/Esport, elenco tornei, classifiche e partite, login con PKCE tramite browser di sistema, profilo, logout e consultazione utenti per admin. L'app completa non è ancora pronta: le altre funzionalità della mappa e le operazioni amministrative di scrittura restano da implementare. I dettagli operativi sono in `mobile/DEVELOPMENT.md`.
+Stato: ambiente Windows preparato e base Flutter/API implementata. Sono presenti navigazione Calcio/Esport, elenco tornei, classifiche e partite con referto, squadre con rose e statistiche nel torneo, login con PKCE tramite browser di sistema, profilo, logout, consultazione utenti e modifica abilitazioni account per admin. La palette e il logo sono quelli del sito. L'anteprima browser `/app-preview/` è riservata agli admin e usa account/database reali (`docs/mobile-preview.md`); il demo locale rimane solo opzionale per test. L'app completa non è ancora pronta: le altre funzionalità della mappa e le altre operazioni amministrative restano da implementare. La pubblicazione sugli store è rimandata. I dettagli operativi sono in `mobile/DEVELOPMENT.md`.
 
 ## Architettura proposta
 
@@ -95,7 +95,7 @@ L'utente ha confermato di disporre soltanto di Windows. Il percorso previsto è 
 
 Per compilare e firmare iOS serve un ambiente macOS con Xcode, locale o remoto. Per distribuire negli store servono i relativi account, le identità di firma e la configurazione dei servizi scelti. L'accesso a questi ambienti e account non è stato verificato.
 
-Il codice definisce come origini di fallback `https://torneioldschool.it` e `https://esport.torneioldschool.it`. Confermare la configurazione effettiva e predisporre staging prima delle prove di scrittura. Non sono state effettuate operazioni sul sito online.
+L'app usa `https://torneioldschool.it` come origine predefinita, con sezione Calcio/Esport esplicita. L'utente ha scelto questo ambiente reale. La base backend nativa è stata pubblicata tramite push su master; l'ultima verifica la trovava disattivata in attesa dell'attivazione admin. L'anteprima browser usa invece la sessione web esistente e lo stesso database, senza dipendere dalle tabelle di autenticazione mobile. Non sono state effettuate scritture di prova nei dati reali.
 
 ## Criterio di completamento
 

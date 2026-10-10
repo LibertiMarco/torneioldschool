@@ -2,9 +2,9 @@
 
 La versione corrente è una base di sviluppo, non la versione completa richiesta per gli store.
 
-Implementato: progetto Android/iOS, navigazione Calcio/Esport, elenco tornei, classifiche, partite, accesso tramite login web con PKCE S256, sessioni mobile revocabili, profilo e logout, consultazione utenti per admin.
+Implementato: progetto Android/iOS, navigazione Calcio/Esport, elenco tornei, classifiche, partite con dettaglio e referto, squadre con rose e statistiche giocatori nel torneo, accesso tramite login web con PKCE S256, sessioni mobile revocabili, profilo e logout, consultazione utenti e modifica delle abilitazioni Totocalcio/Fantacalcio per admin. Palette e logo sono quelli del sito. L'anteprima browser principale è riservata agli admin e usa account/database reali: `../docs/mobile-preview.md`.
 
-Non ancora implementato: operazioni admin di scrittura, dettagli completi di squadre/giocatori/eventi, blog/commenti, preferiti e notifiche, moduli fantasy, grafiche, importazioni, social e parità di tutte le varianti di torneo. La mappa completa è in `../docs/app-mobile.md`.
+Non ancora implementato: le altre operazioni admin di scrittura, storico completo dei giocatori, blog/commenti, preferiti e notifiche, moduli fantasy, grafiche, importazioni, social e parità di tutte le varianti di torneo. La mappa completa è in `../docs/app-mobile.md`.
 
 ## Comandi Windows
 
@@ -20,7 +20,7 @@ Dal terminale nella cartella `mobile`:
 .\flutter.ps1 build apk --debug --dart-define=TOS_BASE_URL=https://INDIRIZZO-STAGING
 ```
 
-`TOS_BASE_URL` deve includere l'eventuale sottocartella del sito. In assenza del parametro l'app usa `https://torneioldschool.it`, dove i nuovi endpoint devono ancora essere distribuiti e attivati. Non inserire segreti nei parametri di build.
+`TOS_BASE_URL` deve includere l'eventuale sottocartella del sito. In assenza del parametro l'app usa `https://torneioldschool.it`. I nuovi endpoint sono stati distribuiti tramite push su master; l'ultima verifica li trovava disattivati in attesa dell'attivazione dal pannello admin. Non inserire segreti nei parametri di build.
 
 Per un emulatore Android collegato a XAMPP locale, l'indirizzo usuale è `http://10.0.2.2/torneioldschool`. Le build debug consentono HTTP; le release richiedono HTTPS. Un telefono fisico deve usare un indirizzo raggiungibile dal dispositivo oppure un tunnel locale configurato. Non è stato creato un emulatore o collegato un telefono.
 
@@ -38,7 +38,7 @@ Prima di attivarle nell'ambiente scelto:
 4. Verificare le colonne account `email_verificata` e `feature_flags` e la colonna `tornei.sezione` nell'ambiente reale.
 5. Verificare che Apache/PHP riceva l'header `Authorization`. Non abilitare CORS permissivo: l'app nativa non ne ha bisogno.
 
-Per il database locale è disponibile `C:\xampp\php\php.exe api/script/mobile_migrate.php --apply` dalla radice del progetto. Senza `--apply` stampa soltanto l'anteprima. Il database locale è stato avviato per la prova ma rifiuta le credenziali configurate (1045); la migrazione non è stata applicata. L'utente ha scelto infine il sito reale. I passaggi di rilascio sono in `../docs/mobile-production.md`; non è stato pubblicato alcun file online.
+Per il database locale è disponibile `C:\xampp\php\php.exe api/script/mobile_migrate.php --apply` dalla radice del progetto. Senza `--apply` stampa soltanto l'anteprima. Il database locale è stato avviato per la prova ma rifiuta le credenziali configurate (1045); la migrazione non è stata applicata. L'utente ha scelto infine il sito reale. I file sono stati pubblicati su master con il commit `4d5862d`; l'attivazione delle API e la migrazione online restano da confermare dal pannello admin. I passaggi di rilascio sono in `../docs/mobile-production.md`.
 
 Il login dell'app apre il login del sito nel browser del sistema. L'endpoint `authorize.php` emette un codice monouso con scadenza di 120 secondi; l'app lo scambia con il verificatore PKCE. Non viene introdotto un endpoint password che aggiri reCAPTCHA. La callback ammessa è soltanto `tosoldschool://auth/callback`.
 
@@ -48,6 +48,8 @@ Prima della produzione, pianificare la pulizia periodica dei codici scaduti e de
 
 ## Verifica
 
+La modifica delle abilitazioni usa il guard admin del servizio mobile e le definizioni/normalizzazione già condivise dal sito. Un hash della versione letta e un aggiornamento condizionale rilevano i salvataggi concorrenti (HTTP 409); non vengono modificati ruoli o password. La schermata richiede conferma, disabilita il doppio invio e permette di ricaricare in caso di conflitto. La prova automatica `tests/mobile_account_features_test.php` usa SQLite in memoria: sono ancora necessarie la verifica MySQL e quella su dispositivo.
+
 ```powershell
 C:\xampp\php\php.exe ..\tests\mobile_auth_test.php
 ```
@@ -56,6 +58,6 @@ I test PHP usano SQLite in memoria e non modificano il database del sito. Copron
 
 ## iOS e distribuzione
 
-`../codemagic.yaml` contiene una pipeline di verifica iOS senza firma. Non è stata avviata, non configura pubblicazione e non produce una IPA installabile. Il progetto deve essere collegato a un account Codemagic e a un repository scelto dall'utente. Per TestFlight/App Store servono configurazione Apple Developer, bundle identifier definitivo, certificati/profili e una pipeline firmata.
+`../codemagic.yaml` contiene una pipeline di verifica iOS senza firma e una pipeline manuale di firma e caricamento TestFlight. Nessuna è stata avviata: non esiste ancora una IPA installabile. L'utente ha un iPhone e soltanto un normale Apple ID. Per il percorso da Windows servono iscrizione Apple Developer e configurazione Codemagic, App Store Connect e certificati/profili. I passaggi sono in `../docs/iphone-testflight.md`.
 
 La dipendenza `flutter_web_auth_2` è fissata a `6.0.0-alpha.8` per compatibilità con AGP 9 generato da Flutter 3.47.7. È una prerelease: prima della distribuzione definitiva verificare stabilità, comportamento su dispositivi e disponibilità della release stabile. Le icone e la firma Android attuali sono quelle di sviluppo.
