@@ -10,7 +10,7 @@ video_expect($identity === video_sync_parse($title),'Hashtags changed the identi
 video_expect($identity['day'] === 1 && $identity['home_score'] === 5 && $identity['away_score'] === 3,'Caption extraction failed');
 $match = ['id'=>42,'torneo'=>'Brasilerao','torneo_nome'=>'Brasilerao','giornata'=>1,'fase_round'=>null,'squadra_casa'=>'Ceará SC','squadra_ospite'=>'Mirassol FC','gol_casa'=>5,'gol_ospite'=>3,'giocata'=>1,'data_partita'=>'2026-09-20','link_instagram'=>null,'link_youtube'=>null];
 $formats = [
-    ["CHAMPIONS LEAGUE 2\nBARCELONA-ARSENAL 7-5",'Champions League 2','Barcelona','Arsenal',7,5],
+    ["CHAMPIONS LEAGUE 2\nBARCELONA-ARSENAL 7-5",'Champions League 2','Barcellona','Arsenal',7,5],
     ['🏆CHAMPIONS LEAGUE | Napoli-Sporting Lisbona 5-7','Champions League','Napoli','Sporting Lisbona',5,7],
     ["LA LIGA CALCIO A 8 🇪🇸\nRAYO VALLECANO - BETIS SIVIGLIA 9-2...",'La Liga','Rayo Vallecano','Betis Siviglia',9,2],
 ];
@@ -29,6 +29,11 @@ foreach ($formats as [$text,$tournament,$home,$away,$homeScore,$awayScore]) {
     if ($tournament === 'La Liga') video_expect(!video_sync_match($parsed,array_replace($fixture,['torneo_nome'=>'La Liga Calcio a 6'])),'Conflicting Calcio a 6/8 tournaments merged');
 }
 video_expect(video_sync_parse('CHAMPIONS LEAGUE | Napoli-Sporting Lisbona') === null,'A match without scores was accepted');
+video_expect(video_sync_team_key('FC BARCELONA') === video_sync_team_key('Barcellona FC'),'Confirmed team alias failed');
+video_expect(video_sync_team_key('Barcelona Juniors') !== video_sync_team_key('Barcellona'),'Alias merged a different team');
+$barcelonaMatch = array_replace($match,['torneo'=>'Champions League 2','torneo_nome'=>'Champions League 2','squadra_casa'=>'FC Barcelona','squadra_ospite'=>'Arsenal','gol_casa'=>7,'gol_ospite'=>5]);
+video_expect(video_sync_match(video_sync_parse("CHAMPIONS LEAGUE 2\nBARCELLONA-ARSENAL 7-5"),$barcelonaMatch),'Reverse alias failed');
+video_expect(!video_sync_match(video_sync_parse("CHAMPIONS LEAGUE 2\nBARCELLONA-ARSENAL 7-4"),$barcelonaMatch),'Alias bypassed result validation');
 video_expect(video_sync_parse('BRASILERAO | GIORNATA 1 | CEARA 5:3 MIRASSOL') !== null,'Existing colon score separator regressed');
 video_expect(video_sync_thumbnail_url('https://i.ytimg.com/vi/abcdefghijk/default.jpg') !== '','YouTube thumbnail rejected');
 video_expect(video_sync_thumbnail_url('https://scontent.cdninstagram.com/cover.jpg') !== '','Instagram thumbnail rejected');

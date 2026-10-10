@@ -16,7 +16,10 @@ function video_sync_normalize(string $text): string
 function video_sync_team_key(string $text): string
 {
     $parts = explode(' ', video_sync_normalize($text));
-    return implode(' ', array_filter($parts, fn($part) => !in_array($part, ['fc', 'sc', 'cf', 'afc', 'club', 'clube', 'football', 'futebol', 'esporte', 'sports'], true)));
+    $key = implode(' ', array_filter($parts, fn($part) => !in_array($part, ['fc', 'sc', 'cf', 'afc', 'club', 'clube', 'football', 'futebol', 'esporte', 'sports'], true)));
+    // Confirmed spelling variants; apply only to the whole team name.
+    $aliases = ['barcelona'=>'barcellona'];
+    return $aliases[$key] ?? $key;
 }
 
 function video_sync_tournament_key(string $name): string
