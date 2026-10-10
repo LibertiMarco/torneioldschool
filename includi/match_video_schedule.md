@@ -14,7 +14,7 @@ includi/match_video_schedule.php
 includi/match_video_sync.php
 ```
 
-Lo script richiede le credenziali social e database già configurate sul server. Il cron deve usare lo stesso utente PHP e la stessa directory runtime privata del sito (`TOS_RUNTIME_DIR`, se impostata). Il runtime contiene `match-video-daily/state.json` e `run.lock`: avanzamento, riepilogo e lock contro esecuzioni contemporanee. Solo un'esecuzione riuscita per giornata; errori consentono fino a tre tentativi, distanziati almeno cinque minuti.
+Lo script richiede le credenziali social e database già configurate sul server. Il cron deve usare lo stesso utente PHP e la stessa directory runtime privata del sito (`TOS_RUNTIME_DIR`, se impostata). Il cron rispetta `TOS_RUNTIME_DIR` se configurata; altrimenti usa `private/torneioldschool-runtime` nella directory del dominio, accanto a `httpdocs`. Il percorso predefinito su Plesk è `/data/vhosts/torneioldschool.it/private/torneioldschool-runtime/match-video-daily/state.json`. La directory contiene `state.json` e `run.lock`: avanzamento, riepilogo e lock contro esecuzioni contemporanee. Solo un'esecuzione riuscita per giornata; errori consentono fino a tre tentativi, distanziati almeno cinque minuti.
 
 ## Opzione 1: cron con comando PHP
 
@@ -31,6 +31,8 @@ Per controllare senza salvare:
 ```sh
 php api/script/sync_match_video_daily.php --dry-run
 ```
+
+`--dry-run` non crea né legge lo stato o il lock del cron: può verificare database e social anche senza una directory scrivibile per il cron.
 
 Senza opzioni, lo script sincronizza immediatamente le ultime 24 ore rispetto all'ora attuale. `--help` mostra le opzioni.
 

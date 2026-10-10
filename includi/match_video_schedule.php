@@ -2,6 +2,14 @@
 declare(strict_types=1);
 require_once __DIR__.'/match_video_sync_job.php';
 
+function video_schedule_storage_file(string $siteRoot,string $configuredRuntime = ''): string
+{
+    $configuredRuntime = trim($configuredRuntime);
+    // Plesk's subscription owns the parent of httpdocs, not the parent of all domains.
+    $root = $configuredRuntime !== '' ? rtrim($configuredRuntime,'/\\') : dirname($siteRoot).'/private/torneioldschool-runtime';
+    return $root.'/match-video-daily/state.json';
+}
+
 function video_schedule_window(DateTimeImmutable $end): array
 {
     $end = $end->setTimezone(new DateTimeZone('Europe/Rome'));

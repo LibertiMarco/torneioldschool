@@ -3,6 +3,8 @@ declare(strict_types=1);
 require_once __DIR__.'/../includi/match_video_schedule.php';
 function schedule_expect(bool $ok,string $message): void {if (!$ok) throw new RuntimeException($message);}
 $zone = new DateTimeZone('Europe/Rome');$end = new DateTimeImmutable('2026-10-10 13:00:00',$zone);
+schedule_expect(str_replace('\\','/',video_schedule_storage_file('/data/vhosts/torneioldschool.it/httpdocs')) === '/data/vhosts/torneioldschool.it/private/torneioldschool-runtime/match-video-daily/state.json','Cron storage escaped the subscription directory');
+schedule_expect(video_schedule_storage_file('/data/vhosts/example/httpdocs','/custom/runtime/') === '/custom/runtime/match-video-daily/state.json','Configured runtime ignored');
 $window = video_schedule_window($end);
 $game = ['id'=>1,'torneo'=>'Test','torneo_nome'=>'Test','giornata'=>1,'fase_round'=>null,'giocata'=>1,
     'squadra_casa'=>'Feyenoord','squadra_ospite'=>'Telstar','gol_casa'=>9,'gol_ospite'=>1,'data_partita'=>'2026-10-09','ora_partita'=>'22:00:00','link_instagram'=>null,'link_youtube'=>null];

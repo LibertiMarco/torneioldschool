@@ -35,15 +35,17 @@ $persist = static function(string $path,array $state): void {
     if (!rename($path.'.tmp',$path)) throw new RuntimeException('Impossibile aggiornare lo stato del cron.');
 };
 try {
-    $path = tos_runtime_path('match-video-daily/state.json');$dir = dirname($path);
-    if (!is_dir($dir) && !mkdir($dir,0700,true) && !is_dir($dir)) throw new RuntimeException('Directory privata del cron non disponibile.');
-    $lock = fopen($dir.'/run.lock','c');
-    if ($lock === false) throw new RuntimeException('Lock del cron non disponibile.');
-    if (!flock($lock,LOCK_EX | LOCK_NB)) {$reply(['status'=>'busy','message'=>'Sincronizzazione già in corso.']);exit;}
     $state = null;
-    if (is_file($path)) {
-        $state = json_decode((string)file_get_contents($path),true,512,JSON_THROW_ON_ERROR);
-        if (!is_array($state) || ($state['version'] ?? 0) !== 1) throw new RuntimeException('Stato cron non valido.');
+    if (!$dryRun) {
+        $path = video_schedule_storage_file(dirname(__DIR__,2),(string)(getenv('TOS_RUNTIME_DIR') ?: ''));$dir = dirname($path);
+        if (!is_dir($dir) && !@mkdir($dir,0700,true) && !is_dir($dir)) throw new RuntimeException('Directory privata del cron non disponibile. Verifica i permessi della cartella private del dominio o configura TOS_RUNTIME_DIR.');
+        $lock = @fopen($dir.'/run.lock','c');
+        if ($lock === false) throw new RuntimeException('Lock del cron non disponibile.');
+        if (!flock($lock,LOCK_EX | LOCK_NB)) {$reply(['status'=>'busy','message'=>'Sincronizzazione già in corso.']);exit;}
+        if (is_file($path)) {
+            $state = json_decode((string)file_get_contents($path),true,512,JSON_THROW_ON_ERROR);
+            if (!is_array($state) || ($state['version'] ?? 0) !== 1) throw new RuntimeException('Stato cron non valido.');
+        }
     }
     if ($dryRun) $run = video_schedule_create($now);
     elseif ($scheduled) $run = video_schedule_due($state,$now);

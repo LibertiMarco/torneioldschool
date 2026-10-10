@@ -3,6 +3,7 @@ require_once __DIR__ . '/../api/mobile/v1/_bootstrap.php';
 require_once __DIR__ . '/../includi/security.php';
 require_once __DIR__ . '/../includi/mobile_account_features.php';
 require_once __DIR__ . '/../includi/app_preview.php';
+require_once __DIR__ . '/../includi/mobile_profile.php';
 
 try {
     if (empty($_SESSION['user_id'])) {
@@ -14,12 +15,16 @@ try {
     $method = $_SERVER['REQUEST_METHOD'] ?? '';
     $body = null;
     if ($method === 'POST') {
-        $body = mobile_input();
+        $multipart = str_starts_with(strtolower($_SERVER['CONTENT_TYPE'] ?? ''), 'multipart/form-data');
+        $body = $action === 'account' && $multipart ? $_POST : mobile_input();
         if (!csrf_is_valid(is_string($body['_csrf'] ?? null) ? $body['_csrf'] : null, 'app_preview')) {
             throw new MobileAuthError('invalid_csrf', 'Sessione scaduta. Ricarica prima di salvare.', 403);
         }
     } elseif ($method !== 'GET') {
         throw new MobileAuthError('method_not_allowed', 'Metodo non consentito.', 405);
+    }
+    if ($action === 'account') {
+        mobile_json(mobile_profile_handle((int)$user['id'], $body, $_FILES, true));
     }
     if ($action === 'features') {
         $service = new MobileAccountFeatures($db, static fn() => preview_admin($db, $_SESSION));
