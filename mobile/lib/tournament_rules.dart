@@ -1,8 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' show parseFragment;
+import 'package:markdown/markdown.dart' as markdown;
 
 import 'theme.dart';
+
+dom.DocumentFragment tournamentRulesFragment(String content) {
+  final fragment = parseFragment(
+    markdown.markdownToHtml(
+      content,
+      extensionSet: markdown.ExtensionSet.commonMark,
+    ),
+  );
+  for (final element in fragment.querySelectorAll(
+    'script, style, iframe, object, embed',
+  )) {
+    element.remove();
+  }
+  return fragment;
+}
 
 class TournamentRules extends StatelessWidget {
   const TournamentRules({super.key, required this.html});
@@ -35,12 +51,7 @@ class TournamentRules extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fragment = parseFragment(html);
-    for (final element in fragment.querySelectorAll(
-      'script, style, iframe, object, embed',
-    )) {
-      element.remove();
-    }
+    final fragment = tournamentRulesFragment(html);
     final sections = <({String title, List<Widget> blocks})>[];
     String heading = 'Regolamento';
     var blocks = <Widget>[];

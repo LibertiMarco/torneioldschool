@@ -39,6 +39,7 @@ dependencies:
   flutter_web_auth_2: 6.0.0-alpha.8
   web: ^1.1.1
   html: ^0.15.7
+  markdown: ^7.3.1
 
 dev_dependencies:
   flutter_test:

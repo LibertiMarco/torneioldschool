@@ -73,72 +73,308 @@ class TeamPage extends StatelessWidget {
   final TosApi api;
   final String slug;
   final Map<String, dynamic> team;
+
+  bool hasPortrait(Map<String, dynamic> player) {
+    final path = '${player['foto'] ?? ''}'.trim();
+    return path.isNotEmpty &&
+        !RegExp(
+          r'(^|/)unknown\.(jpg|jpeg|png)(?:[?#].*)?$',
+          caseSensitive: false,
+        ).hasMatch(path);
+  }
+
+  Widget metric(String label, dynamic value) => Expanded(
+    child: Column(
+      children: [
+        Text(
+          '$value',
+          style: const TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: siteBlue,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Color(0xff778496)),
+        ),
+      ],
+    ),
+  );
+  Widget badge(String label, dynamic value) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    decoration: BoxDecoration(
+      color: const Color(0xfff0f3f7),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Text(
+      '$value $label',
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: Color(0xff526176),
+      ),
+    ),
+  );
   @override
   Widget build(BuildContext context) => DataPage(
     title: '${team['nome']}',
     load: () => api.roster(slug, '${team['nome']}'),
     render: (data) {
       final players = TosApi.rows(data);
+      final logo =
+          '${team['logo'] ?? (players.isEmpty ? '' : players.first['logo_squadra']) ?? ''}';
       return ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${team['nome']}',
-                    style: Theme.of(context).textTheme.headlineSmall,
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xffe5eaf1)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    SiteImage(
+                      api: api,
+                      path: logo,
+                      width: 60,
+                      height: 60,
+                      fallback: Icons.shield_outlined,
+                      preserveShape: true,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${team['nome']}',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                              color: siteBlue,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Andamento nel torneo',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xff778496),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                Row(
+                  children: [
+                    metric('Punti', team['punti'] ?? 0),
+                    metric('Giocate', team['giocate'] ?? 0),
+                    metric('Gol fatti', team['gol_fatti'] ?? 0),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                const Divider(height: 1, color: Color(0xffe5eaf1)),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    badge('vinte', team['vinte'] ?? 0),
+                    badge('pareggi', team['pareggiate'] ?? 0),
+                    badge('perse', team['perse'] ?? 0),
+                    badge('gol subiti', team['gol_subiti'] ?? 0),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 28, bottom: 16),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Rosa',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: siteBlue,
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '${team['punti'] ?? 0} punti · ${team['giocate'] ?? 0} partite giocate',
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
                   ),
-                  Text(
-                    '${team['vinte'] ?? 0} vinte · ${team['pareggiate'] ?? 0} pareggiate · ${team['perse'] ?? 0} perse',
+                  decoration: BoxDecoration(
+                    color: const Color(0xffe9edf3),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  Text(
-                    'Gol fatti ${team['gol_fatti'] ?? 0} · subiti ${team['gol_subiti'] ?? 0}',
+                  child: Text(
+                    '${players.length} giocatori',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: siteBlue,
+                    ),
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+          if (players.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Text(
+                'Rosa non ancora disponibile.',
+                style: TextStyle(color: Color(0xff778496)),
               ),
             ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Text(
-              'Rosa',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-          ),
-          if (players.isEmpty) const Text('Rosa non ancora disponibile.'),
-          ...players.map(
-            (player) => Card(
-              child: ListTile(
-                leading: SiteImage(
-                  api: api,
-                  path: '${player['foto'] ?? ''}',
-                  width: 44,
-                  height: 44,
-                  fallback: Icons.person_outline,
-                ),
-                title: Text(
-                  '${player['nome']} ${player['cognome']}${player['is_captain'].toString() == '1' ? ' · Capitano' : ''}',
-                ),
-                subtitle: Text(
-                  '${player['ruolo_squadra'] ?? player['ruolo'] ?? ''}\n${player['presenze'] ?? 0} presenze · ${player['reti'] ?? 0} gol · ${player['assist'] ?? 0} assist',
-                ),
-                isThreeLine: true,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => PlayerPage(player: player, api: api),
+          for (final player in players)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xffe5eaf1)),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => PlayerPage(player: player, api: api),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            if (hasPortrait(player))
+                              SiteImage(
+                                api: api,
+                                path: '${player['foto']}',
+                                width: 52,
+                                height: 52,
+                                fallback: Icons.person_outline,
+                              )
+                            else
+                              Container(
+                                width: 52,
+                                height: 52,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xffe9edf3),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Text(
+                                  [player['nome'], player['cognome']]
+                                      .map((v) => '${v ?? ''}'.trim())
+                                      .where((v) => v.isNotEmpty)
+                                      .map((v) => v.characters.first)
+                                      .join()
+                                      .toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w700,
+                                    color: siteBlue,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${player['nome']} ${player['cognome']}${player['is_captain'].toString() == '1' ? ' · Capitano' : ''}',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: siteBlue,
+                                    ),
+                                  ),
+                                  if ('${player['ruolo_squadra'] ?? player['ruolo'] ?? ''}'
+                                      .trim()
+                                      .isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${player['ruolo_squadra'] ?? player['ruolo']}',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Color(0xff778496),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              size: 20,
+                              color: Color(0xff778496),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xfff5f7fa),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              for (final entry in {
+                                'Presenze': 'presenze',
+                                'Gol': 'reti',
+                                'Assist': 'assist',
+                              }.entries)
+                                Expanded(
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        '${player[entry.value] ?? 0}',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: siteBlue,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        entry.key,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xff778496),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
         ],
       );
     },
