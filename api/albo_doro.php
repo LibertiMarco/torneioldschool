@@ -11,7 +11,13 @@ if (!$conn || $conn->connect_error) {
 }
 
 $conn->set_charset('utf8mb4');
-$requestedSection = content_current_section();
+try {
+    $requestedSection = content_requested_read_section();
+} catch (InvalidArgumentException $error) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Sezione non valida.']);
+    exit;
+}
 $alboSectionReady = ensure_albo_section_column($conn);
 $torneiSectionReady = ensure_tornei_section_column($conn);
 

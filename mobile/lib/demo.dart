@@ -145,6 +145,57 @@ class DemoApi extends TosApi {
             },
           ],
         };
+      case 'api/classifica_giocatori.php':
+        return {
+          'data': players
+              .map(
+                (p) => {
+                  ...p,
+                  'gol': p['reti'],
+                  'posizione': p['id'] == 10 ? 1 : 2,
+                },
+              )
+              .toList(),
+          'pagination': {'page': 1, 'total_pages': 1},
+        };
+      case 'api/esport_ranking.php':
+        return {
+          'data': [
+            {
+              'nome': 'Luca',
+              'cognome': 'Rossi',
+              'posizione': 1,
+              'punti': 40,
+              'tornei_giocati': 2,
+            },
+          ],
+          'meta': {'can_view_full': true, 'has_more': false},
+        };
+      case 'api/albo_doro.php':
+        return {
+          'data': [
+            {
+              'competizione': 'Old School Cup',
+              'anno': 2026,
+              'filetorneo': 'demo.php',
+              'premi': [
+                {'premio': 'Vincitore', 'vincitrice': 'Old School FC'},
+              ],
+            },
+          ],
+        };
+      case 'api/blog.php':
+        if (query?['azione'] == 'articolo') {
+          return {
+            'titolo': 'La nuova stagione',
+            'contenuto':
+                '<p>Una nuova stagione <strong>Old School</strong>.</p>',
+            'data': '10/10/2026',
+          };
+        }
+        return [
+          {'id': 1, 'titolo': 'La nuova stagione', 'data': '10/10/2026'},
+        ];
       case 'api/leggiClassifica.php':
         return teams;
       case 'api/get_partite.php':

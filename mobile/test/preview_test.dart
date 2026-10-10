@@ -12,6 +12,8 @@ void main() {
     await tester.pumpWidget(TosApp(api: api, auth: DemoAuth(api)));
     await tester.pumpAndSettle();
     expect(find.text('Anteprima · dati dimostrativi'), findsOneWidget);
+    await tester.tap(find.text('Tornei'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Old School Cup'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Squadre'));

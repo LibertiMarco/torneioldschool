@@ -6,7 +6,13 @@ La palette deriva da `style.css`: blu `#15293e`, rosso `#d80000`, sfondo `#f4f4f
 
 Le API della preview risiedono in `app-preview/api.php` e usano gli stessi parametri DB del sito. Non dipendono dall'attivazione delle tabelle di sessione native. La build Android/iOS mantiene invece PKCE e le API `api/mobile/v1`, da attivare con `admin_mobile.php` prima del login sul dispositivo.
 
+La schermata iniziale è la Home: marcatori e presenze totali (prime 5 posizioni, classifica completa paginata con ricerca), notizie della sezione, albo d’oro e riferimenti di contatto. Esport usa il ranking EA FC; il server conserva il limite di 5 ospiti / 50 autenticati. Conteggi, pari merito e ordinamenti vengono dalle stesse API del sito. Notizie e albo accettano una sezione esplicita per le sole letture; senza parametro mantengono il comportamento basato sul dominio. Le scritture del blog continuano a seguire il dominio.
+
+Tornei conserva Calcio/Esport e presenta i tre gruppi del sito: In corso (fine crescente, inizio decrescente a pari fine), Programmati (inizio crescente), Terminati (fine decrescente). Ricerca senza distinzione di maiuscole/accenti, filtro categoria e archivio a gruppi di 12. Con filtri attivi si cercano tutti i tornei; le API non tagliano più l’archivio a 200 righe.
+
 Percorso da provare:
+
+0. In Home alternare Marcatori/Presenze, aprire la classifica completa, una notizia e l’albo completo; cambiare sezione e verificare il ranking EA FC. Aprire Tornei per i gruppi e i filtri.
 
 1. Aprire un torneo reale e passare fra Classifica, Partite e Squadre.
 2. Toccare una squadra, poi un giocatore, per vedere rosa e statistiche del torneo.

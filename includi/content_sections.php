@@ -30,6 +30,22 @@ if (!function_exists('content_current_section')) {
     }
 }
 
+// Public read APIs can select a section explicitly for the shared mobile app.
+// Without a parameter, preserve the website's host-based behavior.
+if (!function_exists('content_requested_read_section')) {
+    function content_requested_read_section(): string
+    {
+        if (!array_key_exists('sezione', $_GET)) {
+            return content_current_section();
+        }
+        $section = $_GET['sezione'];
+        if (!is_string($section) || !in_array($section, ['calcio', 'esport'], true)) {
+            throw new InvalidArgumentException('Sezione non valida.');
+        }
+        return $section;
+    }
+}
+
 if (!function_exists('content_site_origin')) {
     function content_site_origin(string $section): string
     {

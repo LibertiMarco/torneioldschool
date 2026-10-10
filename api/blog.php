@@ -12,6 +12,15 @@ header('Expires: Mon, 01 Jan 1990 00:00:00 GMT');
 $azione = $_GET['azione'] ?? '';
 $mediaBasePath = '/img/blog_media/';
 $blogSection = content_current_section();
+if (in_array($azione, ['ultimi', 'lista', 'articolo'], true)) {
+    try {
+        $blogSection = content_requested_read_section();
+    } catch (InvalidArgumentException $error) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Sezione non valida.']);
+        exit;
+    }
+}
 $blogSectionReady = ensure_blog_post_section_column($conn);
 $shouldFilterBySection = $blogSection !== '' && $blogSectionReady;
 

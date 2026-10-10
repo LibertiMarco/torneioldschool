@@ -61,3 +61,9 @@ I test PHP usano SQLite in memoria e non modificano il database del sito. Copron
 `../codemagic.yaml` contiene una pipeline di verifica iOS senza firma e una pipeline manuale di firma e caricamento TestFlight. Nessuna è stata avviata: non esiste ancora una IPA installabile. L'utente ha un iPhone e soltanto un normale Apple ID. Per il percorso da Windows servono iscrizione Apple Developer e configurazione Codemagic, App Store Connect e certificati/profili. I passaggi sono in `../docs/iphone-testflight.md`.
 
 La dipendenza `flutter_web_auth_2` è fissata a `6.0.0-alpha.8` per compatibilità con AGP 9 generato da Flutter 3.47.7. È una prerelease: prima della distribuzione definitiva verificare stabilità, comportamento su dispositivi e disponibilità della release stabile. Le icone e la firma Android attuali sono quelle di sviluppo.
+
+## Home e tornei
+
+La Home è distinta dall’elenco tornei. Usa le API esistenti `classifica_giocatori.php` (totali senza filtro torneo), `esport_ranking.php`, `blog.php` e `albo_doro.php`: conserva i conteggi e le posizioni calcolati dal sito, senza sommare nuovamente i singoli tornei sul client. Classifica totale paginata e ricercabile; prime 5 in homepage, alternabili fra gol e presenze. Esport conserva i limiti imposti dal server. News e albo sono filtrati esplicitamente per sezione nelle letture; il default del sito per dominio rimane valido.
+
+I tornei hanno gli stessi gruppi e ordinamenti della pagina `tornei.php`; ricerca per nome/categoria/periodo/stato, categorie in ordine naturale, archivio iniziale di 12 con caricamento successivo. Le letture native e preview includono l’intero archivio. Le notizie sono leggibili nelle schermate Flutter con testo e immagini; formattazione avanzata, commenti e media video restano fra i moduli da completare.

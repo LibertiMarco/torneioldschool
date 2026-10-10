@@ -40,7 +40,7 @@ try {
     if ($action === 'tournaments') {
         $section = $_GET['section'] ?? 'calcio';
         if (!in_array($section, ['calcio', 'esport'], true)) { throw new MobileAuthError('invalid_request', 'Sezione non valida.', 400); }
-        $stmt = $db->prepare('SELECT id, nome, stato, data_inizio, data_fine, img, filetorneo, categoria, sezione FROM tornei WHERE sezione = ? ORDER BY data_inizio DESC LIMIT 200');
+        $stmt = $db->prepare('SELECT id, nome, stato, data_inizio, data_fine, img, filetorneo, categoria, sezione FROM tornei WHERE sezione = ? ORDER BY data_inizio DESC');
         $stmt->execute([$section]);
         mobile_json(['tournaments' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
     }

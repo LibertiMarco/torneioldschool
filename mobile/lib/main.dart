@@ -6,6 +6,8 @@ import 'admin.dart';
 import 'details.dart';
 import 'demo.dart';
 import 'theme.dart';
+import 'tournament_list.dart';
+import 'home_dashboard.dart';
 import 'browser_runtime_stub.dart'
     if (dart.library.js_interop) 'browser_runtime_web.dart';
 
@@ -85,11 +87,9 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int page = 0;
   String section = 'calcio';
-  late Future<List<Map<String, dynamic>>> tournaments;
   @override
   void initState() {
     super.initState();
-    tournaments = widget.api.tournaments(section);
     widget.auth.addListener(_authChanged);
     widget.auth.restore();
   }
@@ -104,17 +104,11 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  Future<void> reload() async {
-    final next = widget.api.tournaments(section);
-    setState(() => tournaments = next);
-    await next;
-  }
-
   @override
   Widget build(BuildContext context) {
     final auth = widget.auth;
     final hasStaffAccess = auth.admin || auth.graphics;
-    final selectedPage = page == 2 && !hasStaffAccess ? 1 : page;
+    final selectedPage = page == 3 && !hasStaffAccess ? 2 : page;
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -125,7 +119,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      body: selectedPage == 0
+      body: selectedPage <= 1
           ? Column(
               children: [
                 Padding(
@@ -144,84 +138,27 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                     selected: {section},
-                    onSelectionChanged: (value) => setState(() {
-                      section = value.first;
-                      tournaments = widget.api.tournaments(section);
-                    }),
+                    onSelectionChanged: (value) =>
+                        setState(() => section = value.first),
                   ),
                 ),
                 Expanded(
-                  child: FutureBuilder<List<Map<String, dynamic>>>(
-                    future: tournaments,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState != ConnectionState.done) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (snapshot.hasError) {
-                        return ErrorPanel(
-                          error: snapshot.error!,
-                          retry: () {
-                            reload().catchError((_) {});
-                          },
-                        );
-                      }
-                      final rows = snapshot.data ?? [];
-                      return RefreshIndicator(
-                        onRefresh: reload,
-                        child: ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                          children: rows.isEmpty
-                              ? [
-                                  const Padding(
-                                    padding: EdgeInsets.all(32),
-                                    child: Text('Nessun torneo disponibile.'),
-                                  ),
-                                ]
-                              : rows
-                                    .map(
-                                      (row) => Card(
-                                        child: ListTile(
-                                          contentPadding: const EdgeInsets.all(
-                                            16,
-                                          ),
-                                          leading: const Icon(
-                                            Icons.emoji_events_outlined,
-                                          ),
-                                          title: Text(
-                                            '${row['nome']}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          subtitle: Text(
-                                            '${row['categoria']} · ${row['stato']}',
-                                          ),
-                                          trailing: const Icon(
-                                            Icons.chevron_right,
-                                          ),
-                                          onTap: () =>
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute<void>(
-                                                  builder: (_) =>
-                                                      TournamentPage(
-                                                        api: widget.api,
-                                                        tournament: row,
-                                                      ),
-                                                ),
-                                              ),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
+                  child: selectedPage == 0
+                      ? HomeDashboard(
+                          key: ValueKey('home-$section'),
+                          api: widget.api,
+                          section: section,
+                          onTournaments: () => setState(() => page = 1),
+                        )
+                      : TournamentList(
+                          key: ValueKey('tournaments-$section'),
+                          api: widget.api,
+                          section: section,
                         ),
-                      );
-                    },
-                  ),
                 ),
               ],
             )
-          : selectedPage == 1
+          : selectedPage == 2
           ? _account(auth)
           : auth.admin
           ? AdminUsersPage(auth: auth)
@@ -237,6 +174,10 @@ class _HomePageState extends State<HomePage> {
         selectedIndex: selectedPage,
         onDestinationSelected: (value) => setState(() => page = value),
         destinations: [
+          const NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            label: 'Home',
+          ),
           const NavigationDestination(
             icon: Icon(Icons.emoji_events_outlined),
             label: 'Tornei',

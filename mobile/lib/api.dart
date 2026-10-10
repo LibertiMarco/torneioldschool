@@ -91,6 +91,44 @@ class TosApi {
 
   Future<List<Map<String, dynamic>>> standings(String slug) async =>
       rows(await request('api/leggiClassifica.php', query: {'torneo': slug}));
+  Future<Map<String, dynamic>> playerRanking({
+    String order = 'gol',
+    int page = 1,
+    int perPage = 5,
+    String search = '',
+  }) async => Map<String, dynamic>.from(
+    await request(
+      'api/classifica_giocatori.php',
+      query: {
+        'ordine': order,
+        'page': '$page',
+        'per_page': '$perPage',
+        'search': search,
+      },
+    ) as Map,
+  );
+  Future<Map<String, dynamic>> esportRanking({int limit = 5}) async =>
+      Map<String, dynamic>.from(
+        await request('api/esport_ranking.php', query: {'limit': '$limit'})
+            as Map,
+      );
+  Future<List<Map<String, dynamic>>> news(
+    String section, {
+    bool all = false,
+  }) async => rows(
+    await request(
+      'api/blog.php',
+      query: {'azione': all ? 'lista' : 'ultimi', 'sezione': section},
+    ),
+  );
+  Future<Map<String, dynamic>> article(String id) async =>
+      Map<String, dynamic>.from(
+        await request('api/blog.php', query: {'azione': 'articolo', 'id': id})
+            as Map,
+      );
+  Future<List<Map<String, dynamic>>> hallOfFame(String section) async => rows(
+    (await request('api/albo_doro.php', query: {'sezione': section}))['data'],
+  );
   Future<List<Map<String, dynamic>>> matches(String slug) async =>
       flattenMatches(
         await request('api/get_partite.php', query: {'torneo': slug}),

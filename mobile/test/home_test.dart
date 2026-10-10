@@ -68,6 +68,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Tornei'));
+    await tester.pumpAndSettle();
     expect(find.text('Cup'), findsOneWidget);
     expect(find.text('Gestione'), findsNothing);
     await tester.tap(find.text('Cup'));
@@ -94,6 +96,8 @@ void main() {
           auth: TosAuth(api, storage: MemorySessionStore()),
         ),
       );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tornei'));
       await tester.pumpAndSettle();
       expect(find.text('Riprova'), findsOneWidget);
       await tester.tap(find.text('Account'));
