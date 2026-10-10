@@ -1,15 +1,15 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/match_video_sync.php';
-require_once __DIR__ . '/match_video_duration.php';
 
-/** Private session state: one social API call or up to eight parallel CDN probes per request. */
+
+/** Private session state: one external API call at most per browser request. */
 function video_sync_job_create(string $platform, string $from, string $to): array
 {
     if (!in_array($platform,['both','instagram','youtube'],true)) throw new InvalidArgumentException('Piattaforma non valida.');
     $sources = $platform === 'both' ? ['instagram','youtube'] : [$platform];
     return ['id'=>bin2hex(random_bytes(16)), 'expires'=>time()+1800, 'from'=>$from, 'to'=>$to,
-        'sources'=>$sources, 'index'=>0, 'state'=>['phase'=>'init'], 'media'=>[], 'errors'=>[], 'steps'=>0,'duration_filter'=>1];
+        'sources'=>$sources, 'index'=>0, 'state'=>['phase'=>'init'], 'media'=>[], 'errors'=>[], 'steps'=>0];
 }
 
 function video_sync_job_instagram_library(): void
@@ -47,7 +47,7 @@ function video_sync_job_next(array &$job, bool $success): void
     $job['state'] = ['phase'=>'init'];
 }
 
-function video_sync_job_step(array &$job, ?callable $youtube = null, ?callable $instagram = null, ?callable $instagramInit = null, ?callable $durationRange = null): void
+function video_sync_job_step(array &$job, ?callable $youtube = null, ?callable $instagram = null, ?callable $instagramInit = null): void
 {
     if ($job['expires'] < time()) throw new RuntimeException('La ricerca è scaduta. Avviane una nuova.');
     if ($job['index'] >= count($job['sources'])) return;
@@ -105,14 +105,14 @@ function video_sync_job_step(array &$job, ?callable $youtube = null, ?callable $
                 $credentials = ($instagramInit ?? 'video_sync_job_instagram_init')();
                 $s = $credentials+['phase'=>'page','cursor'=>'','seen'=>[],'ids'=>[],'pages'=>0,'limit'=>50,'media'=>[]];
             } elseif ($s['phase'] === 'page') {
-                $params = ['fields'=>'id,caption,media_type,media_product_type,permalink,thumbnail_url,media_url,timestamp','limit'=>$s['limit']];
+                $params = ['fields'=>'id,caption,media_type,media_product_type,permalink,thumbnail_url,timestamp','limit'=>$s['limit']];
                 if ($s['cursor'] !== '') $params['after'] = $s['cursor'];
                 try {$data = $instagram($s['user'].'/media',$params,$s);} catch (RuntimeException $e) {
                     if (str_contains(strtolower($e->getMessage()),'reduce the amount of data') && $s['limit'] > 1) {$s['limit'] = max(1,intdiv($s['limit'],2));return;}
                     throw $e;
                 }
                 unset($s['retries'],$s['retry_message']);
-                $oldest = null; $s['pending_duration'] = [];
+                $oldest = null;
                 foreach ($data['data'] ?? [] as $item) {
                     if (empty($item['timestamp'])) continue;
                     try {$date = new DateTimeImmutable($item['timestamp']);} catch (Throwable $e) {continue;}
@@ -124,7 +124,7 @@ function video_sync_job_step(array &$job, ?callable $youtube = null, ?callable $
                     if ($product !== '' ? $product !== 'REELS' : !preg_match('~instagram\.com/(?:reel|reels)/~',$item['permalink'])) continue;
                     $s['ids'][$item['id']] = true;
                     $caption = trim((string)($item['caption'] ?? ''));
-                    if ($caption !== '') $s['pending_duration'][] = ['platform'=>'instagram','id'=>$item['id'],'url'=>$item['permalink'],'title'=>$caption,'description'=>'','media_url'=>$item['media_url'] ?? '',
+                    if ($caption !== '') $s['media'][] = ['platform'=>'instagram','id'=>$item['id'],'url'=>$item['permalink'],'title'=>$caption,'description'=>'',
                         'thumbnail'=>video_sync_thumbnail_url($item['thumbnail_url'] ?? ''),'date'=>$date->setTimezone(new DateTimeZone('Europe/Rome'))->format('Y-m-d')];
                 }
                 $cursor = !empty($data['paging']['next']) ? (string)($data['paging']['cursors']['after'] ?? '') : '';
@@ -132,55 +132,7 @@ function video_sync_job_step(array &$job, ?callable $youtube = null, ?callable $
                 $s['pages']++;
                 if ($cursor !== '' && (isset($s['seen'][$cursor]) || $s['pages'] >= 1000)) throw new RuntimeException('Elenco Instagram incompleto: nessun link Instagram preparato.');
                 $s['seen'][$cursor] = true; $s['cursor'] = $cursor;
-                if ($s['pending_duration']) {$s['phase'] = 'duration';$s['duration_index'] = 0;}
-                elseif ($cursor === '') video_sync_job_next($job,true);
-            } elseif ($s['phase'] === 'duration') {
-                // Migrate an in-flight serial probe without repeating its earlier reads.
-                if (isset($s['duration_probe'])) {
-                    $s['duration_probes'][$s['duration_index']] = $s['duration_probe'];unset($s['duration_probe']);
-                }
-                $requests = [];
-                for ($i=$s['duration_index'];$i<count($s['pending_duration']);$i++) {
-                    if (array_key_exists('duration_seconds',$s['pending_duration'][$i])) continue;
-                    $seconds = video_sync_duration_cached((string)$s['pending_duration'][$i]['id']);
-                    if ($seconds !== null) {$s['pending_duration'][$i]['duration_seconds'] = $seconds;continue;}
-                    if (count($requests) >= VIDEO_SYNC_DURATION_CONCURRENCY) continue;
-                    $s['duration_probes'][$i] ??= ['offset'=>0,'requests'=>0];
-                    $requests[$i] = ['url'=>$s['pending_duration'][$i]['media_url'],'offset'=>$s['duration_probes'][$i]['offset']];
-                }
-                if ($durationRange === null) $responses = video_sync_duration_ranges($requests);
-                else {
-                    // Injected transports allow deterministic tests without contacting the CDN.
-                    $responses = [];
-                    foreach ($requests as $i=>$request) {
-                        try {$responses[$i] = $durationRange($request['url'],$request['offset']);}
-                        catch (Throwable $e) {$responses[$i] = null;}
-                    }
-                }
-                foreach ($requests as $i=>$request) {
-                    $probe =& $s['duration_probes'][$i];$probe['requests']++;
-                    $seconds = null;$complete = true;
-                    if (is_string($responses[$i] ?? null)) {
-                        try {
-                            $seconds = video_sync_mp4_duration_step($responses[$i],$probe);
-                            $complete = $seconds !== null || $probe['requests'] >= 12;
-                            if ($seconds !== null) video_sync_duration_store((string)$s['pending_duration'][$i]['id'],$seconds);
-                        } catch (Throwable $e) {}
-                    }
-                    unset($probe);
-                    if ($complete) {$s['pending_duration'][$i]['duration_seconds'] = $seconds;unset($s['duration_probes'][$i]);}
-                }
-                // Preserve API order even when durations finish out of order.
-                while (isset($s['pending_duration'][$s['duration_index']]) && array_key_exists('duration_seconds',$s['pending_duration'][$s['duration_index']])) {
-                    $media = $s['pending_duration'][$s['duration_index']];unset($media['media_url']);
-                    if (video_sync_reel_allowed($media)) $s['media'][] = $media;
-                    else {$counter = $media['duration_seconds'] === null ? 'duration_unknown' : 'duration_short';$job[$counter] = ($job[$counter] ?? 0)+1;}
-                    $s['duration_index']++;
-                }
-                if ($s['duration_index'] >= count($s['pending_duration'])) {
-                    unset($s['pending_duration'],$s['duration_index'],$s['duration_probes']);$s['phase'] = 'page';
-                    if ($s['cursor'] === '') video_sync_job_next($job,true);
-                }
+                if ($cursor === '') video_sync_job_next($job,true);
             }
         }
     } catch (Throwable $e) {
@@ -200,16 +152,10 @@ function video_sync_job_progress(array $job): string
     $source = $job['sources'][$job['index']] ?? null;
     if ($source === null) return 'Lettura completata. Abbinamento alle partite…';
     if (!empty($job['state']['retry_message'])) return ucfirst($source).' · '.$job['state']['retry_message'];
-    if (($job['state']['phase'] ?? '') === 'duration') return 'Instagram · verifica durata Reel '.($job['state']['duration_index']+1).' di '.count($job['state']['pending_duration']).' nella pagina · '.($job['duration_short'] ?? 0).' sotto i 30 secondi esclusi';
     return ucfirst($source).' · '.($job['state']['pages'] ?? 0).' pagine lette · '
         .(count($job['media'])+count($job['state']['media'] ?? [])).' contenuti trovati';
 }
 
-function video_sync_job_duration_summary(array $job): string
-{
-    if (!in_array('instagram',$job['sources'],true)) return '';
-    return ' Reel sotto i 30 secondi esclusi: '.($job['duration_short'] ?? 0).'. Reel con durata non verificabile esclusi: '.($job['duration_unknown'] ?? 0).'.';
-}
 
 function video_sync_open_database(): mysqli
 {
@@ -232,7 +178,6 @@ function video_sync_write_links(mysqli $conn, array $writes): array
     $saved = 0; $preserved = 0; $links = [];
     try {
         foreach ($writes as $write) {
-            if (!video_sync_reel_allowed($write['row']['media'])) throw new RuntimeException('Reel senza durata verificata di almeno 30 secondi. Ripeti la ricerca.');
             $platform = $write['row']['media']['platform'];$url = $write['row']['media']['url'];
             if (!video_sync_result_match($write['row']['identity'],$write['match'],$write['row']['media']['date'])) throw new RuntimeException('Gara fuori dalla finestra di ricerca: ripeti la ricerca.');
             if (!video_sync_valid_url($platform,$url)) throw new RuntimeException('Link video non valido.');

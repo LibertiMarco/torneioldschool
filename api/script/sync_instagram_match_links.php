@@ -45,7 +45,7 @@ if (!$isCli && !defined('TOS_INSTAGRAM_SYNC_LIBRARY')) {
 require_once __DIR__ . '/../../includi/env_loader.php';
 require_once __DIR__ . '/../../includi/instagram_token_store.php';
 require_once __DIR__ . '/../../includi/match_video_sync.php';
-require_once __DIR__ . '/../../includi/match_video_duration.php';
+
 
 date_default_timezone_set('Europe/Rome');
 
@@ -239,7 +239,7 @@ function sync_instagram_fetch_yesterdays_reels(string $userId, string $token, st
     while (true) {
         // Read captions with each media page, avoiding one extra call per Reel.
         $params = [
-            'fields' => 'id,caption,media_type,media_product_type,permalink,media_url,timestamp',
+            'fields' => 'id,caption,media_type,media_product_type,permalink,timestamp',
             'limit' => $pageLimit,
             'access_token' => $token,
         ];
@@ -288,12 +288,6 @@ function sync_instagram_fetch_yesterdays_reels(string $userId, string $token, st
             if (trim($media['caption']) === '') {
                 continue;
             }
-            $media['duration_seconds'] = video_sync_reel_duration($media);
-            if (!video_sync_reel_allowed(['platform'=>'instagram']+$media)) {
-                sync_instagram_log($media['duration_seconds'] === null ? 'Reel escluso: durata non verificabile.' : 'Reel escluso: durata inferiore a 30 secondi.');
-                continue;
-            }
-            unset($media['media_url']);
             $reels[] = $media;
         }
 
