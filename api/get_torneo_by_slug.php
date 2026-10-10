@@ -13,6 +13,7 @@ if ($slug === '') {
 }
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/mobile_tournament_layout.php';
 
 $hasTorneoSection = false;
 $checkSection = @$conn->query("SHOW COLUMNS FROM tornei LIKE 'sezione'");
@@ -46,7 +47,8 @@ if ($row = $result->fetch_assoc()) {
         'img' => $row['img'],
         'categoria' => $row['categoria'],
         'sezione' => $row['sezione'] ?? 'calcio',
-        'config' => $config
+        'config' => $config,
+        'mobile_layout' => mobile_tournament_layout($slug)
     ]);
 } else {
     echo json_encode(['error' => 'Torneo non trovato']);

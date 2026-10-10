@@ -9,6 +9,30 @@ $identity = video_sync_parse($caption);
 video_expect($identity === video_sync_parse($title),'Hashtags changed the identity');
 video_expect($identity['day'] === 1 && $identity['home_score'] === 5 && $identity['away_score'] === 3,'Caption extraction failed');
 $match = ['id'=>42,'torneo'=>'Brasilerao','torneo_nome'=>'Brasilerao','giornata'=>1,'fase_round'=>null,'squadra_casa'=>'Ceará SC','squadra_ospite'=>'Mirassol FC','gol_casa'=>5,'gol_ospite'=>3,'giocata'=>1,'data_partita'=>'2026-09-20','link_instagram'=>null,'link_youtube'=>null];
+$formats = [
+    ["CHAMPIONS LEAGUE 2\nBARCELONA-ARSENAL 7-5",'Champions League 2','Barcelona','Arsenal',7,5],
+    ['🏆CHAMPIONS LEAGUE | Napoli-Sporting Lisbona 5-7','Champions League','Napoli','Sporting Lisbona',5,7],
+    ["LA LIGA CALCIO A 8 🇪🇸\nRAYO VALLECANO - BETIS SIVIGLIA 9-2...",'La Liga','Rayo Vallecano','Betis Siviglia',9,2],
+];
+foreach ($formats as [$text,$tournament,$home,$away,$homeScore,$awayScore]) {
+    $parsed = video_sync_parse($text);
+    video_expect($parsed !== null && $parsed['day'] === null && $parsed['round'] === null,'New caption format or omitted day failed');
+    $fixture = array_replace($match,['torneo'=>$tournament,'torneo_nome'=>$tournament,'squadra_casa'=>$home,'squadra_ospite'=>$away,'gol_casa'=>$homeScore,'gol_ospite'=>$awayScore]);
+    video_expect(video_sync_match($parsed,$fixture),'New caption did not match its game');
+    $mediaFixture = ['platform'=>'instagram','id'=>'format','url'=>'https://www.instagram.com/reel/format/','title'=>$text,'description'=>'','date'=>'2026-10-09'];
+    $newPlan = video_sync_plan([$mediaFixture],[$fixture]);
+    video_expect(reset($newPlan)['automatic'],'Omitted-round index missed a unique game');
+    $otherDay = array_replace($fixture,['id'=>999,'giornata'=>2]);
+    $newPlan = video_sync_plan([$mediaFixture],[$fixture,$otherDay]);
+    video_expect(count(reset($newPlan)['candidates']) === 2 && !reset($newPlan)['automatic'],'Missing day guessed between matching games');
+    if ($tournament === 'Champions League 2') video_expect(!video_sync_match($parsed,array_replace($fixture,['torneo'=>'Champions League','torneo_nome'=>'Champions League'])),'Edition 2 silently became day 2');
+    if ($tournament === 'La Liga') video_expect(!video_sync_match($parsed,array_replace($fixture,['torneo_nome'=>'La Liga Calcio a 6'])),'Conflicting Calcio a 6/8 tournaments merged');
+}
+video_expect(video_sync_parse('CHAMPIONS LEAGUE | Napoli-Sporting Lisbona') === null,'A match without scores was accepted');
+video_expect(video_sync_parse('BRASILERAO | GIORNATA 1 | CEARA 5:3 MIRASSOL') !== null,'Existing colon score separator regressed');
+video_expect(video_sync_thumbnail_url('https://i.ytimg.com/vi/abcdefghijk/default.jpg') !== '','YouTube thumbnail rejected');
+video_expect(video_sync_thumbnail_url('https://scontent.cdninstagram.com/cover.jpg') !== '','Instagram thumbnail rejected');
+video_expect(video_sync_thumbnail_url('javascript:alert(1)') === '' && video_sync_thumbnail_url('https://ytimg.com.attacker.example/cover.jpg') === '','Unsafe thumbnail accepted');
 video_expect(video_sync_match($identity,$match,'2026-10-09'),'Late publication or accented team was rejected');
 video_expect(!video_sync_match($identity,$match,'2026-09-19'),'Future match linked');
 foreach (['giornata'=>2,'gol_casa'=>4,'gol_ospite'=>4,'giocata'=>0,'squadra_casa'=>'Ceara Juniors','torneo'=>'Bundesliga','torneo_nome'=>'Bundesliga'] as $field=>$value) {
@@ -36,6 +60,7 @@ $plan = video_sync_plan([$ig],[$linked]);video_expect(!reset($plan)['automatic']
 $plan = video_sync_plan([array_replace($yt,['title'=>'Video highlights','description'=>$caption])],[$match]);video_expect(reset($plan)['automatic'],'YouTube description fallback');
 $plan = video_sync_plan([array_replace($yt,['description'=>'brasilerao | giornata 1 | Ceará 5 – 3 Mirassol'])],[$match]);video_expect(reset($plan)['automatic'],'Case/accent differences created a false conflict');
 $plan = video_sync_plan([array_replace($yt,['description'=>'BRASILERAO | GIORNATA 1 | CEARA 2 - 3 MIRASSOL'])],[$match]);video_expect(!reset($plan)['automatic'] && !reset($plan)['candidates'],'Conflicting metadata was ignored');
+$plan = video_sync_plan([array_replace($yt,['title'=>"BRASILERAO\nCEARA-MIRASSOL 5-3",'description'=>$caption])],[$match]);video_expect(reset($plan)['automatic'] && reset($plan)['identity']['day'] === 1,'Compatible title/description did not retain the known day');
 video_expect(!video_sync_valid_url('youtube','https://attacker.example/watch?v=abcdefghijk'),'Invalid video host');
 video_expect(!video_sync_valid_url('instagram','https://www.instagram.com.attacker.example/reel/abc/'),'Invalid Instagram host');
 video_expect(video_sync_valid_url('instagram','https://www.instagram.com/p/abc/'),'Official /p/ permalink for a verified Reel');

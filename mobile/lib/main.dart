@@ -3,13 +3,15 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'auth.dart';
 import 'admin.dart';
-import 'details.dart';
+
 import 'demo.dart';
 import 'theme.dart';
 import 'tournament_list.dart';
 import 'home_dashboard.dart';
 import 'browser_runtime_stub.dart'
     if (dart.library.js_interop) 'browser_runtime_web.dart';
+
+export 'tournament_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -269,168 +271,6 @@ class ErrorPanel extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           FilledButton(onPressed: retry, child: const Text('Riprova')),
-        ],
-      ),
-    ),
-  );
-}
-
-class TournamentPage extends StatefulWidget {
-  const TournamentPage({
-    super.key,
-    required this.api,
-    required this.tournament,
-  });
-  final TosApi api;
-  final Map<String, dynamic> tournament;
-  @override
-  State<TournamentPage> createState() => _TournamentPageState();
-}
-
-class _TournamentPageState extends State<TournamentPage> {
-  late Future<List<Map<String, dynamic>>> standings;
-  late Future<List<Map<String, dynamic>>> matches;
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  void _load() {
-    final slug = TosApi.tournamentSlug(widget.tournament);
-    standings = widget.api.standings(slug);
-    matches = widget.api.matches(slug);
-  }
-
-  Widget _list(
-    Future<List<Map<String, dynamic>>> future,
-    Widget Function(Map<String, dynamic>, int) item,
-  ) => FutureBuilder<List<Map<String, dynamic>>>(
-    future: future,
-    builder: (context, snapshot) {
-      if (snapshot.connectionState != ConnectionState.done) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      if (snapshot.hasError) {
-        return ErrorPanel(error: snapshot.error!, retry: () => setState(_load));
-      }
-      final rows = snapshot.data ?? [];
-      if (rows.isEmpty) {
-        return const Center(child: Text('Nessun dato disponibile.'));
-      }
-      return ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: rows.length,
-        itemBuilder: (_, index) => item(rows[index], index),
-      );
-    },
-  );
-  @override
-  Widget build(BuildContext context) => DefaultTabController(
-    length: 3,
-    child: Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.tournament['nome']}'),
-        bottom: const TabBar(
-          tabs: [
-            Tab(text: 'Classifica'),
-            Tab(text: 'Partite'),
-            Tab(text: 'Squadre'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        children: [
-          _list(
-            standings,
-            (row, index) => Card(
-              child: ListTile(
-                leading: Text(
-                  '${index + 1}',
-                  style: const TextStyle(fontSize: 22),
-                ),
-                title: Text('${row['nome']}'),
-                subtitle: Text(
-                  '${row['giocate']} giocate · DR ${row['differenza_reti']}${row['girone'] == null ? '' : ' · Girone ${row['girone']}'}',
-                ),
-                trailing: Text(
-                  '${row['punti']} pt',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => TeamPage(
-                      api: widget.api,
-                      slug: TosApi.tournamentSlug(widget.tournament),
-                      team: row,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          _list(
-            matches,
-            (row, _) => Card(
-              child: InkWell(
-                onTap: row['id'] == null
-                    ? null
-                    : () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) =>
-                              MatchPage(api: widget.api, id: '${row['id']}'),
-                        ),
-                      ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${row['data_partita'] ?? 'Data da definire'} · ${row['ora_partita'] ?? ''}',
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        '${row['squadra_casa']} – ${row['squadra_ospite']}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        row['giocata'].toString() == '1'
-                            ? '${row['gol_casa']} : ${row['gol_ospite']}'
-                            : 'Da giocare',
-                      ),
-                      if (row['campo'] != null) Text('${row['campo']}'),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          _list(
-            standings,
-            (row, _) => Card(
-              child: ListTile(
-                leading: const Icon(Icons.shield_outlined),
-                title: Text('${row['nome']}'),
-                subtitle: Text(
-                  row['girone'] == null
-                      ? 'Rosa e statistiche'
-                      : 'Girone ${row['girone']}',
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => TeamPage(
-                      api: widget.api,
-                      slug: TosApi.tournamentSlug(widget.tournament),
-                      team: row,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     ),

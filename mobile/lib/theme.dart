@@ -35,6 +35,7 @@ ThemeData siteTheme() => ThemeData(
     color: Colors.white,
     surfaceTintColor: Colors.transparent,
     elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16)), side: BorderSide(color: Color(0xffdbe3f0))),
   ),
   filledButtonTheme: FilledButtonThemeData(
     style: FilledButton.styleFrom(

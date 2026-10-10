@@ -75,7 +75,7 @@ void main() {
     await tester.tap(find.text('Cup'));
     await tester.pumpAndSettle();
     expect(find.text('Team A'), findsOneWidget);
-    await tester.tap(find.text('Partite'));
+    await tester.tap(find.text('Calendario'));
     await tester.pumpAndSettle();
     expect(find.text('2 : 0'), findsOneWidget);
     expect(tester.takeException(), isNull);

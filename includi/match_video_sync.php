@@ -19,36 +19,75 @@ function video_sync_team_key(string $text): string
     return implode(' ', array_filter($parts, fn($part) => !in_array($part, ['fc', 'sc', 'cf', 'afc', 'club', 'clube', 'football', 'futebol', 'esporte', 'sports'], true)));
 }
 
-/** Extract the same identity from a Reel caption or a YouTube title/description. */
+function video_sync_tournament_key(string $name): string
+{
+    $name = preg_replace('/\.(php|html)$/i','',$name) ?? $name;
+    $name = video_sync_normalize($name);
+    // "Calcio a 8" is a sport label, not a matchday or an edition number.
+    $name = preg_replace('/\s+calcio\s+a\s+\d{1,2}$/','',$name) ?? $name;
+    return str_replace(' ','',$name);
+}
+
+function video_sync_parse_score(string $line): ?array
+{
+    $dash = '[-:\x{2013}\x{2014}]';
+    $line = trim(preg_replace('/[.\x{2026}]+\s*$/u','',$line) ?? $line);
+    if (preg_match('/^(.+?)\s+(\d{1,3})\s*'.$dash.'\s*(\d{1,3})\s+(.+?)$/u',$line,$score)) {
+        return ['home'=>trim($score[1]),'away'=>trim($score[4]),'home_score'=>(int)$score[2],'away_score'=>(int)$score[3]];
+    }
+    if (preg_match('/^(.+?)\s*'.$dash.'\s*(.+?)\s+(\d{1,3})\s*'.$dash.'\s*(\d{1,3})$/u',$line,$score)) {
+        return ['home'=>trim($score[1]),'away'=>trim($score[2]),'home_score'=>(int)$score[3],'away_score'=>(int)$score[4]];
+    }
+    return null;
+}
+
+/** Structured captions, two-column captions, and tournament/team-score lines. */
 function video_sync_parse(string $text): ?array
 {
+    $header = null;
     foreach (preg_split('/\R/u', html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?: [] as $line) {
         $line = trim(preg_replace('/#[^\s|]+/u', '', $line) ?? '');
+        $line = trim(preg_replace('/[\p{So}\x{FE0F}\x{200D}]/u','',$line) ?? $line);
+        if ($line === '') continue;
         $parts = preg_split('/\s*\|\s*/u', $line);
-        if (count($parts) !== 3 || trim($parts[0]) === '') continue;
-        $round = video_sync_normalize($parts[1]);
         $day = null; $knockout = null;
-        if (preg_match('/^(?:giornata|g|matchday|round)\s*(\d{1,3})$/', $round, $found)) {
-            $day = (int)$found[1];
-            if ($day < 1 || $day > 255) continue;
-        } else {
-            $rounds = ['trentaduesimi'=>'TRENTADUESIMI', 'sedicesimi'=>'SEDICESIMI', 'ottavi'=>'OTTAVI', 'quarti'=>'QUARTI', 'semifinale'=>'SEMIFINALE', 'finale'=>'FINALE'];
-            $knockout = $rounds[$round] ?? null;
-            if ($knockout === null) continue;
+        $score = null; $tournament = null;
+        if (count($parts) === 3 && trim($parts[0]) !== '') {
+            $round = video_sync_normalize($parts[1]);
+            if (preg_match('/^(?:giornata|g|matchday|round)\s*(\d{1,3})$/', $round, $found)) {
+                $day = (int)$found[1];
+                if ($day < 1 || $day > 255) {$header = null;continue;}
+            } else {
+                $rounds = ['trentaduesimi'=>'TRENTADUESIMI', 'sedicesimi'=>'SEDICESIMI', 'ottavi'=>'OTTAVI', 'quarti'=>'QUARTI', 'semifinale'=>'SEMIFINALE', 'finale'=>'FINALE'];
+                $knockout = $rounds[$round] ?? null;
+                if ($knockout === null) {$header = null;continue;}
+            }
+            $tournament = trim($parts[0]); $score = video_sync_parse_score($parts[2]);
+        } elseif (count($parts) === 2 && trim($parts[0]) !== '') {
+            $tournament = trim($parts[0]); $score = video_sync_parse_score($parts[1]);
+        } elseif (count($parts) === 1) {
+            $score = video_sync_parse_score($line);
+            if ($score === null) {$header = $line;continue;}
+            $tournament = $header;
         }
-        if (!preg_match('/^(.+?)\s+(\d{1,3})\s*[-:\x{2013}\x{2014}]\s*(\d{1,3})\s+(.+?)\s*$/u', trim($parts[2]), $score)) continue;
-        return ['tournament'=>trim($parts[0]), 'day'=>$day, 'round'=>$knockout,
-            'home'=>trim($score[1]), 'away'=>trim($score[4]), 'home_score'=>(int)$score[2], 'away_score'=>(int)$score[3]];
+        if ($score !== null && $tournament !== null && video_sync_tournament_key($tournament) !== '') {
+            return ['tournament'=>$tournament,'day'=>$day,'round'=>$knockout]+$score;
+        }
+        $header = null;
     }
     return null;
 }
 
 function video_sync_tournament_matches(string $caption, array $match): bool
 {
-    $caption = str_replace(' ', '', video_sync_normalize($caption));
+    $key = video_sync_tournament_key($caption);
+    if (preg_match('/calcio a (\d{1,2})$/',video_sync_normalize($caption),$captionSport)) {
+        foreach ([$match['torneo_nome'] ?? '',$match['torneo'] ?? ''] as $label) {
+            if (preg_match('/calcio a (\d{1,2})$/',video_sync_normalize((string)$label),$matchSport) && $captionSport[1] !== $matchSport[1]) return false;
+        }
+    }
     foreach ([$match['torneo_nome'] ?? '', $match['torneo'] ?? ''] as $value) {
-        $value = preg_replace('/\.(php|html)$/i', '', (string)$value) ?? '';
-        if ($caption !== '' && $caption === str_replace(' ', '', video_sync_normalize($value))) return true;
+        if ($key !== '' && $key === video_sync_tournament_key((string)$value)) return true;
     }
     return false;
 }
@@ -58,7 +97,23 @@ function video_sync_identity_key(array $identity): array
     $home = video_sync_team_key($identity['home']); $away = video_sync_team_key($identity['away']);
     $scores = [$identity['home_score'],$identity['away_score']];
     if (strcmp($home,$away) > 0) {[$home,$away] = [$away,$home];$scores = array_reverse($scores);}
-    return [str_replace(' ','',video_sync_normalize($identity['tournament'])),$identity['day'],$identity['round'],$home,$away,$scores];
+    return [video_sync_tournament_key($identity['tournament']),$identity['day'],$identity['round'],$home,$away,$scores];
+}
+
+function video_sync_identities_compatible(array $first, array $second): bool
+{
+    $a = video_sync_identity_key($first); $b = video_sync_identity_key($second);
+    if (($first['day'] !== null || $first['round'] !== null) && ($second['day'] !== null || $second['round'] !== null)
+        && [$a[1],$a[2]] !== [$b[1],$b[2]]) return false;
+    $a[1] = $a[2] = $b[1] = $b[2] = null;
+    return $a === $b && video_sync_tournament_matches($first['tournament'],['torneo_nome'=>$second['tournament']]);
+}
+
+function video_sync_thumbnail_url(string $url): string
+{
+    $parts = parse_url($url);
+    if (!$parts || ($parts['scheme'] ?? '') !== 'https' || isset($parts['user']) || isset($parts['pass'])) return '';
+    return preg_match('/(?:^|\.)(?:ytimg\.com|cdninstagram\.com|fbcdn\.net|fbsbx\.com)$/i',$parts['host'] ?? '') ? $url : '';
 }
 
 function video_sync_match(array $identity, array $match, string $publicationDate = ''): bool
@@ -94,9 +149,12 @@ function video_sync_plan(array $media, array $matches): array
         $aliases = [];
         foreach ([$match['torneo_nome'] ?? '',$match['torneo'] ?? ''] as $alias) {
             $identity['tournament'] = preg_replace('/\.(php|html)$/i','',(string)$alias);
-            $key = json_encode(video_sync_identity_key($identity));
-            if (isset($aliases[$key])) continue;
-            $aliases[$key] = true; $index[$key][] = $match;
+            // Index both the known round and captions that omit it, without scanning all games.
+            foreach ([$identity,array_replace($identity,['day'=>null,'round'=>null])] as $variant) {
+                $key = json_encode(video_sync_identity_key($variant));
+                if (isset($aliases[$key])) continue;
+                $aliases[$key] = true; $index[$key][] = $match;
+            }
         }
     }
     foreach ($media as $item) {
@@ -107,7 +165,8 @@ function video_sync_plan(array $media, array $matches): array
         $title = video_sync_parse($item['title'] ?? ''); $description = video_sync_parse($item['description'] ?? '');
         // Conflicting title/description identities require correction, not an arbitrary choice.
         $identity = $title ?? $description;
-        $conflict = $title !== null && $description !== null && video_sync_identity_key($title) !== video_sync_identity_key($description);
+        $conflict = $title !== null && $description !== null && !video_sync_identities_compatible($title,$description);
+        if (!$conflict && $title !== null && $description !== null && $title['day'] === null && $title['round'] === null) $identity = $description;
         $candidates = [];
         if ($identity !== null && !$conflict) foreach ($index[json_encode(video_sync_identity_key($identity))] ?? [] as $match) {
             if (video_sync_match($identity, $match, $item['date'] ?? '')) {

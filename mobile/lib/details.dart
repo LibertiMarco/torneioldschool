@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'home_dashboard.dart' show SiteImage;
 
 class DataPage extends StatefulWidget {
   const DataPage({
@@ -115,7 +116,7 @@ class TeamPage extends StatelessWidget {
           ...players.map(
             (player) => Card(
               child: ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+                leading: SiteImage(api: api, path: '${player['foto'] ?? ''}', width: 44, height: 44, fallback: Icons.person_outline),
                 title: Text(
                   '${player['nome']} ${player['cognome']}${player['is_captain'].toString() == '1' ? ' · Capitano' : ''}',
                 ),
@@ -125,7 +126,7 @@ class TeamPage extends StatelessWidget {
                 isThreeLine: true,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => PlayerPage(player: player),
+                      builder: (_) => PlayerPage(player: player, api: api),
                   ),
                 ),
               ),
@@ -138,15 +139,16 @@ class TeamPage extends StatelessWidget {
 }
 
 class PlayerPage extends StatelessWidget {
-  const PlayerPage({super.key, required this.player});
+  const PlayerPage({super.key, required this.player, this.api});
   final Map<String, dynamic> player;
+  final TosApi? api;
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Giocatore')),
     body: ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        const Icon(Icons.person_outline, size: 80),
+        if (api != null) Center(child: SiteImage(api: api!, path: '${player['foto'] ?? ''}', width: 80, height: 80, fallback: Icons.person_outline)) else const Icon(Icons.person_outline, size: 80),
         const SizedBox(height: 24),
         Text(
           '${player['nome']} ${player['cognome']}',

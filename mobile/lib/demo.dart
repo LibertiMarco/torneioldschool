@@ -196,6 +196,24 @@ class DemoApi extends TosApi {
         return [
           {'id': 1, 'titolo': 'La nuova stagione', 'data': '10/10/2026'},
         ];
+      case 'api/get_torneo_by_slug.php':
+        return {
+          'nome': 'Old School Cup',
+          'config': {
+            'formato': 'campionato',
+            'totale_squadre': 3,
+            'qualificati_gold': 1,
+            'qualificati_silver': 2,
+            'regole_html':
+                '<p>Tre punti per la vittoria, uno per il pareggio.</p>',
+          },
+        };
+      case 'api/get_squadre_torneo.php':
+        return teams;
+      case 'api/classifica_marcatori.php':
+        return players
+            .map((p) => {...p, 'gol': p['reti'], 'squadra': 'Old School FC'})
+            .toList();
       case 'api/leggiClassifica.php':
         return teams;
       case 'api/get_partite.php':

@@ -126,10 +126,11 @@ $csrf = csrf_get_token('match_video_sync');
 <style>
 :root{color-scheme:dark;font-family:Arial,sans-serif}*{box-sizing:border-box}body{margin:0;background:#081522;color:#f4f7fb}main{width:min(1200px,calc(100% - 28px));margin:30px auto}a{color:#99ccff}h1{font-size:clamp(24px,4vw,34px)}p{line-height:1.5}.panel,.result{background:#142235;border:1px solid #ffffff20;border-radius:12px;padding:20px;margin:18px 0}.filters{display:flex;gap:16px;align-items:end;flex-wrap:wrap}label{display:grid;gap:8px;font-weight:700}input,select,button{font:inherit;padding:11px;border-radius:8px;border:1px solid #63758a;max-width:100%}input,select{background:#0b1726;color:#fff}button{background:#e8bd45;color:#101722;font-weight:700;cursor:pointer}.error{padding:12px;background:#512b30;border-radius:8px}.status{padding:12px;background:#183f34;border-radius:8px}.result h2{font-size:17px;margin:0 0 12px;overflow-wrap:anywhere}.meta{font-size:13px;color:#beccdc}.choice{display:flex;gap:12px;align-items:start;margin:12px 0}.choice input{width:22px;height:22px;flex-shrink:0}.result select{width:100%;margin:8px 0}.caption{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}.help{color:#beccdc}button:disabled{opacity:.5;cursor:default}@media(max-width:650px){.filters>*{width:100%}.panel,.result{padding:15px}}
 label,.filters>*{min-width:0}label{grid-template-columns:minmax(0,1fr)}label input,label select{width:100%;min-width:0}.choice{grid-template-columns:none}.error,.status,.help{overflow-wrap:anywhere}
+.cover-preview{display:block;width:min(220px,100%);max-height:260px;object-fit:contain;margin:12px 0;border-radius:8px}
 </style></head><body><main>
 <a href="/admin_dashboard.php">Torna alla dashboard</a><h1>Sincronizza video delle partite</h1>
 <p>Cerca i Reel Instagram e i video pubblici YouTube. Torneo, giornata, squadre e risultato identificano la gara anche se il video è stato pubblicato giorni dopo.</p>
-<p class="help">Formato riconosciuto: BRASILERAO | GIORNATA 1 | CEARA 5 - 3 MIRASSOL. Gli hashtag finali sono facoltativi.</p>
+<p class="help">Sono riconosciuti anche torneo e gara su righe separate, oppure CHAMPIONS LEAGUE | Napoli-Sporting Lisbona 5-7. Giornata e hashtag sono facoltativi; nei casi dubbi scegli la gara fra le corrispondenze.</p>
 <?php foreach ($errors as $error): ?><p class="error" role="alert"><?= video_sync_escape($error) ?></p><?php endforeach; ?>
 <?php if ($message !== ''): ?><p class="status" role="status"><?= video_sync_escape($message) ?></p><?php endif; ?>
 <form id="videoSyncSearch" class="panel filters" method="post"><input type="hidden" name="_csrf" value="<?= video_sync_escape($csrf) ?>"><input type="hidden" name="action" value="scan">
@@ -148,6 +149,7 @@ $pageRows = array_slice($plan,($pageNumber-1)*100,100,true);
 <p>Gli abbinamenti univoci sono preselezionati. Per i casi dubbi scegli la gara e seleziona il contenuto. I link già presenti vengono conservati.</p>
 <?php foreach ($pageRows as $key=>$row): $blocked = !$row['candidates'] || (count($row['candidates']) === 1 && trim((string)($row['candidates'][0]['link_'.$row['media']['platform']] ?? '')) !== ''); ?>
 <article class="result"><h2><a href="<?= video_sync_escape($row['media']['url']) ?>" target="_blank" rel="noopener noreferrer"><?= ucfirst($row['media']['platform']) ?> · <?= video_sync_escape($row['media']['date']) ?> · Apri contenuto</a></h2>
+<?php $thumbnail = video_sync_thumbnail_url($row['media']['thumbnail'] ?? ''); if ($thumbnail !== ''): ?><a href="<?= video_sync_escape($row['media']['url']) ?>" target="_blank" rel="noopener noreferrer"><img class="cover-preview" src="<?= video_sync_escape($thumbnail) ?>" alt="Copertina del contenuto" loading="lazy" referrerpolicy="no-referrer"></a><?php endif; ?>
 <p class="caption"><?= video_sync_escape($row['media']['title'] ?: $row['media']['description']) ?></p><p class="meta"><?= video_sync_escape($row['status']) ?></p>
 <?php if ($row['candidates']): ?><label>Partita<select name="match_id[<?= $key ?>]" <?= $blocked ? 'disabled' : '' ?>>
 <?php if (count($row['candidates']) > 1): ?><option value="">Scegli la partita</option><?php endif; ?>

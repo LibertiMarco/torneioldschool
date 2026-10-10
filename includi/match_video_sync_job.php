@@ -85,7 +85,7 @@ function video_sync_job_step(array &$job, ?callable $youtube = null, ?callable $
                 $s['phase'] = $s['batch'] ? 'videos' : 'page';
                 if (!$s['batch'] && $cursor === '') video_sync_job_next($job,true);
             } elseif ($s['phase'] === 'videos') {
-                $data = $youtube('videos',['part'=>'snippet,status','id'=>implode(',',$s['batch']),'maxResults'=>50,'fields'=>'items(id,snippet(title,description,publishedAt),status(privacyStatus))']);
+                $data = $youtube('videos',['part'=>'snippet,status','id'=>implode(',',$s['batch']),'maxResults'=>50,'fields'=>'items(id,snippet(title,description,publishedAt,thumbnails(default(url))),status(privacyStatus))']);
                 unset($s['retries'],$s['retry_message']);
                 foreach ($data['items'] ?? [] as $video) {
                     $timestamp = $video['snippet']['publishedAt'] ?? '';
@@ -93,7 +93,7 @@ function video_sync_job_step(array &$job, ?callable $youtube = null, ?callable $
                     try {$date = new DateTimeImmutable($timestamp);} catch (Throwable $e) {continue;}
                     if ($date < $from || $date >= $end) continue;
                     $s['media'][] = ['platform'=>'youtube','id'=>$video['id'],'url'=>'https://www.youtube.com/watch?v='.$video['id'],
-                        'title'=>$video['snippet']['title'] ?? '', 'description'=>$video['snippet']['description'] ?? '', 'date'=>$date->setTimezone(new DateTimeZone('Europe/Rome'))->format('Y-m-d')];
+                        'title'=>$video['snippet']['title'] ?? '', 'description'=>$video['snippet']['description'] ?? '', 'thumbnail'=>video_sync_thumbnail_url($video['snippet']['thumbnails']['default']['url'] ?? ''), 'date'=>$date->setTimezone(new DateTimeZone('Europe/Rome'))->format('Y-m-d')];
                 }
                 $s['phase'] = 'page'; unset($s['batch']);
                 if ($s['cursor'] === '') video_sync_job_next($job,true);
@@ -104,7 +104,7 @@ function video_sync_job_step(array &$job, ?callable $youtube = null, ?callable $
                 $credentials = ($instagramInit ?? 'video_sync_job_instagram_init')();
                 $s = $credentials+['phase'=>'page','cursor'=>'','seen'=>[],'ids'=>[],'pages'=>0,'limit'=>50,'media'=>[]];
             } elseif ($s['phase'] === 'page') {
-                $params = ['fields'=>'id,caption,media_type,media_product_type,permalink,timestamp','limit'=>$s['limit']];
+                $params = ['fields'=>'id,caption,media_type,media_product_type,permalink,thumbnail_url,timestamp','limit'=>$s['limit']];
                 if ($s['cursor'] !== '') $params['after'] = $s['cursor'];
                 try {$data = $instagram($s['user'].'/media',$params,$s);} catch (RuntimeException $e) {
                     if (str_contains(strtolower($e->getMessage()),'reduce the amount of data') && $s['limit'] > 1) {$s['limit'] = max(1,intdiv($s['limit'],2));return;}
@@ -124,7 +124,7 @@ function video_sync_job_step(array &$job, ?callable $youtube = null, ?callable $
                     $s['ids'][$item['id']] = true;
                     $caption = trim((string)($item['caption'] ?? ''));
                     if ($caption !== '') $s['media'][] = ['platform'=>'instagram','id'=>$item['id'],'url'=>$item['permalink'],'title'=>$caption,'description'=>'',
-                        'date'=>$date->setTimezone(new DateTimeZone('Europe/Rome'))->format('Y-m-d')];
+                        'thumbnail'=>video_sync_thumbnail_url($item['thumbnail_url'] ?? ''),'date'=>$date->setTimezone(new DateTimeZone('Europe/Rome'))->format('Y-m-d')];
                 }
                 $cursor = !empty($data['paging']['next']) ? (string)($data['paging']['cursors']['after'] ?? '') : '';
                 if ($oldest !== null && $oldest < $from) $cursor = '';

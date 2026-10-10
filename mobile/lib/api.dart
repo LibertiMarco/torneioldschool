@@ -91,6 +91,17 @@ class TosApi {
 
   Future<List<Map<String, dynamic>>> standings(String slug) async =>
       rows(await request('api/leggiClassifica.php', query: {'torneo': slug}));
+  Future<Map<String, dynamic>> tournamentInfo(String slug) async =>
+      Map<String, dynamic>.from(
+        await request('api/get_torneo_by_slug.php', query: {'slug': slug})
+            as Map,
+      );
+  Future<List<Map<String, dynamic>>> tournamentTeams(String slug) async => rows(
+    await request('api/get_squadre_torneo.php', query: {'torneo': slug}),
+  );
+  Future<List<Map<String, dynamic>>> scorers(String slug) async => rows(
+    await request('api/classifica_marcatori.php', query: {'torneo': slug}),
+  );
   Future<Map<String, dynamic>> playerRanking({
     String order = 'gol',
     int page = 1,

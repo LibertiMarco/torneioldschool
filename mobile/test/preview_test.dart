@@ -16,7 +16,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Old School Cup'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Squadre'));
+    await tester.tap(find.text('Rose'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Old School FC'));
     await tester.pumpAndSettle();
@@ -28,8 +28,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Partite'));
+    await tester.tap(find.text('Calendario'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Giornata 4'));
+    await tester.tap(find.text('Giornata 4'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tutte').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('3 : 1'));
     await tester.tap(find.text('3 : 1'));
     await tester.pumpAndSettle();
     expect(find.text('Referto giocatori'), findsOneWidget);

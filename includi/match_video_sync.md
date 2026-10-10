@@ -15,7 +15,23 @@ BRASILERAO | GIORNATA 1 | CEARA 5 - 3 MIRASSOL #highlightstorneioldschool #calci
 
 Su YouTube il titolo può essere lo stesso senza hashtag. Se il titolo non contiene il formato, viene cercato nella descrizione. Sono riconosciuti accenti, maiuscole/minuscole, sigle societarie comuni, trattini dei risultati e l'ordine invertito delle squadre con il punteggio corrispondente. Sono supportati anche i turni eliminatori (`FINALE`, `SEMIFINALE`, ecc.). Un titolo e una descrizione che riportano gare diverse restano da correggere.
 
-L'abbinamento richiede torneo, giornata/turno, entrambe le squadre e risultato di una gara terminata. La gara può essere stata giocata prima della pubblicazione. Se più edizioni del torneo contengono la stessa combinazione, il sistema non sceglie arbitrariamente: propone le gare compatibili. Contenuti generici come “Grande punizione” non vengono collegati senza informazioni sufficienti.
+L'abbinamento richiede torneo, entrambe le squadre e risultato di una gara terminata; giornata e turno vengono verificati quando sono indicati. La gara può essere stata giocata prima della pubblicazione. Se più edizioni del torneo contengono la stessa combinazione, il sistema non sceglie arbitrariamente: propone le gare compatibili. Contenuti generici come “Grande punizione” non vengono collegati senza informazioni sufficienti.
+
+Sono riconosciuti anche questi formati, senza giornata:
+
+```text
+CHAMPIONS LEAGUE 2
+BARCELONA-ARSENAL 7-5
+
+🏆CHAMPIONS LEAGUE | Napoli-Sporting Lisbona 5-7
+
+LA LIGA CALCIO A 8 🇪🇸
+RAYO VALLECANO - BETIS SIVIGLIA 9-2...
+```
+
+Quando la giornata manca, si confrontano torneo, squadre e risultato senza indovinare il turno: una corrispondenza unica può essere preselezionata, più gare compatibili richiedono la scelta dell'operatore. Il numero finale in `CHAMPIONS LEAGUE 2` rimane parte del nome del torneo, in attesa di confermare se indica una giornata. Emoji, bandiere, hashtag e puntini finali sono ignorati; l'etichetta `CALCIO A 8` può essere omessa nel nome del torneo del database, ma un'esplicita etichetta `Calcio a 6` non è compatibile.
+
+Le copertine disponibili dalle API sono mostrate nei risultati con caricamento lazy e collegamento al contenuto. Servono per la verifica visiva; non vengono lette con OCR. La loro lettura aggiunge campi alle chiamate già presenti, senza chiamate API separate per ogni Reel.
 
 ## Configurazione
 

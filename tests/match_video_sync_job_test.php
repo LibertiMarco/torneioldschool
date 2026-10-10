@@ -11,13 +11,13 @@ $youtube = function($service,$params) use (&$calls,$title) {
     if ($service === 'channels') return ['items'=>[['contentDetails'=>['relatedPlaylists'=>['uploads'=>'uploads']]]]];
     if ($service === 'playlistItems') return ['items'=>[['contentDetails'=>['videoId'=>empty($params['pageToken']) ? 'abcdefghijk' : 'lmnopqrstuv']]]]+(empty($params['pageToken']) ? ['nextPageToken'=>'next'] : []);
     $id = $params['id'];
-    return ['items'=>[['id'=>$id,'snippet'=>['title'=>$title,'description'=>'','publishedAt'=>$id === 'abcdefghijk' ? '2026-10-08T22:30:00Z' : '2026-10-09T12:00:00Z'],'status'=>['privacyStatus'=>$id === 'abcdefghijk' ? 'public' : 'private']]]];
+    return ['items'=>[['id'=>$id,'snippet'=>['title'=>$title,'description'=>'','thumbnails'=>['default'=>['url'=>'https://i.ytimg.com/vi/'.$id.'/default.jpg']],'publishedAt'=>$id === 'abcdefghijk' ? '2026-10-08T22:30:00Z' : '2026-10-09T12:00:00Z'],'status'=>['privacyStatus'=>$id === 'abcdefghijk' ? 'public' : 'private']]]];
 };
 $instagramInit = fn()=>['user'=>'user','token'=>'test-token','version'=>'v26.0'];
 $instagram = function($resource,$params,$state) use (&$calls,$title) {
     $calls++;
     if (str_ends_with($resource,'/media')) return ['data'=>[
-        ['id'=>'reel1','caption'=>$title.' #torneioldschool','media_type'=>'VIDEO','media_product_type'=>'REELS','permalink'=>'https://www.instagram.com/p/abc/','timestamp'=>'2026-10-09T10:00:00Z'],
+        ['id'=>'reel1','caption'=>$title.' #torneioldschool','media_type'=>'VIDEO','media_product_type'=>'REELS','permalink'=>'https://www.instagram.com/p/abc/','thumbnail_url'=>'https://scontent.cdninstagram.com/cover.jpg','timestamp'=>'2026-10-09T10:00:00Z'],
         ['id'=>'photo','media_type'=>'IMAGE','permalink'=>'https://www.instagram.com/p/photo/','timestamp'=>'2026-10-09T10:00:00Z'],
         ['id'=>'old','media_type'=>'VIDEO','media_product_type'=>'REELS','permalink'=>'https://www.instagram.com/reel/old/','timestamp'=>'2026-09-01T10:00:00Z']
     ],'paging'=>['next'=>'ignored-url','cursors'=>['after'=>'not-needed']]];
@@ -34,6 +34,7 @@ while ($job['index'] < count($job['sources'])) {
     job_expect(++$steps < 20,'Job did not terminate');
 }
 job_expect(count($job['media']) === 2 && !$job['errors'],'Media or error isolation failed');
+job_expect($job['media'][0]['thumbnail'] === 'https://scontent.cdninstagram.com/cover.jpg' && $job['media'][1]['thumbnail'] === 'https://i.ytimg.com/vi/abcdefghijk/default.jpg','Cover metadata was not retained');
 job_expect($job['media'][0]['platform'] === 'instagram' && $job['media'][1]['date'] === '2026-10-09','Provider order, Reel filter or timezone failed');
 job_expect($calls === 6 && $steps === 7,'Unexpected number of paginated requests');
 job_expect(!str_contains(video_sync_job_progress($job),'test-token'),'Progress exposed credentials');
