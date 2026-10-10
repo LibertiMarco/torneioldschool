@@ -580,6 +580,12 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
       </div>
 
       <div class="admin-card">
+        <h3>Accesso App</h3>
+        <p>Prepara e attiva l’accesso all’app Android e iPhone.</p><br>
+        <a href="/admin_mobile.php">Configura</a>
+      </div>
+
+      <div class="admin-card">
         <h3>Gestione Totocalcio</h3>
         <p>Seleziona partite dal calendario e gestisci la classifica del Totocalcio.</p><br>
         <a href="/api/gestione_totocalcio.php">Apri</a>
