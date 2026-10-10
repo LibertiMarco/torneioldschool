@@ -154,4 +154,4 @@ $pageRows = array_slice($plan,($pageNumber-1)*100,100,true);
 <?php foreach ($row['candidates'] as $match): ?><option value="<?= (int)$match['id'] ?>"><?= video_sync_escape(video_sync_label($match)) ?></option><?php endforeach; ?></select></label><?php endif; ?>
 <label class="choice"><input type="checkbox" name="selected[]" value="<?= $key ?>" <?= $row['automatic'] ? 'checked' : '' ?> <?= $blocked ? 'disabled' : '' ?>>Collega questo contenuto alla partita</label></article>
 <?php endforeach; ?><button type="submit">Salva i link selezionati</button></form><?php endif; ?>
-</main><script src="/api/sincronizza_video_partite.js?v=2" defer></script></body></html>
+</main><script src="/api/sincronizza_video_partite.js?v=3" defer></script></body></html>

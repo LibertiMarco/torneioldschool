@@ -14,7 +14,8 @@
         progress.textContent = 'Avvio della ricerca…';
         form.setAttribute('aria-busy', 'true');
         async function request(data) {
-            const response = await fetch(form.action || location.href, {
+            // A field named "action" shadows HTMLFormElement.action.
+            const response = await fetch(form.getAttribute('action') || location.pathname, {
                 method: 'POST', body: data, credentials: 'same-origin',
                 headers: {Accept: 'application/json'}, signal: AbortSignal.timeout(25000)
             });

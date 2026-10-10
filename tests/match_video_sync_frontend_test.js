@@ -3,10 +3,12 @@ const code = fs.readFileSync(require('path').join(__dirname,'../api/sincronizza_
 async function run(responses) {
     let handler, redirected = null;
     const calls = [], button = {disabled:false}, progress = {};
-    const form = {action:'/api/sincronizza_video_partite.php',querySelector:()=>button,addEventListener:(_,cb)=>handler=cb,setAttribute(){},removeAttribute(){}};
+    const endpoint = '/api/sincronizza_video_partite.php';
+    const form = {action:{toString:()=>'[object HTMLInputElement]'},getAttribute:()=>null,querySelector:()=>button,addEventListener:(_,cb)=>handler=cb,setAttribute(){},removeAttribute(){}};
     class Data extends Map {constructor(source){super(source ? [['action','scan'],['_csrf','csrf-test'],['platform','instagram'],['from','2026-09-10'],['to','2026-10-09']] : []);}}
     vm.runInNewContext(code, {document:{getElementById:id=>id === 'videoSyncSearch' ? form : progress},FormData:Data,AbortSignal:{timeout:()=>({})},
-        location:{href:form.action,pathname:form.action,assign:url=>redirected=url},fetch:async(url,options)=>{
+        location:{href:endpoint,pathname:endpoint,assign:url=>redirected=url},fetch:async(url,options)=>{
+            assert.equal(url,endpoint,'The action input shadowed the request endpoint');
             calls.push({url,body:Object.fromEntries(options.body),credentials:options.credentials});
             const next = responses.shift();
             if (next instanceof Error) throw next;
