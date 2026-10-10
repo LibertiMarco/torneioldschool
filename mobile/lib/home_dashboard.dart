@@ -15,11 +15,13 @@ class SiteImage extends StatelessWidget {
     this.width = 56,
     this.height = 56,
     this.fallback = Icons.image_outlined,
+    this.preserveShape = false,
   });
   final TosApi api;
   final String path;
   final double width, height;
   final IconData fallback;
+  final bool preserveShape;
   @override
   Widget build(BuildContext context) {
     final parsed = Uri.tryParse(path.trim());
@@ -27,10 +29,12 @@ class SiteImage extends StatelessWidget {
     Widget placeholder() => SizedBox(
       width: width,
       height: height,
-      child: ColoredBox(
-        color: const Color(0xffeeeeee),
-        child: Icon(fallback, color: siteBlue),
-      ),
+      child: preserveShape
+          ? Icon(fallback, color: siteBlue)
+          : ColoredBox(
+              color: const Color(0xffeeeeee),
+              child: Icon(fallback, color: siteBlue),
+            ),
     );
     if (path.trim().isEmpty ||
         uri == null ||
@@ -38,16 +42,16 @@ class SiteImage extends StatelessWidget {
         uri.userInfo.isNotEmpty) {
       return placeholder();
     }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Image.network(
-        uri.toString(),
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => placeholder(),
-      ),
+    final picture = Image.network(
+      uri.toString(),
+      width: width,
+      height: height,
+      fit: preserveShape ? BoxFit.contain : BoxFit.cover,
+      errorBuilder: (_, _, _) => placeholder(),
     );
+    return preserveShape
+        ? picture
+        : ClipRRect(borderRadius: BorderRadius.circular(8), child: picture);
   }
 }
 
@@ -573,6 +577,7 @@ class HallCard extends StatelessWidget {
                 api: api,
                 path: '${row['torneo_logo'] ?? ''}',
                 fallback: Icons.emoji_events_outlined,
+                preserveShape: true,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -592,6 +597,7 @@ class HallCard extends StatelessWidget {
                 width: 36,
                 height: 36,
                 fallback: Icons.shield_outlined,
+                preserveShape: true,
               ),
               title: Text('${award['vincitrice'] ?? ''}'),
               subtitle: Text('${award['premio'] ?? ''}'),

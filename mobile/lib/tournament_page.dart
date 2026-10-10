@@ -22,6 +22,27 @@ const phaseLabels = {
   'BRONZO': 'Coppa Bronzo',
 };
 
+InputDecoration tournamentSelectorDecoration(String hint, IconData icon) =>
+    InputDecoration(
+      hintText: hint,
+      filled: true,
+      fillColor: Colors.white,
+      prefixIcon: Icon(icon, size: 20, color: siteBlue),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xffe5eaf1)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xffe5eaf1)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: siteBlue, width: 1.5),
+      ),
+    );
+
 class TournamentPage extends StatefulWidget {
   const TournamentPage({
     super.key,
@@ -77,11 +98,14 @@ class _TournamentPageState extends State<TournamentPage> {
   ) => DropdownButtonFormField<String>(
     initialValue: selected,
     isExpanded: true,
-    decoration: const InputDecoration(
-      labelText: 'Seleziona fase',
-      filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(),
+    icon: const Icon(Icons.expand_more_rounded, color: siteBlue),
+    borderRadius: BorderRadius.circular(18),
+    dropdownColor: Colors.white,
+    style: Theme.of(context).textTheme.bodyMedium!
+        .copyWith(fontWeight: FontWeight.w600),
+    decoration: tournamentSelectorDecoration(
+      'Seleziona fase',
+      Icons.layers_outlined,
     ),
     items: result.phases
         .map(
@@ -141,6 +165,7 @@ class _TournamentPageState extends State<TournamentPage> {
                         width: 72,
                         height: 72,
                         fallback: Icons.emoji_events_outlined,
+                        preserveShape: true,
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -170,28 +195,87 @@ class _TournamentPageState extends State<TournamentPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: tabs
-                    .map(
-                      (label) => ChoiceChip(
-                        label: Text(label),
-                        selected: tab == label,
-                        showCheckmark: false,
-                        selectedColor: siteBlue,
-                        backgroundColor: Colors.white,
-                        labelStyle: TextStyle(
-                          color: tab == label ? Colors.white : siteBlue,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        shape: const StadiumBorder(
-                          side: BorderSide(color: Color(0xffcfd7e7)),
-                        ),
-                        onSelected: (_) => setState(() => tab = label),
-                      ),
-                    )
-                    .toList(),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final width = (constraints.maxWidth - 10) / 2;
+                  const icons = {
+                    'Classifica': Icons.leaderboard_outlined,
+                    'Marcatori': Icons.sports_soccer_rounded,
+                    'Calendario': Icons.calendar_today_rounded,
+                    'Rose': Icons.groups_outlined,
+                    'Regole': Icons.description_outlined,
+                  };
+                  return Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: tabs
+                        .map(
+                          (label) => SizedBox(
+                            width: width,
+                            child: Semantics(
+                              button: true,
+                              selected: tab == label,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                decoration: BoxDecoration(
+                                  color: tab == label
+                                      ? siteBlue
+                                      : const Color(0xffe9edf3),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: tab == label
+                                      ? const [
+                                          BoxShadow(
+                                            color: Color(0x2415293e),
+                                            blurRadius: 12,
+                                            offset: Offset(0, 4),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(16),
+                                    onTap: () => setState(() => tab = label),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 16,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            icons[label],
+                                            size: 20,
+                                            color: tab == label
+                                                ? Colors.white
+                                                : siteBlue,
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Flexible(
+                                            child: Text(
+                                              label,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: tab == label
+                                                    ? Colors.white
+                                                    : siteBlue,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  );
+                },
               ),
               if (tab == 'Classifica') ...[
                 title('Classifica'),
@@ -267,6 +351,7 @@ class _TournamentPageState extends State<TournamentPage> {
                             width: 44,
                             height: 44,
                             fallback: Icons.shield_outlined,
+                            preserveShape: true,
                           ),
                           title: Text(
                             '${team['nome']}',
@@ -375,11 +460,14 @@ class _TournamentPageState extends State<TournamentPage> {
         key: ValueKey('$calendarPhase-$chosen'),
         initialValue: chosen,
         isExpanded: true,
-        decoration: InputDecoration(
-          labelText: calendarPhase == 'REGULAR' ? 'Giornata' : 'Turno',
-          filled: true,
-          fillColor: Colors.white,
-          border: const OutlineInputBorder(),
+        icon: const Icon(Icons.expand_more_rounded, color: siteBlue),
+        borderRadius: BorderRadius.circular(18),
+        dropdownColor: Colors.white,
+        style: Theme.of(context).textTheme.bodyMedium!
+            .copyWith(fontWeight: FontWeight.w600),
+        decoration: tournamentSelectorDecoration(
+          calendarPhase == 'REGULAR' ? 'Giornata' : 'Turno',
+          Icons.event_outlined,
         ),
         items: [
           const DropdownMenuItem(value: '', child: Text('Tutte')),
@@ -561,6 +649,7 @@ class StandingsTable extends StatelessWidget {
                                         width: 24,
                                         height: 24,
                                         fallback: Icons.shield_outlined,
+                                        preserveShape: true,
                                       ),
                                     const SizedBox(width: 6),
                                     Expanded(
@@ -675,6 +764,7 @@ class MatchCard extends StatelessWidget {
                           width: 40,
                           height: 40,
                           fallback: Icons.shield_outlined,
+                          preserveShape: true,
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -710,6 +800,7 @@ class MatchCard extends StatelessWidget {
                           width: 40,
                           height: 40,
                           fallback: Icons.shield_outlined,
+                          preserveShape: true,
                         ),
                         const SizedBox(height: 8),
                         Text(

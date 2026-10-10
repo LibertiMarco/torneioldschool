@@ -387,6 +387,7 @@ class _TournamentListState extends State<TournamentList> {
                               width: 52,
                               height: 52,
                               fallback: Icons.emoji_events_outlined,
+                              preserveShape: true,
                             ),
                             title: Text(
                               '${row['nome']}',
