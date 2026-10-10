@@ -85,6 +85,20 @@ function video_sync_valid_url(string $platform, string $url): bool
 function video_sync_plan(array $media, array $matches): array
 {
     $rows = []; $seen = []; $counts = [];
+    $index = [];
+    foreach ($matches as $match) {
+        if ((int)($match['giocata'] ?? 0) !== 1 || !isset($match['gol_casa'],$match['gol_ospite'])) continue;
+        $round = ($match['fase_round'] ?? '') !== '' ? $match['fase_round'] : null;
+        $identity = ['tournament'=>'','day'=>$round === null ? (int)($match['giornata'] ?? 0) : null,'round'=>$round,
+            'home'=>$match['squadra_casa'],'away'=>$match['squadra_ospite'],'home_score'=>(int)$match['gol_casa'],'away_score'=>(int)$match['gol_ospite']];
+        $aliases = [];
+        foreach ([$match['torneo_nome'] ?? '',$match['torneo'] ?? ''] as $alias) {
+            $identity['tournament'] = preg_replace('/\.(php|html)$/i','',(string)$alias);
+            $key = json_encode(video_sync_identity_key($identity));
+            if (isset($aliases[$key])) continue;
+            $aliases[$key] = true; $index[$key][] = $match;
+        }
+    }
     foreach ($media as $item) {
         if (!video_sync_valid_url($item['platform'] ?? '', $item['url'] ?? '')) continue;
         $key = hash('sha256', $item['platform'] . ':' . $item['id']);
@@ -95,7 +109,7 @@ function video_sync_plan(array $media, array $matches): array
         $identity = $title ?? $description;
         $conflict = $title !== null && $description !== null && video_sync_identity_key($title) !== video_sync_identity_key($description);
         $candidates = [];
-        if ($identity !== null && !$conflict) foreach ($matches as $match) {
+        if ($identity !== null && !$conflict) foreach ($index[json_encode(video_sync_identity_key($identity))] ?? [] as $match) {
             if (video_sync_match($identity, $match, $item['date'] ?? '')) {
                 $candidates[] = $match;
                 $target = $item['platform'] . ':' . $match['id'];
@@ -120,14 +134,22 @@ function video_sync_plan(array $media, array $matches): array
 
 function video_sync_load_matches(mysqli $conn): array
 {
-    $result = $conn->query("SELECT p.*, COALESCE(t.nome,p.torneo) AS torneo_nome FROM partite p
-        LEFT JOIN tornei t ON t.id=(SELECT tx.id FROM tornei tx
-            WHERE tx.nome=p.torneo OR tx.filetorneo=p.torneo
-            OR REPLACE(REPLACE(tx.filetorneo,'.php',''),'.html','')=REPLACE(REPLACE(p.torneo,'.php',''),'.html','')
-            ORDER BY tx.id DESC LIMIT 1)
-        WHERE p.giocata=1 ORDER BY p.data_partita DESC,p.id DESC");
+    // Resolve tournament aliases once, rather than a correlated subquery for every game.
+    $tournaments = $conn->query('SELECT id,nome,filetorneo FROM tornei ORDER BY id ASC');
+    if (!$tournaments) throw new RuntimeException('Impossibile leggere i tornei dal database.');
+    $names = [];
+    foreach ($tournaments->fetch_all(MYSQLI_ASSOC) as $tournament) {
+        foreach ([$tournament['nome'],$tournament['filetorneo']] as $alias) {
+            $names[(string)$alias] = $tournament['nome'];
+            $names[preg_replace('/\.(php|html)$/i','',(string)$alias)] = $tournament['nome'];
+        }
+    }
+    $result = $conn->query('SELECT id,torneo,giornata,fase_round,squadra_casa,squadra_ospite,gol_casa,gol_ospite,giocata,data_partita,link_instagram,link_youtube FROM partite WHERE giocata=1 ORDER BY data_partita DESC,id DESC');
     if (!$result) throw new RuntimeException('Impossibile leggere le partite dal database.');
-    return $result->fetch_all(MYSQLI_ASSOC);
+    $matches = $result->fetch_all(MYSQLI_ASSOC);
+    foreach ($matches as &$match) $match['torneo_nome'] = $names[$match['torneo']] ?? $names[preg_replace('/\.(php|html)$/i','',$match['torneo'])] ?? $match['torneo'];
+    unset($match);
+    return $matches;
 }
 
 /** Request only fixed official API hosts; credentials never appear in error text. */
@@ -135,7 +157,7 @@ function video_sync_request(string $service, array $params, string $key): array
 {
     $url = 'https://www.googleapis.com/youtube/v3/' . $service . '?' . http_build_query($params + ['key'=>$key], '', '&', PHP_QUERY_RFC3986);
     $curl = curl_init($url);
-    curl_setopt_array($curl, [CURLOPT_RETURNTRANSFER=>true, CURLOPT_CONNECTTIMEOUT=>10, CURLOPT_TIMEOUT=>30, CURLOPT_FOLLOWLOCATION=>false]);
+    curl_setopt_array($curl, [CURLOPT_RETURNTRANSFER=>true, CURLOPT_CONNECTTIMEOUT=>5, CURLOPT_TIMEOUT=>15, CURLOPT_FOLLOWLOCATION=>false]);
     $raw = curl_exec($curl); $status = (int)curl_getinfo($curl,CURLINFO_HTTP_CODE); curl_close($curl);
     $json = is_string($raw) ? json_decode($raw,true) : null;
     if ($status < 200 || $status >= 300 || !is_array($json) || isset($json['error'])) {

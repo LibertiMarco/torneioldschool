@@ -23,7 +23,9 @@ L'abbinamento richiede torneo, giornata/turno, entrambe le squadre e risultato d
 - YouTube: riutilizza `YOUTUBE_API_KEY` e `YOUTUBE_CHANNEL_ID` già presenti per le statistiche social. Il canale può essere indicato come ID `UC…`, `@handle`, URL `/channel/…`, URL `/@…` o username `/user/…`. Sono letti i video pubblici usando la playlist dei caricamenti e le [API ufficiali Google](https://developers.google.com/youtube/v3/guides/implementation/videos).
 - Le API vengono chiamate dal server; chiavi e token non sono inviati al browser. Gli errori rimuovono le credenziali dalle risposte.
 - Nessuna modifica allo schema: vengono aggiornati solamente `partite.link_instagram` e `partite.link_youtube`. Le anteprime durano 30 minuti nella sessione amministratore.
-- Il limite di lettura è 100 pagine per piattaforma. Se la paginazione non è completa, la piattaforma segnala un errore e non prepara link; non vengono considerati sicuri abbinamenti ricavati da un elenco parziale.
+- La dashboard legge una pagina per richiesta HTTP, con timeout API di 15 secondi e avanzamento visibile. Instagram richiede fino a 50 contenuti con didascalia per pagina, riducendo il blocco se Meta segnala una risposta troppo grande: nessuna chiamata separata per ogni didascalia. Gli errori temporanei vengono ritentati fino a tre volte, preservando lo stato della ricerca.
+- La dashboard consente fino a 1000 pagine per piattaforma; un ciclo di cursori o un elenco incompleto viene segnalato senza preparare link dalla piattaforma coinvolta. Il vecchio helper YouTube sincrono mantiene il limite di 100 pagine e non viene usato dalla dashboard.
+- I risultati sono divisi in pagine da 100. Ogni salvataggio riguarda la pagina corrente, così le migliaia di selezioni non superano il limite PHP dei campi POST. I contenuti rimanenti restano disponibili senza rifare la ricerca.
 
 Lo script precedente `/api/script/sync_instagram_match_links.php` continua a funzionare da CLI e da web. Per il formato strutturato abbina anche gare precedenti al giorno selezionato; per le vecchie didascalie libere mantiene il confronto sulle gare del medesimo giorno. Esempio di prova senza aggiornare link:
 
@@ -38,3 +40,7 @@ Non è stato configurato un nuovo cron. L'esecuzione dalla dashboard avvia la le
 `php tests/match_video_sync_test.php` verifica il testo fornito, pubblicazioni ritardate, accenti, giornata, risultato, turni, doppioni, ambiguità, conservazione dei link e lettura YouTube con risposte simulate, inclusi paginazione, privacy e fuso Europe/Rome. Non modifica il database e non pubblica contenuti.
 
 Durante l'implementazione la configurazione YouTube locale ha risposto con il canale TORNEI OLD SCHOOL. In questo ambiente non era presente un collegamento Instagram utilizzabile e la connessione al database era rifiutata; lettura Instagram e salvataggio sul database reale rimangono da verificare sull'ambiente configurato.
+
+`php tests/match_video_sync_job_test.php` simula 80 Reel al giorno per 30 giorni: 2400 Reel e altrettanti abbinamenti, letti in 48 chiamate API da 50 contenuti, oltre al controllo di inizializzazione del token. Il numero reale delle pagine dipende da quanti media restituisce Meta e dagli altri post presenti nell'account. Verifica anche ripresa dallo stato serializzato, privacy, paginazione adattiva e isolamento degli errori.
+
+Per distribuire la correzione del timeout caricare insieme `api/sincronizza_video_partite.php`, `api/sincronizza_video_partite.js`, `includi/match_video_sync.php`, `includi/match_video_sync_job.php` e `api/script/sync_instagram_match_links.php`. Nessuna modifica alle credenziali o allo schema del database.

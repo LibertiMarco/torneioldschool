@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/../includi/env_loader.php';
 require_once __DIR__ . '/../includi/match_video_sync.php';
+require_once __DIR__ . '/../includi/match_video_sync_job.php';
 
 function video_sync_escape($value): string {return htmlspecialchars((string)$value,ENT_QUOTES,'UTF-8');}
 function video_sync_date(string $value): DateTimeImmutable {
@@ -19,34 +20,42 @@ $fromValue = (string)($_POST['from'] ?? (new DateTimeImmutable('-30 days',new Da
 $toValue = (string)($_POST['to'] ?? $today);
 $platform = (string)($_POST['platform'] ?? 'both');
 $errors = []; $message = ''; $plan = [];
+$jsonRequest = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && in_array($_POST['action'] ?? '',['scan','step'],true);
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     try {
         if (!csrf_is_valid((string)($_POST['_csrf'] ?? ''),'match_video_sync')) throw new RuntimeException('Sessione scaduta. Ricarica la pagina.');
         $action = $_POST['action'] ?? '';
         if ($action === 'scan') {
-            @set_time_limit(300);
             unset($_SESSION['match_video_sync_plan']);
             $from = video_sync_date($fromValue); $to = video_sync_date($toValue);
             if ($to < $from || $from->diff($to)->days > 366) throw new InvalidArgumentException('Seleziona un intervallo di pubblicazione di massimo un anno.');
             if (!in_array($platform,['both','instagram','youtube'],true)) throw new InvalidArgumentException('Piattaforma non valida.');
-            $media = [];
-            foreach ($platform === 'both' ? ['instagram','youtube'] : [$platform] as $source) {
-                try {
-                    $items = $source === 'instagram' ? video_sync_instagram($from,$to) : video_sync_youtube(trim((string)getenv('YOUTUBE_API_KEY')),trim((string)getenv('YOUTUBE_CHANNEL_ID')),$from,$to);
-                    $media = array_merge($media,$items);
-                } catch (Throwable $e) {$errors[] = $e->getMessage();}
+            $_SESSION['match_video_sync_job'] = video_sync_job_create($platform,$fromValue,$toValue);
+            $reply = ['done'=>false,'job'=>$_SESSION['match_video_sync_job']['id'],'progress'=>'Avvio della ricerca…'];
+        } elseif ($action === 'step') {
+            $job = $_SESSION['match_video_sync_job'] ?? null;
+            if (!is_array($job) || !hash_equals($job['id'],(string)($_POST['job'] ?? '')) || $job['expires'] < time()) throw new RuntimeException('Ricerca scaduta o sostituita. Avviane una nuova.');
+            if ($job['index'] < count($job['sources'])) {
+                video_sync_job_step($job);
+                $_SESSION['match_video_sync_job'] = $job;
+                $reply = ['done'=>false,'job'=>$job['id'],'progress'=>video_sync_job_progress($job)];
+            } else {
+                if ($job['media']) {
+                    $conn = video_sync_open_database();
+                    $plan = video_sync_plan($job['media'],video_sync_load_matches($conn));
+                    $conn->close();
+                }
+                $message = count($job['media']).' contenuti trovati; '.count(array_filter($plan,fn($row)=>$row['automatic'])).' abbinamenti univoci pronti da salvare.';
+                $_SESSION['match_video_sync_plan'] = ['expires'=>time()+1800,'rows'=>$plan,'message'=>$message,'errors'=>$job['errors'],
+                    'from'=>$job['from'],'to'=>$job['to'],'platform'=>count($job['sources']) === 2 ? 'both' : $job['sources'][0]];
+                unset($_SESSION['match_video_sync_job']);
+                $reply = ['done'=>true,'progress'=>$message];
             }
-            if ($media) {
-                require __DIR__ . '/../includi/db.php';
-                $plan = video_sync_plan($media,video_sync_load_matches($conn));
-                $_SESSION['match_video_sync_plan'] = ['expires'=>time()+1800,'rows'=>$plan];
-            }
-            $message = count($media).' contenuti trovati; '.count(array_filter($plan,fn($row)=>$row['automatic'])).' abbinamenti univoci pronti da salvare.';
         } elseif ($action === 'save') {
             $snapshot = $_SESSION['match_video_sync_plan'] ?? null;
             if (!is_array($snapshot) || $snapshot['expires'] < time()) throw new RuntimeException('La ricerca è scaduta. Cerca nuovamente i video.');
             $selected = $_POST['selected'] ?? [];
-            if (!is_array($selected) || !$selected || count($selected) > count($snapshot['rows'])) throw new InvalidArgumentException('Seleziona almeno un contenuto da collegare.');
+            if (!is_array($selected) || !$selected || count($selected) > min(100,count($snapshot['rows']))) throw new InvalidArgumentException('Seleziona da 1 a 100 contenuti da collegare.');
             $choices = $_POST['match_id'] ?? [];
             if (!is_array($choices)) throw new InvalidArgumentException('Selezione delle partite non valida.');
             $writes = []; $targets = [];
@@ -63,7 +72,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 if (!video_sync_valid_url($source,$row['media']['url'])) throw new InvalidArgumentException('Link del contenuto non valido.');
                 $writes[] = ['row'=>$row,'match'=>$candidate,'id'=>$id,'field'=>'link_'.$source];
             }
-            require __DIR__ . '/../includi/db.php';
+            $conn = video_sync_open_database();
             if (!$conn->begin_transaction()) throw new RuntimeException('Impossibile avviare il salvataggio.');
             $saved = 0; $preserved = 0;
             try {
@@ -87,10 +96,29 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 }
                 if (!$conn->commit()) throw new RuntimeException('Conferma del salvataggio non riuscita.');
             } catch (Throwable $e) {$conn->rollback();throw $e;}
-            unset($_SESSION['match_video_sync_plan']);
             $message = $saved.' link salvati. '.$preserved.' link già presenti conservati.';
+            foreach ($selected as $key) unset($snapshot['rows'][$key]);
+            $snapshot['message'] = $message;
+            $snapshot['expires'] = time()+1800;
+            $_SESSION['match_video_sync_plan'] = $snapshot;
+            header('Location: '.strtok($_SERVER['REQUEST_URI'] ?? '/api/sincronizza_video_partite.php','?'));
+            exit;
         } else throw new InvalidArgumentException('Azione non valida.');
     } catch (Throwable $e) {$errors[] = $e->getMessage();}
+}
+if ($jsonRequest) {
+    header('Content-Type: application/json; charset=utf-8');
+    if ($errors) {http_response_code(400);$reply = ['error'=>implode(' ',$errors)];}
+    session_write_close();
+    echo json_encode($reply,JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+    exit;
+}
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    $snapshot = $_SESSION['match_video_sync_plan'] ?? null;
+    if (is_array($snapshot) && $snapshot['expires'] >= time()) {
+        $plan = $snapshot['rows']; $message = $snapshot['message'] ?? ''; $errors = $snapshot['errors'] ?? [];
+        $fromValue = $snapshot['from'] ?? $fromValue; $toValue = $snapshot['to'] ?? $toValue; $platform = $snapshot['platform'] ?? $platform;
+    }
 }
 $csrf = csrf_get_token('match_video_sync');
 ?>
@@ -104,13 +132,21 @@ label,.filters>*{min-width:0}label{grid-template-columns:minmax(0,1fr)}label inp
 <p class="help">Formato riconosciuto: BRASILERAO | GIORNATA 1 | CEARA 5 - 3 MIRASSOL. Gli hashtag finali sono facoltativi.</p>
 <?php foreach ($errors as $error): ?><p class="error" role="alert"><?= video_sync_escape($error) ?></p><?php endforeach; ?>
 <?php if ($message !== ''): ?><p class="status" role="status"><?= video_sync_escape($message) ?></p><?php endif; ?>
-<form class="panel filters" method="post"><input type="hidden" name="_csrf" value="<?= video_sync_escape($csrf) ?>"><input type="hidden" name="action" value="scan">
+<form id="videoSyncSearch" class="panel filters" method="post"><input type="hidden" name="_csrf" value="<?= video_sync_escape($csrf) ?>"><input type="hidden" name="action" value="scan">
 <label>Pubblicati dal<input type="date" name="from" value="<?= video_sync_escape($fromValue) ?>" required></label>
 <label>Pubblicati fino al<input type="date" name="to" value="<?= video_sync_escape($toValue) ?>" required></label>
 <label>Piattaforma<select name="platform"><?php foreach (['both'=>'Instagram e YouTube','instagram'=>'Instagram','youtube'=>'YouTube'] as $value=>$label): ?><option value="<?= $value ?>" <?= $platform === $value ? 'selected' : '' ?>><?= $label ?></option><?php endforeach; ?></select></label><button type="submit">Cerca video e Reel</button></form>
-<?php if ($plan): ?><form method="post"><input type="hidden" name="_csrf" value="<?= video_sync_escape($csrf) ?>"><input type="hidden" name="action" value="save">
+<p id="videoSyncProgress" class="status" role="status" aria-live="polite" hidden></p>
+<noscript><p>Attiva JavaScript per eseguire la ricerca con avanzamento.</p></noscript>
+<?php if ($plan):
+$pageCount = max(1,(int)ceil(count($plan)/100));
+$pageNumber = max(1,min($pageCount,(int)($_GET['page'] ?? 1)));
+$pageRows = array_slice($plan,($pageNumber-1)*100,100,true);
+?><p>Pagina <?= $pageNumber ?> di <?= $pageCount ?> · <?= count($plan) ?> contenuti ancora da controllare. Il salvataggio riguarda questa pagina.</p>
+<nav aria-label="Pagine dei risultati"><?php if ($pageNumber > 1): ?><a href="?page=<?= $pageNumber-1 ?>">Pagina precedente</a> · <?php endif; ?><?php if ($pageNumber < $pageCount): ?><a href="?page=<?= $pageNumber+1 ?>">Pagina successiva</a><?php endif; ?></nav>
+<form method="post"><input type="hidden" name="_csrf" value="<?= video_sync_escape($csrf) ?>"><input type="hidden" name="action" value="save">
 <p>Gli abbinamenti univoci sono preselezionati. Per i casi dubbi scegli la gara e seleziona il contenuto. I link già presenti vengono conservati.</p>
-<?php foreach ($plan as $key=>$row): $blocked = !$row['candidates'] || (count($row['candidates']) === 1 && trim((string)($row['candidates'][0]['link_'.$row['media']['platform']] ?? '')) !== ''); ?>
+<?php foreach ($pageRows as $key=>$row): $blocked = !$row['candidates'] || (count($row['candidates']) === 1 && trim((string)($row['candidates'][0]['link_'.$row['media']['platform']] ?? '')) !== ''); ?>
 <article class="result"><h2><a href="<?= video_sync_escape($row['media']['url']) ?>" target="_blank" rel="noopener noreferrer"><?= ucfirst($row['media']['platform']) ?> · <?= video_sync_escape($row['media']['date']) ?> · Apri contenuto</a></h2>
 <p class="caption"><?= video_sync_escape($row['media']['title'] ?: $row['media']['description']) ?></p><p class="meta"><?= video_sync_escape($row['status']) ?></p>
 <?php if ($row['candidates']): ?><label>Partita<select name="match_id[<?= $key ?>]" <?= $blocked ? 'disabled' : '' ?>>
@@ -118,4 +154,4 @@ label,.filters>*{min-width:0}label{grid-template-columns:minmax(0,1fr)}label inp
 <?php foreach ($row['candidates'] as $match): ?><option value="<?= (int)$match['id'] ?>"><?= video_sync_escape(video_sync_label($match)) ?></option><?php endforeach; ?></select></label><?php endif; ?>
 <label class="choice"><input type="checkbox" name="selected[]" value="<?= $key ?>" <?= $row['automatic'] ? 'checked' : '' ?> <?= $blocked ? 'disabled' : '' ?>>Collega questo contenuto alla partita</label></article>
 <?php endforeach; ?><button type="submit">Salva i link selezionati</button></form><?php endif; ?>
-</main></body></html>
+</main><script src="/api/sincronizza_video_partite.js?v=2" defer></script></body></html>

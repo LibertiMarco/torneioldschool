@@ -4,6 +4,12 @@ require_once __DIR__ . '/../includi/db.php';
 $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
 
 $partite = [];
+$coverTournaments = [];
+$tournamentResult = $conn->query("SELECT id,nome,filetorneo FROM tornei WHERE stato IN ('in corso','programmato') ORDER BY id");
+if ($tournamentResult) {
+  $coverTournaments = $tournamentResult->fetch_all(MYSQLI_ASSOC);
+  $tournamentResult->free();
+}
 $stmt = $conn->prepare(
   "SELECT p.id, p.torneo,
           COALESCE((SELECT t.nome FROM tornei t
@@ -98,17 +104,22 @@ if ($stmt && $stmt->execute()) {
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="/api/matchday-renderer.js?v=20261007-date-range"></script>
+<script src="/api/copertine-colori.js?v=20261010"></script>
 <script src="/api/grafiche_frame_height.js?v=20261006"></script>
 <script src="/api/grafiche_foto_touch.js?v=20261009-covers"></script>
+<script id="coverTournaments" type="application/json"><?= json_encode($coverTournaments,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?></script>
 <script>
 const matches=<?= json_encode($partite,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
 const $=id=>document.getElementById(id);let selected=null,photo=null,brand=null,homeLogo=null,awayLogo=null,tournamentLogo=null;
-const coverColors=['#00bf63','#1769e0','#6c39c6','#e43b35','#e77722','#009c9a','#153b8f','#a51e49'];
+const coverColors=CoverColors.assign([
+  ...JSON.parse(document.getElementById('coverTournaments').textContent||'[]'),
+  ...matches.map(m=>({id:m.torneo_id,nome:m.torneo_nome||m.torneo,filetorneo:m.torneo}))
+]);
 const upper=(v,f='')=>String(v||f).trim().toUpperCase();const safe=v=>String(v||'copertina').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
 function loadImage(src){return new Promise(resolve=>{if(!src)return resolve(null);const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src=src})}function fileImage(file){return new Promise((resolve,reject)=>{if(!file)return resolve(null);const r=new FileReader();r.onload=async()=>resolve(await loadImage(r.result));r.onerror=reject;r.readAsDataURL(file)})}
 function coverCompetitionTheme(){return window.MatchdayRenderer.tournamentTheme({nome:selected?.torneo_nome||selected?.torneo||matches.find(m=>String(m.torneo)===$('tournament').value)?.torneo_nome||$('tournament').value})}
 function coverAccent(){const palette=coverCompetitionTheme();return ['brasileirao','mcleague'].includes(palette.competition)?palette.secondary:'#fff'}
-function theme(){const palette=coverCompetitionTheme();if(['brasileirao','mcleague'].includes(palette.competition))return palette.primary;const name=String(selected?.torneo_nome||'').toLowerCase();if(/saudi|arabia/.test(name))return'#00bf63';let hash=2166136261,key=String(selected?.torneo_id||selected?.torneo||'torneo');for(let i=0;i<key.length;i++){hash^=key.charCodeAt(i);hash=Math.imul(hash,16777619)}return coverColors[Math.abs(hash)%coverColors.length]}
+function theme(){const match=selected||matches.find(m=>String(m.torneo)===$('tournament').value);return coverColors.get({id:match?.torneo_id,nome:match?.torneo_nome||match?.torneo,filetorneo:match?.torneo})||'#08243b'}
 function contain(ctx,img,x,y,w,h){if(!img?.naturalWidth)return;const s=Math.min(w/img.naturalWidth,h/img.naturalHeight),dw=img.naturalWidth*s,dh=img.naturalHeight*s;ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh)}
 function cover(ctx,img,x,y,w,h,type){if(!img?.naturalWidth)return;const zoom=Number($('zoom').value)/100,s=Math.max(w/img.naturalWidth,h/img.naturalHeight)*zoom,px=Number($('posX').value)/100,py=Number($('posY').value)/100;const base={x:x-(img.naturalWidth*s-w)*px,y:y-(img.naturalHeight*s-h)*py,w:img.naturalWidth*s,h:img.naturalHeight*s};const box=PhotoTouchEditor.transform(type,img,{x,y,w,h},base);ctx.drawImage(img,box.x,box.y,box.w,box.h)}
 function fit(ctx,text,max,start,min=18,weight=800,font='Arial'){let size=start;do{ctx.font=`${weight} ${size}px ${font}`;if(ctx.measureText(text).width<=max)break;size-=2}while(size>min)}
