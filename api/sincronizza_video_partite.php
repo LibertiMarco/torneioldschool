@@ -5,6 +5,12 @@ require_once __DIR__ . '/../includi/env_loader.php';
 require_once __DIR__ . '/../includi/match_video_sync.php';
 require_once __DIR__ . '/../includi/match_video_sync_job.php';
 
+// Discard snapshots/jobs created before duration verification was introduced.
+if (isset($_SESSION['match_video_sync_job']) && !isset($_SESSION['match_video_sync_job']['duration_filter'])) unset($_SESSION['match_video_sync_job']);
+if (isset($_SESSION['match_video_sync_plan']['rows'])) {
+    $_SESSION['match_video_sync_plan']['rows'] = array_filter($_SESSION['match_video_sync_plan']['rows'],fn($row)=>video_sync_reel_allowed($row['media']));
+}
+
 function video_sync_escape($value): string {return htmlspecialchars((string)$value,ENT_QUOTES,'UTF-8');}
 function video_sync_date(string $value): DateTimeImmutable {
     $date = DateTimeImmutable::createFromFormat('!Y-m-d',$value,new DateTimeZone('Europe/Rome'));
@@ -59,7 +65,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     $_SESSION['match_video_sync_job'] = $job;$_SESSION['match_video_sync_plan'] = $snapshot;
                     $reply = ['done'=>false,'job'=>$job['id'],'progress'=>$job['saved'].' link associati · '.(count($job['apply_keys'])-$job['apply_offset']).' da elaborare'];
                 } else {
-                    $snapshot['message'] = count($snapshot['rows']).' contenuti letti. '.$job['saved'].' link associati automaticamente; '.$job['preserved'].' link già presenti conservati. I casi dubbi restano da scegliere.';
+                    $snapshot['message'] = count($snapshot['rows']).' contenuti letti. '.$job['saved'].' link associati automaticamente; '.$job['preserved'].' link già presenti conservati. I casi dubbi restano da scegliere.'.video_sync_job_duration_summary($job);
                     $_SESSION['match_video_sync_plan'] = $snapshot;unset($_SESSION['match_video_sync_job']);
                     $reply = ['done'=>true,'progress'=>$snapshot['message']];
                 }
@@ -69,7 +75,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     $plan = video_sync_plan($job['media'],video_sync_load_matches($conn,$job['from'],$job['to']));
                     $conn->close();
                 }
-                $message = count($job['media']).' contenuti trovati; '.count(array_filter($plan,fn($row)=>$row['automatic'])).' abbinamenti univoci pronti da salvare.';
+                $message = count($job['media']).' contenuti trovati; '.count(array_filter($plan,fn($row)=>$row['automatic'])).' abbinamenti univoci pronti da salvare.'.video_sync_job_duration_summary($job);
                 $_SESSION['match_video_sync_plan'] = ['expires'=>time()+1800,'rows'=>$plan,'message'=>$message,'errors'=>$job['errors'],
                     'from'=>$job['from'],'to'=>$job['to'],'platform'=>count($job['sources']) === 2 ? 'both' : $job['sources'][0]];
                 $job['apply_keys'] = array_keys(array_filter($plan,fn($row)=>$row['automatic']));
@@ -157,6 +163,7 @@ label,.filters>*{min-width:0}label{grid-template-columns:minmax(0,1fr)}label inp
 </style></head><body><main>
 <a href="/admin_dashboard.php">Torna alla dashboard</a><h1>Sincronizza video delle partite</h1>
 <p>Cerca i Reel Instagram e i video pubblici YouTube. Squadre e risultato vengono confrontati con le gare del giorno di pubblicazione e di quello precedente, anche se torneo e giornata sono scritti diversamente.</p>
+<p>Instagram: solo Reel di almeno 30 secondi. Quelli più brevi o con durata non verificabile vengono esclusi dalla ricerca delle partite e dai risultati.</p>
 <p class="help">La ricerca associa automaticamente i link delle corrispondenze uniche che non hanno già un link. I link presenti vengono conservati; nei casi dubbi scegli la gara o il video.</p>
 <?php foreach ($errors as $error): ?><p class="error" role="alert"><?= video_sync_escape($error) ?></p><?php endforeach; ?>
 <?php if ($message !== ''): ?><p class="status" role="status"><?= video_sync_escape($message) ?></p><?php endif; ?>

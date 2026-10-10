@@ -1,6 +1,13 @@
 <?php
 declare(strict_types=1);
+$durationTestRoot = sys_get_temp_dir().'/tos-duration-job-test-'.bin2hex(random_bytes(6));
+function tos_runtime_path(string $relative = ''): string {global $durationTestRoot;return $durationTestRoot.'/'.$relative;}
 require_once __DIR__ . '/../includi/match_video_sync_job.php';
+$durationCalls = 0;
+$durationRange = function($url,$offset) use (&$durationCalls) {
+    $durationCalls++;
+    return pack('N',36).'moov'.pack('N',28).'mvhd'.pack('N5',0,0,0,1000,60000);
+};
 function job_expect(bool $value,string $message): void {if (!$value) throw new RuntimeException($message);}
 $oldChannel = getenv('YOUTUBE_CHANNEL_ID');
 putenv('YOUTUBE_CHANNEL_ID=@testchannel');
@@ -27,7 +34,7 @@ $job = video_sync_job_create('both','2026-10-09','2026-10-09');
 $steps = 0;
 while ($job['index'] < count($job['sources'])) {
     $before = $calls;
-    video_sync_job_step($job,$youtube,$instagram,$instagramInit);
+    video_sync_job_step($job,$youtube,$instagram,$instagramInit,$durationRange);
     job_expect($calls-$before <= 1,'More than one external API request in a step');
     // Each subsequent step runs from state persisted by an earlier HTTP request.
     $job = unserialize(serialize($job));
@@ -36,7 +43,7 @@ while ($job['index'] < count($job['sources'])) {
 job_expect(count($job['media']) === 2 && !$job['errors'],'Media or error isolation failed');
 job_expect($job['media'][0]['thumbnail'] === 'https://scontent.cdninstagram.com/cover.jpg' && $job['media'][1]['thumbnail'] === 'https://i.ytimg.com/vi/abcdefghijk/default.jpg','Cover metadata was not retained');
 job_expect($job['media'][0]['platform'] === 'instagram' && $job['media'][1]['date'] === '2026-10-09','Provider order, Reel filter or timezone failed');
-job_expect($calls === 6 && $steps === 7,'Unexpected number of paginated requests');
+job_expect($calls === 6 && $steps === 8 && $durationCalls === 1,'Unexpected number of paginated requests');
 job_expect(!str_contains(video_sync_job_progress($job),'test-token'),'Progress exposed credentials');
 
 // Fail after already reading one YouTube video: nothing from that provider may survive.
@@ -55,11 +62,11 @@ job_expect(count($job['media']) === 1 && count($job['errors']) === 1,'Failure pr
 
 // Reduced Instagram page size requires a new step, never a blocking retry loop.
 $job = video_sync_job_create('instagram','2026-10-09','2026-10-09');
-video_sync_job_step($job,null,$instagram,$instagramInit);
+video_sync_job_step($job,null,$instagram,$instagramInit,$durationRange);
 video_sync_job_step($job,null,fn()=>throw new RuntimeException('Please reduce the amount of data'));
 job_expect($job['state']['limit'] === 25 && !$job['errors'] && $job['index'] === 0,'Adaptive page retry failed');
-video_sync_job_step($job,null,$instagram,$instagramInit);
-video_sync_job_step($job,null,$instagram,$instagramInit);
+video_sync_job_step($job,null,$instagram,$instagramInit,$durationRange);
+video_sync_job_step($job,null,$instagram,$instagramInit,$durationRange);
 job_expect(count($job['media']) === 1,'Retry did not preserve the caption');
 
 $job = video_sync_job_create('youtube','2026-10-09','2026-10-09');
@@ -73,7 +80,7 @@ putenv($oldChannel === false ? 'YOUTUBE_CHANNEL_ID' : 'YOUTUBE_CHANNEL_ID='.$old
 $bulkCalls = 0;
 $bulk = function($resource,$params,$state) use (&$bulkCalls) {
     job_expect(str_ends_with($resource,'/media'),'A caption was fetched separately');
-    job_expect(str_contains($params['fields'],'caption'),'Captions missing from the page request');
+    job_expect(str_contains($params['fields'],'caption') && str_contains($params['fields'],'media_url'),'Captions or video metadata URL missing from the page request');
     $bulkCalls++;
     $offset = (int)($params['after'] ?? 0);
     $limit = (int)$params['limit'];
@@ -89,22 +96,29 @@ $bulk = function($resource,$params,$state) use (&$bulkCalls) {
 };
 $job = video_sync_job_create('instagram','2026-09-10','2026-10-09');
 while ($job['index'] < 1) {
-    video_sync_job_step($job,null,$bulk,$instagramInit);
+    $before = $bulkCalls+$durationCalls;
+    video_sync_job_step($job,null,$bulk,$instagramInit,$durationRange);
+    job_expect($bulkCalls+$durationCalls-$before <= 1,'High-volume scan made multiple HTTP calls per step');
     $job = unserialize(serialize($job));
 }
-job_expect(count($job['media']) === 2400 && !$job['errors'] && $bulkCalls === 48,'High-volume scan lost Reel or used too many requests');
+job_expect(count($job['media']) === 2400 && !$job['errors'] && $bulkCalls === 48 && $durationCalls === 2401,'High-volume scan lost Reel or used too many requests');
 $matches = [];
 for ($i=0;$i<2400;$i++) $matches[] = ['id'=>$i+1,'torneo'=>'Brasilerao','torneo_nome'=>'Brasilerao','giornata'=>1,'fase_round'=>null,
     'squadra_casa'=>'Ceara '.$i,'squadra_ospite'=>'Mirassol','gol_casa'=>5,'gol_ospite'=>3,'giocata'=>1,'data_partita'=>$job['media'][$i]['date'],'link_instagram'=>null,'link_youtube'=>null];
 $plan = video_sync_plan($job['media'],$matches);
 job_expect(count($plan) === 2400 && count(array_filter($plan,fn($row)=>$row['automatic'])) === 2400,'High-volume match indexing failed');
 $job = video_sync_job_create('instagram','2026-09-10','2026-10-09');
-video_sync_job_step($job,null,$bulk,$instagramInit);
-video_sync_job_step($job,null,$bulk,$instagramInit);
+video_sync_job_step($job,null,$bulk,$instagramInit,$durationRange);
+video_sync_job_step($job,null,$bulk,$instagramInit,$durationRange);
+while ($job['state']['phase'] === 'duration') video_sync_job_step($job,null,$bulk,$instagramInit,$durationRange);
 $retained = count($job['state']['media']);
 video_sync_job_step($job,null,fn()=>throw new RuntimeException('Operation timed out'));
 job_expect($job['index'] === 0 && count($job['state']['media']) === $retained && $job['state']['retries'] === 1,'Transient failure lost scan state');
-video_sync_job_step($job,null,$bulk,$instagramInit);
+video_sync_job_step($job,null,$bulk,$instagramInit,$durationRange);
+while ($job['state']['phase'] === 'duration') video_sync_job_step($job,null,$bulk,$instagramInit,$durationRange);
 job_expect(count($job['state']['media']) === $retained+50 && !isset($job['state']['retries']),'Retry did not resume at the next page');
 echo "PASS: 2400 Reel / 30 days / 48 bulk API requests and 2400 exact matches\n";
 echo "PASS: resumed jobs, one API call per step, captions, timezones, privacy, failed-source isolation, adaptive paging and expiry\n";
+
+foreach (glob($durationTestRoot.'/reel-durations/*.json') as $file) unlink($file);
+rmdir($durationTestRoot.'/reel-durations');rmdir($durationTestRoot);

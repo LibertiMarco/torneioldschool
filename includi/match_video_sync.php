@@ -391,6 +391,6 @@ function video_sync_instagram(DateTimeImmutable $from, DateTimeImmutable $to): a
     $version = (string)(getenv('INSTAGRAM_GRAPH_API_VERSION') ?: 'v26.0');
     if (!preg_match('/^v\d+\.\d+$/D',$version)) throw new RuntimeException('Versione API Instagram non valida.');
     $reels = sync_instagram_fetch_yesterdays_reels($state['user_id'],$state['access_token'],$version,$from,$to);
-    return array_map(fn($reel)=>['platform'=>'instagram','id'=>$reel['id'],'url'=>$reel['permalink'],
+    return array_map(fn($reel)=>['platform'=>'instagram','id'=>$reel['id'],'url'=>$reel['permalink'],'duration_seconds'=>$reel['duration_seconds'],
         'title'=>$reel['caption'],'description'=>'','date'=>(new DateTimeImmutable($reel['timestamp']))->setTimezone(new DateTimeZone('Europe/Rome'))->format('Y-m-d')],$reels);
 }

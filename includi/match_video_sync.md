@@ -43,6 +43,22 @@ Il torneo e la giornata possono mancare o essere scritti diversamente. Sono comu
 
 Le copertine disponibili dalle API vengono mostrate nei risultati per la verifica visiva, con caricamento lazy. Non vengono lette tramite OCR e non richiedono una chiamata API separata per ogni Reel.
 
+## Durata minima dei Reel
+
+Instagram: vengono cercate e mostrate soltanto pubblicazioni con durata verificata di almeno 30 secondi. Un Reel di 29,999 secondi viene escluso; uno di 30 secondi viene incluso. YouTube conserva il comportamento precedente.
+
+La lista Instagram viene letta con `media_url`. La durata viene ricavata dai metadati MP4 (`moov/mvhd`) con richieste Range da massimo 64 KiB: il contenuto video non viene scaricato interamente. Ogni passo della dashboard effettua al massimo una richiesta esterna, con timeout di 8 secondi per i metadati; gli eventuali blocchi `mdat` vengono saltati usando la loro dimensione. La ricerca dei metadati è limitata a 12 richieste per Reel. Le durate verificate, comprese quelle dei Reel brevi, sono memorizzate per 7 giorni nella directory runtime privata `reel-durations`; i dati già in cache vengono elaborati in blocco senza richieste al CDN.
+
+Reel privi di URL video o con durata non verificabile vengono esclusi, con un conteggio nel riepilogo. Questi errori non sono memorizzati in cache: una ricerca successiva può riprovare. Il filtro precede l'abbinamento e il salvataggio. I risultati Instagram delle ricerche precedenti senza durata verificata vengono rimossi: avviare una nuova ricerca dopo l'aggiornamento. Anche lo script CLI applica la stessa soglia.
+
+## Durata minima dei Reel
+
+Instagram: vengono cercate e mostrate soltanto pubblicazioni con durata verificata di almeno 30 secondi. Un Reel di 29,999 secondi viene escluso; uno di 30 secondi viene incluso. YouTube conserva il comportamento precedente.
+
+La lista Instagram viene letta con `media_url`. La durata viene ricavata dai metadati MP4 (`moov/mvhd`) con richieste Range da massimo 64 KiB: il contenuto video non viene scaricato interamente. Ogni passo della dashboard effettua al massimo una richiesta esterna, con timeout di 8 secondi per i metadati; gli eventuali blocchi `mdat` vengono saltati usando la loro dimensione. La ricerca dei metadati è limitata a 12 richieste per Reel. Le durate verificate, comprese quelle dei Reel brevi, sono memorizzate per 7 giorni nella directory runtime privata `reel-durations`; i dati già in cache vengono elaborati in blocco senza richieste al CDN.
+
+Reel privi di URL video o con durata non verificabile vengono esclusi, con un conteggio nel riepilogo. Questi errori non sono memorizzati in cache: una ricerca successiva può riprovare. Il filtro precede l'abbinamento e il salvataggio. I risultati Instagram delle ricerche precedenti senza durata verificata vengono rimossi: avviare una nuova ricerca dopo l'aggiornamento. Anche lo script CLI applica la stessa soglia.
+
 ## Volume e salvataggio
 
 La dashboard effettua al massimo una chiamata social per richiesta HTTP, con avanzamento visibile e timeout API di 15 secondi. Instagram richiede fino a 50 media con didascalia per pagina; se Meta richiede meno dati, il blocco viene ridotto. Gli errori temporanei vengono ritentati fino a tre volte preservando lo stato.
@@ -63,6 +79,8 @@ Caricare insieme questi file per aggiornare la regola e il salvataggio automatic
 ```text
 includi/match_video_sync.php
 includi/match_video_sync_job.php
+includi/match_video_duration.php
+includi/match_video_duration.php
 api/sincronizza_video_partite.php
 api/script/sync_instagram_match_links.php
 ```
@@ -73,6 +91,8 @@ La pagina richiede inoltre il JavaScript già introdotto `api/sincronizza_video_
 
 - `php tests/match_video_date_test.php`: giorno del video e precedente, cambio mese, descrizioni prive di torneo, squadre invertite, punteggi, alias, link già presenti e ambiguità.
 - `php tests/match_video_sync_job_test.php`: 2400 Reel, 48 chiamate simulate da 50 contenuti, 2400 abbinamenti, stato serializzato, retry, copertine e isolamento degli errori.
+- `php tests/match_video_duration_test.php`: MP4 v0/v1, metadati in testa/coda, soglia 29,999/30 secondi, durate sconosciute, cache e limite di una richiesta HTTP per passo.
+- `php tests/match_video_duration_test.php`: MP4 v0/v1, metadati in testa/coda, soglia 29,999/30 secondi, durate sconosciute, cache e limite di una richiesta HTTP per passo.
 - `php tests/match_video_sync_test.php`: parser, provider e verifiche del vecchio matcher mantenuto separatamente per regressione.
 - `node tests/match_video_sync_frontend_test.js` e `node tests/match_video_sync_browser_test.js`: flusso del browser, CSRF, endpoint e recupero dagli errori.
 
