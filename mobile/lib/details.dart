@@ -221,7 +221,7 @@ class MatchPage extends StatelessWidget {
       );
       Widget statBadge(String label, dynamic value, {Color color = siteBlue}) =>
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(10),
@@ -245,11 +245,135 @@ class MatchPage extends StatelessWidget {
             )
             .add(event);
       }
-      final ordered = [
-        home,
-        if (away != home) away,
-        ...groups.keys.where((name) => name != home && name != away),
-      ];
+      Widget playerCard(Map<String, dynamic> event) => Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xffe5eaf1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                SiteImage(
+                  api: api,
+                  path: '${event['foto'] ?? ''}',
+                  width: 34,
+                  height: 34,
+                  fallback: Icons.person_outline,
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: siteBlue,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'VOTO',
+                        style: TextStyle(
+                          color: Color(0xffcdd8e5),
+                          fontSize: 9,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                      Text(
+                        '${event['voto'] ?? '—'}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '${event['nome']} ${event['cognome']}',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: siteBlue,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                statBadge('gol', event['goal'] ?? 0),
+                statBadge('assist', event['assist'] ?? 0),
+                statBadge('autogol', event['autogol'] ?? 0),
+                statBadge(
+                  'gialli',
+                  event['cartellino_giallo'] ?? 0,
+                  color: const Color(0xff996b00),
+                ),
+                statBadge(
+                  'rossi',
+                  event['cartellino_rosso'] ?? 0,
+                  color: siteRed,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      Widget reportColumn(String name, String side) => Column(
+        key: ValueKey('match-report-$side'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 12, bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  side,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 1.2,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xff778496),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: siteBlue,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if ((groups[name] ?? []).isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'Nessun referto.',
+                style: TextStyle(fontSize: 12, color: Color(0xff778496)),
+              ),
+            ),
+          for (final event in groups[name] ?? <Map<String, dynamic>>[])
+            playerCard(event),
+        ],
+      );
       return ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -417,7 +541,18 @@ class MatchPage extends StatelessWidget {
                 ],
               ),
             ),
-          for (final name in ordered.where(groups.containsKey)) ...[
+          if (events.isNotEmpty)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: reportColumn(home, 'CASA')),
+                const SizedBox(width: 12),
+                Expanded(child: reportColumn(away, 'OSPITE')),
+              ],
+            ),
+          for (final name in groups.keys.where(
+            (name) => name != home && name != away,
+          )) ...[
             Padding(
               padding: const EdgeInsets.only(top: 16, bottom: 12),
               child: Text(
@@ -429,94 +564,7 @@ class MatchPage extends StatelessWidget {
                 ),
               ),
             ),
-            for (final event in groups[name]!)
-              Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xffe5eaf1)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        SiteImage(
-                          api: api,
-                          path: '${event['foto'] ?? ''}',
-                          width: 40,
-                          height: 40,
-                          fallback: Icons.person_outline,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            '${event['nome']} ${event['cognome']}',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: siteBlue,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: siteBlue,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            children: [
-                              const Text(
-                                'VOTO',
-                                style: TextStyle(
-                                  color: Color(0xffcdd8e5),
-                                  fontSize: 9,
-                                  letterSpacing: 0.6,
-                                ),
-                              ),
-                              Text(
-                                '${event['voto'] ?? '—'}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        statBadge('gol', event['goal'] ?? 0),
-                        statBadge('assist', event['assist'] ?? 0),
-                        statBadge('autogol', event['autogol'] ?? 0),
-                        statBadge(
-                          'gialli',
-                          event['cartellino_giallo'] ?? 0,
-                          color: const Color(0xff996b00),
-                        ),
-                        statBadge(
-                          'rossi',
-                          event['cartellino_rosso'] ?? 0,
-                          color: siteRed,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+            for (final event in groups[name]!) playerCard(event),
           ],
         ],
       );
