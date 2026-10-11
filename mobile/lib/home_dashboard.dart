@@ -256,8 +256,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               final rows = TosApi.rows(value);
               return Column(
                 children: [
-                  if (rows.isEmpty) const Text('Nessun risultato disponibile.'),
-                  ...rows.take(2).map((row) => HallCard(api: api, row: row)),
+                  HallOfFamePanel(api: api, rows: rows),
                   TextButton(
                     onPressed: () => openPage(
                       context,
@@ -266,9 +265,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         load: () => api.hallOfFame(widget.section),
                         render: (data) => ListView(
                           padding: const EdgeInsets.all(16),
-                          children: TosApi.rows(data)
-                              .map((r) => HallCard(api: api, row: r))
-                              .toList(),
+                          children: [
+                            HallOfFamePanel(api: api, rows: TosApi.rows(data)),
+                          ],
                         ),
                       ),
                     ),
@@ -639,6 +638,92 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
       ],
     ),
   );
+}
+
+class HallOfFamePanel extends StatefulWidget {
+  const HallOfFamePanel({super.key, required this.api, required this.rows});
+  final TosApi api;
+  final List<Map<String, dynamic>> rows;
+
+  @override
+  State<HallOfFamePanel> createState() => _HallOfFamePanelState();
+}
+
+class _HallOfFamePanelState extends State<HallOfFamePanel> {
+  String? selected;
+
+  String competitionKey(Map<String, dynamic> row) =>
+      '${row['sezione'] ?? 'calcio'}::${row['competizione'] ?? ''}';
+
+  num number(Map<String, dynamic> row, String field) =>
+      num.tryParse('${row[field] ?? ''}') ?? 0;
+
+  Map<String, dynamic> latestTournament() => widget.rows.reduce((latest, row) {
+    final time = number(
+      row,
+      'latest_sort_time',
+    ).compareTo(number(latest, 'latest_sort_time'));
+    return time > 0 ||
+            (time == 0 &&
+                number(row, 'latest_record_id') >
+                    number(latest, 'latest_record_id'))
+        ? row
+        : latest;
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.rows.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(20),
+        child: Text('Nessun risultato disponibile.'),
+      );
+    }
+    final competitions = <String, String>{
+      for (final row in widget.rows)
+        competitionKey(row): '${row['competizione'] ?? 'Torneo'}',
+    };
+    final options = competitions.entries.toList()
+      ..sort((a, b) => a.value.toLowerCase().compareTo(b.value.toLowerCase()));
+    final value = competitions.containsKey(selected)
+        ? selected!
+        : competitionKey(latestTournament());
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: DropdownButtonFormField<String>(
+            key: ValueKey(value),
+            initialValue: value,
+            isExpanded: true,
+            menuMaxHeight: 320,
+            borderRadius: BorderRadius.circular(16),
+            decoration: InputDecoration(
+              labelText: 'Scegli il torneo',
+              prefixIcon: const Icon(Icons.emoji_events_outlined),
+              filled: true,
+              fillColor: const Color(0xffe8edf5),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            items: [
+              for (final option in options)
+                DropdownMenuItem(
+                  value: option.key,
+                  child: Text(option.value, overflow: TextOverflow.ellipsis),
+                ),
+            ],
+            onChanged: (choice) => setState(() => selected = choice),
+          ),
+        ),
+        ...widget.rows
+            .where((row) => competitionKey(row) == value)
+            .map((row) => HallCard(api: widget.api, row: row)),
+      ],
+    );
+  }
 }
 
 class HallCard extends StatelessWidget {
