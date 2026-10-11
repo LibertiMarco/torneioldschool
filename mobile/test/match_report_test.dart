@@ -63,9 +63,17 @@ class FilteredReportApi extends TwoTeamReportApi {
       'goal': 0,
       'cartellino_giallo': 0,
       'cartellino_rosso': 0,
+      'is_captain': 0,
     };
     final rows = <Map<String, dynamic>>[
-      {...base, 'nome': 'Solo', 'cognome': 'Gol', 'goal': '2'},
+      {
+        ...base,
+        'nome': 'Solo',
+        'cognome': 'Gol',
+        'goal': '2',
+        'ruolo_squadra': 'POR',
+        'is_captain': '1',
+      },
       {
         ...base,
         'nome': 'Solo',
@@ -81,12 +89,21 @@ class FilteredReportApi extends TwoTeamReportApi {
         'cartellino_rosso': 1,
         'squadra': 'Altra squadra',
       },
-      {...base, 'nome': 'Senza', 'cognome': 'Eventi', 'voto': 7},
+      {
+        ...base,
+        'nome': 'Senza',
+        'cognome': 'Eventi',
+        'voto': 7,
+        'ruolo_squadra': '',
+        'ruolo': 'Portiere',
+      },
       {
         ...base,
         'nome': 'Solo',
         'cognome': 'Assist',
         'assist': 1,
+        'ruolo_squadra': 'Difensore',
+        'ruolo': 'Portiere',
         'squadra': 'Real Academy',
       },
     ];
@@ -130,6 +147,10 @@ void main() {
         true,
       );
       expect(find.text('Solo Gol'), findsOneWidget);
+      expect(find.text('GK'), findsOneWidget);
+      expect(find.text('C'), findsOneWidget);
+      expect(find.byTooltip('Portiere'), findsOneWidget);
+      expect(find.byTooltip('Capitano'), findsOneWidget);
       expect(find.text('Solo Giallo'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('Solo Rosso').hitTestable(),
@@ -151,6 +172,8 @@ void main() {
       );
       expect(find.text('Senza Eventi'), findsOneWidget);
       expect(find.text('Solo Assist'), findsOneWidget);
+      expect(find.text('GK'), findsNWidgets(2));
+      expect(find.text('C'), findsOneWidget);
       expect(api.eventRequests, 1);
       await tester.tap(find.text('Con eventi'));
       await tester.pumpAndSettle();
