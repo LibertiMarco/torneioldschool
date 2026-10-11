@@ -7,6 +7,7 @@ require_once __DIR__ . '/includi/fanta_old_school.php';
 $adminSection = $adminSection ?? content_current_section();
 $adminIsEsport = $adminSection === 'esport';
 $graphicsOnly = trim((string)($_SESSION['ruolo'] ?? '')) === 'grafico';
+$appEmbed = ($_GET['embed'] ?? '') === '1';
 $csrfKey = 'admin_fanta_old_school';
 $adminFlash = $_SESSION['fanta_old_school_admin_flash'] ?? null;
 unset($_SESSION['fanta_old_school_admin_flash']);
@@ -484,7 +485,10 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
     </style>
 </head>
 <body class="admin-page">
-    <?php include __DIR__ . '/includi/header.php'; ?>
+    <?php if (!$appEmbed) include __DIR__ . '/includi/header.php'; ?>
+    <?php if ($appEmbed): ?>
+      <style>.admin-dashboard { padding-top: 20px; margin-top: 0; } .admin-title { font-size: 26px; } body.admin-page { padding-top: 0; }</style>
+    <?php endif; ?>
 
     <main class="admin-dashboard">
         <h1 class="admin-title"><?= $graphicsOnly ? 'Pannello Grafico' : ($adminIsEsport ? 'Pannello Amministratore ESPORT' : 'Pannello Amministratore SPORT') ?></h1>
@@ -890,9 +894,9 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
     </section>
     <?php endif; ?>
 
-    <a class="logout-btn" href="index.php">Esci dal pannello</a>
+    <?php if (!$appEmbed): ?><a class="logout-btn" href="index.php">Esci dal pannello</a><?php endif; ?>
     </main>
-    <div id="footer-container"></div>
+    <?php if (!$appEmbed): ?><div id="footer-container"></div><?php endif; ?>
     <script src="/includi/app.min.js?v=20251220"></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
@@ -993,7 +997,7 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
           });
         });
 
-        fetch("/includi/footer.html")
+        if (document.getElementById('footer-container')) fetch("/includi/footer.html")
           .then(r => r.text())
           .then(html => {
             const footer = document.getElementById("footer-container");

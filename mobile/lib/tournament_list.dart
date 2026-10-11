@@ -27,61 +27,74 @@ class TournamentCard extends StatelessWidget {
     final state = '${tournament['stato'] ?? ''}'.trim().toLowerCase();
     final category = '${tournament['categoria'] ?? ''}'.trim();
     final period = tournamentPeriod(tournament);
-    final (status, statusColor, statusBackground) = switch (state) {
-      'in corso' => (
-        'In corso',
-        const Color(0xff16734b),
-        const Color(0xffe9f6ee),
-      ),
-      'programmato' => ('In programma', siteBlue, const Color(0xffeaf0f7)),
-      'terminato' => (
-        'Terminato',
-        const Color(0xff667585),
-        const Color(0xfff0f2f5),
-      ),
-      _ => ('${tournament['stato'] ?? ''}', siteBlue, const Color(0xffeaf0f7)),
+    final status = switch (state) {
+      'in corso' => 'In corso',
+      'programmato' => 'In programma',
+      'terminato' => 'Terminato',
+      _ => '${tournament['stato'] ?? ''}',
     };
     final logo = Container(
-      width: 76,
-      height: 76,
-      padding: const EdgeInsets.all(10),
+      width: 88,
+      height: 88,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xfff1f5fa), Color(0xffe5edf6)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xffe3eaf3)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
       ),
       child: SiteImage(
         api: api,
         path: '${tournament['img'] ?? ''}',
-        width: 56,
-        height: 56,
+        width: 64,
+        height: 64,
         fallback: Icons.emoji_events_outlined,
         preserveShape: true,
       ),
     );
-    final description = Column(
+    final metadata = Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${tournament['nome'] ?? ''}',
-          style: const TextStyle(
-            color: siteBlue,
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -.5,
-            height: 1.15,
+        if (status.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: Colors.white.withValues(alpha: .18)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: state == 'in corso'
+                        ? const Color(0xff75e2b7)
+                        : Colors.white70,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 7),
+                Flexible(
+                  child: Text(
+                    status,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
         if (category.isNotEmpty) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             category,
             style: const TextStyle(
-              color: Color(0xff667585),
+              color: Color(0xffd5e3ef),
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -90,130 +103,102 @@ class TournamentCard extends StatelessWidget {
       ],
     );
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 18),
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x0915293e),
-              blurRadius: 20,
+              color: Color(0x1415293e),
+              blurRadius: 18,
               offset: Offset(0, 6),
             ),
           ],
         ),
         child: Material(
           color: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-            side: const BorderSide(color: Color(0xffe5eaf1)),
-          ),
+          borderRadius: BorderRadius.circular(24),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 18,
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: siteRed,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      if (status.isNotEmpty)
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: statusBackground,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 5,
-                                    height: 5,
-                                    decoration: BoxDecoration(
-                                      color: statusColor,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: Text(
-                                      status,
-                                      style: TextStyle(
-                                        color: statusColor,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Ink(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xff102237), Color(0xff315977)],
+                    ),
                   ),
-                  const SizedBox(height: 18),
-                  LayoutBuilder(
+                  padding: const EdgeInsets.all(20),
+                  child: LayoutBuilder(
                     builder: (context, constraints) {
-                      if (constraints.maxWidth < 230 ||
-                          MediaQuery.textScalerOf(context).scale(14) > 21) {
+                      if (MediaQuery.textScalerOf(context).scale(14) > 21 ||
+                          constraints.maxWidth < 225) {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             logo,
                             const SizedBox(height: 16),
-                            description,
+                            metadata,
                           ],
                         );
                       }
                       return Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           logo,
-                          const SizedBox(width: 16),
-                          Expanded(child: description),
+                          const SizedBox(width: 20),
+                          Expanded(child: metadata),
                         ],
                       );
                     },
                   ),
-                  const SizedBox(height: 20),
-                  const Divider(height: 1, color: Color(0xffedf0f5)),
-                  const SizedBox(height: 14),
-                  Row(
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      Text(
+                        '${tournament['nome'] ?? ''}',
+                        style: const TextStyle(
+                          color: siteBlue,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -.6,
+                          height: 1.12,
+                        ),
+                      ),
+                      if (period.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Row(
                           children: [
-                            if (period.isNotEmpty) ...[
-                              Text(
+                            const Icon(
+                              Icons.calendar_today_outlined,
+                              size: 13,
+                              color: Color(0xff778496),
+                            ),
+                            const SizedBox(width: 7),
+                            Expanded(
+                              child: Text(
                                 period,
                                 style: const TextStyle(
                                   color: Color(0xff778496),
-                                  fontSize: 11,
+                                  fontSize: 12,
                                 ),
                               ),
-                              const SizedBox(height: 5),
-                            ],
-                            const Text(
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
                               'Esplora il torneo',
                               style: TextStyle(
                                 color: siteBlue,
@@ -221,27 +206,27 @@ class TournamentCard extends StatelessWidget {
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: siteBlue,
-                          borderRadius: BorderRadius.circular(13),
-                        ),
-                        child: const Icon(
-                          Icons.north_east_rounded,
-                          color: Colors.white,
-                          size: 19,
-                        ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: const Color(0xffeef3f8),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 19,
+                              color: siteBlue,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

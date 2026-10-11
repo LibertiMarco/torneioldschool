@@ -11,7 +11,7 @@ try {
         throw new MobileAuthError('invalid_session', 'Accedi con il tuo account del sito.', 401);
     }
     $db = mobile_db();
-    $user = preview_admin($db, $_SESSION);
+    $user = preview_user($db, $_SESSION);
     $action = $_GET['action'] ?? '';
     $method = $_SERVER['REQUEST_METHOD'] ?? '';
     $body = null;
@@ -54,6 +54,7 @@ try {
         mobile_json(['tournaments' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
     }
     if ($action === 'users') {
+        preview_admin($db, $_SESSION);
         $page = filter_var($_GET['page'] ?? '1', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100000]]);
         if ($page === false) { throw new MobileAuthError('invalid_request', 'Pagina non valida.', 400); }
         $stmt = $db->prepare('SELECT id, email, nome, cognome, ruolo, avatar, feature_flags FROM utenti ORDER BY id DESC LIMIT 51 OFFSET ?');

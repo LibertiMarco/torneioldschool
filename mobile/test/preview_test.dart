@@ -69,6 +69,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Gestione'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Gestione account'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Luca Demo'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(SwitchListTile, 'Totocalcio'));
