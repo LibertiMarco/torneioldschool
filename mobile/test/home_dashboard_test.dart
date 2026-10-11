@@ -98,8 +98,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.orders.last, 'presenze');
       expect(api.pageSizes.last, 10);
-      expect(find.text('Classifica Gol'), findsOneWidget);
-      expect(find.text('Classifica Presenze'), findsOneWidget);
+      expect(find.text('Marcatori'), findsOneWidget);
+      expect(find.text('Presenze'), findsOneWidget);
       expect(find.text('250 presenze · 120 gol'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.byTooltip('Pagina successiva'),
