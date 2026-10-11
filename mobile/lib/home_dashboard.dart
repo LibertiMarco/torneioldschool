@@ -432,16 +432,46 @@ class _HomeDashboardState extends State<HomeDashboard> {
               ),
             ),
           ),
-          const HomeSectionTitle(
-            title: 'Contattaci',
-            eyebrow: 'RESTIAMO IN CONTATTO',
-          ),
-          const SelectableText(
-            'Email: info@torneioldschool.it\nSponsorizzazioni: sponsor@torneioldschool.it\nWhatsApp: +39 338 321 3272\nNapoli e provincia',
-            style: TextStyle(
-              color: Color(0xff667585),
-              fontSize: 12,
-              height: 1.9,
+          const SizedBox(height: 28),
+          Material(
+            color: siteBlue,
+            borderRadius: BorderRadius.circular(20),
+            clipBehavior: Clip.antiAlias,
+            child: const Padding(
+              padding: EdgeInsets.all(22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'RESTIAMO IN CONTATTO',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      letterSpacing: 2,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Contattaci',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 27,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -.7,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  SelectableText(
+                    'Email: info@torneioldschool.it\nSponsorizzazioni: sponsor@torneioldschool.it\nWhatsApp: +39 338 321 3272\nNapoli e provincia',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      height: 1.9,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
