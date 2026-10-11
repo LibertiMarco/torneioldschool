@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/torneo_phase_rules.php';
 require_once __DIR__ . '/diffidati.php';
+require_once __DIR__ . '/player_awards.php';
 
 function mobile_player_stats_query(array $query): array {
     foreach ($query as $key => $value) {
@@ -70,7 +71,7 @@ function mobile_player_stats_handle(int $userId, array $query): array {
             $team = array_merge($team, $stats, ['diffidato' => count(diffidati_fetch($conn, $team['torneo'], $id, (int)$team['id'])) > 0]);
         }
         unset($team);
-        return ['player' => $player, 'teams' => $teams];
+        return ['player' => $player, 'teams' => $teams, 'awards' => player_awards_fetch_all($conn, $player, $teams, $section)];
     } finally {
         $conn->close();
     }

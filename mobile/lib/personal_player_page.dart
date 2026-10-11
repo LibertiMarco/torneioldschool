@@ -91,7 +91,7 @@ class _PersonalPlayerPageState extends State<PersonalPlayerPage> {
     context,
     PlayerHistoryPage(
       api: widget.auth.api,
-      player: player,
+      player: {...player, 'sezione': widget.section},
       initialType: type,
       loadMatches: (type, page) async {
         final result = await _load(type: type, page: page);
@@ -166,6 +166,7 @@ class _PersonalPlayerPageState extends State<PersonalPlayerPage> {
           api: widget.auth.api,
           player: player,
           teams: teams,
+          awards: TosApi.rows(data['awards']),
           section: widget.section,
           refresh: _refresh,
           history: (type) => _history(player, type),
