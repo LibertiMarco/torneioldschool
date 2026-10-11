@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'auth.dart';
+import 'staff_controls.dart';
 import 'staff_demo.dart';
 import 'staff_engine.dart';
 import 'staff_engine_native.dart'
@@ -226,19 +227,22 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
     final document = _document;
     final accepted = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Conferma operazione'),
-        content: Text('${message['message']}'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annulla'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Conferma'),
-          ),
-        ],
+      builder: (context) => StaffTheme(
+        child: AlertDialog(
+          title: const Text('Conferma operazione'),
+          content: Text('${message['message']}'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Annulla'),
+            ),
+            StaffActionButton(
+              onPressed: () => Navigator.pop(context, true),
+              label: 'Conferma',
+              icon: staffActionIcon('Conferma'),
+            ),
+          ],
+        ),
       ),
     );
     _confirming = false;
@@ -355,33 +359,22 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
         final label = '${block['label']}';
         final disabled = block['disabled'] == true || _actionBusy;
         final danger = block['danger'] == true;
-        final child = Text(label, textAlign: TextAlign.center);
         return Padding(
           key: key,
-          padding: const EdgeInsets.symmetric(vertical: 5),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: block['tab'] == true
-              ? ChoiceChip(
-                  label: child,
+              ? StaffFilter(
+                  label: label,
                   selected: block['selected'] == true,
                   onSelected: disabled ? null : (_) => _click(block),
                 )
-              : danger
-              ? OutlinedButton.icon(
+              : StaffActionButton(
+                  label: label,
+                  icon: danger
+                      ? Icons.delete_outline_rounded
+                      : staffActionIcon(label),
+                  danger: danger,
                   onPressed: disabled ? null : () => _click(block),
-                  icon: const Icon(Icons.delete_outline),
-                  label: child,
-                  style: OutlinedButton.styleFrom(foregroundColor: siteRed),
-                )
-              : FilledButton(
-                  onPressed: disabled ? null : () => _click(block),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, 48),
-                    backgroundColor: siteBlue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: child,
                 ),
         );
       case 'form':
@@ -499,14 +492,14 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                 if (block['export'] == true)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
-                    child: FilledButton.icon(
+                    child: StaffActionButton(
                       onPressed: () => _send({
                         'type': 'export',
                         'id': block['id'],
                         'name': '${block['label'] ?? 'grafica'}.png',
                       }),
-                      icon: const Icon(Icons.download_outlined),
-                      label: const Text('Salva grafica'),
+                      icon: Icons.download_outlined,
+                      label: 'Salva grafica',
                     ),
                   ),
               ],
@@ -519,164 +512,179 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
   }
 
   @override
-  Widget build(BuildContext context) => Localizations(
-    locale: const Locale('it'),
-    delegates: const [
-      FlutterQuillLocalizations.delegate,
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
-    child: Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: [
-          if (_allowed)
-            IconButton(
-              tooltip: 'Ricarica',
-              icon: const Icon(Icons.refresh),
-              onPressed: _loading ? null : _start,
-            ),
-        ],
-      ),
-      body: !_allowed
-          ? const Center(child: Text('Area riservata allo staff.'))
-          : Stack(
-              children: [
-                if (_engine != null)
-                  Positioned(
-                    left: -1400,
-                    top: 0,
-                    width: 1200,
-                    height: 1800,
-                    child: _engine!.host,
-                  ),
-                Positioned.fill(
-                  child: ColoredBox(
-                    color: siteBackground,
-                    child: _error != null
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.cloud_off_outlined,
-                                    size: 44,
-                                    color: siteBlue,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(_error!, textAlign: TextAlign.center),
-                                  const SizedBox(height: 18),
-                                  FilledButton.icon(
-                                    onPressed: _start,
-                                    icon: const Icon(Icons.refresh),
-                                    label: const Text('Riprova'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        : _blocks.isEmpty && _loading
-                        ? const Center(child: CircularProgressIndicator())
-                        : SingleChildScrollView(
-                            key: ValueKey('$_document:$_modal'),
-                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 32),
-                            child: Center(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 720,
-                                ),
+  Widget build(BuildContext context) => StaffTheme(
+    child: Localizations(
+      locale: const Locale('it'),
+      delegates: const [
+        FlutterQuillLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      child: Scaffold(
+        appBar: AppBar(
+          leading: Navigator.of(context).canPop()
+              ? const StaffBackButton()
+              : null,
+          title: Text(widget.title),
+          actions: [
+            if (_allowed)
+              IconButton(
+                tooltip: 'Ricarica',
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xff29445d),
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.refresh_rounded),
+                onPressed: _loading ? null : _start,
+              ),
+          ],
+        ),
+        body: !_allowed
+            ? const Center(child: Text('Area riservata allo staff.'))
+            : Stack(
+                children: [
+                  if (_engine != null)
+                    Positioned(
+                      left: -1400,
+                      top: 0,
+                      width: 1200,
+                      height: 1800,
+                      child: _engine!.host,
+                    ),
+                  Positioned.fill(
+                    child: ColoredBox(
+                      color: siteBackground,
+                      child: _error != null
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (!_modal)
-                                      Container(
-                                        margin: const EdgeInsets.only(
-                                          bottom: 8,
-                                        ),
-                                        padding: const EdgeInsets.all(18),
-                                        decoration: BoxDecoration(
-                                          gradient: const LinearGradient(
-                                            colors: [
-                                              siteBlue,
-                                              Color(0xff244b6d),
-                                            ],
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Icon(
-                                              widget.icon,
-                                              color: Colors.white,
-                                              size: 30,
-                                            ),
-                                            const SizedBox(width: 14),
-                                            Expanded(
-                                              child: Text(
-                                                widget.description,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  height: 1.4,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    if (!_modal && !widget.graphicsOnly)
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                        child: SegmentedButton<String>(
-                                          segments: const [
-                                            ButtonSegment(
-                                              value: 'calcio',
-                                              label: Text('Calcio'),
-                                              icon: Icon(Icons.sports_soccer),
-                                            ),
-                                            ButtonSegment(
-                                              value: 'esport',
-                                              label: Text('Esport'),
-                                              icon: Icon(
-                                                Icons.sports_esports_outlined,
-                                              ),
-                                            ),
-                                          ],
-                                          selected: {_section},
-                                          onSelectionChanged: _loading
-                                              ? null
-                                              : (selection) {
-                                                  _section = selection.first;
-                                                  _start();
-                                                },
-                                        ),
-                                      ),
-                                    _column(_blocks),
+                                    const Icon(
+                                      Icons.cloud_off_outlined,
+                                      size: 44,
+                                      color: siteBlue,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(_error!, textAlign: TextAlign.center),
+                                    const SizedBox(height: 18),
+                                    StaffActionButton(
+                                      onPressed: _start,
+                                      icon: Icons.refresh,
+                                      label: 'Riprova',
+                                    ),
                                   ],
                                 ),
                               ),
+                            )
+                          : _blocks.isEmpty && _loading
+                          ? const Center(child: CircularProgressIndicator())
+                          : SingleChildScrollView(
+                              key: ValueKey('$_document:$_modal'),
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                10,
+                                16,
+                                32,
+                              ),
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 720,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      if (!_modal)
+                                        Container(
+                                          margin: const EdgeInsets.only(
+                                            bottom: 8,
+                                          ),
+                                          padding: const EdgeInsets.all(18),
+                                          decoration: BoxDecoration(
+                                            gradient: const LinearGradient(
+                                              colors: [
+                                                siteBlue,
+                                                Color(0xff244b6d),
+                                              ],
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Icon(
+                                                widget.icon,
+                                                color: Colors.white,
+                                                size: 30,
+                                              ),
+                                              const SizedBox(width: 14),
+                                              Expanded(
+                                                child: Text(
+                                                  widget.description,
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    height: 1.4,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      if (!_modal && !widget.graphicsOnly)
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 12,
+                                          ),
+                                          child: SegmentedButton<String>(
+                                            showSelectedIcon: false,
+                                            segments: const [
+                                              ButtonSegment(
+                                                value: 'calcio',
+                                                label: Text('Calcio'),
+                                                icon: Icon(Icons.sports_soccer),
+                                              ),
+                                              ButtonSegment(
+                                                value: 'esport',
+                                                label: Text('Esport'),
+                                                icon: Icon(
+                                                  Icons.sports_esports_outlined,
+                                                ),
+                                              ),
+                                            ],
+                                            selected: {_section},
+                                            onSelectionChanged: _loading
+                                                ? null
+                                                : (selection) {
+                                                    _section = selection.first;
+                                                    _start();
+                                                  },
+                                          ),
+                                        ),
+                                      _column(_blocks),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                  ),
-                ),
-                if (_loading && _blocks.isNotEmpty)
-                  const Positioned.fill(
-                    child: ColoredBox(
-                      color: Color(0x99ffffff),
-                      child: Center(child: CircularProgressIndicator()),
                     ),
                   ),
-              ],
-            ),
+                  if (_loading && _blocks.isNotEmpty)
+                    const Positioned.fill(
+                      child: ColoredBox(
+                        color: Color(0x99ffffff),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    ),
+                ],
+              ),
+      ),
     ),
   );
 }
@@ -751,79 +759,83 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, refresh) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(context).bottom,
-          ),
-          child: SizedBox(
-            height: MediaQuery.sizeOf(context).height * .75,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    '${widget.field['label']}',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.search),
-                      hintText: 'Cerca…',
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (value) => refresh(() {
-                      search = value.toLowerCase();
-                    }),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: ListView(
-                    children: [
-                      for (final option in options.where(
-                        (o) => '${o['label']}'.toLowerCase().contains(search),
-                      ))
-                        multiple
-                            ? CheckboxListTile(
-                                title: Text('${option['label']}'),
-                                value: chosen.contains(option['value']),
-                                onChanged: option['disabled'] == true
-                                    ? null
-                                    : (value) => refresh(() {
-                                        value == true
-                                            ? chosen.add('${option['value']}')
-                                            : chosen.remove(
-                                                '${option['value']}',
-                                              );
-                                      }),
-                              )
-                            : ListTile(
-                                title: Text('${option['label']}'),
-                                selected: option['value'] == _value,
-                                trailing: option['value'] == _value
-                                    ? const Icon(Icons.check, color: siteRed)
-                                    : null,
-                                enabled: option['disabled'] != true,
-                                onTap: () => Navigator.pop(context, [
-                                  '${option['value']}',
-                                ]),
-                              ),
-                    ],
-                  ),
-                ),
-                if (multiple)
+      builder: (context) => StaffTheme(
+        child: StatefulBuilder(
+          builder: (context, refresh) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: SizedBox(
+              height: MediaQuery.sizeOf(context).height * .75,
+              child: Column(
+                children: [
                   Padding(
                     padding: const EdgeInsets.all(16),
-                    child: FilledButton(
-                      onPressed: () => Navigator.pop(context, chosen.toList()),
-                      child: const Text('Applica selezione'),
+                    child: Text(
+                      '${widget.field['label']}',
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextField(
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.search),
+                        hintText: 'Cerca…',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) => refresh(() {
+                        search = value.toLowerCase();
+                      }),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        for (final option in options.where(
+                          (o) => '${o['label']}'.toLowerCase().contains(search),
+                        ))
+                          multiple
+                              ? CheckboxListTile(
+                                  title: Text('${option['label']}'),
+                                  value: chosen.contains(option['value']),
+                                  onChanged: option['disabled'] == true
+                                      ? null
+                                      : (value) => refresh(() {
+                                          value == true
+                                              ? chosen.add('${option['value']}')
+                                              : chosen.remove(
+                                                  '${option['value']}',
+                                                );
+                                        }),
+                                )
+                              : ListTile(
+                                  title: Text('${option['label']}'),
+                                  selected: option['value'] == _value,
+                                  trailing: option['value'] == _value
+                                      ? const Icon(Icons.check, color: siteRed)
+                                      : null,
+                                  enabled: option['disabled'] != true,
+                                  onTap: () => Navigator.pop(context, [
+                                    '${option['value']}',
+                                  ]),
+                                ),
+                      ],
+                    ),
+                  ),
+                  if (multiple)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: StaffActionButton(
+                        onPressed: () =>
+                            Navigator.pop(context, chosen.toList()),
+                        label: 'Applica selezione',
+                        icon: staffActionIcon('Applica selezione'),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
