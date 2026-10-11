@@ -53,6 +53,41 @@ Widget tournament(DemoApi api, {String slug = 'demo'}) => MaterialApp(
 );
 
 void main() {
+  testWidgets('Cup cautions show round and cup instead of matchday at 320 px', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: siteTheme(),
+        home: Scaffold(
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: const [
+              TournamentCautionedPlayers(
+                players: [
+                  {
+                    'nome': 'Mario',
+                    'cognome': 'Rossi',
+                    'squadra': 'Squadra Gold',
+                    'giornate': [2, 2],
+                    'ammonizioni': ['SEMIFINALE GOLD', 'QUARTI SILVER'],
+                  },
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('SEMIFINALE GOLD'), findsOneWidget);
+    expect(find.text('QUARTI SILVER'), findsOneWidget);
+    expect(find.text('Giornata 2'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'Diffidati loads the tournament and shows caution days at 320 px',
     (tester) async {
