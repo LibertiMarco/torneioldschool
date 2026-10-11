@@ -3,6 +3,7 @@ import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' show parseFragment;
 
 import 'api.dart';
+import 'player_history.dart';
 import 'details.dart' show DataPage;
 import 'main.dart' show ErrorPanel, TournamentPage;
 import 'theme.dart' show siteBlue;
@@ -381,47 +382,51 @@ class PlayerRankingCard extends StatelessWidget {
       ),
       onTap: () => openPage(
         context,
-        Scaffold(
-          appBar: AppBar(
-            title: Text('${row['nome'] ?? ''} ${row['cognome'] ?? ''}'.trim()),
-          ),
-          body: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              Text(
-                esport
-                    ? 'Statistiche EA FC totali'
-                    : 'Statistiche totali Old School',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              ...(esport
-                      ? {
-                          'punti': 'Punti totali',
-                          'tornei_giocati': 'Tornei giocati',
-                          'punti_partecipazione': 'Partecipazione',
-                          'punti_gironi': 'Gironi',
-                          'bonus_gironi': 'Bonus gironi',
-                          'punti_gold': 'Coppa Gold',
-                          'punti_silver': 'Coppa Silver',
-                          'best_result': 'Miglior risultato',
-                        }
-                      : {
-                          'gol': 'Gol totali',
-                          'presenze': 'Presenze totali',
-                          'media_voti': 'Media voti',
-                          'ruolo': 'Ruolo',
-                        })
-                  .entries
-                  .map(
-                    (e) => ListTile(
-                      title: Text(e.value),
-                      trailing: Text('${row[e.key] ?? '–'}'),
-                    ),
+        !esport
+            ? PlayerHistoryPage(api: api, player: row, initialType: order)
+            : Scaffold(
+                appBar: AppBar(
+                  title: Text(
+                    '${row['nome'] ?? ''} ${row['cognome'] ?? ''}'.trim(),
                   ),
-            ],
-          ),
-        ),
+                ),
+                body: ListView(
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    Text(
+                      esport
+                          ? 'Statistiche EA FC totali'
+                          : 'Statistiche totali Old School',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 16),
+                    ...(esport
+                            ? {
+                                'punti': 'Punti totali',
+                                'tornei_giocati': 'Tornei giocati',
+                                'punti_partecipazione': 'Partecipazione',
+                                'punti_gironi': 'Gironi',
+                                'bonus_gironi': 'Bonus gironi',
+                                'punti_gold': 'Coppa Gold',
+                                'punti_silver': 'Coppa Silver',
+                                'best_result': 'Miglior risultato',
+                              }
+                            : {
+                                'gol': 'Gol totali',
+                                'presenze': 'Presenze totali',
+                                'media_voti': 'Media voti',
+                                'ruolo': 'Ruolo',
+                              })
+                        .entries
+                        .map(
+                          (e) => ListTile(
+                            title: Text(e.value),
+                            trailing: Text('${row[e.key] ?? '–'}'),
+                          ),
+                        ),
+                  ],
+                ),
+              ),
       ),
     ),
   );

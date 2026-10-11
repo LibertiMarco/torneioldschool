@@ -149,6 +149,21 @@ class TosApi {
       },
     ) as Map,
   );
+  Future<Map<String, dynamic>> playerMatches(
+    String id, {
+    String type = 'gol',
+    int page = 1,
+  }) async => Map<String, dynamic>.from(
+    await request(
+      'api/giocatore_partite.php',
+      query: {
+        'giocatore_id': id,
+        'tipo': type,
+        'page': '$page',
+        'limit': '100',
+      },
+    ) as Map,
+  );
   Future<Map<String, dynamic>> esportRanking({int limit = 5}) async =>
       Map<String, dynamic>.from(
         await request('api/esport_ranking.php', query: {'limit': '$limit'})
