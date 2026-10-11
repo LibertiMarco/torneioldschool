@@ -55,3 +55,5 @@ Marcatori/Presenze: selettore condiviso tra Home, classifica completa e storico,
 Schede della classifica generale: gol e presenze compaiono una sola volta, con ⚽️ e 📋. La statistica selezionata viene prima ed è in evidenza; il numero ripetuto a destra è rimosso. Ruolo e media voto restano separati. Verificati i test Home/storico e il layout a 320 px.
 
 Le emoji della classifica sono immagini PNG Twemoji incluse negli asset locali (pallone e appunti), per evitare simboli mancanti con CanvasKit/Safari o font emoji non disponibili. I numeri restano singoli e le etichette per gli screen reader descrivono gol/presenze. Licenza e attribuzione sono distribuite insieme agli asset.
+
+Eventi giocatore: scheda, referto e storico mostrano un pallone per ogni gol, un cartellino giallo se ammonito e rosso se espulso. Gli assist/autogol e le etichette numeriche non compaiono nei riepiloghi eventi; nella scheda restano presenze e media voto solo se maggiori di zero. I simboli sono immagini locali o forme colorate, con etichette accessibili. Verificati test referto/storico/preview, incluso schermo a 320 px.

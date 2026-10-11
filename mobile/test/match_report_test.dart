@@ -28,6 +28,8 @@ class TwoTeamReportApi extends DemoApi {
           'nome': 'Marco',
           'cognome': 'Ospite',
           'squadra': 'Real Academy',
+          'cartellino_giallo': 1,
+          'cartellino_rosso': 1,
         },
       ];
     }
@@ -64,9 +66,27 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.descendant(of: away, matching: find.text('2 gol')),
+      find.descendant(
+        of: away,
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is Image &&
+              w.image is AssetImage &&
+              (w.image as AssetImage).assetName == 'assets/emoji/football.png',
+        ),
+      ),
+      findsNWidgets(2),
+    );
+    expect(
+      find.descendant(of: away, matching: find.byTooltip('Ammonito')),
       findsOneWidget,
     );
+    expect(
+      find.descendant(of: away, matching: find.byTooltip('Espulso')),
+      findsOneWidget,
+    );
+    expect(find.text('0 assist'), findsNothing);
+    expect(find.text('0 gol'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

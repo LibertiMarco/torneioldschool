@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'player_event_marks.dart';
 import 'ranking_mode_selector.dart';
 import 'details.dart' show MatchPage;
 import 'home_dashboard.dart' show SiteImage, openPage;
@@ -240,15 +241,7 @@ class PlayerHistoryMatchCard extends StatelessWidget {
                   team('ospite'),
                 ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                type == 'gol'
-                    ? 'Gol segnati: ${match['goal'] ?? 0}'
-                    : 'Presenza registrata',
-              ),
-              if (type == 'gol' &&
-                  (int.tryParse('${match['assist']}') ?? 0) > 0)
-                Text('Assist: ${match['assist']}'),
+              PlayerEventMarks(stats: match),
               if (type == 'presenze' && match['voto'] != null)
                 Text('Voto: ${match['voto']}'),
             ],
