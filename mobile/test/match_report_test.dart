@@ -122,7 +122,83 @@ class FilteredReportApi extends TwoTeamReportApi {
   }
 }
 
+class GoalkeeperOrderApi extends FilteredReportApi {
+  @override
+  Future<dynamic> request(
+    String path, {
+    Map<String, String>? query,
+    String? accessToken,
+    List<ApiUpload>? uploads,
+    Map<String, dynamic>? body,
+  }) async {
+    final result = await super.request(
+      path,
+      query: query,
+      accessToken: accessToken,
+      uploads: uploads,
+      body: body,
+    );
+    if (path != 'api/get_eventi_partita.php') return result;
+    return [
+      for (final row in result as List<Map<String, dynamic>>)
+        {
+          ...row,
+          if (row['cognome'] == 'Gol') 'ruolo_squadra': 'Attaccante',
+          if (row['cognome'] == 'Assist') 'ruolo_squadra': 'GK',
+        },
+    ];
+  }
+}
+
 void main() {
+  testWidgets(
+    'All puts each team goalkeeper first and preserves the remaining order',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 1100));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final api = GoalkeeperOrderApi();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MatchPage(api: api, id: '1'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Tutti').hitTestable(), 200);
+      await tester.pumpAndSettle();
+      expect(find.text('Senza Eventi'), findsNothing);
+      expect(find.text('Solo Assist'), findsNothing);
+      await tester.tap(find.text('Tutti'));
+      await tester.pumpAndSettle();
+      final home = find.byKey(const ValueKey('match-report-CASA'));
+      final away = find.byKey(const ValueKey('match-report-OSPITE'));
+      for (final pair in [
+        (home, 'Senza Eventi', 'Solo Gol'),
+        (away, 'Solo Assist', 'Solo Giallo'),
+      ]) {
+        final goalkeeper = find.descendant(
+          of: pair.$1,
+          matching: find.text(pair.$2),
+        );
+        final outfield = find.descendant(
+          of: pair.$1,
+          matching: find.text(pair.$3),
+        );
+        expect(goalkeeper, findsOneWidget);
+        expect(outfield, findsOneWidget);
+        expect(
+          tester.getTopLeft(goalkeeper).dy,
+          lessThan(tester.getTopLeft(outfield).dy),
+        );
+      }
+      expect(api.eventRequests, 1);
+      await tester.tap(find.text('Con eventi'));
+      await tester.pumpAndSettle();
+      expect(find.text('Senza Eventi'), findsNothing);
+      expect(find.text('Solo Assist'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'Match report defaults to goals and cards; All includes the other players without reloading',
     (tester) async {

@@ -259,6 +259,14 @@ class _MatchPageState extends State<MatchPage> {
             )
             .add(event);
       }
+      if (showAllPlayers) {
+        for (final entry in groups.entries) {
+          groups[entry.key] = [
+            ...entry.value.where(isGoalkeeper),
+            ...entry.value.where((player) => !isGoalkeeper(player)),
+          ];
+        }
+      }
       Widget playerCard(Map<String, dynamic> event) => Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(12),
