@@ -11,6 +11,245 @@ const tournamentStates = {
   'terminato': 'Tornei terminati',
 };
 
+class TournamentCard extends StatelessWidget {
+  const TournamentCard({
+    super.key,
+    required this.api,
+    required this.tournament,
+    required this.onTap,
+  });
+  final TosApi api;
+  final Map<String, dynamic> tournament;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = '${tournament['stato'] ?? ''}'.trim().toLowerCase();
+    final category = '${tournament['categoria'] ?? ''}'.trim();
+    final period = tournamentPeriod(tournament);
+    final (status, statusColor, statusBackground) = switch (state) {
+      'in corso' => (
+        'In corso',
+        const Color(0xff16734b),
+        const Color(0xffe9f6ee),
+      ),
+      'programmato' => ('In programma', siteBlue, const Color(0xffeaf0f7)),
+      'terminato' => (
+        'Terminato',
+        const Color(0xff667585),
+        const Color(0xfff0f2f5),
+      ),
+      _ => ('${tournament['stato'] ?? ''}', siteBlue, const Color(0xffeaf0f7)),
+    };
+    final logo = Container(
+      width: 76,
+      height: 76,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xfff1f5fa), Color(0xffe5edf6)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xffe3eaf3)),
+      ),
+      child: SiteImage(
+        api: api,
+        path: '${tournament['img'] ?? ''}',
+        width: 56,
+        height: 56,
+        fallback: Icons.emoji_events_outlined,
+        preserveShape: true,
+      ),
+    );
+    final description = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${tournament['nome'] ?? ''}',
+          style: const TextStyle(
+            color: siteBlue,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -.5,
+            height: 1.15,
+          ),
+        ),
+        if (category.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            category,
+            style: const TextStyle(
+              color: Color(0xff667585),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ],
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0915293e),
+              blurRadius: 20,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: const BorderSide(color: Color(0xffe5eaf1)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 18,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: siteRed,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      if (status.isNotEmpty)
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusBackground,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 5,
+                                    height: 5,
+                                    decoration: BoxDecoration(
+                                      color: statusColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      status,
+                                      style: TextStyle(
+                                        color: statusColor,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      if (constraints.maxWidth < 230 ||
+                          MediaQuery.textScalerOf(context).scale(14) > 21) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            logo,
+                            const SizedBox(height: 16),
+                            description,
+                          ],
+                        );
+                      }
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          logo,
+                          const SizedBox(width: 16),
+                          Expanded(child: description),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  const Divider(height: 1, color: Color(0xffedf0f5)),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (period.isNotEmpty) ...[
+                              Text(
+                                period,
+                                style: const TextStyle(
+                                  color: Color(0xff778496),
+                                  fontSize: 11,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                            ],
+                            const Text(
+                              'Esplora il torneo',
+                              style: TextStyle(
+                                color: siteBlue,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: siteBlue,
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: const Icon(
+                          Icons.north_east_rounded,
+                          color: Colors.white,
+                          size: 19,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 String normalizedSearch(String value) {
   var result = value.trim().toLowerCase();
   const accents = {
@@ -378,36 +617,14 @@ class _TournamentListState extends State<TournamentList> {
                   ...filtered
                       .take(limit)
                       .map(
-                        (row) => Card(
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(12),
-                            leading: SiteImage(
-                              api: widget.api,
-                              path: '${row['img'] ?? ''}',
-                              width: 52,
-                              height: 52,
-                              fallback: Icons.emoji_events_outlined,
-                              preserveShape: true,
-                            ),
-                            title: Text(
-                              '${row['nome']}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Text(
-                              [
-                                '${row['categoria'] ?? ''}',
-                                tournamentPeriod(row),
-                              ].where((s) => s.isNotEmpty).join(' · '),
-                            ),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => TournamentPage(
-                                  api: widget.api,
-                                  tournament: row,
-                                ),
+                        (row) => TournamentCard(
+                          api: widget.api,
+                          tournament: row,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => TournamentPage(
+                                api: widget.api,
+                                tournament: row,
                               ),
                             ),
                           ),
