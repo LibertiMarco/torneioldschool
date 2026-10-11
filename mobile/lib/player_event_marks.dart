@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+bool hasPlayerEvents(Map<String, dynamic> stats) => [
+  'goal',
+  'cartellino_giallo',
+  'cartellino_rosso',
+].any((key) => (int.tryParse('${stats[key] ?? 0}') ?? 0) > 0);
+
 class PlayerEventMarks extends StatelessWidget {
   const PlayerEventMarks({super.key, required this.stats});
   final Map<String, dynamic> stats;
@@ -10,7 +16,7 @@ class PlayerEventMarks extends StatelessWidget {
     final goals = count('goal');
     final yellow = count('cartellino_giallo') > 0;
     final red = count('cartellino_rosso') > 0;
-    if (goals <= 0 && !yellow && !red) return const SizedBox.shrink();
+    if (!hasPlayerEvents(stats)) return const SizedBox.shrink();
     Widget card(Color color, String label) => Semantics(
       label: label,
       child: Tooltip(
