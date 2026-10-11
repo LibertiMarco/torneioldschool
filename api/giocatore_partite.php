@@ -25,6 +25,11 @@ $tipo = strtolower(trim($_GET['tipo'] ?? 'gol'));
 $tipo = in_array($tipo, ['gol', 'presenze'], true) ? $tipo : 'gol';
 $limit = (int)($_GET['limit'] ?? 200);
 $limit = $limit > 0 ? min($limit, 500) : 200;
+// Paging is opt-in: preserve the existing website response when page is absent.
+$paged = isset($_GET['page']);
+$page = max(1, min(100000, (int)($_GET['page'] ?? 1)));
+$offset = ($page - 1) * $limit;
+$fetchLimit = $paged ? $limit + 1 : $limit;
 
 if ($giocatoreId <= 0) {
     http_response_code(400);
@@ -292,11 +297,11 @@ $sqlMatches = "
       AND COALESCE(t.sezione, 'calcio') = ?
       AND {$whereStat}
     ORDER BY p.data_partita DESC, p.ora_partita DESC, pg.partita_id DESC
-    LIMIT ?
+    LIMIT ? OFFSET ?
 ";
 
-$paramsMatches = array_merge([$giocatoreId], $paramsExcluded, [$siteSection, $limit]);
-$typesMatches = 'i' . $typesExcluded . 'si';
+$paramsMatches = array_merge([$giocatoreId], $paramsExcluded, [$siteSection, $fetchLimit, $offset]);
+$typesMatches = 'i' . $typesExcluded . 'sii';
 
 $stmt = $conn->prepare($sqlMatches);
 if (!$stmt) {
@@ -341,7 +346,13 @@ if ($resMatches) {
 }
 $stmt->close();
 
+$hasMore = $paged && count($matches) > $limit;
+if ($hasMore) {
+    $matches = array_slice($matches, 0, $limit);
+}
+
 echo json_encode([
+    'pagination' => ['page' => $page, 'per_page' => $limit, 'has_more' => $hasMore],
     'player' => $player,
     'teams' => $teams,
     'matches' => $matches,
