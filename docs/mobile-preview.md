@@ -53,3 +53,5 @@ Aggiornamenti browser: l’ingresso PHP aggiunge una versione derivata dai file 
 Marcatori/Presenze: selettore condiviso tra Home, classifica completa e storico, con pulsanti arrotondati di almeno 64 px, icone, contrasto blu/bianco e accento rosso sulla selezione. Con testo ingrandito i pulsanti passano a una colonna. Verificati 9 test di classifica/storico, analisi Flutter, build web e mantenimento della versione degli asset per la cache.
 
 Schede della classifica generale: gol e presenze compaiono una sola volta, con ⚽️ e 📋. La statistica selezionata viene prima ed è in evidenza; il numero ripetuto a destra è rimosso. Ruolo e media voto restano separati. Verificati i test Home/storico e il layout a 320 px.
+
+Le emoji della classifica sono immagini PNG Twemoji incluse negli asset locali (pallone e appunti), per evitare simboli mancanti con CanvasKit/Safari o font emoji non disponibili. I numeri restano singoli e le etichette per gli screen reader descrivono gol/presenze. Licenza e attribuzione sono distribuite insieme agli asset.

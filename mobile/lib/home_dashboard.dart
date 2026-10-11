@@ -381,15 +381,29 @@ class PlayerRankingCard extends StatelessWidget {
                         label:
                             '${row[stat] ?? 0} ${stat == 'gol' ? 'gol' : 'presenze'}',
                         excludeSemantics: true,
-                        child: Text(
-                          '${stat == 'gol' ? '⚽️' : '📋'} ${row[stat] ?? 0}',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: stat == order
-                                ? FontWeight.w800
-                                : FontWeight.w500,
-                            color: siteBlue,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              stat == 'gol'
+                                  ? 'assets/emoji/football.png'
+                                  : 'assets/emoji/clipboard.png',
+                              width: 22,
+                              height: 22,
+                              excludeFromSemantics: true,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${row[stat] ?? 0}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: stat == order
+                                    ? FontWeight.w800
+                                    : FontWeight.w500,
+                                color: siteBlue,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                   ],

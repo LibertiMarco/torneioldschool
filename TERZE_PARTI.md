@@ -12,3 +12,5 @@ Il generatore Full Time/MVP usa MODNet per lo scontorno delle persone. Il modell
 La prima rimozione scarica il modello (circa 26 MB) e il runtime WebAssembly. Il worker viene chiuso dopo 90 secondi di inattività; il modello può essere conservato nella cache HTTP del browser.
 
 Import Giocatori usa [Tesseract.js 5.1.1](https://github.com/naptha/tesseract.js) (Apache-2.0), caricato da jsDelivr, con le lingue italiana e inglese. Il motore WebAssembly e i dati delle lingue vengono scaricati al primo utilizzo. Il riconoscimento avviene nel browser: al sito viene inviato solo il testo da controllare, senza caricare la foto nel database o inviarla a un servizio OCR.
+
+La classifica dell’app usa le immagini Twemoji ⚽ e 📋 di Twitter, Inc. e contributori, distribuite con licenza CC BY 4.0. Fonte: https://github.com/jdecked/twemoji (assets/72x72/26bd.png e 1f4cb.png). Immagini originali non modificate; licenza e attribuzione incluse in mobile/assets/emoji e negli asset della preview.
