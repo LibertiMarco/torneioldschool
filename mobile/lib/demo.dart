@@ -1,5 +1,6 @@
 import 'api.dart';
 import 'auth.dart';
+import 'about_demo.dart';
 
 // Preview data never uses the live service or credentials.
 class DemoApi extends TosApi {
@@ -196,6 +197,8 @@ class DemoApi extends TosApi {
           ],
           'meta': {'can_view_full': true, 'has_more': false},
         };
+      case 'api/about.php':
+        return aboutDemo;
       case 'api/diffidati.php':
         return [
           {

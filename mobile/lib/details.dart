@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'external_link_button.dart';
 import 'player_event_marks.dart';
 export 'team_page.dart';
 import 'theme.dart';
@@ -51,7 +52,9 @@ class _DataPageState extends State<DataPage> {
                   ),
                   const SizedBox(height: 16),
                   FilledButton(
-                    onPressed: () => setState(() => data = widget.load()),
+                    onPressed: () => setState(() {
+                      data = widget.load();
+                    }),
                     child: const Text('Riprova'),
                   ),
                 ],
@@ -477,6 +480,7 @@ class MatchPage extends StatelessWidget {
               ],
             ),
           ),
+          MatchLinks(match: match),
           const Padding(
             padding: EdgeInsets.only(top: 28, bottom: 8),
             child: Text(
@@ -540,4 +544,39 @@ class MatchPage extends StatelessWidget {
       );
     },
   );
+}
+
+class MatchLinks extends StatelessWidget {
+  const MatchLinks({super.key, required this.match});
+  final Map<String, dynamic> match;
+
+  @override
+  Widget build(BuildContext context) {
+    final youtube = externalLinkUri(match['link_youtube']);
+    final instagram = externalLinkUri(match['link_instagram']);
+    if (youtube == null && instagram == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          if (youtube != null)
+            ExternalLinkButton(
+              uri: youtube,
+              label: 'Guarda su YouTube',
+              icon: Icons.play_circle_outline,
+              color: const Color(0xffd80000),
+            ),
+          if (instagram != null)
+            ExternalLinkButton(
+              uri: instagram,
+              label: 'Guarda su Instagram',
+              icon: Icons.camera_alt_outlined,
+              color: const Color(0xffb52b74),
+            ),
+        ],
+      ),
+    );
+  }
 }

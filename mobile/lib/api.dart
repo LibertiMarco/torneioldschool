@@ -185,6 +185,8 @@ class TosApi {
         await request('api/blog.php', query: {'azione': 'articolo', 'id': id})
             as Map,
       );
+  Future<Map<String, dynamic>> about() async =>
+      Map<String, dynamic>.from(await request('api/about.php') as Map);
   Future<List<Map<String, dynamic>>> hallOfFame(String section) async => rows(
     (await request('api/albo_doro.php', query: {'sezione': section}))['data'],
   );
