@@ -40,11 +40,13 @@ function mobile_player_stats_handle(int $userId, array $query): array {
             $filter = $type === 'gol' ? 'pg.goal > 0' : 'pg.presenza = 1';
             $offset = ($page - 1) * 100;
             $stmt = $conn->prepare("SELECT p.id AS partita_id, p.torneo, p.squadra_casa, p.squadra_ospite, p.gol_casa, p.gol_ospite, p.data_partita, p.ora_partita, p.giornata, p.fase, p.fase_round, p.fase_leg, p.giocata, p.decisa_rigori, p.rigori_casa, p.rigori_ospite, pg.goal, pg.assist, pg.cartellino_giallo, pg.cartellino_rosso, pg.voto,
-                COALESCE(t.nome, p.torneo) AS torneo_nome
+                COALESCE(t.nome, p.torneo) AS torneo_nome, sc.logo AS logo_casa, so.logo AS logo_ospite
                 FROM partita_giocatore pg JOIN partite p ON p.id = pg.partita_id
                 JOIN squadre s ON s.id = {$resolved}
                 JOIN squadre_giocatori sg ON sg.squadra_id = s.id AND sg.giocatore_id = pg.giocatore_id
                 LEFT JOIN tornei t ON (t.filetorneo = p.torneo OR t.filetorneo = CONCAT(p.torneo, '.php') OR t.nome = p.torneo)
+                LEFT JOIN squadre sc ON sc.nome = p.squadra_casa AND sc.torneo = p.torneo
+                LEFT JOIN squadre so ON so.nome = p.squadra_ospite AND so.torneo = p.torneo
                 WHERE pg.giocatore_id = ? AND COALESCE(t.sezione, 'calcio') = ? AND {$filter}
                 ORDER BY p.data_partita DESC, p.ora_partita DESC, p.id DESC, pg.id DESC LIMIT 101 OFFSET ?");
             $stmt->bind_param('isi', $id, $section, $offset);
