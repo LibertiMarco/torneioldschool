@@ -13,10 +13,13 @@ class PlayerHistoryPage extends StatefulWidget {
     required this.api,
     required this.player,
     this.initialType = 'gol',
+    this.loadMatches,
   });
   final TosApi api;
   final Map<String, dynamic> player;
   final String initialType;
+  final Future<Map<String, dynamic>> Function(String type, int page)?
+  loadMatches;
   @override
   State<PlayerHistoryPage> createState() => _PlayerHistoryPageState();
 }
@@ -51,11 +54,13 @@ class _PlayerHistoryPageState extends State<PlayerHistoryPage> {
       error = null;
     });
     try {
-      final result = await widget.api.playerMatches(
-        '${widget.player['id']}',
-        type: type,
-        page: page + 1,
-      );
+      final result = widget.loadMatches != null
+          ? await widget.loadMatches!(type, page + 1)
+          : await widget.api.playerMatches(
+              '${widget.player['id']}',
+              type: type,
+              page: page + 1,
+            );
       if (!mounted || requestGeneration != generation) return;
       setState(() {
         player = Map<String, dynamic>.from(result['player'] as Map);

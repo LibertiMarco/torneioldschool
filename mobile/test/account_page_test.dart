@@ -48,6 +48,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Marco Demo'), findsOneWidget);
       await tester.enterText(find.byType(TextFormField).at(0), 'Nuovo');
+      await tester.scrollUntilVisible(
+        find.text('Newsletter'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       final newsletter = find.byType(SwitchListTile).first;
       await tester.ensureVisible(newsletter);
       await tester.pumpAndSettle();

@@ -158,6 +158,40 @@ class DemoApi extends TosApi {
               ? ''
               : 'Impostazioni aggiornate con successo.',
         };
+      case 'api/mobile/v1/player_stats.php':
+        final player = {...players.first};
+        if (query?['type'] != null) {
+          return {
+            'player': {
+              ...player,
+              'totali': {'gol': player['reti'], 'presenze': player['presenze']},
+            },
+            'matches': [
+              {
+                ...games.first,
+                'partita_id': games.first['id'],
+                'goal': player['reti'],
+                'voto': player['media_voti'],
+              },
+            ],
+            'pagination': {'page': 1, 'has_more': false},
+          };
+        }
+        return {
+          'player': player,
+          'teams': [
+            {
+              ...teams.first,
+              'torneo': 'demo',
+              'torneo_nome': 'Old School Cup',
+              'reti': 4,
+              'presenze': 3,
+              'gialli': 1,
+              'media_voti': 7.5,
+              'diffidato': true,
+            },
+          ],
+        };
       case 'api/mobile/v1/tournaments.php':
         final esport = query?['section'] == 'esport';
         return {
