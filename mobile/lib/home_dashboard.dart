@@ -9,7 +9,8 @@ import 'player_history.dart';
 import 'ranking_mode_selector.dart';
 import 'details.dart' show DataPage;
 import 'main.dart' show ErrorPanel, TournamentPage;
-import 'theme.dart' show siteBlue;
+import 'theme.dart' show siteBlue, siteRed;
+import 'home_design.dart';
 
 class SiteImage extends StatelessWidget {
   const SiteImage({
@@ -119,56 +120,178 @@ class HomeDashboard extends StatefulWidget {
 class _HomeDashboardState extends State<HomeDashboard> {
   String order = 'gol';
   int reload = 0;
+
+  void _ranking(Map<String, dynamic> row, bool esport) {
+    if (!esport) {
+      openPage(
+        context,
+        PlayerHistoryPage(api: widget.api, player: row, initialType: order),
+      );
+      return;
+    }
+    openPage(
+      context,
+      Scaffold(
+        appBar: AppBar(
+          title: Text('${row['nome'] ?? ''} ${row['cognome'] ?? ''}'.trim()),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            const Text(
+              'Statistiche EA FC totali',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+            ),
+            for (final entry in {
+              'punti': 'Punti totali',
+              'tornei_giocati': 'Tornei giocati',
+              'punti_partecipazione': 'Partecipazione',
+              'punti_gironi': 'Gironi',
+              'bonus_gironi': 'Bonus gironi',
+              'punti_gold': 'Coppa Gold',
+              'punti_silver': 'Coppa Silver',
+              'best_result': 'Miglior risultato',
+            }.entries)
+              ListTile(
+                title: Text(entry.value),
+                trailing: Text('${row[entry.key] ?? '–'}'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _link(String label, VoidCallback action) => Padding(
+    padding: const EdgeInsets.only(top: 8),
+    child: TextButton(
+      onPressed: action,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Icon(Icons.arrow_forward, size: 18),
+        ],
+      ),
+    ),
+  );
+
+  Widget _rankingSelector() => LayoutBuilder(
+    builder: (context, constraints) {
+      Widget option(String mode, String label) => Expanded(
+        child: TextButton(
+          onPressed: () => setState(() => order = mode),
+          style: TextButton.styleFrom(
+            backgroundColor: order == mode ? siteBlue : Colors.transparent,
+            foregroundColor: order == mode ? Colors.white : siteBlue,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+          ),
+        ),
+      );
+      return Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xffe8edf2),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            option('gol', 'Marcatori'),
+            option('presenze', 'Presenze'),
+          ],
+        ),
+      );
+    },
+  );
+
   @override
   Widget build(BuildContext context) {
     final api = widget.api;
     final esport = widget.section == 'esport';
-    Widget heading(String text) => Padding(
-      padding: const EdgeInsets.fromLTRB(0, 24, 0, 12),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.titleLarge
-            ?.copyWith(fontWeight: FontWeight.bold, color: siteBlue),
-      ),
-    );
     return RefreshIndicator(
-      onRefresh: () async => setState(() => reload++),
+      onRefresh: () async {
+        setState(() => reload++);
+      },
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          heading(esport ? 'Ranking EA FC' : 'Classifica giocatori totale'),
-          if (!esport)
-            RankingModeSelector(
-              value: order,
-              onChanged: (value) => setState(() => order = value),
+          const SizedBox(height: 12),
+          const Text(
+            'LA COMMUNITY IN CAMPO',
+            style: TextStyle(
+              color: siteRed,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 2,
             ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            esport ? 'Ranking EA FC' : 'Classifica giocatori totale',
+            style: const TextStyle(
+              color: siteBlue,
+              fontSize: 30,
+              fontWeight: FontWeight.w900,
+              height: 1.08,
+              letterSpacing: -1,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'I protagonisti di Old School',
+            style: TextStyle(color: Color(0xff667585), fontSize: 12),
+          ),
+          const SizedBox(height: 20),
+          if (!esport) ...[_rankingSelector(), const SizedBox(height: 14)],
           HomeBlock(
-            key: ValueKey('ranking-$reload-$order'),
+            key: ValueKey('ranking-${widget.section}-$reload-$order'),
             load: () =>
                 esport ? api.esportRanking() : api.playerRanking(order: order),
             render: (value) {
               final result = Map<String, dynamic>.from(value as Map);
               final rows = TosApi.rows(result['data']);
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (rows.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Text('Nessun giocatore disponibile.'),
-                    ),
-                  ...rows.map(
-                    (row) => PlayerRankingCard(
-                      api: api,
-                      row: row,
-                      esport: esport,
-                      order: order,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: Column(
+                      children: [
+                        if (rows.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Text('Nessun giocatore disponibile.'),
+                          ),
+                        for (final row in rows)
+                          HomeRankingEntry(
+                            api: api,
+                            row: row,
+                            esport: esport,
+                            order: order,
+                            open: () => _ranking(row, esport),
+                          ),
+                      ],
                     ),
                   ),
                   if (!esport ||
                       (result['meta'] as Map?)?['can_view_full'] == true)
-                    TextButton(
-                      onPressed: () => openPage(
+                    _link(
+                      'Classifica completa',
+                      () => openPage(
                         context,
                         GlobalRankingPage(
                           api: api,
@@ -176,7 +299,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
                           initialOrder: order,
                         ),
                       ),
-                      child: const Text('Classifica completa'),
                     ),
                   if (esport &&
                       (result['meta'] as Map?)?['has_more'] == true &&
@@ -189,103 +311,137 @@ class _HomeDashboardState extends State<HomeDashboard> {
               );
             },
           ),
-          heading('Ultime notizie'),
+          const HomeSectionTitle(
+            title: 'Ultime notizie',
+            eyebrow: 'DENTRO OLD SCHOOL',
+          ),
           HomeBlock(
-            key: ValueKey('news-$reload'),
+            key: ValueKey('news-${widget.section}-$reload'),
             load: () => api.news(widget.section),
             render: (value) {
               final rows = TosApi.rows(value);
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (rows.isEmpty) const Text('Nessuna notizia disponibile.'),
-                  ...rows.take(4).map((row) => NewsCard(api: api, row: row)),
-                  TextButton(
-                    onPressed: () => openPage(
+                  for (var i = 0; i < rows.length && i < 4; i++)
+                    NewsCard(api: api, row: rows[i], featured: i == 0),
+                  _link(
+                    'Tutte le notizie',
+                    () => openPage(
                       context,
                       DataPage(
                         title: 'Notizie',
                         load: () => api.news(widget.section, all: true),
                         render: (data) => ListView(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(20),
                           children: TosApi.rows(data)
                               .map((r) => NewsCard(api: api, row: r))
                               .toList(),
                         ),
                       ),
                     ),
-                    child: const Text('Tutte le notizie'),
                   ),
                 ],
               );
             },
           ),
-          heading("Albo d’oro"),
+          const HomeSectionTitle(
+            title: 'Albo d’oro',
+            eyebrow: 'CHI HA LASCIATO IL SEGNO',
+          ),
           HomeBlock(
-            key: ValueKey('hall-$reload'),
+            key: ValueKey('hall-${widget.section}-$reload'),
             load: () => api.hallOfFame(widget.section),
-            render: (value) {
-              final rows = TosApi.rows(value);
-              return Column(
-                children: [
-                  HallOfFamePanel(api: api, rows: rows),
-                  TextButton(
-                    onPressed: () => openPage(
-                      context,
-                      DataPage(
-                        title: "Albo d’oro",
-                        load: () => api.hallOfFame(widget.section),
-                        render: (data) => ListView(
-                          padding: const EdgeInsets.all(16),
-                          children: [
-                            HallOfFamePanel(api: api, rows: TosApi.rows(data)),
-                          ],
-                        ),
+            render: (value) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                HallOfFamePanel(api: api, rows: TosApi.rows(value)),
+                _link(
+                  'Albo d’oro completo',
+                  () => openPage(
+                    context,
+                    DataPage(
+                      title: 'Albo d’oro',
+                      load: () => api.hallOfFame(widget.section),
+                      render: (data) => ListView(
+                        padding: const EdgeInsets.all(20),
+                        children: [
+                          HallOfFamePanel(api: api, rows: TosApi.rows(data)),
+                        ],
                       ),
                     ),
-                    child: const Text("Albo d’oro completo"),
                   ),
-                ],
-              );
-            },
+                ),
+              ],
+            ),
           ),
-          heading('Chi siamo'),
-          Card(
+          const SizedBox(height: 28),
+          Material(
+            color: siteBlue,
+            borderRadius: BorderRadius.circular(20),
+            clipBehavior: Clip.antiAlias,
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(22),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Lo facciamo per passione, per condividere divertimento e amicizia con chiunque voglia partecipare.',
-                    style: TextStyle(fontSize: 16, height: 1.6),
+                    'PIÙ DI UN TORNEO',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      letterSpacing: 2,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Chi siamo',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 27,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -.7,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Calcio, amicizia e passione. La community Old School, a Napoli e provincia.',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextButton(
                     onPressed: () => openPage(context, AboutPage(api: api)),
-                    icon: const Icon(Icons.groups_outlined),
-                    label: const Text('Scopri chi siamo'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: const Row(
+                      children: [
+                        Expanded(child: Text('Scopri chi siamo')),
+                        Icon(Icons.north_east, size: 18),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          heading('Contattaci'),
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Siamo sempre disponibili per domande, iscrizioni o collaborazioni.',
-                  ),
-                  SizedBox(height: 16),
-                  SelectableText(
-                    'Email: info@torneioldschool.it\nSponsorizzazioni: sponsor@torneioldschool.it\nWhatsApp: +39 338 321 3272\nNapoli e provincia',
-                    style: TextStyle(height: 1.8),
-                  ),
-                ],
-              ),
+          const HomeSectionTitle(
+            title: 'Contattaci',
+            eyebrow: 'RESTIAMO IN CONTATTO',
+          ),
+          const SelectableText(
+            'Email: info@torneioldschool.it\nSponsorizzazioni: sponsor@torneioldschool.it\nWhatsApp: +39 338 321 3272\nNapoli e provincia',
+            style: TextStyle(
+              color: Color(0xff667585),
+              fontSize: 12,
+              height: 1.9,
             ),
           ),
         ],
@@ -686,9 +842,10 @@ class _HallOfFamePanelState extends State<HallOfFamePanel> {
               labelText: 'Scegli il torneo',
               prefixIcon: const Icon(Icons.emoji_events_outlined),
               filled: true,
-              fillColor: const Color(0xffe8edf5),
+              fillColor: Colors.white,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
               ),
             ),
             items: [
@@ -714,7 +871,12 @@ class HallCard extends StatelessWidget {
   final TosApi api;
   final Map<String, dynamic> row;
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+    ),
     child: Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -770,71 +932,64 @@ class HallCard extends StatelessWidget {
 }
 
 class NewsCard extends StatelessWidget {
-  const NewsCard({super.key, required this.api, required this.row});
+  const NewsCard({
+    super.key,
+    required this.api,
+    required this.row,
+    this.featured = false,
+  });
   final TosApi api;
   final Map<String, dynamic> row;
+  final bool featured;
   @override
-  Widget build(BuildContext context) => Card(
-    child: ListTile(
-      contentPadding: const EdgeInsets.all(12),
-      leading: SiteImage(
-        api: api,
-        path: '${row['cover'] ?? row['immagine'] ?? ''}',
-        width: 64,
-        height: 64,
-      ),
-      title: Text(
-        '${row['titolo'] ?? ''}',
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      subtitle: Text('${row['data'] ?? ''}'),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () => openPage(
-        context,
-        DataPage(
-          title: 'Notizia',
-          load: () => api.article('${row['id']}'),
-          render: (value) {
-            final article = Map<String, dynamic>.from(value as Map);
-            return ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                Text(
-                  '${article['titolo'] ?? ''}',
-                  style: Theme.of(context).textTheme.headlineSmall,
+  Widget build(BuildContext context) => HomeNewsTile(
+    api: api,
+    row: row,
+    featured: featured,
+    open: () => openPage(
+      context,
+      DataPage(
+        title: 'Notizia',
+        load: () => api.article('${row['id']}'),
+        render: (value) {
+          final article = Map<String, dynamic>.from(value as Map);
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Text(
+                '${article['titolo'] ?? ''}',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text('${article['data'] ?? ''}'),
+              const SizedBox(height: 16),
+              if ('${article['cover'] ?? ''}'.isNotEmpty)
+                SiteImage(
+                  api: api,
+                  path: '${article['cover']}',
+                  width: double.infinity,
+                  height: 200,
                 ),
-                const SizedBox(height: 8),
-                Text('${article['data'] ?? ''}'),
-                const SizedBox(height: 16),
-                if ('${article['cover'] ?? ''}'.isNotEmpty)
-                  SiteImage(
-                    api: api,
-                    path: '${article['cover']}',
-                    width: double.infinity,
-                    height: 200,
-                  ),
-                const SizedBox(height: 16),
-                ArticleContent(content: '${article['contenuto'] ?? ''}'),
-                ...TosApi.rows(article['media'])
-                    .where(
-                      (m) =>
-                          m['tipo'] == 'image' && m['url'] != article['cover'],
-                    )
-                    .map(
-                      (m) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: SiteImage(
-                          api: api,
-                          path: '${m['url']}',
-                          width: double.infinity,
-                          height: 220,
-                        ),
+              const SizedBox(height: 16),
+              ArticleContent(content: '${article['contenuto'] ?? ''}'),
+              ...TosApi.rows(article['media'])
+                  .where(
+                    (m) => m['tipo'] == 'image' && m['url'] != article['cover'],
+                  )
+                  .map(
+                    (m) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: SiteImage(
+                        api: api,
+                        path: '${m['url']}',
+                        width: double.infinity,
+                        height: 220,
                       ),
                     ),
-              ],
-            );
-          },
-        ),
+                  ),
+            ],
+          );
+        },
       ),
     ),
   );

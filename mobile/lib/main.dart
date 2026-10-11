@@ -115,11 +115,25 @@ class _HomePageState extends State<HomePage> {
     final selectedPage = page == 4 && !hasStaffAccess ? 3 : page;
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: selectedPage == 0 ? siteBackground : siteBlue,
+        foregroundColor: selectedPage == 0 ? siteBlue : Colors.white,
+        elevation: 0,
         title: Row(
           children: [
             Image.asset('assets/logo_old_school.png', width: 34, height: 34),
             const SizedBox(width: 12),
-            const Flexible(child: Text('Tornei Old School')),
+            Flexible(
+              child: selectedPage == 0
+                  ? const Text(
+                      'OLD SCHOOL',
+                      style: TextStyle(
+                        fontSize: 16,
+                        letterSpacing: 2,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    )
+                  : const Text('Tornei Old School'),
+            ),
           ],
         ),
       ),
@@ -129,6 +143,27 @@ class _HomePageState extends State<HomePage> {
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: SegmentedButton<String>(
+                    showSelectedIcon: selectedPage != 0,
+                    style: selectedPage == 0
+                        ? ButtonStyle(
+                            side: const WidgetStatePropertyAll(BorderSide.none),
+                            shape: WidgetStatePropertyAll(
+                              RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            backgroundColor: WidgetStateProperty.resolveWith(
+                              (states) => states.contains(WidgetState.selected)
+                                  ? siteBlue
+                                  : Colors.white,
+                            ),
+                            foregroundColor: WidgetStateProperty.resolveWith(
+                              (states) => states.contains(WidgetState.selected)
+                                  ? Colors.white
+                                  : siteBlue,
+                            ),
+                          )
+                        : null,
                     segments: const [
                       ButtonSegment(
                         value: 'calcio',
