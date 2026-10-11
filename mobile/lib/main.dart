@@ -8,6 +8,7 @@ import 'personal_player_page.dart';
 
 import 'demo.dart';
 import 'theme.dart';
+import 'section_selector.dart';
 import 'tournament_list.dart';
 import 'home_dashboard.dart';
 import 'browser_runtime_stub.dart'
@@ -147,43 +148,9 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: SegmentedButton<String>(
-                    showSelectedIcon: selectedPage != 0,
-                    style: selectedPage == 0
-                        ? ButtonStyle(
-                            side: const WidgetStatePropertyAll(BorderSide.none),
-                            shape: WidgetStatePropertyAll(
-                              RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            backgroundColor: WidgetStateProperty.resolveWith(
-                              (states) => states.contains(WidgetState.selected)
-                                  ? siteBlue
-                                  : Colors.white,
-                            ),
-                            foregroundColor: WidgetStateProperty.resolveWith(
-                              (states) => states.contains(WidgetState.selected)
-                                  ? Colors.white
-                                  : siteBlue,
-                            ),
-                          )
-                        : null,
-                    segments: const [
-                      ButtonSegment(
-                        value: 'calcio',
-                        label: Text('Calcio'),
-                        icon: Icon(Icons.sports_soccer),
-                      ),
-                      ButtonSegment(
-                        value: 'esport',
-                        label: Text('Esport'),
-                        icon: Icon(Icons.sports_esports),
-                      ),
-                    ],
-                    selected: {section},
-                    onSelectionChanged: (value) =>
-                        setState(() => section = value.first),
+                  child: SectionSelector(
+                    section: section,
+                    onChanged: (value) => setState(() => section = value),
                   ),
                 ),
                 Expanded(
