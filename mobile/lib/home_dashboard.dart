@@ -88,7 +88,9 @@ class _HomeBlockState extends State<HomeBlock> {
       if (snapshot.hasError) {
         return ErrorPanel(
           error: snapshot.error!,
-          retry: () => setState(() => data = widget.load()),
+          retry: () => setState(() {
+            data = widget.load();
+          }),
         );
       }
       return widget.render(snapshot.data);

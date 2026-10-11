@@ -34,10 +34,25 @@ function mobile_tournament_layout(string $slug): array
         $silverSingle = max(0, ($constants['TEAM_COUNT'] ?? 18) - $goldSingle);
     }
     $rules = '';
+    $configOverrides = [];
     // Legacy pages store their rules as static HTML instead of config.regole_html.
     $page = __DIR__ . '/../tornei/' . $slug . '.php';
-    if (is_file($page) && class_exists('DOMDocument')) {
-        $html = preg_replace('/<\?php[\s\S]*?\?>|<\?=[\s\S]*?\?>/', '', (string)file_get_contents($page));
+    $pageSource = is_file($page) ? (string)file_get_contents($page) : '';
+    // Fixed tournament formulas can override stale DB values in the public page.
+    // Read only literal numeric assignments, never execute the page's PHP.
+    preg_match_all(
+        '/\$torneoConfig\[[\'"](?<field>totale_squadre|campionato_squadre|qualificati_gold|qualificati_silver|qualificati_bronzo)[\'"]\]\s*=\s*(?<value>\d+)\s*;/',
+        $pageSource,
+        $overrides,
+        PREG_SET_ORDER
+    );
+    foreach ($overrides as $override) {
+        $configOverrides[$override['field']] = (int)$override['value'];
+    }
+    // Partial formulas with computed fields cannot be reconstructed this way.
+    if (!isset($configOverrides['totale_squadre'])) { $configOverrides = []; }
+    if ($pageSource !== '' && class_exists('DOMDocument')) {
+        $html = preg_replace('/<\?php[\s\S]*?\?>|<\?=[\s\S]*?\?>/', '', $pageSource);
         $doc = new DOMDocument();
         $previous = libxml_use_internal_errors(true);
         $doc->loadHTML('<?xml encoding="UTF-8">' . $html);
@@ -50,6 +65,7 @@ function mobile_tournament_layout(string $slug): array
         libxml_use_internal_errors($previous);
     }
     return [
+        'config_overrides' => $configOverrides,
         'group_mode' => $modern ? 'template' : 'legacy',
         'default_team_count' => $constants['DEFAULT_TEAM_COUNT'] ?? $constants['TEAM_COUNT'] ?? 18,
         'default_gold' => $constants['DEFAULT_GOLD'] ?? 16,

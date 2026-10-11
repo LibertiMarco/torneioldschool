@@ -11,6 +11,10 @@ $weekend = mobile_tournament_layout('WeekendLeague2');
 layout_expect($weekend['legacy_gold'] === 6 && $weekend['legacy_silver'] === 4, 'Weekend qualifications');
 $mc = mobile_tournament_layout('McLeague');
 layout_expect($mc['default_team_count'] === 7 && $mc['default_gold'] === 4 && $mc['eliminated_color'], 'McLeague defaults');
+$brasil = mobile_tournament_layout('Brasilerao');
+layout_expect($brasil['config_overrides'] === ['totale_squadre' => 22, 'qualificati_gold' => 16, 'qualificati_silver' => 6], 'Brasilerao public page overrides');
+layout_expect($mc['config_overrides']['totale_squadre'] === 7 && $mc['config_overrides']['qualificati_silver'] === 2, 'McLeague fixed formula overrides');
+layout_expect($champions['config_overrides'] === [], 'Legacy page without overrides remains unchanged');
 $formula = mobile_tournament_layout('Formula1');
 layout_expect($formula['spareggio'] && $formula['spareggio_default'] === 16, 'Formula 1 play-in');
 foreach (['../env_loader','/tmp/test','Torneo.php'] as $invalid) {

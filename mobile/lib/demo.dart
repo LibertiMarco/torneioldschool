@@ -196,6 +196,16 @@ class DemoApi extends TosApi {
           ],
           'meta': {'can_view_full': true, 'has_more': false},
         };
+      case 'api/diffidati.php':
+        return [
+          {
+            'giocatore_id': 10,
+            'nome': 'Luca',
+            'cognome': 'Rossi',
+            'squadra': 'Old School FC',
+            'giornate': [2, 3],
+          },
+        ];
       case 'api/albo_doro.php':
         return {
           'data': [
