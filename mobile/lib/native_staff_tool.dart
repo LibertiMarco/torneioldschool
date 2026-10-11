@@ -16,6 +16,7 @@ import 'staff_engine_native.dart'
 import 'staff_rich_editor.dart';
 import 'staff_match_forms.dart';
 import 'theme.dart';
+import 'section_selector.dart';
 
 class NativeStaffTool extends StatefulWidget {
   const NativeStaffTool({
@@ -706,27 +707,12 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                                           padding: const EdgeInsets.symmetric(
                                             vertical: 12,
                                           ),
-                                          child: SegmentedButton<String>(
-                                            showSelectedIcon: false,
-                                            segments: const [
-                                              ButtonSegment(
-                                                value: 'calcio',
-                                                label: Text('Calcio'),
-                                                icon: Icon(Icons.sports_soccer),
-                                              ),
-                                              ButtonSegment(
-                                                value: 'esport',
-                                                label: Text('Esport'),
-                                                icon: Icon(
-                                                  Icons.sports_esports_outlined,
-                                                ),
-                                              ),
-                                            ],
-                                            selected: {_section},
-                                            onSelectionChanged: _loading
+                                          child: SectionSelector(
+                                            section: _section,
+                                            onChanged: _loading
                                                 ? null
                                                 : (selection) {
-                                                    _section = selection.first;
+                                                    _section = selection;
                                                     _start();
                                                   },
                                           ),
