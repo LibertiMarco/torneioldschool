@@ -6,6 +6,7 @@ import 'home_dashboard.dart' show SiteImage, HomeBlock, openPage;
 import 'tournament_rules.dart';
 import 'main.dart' show ErrorPanel;
 import 'theme.dart';
+import 'ranking_surface.dart';
 import 'tournament_logic.dart';
 
 const cupColors = {
@@ -884,6 +885,24 @@ class _TournamentScorersState extends State<TournamentScorers> {
     return Column(
       children: [
         if (widget.players.isEmpty) const Text('Nessun dato marcatori.'),
+        if (widget.players.isNotEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: const BoxDecoration(
+              color: siteBlue,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: const Text(
+              'CLASSIFICA MARCATORI',
+              style: TextStyle(
+                color: Color(0xffa6e9ee),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
         ...widget.players
             .skip(page * perPage)
             .take(perPage)
@@ -892,7 +911,8 @@ class _TournamentScorersState extends State<TournamentScorers> {
             .entries
             .map((entry) {
               final player = entry.value;
-              return Card(
+              return RankingSurface(
+                index: page * perPage + entry.key,
                 child: ListTile(
                   leading: SizedBox(
                     width: 74,

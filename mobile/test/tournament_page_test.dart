@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/demo.dart';
+import 'package:tornei_old_school/details.dart';
+import 'package:tornei_old_school/ranking_surface.dart';
 import 'package:tornei_old_school/theme.dart';
 import 'package:tornei_old_school/tournament_page.dart';
 
@@ -85,6 +87,57 @@ class CupLegApi extends GroupedTournamentApi {
 }
 
 void main() {
+  testWidgets(
+    'Scorer table keeps tied positions, alternates rows and opens players after paging',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 1800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final players = List.generate(
+        16,
+        (i) => <String, dynamic>{
+          'id': 1,
+          'nome': 'Giocatore',
+          'cognome': '$i',
+          'gol': 8,
+          'squadra': 'Old School FC',
+        },
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: siteTheme(),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: TournamentScorers(api: DemoApi(), players: players),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('1'), findsNWidgets(15));
+      expect(find.text('GOL'), findsNWidgets(15));
+      final surfaces = tester
+          .widgetList<RankingSurface>(find.byType(RankingSurface))
+          .toList();
+      expect(surfaces.map((s) => s.index), List.generate(15, (i) => i));
+      expect(find.text('Giocatore 15'), findsNothing);
+      await tester.ensureVisible(find.byTooltip('Marcatori successivi'));
+      await tester.tap(find.byTooltip('Marcatori successivi'));
+      await tester.pumpAndSettle();
+      expect(find.text('Pagina 2 di 2'), findsOneWidget);
+      expect(find.text('Giocatore 15'), findsOneWidget);
+      expect(find.text('1'), findsOneWidget);
+      expect(
+        tester.widget<RankingSurface>(find.byType(RankingSurface)).index,
+        15,
+      );
+      await tester.ensureVisible(find.text('Giocatore 15'));
+      await tester.tap(find.text('Giocatore 15'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PlayerPage), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('Cup bracket and calendar separate semifinal legs and final', (
     tester,
   ) async {

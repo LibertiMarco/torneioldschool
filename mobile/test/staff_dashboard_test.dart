@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/api.dart';
 import 'package:tornei_old_school/admin.dart';
 import 'package:tornei_old_school/demo.dart';
+import 'package:tornei_old_school/external_link_button.dart';
 import 'package:tornei_old_school/main.dart';
 import 'package:tornei_old_school/staff_dashboard.dart';
 
@@ -58,6 +59,18 @@ void main() {
         expect(find.text('Gestione account'), findsNothing);
         expect(find.text('Dashboard amministratore'), findsNothing);
         expect(find.text('Apri dashboard'), findsNothing);
+        expect(find.text('Tornei'), findsOneWidget); // Only bottom navigation.
+        expect(find.text('Matchday'), findsOneWidget);
+        await tester.ensureVisible(find.text('Template'));
+        await tester.tap(find.text('Template'));
+        await tester.pumpAndSettle();
+        expect(find.byType(StaffToolPage), findsOneWidget);
+        final link = tester.widget<ExternalLinkButton>(
+          find.byType(ExternalLinkButton),
+        );
+        expect(link.uri.path, '/api/grafiche_post_partita.php');
+        expect(link.uri.queryParameters, {'templates': '1', 'embed': '1'});
+        expect(api.userRequests, 0);
       } else {
         expect(find.text('Dashboard amministratore'), findsOneWidget);
         await tester.ensureVisible(find.text('Gestione account'));
@@ -86,5 +99,48 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.userRequests, 0);
     expect(find.text('Account riservati agli amministratori.'), findsOneWidget);
+  });
+  testWidgets('Admin filters native tools and graphic tools reject non-staff', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = StaffApi();
+    final auth = DemoAuth(api)..user = api.users.first;
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: const TextScaler.linear(1.6)),
+          child: child!,
+        ),
+        home: Scaffold(body: StaffDashboard(auth: auth)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Grafiche').hitTestable(), 250);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Grafiche'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Matchday').hitTestable(), 250);
+    await tester.pumpAndSettle();
+    expect(find.text('Matchday'), findsOneWidget);
+    expect(find.text('Calendario e risultati'), findsNothing);
+    expect(find.text('Account giocatore'), findsNothing);
+    expect(api.userRequests, 0);
+    await tester.ensureVisible(find.text('Matchday'));
+    await tester.tap(find.text('Matchday'));
+    await tester.pumpAndSettle();
+    expect(find.byType(StaffToolPage), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    auth.user = api.users.last;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StaffToolPage(auth: auth, tool: graphicsTools.first),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Area riservata allo staff.'), findsOneWidget);
+    expect(find.byType(ExternalLinkButton), findsNothing);
   });
 }

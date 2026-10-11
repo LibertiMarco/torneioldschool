@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'home_dashboard.dart' show SiteImage;
 import 'theme.dart';
+import 'ranking_surface.dart';
 
 class HomeSectionTitle extends StatelessWidget {
   const HomeSectionTitle({
@@ -49,12 +50,14 @@ class HomeRankingEntry extends StatelessWidget {
     required this.order,
     required this.esport,
     required this.open,
+    this.index = 0,
   });
   final TosApi api;
   final Map<String, dynamic> row;
   final String order;
   final bool esport;
   final VoidCallback open;
+  final int index;
   @override
   Widget build(BuildContext context) {
     final first = '${row['posizione']}' == '1';
@@ -177,8 +180,8 @@ class HomeRankingEntry extends StatelessWidget {
           ),
       ],
     );
-    return Material(
-      color: Colors.white,
+    return RankingSurface(
+      index: index,
       child: InkWell(
         onTap: open,
         child: Container(
