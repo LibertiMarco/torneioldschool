@@ -4,12 +4,14 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'api.dart';
 import 'auth.dart';
-import 'home_dashboard.dart' show SiteImage;
+import 'home_dashboard.dart' show SiteImage, openPage;
+import 'personal_player_page.dart';
 import 'theme.dart';
 
 class AccountPage extends StatefulWidget {
-  const AccountPage({super.key, required this.auth});
+  const AccountPage({super.key, required this.auth, this.section = 'calcio'});
   final TosAuth auth;
+  final String section;
   @override
   State<AccountPage> createState() => _AccountPageState();
 }
@@ -354,6 +356,33 @@ class _AccountPageState extends State<AccountPage> {
               'JPG, PNG, GIF o WEBP · massimo 2MB',
               style: TextStyle(fontSize: 12, color: Color(0xff778496)),
             ),
+          ]),
+          _section('Le mie statistiche', Icons.sports_soccer_rounded, [
+            if (_player == null)
+              const Text(
+                'Non hai ancora un profilo giocatore collegato. Contatta un amministratore.',
+              )
+            else ...[
+              Text(
+                '${_player!['nome']} ${_player!['cognome']}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: () => openPage(
+                  context,
+                  PersonalPlayerPage(
+                    auth: widget.auth,
+                    section: widget.section,
+                  ),
+                ),
+                icon: const Icon(Icons.insights_outlined),
+                label: const Text('Apri le mie statistiche'),
+              ),
+            ],
           ]),
           if (_error != null || _message != null)
             Container(

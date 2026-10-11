@@ -137,38 +137,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          Card(
-            color: siteBlue,
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    esport ? 'Old School Esport' : 'Tornei calcetto Napoli',
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    esport
-                        ? 'Tornei, ranking EA FC e tutte le sfide della community.'
-                        : 'Tornei di calcio a 5, 6 e 8 a Napoli. Risultati, classifiche e statistiche Old School.',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(height: 20),
-                  FilledButton.icon(
-                    onPressed: widget.onTournaments,
-                    icon: const Icon(Icons.emoji_events_outlined),
-                    label: const Text('Scopri i tornei'),
-                  ),
-                ],
-              ),
-            ),
-          ),
           heading(esport ? 'Ranking EA FC' : 'Classifica giocatori totale'),
           if (!esport)
             RankingModeSelector(

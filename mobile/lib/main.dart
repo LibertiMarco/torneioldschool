@@ -164,7 +164,7 @@ class _HomePageState extends State<HomePage> {
           : selectedPage == 2
           ? auth.user == null
                 ? _account(auth)
-                : AccountPage(auth: auth)
+                : AccountPage(auth: auth, section: section)
           : auth.admin
           ? AdminUsersPage(auth: auth)
           : const Center(

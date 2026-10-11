@@ -4,6 +4,7 @@ require_once __DIR__ . '/../includi/security.php';
 require_once __DIR__ . '/../includi/mobile_account_features.php';
 require_once __DIR__ . '/../includi/app_preview.php';
 require_once __DIR__ . '/../includi/mobile_profile.php';
+require_once __DIR__ . '/../includi/mobile_player_stats.php';
 
 try {
     if (empty($_SESSION['user_id'])) {
@@ -39,6 +40,9 @@ try {
         mobile_json($service->save('', $body['id'], $body['feature_flags'], $body['revision']));
     }
     mobile_method('GET');
+    if ($action === 'player_stats') {
+        mobile_json(mobile_player_stats_handle((int)$user['id'], $_GET));
+    }
     if ($action === 'session') {
         mobile_json(['user' => $user, 'csrf' => csrf_get_token('app_preview')]);
     }
