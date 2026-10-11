@@ -4,6 +4,7 @@ import 'api.dart';
 import 'external_link_button.dart';
 import 'player_event_marks.dart';
 import 'player_role_badges.dart';
+import 'player_awards.dart';
 export 'team_page.dart';
 import 'theme.dart';
 import 'tournament_logic.dart' show phaseKey, matchTurn, roundLabel, matchLeg;
@@ -115,6 +116,14 @@ class PlayerPage extends StatelessWidget {
               title: Text(entry.key),
               trailing: Text('${player[entry.value]}'),
             ),
+        if (api != null) ...[
+          const SizedBox(height: 28),
+          PlayerAwardsSection(
+            api: api!,
+            playerId: '${player['id'] ?? player['giocatore_id'] ?? ''}',
+            section: '${player['sezione'] ?? 'calcio'}',
+          ),
+        ],
       ],
     ),
   );

@@ -27,6 +27,28 @@ class DemoApi extends TosApi {
       'permissions': {'admin': false, 'graphics': false},
     },
   ];
+  List<Map<String, dynamic>> get awards => [
+    {
+      'id': 1,
+      'tipo': 'Individuale',
+      'premio': 'Miglior attaccante',
+      'competizione': 'Campionato Demo',
+      'squadra': 'Old School FC',
+      'anno': '2026',
+      'logo': '',
+      'link': '/tornei/demo.php',
+    },
+    {
+      'id': 2,
+      'tipo': 'Squadra',
+      'premio': 'Coppa Gold',
+      'competizione': 'Campionato Demo',
+      'squadra': 'Old School FC',
+      'anno': '2026',
+      'logo': '',
+      'link': '/tornei/demo.php',
+    },
+  ];
   int revision = 1;
   List<Map<String, dynamic>> get teams => [
     {
@@ -158,6 +180,8 @@ class DemoApi extends TosApi {
               ? ''
               : 'Impostazioni aggiornate con successo.',
         };
+      case 'api/player_awards.php':
+        return {'awards': query?['section'] == 'esport' ? [] : awards};
       case 'api/mobile/v1/player_stats.php':
         final player = {...players.first};
         if (query?['type'] != null) {
@@ -179,6 +203,7 @@ class DemoApi extends TosApi {
         }
         return {
           'player': player,
+          'awards': query?['section'] == 'esport' ? [] : awards,
           'teams': [
             {
               ...teams.first,

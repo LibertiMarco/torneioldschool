@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'home_dashboard.dart' show SiteImage;
 import 'theme.dart';
+import 'player_awards.dart';
 
 class PlayerDashboard extends StatefulWidget {
   const PlayerDashboard({
@@ -14,10 +15,12 @@ class PlayerDashboard extends StatefulWidget {
     required this.refresh,
     required this.history,
     required this.openTeam,
+    this.awards = const [],
   });
   final TosApi api;
   final Map<String, dynamic> player;
   final List<Map<String, dynamic>> teams;
+  final List<Map<String, dynamic>> awards;
   final String section;
   final Future<void> Function() refresh;
   final void Function(String) history;
@@ -64,6 +67,8 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
         _discipline(),
         const SizedBox(height: 22),
         _history(),
+        const SizedBox(height: 28),
+        PlayerAwardsSection(api: widget.api, awards: widget.awards),
         if (widget.teams.isNotEmpty) ...[const SizedBox(height: 26), _chart()],
         const SizedBox(height: 28),
         _title('Le mie squadre', 'APPARTENENZA'),

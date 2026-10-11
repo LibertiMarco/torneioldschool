@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'player_event_marks.dart';
+import 'player_awards.dart';
 import 'ranking_mode_selector.dart';
 import 'details.dart' show MatchPage;
 import 'home_dashboard.dart' show SiteImage, openPage;
@@ -155,6 +156,12 @@ class _PlayerHistoryPageState extends State<PlayerHistoryPage> {
               onPressed: () => load(),
               child: const Text('Carica altre partite'),
             ),
+          const SizedBox(height: 28),
+          PlayerAwardsSection(
+            api: widget.api,
+            playerId: '${widget.player['id'] ?? ''}',
+            section: '${widget.player['sezione'] ?? 'calcio'}',
+          ),
         ],
       ),
     );

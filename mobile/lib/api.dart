@@ -151,6 +151,15 @@ class TosApi {
       },
     ) as Map,
   );
+  Future<List<Map<String, dynamic>>> playerAwards(
+    String id, {
+    String section = 'calcio',
+  }) async => rows(
+    (await request(
+      'api/player_awards.php',
+      query: {'id': id, 'section': section},
+    ) as Map)['awards'],
+  );
   Future<Map<String, dynamic>> playerMatches(
     String id, {
     String type = 'gol',
