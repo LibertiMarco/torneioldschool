@@ -525,16 +525,6 @@ class _AccountPageState extends State<AccountPage> {
               ),
             ],
           ),
-          _section('Fanta Old School', Icons.emoji_events_outlined, [
-            const Text(
-              'Accedi al referral personale e controlla gli inviti dalla tua area Fanta.',
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: () => _open('fantaoldschool'),
-              child: const Text('Apri Fanta Old School'),
-            ),
-          ]),
           _section('Gestione account', Icons.manage_accounts_outlined, [
             OutlinedButton.icon(
               onPressed: _saving ? null : widget.auth.logout,
