@@ -16,6 +16,51 @@ Map<String, dynamic> team(
   'gol_fatti': 5,
 };
 void main() {
+  test('Cup rounds normalize legacy days and separate both leg encodings', () {
+    final matches = [
+      {'fase': 'GOLD', 'giornata': 2, 'fase_leg': 'ANDATA', 'giocata': 1},
+      {'fase': 'GOLD', 'giornata': 2, 'fase_leg': 'RITORNO', 'giocata': 0},
+      {'fase': 'GOLD', 'giornata': 1, 'giocata': 0},
+    ];
+    expect(matchTurn(matches[0], 'GOLD'), 'SEMIFINALE|ANDATA');
+    expect(matchTurn(matches[1], 'GOLD'), 'SEMIFINALE|RITORNO');
+    expect(matchTurn(matches[2], 'GOLD'), 'FINALE');
+    expect(defaultCalendarRound(matches, 'GOLD'), 'SEMIFINALE|RITORNO');
+    expect(
+      roundLabel(matchTurn(matches[1], 'GOLD'), 'GOLD'),
+      'Semifinale · Ritorno',
+    );
+    expect(
+      matchTurn({
+        'giornata': 2,
+        'fase_round': ' quarti ',
+        'fase_leg': 1,
+      }, 'SILVER'),
+      'QUARTI|ANDATA',
+    );
+    expect(
+      matchTurn({
+        'giornata': 2,
+        'fase_round': 'QUARTI',
+        'fase_leg': '2',
+      }, 'SILVER'),
+      'QUARTI|RITORNO',
+    );
+    expect(matchTurn({'giornata': 2, 'fase_leg': 'ANDATA'}, 'REGULAR'), '2');
+    expect(roundLabel('2', 'REGULAR'), 'Giornata 2');
+    final turns = [
+      'FINALE',
+      'SEMIFINALE|RITORNO',
+      'QUARTI',
+      'SEMIFINALE|ANDATA',
+    ]..sort(roundOrder);
+    expect(turns, [
+      'QUARTI',
+      'SEMIFINALE|ANDATA',
+      'SEMIFINALE|RITORNO',
+      'FINALE',
+    ]);
+  });
   test(
     'Exactly two tied teams use direct encounters; three use goal difference',
     () {

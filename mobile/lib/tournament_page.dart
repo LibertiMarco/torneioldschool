@@ -416,7 +416,7 @@ class _TournamentPageState extends State<TournamentPage> {
     final rows = result.matches
         .where((m) => phaseKey(m['fase']) == phase)
         .toList();
-    final rounds = rows.map((r) => matchRound(r, phase)).toSet().toList()
+    final rounds = rows.map((r) => matchTurn(r, phase)).toSet().toList()
       ..sort(roundOrder);
     return [
       if (rows.isEmpty)
@@ -428,7 +428,7 @@ class _TournamentPageState extends State<TournamentPage> {
         (r) => [
           title(roundLabel(r, phase)),
           ...rows
-              .where((m) => matchRound(m, phase) == r)
+              .where((m) => matchTurn(m, phase) == r)
               .map((m) => MatchCard(api: widget.api, match: m, phase: phase)),
         ],
       ),
@@ -439,9 +439,8 @@ class _TournamentPageState extends State<TournamentPage> {
     final rows = result.matches
         .where((m) => phaseKey(m['fase']) == calendarPhase)
         .toList();
-    final rounds =
-        rows.map((m) => matchRound(m, calendarPhase)).toSet().toList()
-          ..sort(roundOrder);
+    final rounds = rows.map((m) => matchTurn(m, calendarPhase)).toSet().toList()
+      ..sort(roundOrder);
     if (rounds.isEmpty) {
       return [
         const Padding(
@@ -454,7 +453,7 @@ class _TournamentPageState extends State<TournamentPage> {
         ? round!
         : defaultCalendarRound(result.matches, calendarPhase);
     final visible = rows
-        .where((m) => chosen.isEmpty || matchRound(m, calendarPhase) == chosen)
+        .where((m) => chosen.isEmpty || matchTurn(m, calendarPhase) == chosen)
         .toList();
     visible.sort((a, b) {
       final date = '${a['data_partita'] ?? ''} ${a['ora_partita'] ?? ''}'
@@ -487,33 +486,25 @@ class _TournamentPageState extends State<TournamentPage> {
         onChanged: (v) => setState(() => round = v),
       ),
       const SizedBox(height: 16),
-      ...visible.map(
-        (m) => MatchCard(api: widget.api, match: m, phase: calendarPhase),
-      ),
+      ...rounds
+          .where((r) => chosen.isEmpty || r == chosen)
+          .expand(
+            (r) => [
+              if (calendarPhase != 'REGULAR' || chosen.isEmpty)
+                title(roundLabel(r, calendarPhase)),
+              ...visible
+                  .where((m) => matchTurn(m, calendarPhase) == r)
+                  .map(
+                    (m) => MatchCard(
+                      api: widget.api,
+                      match: m,
+                      phase: calendarPhase,
+                    ),
+                  ),
+            ],
+          ),
     ];
   }
-}
-
-String roundLabel(String round, String phase) {
-  if (phase == 'REGULAR' || phase == 'SPAREGGIO') {
-    return round == '0' ? 'Giornata da definire' : 'Giornata $round';
-  }
-  const labels = {
-    '1': 'Finale',
-    '2': 'Semifinale',
-    '3': 'Quarti di finale',
-    '4': 'Ottavi di finale',
-    '5': 'Sedicesimi di finale',
-    '6': 'Trentaduesimi di finale',
-    'KO': 'Fase eliminazione',
-    'FINALE': 'Finale',
-    'SEMIFINALE': 'Semifinale',
-    'QUARTI': 'Quarti di finale',
-    'OTTAVI': 'Ottavi di finale',
-    'SEDICESIMI': 'Sedicesimi di finale',
-    'TRENTADUESIMI': 'Trentaduesimi di finale',
-  };
-  return labels[round] ?? round;
 }
 
 class StandingsTable extends StatelessWidget {
@@ -830,8 +821,12 @@ class MatchCard extends StatelessWidget {
                   'Rigori ${match['rigori_casa'] ?? '–'} : ${match['rigori_ospite'] ?? '–'}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-              if (stat(match['fase_leg']) > 0)
-                Text(stat(match['fase_leg']) == 1 ? 'Andata' : 'Ritorno'),
+              if (matchLeg(match['fase_leg']).isNotEmpty)
+                Text(
+                  matchLeg(match['fase_leg']) == 'ANDATA'
+                      ? 'Andata'
+                      : 'Ritorno',
+                ),
               if (!played)
                 const Text('Da giocare', style: TextStyle(color: siteRed)),
               if ('${match['campo'] ?? ''}'.isNotEmpty)

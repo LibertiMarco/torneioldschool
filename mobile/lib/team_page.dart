@@ -4,7 +4,7 @@ import 'api.dart';
 import 'details.dart' show MatchPage, PlayerPage;
 import 'home_dashboard.dart' show SiteImage, HomeBlock, openPage;
 import 'theme.dart';
-import 'tournament_logic.dart' show stat, phaseKey;
+import 'tournament_logic.dart' show stat, phaseKey, matchTurn, roundLabel;
 import 'tournament_list.dart' show normalizedSearch;
 
 List<Map<String, dynamic>> teamPlayedMatches(
@@ -734,8 +734,7 @@ class TeamMatchTile extends StatelessWidget {
                       child: Text(
                         [
                           phaseName,
-                          if (match['giornata'] != null)
-                            'Giornata ${match['giornata']}',
+                          roundLabel(matchTurn(match, phase), phase),
                         ].join(' · '),
                         style: const TextStyle(
                           fontSize: 11,

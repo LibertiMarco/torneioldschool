@@ -310,8 +310,51 @@ String matchRound(Map<String, dynamic> match, String phase) {
   if (phase == 'REGULAR' || phase == 'SPAREGGIO') {
     return '${match['giornata'] ?? 0}';
   }
-  final stage = '${match['fase_round'] ?? ''}'.trim();
-  return stage.isNotEmpty ? stage : '${match['giornata'] ?? 'KO'}';
+  final stage = '${match['fase_round'] ?? ''}'.trim().toUpperCase();
+  final raw = stage.isNotEmpty ? stage : '${match['giornata'] ?? 'KO'}';
+  return const {
+        '1': 'FINALE',
+        '2': 'SEMIFINALE',
+        '3': 'QUARTI',
+        '4': 'OTTAVI',
+        '5': 'SEDICESIMI',
+        '6': 'TRENTADUESIMI',
+      }[raw] ??
+      raw;
+}
+
+String matchLeg(dynamic value) =>
+    switch ('${value ?? ''}'.trim().toUpperCase()) {
+      'ANDATA' || '1' => 'ANDATA',
+      'RITORNO' || '2' => 'RITORNO',
+      _ => '',
+    };
+
+String matchTurn(Map<String, dynamic> match, String phase) {
+  final round = matchRound(match, phase);
+  final leg = matchLeg(match['fase_leg']);
+  return phase != 'REGULAR' && leg.isNotEmpty ? '$round|$leg' : round;
+}
+
+String roundLabel(String turn, String phase) {
+  final parts = turn.split('|');
+  final round = parts.first;
+  final label = phase == 'REGULAR' || phase == 'SPAREGGIO'
+      ? (round == '0' ? 'Giornata da definire' : 'Giornata $round')
+      : const {
+              'FINALE': 'Finale',
+              'SEMIFINALE': 'Semifinale',
+              'QUARTI': 'Quarti di finale',
+              'OTTAVI': 'Ottavi di finale',
+              'SEDICESIMI': 'Sedicesimi di finale',
+              'TRENTADUESIMI': 'Trentaduesimi di finale',
+              'KO': 'Fase eliminazione',
+            }[round] ??
+            round;
+  final leg = parts.length > 1 ? matchLeg(parts[1]) : '';
+  return leg.isEmpty
+      ? label
+      : '$label · ${leg == 'ANDATA' ? 'Andata' : 'Ritorno'}';
 }
 
 const knockoutRounds = [
@@ -323,24 +366,34 @@ const knockoutRounds = [
   'FINALE',
 ];
 int roundOrder(String left, String right) {
-  final a = knockoutRounds.indexOf(left);
-  final b = knockoutRounds.indexOf(right);
-  if (a >= 0 && b >= 0) return a.compareTo(b);
-  return naturalCategoryOrder(left, right);
+  final l = left.split('|'), r = right.split('|');
+  final a = knockoutRounds.indexOf(l.first);
+  final b = knockoutRounds.indexOf(r.first);
+  final order = a >= 0 && b >= 0
+      ? a.compareTo(b)
+      : naturalCategoryOrder(l.first, r.first);
+  if (order != 0) return order;
+  int legOrder(List<String> parts) => parts.length < 2
+      ? 0
+      : parts[1] == 'ANDATA'
+      ? 1
+      : 2;
+  return legOrder(l).compareTo(legOrder(r));
 }
 
 String defaultCalendarRound(List<Map<String, dynamic>> matches, String phase) {
   final rows = matches.where((r) => phaseKey(r['fase']) == phase).toList();
-  final available = rows.map((m) => matchRound(m, phase)).toSet().toList()
+  final available = rows.map((m) => matchTurn(m, phase)).toSet().toList()
     ..sort(roundOrder);
   final pending = rows
       .where((r) => stat(r['giocata']) != 1)
-      .map((m) => matchRound(m, phase))
+      .map((m) => matchTurn(m, phase))
       .toSet();
   final preferred = available.where(pending.contains).toList();
   final source = preferred.isNotEmpty ? preferred : available;
   if (source.isEmpty) return '';
-  return phase == 'REGULAR' || source.any(knockoutRounds.contains)
+  return phase == 'REGULAR' ||
+          source.any((turn) => knockoutRounds.contains(turn.split('|').first))
       ? source.first
       : source.last;
 }
