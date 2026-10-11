@@ -35,7 +35,8 @@ $stmt2 = $conn->prepare("
         g.cognome,
         COALESCE(sg.foto, g.foto) AS foto,
         s.nome AS squadra,
-        sg.ruolo,
+        COALESCE(NULLIF(TRIM(sg.ruolo), ''), g.ruolo) AS ruolo,
+        sg.ruolo AS ruolo_squadra,
         COALESCE(sg.is_captain, 0) AS is_captain
     FROM partita_giocatore pg
     JOIN giocatori g ON g.id = pg.giocatore_id

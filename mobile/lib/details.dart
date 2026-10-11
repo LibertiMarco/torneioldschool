@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'external_link_button.dart';
 import 'player_event_marks.dart';
+import 'player_role_badges.dart';
 export 'team_page.dart';
 import 'theme.dart';
 import 'tournament_logic.dart' show phaseKey, matchTurn, roundLabel, matchLeg;
@@ -281,6 +282,7 @@ class _MatchPageState extends State<MatchPage> {
                   height: 34,
                   fallback: Icons.person_outline,
                 ),
+                PlayerRoleBadges(player: event),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
