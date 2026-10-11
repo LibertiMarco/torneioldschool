@@ -393,9 +393,7 @@ class _TournamentPageState extends State<TournamentPage> {
               ],
               if (tab == 'Diffidati') ...[
                 title('Elenco Diffidati'),
-                const Text(
-                  'Giocatori in diffida e giornate delle ammonizioni.',
-                ),
+                const Text('Giocatori in diffida e turni delle ammonizioni.'),
                 const SizedBox(height: 12),
                 HomeBlock(
                   key: ValueKey('diffidati-$reload'),
@@ -1035,13 +1033,21 @@ class TournamentCautionedPlayers extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text('${player['squadra'] ?? ''}'),
                   const SizedBox(height: 12),
-                  const Text('Giornate ammonizioni'),
+                  const Text('Turni ammonizioni'),
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      for (final day in (player['giornate'] as List? ?? []))
+                      for (final label
+                          in (player['ammonizioni'] as List? ??
+                              (player['giornate'] as List? ?? [])
+                                  .map(
+                                    (day) => day == null
+                                        ? 'Giornata non indicata'
+                                        : 'Giornata $day',
+                                  )
+                                  .toList()))
                         Chip(
                           avatar: Container(
                             width: 10,
@@ -1051,11 +1057,7 @@ class TournamentCautionedPlayers extends StatelessWidget {
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
-                          label: Text(
-                            day == null
-                                ? 'Giornata non indicata'
-                                : 'Giornata $day',
-                          ),
+                          label: Text('$label'),
                         ),
                     ],
                   ),

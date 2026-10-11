@@ -10,7 +10,7 @@ function initDiffidati() {
   const heading = document.createElement('div');
   heading.className = 'diffidati-heading';
   const description = document.createElement('p');
-  description.textContent = 'Giocatori in diffida e giornate delle ammonizioni.';
+  description.textContent = 'Giocatori in diffida e turni delle ammonizioni.';
   const summary = document.createElement('span');
   summary.className = 'diffidati-count';
   summary.hidden = true;
@@ -53,9 +53,9 @@ function initDiffidati() {
       if (!players.length) { message.textContent = 'Nessun giocatore diffidato.'; return; }
       const table = document.createElement('table');
       table.className = 'diffidati-table';
-      table.setAttribute('aria-label', 'Giocatori diffidati e giornate delle ammonizioni');
+      table.setAttribute('aria-label', 'Giocatori diffidati e turni delle ammonizioni');
       const header = table.createTHead().insertRow();
-      ['Giocatore', 'Squadra', 'Giornate ammonizioni'].forEach(label => {
+      ['Giocatore', 'Squadra', 'Turni ammonizioni'].forEach(label => {
         const th = document.createElement('th'); th.scope = 'col'; th.textContent = label; header.append(th);
       });
       const body = table.createTBody();
@@ -73,11 +73,13 @@ function initDiffidati() {
         days.dataset.label = 'Ammonizioni';
         const badges = document.createElement('div');
         badges.className = 'diffidati-badges';
-        player.giornate.forEach(day => {
+        const labels = Array.isArray(player.ammonizioni) ? player.ammonizioni :
+          (player.giornate || []).map(day => day == null ? 'Giornata non indicata' : `Giornata ${day}`);
+        labels.forEach(label => {
           const badge = document.createElement('span');
           badge.className = 'diffidati-day';
-          badge.textContent = day == null ? 'Giornata non indicata' : `${day} gio`;
-          badge.title = day == null ? 'Giornata non indicata' : `Ammonito nella giornata ${day}`;
+          badge.textContent = label;
+          badge.title = `Ammonizione: ${label}`;
           badges.append(badge);
         });
         days.append(badges);
