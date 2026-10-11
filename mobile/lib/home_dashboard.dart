@@ -3,6 +3,7 @@ import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' show parseFragment;
 
 import 'api.dart';
+import 'about_page.dart';
 import 'article_content.dart';
 import 'player_history.dart';
 import 'ranking_mode_selector.dart';
@@ -280,11 +281,23 @@ class _HomeDashboardState extends State<HomeDashboard> {
             },
           ),
           heading('Chi siamo'),
-          const Card(
+          Card(
             child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Text(
-                'Lo facciamo per passione, per condividere divertimento e amicizia con chiunque voglia partecipare.',
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Lo facciamo per passione, per condividere divertimento e amicizia con chiunque voglia partecipare.',
+                    style: TextStyle(fontSize: 16, height: 1.6),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () => openPage(context, AboutPage(api: api)),
+                    icon: const Icon(Icons.groups_outlined),
+                    label: const Text('Scopri chi siamo'),
+                  ),
+                ],
               ),
             ),
           ),
