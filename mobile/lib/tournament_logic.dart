@@ -17,9 +17,12 @@ class TournamentData {
   TournamentData(this.info, this.teams, this.matches);
   final Map<String, dynamic> info;
   final List<Map<String, dynamic>> teams, matches;
-  Map<String, dynamic> get config => info['config'] is Map
-      ? Map<String, dynamic>.from(info['config'] as Map)
-      : {};
+  Map<String, dynamic> get config => {
+    if (info['config'] is Map)
+      ...Map<String, dynamic>.from(info['config'] as Map),
+    if (layout['config_overrides'] is Map)
+      ...Map<String, dynamic>.from(layout['config_overrides'] as Map),
+  };
   String get format =>
       '${config['formato'] ?? config['formula_torneo'] ?? ''}'.toLowerCase();
   Map<String, dynamic> get layout => info['mobile_layout'] is Map

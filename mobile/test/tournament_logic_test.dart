@@ -87,6 +87,35 @@ void main() {
     expect(data.cupPlaces, {'GOLD': 14, 'SILVER': 4, 'BRONZO': 0});
     expect(data.cupForPosition(15), 'SILVER');
   });
+  test('Brasilerao public formula overrides outdated database cup counts', () {
+    final data = TournamentData(
+      {
+        'config': {
+          'formato': 'campionato',
+          'campionato_squadre': 22,
+          'totale_squadre': 16,
+          'qualificati_gold': 16,
+          'qualificati_silver': 8,
+        },
+        'mobile_layout': {
+          'group_mode': 'template',
+          'config_overrides': {
+            'totale_squadre': 22,
+            'qualificati_gold': 16,
+            'qualificati_silver': 6,
+          },
+        },
+      },
+      List.generate(22, (i) => team('Team $i', i, '', 0, 0)),
+      [],
+    );
+    expect(data.teamCount, 22);
+    expect(data.tableCupPlaces, {'GOLD': 16, 'SILVER': 6, 'BRONZO': 0});
+    expect(data.cupForPosition(16), 'GOLD');
+    expect(data.cupForPosition(17), 'SILVER');
+    expect(data.cupForPosition(22), 'SILVER');
+    expect(data.phases, contains('SILVER'));
+  });
   test('Legacy group inference and Serie C qualification override match site helper', () {
     final data = TournamentData(
       {

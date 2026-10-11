@@ -134,7 +134,7 @@ class _TournamentPageState extends State<TournamentPage> {
         final esport = '${info['sezione']}' == 'esport';
         final tabs = [
           'Classifica',
-          if (!esport) 'Marcatori',
+          if (!esport) ...['Marcatori', 'Diffidati'],
           'Calendario',
           'Rose',
           'Regole',
@@ -202,6 +202,7 @@ class _TournamentPageState extends State<TournamentPage> {
                   const icons = {
                     'Classifica': Icons.leaderboard_outlined,
                     'Marcatori': Icons.sports_soccer_rounded,
+                    'Diffidati': Icons.warning_amber_rounded,
                     'Calendario': Icons.calendar_today_rounded,
                     'Rose': Icons.groups_outlined,
                     'Regole': Icons.description_outlined,
@@ -388,6 +389,19 @@ class _TournamentPageState extends State<TournamentPage> {
                     api: widget.api,
                     players: TosApi.rows(value),
                   ),
+                ),
+              ],
+              if (tab == 'Diffidati') ...[
+                title('Elenco Diffidati'),
+                const Text(
+                  'Giocatori in diffida e giornate delle ammonizioni.',
+                ),
+                const SizedBox(height: 12),
+                HomeBlock(
+                  key: ValueKey('diffidati-$reload'),
+                  load: () => widget.api.cautionedPlayers(slug),
+                  render: (value) =>
+                      TournamentCautionedPlayers(players: TosApi.rows(value)),
                 ),
               ],
               if (tab == 'Regole') ...[
@@ -946,6 +960,83 @@ class _TournamentScorersState extends State<TournamentScorers> {
                 icon: const Icon(Icons.chevron_right),
               ),
             ],
+          ),
+      ],
+    );
+  }
+}
+
+class TournamentCautionedPlayers extends StatelessWidget {
+  const TournamentCautionedPlayers({super.key, required this.players});
+  final List<Map<String, dynamic>> players;
+
+  @override
+  Widget build(BuildContext context) {
+    if (players.isEmpty) return const Text('Nessun giocatore diffidato.');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          '${players.length} ${players.length == 1 ? 'giocatore' : 'giocatori'}',
+        ),
+        const SizedBox(height: 8),
+        for (final player in players)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Color(0xffa86b00),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '${player['cognome'] ?? ''} ${player['nome'] ?? ''}'
+                              .trim(),
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: siteBlue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text('${player['squadra'] ?? ''}'),
+                  const SizedBox(height: 12),
+                  const Text('Giornate ammonizioni'),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final day in (player['giornate'] as List? ?? []))
+                        Chip(
+                          avatar: Container(
+                            width: 10,
+                            height: 15,
+                            decoration: BoxDecoration(
+                              color: const Color(0xffffd43b),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          label: Text(
+                            day == null
+                                ? 'Giornata non indicata'
+                                : 'Giornata $day',
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
       ],
     );

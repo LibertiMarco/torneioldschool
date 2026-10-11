@@ -133,6 +133,8 @@ class TosApi {
   Future<List<Map<String, dynamic>>> scorers(String slug) async => rows(
     await request('api/classifica_marcatori.php', query: {'torneo': slug}),
   );
+  Future<List<Map<String, dynamic>>> cautionedPlayers(String slug) async =>
+      rows(await request('api/diffidati.php', query: {'torneo': slug}));
   Future<Map<String, dynamic>> playerRanking({
     String order = 'gol',
     int page = 1,
