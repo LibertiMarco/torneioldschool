@@ -29,6 +29,9 @@ class TeamFixtures extends DemoApi {
       'rigori_casa': 3,
       'rigori_ospite': 4,
       'fase': 'GOLD',
+      'giornata': 2,
+      'fase_round': 'SEMIFINALE',
+      'fase_leg': 'RITORNO',
       'data_partita': '2026-10-10',
       'ora_partita': '21:00',
     },
@@ -78,7 +81,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Partite disputate'), findsOneWidget);
       expect(find.text('2 partite'), findsOneWidget);
-      expect(find.text('Coppa Gold'), findsOneWidget);
+      expect(find.text('Coppa Gold · Semifinale · Ritorno'), findsOneWidget);
       expect(find.text('Other A'), findsNothing);
       expect(find.text('Sporting Club'), findsNothing);
       await tester.tap(find.text('Rosa'));

@@ -5,6 +5,7 @@ import 'external_link_button.dart';
 import 'player_event_marks.dart';
 export 'team_page.dart';
 import 'theme.dart';
+import 'tournament_logic.dart' show phaseKey, matchTurn, roundLabel, matchLeg;
 import 'home_dashboard.dart' show SiteImage;
 
 class DataPage extends StatefulWidget {
@@ -456,7 +457,8 @@ class MatchPage extends StatelessWidget {
                     'Arbitro',
                     match['arbitro'],
                   ),
-                if (match['giornata'] != null)
+                if (match['giornata'] != null &&
+                    phaseKey(match['fase']) == 'REGULAR')
                   information(
                     Icons.calendar_today_outlined,
                     'Giornata',
@@ -464,18 +466,23 @@ class MatchPage extends StatelessWidget {
                   ),
                 if ('${match['fase'] ?? ''}'.trim().isNotEmpty)
                   information(Icons.layers_outlined, 'Fase', match['fase']),
-                if ('${match['fase_round'] ?? ''}'.trim().isNotEmpty)
+                if (phaseKey(match['fase']) != 'REGULAR')
                   information(
                     Icons.emoji_events_outlined,
                     'Turno',
-                    match['fase_round'],
+                    roundLabel(
+                      matchTurn(match, phaseKey(match['fase'])),
+                      phaseKey(match['fase']),
+                    ),
                   ),
-                if ('${match['fase_leg']}' == '1' ||
-                    '${match['fase_leg']}' == '2')
+                if (phaseKey(match['fase']) == 'REGULAR' &&
+                    matchLeg(match['fase_leg']).isNotEmpty)
                   information(
                     Icons.swap_horiz_rounded,
                     'Incontro',
-                    '${match['fase_leg']}' == '1' ? 'Andata' : 'Ritorno',
+                    matchLeg(match['fase_leg']) == 'ANDATA'
+                        ? 'Andata'
+                        : 'Ritorno',
                   ),
               ],
             ),

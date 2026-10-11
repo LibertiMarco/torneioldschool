@@ -6,6 +6,7 @@ import 'ranking_mode_selector.dart';
 import 'details.dart' show MatchPage;
 import 'home_dashboard.dart' show SiteImage, openPage;
 import 'theme.dart' show siteBlue;
+import 'tournament_logic.dart' show phaseKey, matchTurn, roundLabel;
 
 class PlayerHistoryPage extends StatefulWidget {
   const PlayerHistoryPage({
@@ -177,13 +178,8 @@ class PlayerHistoryMatchCard extends StatelessWidget {
     final dateText = date == null
         ? ''
         : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-    final round = '${match['fase_round'] ?? ''}'.trim();
-    final stage = round.isNotEmpty
-        ? round
-        : [
-            if ('${match['fase'] ?? ''}'.isNotEmpty) '${match['fase']}',
-            if (match['giornata'] != null) 'Giornata ${match['giornata']}',
-          ].join(' · ');
+    final phase = phaseKey(match['fase']);
+    final stage = roundLabel(matchTurn(match, phase), phase);
     Widget team(String side) => Expanded(
       child: Column(
         children: [
