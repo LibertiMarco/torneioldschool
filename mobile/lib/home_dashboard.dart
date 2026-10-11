@@ -351,31 +351,61 @@ class PlayerRankingCard extends StatelessWidget {
         '${row['nome'] ?? ''} ${row['cognome'] ?? ''}'.trim(),
         style: const TextStyle(fontWeight: FontWeight.bold),
       ),
-      subtitle: Text(
-        esport
-            ? '${row['tornei_giocati'] ?? 0} tornei · ${row['best_result'] ?? ''}'
-            : [
-                if ('${row['ruolo'] ?? ''}'.trim().isNotEmpty)
-                  '${row['ruolo']}',
-                if ('${row['squadra'] ?? ''}'.trim().isNotEmpty)
-                  '${row['squadra']}',
-                ...(order == 'presenze'
-                    ? [
-                        '${row['presenze'] ?? 0} presenze',
-                        '${row['gol'] ?? 0} gol',
-                      ]
-                    : [
-                        '${row['gol'] ?? 0} gol',
-                        '${row['presenze'] ?? 0} presenze',
-                      ]),
-                if (row['media_voti'] != null)
-                  'Media voto: ${row['media_voti']}',
-              ].join(' · '),
-      ),
-      trailing: Text(
-        esport ? '${row['punti'] ?? 0} pt' : '${row[order] ?? 0}',
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-      ),
+      subtitle: esport
+          ? Text(
+              '${row['tornei_giocati'] ?? 0} tornei · ${row['best_result'] ?? ''}',
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if ('${row['ruolo'] ?? ''}'.trim().isNotEmpty ||
+                    '${row['squadra'] ?? ''}'.trim().isNotEmpty)
+                  Text(
+                    [
+                      if ('${row['ruolo'] ?? ''}'.trim().isNotEmpty)
+                        '${row['ruolo']}',
+                      if ('${row['squadra'] ?? ''}'.trim().isNotEmpty)
+                        '${row['squadra']}',
+                    ].join(' · '),
+                  ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 6,
+                  children: [
+                    for (final stat
+                        in order == 'presenze'
+                            ? ['presenze', 'gol']
+                            : ['gol', 'presenze'])
+                      Semantics(
+                        label:
+                            '${row[stat] ?? 0} ${stat == 'gol' ? 'gol' : 'presenze'}',
+                        excludeSemantics: true,
+                        child: Text(
+                          '${stat == 'gol' ? '⚽️' : '📋'} ${row[stat] ?? 0}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: stat == order
+                                ? FontWeight.w800
+                                : FontWeight.w500,
+                            color: siteBlue,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                if (row['media_voti'] != null) ...[
+                  const SizedBox(height: 6),
+                  Text('Media voto: ${row['media_voti']}'),
+                ],
+              ],
+            ),
+      trailing: esport
+          ? Text(
+              '${row['punti'] ?? 0} pt',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            )
+          : null,
       onTap: () => openPage(
         context,
         !esport
