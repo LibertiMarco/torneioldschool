@@ -2,20 +2,24 @@ import 'package:flutter/material.dart';
 
 import 'theme.dart';
 
+bool isGoalkeeper(Map<String, dynamic> player) {
+  final teamRole = '${player['ruolo_squadra'] ?? ''}'.trim();
+  final role = teamRole.isNotEmpty
+      ? teamRole
+      : '${player['ruolo'] ?? ''}'.trim();
+  return RegExp(
+    r'portiere|\bgk\b|^(p|por)$',
+    caseSensitive: false,
+  ).hasMatch(role);
+}
+
 class PlayerRoleBadges extends StatelessWidget {
   const PlayerRoleBadges({super.key, required this.player});
   final Map<String, dynamic> player;
 
   @override
   Widget build(BuildContext context) {
-    final teamRole = '${player['ruolo_squadra'] ?? ''}'.trim();
-    final role = teamRole.isNotEmpty
-        ? teamRole
-        : '${player['ruolo'] ?? ''}'.trim();
-    final goalkeeper = RegExp(
-      r'portiere|\bgk\b|^(p|por)$',
-      caseSensitive: false,
-    ).hasMatch(role);
+    final goalkeeper = isGoalkeeper(player);
     final captain =
         (int.tryParse('${player['is_captain'] ?? player['captain'] ?? 0}') ??
             0) ==
