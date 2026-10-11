@@ -195,13 +195,19 @@ class HomeRankingEntry extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
-                    width: 24,
-                    child: Text(
-                      '${row['posizione'] ?? '–'}',
-                      style: TextStyle(
-                        color: first ? siteRed : const Color(0xff667585),
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
+                    width: esport ? 24 : 40,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${row['posizione'] ?? '–'}',
+                        style: TextStyle(
+                          color: !esport || first
+                              ? siteRed
+                              : const Color(0xff667585),
+                          fontSize: esport ? 17 : 26,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                   ),

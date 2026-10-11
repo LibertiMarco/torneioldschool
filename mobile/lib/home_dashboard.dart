@@ -501,14 +501,22 @@ class PlayerRankingCard extends StatelessWidget {
     index: index,
     child: ListTile(
       leading: SizedBox(
-        width: 78,
+        width: esport ? 78 : 94,
         child: Row(
           children: [
             SizedBox(
-              width: 28,
-              child: Text(
-                '${row['posizione'] ?? '–'}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+              width: esport ? 28 : 44,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${row['posizione'] ?? '–'}',
+                  style: TextStyle(
+                    fontWeight: esport ? FontWeight.bold : FontWeight.w900,
+                    fontSize: esport ? null : 26,
+                    color: esport ? null : siteRed,
+                  ),
+                ),
               ),
             ),
             SiteImage(
