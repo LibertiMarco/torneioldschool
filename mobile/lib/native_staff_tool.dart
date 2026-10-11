@@ -14,6 +14,7 @@ import 'staff_engine.dart';
 import 'staff_engine_native.dart'
     if (dart.library.js_interop) 'staff_engine_web.dart';
 import 'staff_rich_editor.dart';
+import 'staff_match_forms.dart';
 import 'theme.dart';
 
 class NativeStaffTool extends StatefulWidget {
@@ -51,6 +52,10 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
   int _run = 0;
   bool get _allowed =>
       widget.auth.admin || (widget.graphicsOnly && widget.auth.graphics);
+  Map? get _lineup => _blocks
+      .whereType<Map>()
+      .where((block) => block['kind'] == 'match-lineup')
+      .firstOrNull;
   @override
   void initState() {
     super.initState();
@@ -344,6 +349,17 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
       '$_document:${block['id'] ?? block['text'] ?? block['label']}',
     );
     switch (block['kind']) {
+      case 'match-form':
+        return StaffMatchForm(key: key, model: block, render: _block);
+      case 'match-lineup':
+        return StaffMatchLineup(
+          key: key,
+          model: block,
+          render: _block,
+          onChanged: (field, value) =>
+              _send({'type': 'change', 'id': field['id'], ...value}),
+          onAction: _click,
+        );
       case 'field':
         return Padding(
           key: key,
@@ -523,10 +539,22 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
       ],
       child: Scaffold(
         appBar: AppBar(
-          leading: Navigator.of(context).canPop()
+          leading: _lineup?['back'] is Map
+              ? IconButton(
+                  tooltip: 'Torna alla partita',
+                  style: IconButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: const Color(0xff29445d),
+                  ),
+                  onPressed: _loading || _actionBusy
+                      ? null
+                      : () => _click(_lineup!['back'] as Map),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                )
+              : Navigator.of(context).canPop()
               ? const StaffBackButton()
               : null,
-          title: Text(widget.title),
+          title: Text(_lineup == null ? widget.title : 'Statistiche partita'),
           actions: [
             if (_allowed)
               IconButton(
@@ -536,10 +564,44 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                   foregroundColor: Colors.white,
                 ),
                 icon: const Icon(Icons.refresh_rounded),
-                onPressed: _loading ? null : _start,
+                onPressed: _loading
+                    ? null
+                    : _lineup == null
+                    ? _start
+                    : () => _send({'type': 'reload', 'id': _lineup!['id']}),
               ),
           ],
         ),
+        bottomNavigationBar: _lineup == null
+            ? null
+            : SafeArea(
+                child: Material(
+                  color: Colors.white,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    decoration: const BoxDecoration(
+                      border: Border(top: BorderSide(color: staffBorder)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (_lineup!['finalize'] is Map)
+                          _block(_lineup!['finalize'] as Map),
+                        const Text(
+                          'La finalizzazione segna la partita come giocata e invia le notifiche.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xff637487),
+                          ),
+                        ),
+                        if (_lineup!['save'] is Map)
+                          _block(_lineup!['save'] as Map),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
         body: !_allowed
             ? const Center(child: Text('Area riservata allo staff.'))
             : Stack(
@@ -598,7 +660,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.stretch,
                                     children: [
-                                      if (!_modal)
+                                      if (!_modal && _lineup == null)
                                         Container(
                                           margin: const EdgeInsets.only(
                                             bottom: 8,
@@ -637,7 +699,9 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                                             ],
                                           ),
                                         ),
-                                      if (!_modal && !widget.graphicsOnly)
+                                      if (!_modal &&
+                                          !widget.graphicsOnly &&
+                                          _lineup == null)
                                         Padding(
                                           padding: const EdgeInsets.symmetric(
                                             vertical: 12,
@@ -989,6 +1053,14 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
       readOnly: date,
       obscureText: type == 'password',
       maxLines: type == 'textarea' ? 5 : 1,
+      textAlign: f['score'] == true ? TextAlign.center : TextAlign.start,
+      style: f['score'] == true
+          ? const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: siteBlue,
+            )
+          : null,
       keyboardType: type == 'number'
           ? const TextInputType.numberWithOptions(decimal: true, signed: true)
           : type == 'email'
