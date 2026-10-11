@@ -107,6 +107,16 @@ void main() {
           )
           .first,
     );
+    await tester.scrollUntilVisible(
+      find.text('Frank'),
+      100,
+      scrollable: find
+          .descendant(
+            of: find.byType(AboutPage),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     expect(find.text('Frank'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Emanuele'),
@@ -130,6 +140,25 @@ void main() {
           .first,
     );
     expect(find.text('Direttore di gara'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('About contact opens the email provided by the service', (
+    tester,
+  ) async {
+    await tester.pumpWidget(MaterialApp(home: AboutPage(api: AboutApi())));
+    await tester.pumpAndSettle();
+    final contact = find.widgetWithText(FilledButton, 'Scrivici').first;
+    await tester.scrollUntilVisible(
+        find.text('Contatto diretto'),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(contact);
+    await tester.pumpAndSettle();
+    await tester.tap(contact);
+    await tester.pumpAndSettle();
+    expect(launched, ['mailto:info@torneioldschool.it']);
     expect(tester.takeException(), isNull);
   });
 
