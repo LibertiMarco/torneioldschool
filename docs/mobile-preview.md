@@ -61,3 +61,13 @@ Eventi giocatore: scheda, referto e storico mostrano un pallone per ogni gol, un
 Chi siamo: layout editoriale con logo e trama grafica, storia formattata, citazione in evidenza, contatti separati da divisori, organizzatori a due colonne quando lo spazio lo permette e staff raggruppato con foto o iniziali. Tutti i testi e le persone restano letti da api/about.php. Verificati layout a 320/390/430 px, testo ingrandito, staff, riprova e apertura del contatto email.
 
 Le card dei tornei usano una testata blu sfumata, logo su superficie bianca, stato e categoria, con nome e date nella parte inferiore. Non includono il precedente trattino decorativo rosso. I nomi lunghi e il testo ingrandito restano leggibili a 320 px.
+
+Gli strumenti della dashboard staff ora sono renderizzati con moduli, elenchi,
+selettori, editor e anteprime Flutter. Il bridge protetto riutilizza i controller
+PHP in background, senza mostrarne le pagine. Copre i 13 strumenti admin, i sei
+strumenti grafiche e le pagine collegate per distinta e calendario AllInOne;
+gli account mantengono il servizio nativo. I grafici continuano ad accedere solo
+alle grafiche. Il Fantacalcio conserva il suo stato di modulo in preparazione.
+Dettagli tecnici e prove sono in `../mobile/README.md`. I salvataggi sono stati
+verificati con fixture locali; non sono stati eseguiti salvataggi amministrativi
+sul database di produzione o prove su telefoni fisici.

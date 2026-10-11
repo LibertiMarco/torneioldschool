@@ -188,6 +188,16 @@ class TosAuth extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, String>> staffSessionHeaders() async {
+    final response = await authorized('api/mobile/v1/me.php');
+    user = Map<String, dynamic>.from(response['user'] as Map);
+    notifyListeners();
+    if (!admin && !graphics) {
+      throw const ApiError('Area riservata allo staff.', status: 403);
+    }
+    return {'Authorization': 'Bearer $_access'};
+  }
+
   void updateProfile(Map<String, dynamic> profile) {
     if (user == null) return;
     user = {...user!, ...profile};

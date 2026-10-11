@@ -32,6 +32,34 @@ const testUser = {
 };
 
 void main() {
+  test('Staff controller headers use the refreshed database role and keep bearer out of URLs', () async {
+    final store = MemorySessionStore()
+      ..value = jsonEncode({'access': 'old', 'refresh': 'refresh'});
+    var permissions = {'admin': true, 'graphics': true};
+    final api = TosApi(
+      baseUrl: Uri.parse('https://example.test'),
+      client: MockClient((request) async {
+        expect(request.url.queryParameters.containsKey('access_token'), false);
+        expect(request.headers['Authorization'], 'Bearer old');
+        return http.Response(
+          jsonEncode({
+            'user': {...testUser, 'permissions': permissions},
+          }),
+          200,
+        );
+      }),
+    );
+    final auth = TosAuth(api, storage: store);
+    await auth.restore();
+    expect(await auth.staffSessionHeaders(), {'Authorization': 'Bearer old'});
+    permissions = {'admin': false, 'graphics': false};
+    await expectLater(
+      auth.staffSessionHeaders(),
+      throwsA(isA<ApiError>().having((error) => error.status, 'status', 403)),
+    );
+    expect(auth.admin, false);
+    expect(auth.graphics, false);
+  });
   test('Concurrent expired requests rotate the refresh only once', () async {
     final store = MemorySessionStore()
       ..value = jsonEncode({'access': 'old-access', 'refresh': 'old-refresh'});

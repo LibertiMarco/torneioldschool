@@ -48,6 +48,15 @@ class BrowserAuth extends TosAuth {
   }
 
   @override
+  Future<Map<String, String>> staffSessionHeaders() async {
+    await restore();
+    if (!admin && !graphics) {
+      throw ApiError(error ?? 'Area riservata allo staff.', status: 403);
+    }
+    return {};
+  }
+
+  @override
   Future<dynamic> authorized(
     String path, {
     Map<String, dynamic>? body,

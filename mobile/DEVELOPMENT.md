@@ -4,7 +4,13 @@ La versione corrente è una base di sviluppo, non la versione completa richiesta
 
 Implementato: progetto Android/iOS, navigazione Calcio/Esport, elenco tornei, classifiche, partite con dettaglio e referto, squadre con rose e statistiche giocatori nel torneo, accesso tramite login web con PKCE S256, sessioni mobile revocabili, profilo e logout, consultazione utenti e modifica delle abilitazioni Totocalcio/Fantacalcio per admin. Palette e logo sono quelli del sito. L'anteprima browser principale è riservata ad admin e grafici e usa account/database reali: `../docs/mobile-preview.md`.
 
-Non ancora implementato: le altre operazioni admin di scrittura, storico completo dei giocatori, blog/commenti, preferiti e notifiche, moduli fantasy, grafiche, importazioni, social e parità di tutte le varianti di torneo. La mappa completa è in `../docs/app-mobile.md`.
+La dashboard staff e i suoi 19 strumenti hanno ora interfacce Flutter per moduli,
+selezioni, elenchi, editor articoli e grafiche. Un controller interno non visibile
+riutilizza i salvataggi PHP e i relativi controlli; dettagli e limiti sono in
+`README.md`. Sono presenti anche storico e premi giocatore e lettura del blog.
+Restano in sviluppo commenti, preferiti, notifiche native e moduli fantasy;
+la parità con tutte le varianti di torneo richiede ulteriori verifiche. La mappa
+completa è in `../docs/app-mobile.md`.
 
 ## Comandi Windows
 

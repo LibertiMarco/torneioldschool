@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'admin.dart';
 import 'auth.dart';
-import 'external_link_button.dart';
+import 'native_staff_tool.dart';
 import 'theme.dart';
-import 'staff_tool_embed_stub.dart'
-    if (dart.library.js_interop) 'staff_tool_embed_web.dart';
 
 class StaffTool {
   const StaffTool(
@@ -405,40 +403,19 @@ class StaffToolPage extends StatelessWidget {
     final allowed = tool.category == 'Grafiche'
         ? auth.graphics || auth.admin
         : auth.admin;
-    final source = Uri.parse(tool.path);
-    final uri = auth.api.uri(source.path, {
-      ...source.queryParameters,
-      'embed': '1',
-    });
-    final fallback = ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Icon(tool.icon, size: 48, color: siteBlue),
-        const SizedBox(height: 20),
-        Text(tool.description, textAlign: TextAlign.center),
-        const SizedBox(height: 20),
-        if (auth.api.preview)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 16),
-            child: Text(
-              'Gli strumenti di gestione sono disponibili con il tuo account sul sito. Questa demo non modifica i dati.',
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ExternalLinkButton(
-          uri: uri,
-          label: 'Apri ${tool.title}',
-          icon: Icons.open_in_new,
-        ),
-      ],
-    );
-    return Scaffold(
-      appBar: AppBar(title: Text(tool.title)),
-      body: !allowed
-          ? const Center(child: Text('Area riservata allo staff.'))
-          : auth.api.preview
-          ? fallback
-          : staffToolEmbed(uri: uri, fallback: fallback),
+    if (!allowed) {
+      return Scaffold(
+        appBar: AppBar(title: Text(tool.title)),
+        body: const Center(child: Text('Area riservata allo staff.')),
+      );
+    }
+    return NativeStaffTool(
+      auth: auth,
+      title: tool.title,
+      description: tool.description,
+      path: tool.path,
+      icon: tool.icon,
+      graphicsOnly: tool.category == 'Grafiche',
     );
   }
 }
