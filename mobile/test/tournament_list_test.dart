@@ -28,6 +28,49 @@ class ArchiveApi extends TosApi {
 }
 
 void main() {
+  testWidgets('Modern tournament cards remain readable and tappable at 320px', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var opened = 0;
+    const name = 'Torneo della community con un nome particolarmente lungo';
+    for (final scale in [1.0, 2.0]) {
+      for (final state in ['in corso', 'programmato', 'terminato']) {
+        await tester.pumpWidget(
+          MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(scale)),
+              child: child!,
+            ),
+            home: Scaffold(
+              body: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  TournamentCard(
+                    api: ArchiveApi(),
+                    tournament: cup(name, state, '2026-01-01', '2026-06-01'),
+                    onTap: () => opened++,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(name), findsOneWidget);
+        expect(tester.widget<Text>(find.text(name)).maxLines, isNull);
+        expect(find.text('01/26 - 06/26'), findsOneWidget);
+        await tester.ensureVisible(find.text('Esplora il torneo'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Esplora il torneo'));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      }
+    }
+    expect(opened, 6);
+  });
   test('Website grouping, sorting and missing dates', () {
     final rows = [
       cup('Later', 'in corso', '2026-01-01', '2026-12-01'),
