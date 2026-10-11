@@ -37,7 +37,156 @@ class TwoTeamReportApi extends DemoApi {
   }
 }
 
+class FilteredReportApi extends TwoTeamReportApi {
+  FilteredReportApi({this.noEvents = false});
+  final bool noEvents;
+  int eventRequests = 0;
+  @override
+  Future<dynamic> request(
+    String path, {
+    Map<String, String>? query,
+    String? accessToken,
+    List<ApiUpload>? uploads,
+    Map<String, dynamic>? body,
+  }) async {
+    final result = await super.request(
+      path,
+      query: query,
+      accessToken: accessToken,
+      uploads: uploads,
+      body: body,
+    );
+    if (path != 'api/get_eventi_partita.php') return result;
+    eventRequests++;
+    final base = {
+      ...(result as List).first as Map<String, dynamic>,
+      'goal': 0,
+      'cartellino_giallo': 0,
+      'cartellino_rosso': 0,
+    };
+    final rows = <Map<String, dynamic>>[
+      {...base, 'nome': 'Solo', 'cognome': 'Gol', 'goal': '2'},
+      {
+        ...base,
+        'nome': 'Solo',
+        'cognome': 'Giallo',
+        'goal': 0,
+        'cartellino_giallo': '1',
+        'squadra': 'Real Academy',
+      },
+      {
+        ...base,
+        'nome': 'Solo',
+        'cognome': 'Rosso',
+        'cartellino_rosso': 1,
+        'squadra': 'Altra squadra',
+      },
+      {...base, 'nome': 'Senza', 'cognome': 'Eventi', 'voto': 7},
+      {
+        ...base,
+        'nome': 'Solo',
+        'cognome': 'Assist',
+        'assist': 1,
+        'squadra': 'Real Academy',
+      },
+    ];
+    return noEvents
+        ? rows
+              .map(
+                (row) => {
+                  ...row,
+                  'goal': 0,
+                  'cartellino_giallo': 0,
+                  'cartellino_rosso': 0,
+                },
+              )
+              .toList()
+        : rows;
+  }
+}
+
 void main() {
+  testWidgets(
+    'Match report defaults to goals and cards; All includes the other players without reloading',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final api = FilteredReportApi();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MatchPage(api: api, id: '1'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Con eventi').hitTestable(),
+        200,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Con eventi'))
+            .selected,
+        true,
+      );
+      expect(find.text('Solo Gol'), findsOneWidget);
+      expect(find.text('Solo Giallo'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Solo Rosso').hitTestable(),
+        100,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Solo Rosso'), findsOneWidget);
+      expect(find.text('Senza Eventi'), findsNothing);
+      expect(find.text('Solo Assist'), findsNothing);
+      await tester.scrollUntilVisible(find.text('Tutti').hitTestable(), -150);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tutti'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Tutti'))
+            .selected,
+        true,
+      );
+      expect(find.text('Senza Eventi'), findsOneWidget);
+      expect(find.text('Solo Assist'), findsOneWidget);
+      expect(api.eventRequests, 1);
+      await tester.tap(find.text('Con eventi'));
+      await tester.pumpAndSettle();
+      expect(find.text('Senza Eventi'), findsNothing);
+      expect(find.text('Solo Assist'), findsNothing);
+      expect(api.eventRequests, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets('Event-free report still lets All show players and votes', (
+    tester,
+  ) async {
+    final api = FilteredReportApi(noEvents: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MatchPage(api: api, id: '1'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Tutti').hitTestable(), 200);
+    await tester.pumpAndSettle();
+    expect(find.text('Referto non ancora disponibile.'), findsNothing);
+    expect(find.text('Senza Eventi'), findsNothing);
+    expect(
+      find.text(
+        'Nessun gol o cartellino. Tocca “Tutti” per vedere tutti i giocatori.',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Tutti'));
+    await tester.pumpAndSettle();
+    expect(find.text('Senza Eventi'), findsOneWidget);
+    expect(api.eventRequests, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Match reports keep home left and away right on small phones', (
     tester,
   ) async {

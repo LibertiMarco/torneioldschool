@@ -119,7 +119,7 @@ class PlayerPage extends StatelessWidget {
   );
 }
 
-class MatchPage extends StatelessWidget {
+class MatchPage extends StatefulWidget {
   const MatchPage({
     super.key,
     required this.api,
@@ -129,6 +129,22 @@ class MatchPage extends StatelessWidget {
   final TosApi api;
   final String id;
   final Map<String, dynamic> previewMatch;
+
+  @override
+  State<MatchPage> createState() => _MatchPageState();
+}
+
+class _MatchPageState extends State<MatchPage> {
+  bool showAllPlayers = false;
+  TosApi get api => widget.api;
+  String get id => widget.id;
+  Map<String, dynamic> get previewMatch => widget.previewMatch;
+
+  @override
+  void didUpdateWidget(MatchPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.id != id || oldWidget.api != api) showAllPlayers = false;
+  }
 
   String dateLabel(dynamic value) {
     final date = DateTime.tryParse('$value');
@@ -154,6 +170,7 @@ class MatchPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DataPage(
+    key: ValueKey((api, id)),
     title: 'Dettaglio partita',
     load: () async {
       final results = await Future.wait<dynamic>([
@@ -168,6 +185,9 @@ class MatchPage extends StatelessWidget {
         ...Map<String, dynamic>.from(data['match'] as Map),
       };
       final events = TosApi.rows(data['events']);
+      final visibleEvents = showAllPlayers
+          ? events
+          : events.where(hasPlayerEvents).toList();
       final played = '${match['giocata']}' == '1';
       final home = '${match['squadra_casa'] ?? 'Da definire'}';
       final away = '${match['squadra_ospite'] ?? 'Da definire'}';
@@ -229,7 +249,7 @@ class MatchPage extends StatelessWidget {
         ),
       );
       final groups = <String, List<Map<String, dynamic>>>{};
-      for (final event in events) {
+      for (final event in visibleEvents) {
         final teamName = '${event['squadra'] ?? ''}'.trim();
         groups
             .putIfAbsent(
@@ -337,10 +357,10 @@ class MatchPage extends StatelessWidget {
             ),
           ),
           if ((groups[name] ?? []).isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Text(
-                'Nessun referto.',
+                showAllPlayers ? 'Nessun referto.' : 'Nessun gol o cartellino.',
                 style: TextStyle(fontSize: 12, color: Color(0xff778496)),
               ),
             ),
@@ -499,6 +519,34 @@ class MatchPage extends StatelessWidget {
               ),
             ),
           ),
+          if (events.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Con eventi'),
+                    selected: !showAllPlayers,
+                    onSelected: (_) => setState(() => showAllPlayers = false),
+                  ),
+                  ChoiceChip(
+                    label: const Text('Tutti'),
+                    selected: showAllPlayers,
+                    onSelected: (_) => setState(() => showAllPlayers = true),
+                  ),
+                ],
+              ),
+            ),
+            if (visibleEvents.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Text(
+                  'Nessun gol o cartellino. Tocca “Tutti” per vedere tutti i giocatori.',
+                ),
+              ),
+          ],
           if (events.isEmpty)
             Container(
               margin: const EdgeInsets.only(top: 12),
@@ -522,7 +570,7 @@ class MatchPage extends StatelessWidget {
                 ],
               ),
             ),
-          if (events.isNotEmpty)
+          if (visibleEvents.isNotEmpty)
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
