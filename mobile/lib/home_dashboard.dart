@@ -3,6 +3,7 @@ import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' show parseFragment;
 
 import 'api.dart';
+import 'article_content.dart';
 import 'player_history.dart';
 import 'ranking_mode_selector.dart';
 import 'details.dart' show DataPage;
@@ -745,10 +746,7 @@ class NewsCard extends StatelessWidget {
                     height: 200,
                   ),
                 const SizedBox(height: 16),
-                SelectableText(
-                  articleText('${article['contenuto'] ?? ''}'),
-                  style: const TextStyle(fontSize: 16, height: 1.6),
-                ),
+                ArticleContent(content: '${article['contenuto'] ?? ''}'),
                 ...TosApi.rows(article['media'])
                     .where(
                       (m) =>
