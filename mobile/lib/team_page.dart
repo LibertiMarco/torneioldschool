@@ -400,8 +400,42 @@ class RosterPlayerCard extends StatelessWidget {
         .map((v) => v.characters.first)
         .join()
         .toUpperCase();
-    final captain = stat(player['is_captain']) == 1;
-    final role = '${player['ruolo_squadra'] ?? player['ruolo'] ?? ''}'.trim();
+    final captain = stat(player['is_captain'] ?? player['captain']) == 1;
+    final teamRole = '${player['ruolo_squadra'] ?? ''}'.trim();
+    final role = teamRole.isNotEmpty
+        ? teamRole
+        : '${player['ruolo'] ?? ''}'.trim();
+    final goalkeeper = RegExp(
+      r'portiere|\bgk\b|^(p|por)$',
+      caseSensitive: false,
+    ).hasMatch(role);
+    Widget badge(
+      String label,
+      String description,
+      Color color,
+      Color textColor,
+    ) => Tooltip(
+      message: description,
+      child: Semantics(
+        label: description,
+        excludeSemantics: true,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(7),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ),
+    );
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -462,27 +496,25 @@ class RosterPlayerCard extends StatelessWidget {
                                 ),
                               ),
                       ),
-                      if (captain)
+                      if (goalkeeper || captain)
                         Positioned(
                           top: 10,
                           right: 10,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: siteRed,
-                              borderRadius: BorderRadius.circular(7),
-                            ),
-                            child: const Text(
-                              'Capitano',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (goalkeeper)
+                                badge(
+                                  'GK',
+                                  'Portiere',
+                                  const Color(0xffffd43b),
+                                  siteBlue,
+                                ),
+                              if (goalkeeper && captain)
+                                const SizedBox(width: 6),
+                              if (captain)
+                                badge('C', 'Capitano', siteRed, Colors.white),
+                            ],
                           ),
                         ),
                     ],
