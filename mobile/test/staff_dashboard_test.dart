@@ -6,6 +6,7 @@ import 'package:tornei_old_school/demo.dart';
 import 'package:tornei_old_school/external_link_button.dart';
 import 'package:tornei_old_school/main.dart';
 import 'package:tornei_old_school/staff_dashboard.dart';
+import 'package:tornei_old_school/native_staff_tool.dart';
 
 class StaffApi extends DemoApi {
   int userRequests = 0;
@@ -65,11 +66,12 @@ void main() {
         await tester.tap(find.text('Template'));
         await tester.pumpAndSettle();
         expect(find.byType(StaffToolPage), findsOneWidget);
-        final link = tester.widget<ExternalLinkButton>(
-          find.byType(ExternalLinkButton),
+        final tool = tester.widget<NativeStaffTool>(
+          find.byType(NativeStaffTool),
         );
-        expect(link.uri.path, '/api/grafiche_post_partita.php');
-        expect(link.uri.queryParameters, {'templates': '1', 'embed': '1'});
+        expect(Uri.parse(tool.path).queryParameters, {'templates': '1'});
+        expect(find.byType(StaffNativeField), findsWidgets);
+        expect(find.byType(ExternalLinkButton), findsNothing);
         expect(api.userRequests, 0);
       } else {
         expect(find.text('Dashboard amministratore'), findsOneWidget);
