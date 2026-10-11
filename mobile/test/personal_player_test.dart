@@ -237,7 +237,16 @@ void main() {
         100,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      final requestCount = api.queries.length;
+      await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Presenze'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Presenze'));
+      await tester.pumpAndSettle();
+      expect(find.text('Presenze per squadra'), findsOneWidget);
+      expect(api.queries.length, requestCount);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Gol'));
+      await tester.pumpAndSettle();
+      expect(find.text('Gol per squadra'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('Vedi squadra'),
         100,

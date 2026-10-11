@@ -17,7 +17,7 @@ Percorso da provare:
 1. Aprire un torneo reale e passare fra Classifica, Marcatori, Calendario, Rose e Regole (Marcatori solo per Calcio).
 2. Toccare una squadra, poi un giocatore, per vedere rosa e statistiche del torneo.
 3. Toccare una partita per vedere risultato e referto giocatori.
-4. Aprire Profilo nella barra inferiore: mostra la scheda e le statistiche del giocatore associato all’account, filtrate per Calcio/Esport. Gol, Presenze e Storico prestazioni aprono lo storico autenticato e i referti. Il grafico confronta i gol reali per squadra. Se manca l’associazione, appare una schermata dedicata con verifica associazione. Account conserva impostazioni, consensi e foto dello stesso account del sito.
+4. Aprire Profilo nella barra inferiore: mostra la scheda e le statistiche del giocatore associato all’account, filtrate per Calcio/Esport. Gol e Presenze nella scheda atleta e Storico prestazioni aprono lo storico autenticato e i referti. Il grafico permette di confrontare Gol/Presenze reali per squadra, senza richieste aggiuntive. Foto o iniziali, texture del campo, statistiche integrate e riepilogo compatto compongono la scheda; le animazioni rispettano il movimento ridotto. Se manca l’associazione, appare una schermata dedicata con verifica associazione. Account conserva impostazioni, consensi e foto dello stesso account del sito.
 5. In Gestione aprire un account per consultare le abilitazioni. Salvare soltanto una modifica che si intende applicare anche sul sito; annullando la conferma non viene salvato nulla.
 
 Per aggiornare la preview compilare dalla cartella `mobile`:
