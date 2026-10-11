@@ -1,4 +1,5 @@
 <?php
+$allowGraphicsAccess = true;
 require_once __DIR__ . '/../includi/admin_guard.php';
 $html = __DIR__ . '/build/index.html';
 if (!is_file($html)) {

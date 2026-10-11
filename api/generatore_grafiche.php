@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includi/graphics_guard.php';
+$appEmbed = ($_GET['embed'] ?? '') === '1';
 ?>
 <!doctype html>
 <html lang="it">
@@ -20,10 +21,10 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
     .frame.auto-height{min-height:0}
   </style>
 </head>
-<body class="with-site-header">
-<?php include __DIR__ . '/../includi/header.php'; ?>
+<body<?= $appEmbed ? '' : ' class="with-site-header"' ?>>
+<?php if (!$appEmbed) include __DIR__ . '/../includi/header.php'; ?>
 <main>
-  <a href="/admin_dashboard.php">Torna alla dashboard</a>
+  <?php if (!$appEmbed): ?><a href="/admin_dashboard.php">Torna alla dashboard</a><?php endif; ?>
   <h1>Generatore grafiche</h1>
   <p class="intro">Tutti gli strumenti grafici Old School in un’unica area.</p>
   <nav class="tabs" aria-label="Sezioni grafiche">
@@ -43,7 +44,7 @@ require_once __DIR__ . '/../includi/graphics_guard.php';
     <iframe id="presentationFrame" class="frame" title="Presentazione Squadre" data-src="/api/grafiche_presentazione.php?embed=1"></iframe>
   </section>
 </main>
-<div id="footer-container"></div>
+<?php if (!$appEmbed): ?><div id="footer-container"></div><?php endif; ?>
 <script>
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(tab=>tab.classList.toggle('active',tab===button));
@@ -67,5 +68,5 @@ window.addEventListener('message',event=>{
   const graphics=document.getElementById('postMatchFrame');
   if(graphics.getAttribute('src'))graphics.contentWindow.postMessage({type:'graphics-templates-refresh',torneoId:event.data.torneoId},window.location.origin);
 });
-fetch('/includi/footer.html').then(response=>response.text()).then(html=>{document.getElementById('footer-container').innerHTML=html;}).catch(()=>{});
+if(document.getElementById('footer-container'))fetch('/includi/footer.html').then(response=>response.text()).then(html=>{document.getElementById('footer-container').innerHTML=html;}).catch(()=>{});
 </script></body></html>

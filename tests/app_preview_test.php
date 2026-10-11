@@ -15,6 +15,8 @@ function preview_reject(Closure $action, string $code): void {
     throw new RuntimeException('Expected rejection ' . $code);
 }
 preview_reject(static fn() => preview_admin($db, []), 'invalid_session');
+preview_reject(static fn() => preview_user($db, []), 'invalid_session');
+preview_reject(static fn() => preview_user($db, ['user_id' => 2, 'ruolo' => 'grafico']), 'forbidden');
 preview_reject(static fn() => preview_admin($db, ['user_id' => 2, 'ruolo' => 'admin']), 'forbidden');
 preview_expect(preview_admin($db, ['user_id' => 1])['permissions']['admin'], 'Current admin accepted');
 $service = new MobileAccountFeatures($db, static fn() => preview_admin($db, ['user_id' => 1]));
@@ -22,6 +24,9 @@ $before = $service->get('', 2);
 $saved = $service->save('', 2, ['totocalcio' => true, 'fantacalcio' => false], $before['revision']);
 preview_expect($saved['user']['feature_flags']['totocalcio'], 'Cookie guard uses shared account operations');
 $db->exec("UPDATE utenti SET ruolo = 'grafico' WHERE id = 1");
+preview_expect(preview_user($db, ['user_id' => 1])['permissions']['graphics'], 'Graphics staff can use preview');
+preview_expect(!preview_user($db, ['user_id' => 1])['permissions']['admin'], 'Graphics staff cannot administer accounts');
+preview_reject(static fn() => preview_admin($db, ['user_id' => 1]), 'forbidden');
 preview_reject(static fn() => $service->save('', 2, ['totocalcio' => false, 'fantacalcio' => false], $saved['revision']), 'forbidden');
 $db->exec("UPDATE utenti SET ruolo = 'sysadmin', email_verificata = 0 WHERE id = 1");
 preview_reject(static fn() => preview_admin($db, ['user_id' => 1]), 'invalid_session');

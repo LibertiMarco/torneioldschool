@@ -2,7 +2,7 @@
 
 La versione corrente è una base di sviluppo, non la versione completa richiesta per gli store.
 
-Implementato: progetto Android/iOS, navigazione Calcio/Esport, elenco tornei, classifiche, partite con dettaglio e referto, squadre con rose e statistiche giocatori nel torneo, accesso tramite login web con PKCE S256, sessioni mobile revocabili, profilo e logout, consultazione utenti e modifica delle abilitazioni Totocalcio/Fantacalcio per admin. Palette e logo sono quelli del sito. L'anteprima browser principale è riservata agli admin e usa account/database reali: `../docs/mobile-preview.md`.
+Implementato: progetto Android/iOS, navigazione Calcio/Esport, elenco tornei, classifiche, partite con dettaglio e referto, squadre con rose e statistiche giocatori nel torneo, accesso tramite login web con PKCE S256, sessioni mobile revocabili, profilo e logout, consultazione utenti e modifica delle abilitazioni Totocalcio/Fantacalcio per admin. Palette e logo sono quelli del sito. L'anteprima browser principale è riservata ad admin e grafici e usa account/database reali: `../docs/mobile-preview.md`.
 
 Non ancora implementato: le altre operazioni admin di scrittura, storico completo dei giocatori, blog/commenti, preferiti e notifiche, moduli fantasy, grafiche, importazioni, social e parità di tutte le varianti di torneo. La mappa completa è in `../docs/app-mobile.md`.
 

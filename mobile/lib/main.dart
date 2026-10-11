@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'auth.dart';
-import 'admin.dart';
+import 'staff_dashboard.dart';
 import 'account_page.dart';
 import 'personal_player_page.dart';
 
@@ -212,16 +212,7 @@ class _HomePageState extends State<HomePage> {
           ? auth.user == null
                 ? _account(auth)
                 : AccountPage(auth: auth, section: section)
-          : auth.admin
-          ? AdminUsersPage(auth: auth)
-          : const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text(
-                  'Gli strumenti di gestione saranno disponibili con il completamento dell’area amministrativa.',
-                ),
-              ),
-            ),
+          : StaffDashboard(auth: auth),
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedPage,
         onDestinationSelected: (value) => setState(() => page = value),
