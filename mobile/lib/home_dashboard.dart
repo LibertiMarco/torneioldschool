@@ -357,7 +357,23 @@ class PlayerRankingCard extends StatelessWidget {
       subtitle: Text(
         esport
             ? '${row['tornei_giocati'] ?? 0} tornei · ${row['best_result'] ?? ''}'
-            : '${row['gol'] ?? 0} gol · ${row['presenze'] ?? 0} presenze',
+            : [
+                if ('${row['ruolo'] ?? ''}'.trim().isNotEmpty)
+                  '${row['ruolo']}',
+                if ('${row['squadra'] ?? ''}'.trim().isNotEmpty)
+                  '${row['squadra']}',
+                ...(order == 'presenze'
+                    ? [
+                        '${row['presenze'] ?? 0} presenze',
+                        '${row['gol'] ?? 0} gol',
+                      ]
+                    : [
+                        '${row['gol'] ?? 0} gol',
+                        '${row['presenze'] ?? 0} presenze',
+                      ]),
+                if (row['media_voti'] != null)
+                  'Media voto: ${row['media_voti']}',
+              ].join(' · '),
       ),
       trailing: Text(
         esport ? '${row['punti'] ?? 0} pt' : '${row[order] ?? 0}',
@@ -428,6 +444,7 @@ class GlobalRankingPage extends StatefulWidget {
 class _GlobalRankingPageState extends State<GlobalRankingPage> {
   late String order;
   String search = '';
+  final searchController = TextEditingController();
   int page = 1;
   late Future<Map<String, dynamic>> data;
   @override
@@ -437,13 +454,25 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
     load();
   }
 
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  void submitSearch() => setState(() {
+    search = searchController.text.trim();
+    page = 1;
+    load();
+  });
+
   void load() {
     data = widget.esport
         ? widget.api.esportRanking(limit: 50)
         : widget.api.playerRanking(
             order: order,
             page: page,
-            perPage: 20,
+            perPage: 10,
             search: search,
           );
   }
@@ -462,8 +491,11 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
             padding: const EdgeInsets.all(16),
             child: SegmentedButton<String>(
               segments: const [
-                ButtonSegment(value: 'gol', label: Text('Marcatori')),
-                ButtonSegment(value: 'presenze', label: Text('Presenze')),
+                ButtonSegment(value: 'gol', label: Text('Classifica Gol')),
+                ButtonSegment(
+                  value: 'presenze',
+                  label: Text('Classifica Presenze'),
+                ),
               ],
               selected: {order},
               onSelectionChanged: (v) => setState(() {
@@ -476,16 +508,19 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
-              decoration: const InputDecoration(
+              controller: searchController,
+              decoration: InputDecoration(
                 labelText: 'Cerca giocatore',
-                prefixIcon: Icon(Icons.search),
+                hintText: 'Nome o cognome',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  tooltip: 'Cerca',
+                  onPressed: submitSearch,
+                  icon: const Icon(Icons.arrow_forward),
+                ),
               ),
               textInputAction: TextInputAction.search,
-              onSubmitted: (v) => setState(() {
-                search = v.trim();
-                page = 1;
-                load();
-              }),
+              onSubmitted: (_) => submitSearch(),
             ),
           ),
         ],
@@ -537,7 +572,14 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
                               : null,
                           icon: const Icon(Icons.chevron_left),
                         ),
-                        Text('Pagina $page di $total'),
+                        Flexible(
+                          child: Text(
+                            rows.isEmpty
+                                ? 'Nessun giocatore trovato'
+                                : 'Pagina $page di $total · ${pagination['total'] ?? rows.length} giocatori',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
                         IconButton(
                           tooltip: 'Pagina successiva',
                           onPressed: page < total
