@@ -4,6 +4,7 @@ import 'api.dart';
 import 'auth.dart';
 import 'admin.dart';
 import 'account_page.dart';
+import 'personal_player_page.dart';
 
 import 'demo.dart';
 import 'theme.dart';
@@ -111,7 +112,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final auth = widget.auth;
     final hasStaffAccess = auth.admin || auth.graphics;
-    final selectedPage = page == 3 && !hasStaffAccess ? 2 : page;
+    final selectedPage = page == 4 && !hasStaffAccess ? 3 : page;
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -122,7 +123,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      body: selectedPage <= 1
+      body: selectedPage <= 2
           ? Column(
               children: [
                 Padding(
@@ -153,15 +154,21 @@ class _HomePageState extends State<HomePage> {
                           section: section,
                           onTournaments: () => setState(() => page = 1),
                         )
-                      : TournamentList(
+                      : selectedPage == 1
+                      ? TournamentList(
                           key: ValueKey('tournaments-$section'),
                           api: widget.api,
                           section: section,
+                        )
+                      : PersonalPlayerPage(
+                          auth: auth,
+                          section: section,
+                          onAccount: () => setState(() => page = 3),
                         ),
                 ),
               ],
             )
-          : selectedPage == 2
+          : selectedPage == 3
           ? auth.user == null
                 ? _account(auth)
                 : AccountPage(auth: auth, section: section)
@@ -188,7 +195,12 @@ class _HomePageState extends State<HomePage> {
             label: 'Tornei',
           ),
           const NavigationDestination(
-            icon: Icon(Icons.person_outline),
+            icon: Icon(Icons.badge_outlined),
+            selectedIcon: Icon(Icons.badge),
+            label: 'Profilo',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.manage_accounts_outlined),
             label: 'Account',
           ),
           if (hasStaffAccess)
