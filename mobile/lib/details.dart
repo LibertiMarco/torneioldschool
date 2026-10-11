@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'player_event_marks.dart';
 export 'team_page.dart';
 import 'theme.dart';
 import 'home_dashboard.dart' show SiteImage;
@@ -93,18 +94,22 @@ class PlayerPage extends StatelessWidget {
         ),
         Text('${player['ruolo_squadra'] ?? player['ruolo'] ?? ''}'),
         const SizedBox(height: 24),
+        PlayerEventMarks(
+          stats: {
+            'goal': player['reti'] ?? player['gol'] ?? 0,
+            'cartellino_giallo': player['gialli'] ?? 0,
+            'cartellino_rosso': player['rossi'] ?? 0,
+          },
+        ),
         for (final entry in {
           'Presenze': 'presenze',
-          'Gol': 'reti',
-          'Assist': 'assist',
-          'Gialli': 'gialli',
-          'Rossi': 'rossi',
           'Media voti': 'media_voti',
         }.entries)
-          ListTile(
-            title: Text(entry.key),
-            trailing: Text('${player[entry.value] ?? '—'}'),
-          ),
+          if ((num.tryParse('${player[entry.value]}') ?? 0) > 0)
+            ListTile(
+              title: Text(entry.key),
+              trailing: Text('${player[entry.value]}'),
+            ),
       ],
     ),
   );
@@ -219,22 +224,6 @@ class MatchPage extends StatelessWidget {
           ],
         ),
       );
-      Widget statBadge(String label, dynamic value, {Color color = siteBlue}) =>
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.07),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '$value $label',
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          );
       final groups = <String, List<Map<String, dynamic>>>{};
       for (final event in events) {
         final teamName = '${event['squadra'] ?? ''}'.trim();
@@ -309,26 +298,7 @@ class MatchPage extends StatelessWidget {
                 color: siteBlue,
               ),
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                statBadge('gol', event['goal'] ?? 0),
-                statBadge('assist', event['assist'] ?? 0),
-                statBadge('autogol', event['autogol'] ?? 0),
-                statBadge(
-                  'gialli',
-                  event['cartellino_giallo'] ?? 0,
-                  color: const Color(0xff996b00),
-                ),
-                statBadge(
-                  'rossi',
-                  event['cartellino_rosso'] ?? 0,
-                  color: siteRed,
-                ),
-              ],
-            ),
+            PlayerEventMarks(stats: event),
           ],
         ),
       );

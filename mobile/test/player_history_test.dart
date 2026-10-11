@@ -96,8 +96,14 @@ void main() {
         expect(find.byType(PlayerHistoryPage), findsOneWidget);
         expect(api.calls.single, '7/$type/1');
         expect(
-          find.text(type == 'gol' ? 'Gol segnati: 3' : 'Presenza registrata'),
-          findsOneWidget,
+          find.byWidgetPredicate(
+            (w) =>
+                w is Image &&
+                w.image is AssetImage &&
+                (w.image as AssetImage).assetName ==
+                    'assets/emoji/football.png',
+          ),
+          findsNWidgets(type == 'gol' ? 3 : 0),
         );
         final nextType = type == 'gol' ? 'presenze' : 'gol';
         await tester.tap(
@@ -106,10 +112,14 @@ void main() {
         await tester.pumpAndSettle();
         expect(api.calls.last, '7/$nextType/1');
         expect(
-          find.text(
-            nextType == 'gol' ? 'Gol segnati: 3' : 'Presenza registrata',
+          find.byWidgetPredicate(
+            (w) =>
+                w is Image &&
+                w.image is AssetImage &&
+                (w.image as AssetImage).assetName ==
+                    'assets/emoji/football.png',
           ),
-          findsOneWidget,
+          findsNWidgets(nextType == 'gol' ? 3 : 0),
         );
         expect(tester.takeException(), isNull);
       },
