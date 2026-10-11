@@ -100,7 +100,9 @@ void main() {
           findsOneWidget,
         );
         final nextType = type == 'gol' ? 'presenze' : 'gol';
-        await tester.tap(find.text(nextType == 'gol' ? 'Gol' : 'Presenze'));
+        await tester.tap(
+          find.text(nextType == 'gol' ? 'Marcatori' : 'Presenze'),
+        );
         await tester.pumpAndSettle();
         expect(api.calls.last, '7/$nextType/1');
         expect(

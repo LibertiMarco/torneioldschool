@@ -4,6 +4,7 @@ import 'package:html/parser.dart' show parseFragment;
 
 import 'api.dart';
 import 'player_history.dart';
+import 'ranking_mode_selector.dart';
 import 'details.dart' show DataPage;
 import 'main.dart' show ErrorPanel, TournamentPage;
 import 'theme.dart' show siteBlue;
@@ -166,14 +167,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ),
           heading(esport ? 'Ranking EA FC' : 'Classifica giocatori totale'),
           if (!esport)
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'gol', label: Text('Marcatori')),
-                ButtonSegment(value: 'presenze', label: Text('Presenze')),
-              ],
-              selected: {order},
-              onSelectionChanged: (values) =>
-                  setState(() => order = values.first),
+            RankingModeSelector(
+              value: order,
+              onChanged: (value) => setState(() => order = value),
             ),
           HomeBlock(
             key: ValueKey('ranking-$reload-$order'),
@@ -494,17 +490,10 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
         if (!widget.esport) ...[
           Padding(
             padding: const EdgeInsets.all(16),
-            child: SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'gol', label: Text('Classifica Gol')),
-                ButtonSegment(
-                  value: 'presenze',
-                  label: Text('Classifica Presenze'),
-                ),
-              ],
-              selected: {order},
-              onSelectionChanged: (v) => setState(() {
-                order = v.first;
+            child: RankingModeSelector(
+              value: order,
+              onChanged: (value) => setState(() {
+                order = value;
                 page = 1;
                 load();
               }),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'ranking_mode_selector.dart';
 import 'details.dart' show MatchPage;
 import 'home_dashboard.dart' show SiteImage, openPage;
 import 'theme.dart' show siteBlue;
@@ -106,15 +107,10 @@ class _PlayerHistoryPageState extends State<PlayerHistoryPage> {
             ),
           ),
           const SizedBox(height: 12),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'gol', label: Text('Gol')),
-              ButtonSegment(value: 'presenze', label: Text('Presenze')),
-            ],
-            selected: {type},
-            onSelectionChanged: (values) {
-              if (values.first == type) return;
-              type = values.first;
+          RankingModeSelector(
+            value: type,
+            onChanged: (value) {
+              type = value;
               load(reset: true);
             },
           ),
