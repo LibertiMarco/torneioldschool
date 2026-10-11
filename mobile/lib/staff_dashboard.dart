@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'admin.dart';
 import 'auth.dart';
+import 'staff_controls.dart';
 import 'native_staff_tool.dart';
 import 'theme.dart';
 
@@ -181,131 +182,128 @@ class _StaffDashboardState extends State<StaffDashboard> {
     final visible = tools.where(
       (tool) => category == 'Tutti' || tool.category == category,
     );
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            gradient: const LinearGradient(
-              colors: [Color(0xff10263d), Color(0xff164d69)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            border: Border.all(color: const Color(0xff38718a)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.dashboard_customize_outlined,
-                color: Color(0xff7ee9ee),
-                size: 30,
+    return StaffTheme(
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: const LinearGradient(
+                colors: [Color(0xff10263d), Color(0xff164d69)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'AREA STAFF',
-                style: TextStyle(
+              border: Border.all(color: const Color(0xff38718a)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.dashboard_customize_outlined,
                   color: Color(0xff7ee9ee),
-                  letterSpacing: 2,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+                  size: 30,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                auth.admin ? 'Dashboard amministratore' : 'Generatore grafiche',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 25,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                auth.admin
-                    ? 'Il tuo centro di gestione, a portata di tap.'
-                    : 'Scegli il formato e crea la prossima grafica.',
-                style: const TextStyle(color: Color(0xffc7dce6), height: 1.4),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        if (auth.admin) ...[
-          _StaffShortcut(
-            title: 'Gestione account',
-            subtitle: 'Utenti e abilitazioni',
-            icon: Icons.manage_accounts_outlined,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => Scaffold(
-                  appBar: AppBar(title: const Text('Gestione account')),
-                  body: AdminUsersPage(auth: auth),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          _StaffShortcut(
-            title: 'Generatore grafiche',
-            subtitle: 'Matchday, risultati e classifiche',
-            icon: Icons.auto_awesome_outlined,
-            onTap: () => setState(() => category = 'Grafiche'),
-          ),
-          const SizedBox(height: 22),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final value in [
-                'Tutti',
-                'Sport',
-                'Account',
-                'Contenuti',
-                'Grafiche',
-                'Extra',
-              ])
-                ChoiceChip(
-                  label: Text(value),
-                  selected: category == value,
-                  onSelected: (_) => setState(() => category = value),
-                  selectedColor: const Color(0xffd8f3f5),
-                  side: BorderSide(
-                    color: category == value
-                        ? const Color(0xff45a5b3)
-                        : const Color(0xffdce3eb),
+                const SizedBox(height: 16),
+                const Text(
+                  'AREA STAFF',
+                  style: TextStyle(
+                    color: Color(0xff7ee9ee),
+                    letterSpacing: 2,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  auth.admin
+                      ? 'Dashboard amministratore'
+                      : 'Generatore grafiche',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 25,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  auth.admin
+                      ? 'Il tuo centro di gestione, a portata di tap.'
+                      : 'Scegli il formato e crea la prossima grafica.',
+                  style: const TextStyle(color: Color(0xffc7dce6), height: 1.4),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 18),
-        ],
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final columns = MediaQuery.textScalerOf(context).scale(15) > 22.5
-                ? 1
-                : constraints.maxWidth >= 520
-                ? 3
-                : 2;
-            // Wrap lets each tool grow naturally, including with enlarged text.
-            return Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                for (final tool in visible)
-                  SizedBox(
-                    width:
-                        (constraints.maxWidth - 10 * (columns - 1)) / columns,
-                    child: Material(
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                        side: const BorderSide(color: Color(0xffdce5ed)),
+          const SizedBox(height: 20),
+          if (auth.admin) ...[
+            _StaffShortcut(
+              title: 'Gestione account',
+              subtitle: 'Utenti e abilitazioni',
+              icon: Icons.manage_accounts_outlined,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => StaffTheme(
+                    child: Scaffold(
+                      appBar: AppBar(
+                        leading: Navigator.of(context).canPop()
+                            ? const StaffBackButton()
+                            : null,
+                        title: const Text('Gestione account'),
                       ),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
+                      body: AdminUsersPage(auth: auth),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            _StaffShortcut(
+              title: 'Generatore grafiche',
+              subtitle: 'Matchday, risultati e classifiche',
+              icon: Icons.auto_awesome_outlined,
+              onTap: () => setState(() => category = 'Grafiche'),
+            ),
+            const SizedBox(height: 22),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final value in [
+                  'Tutti',
+                  'Sport',
+                  'Account',
+                  'Contenuti',
+                  'Grafiche',
+                  'Extra',
+                ])
+                  StaffFilter(
+                    label: value,
+                    selected: category == value,
+                    onSelected: (_) => setState(() => category = value),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 18),
+          ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = MediaQuery.textScalerOf(context).scale(15) > 22.5
+                  ? 1
+                  : constraints.maxWidth >= 520
+                  ? 3
+                  : 2;
+              // Wrap lets each tool grow naturally, including with enlarged text.
+              return Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (final tool in visible)
+                    SizedBox(
+                      width:
+                          (constraints.maxWidth - 10 * (columns - 1)) / columns,
+                      child: StaffTapSurface(
                         onTap: () => openTool(tool),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -315,13 +313,12 @@ class _StaffDashboardState extends State<StaffDashboard> {
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xffeaf5f8),
+                                  gradient: const LinearGradient(
+                                    colors: [siteBlue, Color(0xff245c78)],
+                                  ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Icon(
-                                  tool.icon,
-                                  color: const Color(0xff17617b),
-                                ),
+                                child: Icon(tool.icon, color: Colors.white),
                               ),
                               const SizedBox(height: 14),
                               Text(
@@ -355,12 +352,12 @@ class _StaffDashboardState extends State<StaffDashboard> {
                         ),
                       ),
                     ),
-                  ),
-              ],
-            );
-          },
-        ),
-      ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }
@@ -376,20 +373,24 @@ class _StaffShortcut extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Material(
-    color: const Color(0xffedf4f8),
-    borderRadius: BorderRadius.circular(18),
-    clipBehavior: Clip.antiAlias,
+  Widget build(BuildContext context) => StaffTapSurface(
+    onTap: onTap,
     child: ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      leading: Icon(icon, color: siteBlue),
+      leading: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [siteBlue, Color(0xff245c78)]),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Icon(icon, color: Colors.white),
+      ),
       title: Text(
         title,
         style: const TextStyle(fontWeight: FontWeight.w800, color: siteBlue),
       ),
       subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right, color: siteBlue),
-      onTap: onTap,
+      trailing: const Icon(Icons.arrow_forward_rounded, color: staffAccent),
     ),
   );
 }

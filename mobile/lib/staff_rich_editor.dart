@@ -5,6 +5,9 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:html/dom.dart' as html;
 import 'package:html/parser.dart' as html;
 
+import 'staff_controls.dart';
+import 'theme.dart';
+
 // The article controllers accept HTML. Keep formatting while editing in Flutter.
 List<Map<String, dynamic>> staffHtmlDelta(String value) {
   final ops = <Map<String, dynamic>>[];
@@ -189,6 +192,34 @@ class _StaffRichEditorState extends State<StaffRichEditor> {
             QuillSimpleToolbar(
               controller: _controller,
               config: const QuillSimpleToolbarConfig(
+                iconTheme: QuillIconTheme(
+                  iconButtonSelectedData: IconButtonData(
+                    color: Colors.white,
+                    style: ButtonStyle(
+                      backgroundColor: WidgetStatePropertyAll(siteBlue),
+                      foregroundColor: WidgetStatePropertyAll(Colors.white),
+                      minimumSize: WidgetStatePropertyAll(Size(48, 48)),
+                      shape: WidgetStatePropertyAll(
+                        RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(14)),
+                        ),
+                      ),
+                    ),
+                  ),
+                  iconButtonUnselectedData: IconButtonData(
+                    color: staffAccent,
+                    style: ButtonStyle(
+                      backgroundColor: WidgetStatePropertyAll(staffPale),
+                      foregroundColor: WidgetStatePropertyAll(staffAccent),
+                      minimumSize: WidgetStatePropertyAll(Size(48, 48)),
+                      shape: WidgetStatePropertyAll(
+                        RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(14)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 showFontFamily: false,
                 showFontSize: false,
                 showSmallButton: false,

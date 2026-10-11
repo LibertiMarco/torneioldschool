@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'auth.dart';
+import 'staff_controls.dart';
 import 'api.dart';
 
 class AdminUsersPage extends StatefulWidget {
@@ -29,90 +30,111 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   @override
   Widget build(BuildContext context) => !widget.auth.admin
       ? const Center(child: Text('Account riservati agli amministratori.'))
-      : FutureBuilder<dynamic>(
-          future: users,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      snapshot.error is ApiError
-                          ? snapshot.error.toString()
-                          : 'Servizio temporaneamente non disponibile.',
-                    ),
-                    FilledButton(
-                      onPressed: () => setState(_load),
-                      child: const Text('Riprova'),
-                    ),
-                  ],
-                ),
-              );
-            }
-            final rows = TosApi.rows(snapshot.data['users']);
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                const Text(
-                  'Utenti',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                if (rows.isEmpty) const Text('Nessun utente disponibile.'),
-                ...rows.map(
-                  (user) => Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.person_outline),
-                      title: Text('${user['nome']} ${user['cognome']}'),
-                      subtitle: Text('${user['email']}'),
-                      trailing: Text('${user['ruolo']}'),
-                      onTap: () async {
-                        await Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => AdminFeaturesPage(
-                              auth: widget.auth,
-                              user: user,
+      : StaffTheme(
+          child: FutureBuilder<dynamic>(
+            future: users,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        snapshot.error is ApiError
+                            ? snapshot.error.toString()
+                            : 'Servizio temporaneamente non disponibile.',
+                      ),
+                      StaffActionButton(
+                        onPressed: () => setState(_load),
+                        label: 'Riprova',
+                        icon: staffActionIcon('Riprova'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              final rows = TosApi.rows(snapshot.data['users']);
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  const Text(
+                    'Utenti',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  if (rows.isEmpty) const Text('Nessun utente disponibile.'),
+                  ...rows.map(
+                    (user) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: StaffTapSurface(
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => AdminFeaturesPage(
+                                auth: widget.auth,
+                                user: user,
+                              ),
+                            ),
+                          );
+                          if (mounted) setState(_load);
+                        },
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(16),
+                          leading: const CircleAvatar(
+                            backgroundColor: staffPale,
+                            child: Icon(
+                              Icons.person_outline,
+                              color: staffAccent,
                             ),
                           ),
-                        );
-                        if (mounted) setState(_load);
-                      },
+                          title: Text(
+                            '${user['nome']} ${user['cognome']}',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: Text('${user['email']}\n${user['ruolo']}'),
+                          trailing: const Icon(
+                            Icons.arrow_forward_rounded,
+                            color: staffAccent,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 12,
-                  children: [
-                    TextButton(
-                      onPressed: page == 1
-                          ? null
-                          : () => setState(() {
-                              page--;
-                              _load();
-                            }),
-                      child: const Text('Precedente'),
-                    ),
-                    Text('Pagina $page'),
-                    TextButton(
-                      onPressed: snapshot.data['has_more'] == true
-                          ? () => setState(() {
-                              page++;
-                              _load();
-                            })
-                          : null,
-                      child: const Text('Successiva'),
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 12,
+                    children: [
+                      TextButton.icon(
+                        icon: const Icon(Icons.chevron_left_rounded),
+                        onPressed: page == 1
+                            ? null
+                            : () => setState(() {
+                                page--;
+                                _load();
+                              }),
+                        label: const Text('Precedente'),
+                      ),
+                      Text('Pagina $page'),
+                      TextButton.icon(
+                        icon: const Icon(Icons.chevron_right_rounded),
+                        onPressed: snapshot.data['has_more'] == true
+                            ? () => setState(() {
+                                page++;
+                                _load();
+                              })
+                            : null,
+                        label: const Text('Successiva'),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
         );
 }
 
@@ -169,23 +191,26 @@ class _AdminFeaturesPageState extends State<AdminFeaturesPage> {
   Future<void> _save() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Salvare le abilitazioni?'),
-        content: Text(
-          widget.auth.api.preview
-              ? 'La modifica riguarda soltanto i dati dimostrativi.'
-              : 'La modifica sarà valida anche sul sito per ${widget.user['email']}.',
+      builder: (context) => StaffTheme(
+        child: AlertDialog(
+          title: const Text('Salvare le abilitazioni?'),
+          content: Text(
+            widget.auth.api.preview
+                ? 'La modifica riguarda soltanto i dati dimostrativi.'
+                : 'La modifica sarà valida anche sul sito per ${widget.user['email']}.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Annulla'),
+            ),
+            StaffActionButton(
+              onPressed: () => Navigator.pop(context, true),
+              label: 'Salva',
+              icon: staffActionIcon('Salva'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annulla'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Salva'),
-          ),
-        ],
       ),
     );
     if (confirmed != true || !mounted) return;
@@ -225,53 +250,63 @@ class _AdminFeaturesPageState extends State<AdminFeaturesPage> {
       ? const Scaffold(
           body: Center(child: Text('Account riservati agli amministratori.')),
         )
-      : Scaffold(
-          appBar: AppBar(title: const Text('Funzioni account')),
-          body: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              Text(
-                '${widget.user['nome']} ${widget.user['cognome']}',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              Text('${widget.user['email']}'),
-              const SizedBox(height: 12),
-              const Text(
-                'Admin e sysadmin possono sempre accedere alle funzioni, anche se disabilitate qui.',
-              ),
-              const SizedBox(height: 24),
-              if (busy) const LinearProgressIndicator(),
-              ...definitions.map(
-                (definition) => SwitchListTile(
-                  title: Text('${definition['label']}'),
-                  subtitle: Text('${definition['description']}'),
-                  value: flags[definition['key']] == true,
-                  onChanged: busy || revision == null
-                      ? null
-                      : (value) => setState(
-                          () => flags['${definition['key']}'] = value,
-                        ),
+      : StaffTheme(
+          child: Scaffold(
+            appBar: AppBar(
+              leading: Navigator.of(context).canPop()
+                  ? const StaffBackButton()
+                  : null,
+              title: const Text('Funzioni account'),
+            ),
+            body: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                Text(
+                  '${widget.user['nome']} ${widget.user['cognome']}',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-              ),
-              if (error != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Text(
-                    error!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
+                Text('${widget.user['email']}'),
+                const SizedBox(height: 12),
+                const Text(
+                  'Admin e sysadmin possono sempre accedere alle funzioni, anche se disabilitate qui.',
+                ),
+                const SizedBox(height: 24),
+                if (busy) const LinearProgressIndicator(),
+                ...definitions.map(
+                  (definition) => SwitchListTile(
+                    title: Text('${definition['label']}'),
+                    subtitle: Text('${definition['description']}'),
+                    value: flags[definition['key']] == true,
+                    onChanged: busy || revision == null
+                        ? null
+                        : (value) => setState(
+                            () => flags['${definition['key']}'] = value,
+                          ),
                   ),
                 ),
-              FilledButton(
-                onPressed: busy || revision == null ? null : _save,
-                child: const Text('Salva abilitazioni'),
-              ),
-              TextButton(
-                onPressed: busy ? null : _load,
-                child: const Text('Ricarica dal server'),
-              ),
-            ],
+                if (error != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      error!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+                StaffActionButton(
+                  onPressed: busy || revision == null ? null : _save,
+                  label: 'Salva abilitazioni',
+                  icon: staffActionIcon('Salva abilitazioni'),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: busy ? null : _load,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Ricarica dal server'),
+                ),
+              ],
+            ),
           ),
         );
 }
