@@ -7,6 +7,7 @@ import 'about_page.dart';
 import 'article_content.dart';
 import 'player_history.dart';
 import 'ranking_mode_selector.dart';
+import 'ranking_surface.dart';
 import 'details.dart' show DataPage;
 import 'main.dart' show ErrorPanel, TournamentPage;
 import 'theme.dart' show siteBlue, siteRed;
@@ -276,13 +277,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             padding: EdgeInsets.all(20),
                             child: Text('Nessun giocatore disponibile.'),
                           ),
-                        for (final row in rows)
+                        for (final entry in rows.asMap().entries)
                           HomeRankingEntry(
+                            index: entry.key,
                             api: api,
-                            row: row,
+                            row: entry.value,
                             esport: esport,
                             order: order,
-                            open: () => _ranking(row, esport),
+                            open: () => _ranking(entry.value, esport),
                           ),
                       ],
                     ),
@@ -487,13 +489,16 @@ class PlayerRankingCard extends StatelessWidget {
     required this.row,
     this.esport = false,
     this.order = 'gol',
+    this.index = 0,
   });
   final TosApi api;
   final Map<String, dynamic> row;
   final bool esport;
   final String order;
+  final int index;
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => RankingSurface(
+    index: index,
     child: ListTile(
       leading: SizedBox(
         width: 78,
@@ -752,10 +757,11 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   if (rows.isEmpty) const Text('Nessun giocatore trovato.'),
-                  ...rows.map(
-                    (r) => PlayerRankingCard(
+                  ...rows.asMap().entries.map(
+                    (entry) => PlayerRankingCard(
+                      index: entry.key,
                       api: widget.api,
-                      row: r,
+                      row: entry.value,
                       esport: widget.esport,
                       order: order,
                     ),
