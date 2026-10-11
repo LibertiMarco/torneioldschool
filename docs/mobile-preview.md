@@ -51,3 +51,5 @@ Storico giocatore dalla classifica generale: toccando un giocatore si apre il fi
 Aggiornamenti browser: l’ingresso PHP aggiunge una versione derivata dai file compilati al loader; il loader la propaga a main.dart.js, evitando le precedenti copie immutable. La directory build disabilita la cache lunga per JavaScript/JSON/WASM. La stessa logica è nel template Flutter per le compilazioni future. Verificati propagazione della versione, cambio versione al cambio contenuto e sintassi PHP/JavaScript.
 
 Marcatori/Presenze: selettore condiviso tra Home, classifica completa e storico, con pulsanti arrotondati di almeno 64 px, icone, contrasto blu/bianco e accento rosso sulla selezione. Con testo ingrandito i pulsanti passano a una colonna. Verificati 9 test di classifica/storico, analisi Flutter, build web e mantenimento della versione degli asset per la cache.
+
+Schede della classifica generale: gol e presenze compaiono una sola volta, con ⚽️ e 📋. La statistica selezionata viene prima ed è in evidenza; il numero ripetuto a destra è rimosso. Ruolo e media voto restano separati. Verificati i test Home/storico e il layout a 320 px.

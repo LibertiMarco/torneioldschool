@@ -85,14 +85,14 @@ void main() {
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.text('Mario Rossi'), 150);
       await tester.pumpAndSettle();
-      expect(find.text('120 gol · 250 presenze'), findsOneWidget);
+      expect(find.text('📋 250'), findsOneWidget);
       expect(find.text('1'), findsNWidgets(2));
       expect(find.text('3'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Presenze'), -100);
       await tester.tap(find.text('Presenze'));
       await tester.pumpAndSettle();
       expect(api.orders.last, 'presenze');
-      expect(find.text('250 presenze · 120 gol'), findsOneWidget);
+      expect(find.text('📋 250'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Classifica completa'), 100);
       await tester.tap(find.text('Classifica completa'));
       await tester.pumpAndSettle();
@@ -100,7 +100,7 @@ void main() {
       expect(api.pageSizes.last, 10);
       expect(find.text('Marcatori'), findsOneWidget);
       expect(find.text('Presenze'), findsOneWidget);
-      expect(find.text('250 presenze · 120 gol'), findsOneWidget);
+      expect(find.text('📋 250'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.byTooltip('Pagina successiva'),
         150,
@@ -162,10 +162,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(
-      find.text('Attaccante · 120 gol · 250 presenze · Media voto: 7.50'),
-      findsOneWidget,
-    );
+    expect(find.text('Media voto: 7.50'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
   testWidgets('Ranking outage leaves news and hall available', (tester) async {
