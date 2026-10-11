@@ -925,11 +925,36 @@ class _TournamentScorersState extends State<TournamentScorers> {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text('${player['squadra'] ?? ''}'),
-                  trailing: Text(
-                    '${player['gol']} gol',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: siteRed,
+                  trailing: Semantics(
+                    label: '${stat(player['gol'])} gol',
+                    child: ExcludeSemantics(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${stat(player['gol'])}',
+                              style: const TextStyle(
+                                fontSize: 32,
+                                height: 1,
+                                fontWeight: FontWeight.w800,
+                                color: siteBlue,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'GOL',
+                              style: TextStyle(
+                                fontSize: 11,
+                                height: 1,
+                                letterSpacing: 1.2,
+                                color: Color(0xff778496),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   onTap: () => openPage(
