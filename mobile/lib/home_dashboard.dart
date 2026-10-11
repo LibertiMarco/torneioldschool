@@ -363,8 +363,14 @@ class PlayerRankingCard extends StatelessWidget {
                 if ('${row['squadra'] ?? ''}'.trim().isNotEmpty)
                   '${row['squadra']}',
                 ...(order == 'presenze'
-                    ? ['${row['presenze'] ?? 0} presenze', '${row['gol'] ?? 0} gol']
-                    : ['${row['gol'] ?? 0} gol', '${row['presenze'] ?? 0} presenze']),
+                    ? [
+                        '${row['presenze'] ?? 0} presenze',
+                        '${row['gol'] ?? 0} gol',
+                      ]
+                    : [
+                        '${row['gol'] ?? 0} gol',
+                        '${row['presenze'] ?? 0} presenze',
+                      ]),
                 if (row['media_voti'] != null)
                   'Media voto: ${row['media_voti']}',
               ].join(' · '),
@@ -438,6 +444,7 @@ class GlobalRankingPage extends StatefulWidget {
 class _GlobalRankingPageState extends State<GlobalRankingPage> {
   late String order;
   String search = '';
+  final searchController = TextEditingController();
   int page = 1;
   late Future<Map<String, dynamic>> data;
   @override
@@ -446,6 +453,18 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
     order = widget.initialOrder;
     load();
   }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  void submitSearch() => setState(() {
+    search = searchController.text.trim();
+    page = 1;
+    load();
+  });
 
   void load() {
     data = widget.esport
@@ -473,7 +492,10 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
             child: SegmentedButton<String>(
               segments: const [
                 ButtonSegment(value: 'gol', label: Text('Classifica Gol')),
-                ButtonSegment(value: 'presenze', label: Text('Classifica Presenze')),
+                ButtonSegment(
+                  value: 'presenze',
+                  label: Text('Classifica Presenze'),
+                ),
               ],
               selected: {order},
               onSelectionChanged: (v) => setState(() {
@@ -486,17 +508,19 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
-              decoration: const InputDecoration(
+              controller: searchController,
+              decoration: InputDecoration(
                 labelText: 'Cerca giocatore',
                 hintText: 'Nome o cognome',
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  tooltip: 'Cerca',
+                  onPressed: submitSearch,
+                  icon: const Icon(Icons.arrow_forward),
+                ),
               ),
               textInputAction: TextInputAction.search,
-              onSubmitted: (v) => setState(() {
-                search = v.trim();
-                page = 1;
-                load();
-              }),
+              onSubmitted: (_) => submitSearch(),
             ),
           ),
         ],

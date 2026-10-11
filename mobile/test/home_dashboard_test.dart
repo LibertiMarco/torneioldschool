@@ -10,6 +10,7 @@ class HomeApi extends DemoApi {
   final newsSections = <String>[];
   final hallSections = <String>[];
   final pages = <int>[];
+  final pageSizes = <int>[];
   final searches = <String>[];
   bool unavailable = false;
   @override
@@ -21,6 +22,7 @@ class HomeApi extends DemoApi {
   }) async {
     orders.add(order);
     pages.add(page);
+    pageSizes.add(perPage);
     searches.add(search);
     if (unavailable) throw const ApiError('Ranking non disponibile.');
     return {
@@ -47,7 +49,7 @@ class HomeApi extends DemoApi {
           'posizione': 3,
         },
       ],
-      'pagination': {'page': page, 'total_pages': 2},
+      'pagination': {'page': page, 'total_pages': 2, 'total': 13},
     };
   }
 
@@ -90,10 +92,15 @@ void main() {
       await tester.tap(find.text('Presenze'));
       await tester.pumpAndSettle();
       expect(api.orders.last, 'presenze');
+      expect(find.text('250 presenze · 120 gol'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Classifica completa'), 100);
       await tester.tap(find.text('Classifica completa'));
       await tester.pumpAndSettle();
       expect(api.orders.last, 'presenze');
+      expect(api.pageSizes.last, 10);
+      expect(find.text('Classifica Gol'), findsOneWidget);
+      expect(find.text('Classifica Presenze'), findsOneWidget);
+      expect(find.text('250 presenze · 120 gol'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.byTooltip('Pagina successiva'),
         150,
@@ -116,6 +123,51 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets('Full ranking fits a narrow phone and shows site statistics', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = HomeApi();
+    await tester.pumpWidget(MaterialApp(home: GlobalRankingPage(api: api)));
+    await tester.pumpAndSettle();
+    expect(api.pageSizes.last, 10);
+    await tester.scrollUntilVisible(
+      find.byTooltip('Pagina successiva'),
+      150,
+      scrollable: find.descendant(
+        of: find.byType(ListView),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Pagina 1 di 2 · 13 giocatori'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PlayerRankingCard(
+            api: api,
+            row: {
+              'nome': 'Mario',
+              'cognome': 'Rossi',
+              'gol': 120,
+              'presenze': 250,
+              'ruolo': 'Attaccante',
+              'media_voti': '7.50',
+              'posizione': 1,
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Attaccante · 120 gol · 250 presenze · Media voto: 7.50'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('Ranking outage leaves news and hall available', (tester) async {
     final api = HomeApi()..unavailable = true;
     await tester.pumpWidget(
