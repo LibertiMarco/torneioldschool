@@ -39,6 +39,67 @@ class TeamFixtures extends DemoApi {
 }
 
 void main() {
+  testWidgets(
+    'Roster badges use team role, fallback role and captain flag at 320px',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final api = DemoApi();
+      for (final role in ['Portiere', 'GK', 'P', 'POR']) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: siteTheme(),
+            home: Scaffold(
+              body: RosterPlayerCard(
+                api: api,
+                player: {
+                  'nome': 'Mario',
+                  'cognome': 'Rossi',
+                  'ruolo_squadra': role,
+                  'is_captain': '1',
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text('GK'),
+          role == 'GK' ? findsNWidgets(2) : findsOneWidget,
+        );
+        expect(find.text('C'), findsOneWidget);
+        expect(find.byTooltip('Portiere'), findsOneWidget);
+        expect(find.byTooltip('Capitano'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+      for (final teamRole in ['', 'Difensore']) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: siteTheme(),
+            home: Scaffold(
+              body: RosterPlayerCard(
+                api: api,
+                player: {
+                  'nome': 'Mario',
+                  'cognome': 'Rossi',
+                  'ruolo_squadra': teamRole,
+                  'ruolo': 'Portiere',
+                  'is_captain': 0,
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text('GK'),
+          teamRole.isEmpty ? findsOneWidget : findsNothing,
+        );
+        expect(find.text('C'), findsNothing);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
   test('Team history includes played home/away matches in all phases, newest first', () async {
     final rows = teamPlayedMatches(
       await TeamFixtures().matches('demo'),
@@ -88,7 +149,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Rosa squadra'), findsOneWidget);
       expect(find.text('Luca Rossi'), findsOneWidget);
-      expect(find.text('Capitano'), findsOneWidget);
+      expect(find.text('C'), findsOneWidget);
+      expect(find.byTooltip('Capitano'), findsOneWidget);
       expect(find.text('4'), findsWidgets);
       await tester.binding.setSurfaceSize(const Size(320, 844));
       await tester.pumpAndSettle();
