@@ -44,6 +44,7 @@
       clone.querySelectorAll('input,select,textarea,button').forEach(child => child.remove());
       return clean(clone.textContent);
     }).join(' ');
+    if (!text) text = clean(element.getAttribute('aria-label'));
     if (!text) {
       const before = element.previousElementSibling;
       if (before?.tagName === 'LABEL') text = clean(before.textContent);
@@ -80,6 +81,63 @@
       danger: /elimina|rimuovi|cancella|disattiva/i.test(text)};
   }
   const textNode = (kind, text) => text ? {kind, text} : null;
+  function matchForm(form) {
+    const used = new Set();
+    const sections = [
+      ['Seleziona la partita', ['selTorneoMod','selFaseMod','selGiornataMod','selPartitaMod','btnStatsMod']],
+      ['Risultato', ['squadra_casa_mod','squadra_ospite_mod','gol_casa_mod','gol_ospite_mod','decisa_rigori_mod','rigori_casa_mod','rigori_ospite_mod','giocata_mod']],
+      ['Dettagli partita', ['torneo_mod','fase_mod','giornata_mod','round_eliminazione_mod','faseLegMod','data_partita_mod','ora_partita_mod','campo_mod']],
+      ['Arbitro e video', ['arbitro_mod','link_youtube_mod','link_instagram_mod']],
+    ].map(([title, keys]) => ({title, blocks: keys.map(key => {
+      const element = form.querySelector(`#${key}`);
+      if (!element) return null;
+      used.add(element);
+      const block = walk(element);
+      if (block && /^(gol|rigori)_(casa|ospite)_mod$/.test(key)) block.score = true;
+      return block;
+    }).filter(Boolean)})).filter(section => section.blocks.length);
+    const rest = Array.from(form.querySelectorAll('input,select,textarea,button,.form-message'))
+      .filter(element => !used.has(element)).map(element => walk(element)).filter(Boolean);
+    return {kind:'match-form', id:id(form), sections, blocks:rest};
+  }
+  function matchLineup(form) {
+    const field = element => element && visible(element) ? control(element) : null;
+    const info = doc.querySelector('#partitaInfo')?.cloneNode(true);
+    info?.querySelectorAll('br').forEach(br => br.replaceWith(doc.createTextNode(' · ')));
+    const teams = Array.from(form.querySelectorAll('.team-lineup')).filter(visible).map(team => ({
+      id:id(team), name:clean(team.querySelector('h2')?.textContent),
+      actions:Array.from(team.querySelectorAll('[data-select-team]')).map(action).filter(Boolean),
+      players:Array.from(team.querySelectorAll('.player-row')).filter(visible).map(row => ({
+        id:id(row), name:clean(row.querySelector('.player-name > span')?.textContent),
+        badges:Array.from(row.querySelectorAll('.player-meta-badge,.disciplinary-tag')).map(tag => clean(tag.textContent)),
+        fields:Array.from(row.querySelectorAll('input,select')).map(element => {
+          const block = field(element);
+          if (!block) return null;
+          block.stat = element.dataset.field;
+          if (block.stat === 'presenza') block.label = 'Presente';
+          return block;
+        }).filter(Boolean),
+      })),
+    }));
+    const finalize = field(form.querySelector('#finalizzaPartita'));
+    if (finalize) finalize.label = 'Finalizza partita';
+    const save = form.querySelector('#saveLineup') ? action(form.querySelector('#saveLineup')) : null;
+    if (!teams.length) {
+      if (finalize) finalize.disabled = true;
+      if (save) save.disabled = true;
+    }
+    return {kind:'match-lineup', id:id(form), teams,
+      info:clean(info?.textContent),
+      home:clean(form.querySelector('#homeScoreName')?.textContent),
+      away:clean(form.querySelector('#awayScoreName')?.textContent),
+      score:clean(form.querySelector('#liveScore')?.textContent),
+      back:doc.querySelector('#btnBackStats') ? action(doc.querySelector('#btnBackStats')) : null,
+      finalize, save,
+      notice:doc.querySelector('#msgBox')?.style.opacity === '1' ? clean(doc.querySelector('#msgBox').textContent) : '',
+      error:doc.querySelector('#msgBox')?.classList.contains('msg-error') || false,
+      loading:teams.length ? '' : clean(form.querySelector('#lineupRoot')?.textContent),
+    };
+  }
   function walk(element, inTable = false) {
     if (element.nodeType === 3) return textNode('text', clean(element.textContent));
     if (element.nodeType !== 1) return null;
@@ -90,6 +148,7 @@
       if (visible(element.parentElement)) return control(element);
     }
     if (!visible(element)) return null;
+    if (doc.location.pathname === '/api/gestione_partite.php' && element.matches('form#formModifica')) return matchForm(element);
     if (tag === 'INPUT' && ['submit','button','reset'].includes(element.type)) return action(element);
     if (['INPUT','SELECT','TEXTAREA'].includes(tag) || editable(element)) return control(element);
     if (tag === 'BUTTON' || tag === 'A' || element.getAttribute('role') === 'button') return action(element);
@@ -140,7 +199,8 @@
     try {
       const modal = Array.from(doc.querySelectorAll('[role="dialog"],dialog[open],.modal,.modal-overlay,.confirm-overlay,.confirm-modal,.delete-modal')).find(visible);
       const root = modal || doc.querySelector('main') || doc.querySelector('.admin-container') || doc.body;
-      const data = {blocks: children(root, false), modal: !!modal};
+      const lineup = !modal && doc.location.pathname === '/api/statistiche_partita.php' && doc.querySelector('form#lineupForm');
+      const data = {blocks: lineup ? [matchLineup(lineup)] : children(root, false), modal: !!modal};
       const serialized = JSON.stringify(data);
       if (serialized !== lastSnapshot) { lastSnapshot = serialized; emit('snapshot', data); }
     } catch (_) { emit('error', {message: 'Impossibile aggiornare lo strumento. Riprova.'}); }
@@ -250,6 +310,8 @@
         element.click(); approved = null;
       } else if (message.type === 'export' && element.tagName === 'CANVAS') {
         element.toBlob(blob => blob && fileMessage(blob, message.name || 'grafica.png'), 'image/png');
+      } else if (message.type === 'reload' && doc.location.pathname === '/api/statistiche_partita.php' && element.matches('form#lineupForm')) {
+        doc.defaultView.location.reload();
       }
       schedule();
     } catch (_) { emit('error', {message: 'Operazione non riuscita. Controlla i dati e riprova.'}); }

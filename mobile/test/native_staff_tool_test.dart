@@ -8,6 +8,7 @@ import 'package:tornei_old_school/native_staff_tool.dart';
 import 'package:tornei_old_school/staff_dashboard.dart';
 import 'package:tornei_old_school/staff_engine.dart';
 import 'package:tornei_old_school/staff_rich_editor.dart';
+import 'package:tornei_old_school/staff_match_forms.dart';
 import 'package:tornei_old_school/theme.dart';
 
 class FixtureAuth extends DemoAuth {
@@ -50,6 +51,303 @@ class FixtureEngine implements StaffEngine {
 }
 
 void main() {
+  testWidgets(
+    'Grouped result form keeps both scores editable at 320px with large text',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final api = DemoApi(), auth = FixtureAuth(DemoApi());
+      auth.user = api.users.first;
+      final snapshot = {
+        'type': 'snapshot',
+        'document': 'result-document',
+        'blocks': [
+          {
+            'kind': 'match-form',
+            'id': 'result',
+            'sections': [
+              {
+                'title': 'Seleziona la partita',
+                'blocks': [
+                  {
+                    'kind': 'field',
+                    'id': 'match',
+                    'type': 'select',
+                    'label': 'Partita',
+                    'value': '25',
+                    'options': [
+                      {'value': '25', 'label': 'Go Ahead Eagles - Napoli'},
+                    ],
+                  },
+                ],
+              },
+              {
+                'title': 'Risultato',
+                'blocks': [
+                  for (final side in ['casa', 'ospite'])
+                    {
+                      'kind': 'field',
+                      'id': 'goals-$side',
+                      'type': 'number',
+                      'score': true,
+                      'label': 'Gol $side',
+                      'value': '0',
+                    },
+                ],
+              },
+            ],
+            'blocks': [
+              {
+                'kind': 'action',
+                'id': 'save-result',
+                'label': 'Salva modifiche',
+              },
+            ],
+          },
+        ],
+      };
+      late FixtureEngine engine;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: siteTheme(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(1.6)),
+            child: child!,
+          ),
+          home: NativeStaffTool(
+            auth: auth,
+            title: 'Calendario e risultati',
+            description: 'Partite e risultati',
+            path: 'api/gestione_partite.php',
+            icon: Icons.calendar_month,
+            graphicsOnly: false,
+            engineFactory: (channel, receive) =>
+                engine = FixtureEngine(receive, snapshot),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(StaffMatchForm), findsOneWidget);
+      final goal = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == 'Gol casa',
+      );
+      await tester.ensureVisible(goal);
+      await tester.enterText(goal, '4');
+      expect(engine.commands.last, {
+        'document': 'result-document',
+        'type': 'change',
+        'id': 'goals-casa',
+        'value': '4',
+      });
+      expect(tester.widget<TextField>(goal).style?.fontSize, 28);
+      await tester.ensureVisible(find.text('Salva modifiche'));
+      await tester.tap(find.text('Salva modifiche'));
+      await tester.pumpAndSettle();
+      expect(engine.commands.last['id'], 'save-result');
+      expect(tester.takeException(), isNull);
+    },
+  );
+  for (final scale in [1.0, 1.6]) {
+    testWidgets(
+      'Match lineup edits events and keeps finalization visible at 320px, scale $scale',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(320, 1000));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final api = DemoApi(), auth = FixtureAuth(DemoApi());
+        auth.user = api.users.first;
+        Map<String, dynamic> field(
+          String stat,
+          String type,
+          String label,
+          String value,
+        ) => {
+          'kind': 'field',
+          'id': 'player-$stat',
+          'stat': stat,
+          'type': type,
+          'label': label,
+          'value': value,
+          'checked': false,
+          'options': [
+            {'value': '6', 'label': '6'},
+            {'value': '7.5', 'label': '7,5'},
+          ],
+        };
+        final model = {
+          'kind': 'match-lineup',
+          'id': 'lineup',
+          'home': 'Go Ahead Eagles',
+          'away': 'Napoli',
+          'score': '0 - 0',
+          'info': 'Brasilerao · Semifinale Gold',
+          'back': {'kind': 'action', 'id': 'back', 'label': 'Torna indietro'},
+          'finalize': {
+            'kind': 'field',
+            'id': 'finalize',
+            'type': 'checkbox',
+            'label': 'Finalizza partita',
+            'checked': false,
+          },
+          'save': {
+            'kind': 'action',
+            'id': 'save-lineup',
+            'label': 'Salva tutta la distinta',
+          },
+          'teams': [
+            {
+              'id': 'home',
+              'name': 'Go Ahead Eagles',
+              'actions': [
+                {
+                  'kind': 'action',
+                  'id': 'all-present',
+                  'label': 'Tutti presenti',
+                },
+                {'kind': 'action', 'id': 'none-present', 'label': 'Nessuno'},
+              ],
+              'players': [
+                {
+                  'id': 'player',
+                  'name': 'Rossi Marco',
+                  'badges': ['GK', 'C', 'DIFFIDATO'],
+                  'fields': [
+                    field('presenza', 'checkbox', 'Presente', ''),
+                    field('goal', 'number', 'Gol', '0'),
+                    field('assist', 'number', 'Assist', '0'),
+                    field('autogol', 'number', 'Autogol', '0'),
+                    field(
+                      'cartellino_giallo',
+                      'checkbox',
+                      'Cartellino giallo',
+                      '',
+                    ),
+                    field(
+                      'cartellino_rosso',
+                      'checkbox',
+                      'Cartellino rosso',
+                      '',
+                    ),
+                    field('voto', 'select', 'Voto', '6'),
+                  ],
+                },
+              ],
+            },
+            {'id': 'away', 'name': 'Napoli', 'actions': [], 'players': []},
+          ],
+        };
+        final snapshot = {
+          'type': 'snapshot',
+          'document': 'match-document',
+          'blocks': [model],
+        };
+        late FixtureEngine engine;
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: siteTheme(),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(scale)),
+              child: child!,
+            ),
+            home: NativeStaffTool(
+              auth: auth,
+              title: 'Calendario e risultati',
+              description: 'Partite, referti e punteggi',
+              path: 'api/gestione_partite.php',
+              icon: Icons.calendar_month,
+              graphicsOnly: false,
+              engineFactory: (channel, receive) =>
+                  engine = FixtureEngine(receive, snapshot),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(StaffMatchLineup), findsOneWidget);
+        expect(find.byType(SegmentedButton<String>), findsNothing);
+        expect(
+          find.text('Salva tutta la distinta').hitTestable(),
+          findsOneWidget,
+        );
+        expect(find.text('Finalizza partita').hitTestable(), findsOneWidget);
+        await tester.ensureVisible(find.text('Rossi Marco'));
+        await tester.tap(find.text('Rossi Marco'));
+        expect(engine.commands.last, {
+          'document': 'match-document',
+          'type': 'change',
+          'id': 'player-presenza',
+          'checked': true,
+        });
+        expect(find.text('GK'), findsOneWidget);
+        expect(find.text('C'), findsOneWidget);
+        final goalCounter = find.byWidgetPredicate(
+          (widget) =>
+              widget is StaffStatCounter && widget.field['stat'] == 'goal',
+        );
+        final increment = find.descendant(
+          of: goalCounter,
+          matching: find.byTooltip('Aumenta Gol'),
+        );
+        await tester.ensureVisible(increment);
+        await tester.tap(increment);
+        await tester.pump();
+        await tester.tap(increment);
+        await tester.pump();
+        expect(engine.commands.last['value'], '2');
+        expect(engine.commands.last['id'], 'player-goal');
+        final intermediate =
+            jsonDecode(jsonEncode(snapshot)) as Map<String, dynamic>;
+        intermediate['blocks'][0]['teams'][0]['players'][0]['fields'][1]['value'] =
+            '1';
+        engine.receive(intermediate);
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<TextField>(
+                find.descendant(
+                  of: goalCounter,
+                  matching: find.byType(TextField),
+                ),
+              )
+              .controller!
+              .text,
+          '2',
+        );
+        await tester.tap(increment);
+        await tester.pump();
+        expect(engine.commands.last['value'], '3');
+        final decrement = find.descendant(
+          of: goalCounter,
+          matching: find.byTooltip('Diminuisci Gol'),
+        );
+        await tester.tap(decrement);
+        await tester.pump();
+        expect(engine.commands.last['value'], '2');
+        await tester.ensureVisible(find.text('Giallo'));
+        await tester.tap(find.text('Giallo'));
+        expect(engine.commands.last['id'], 'player-cartellino_giallo');
+        expect(engine.commands.last['checked'], true);
+        await tester.ensureVisible(find.text('Rosso'));
+        await tester.tap(find.text('Rosso'));
+        expect(engine.commands.last['id'], 'player-cartellino_rosso');
+        await tester.tap(find.text('Finalizza partita'));
+        expect(engine.commands.last['id'], 'finalize');
+        expect(engine.commands.last['checked'], true);
+        await tester.tap(find.text('Salva tutta la distinta'));
+        await tester.pumpAndSettle();
+        expect(engine.commands.last, {
+          'document': 'match-document',
+          'type': 'click',
+          'id': 'save-lineup',
+        });
+        await tester.tap(find.byTooltip('Torna alla partita'));
+        await tester.pumpAndSettle();
+        expect(engine.commands.last['id'], 'back');
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
   test('Protocol rejects wrong channels and malformed data', () {
     expect(safeStaffFilename('../../coppa/a.png'), isNot(contains('/')));
     expect(safeStaffFilename('../../coppa/a.png'), isNot(startsWith('.')));
