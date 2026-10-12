@@ -1,0 +1,147 @@
+<?php
+require_once __DIR__ . '/partite_schema.php';
+require_once __DIR__ . '/giocatore_goal_extra.php';
+
+function get_torneo_details(mysqli $conn, string $torneo): array
+{
+    if ($torneo === '') {
+        return [];
+    }
+
+    $filenamePhp = $torneo . '.php';
+    $filenameHtml = $torneo . '.html';
+    $stmt = $conn->prepare("
+        SELECT nome, data_inizio, data_fine, config
+        FROM tornei
+        WHERE filetorneo IN (?, ?)
+        ORDER BY (filetorneo LIKE '%.php') DESC
+        LIMIT 1
+    ");
+    if (!$stmt) {
+        return [];
+    }
+
+    $stmt->bind_param('ss', $filenamePhp, $filenameHtml);
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return [];
+    }
+
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$row) {
+        return [];
+    }
+
+    $decoded = json_decode((string)($row['config'] ?? ''), true);
+    $row['config_decoded'] = is_array($decoded) ? $decoded : [];
+    return $row;
+}
+
+function torneo_ha_due_giornate_regular(mysqli $conn, string $torneo): bool
+{
+    $stmt = $conn->prepare("
+        SELECT
+            COUNT(DISTINCT giornata) AS numero_giornate,
+            MIN(giornata) AS prima_giornata,
+            MAX(giornata) AS ultima_giornata
+        FROM partite
+        WHERE torneo = ?
+          AND UPPER(CASE
+              WHEN TRIM(COALESCE(fase, '')) IN ('', 'GIRONE') THEN 'REGULAR'
+              ELSE TRIM(COALESCE(fase, ''))
+          END) = 'REGULAR'
+          AND giornata IS NOT NULL
+    ");
+    if (!$stmt) {
+        return false;
+    }
+
+    $stmt->bind_param('s', $torneo);
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return false;
+    }
+
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    return (int)($row['numero_giornate'] ?? 0) === 2
+        && (int)($row['prima_giornata'] ?? 0) === 1
+        && (int)($row['ultima_giornata'] ?? 0) === 2;
+}
+
+
+function tournament_scorers_sql(mysqli $conn, string $torneo): string {
+// Per Coppa d'Africa contiamo tutte le fasi.
+// Lo stesso vale per i tornei disputati in un solo giorno, per quelli che
+// contengono "allinonenight" nel nome e per quelli con una regular season di sole due giornate:
+// la classifica capocannoniere comprende anche tutte le fasi finali.
+// Per tutti i tornei a gironi includiamo anche la Coppa Gold.
+// Per gli altri tornei consideriamo solo la fase REGULAR (anche se fase vuota o "GIRONE").
+// Uso COALESCE per includere anche valori NULL di fase come regular, evitando di escludere partite registrate senza fase.
+$phaseExpr = "UPPER(CASE WHEN TRIM(COALESCE(p.fase, '')) IN ('', 'GIRONE') THEN 'REGULAR' ELSE TRIM(COALESCE(p.fase, '')) END)";
+$torneoDetails = get_torneo_details($conn, $torneo);
+$torneoConfig = $torneoDetails['config_decoded'] ?? [];
+$torneoFormat = strtolower(trim((string)($torneoConfig['formato'] ?? $torneoConfig['formula_torneo'] ?? '')));
+$isGironeTournament = ($torneoFormat === 'girone');
+$hasTwoRegularMatchdays = torneo_ha_due_giornate_regular($conn, $torneo);
+$startDate = trim((string)($torneoDetails['data_inizio'] ?? ''));
+$endDate = trim((string)($torneoDetails['data_fine'] ?? ''));
+$isSingleDayTournament = $startDate !== '' && $startDate !== '0000-00-00' && $startDate === $endDate;
+$tournamentName = strtolower((string)($torneoDetails['nome'] ?? ''));
+$isAllInOneNightTournament = strpos($tournamentName, 'allinonenight') !== false;
+
+if ($torneo === 'Coppadafrica' || $hasTwoRegularMatchdays || $isSingleDayTournament || $isAllInOneNightTournament) {
+    $phaseClause = '';
+} elseif ($isGironeTournament) {
+    $phaseClause = "AND $phaseExpr IN ('REGULAR','GOLD')";
+} else {
+    $phaseClause = "AND $phaseExpr = 'REGULAR'";
+}
+
+$teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
+$resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
+$extraTeamGoalsExpr = giocatore_goal_extra_team_expr($conn, 'g.id', 's.id');
+$goalField = "(COALESCE(match_stats.gol, 0) + {$extraTeamGoalsExpr})";
+$matchStatsSubquery = "
+    SELECT
+        pg.giocatore_id,
+        {$resolvedTeamExpr} AS squadra_ref,
+        SUM(pg.goal) AS gol,
+        SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END) AS presenze
+    FROM partita_giocatore pg
+    JOIN partite p
+      ON p.id = pg.partita_id
+    WHERE p.torneo = ?
+      $phaseClause
+    GROUP BY pg.giocatore_id, squadra_ref
+";
+
+$sql = "
+    SELECT 
+        g.id,
+        g.nome,
+        g.cognome,
+        s.nome AS squadra,
+        s.logo AS logo,
+        COALESCE(sg.foto, g.foto, s.logo) AS foto,
+        s.torneo AS torneo,
+        {$goalField} AS gol,
+        COALESCE(match_stats.presenze, 0) AS presenze
+    FROM squadre_giocatori sg
+    JOIN squadre s ON s.id = sg.squadra_id
+    JOIN giocatori g ON g.id = sg.giocatore_id
+    LEFT JOIN (
+        {$matchStatsSubquery}
+    ) match_stats
+     ON match_stats.giocatore_id = g.id
+     AND match_stats.squadra_ref = s.id
+    WHERE s.torneo = ?
+      AND {$goalField} > 0
+    ORDER BY gol DESC, presenze DESC, g.cognome ASC, g.nome ASC
+";
+
+
+return $sql;
+}

@@ -68,6 +68,8 @@ $pageSeo = [
   <main class="albo-page">
     <h1><?= $isEsportAlbo ? "Albo d'oro ESPORT" : "Albo d'oro completo" ?></h1>
     <div class="albo-filters">
+      <label for="filterAnno">Anno</label>
+      <select id="filterAnno" class="albo-select"><option value="">Tutti gli anni</option></select>
       <label for="filterCompetizione">Torneo</label>
       <select id="filterCompetizione" class="albo-select">
         <option value="">Caricamento tornei...</option>
@@ -112,41 +114,44 @@ $pageSeo = [
       return formatPeriodo(item.data_inizio, item.data_fine, item.anno);
     }
 
+    const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+    const safeUrl = value => /^(https?:\/\/|\/(?!\/))/i.test(String(value || '')) ? value : '';
     function renderCard(item) {
       const periodo = labelPeriodo(item);
-      const logoTorneo = item.torneo_logo || '/img/logo_old_school.png';
+      const logoTorneo = safeUrl(item.torneo_logo) || '/img/logo_old_school.png';
       const nomeTorneo = item.competizione || 'Torneo';
-      const linkTorneo = item.link_torneo || '';
+      const linkTorneo = safeUrl(item.link_torneo);
       const premi = (item.premi || []).map(p => `
         <div class="albo-premio">
-          <div class="albo-premio-title">${p.premio || ''}</div>
+          <div class="albo-premio-title">${esc(p.premio || '')}</div>
           <div class="albo-premio-body">
-            <img src="${p.logo_vincitrice || '/img/tornei/pallone.png'}" alt="">
-            <div class="vic">${p.vincitrice || ''}</div>
+            <img src="${esc(safeUrl(p.logo_vincitrice) || '/img/tornei/pallone.png')}" alt="">
+            <div class="vic">${esc(p.vincitrice || '')}</div>
           </div>
         </div>
       `).join('');
       return `
         <article class="albo-card">
           <div class="albo-header">
-            <span class="albo-pill">${item.anno || ''}</span>
-            <img class="albo-logo" src="${logoTorneo}" alt="${nomeTorneo}" onerror="this.src='/img/logo_old_school.png'">
+            <span class="albo-pill">${esc(item.anno || '')}</span>
+            <img class="albo-logo" src="${esc(logoTorneo)}" alt="${esc(nomeTorneo)}" onerror="this.src='/img/logo_old_school.png'">
           </div>
           <div>
             <p class="albo-meta">Torneo</p>
-            <h3 class="albo-title">${nomeTorneo}</h3>
-            <p class="albo-meta">${periodo}</p>
+            <h3 class="albo-title">${esc(nomeTorneo)}</h3>
+            <p class="albo-meta">${esc(periodo)}</p>
           </div>
           <div class="albo-premi">
             ${premi}
           </div>
-          ${linkTorneo ? `<div class="albo-actions"><a class="albo-link" href="${linkTorneo}">Vai al torneo</a></div>` : ''}
+          ${linkTorneo ? `<div class="albo-actions"><a class="albo-link" href="${esc(linkTorneo)}">Vai al torneo</a></div>` : ''}
         </article>
       `;
     }
 
     const grid = document.getElementById('alboGrid');
     const select = document.getElementById('filterCompetizione');
+    const yearSelect = document.getElementById('filterAnno');
     const searchInput = document.getElementById('filterSearch');
     let alboData = [];
     let hasManualSelection = false;
@@ -182,11 +187,11 @@ $pageSeo = [
     }
 
     function competitionKey(item) {
-      return `${String(item?.sezione || 'calcio')}::${String(item?.competizione || '')}`;
+      return item?.edition_key || `${String(item?.sezione || 'calcio')}::${String(item?.competizione || '')}::${String(item?.anno || '')}`;
     }
 
     function competitionLabel(item) {
-      return `${String(item?.sezione || 'calcio').toUpperCase()} - ${String(item?.competizione || '')}`;
+      return `${String(item?.sezione || 'calcio').toUpperCase()} - ${String(item?.competizione || '')} · ${String(item?.anno || '')}`;
     }
 
     function renderList(items) {
@@ -213,7 +218,7 @@ $pageSeo = [
       const latestItem = getLatestInsertedItems(items)[0] || null;
       const defaultCompetizione = latestItem ? competitionKey(latestItem) : unique[0][0];
 
-      select.innerHTML = unique.map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
+      select.innerHTML = unique.map(([value, label]) => `<option value="${esc(value)}">${esc(label)}</option>`).join('');
       select.disabled = false;
       select.value = defaultCompetizione;
       hasManualSelection = false;
@@ -222,7 +227,7 @@ $pageSeo = [
     function applyFilter() {
       const selectedCompetizione = select.value;
       const searchTerm = normalizeSearchValue(searchInput.value);
-      let filtered = [...alboData];
+      let filtered = alboData.filter(item => !yearSelect.value || String(item.anno) === yearSelect.value);
 
       if (searchTerm) {
         filtered = filtered.filter(item => normalizeSearchValue(item.competizione || '').includes(searchTerm));
@@ -241,6 +246,8 @@ $pageSeo = [
       .then(r => r.json())
       .then(data => {
         alboData = Array.isArray(data.data) ? data.data : [];
+        const years = [...new Set(alboData.map(item => String(item.anno || '')).filter(Boolean))].sort().reverse();
+        yearSelect.innerHTML = '<option value="">Tutti gli anni</option>' + years.map(year => `<option value="${esc(year)}">${esc(year)}</option>`).join('');
         populateSelect(alboData);
         applyFilter();
       })
@@ -253,6 +260,10 @@ $pageSeo = [
       applyFilter();
     });
     searchInput.addEventListener('input', applyFilter);
+    yearSelect.addEventListener('change', () => {
+      populateSelect(alboData.filter(item => !yearSelect.value || String(item.anno) === yearSelect.value));
+      applyFilter();
+    });
 
     document.addEventListener("DOMContentLoaded", () => {
       fetch("/includi/footer.html")
