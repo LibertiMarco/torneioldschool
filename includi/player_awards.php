@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/albo_archive.php';
 function resolve_torneo_link(?string $value): string {
     $value = trim((string)$value);
     if ($value === '' || $value === '0') {
@@ -230,7 +231,8 @@ function fetch_player_awards(mysqli $conn, array $giocatore, array $teams, strin
     $seen = [];
     $res = $stmt->get_result();
     while ($row = $res->fetch_assoc()) {
-        $winnerKey = premio_normalize((string)($row['vincitrice'] ?? ''));
+        $bound = albo_bind_edition([...$row,'sezione'=>$section,'anno'=>(string)($row['fine_anno'] ?: $row['inizio_anno'] ?: '')],albo_backfill()['editions'] ?? []);
+        $winnerKey = premio_normalize(preg_replace('/\([^)]*\)/', '', (string)($row['vincitrice'] ?? '')) ?? '');
         $teamCategory = premio_team_category((string)($row['premio'] ?? ''));
         foreach ($teams as $team) {
             if (!premio_competizione_matches_team((string)$row['competizione'], $team)) continue;
@@ -247,7 +249,7 @@ function fetch_player_awards(mysqli $conn, array $giocatore, array $teams, strin
                 'tipo' => $isTeamAward ? 'Squadra' : 'Individuale',
                 'premio' => $isTeamAward ? $teamCategory : (string)$row['premio'],
                 'premio_originale' => (string)$row['premio'],
-                'competizione' => (string)$row['competizione'],
+                'competizione' => (string)($bound['competizione'] ?? $row['competizione']),
                 'squadra' => (string)($team['nome'] ?? ''),
                 'anno' => (string)($row['fine_anno'] ?: $row['inizio_anno'] ?: ''),
                 'logo' => $isTeamAward
@@ -267,8 +269,9 @@ function deduplicate_player_awards(array $awards): array {
     $seen = [];
     foreach ($awards as $award) {
         $key = premio_normalize((string)($award['tipo'] ?? '')) . ':'
-            . premio_normalize((string)($award['premio'] ?? '')) . ':'
+            . albo_kind((string)($award['premio'] ?? '')) . ':'
             . premio_normalize((string)($award['competizione'] ?? '')) . ':'
+            . (string)($award['anno'] ?? '') . ':'
             . premio_normalize((string)($award['squadra'] ?? ''));
         if (isset($seen[$key])) continue;
         $seen[$key] = true;
@@ -278,9 +281,26 @@ function deduplicate_player_awards(array $awards): array {
 }
 
 function player_awards_fetch_all(mysqli $conn, array $player, array $teams, string $section): array {
+    $official=[]; $covered=[];
+    foreach (albo_archive_read($conn,$section) as $record) {
+        $edition=(int)($record['torneo_id'] ?? 0);
+        $teamIds=array_map('intval',array_column($teams,'id'));
+        $individual=!empty($record['giocatore_id']) && (int)$record['giocatore_id'] === (int)$player['id'];
+        $member=isset($record['members']) ? in_array((int)$player['id'],$record['members'],true)
+            : (!empty($record['squadra_id']) && in_array((int)$record['squadra_id'],$teamIds,true));
+        if ($edition) $covered[albo_slug((string)($record['link_torneo'] ?? '')) . ':' . $record['kind']]=true;
+        if (!$individual && !$member) continue;
+        $team=''; foreach ($teams as $item) if ((int)$item['id'] === (int)($record['squadra_id'] ?? 0)) { $team=(string)$item['nome']; break; }
+        $official[]=['id'=>$record['source_key'] ?? $record['record_id'],'tipo'=>$individual ? 'Individuale' : 'Squadra',
+            'premio'=>$record['premio'],'competizione'=>$record['competizione'],'squadra'=>$team,
+            'anno'=>$record['anno'],'logo'=>$record['logo_vincitrice'] ?? '', 'link'=>$record['link_torneo'] ?? '',
+            'torneo_id'=>$edition,'giocatore_id'=>$record['giocatore_id'] ?? null];
+    }
+    $inferred=array_merge(fetch_player_regular_season_awards($conn,$teams),fetch_player_cup_awards($conn,$teams));
+    $inferred=array_values(array_filter($inferred,static fn($award)=>!isset($covered[albo_slug((string)$award['link']) . ':' . albo_kind((string)$award['premio'])])));
     return deduplicate_player_awards(array_merge(
-        fetch_player_regular_season_awards($conn, $teams),
-        fetch_player_cup_awards($conn, $teams),
+        $official,
+        $inferred,
         fetch_player_awards($conn, $player, $teams, $section)
     ));
 }

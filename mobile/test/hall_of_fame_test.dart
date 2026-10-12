@@ -35,6 +35,54 @@ class HallApi extends DemoApi {
 }
 
 void main() {
+  testWidgets('Year filter separates editions with the same name', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = HallApi();
+    final rows = [
+      {
+        'edition_key': 'calcio:1',
+        'competizione': 'Coppa unica',
+        'anno': 2025,
+        'latest_sort_time': 1,
+        'premi': [
+          {'premio': 'Vincente', 'vincitrice': 'Vincente 2025'},
+        ],
+      },
+      {
+        'edition_key': 'calcio:2',
+        'competizione': 'Coppa unica',
+        'anno': 2026,
+        'latest_sort_time': 2,
+        'premi': [
+          {'premio': 'Vincente', 'vincitrice': 'Vincente 2026'},
+        ],
+      },
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [HallOfFamePanel(api: api, rows: rows)],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Vincente 2026'), findsOneWidget);
+    expect(find.text('Vincente 2025'), findsNothing);
+    await tester.tap(find.byType(DropdownButtonFormField<int>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2025').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Vincente 2025'), findsOneWidget);
+    expect(find.text('Vincente 2026'), findsNothing);
+    expect(find.text('Coppa unica · 2025'), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('Selects the latest entry and switches awards at phone width', (
     tester,
   ) async {

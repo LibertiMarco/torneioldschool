@@ -1,8 +1,15 @@
 <?php
 require_once __DIR__ . '/../includi/admin_guard.php';
+// The app uses one host for both sections; only authenticated embedded staff
+// requests may explicitly choose the section here.
+if (($_GET['embed'] ?? '') === '1' && isset($_GET['sezione'])) {
+    if (!is_string($_GET['sezione']) || !in_array($_GET['sezione'],['calcio','esport'],true)) { http_response_code(400);exit('Sezione non valida.'); }
+    $adminSection=$_GET['sezione'];$adminIsEsport=$adminSection === 'esport';
+}
 
 require_once __DIR__ . '/../includi/db.php';
 require_once __DIR__ . '/../includi/content_sections.php';
+require_once __DIR__ . '/../includi/albo_admin.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_or_same_origin_require('admin_albo');
@@ -17,6 +24,10 @@ $orderColumnAvailable = false;
 $sectionColumnAvailable = false;
 $sortGroups = [];
 $defaultTorneoLogo = '/img/logo_old_school.png';
+$alboAutoPlan=null;
+$alboAutoTournaments=[];
+$alboAutoId=(int)($_POST['auto_torneo'] ?? 0);
+$alboAutoClose=($_POST['auto_close'] ?? '') === '1';
 
 function h($str) {
     return htmlspecialchars((string)$str, ENT_QUOTES, 'UTF-8');
@@ -467,6 +478,32 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         });
     }
 }
+if ($conn && !$conn->connect_error) {
+    try {
+        $stmt=$conn->prepare('SELECT id,nome,stato,data_fine FROM tornei WHERE sezione=? ORDER BY data_fine DESC,id DESC');
+        $stmt->bind_param('s',$adminSection);$stmt->execute();
+        $alboAutoTournaments=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);$stmt->close();
+        if (str_starts_with((string)($_POST['azione'] ?? ''),'auto_')) {
+            csrf_require('admin_albo');
+            $db=albo_admin_db();
+            $actor=(int)($_SESSION['user_id'] ?? 0);
+            $freshRole=albo_admin_rows($db,'SELECT ruolo FROM utenti WHERE id=?',[$actor])[0]['ruolo'] ?? '';
+            if (!in_array($freshRole,['admin','sysadmin'],true)) { http_response_code(403);exit('Area riservata agli amministratori.'); }
+            if (($_POST['azione'] ?? '') === 'auto_publish') {
+                $store=new AlboAwardStore($db);
+                $keys=$_POST['auto_keys'] ?? []; $individuals=$_POST['auto_individuals'] ?? [];
+                if (!is_array($keys) || !is_array($individuals) || count($keys)>1000) throw new RuntimeException('Selezione non valida.');
+                $count=$store->publish($alboAutoId,$actor,(string)($_POST['auto_revision'] ?? ''),$keys,$individuals,$alboAutoClose,
+                    fn($lockedDb)=>albo_admin_plan($lockedDb,$conn,$alboAutoId,$adminSection,$alboAutoClose));
+                $messages[]='Pubblicazione completata: ' . $count . ' premi aggiunti o aggiornati.' . ($alboAutoClose ? ' Torneo chiuso.' : '');
+            }
+            $alboAutoPlan=albo_admin_plan($db,$conn,$alboAutoId,$adminSection,$alboAutoClose);
+        }
+    } catch (Throwable $error) {
+        if ($error instanceof RuntimeException && !$error instanceof PDOException) $errors[]=$error->getMessage();
+        else { error_log('Award automation: ' . get_class($error) . ' request failed');$errors[]='Impossibile preparare i premi. Riprova.'; }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -548,13 +585,15 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endforeach; ?>
 
     <div class="tab-buttons">
-      <button type="button" data-tab="panel-create" class="active">Crea</button>
+      <button type="button" data-tab="panel-auto" class="active">Automazione</button>
+      <button type="button" data-tab="panel-create">Crea</button>
       <button type="button" data-tab="panel-update">Modifica</button>
       <button type="button" data-tab="panel-sort">Ordina</button>
       <button type="button" data-tab="panel-delete">Elimina</button>
     </div>
 
-    <div class="panel-card" id="panel-create">
+    <?php include __DIR__ . '/../includi/albo_admin_panel.php'; ?>
+    <div class="panel-card hidden" id="panel-create">
       <h3>Nuova voce</h3>
       <form method="POST" enctype="multipart/form-data">
         <input type="hidden" name="azione" value="create">
@@ -744,7 +783,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
   <div id="footer-container"></div>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const panels = ["panel-create", "panel-update", "panel-sort", "panel-delete"];
+      const panels = ["panel-auto", "panel-create", "panel-update", "panel-sort", "panel-delete"];
       const tabButtons = document.querySelectorAll('.tab-buttons button');
       function showPanel(id) {
         panels.forEach(pid => {
@@ -754,7 +793,7 @@ if (empty($errors) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         tabButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === id));
       }
       tabButtons.forEach(btn => btn.addEventListener('click', () => showPanel(btn.dataset.tab)));
-      showPanel('panel-create');
+      showPanel('panel-auto');
 
       // Gestione selezione per modifica
       const alboData = <?= json_encode($albo, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;

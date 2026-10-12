@@ -834,25 +834,30 @@ class HallOfFamePanel extends StatefulWidget {
 
 class _HallOfFamePanelState extends State<HallOfFamePanel> {
   String? selected;
+  int? selectedYear;
 
   String competitionKey(Map<String, dynamic> row) =>
-      '${row['sezione'] ?? 'calcio'}::${row['competizione'] ?? ''}';
+      '${row['edition_key'] ?? '${row['sezione'] ?? 'calcio'}::${row['competizione'] ?? ''}::${row['anno'] ?? ''}'}';
 
   num number(Map<String, dynamic> row, String field) =>
       num.tryParse('${row[field] ?? ''}') ?? 0;
 
-  Map<String, dynamic> latestTournament() => widget.rows.reduce((latest, row) {
-    final time = number(
-      row,
-      'latest_sort_time',
-    ).compareTo(number(latest, 'latest_sort_time'));
-    return time > 0 ||
-            (time == 0 &&
-                number(row, 'latest_record_id') >
-                    number(latest, 'latest_record_id'))
-        ? row
-        : latest;
-  });
+  Map<String, dynamic> latestTournament(List<Map<String, dynamic>> rows) {
+    var latest = rows.first;
+    for (final row in rows.skip(1)) {
+      final time = number(
+        row,
+        'latest_sort_time',
+      ).compareTo(number(latest, 'latest_sort_time'));
+      if (time > 0 ||
+          (time == 0 &&
+              number(row, 'latest_record_id') >
+                  number(latest, 'latest_record_id'))) {
+        latest = row;
+      }
+    }
+    return latest;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -862,18 +867,67 @@ class _HallOfFamePanelState extends State<HallOfFamePanel> {
         child: Text('Nessun risultato disponibile.'),
       );
     }
+    final years =
+        widget.rows
+            .map((row) => int.tryParse('${row['anno']}') ?? 0)
+            .where((year) => year > 0)
+            .toSet()
+            .toList()
+          ..sort((a, b) => b.compareTo(a));
+    final currentYear = years.contains(selectedYear) ? selectedYear : null;
+    final visible = widget.rows
+        .where(
+          (row) => currentYear == null || '${row['anno']}' == '$currentYear',
+        )
+        .toList();
     final competitions = <String, String>{
-      for (final row in widget.rows)
-        competitionKey(row): '${row['competizione'] ?? 'Torneo'}',
+      for (final row in visible)
+        competitionKey(
+          row,
+        ): '${row['competizione'] ?? 'Torneo'}${widget.rows.where((other) => other['competizione'] == row['competizione']).length > 1 ? ' · ${row['anno'] ?? ''}' : ''}',
     };
     final options = competitions.entries.toList()
       ..sort((a, b) => a.value.toLowerCase().compareTo(b.value.toLowerCase()));
     final value = competitions.containsKey(selected)
         ? selected!
-        : competitionKey(latestTournament());
+        : competitionKey(latestTournament(visible));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (years.length > 1)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: DropdownButtonFormField<int>(
+              isExpanded: true,
+              key: ValueKey('hall-year-$currentYear'),
+              initialValue: currentYear ?? 0,
+              decoration: const InputDecoration(
+                labelText: 'Anno',
+                prefixIcon: Icon(Icons.calendar_month_outlined),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(16)),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              items: [
+                const DropdownMenuItem(
+                  value: 0,
+                  child: Text(
+                    'Tutti gli anni',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                for (final year in years)
+                  DropdownMenuItem(value: year, child: Text('$year')),
+              ],
+              onChanged: (year) => setState(() {
+                selectedYear = year == 0 ? null : year;
+                selected = null;
+              }),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: DropdownButtonFormField<String>(
@@ -902,7 +956,7 @@ class _HallOfFamePanelState extends State<HallOfFamePanel> {
             onChanged: (choice) => setState(() => selected = choice),
           ),
         ),
-        ...widget.rows
+        ...visible
             .where((row) => competitionKey(row) == value)
             .map((row) => HallCard(api: widget.api, row: row)),
       ],
@@ -943,21 +997,9 @@ class HallCard extends StatelessWidget {
               ),
             ],
           ),
-          ...TosApi.rows(row['premi']).map(
-            (award) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: SiteImage(
-                api: api,
-                path: '${award['logo_vincitrice'] ?? ''}',
-                width: 36,
-                height: 36,
-                fallback: Icons.shield_outlined,
-                preserveShape: true,
-              ),
-              title: Text('${award['vincitrice'] ?? ''}'),
-              subtitle: Text('${award['premio'] ?? ''}'),
-            ),
-          ),
+          const SizedBox(height: 12),
+          ...TosApi.rows(row['premi'])
+              .map((award) => _HallAward(api: api, award: award)),
           if (TosApi.tournamentSlug(row).isNotEmpty)
             TextButton(
               onPressed: () => openPage(
@@ -973,6 +1015,94 @@ class HallCard extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _HallAward extends StatelessWidget {
+  const _HallAward({required this.api, required this.award});
+  final TosApi api;
+  final Map<String, dynamic> award;
+  @override
+  Widget build(BuildContext context) {
+    final kind = '${award['kind'] ?? ''}';
+    final individual =
+        award['tipo'] == 'Individuale' ||
+        ['SCORER', 'MVP', 'KEEPER', 'DEFENDER', 'ATTACKER'].contains(kind);
+    final accent = kind == 'GOLD'
+        ? const Color(0xff9d7116)
+        : kind == 'SILVER'
+        ? const Color(0xff697e91)
+        : kind == 'BRONZO'
+        ? const Color(0xffa65c35)
+        : siteBlue;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xfff6f8fb),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent.withValues(alpha: .2)),
+      ),
+      child: Row(
+        children: [
+          SiteImage(
+            api: api,
+            path: '${award['logo_vincitrice'] ?? ''}',
+            width: 44,
+            height: 44,
+            fallback: individual ? Icons.person_outline : Icons.shield_outlined,
+            preserveShape: true,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      kind == 'SCORER'
+                          ? Icons.sports_soccer
+                          : Icons.emoji_events_outlined,
+                      size: 16,
+                      color: accent,
+                    ),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        '${award['premio'] ?? ''}',
+                        style: TextStyle(
+                          color: accent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  '${award['vincitrice'] ?? ''}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: siteBlue,
+                  ),
+                ),
+                if (kind == 'SCORER' &&
+                    (int.tryParse('${award['gol']}') ?? 0) > 0)
+                  Text(
+                    '${award['gol']} gol',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xff637487),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class NewsCard extends StatelessWidget {
