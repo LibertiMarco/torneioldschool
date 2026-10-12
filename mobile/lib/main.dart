@@ -223,12 +223,8 @@ class _HomePageState extends State<HomePage> {
     final selectedPage = page == 4 && !hasStaffAccess ? 3 : page;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: selectedPage == 0
-            ? Theme.of(context).scaffoldBackgroundColor
-            : Theme.of(context).colorScheme.primary,
-        foregroundColor: selectedPage == 0
-            ? Theme.of(context).colorScheme.onSurface
-            : Theme.of(context).colorScheme.onPrimary,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         elevation: 0,
         title: Row(
           children: [

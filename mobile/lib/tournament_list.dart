@@ -126,11 +126,13 @@ class TournamentCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Ink(
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xff102237), Color(0xff315977)],
+                      colors: Theme.of(context).brightness == Brightness.dark
+                          ? const [Color(0xff171717), Color(0xff303030)]
+                          : const [Color(0xff102237), Color(0xff315977)],
                     ),
                   ),
                   padding: const EdgeInsets.all(20),

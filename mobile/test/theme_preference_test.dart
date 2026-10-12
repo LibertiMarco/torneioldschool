@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/auth.dart';
 import 'package:tornei_old_school/demo.dart';
 import 'package:tornei_old_school/main.dart';
+import 'package:tornei_old_school/theme.dart';
 
 class MemoryThemeStore implements SessionStore {
   final values = <String, String>{};
@@ -35,6 +36,7 @@ void main() {
     await tester.tap(find.text('Scuro'));
     await tester.pumpAndSettle();
     expect(storage.values['tos.app.theme'], 'dark');
+    expect(siteDarkTheme().scaffoldBackgroundColor, Colors.black);
     expect(
       Theme.of(tester.element(find.text('TORNEI OLD SCHOOL'))).brightness,
       Brightness.dark,

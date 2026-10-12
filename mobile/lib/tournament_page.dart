@@ -994,6 +994,7 @@ class _TournamentScorersState extends State<TournamentScorers> {
   int page = 0;
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final ranks = <int>[];
     int? lastGoals;
     var rank = 0;
@@ -1012,14 +1013,16 @@ class _TournamentScorersState extends State<TournamentScorers> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              color: siteBlue,
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? colors.surfaceContainer
+                  : siteBlue,
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             ),
-            child: const Text(
+            child: Text(
               'CLASSIFICA MARCATORI',
               style: TextStyle(
-                color: Color(0xffa6e9ee),
+                color: colors.onSurface,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.5,

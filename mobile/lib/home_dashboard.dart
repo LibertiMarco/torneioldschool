@@ -393,7 +393,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ),
           const SizedBox(height: 28),
           Material(
-            color: siteBlue,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Theme.of(context).colorScheme.surfaceContainer
+                : siteBlue,
             borderRadius: BorderRadius.circular(20),
             clipBehavior: Clip.antiAlias,
             child: Padding(
@@ -449,7 +451,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ),
           const SizedBox(height: 28),
           Material(
-            color: siteBlue,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Theme.of(context).colorScheme.surfaceContainer
+                : siteBlue,
             borderRadius: BorderRadius.circular(20),
             clipBehavior: Clip.antiAlias,
             child: const Padding(

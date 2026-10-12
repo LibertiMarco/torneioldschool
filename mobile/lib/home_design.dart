@@ -260,7 +260,11 @@ class HomeNewsTile extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final path = '${row['cover'] ?? row['immagine'] ?? ''}';
     return Material(
-      color: featured ? siteBlue : Colors.transparent,
+      color: featured
+          ? (Theme.of(context).brightness == Brightness.dark
+                ? colors.surfaceContainer
+                : siteBlue)
+          : Colors.transparent,
       borderRadius: BorderRadius.circular(featured ? 20 : 0),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
