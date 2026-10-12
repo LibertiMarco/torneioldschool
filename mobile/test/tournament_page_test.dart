@@ -87,6 +87,41 @@ class CupLegApi extends GroupedTournamentApi {
 }
 
 void main() {
+  testWidgets('Match cards use the dark theme surface and readable labels', (
+    tester,
+  ) async {
+    final colors = siteDarkTheme().colorScheme;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: siteDarkTheme(),
+        home: Scaffold(
+          body: MatchCard(
+            api: DemoApi(),
+            match: {
+              'id': 1,
+              'squadra_casa': 'Old School FC',
+              'squadra_ospite': 'Demo United',
+              'giocata': 1,
+              'gol_casa': 2,
+              'gol_ospite': 1,
+              'data_partita': '2026-10-01',
+              'ora_partita': '20:00',
+            },
+            phase: 'GOLD',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<Card>(find.byType(Card)).color,
+      colors.surfaceContainerLow,
+    );
+    expect(find.text('TERMINATA'), findsOneWidget);
+    expect(find.text('Old School FC'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'Scorer table keeps tied positions, alternates rows and opens players after paging',
     (tester) async {

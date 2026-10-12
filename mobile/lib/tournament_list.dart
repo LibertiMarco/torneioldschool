@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'main.dart' show ErrorPanel, TournamentPage;
 import 'home_dashboard.dart' show SiteImage;
-import 'theme.dart';
 
 const tournamentStates = {
   'in corso': 'In corso',
@@ -24,6 +23,7 @@ class TournamentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final state = '${tournament['stato'] ?? ''}'.trim().toLowerCase();
     final category = '${tournament['categoria'] ?? ''}'.trim();
     final period = tournamentPeriod(tournament);
@@ -116,7 +116,7 @@ class TournamentCard extends StatelessWidget {
           ],
         ),
         child: Material(
-          color: Colors.white,
+          color: colors.surfaceContainerLow,
           borderRadius: BorderRadius.circular(24),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
@@ -164,8 +164,8 @@ class TournamentCard extends StatelessWidget {
                     children: [
                       Text(
                         '${tournament['nome'] ?? ''}',
-                        style: const TextStyle(
-                          color: siteBlue,
+                        style: TextStyle(
+                          color: colors.onSurface,
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -.6,
@@ -176,17 +176,17 @@ class TournamentCard extends StatelessWidget {
                         const SizedBox(height: 10),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.calendar_today_outlined,
                               size: 13,
-                              color: Color(0xff778496),
+                              color: colors.onSurfaceVariant,
                             ),
                             const SizedBox(width: 7),
                             Expanded(
                               child: Text(
                                 period,
-                                style: const TextStyle(
-                                  color: Color(0xff778496),
+                                style: TextStyle(
+                                  color: colors.onSurfaceVariant,
                                   fontSize: 12,
                                 ),
                               ),
@@ -197,11 +197,11 @@ class TournamentCard extends StatelessWidget {
                       const SizedBox(height: 18),
                       Row(
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Text(
                               'Esplora il torneo',
                               style: TextStyle(
-                                color: siteBlue,
+                                color: colors.onSurface,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -212,13 +212,13 @@ class TournamentCard extends StatelessWidget {
                             width: 38,
                             height: 38,
                             decoration: BoxDecoration(
-                              color: const Color(0xffeef3f8),
+                              color: colors.surfaceContainerHigh,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.arrow_forward_rounded,
                               size: 19,
-                              color: siteBlue,
+                              color: colors.primary,
                             ),
                           ),
                         ],
@@ -385,10 +385,17 @@ class _TournamentListState extends State<TournamentList> {
   InputDecoration filterDecoration(String hint, IconData icon) =>
       InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xff778496), fontSize: 14),
+        hintStyle: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontSize: 14,
+        ),
         filled: true,
-        fillColor: const Color(0xfff3f5f8),
-        prefixIcon: Icon(icon, size: 21, color: siteBlue),
+        fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        prefixIcon: Icon(
+          icon,
+          size: 21,
+          color: Theme.of(context).colorScheme.primary,
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 17,
@@ -403,7 +410,10 @@ class _TournamentListState extends State<TournamentList> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: siteBlue, width: 1.5),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.primary,
+            width: 1.5,
+          ),
         ),
       );
 
@@ -458,9 +468,11 @@ class _TournamentListState extends State<TournamentList> {
               margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xffe5eaf1)),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x0815293e),
@@ -472,14 +484,21 @@ class _TournamentListState extends State<TournamentList> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Trova il tuo torneo',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Cerca per nome o scegli una categoria',
-                    style: TextStyle(fontSize: 13, color: Color(0xff778496)),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -515,14 +534,16 @@ class _TournamentListState extends State<TournamentList> {
                   DropdownButtonFormField<String>(
                     initialValue: category,
                     isExpanded: true,
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.expand_more_rounded,
-                      color: siteBlue,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     borderRadius: BorderRadius.circular(18),
-                    dropdownColor: Colors.white,
+                    dropdownColor: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHigh,
                     style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                      color: siteBlue,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -557,22 +578,26 @@ class _TournamentListState extends State<TournamentList> {
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
                           showCheckmark: false,
-                          selectedColor: siteBlue,
-                          backgroundColor: Colors.white,
+                          selectedColor: Theme.of(context).colorScheme.primary,
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerLow,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
                             vertical: 8,
                           ),
                           labelStyle: TextStyle(
-                            color: state == entry.key ? Colors.white : siteBlue,
+                            color: state == entry.key
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : Theme.of(context).colorScheme.onSurface,
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
                           ),
                           shape: const StadiumBorder(),
                           side: BorderSide(
                             color: state == entry.key
-                                ? siteBlue
-                                : const Color(0xffe0e6ee),
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.outlineVariant,
                           ),
                           label: Text(
                             '${entry.value} (${tournamentGroup(rows, entry.key, search: search, category: category).length})',

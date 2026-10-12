@@ -39,15 +39,110 @@ void main() {
   runApp(TosApp(api: api, auth: TosAuth(api)));
 }
 
-class TosApp extends StatelessWidget {
-  const TosApp({super.key, required this.api, required this.auth});
+class TosApp extends StatefulWidget {
+  const TosApp({
+    super.key,
+    required this.api,
+    required this.auth,
+    this.themeStorage,
+  });
   final TosApi api;
   final TosAuth auth;
+  final SessionStore? themeStorage;
+  @override
+  State<TosApp> createState() => _TosAppState();
+}
+
+class _TosAppState extends State<TosApp> {
+  static const _themeKey = 'tos.app.theme';
+  final _navigatorKey = GlobalKey<NavigatorState>();
+  late final SessionStore _themeStorage =
+      widget.themeStorage ?? const SecureSessionStore();
+  ThemeMode _themeMode = ThemeMode.light;
+  bool _themeChanged = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    try {
+      final value = await _themeStorage.read(_themeKey);
+      if (!mounted || _themeChanged) return;
+      setState(
+        () => _themeMode = value == 'dark' ? ThemeMode.dark : ThemeMode.light,
+      );
+    } catch (_) {
+      // The app opens in light mode when local preferences are unavailable.
+    }
+  }
+
+  Future<void> _setTheme(ThemeMode value) async {
+    _themeChanged = true;
+    setState(() => _themeMode = value);
+    try {
+      await _themeStorage.write(
+        _themeKey,
+        value == ThemeMode.dark ? 'dark' : 'light',
+      );
+    } catch (_) {
+      // Keep the selected theme for this session if storage is unavailable.
+    }
+  }
+
+  Future<void> _showThemePicker() async {
+    final pickerContext = _navigatorKey.currentContext;
+    if (pickerContext == null) return;
+    final selection = await showModalBottomSheet<ThemeMode>(
+      context: pickerContext,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Aspetto', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              Text(
+                'Scegli il tema dell’app',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 18),
+              SegmentedButton<ThemeMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: ThemeMode.light,
+                    icon: Icon(Icons.light_mode_outlined),
+                    label: Text('Chiaro'),
+                  ),
+                  ButtonSegment(
+                    value: ThemeMode.dark,
+                    icon: Icon(Icons.dark_mode_outlined),
+                    label: Text('Scuro'),
+                  ),
+                ],
+                selected: {_themeMode},
+                onSelectionChanged: (values) =>
+                    Navigator.pop(context, values.first),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selection != null) await _setTheme(selection);
+  }
+
   @override
   Widget build(BuildContext context) => MaterialApp(
+    navigatorKey: _navigatorKey,
     title: 'Tornei Old School',
     debugShowCheckedModeBanner: false,
-    builder: api.preview
+    builder: widget.api.preview
         ? (context, child) => Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 560),
@@ -77,14 +172,26 @@ class TosApp extends StatelessWidget {
           )
         : null,
     theme: siteTheme(),
-    home: HomePage(api: api, auth: auth),
+    darkTheme: siteDarkTheme(),
+    themeMode: _themeMode,
+    home: HomePage(
+      api: widget.api,
+      auth: widget.auth,
+      onTheme: _showThemePicker,
+    ),
   );
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.api, required this.auth});
+  const HomePage({
+    super.key,
+    required this.api,
+    required this.auth,
+    required this.onTheme,
+  });
   final TosApi api;
   final TosAuth auth;
+  final VoidCallback onTheme;
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -116,8 +223,12 @@ class _HomePageState extends State<HomePage> {
     final selectedPage = page == 4 && !hasStaffAccess ? 3 : page;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: selectedPage == 0 ? siteBackground : siteBlue,
-        foregroundColor: selectedPage == 0 ? siteBlue : Colors.white,
+        backgroundColor: selectedPage == 0
+            ? Theme.of(context).scaffoldBackgroundColor
+            : Theme.of(context).colorScheme.primary,
+        foregroundColor: selectedPage == 0
+            ? Theme.of(context).colorScheme.onSurface
+            : Theme.of(context).colorScheme.onPrimary,
         elevation: 0,
         title: Row(
           children: [
@@ -142,6 +253,17 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Aspetto chiaro o scuro',
+            onPressed: widget.onTheme,
+            icon: Icon(
+              Theme.of(context).brightness == Brightness.dark
+                  ? Icons.dark_mode_rounded
+                  : Icons.light_mode_rounded,
+            ),
+          ),
+        ],
       ),
       body: selectedPage <= 2
           ? Column(

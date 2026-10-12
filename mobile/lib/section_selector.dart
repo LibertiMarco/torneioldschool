@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'theme.dart';
-
 // Use the Home selector everywhere, including inside the staff theme.
 class SectionSelector extends StatelessWidget {
   const SectionSelector({
@@ -27,12 +25,14 @@ class SectionSelector extends StatelessWidget {
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           backgroundColor: WidgetStateProperty.resolveWith(
-            (states) =>
-                states.contains(WidgetState.selected) ? siteBlue : Colors.white,
+            (states) => states.contains(WidgetState.selected)
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.surfaceContainerHigh,
           ),
           foregroundColor: WidgetStateProperty.resolveWith(
-            (states) =>
-                states.contains(WidgetState.selected) ? Colors.white : siteBlue,
+            (states) => states.contains(WidgetState.selected)
+                ? Theme.of(context).colorScheme.onPrimary
+                : Theme.of(context).colorScheme.onSurface,
           ),
         ),
         segments: const [

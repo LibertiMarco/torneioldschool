@@ -24,26 +24,36 @@ const phaseLabels = {
   'BRONZO': 'Coppa Bronzo',
 };
 
-InputDecoration tournamentSelectorDecoration(String hint, IconData icon) =>
-    InputDecoration(
-      hintText: hint,
-      filled: true,
-      fillColor: Colors.white,
-      prefixIcon: Icon(icon, size: 20, color: siteBlue),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xffe5eaf1)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xffe5eaf1)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: siteBlue, width: 1.5),
-      ),
-    );
+InputDecoration tournamentSelectorDecoration(
+  BuildContext context,
+  String hint,
+  IconData icon,
+) => InputDecoration(
+  hintText: hint,
+  filled: true,
+  fillColor: Theme.of(context).colorScheme.surfaceContainerLow,
+  prefixIcon: Icon(
+    icon,
+    size: 20,
+    color: Theme.of(context).colorScheme.primary,
+  ),
+  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(16),
+    borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+  ),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(16),
+    borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(16),
+    borderSide: BorderSide(
+      color: Theme.of(context).colorScheme.primary,
+      width: 1.5,
+    ),
+  ),
+);
 
 class TournamentPage extends StatefulWidget {
   const TournamentPage({
@@ -86,10 +96,10 @@ class _TournamentPageState extends State<TournamentPage> {
     padding: const EdgeInsets.symmetric(vertical: 16),
     child: Text(
       value,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.bold,
-        color: siteBlue,
+        color: Theme.of(context).colorScheme.primary,
       ),
     ),
   );
@@ -100,12 +110,16 @@ class _TournamentPageState extends State<TournamentPage> {
   ) => DropdownButtonFormField<String>(
     initialValue: selected,
     isExpanded: true,
-    icon: const Icon(Icons.expand_more_rounded, color: siteBlue),
+    icon: Icon(
+      Icons.expand_more_rounded,
+      color: Theme.of(context).colorScheme.primary,
+    ),
     borderRadius: BorderRadius.circular(18),
-    dropdownColor: Colors.white,
+    dropdownColor: Theme.of(context).colorScheme.surfaceContainerHigh,
     style: Theme.of(context).textTheme.bodyMedium!
         .copyWith(fontWeight: FontWeight.w600),
     decoration: tournamentSelectorDecoration(
+      context,
       'Seleziona fase',
       Icons.layers_outlined,
     ),
@@ -155,7 +169,9 @@ class _TournamentPageState extends State<TournamentPage> {
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
-                  side: const BorderSide(color: Color(0xffdbe3f0)),
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(20),
@@ -176,10 +192,10 @@ class _TournamentPageState extends State<TournamentPage> {
                           children: [
                             Text(
                               '${info['nome']}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: siteBlue,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -222,8 +238,10 @@ class _TournamentPageState extends State<TournamentPage> {
                                 duration: const Duration(milliseconds: 180),
                                 decoration: BoxDecoration(
                                   color: tab == label
-                                      ? siteBlue
-                                      : const Color(0xffe9edf3),
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerHigh,
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: tab == label
                                       ? const [
@@ -251,8 +269,12 @@ class _TournamentPageState extends State<TournamentPage> {
                                             icons[label],
                                             size: 20,
                                             color: tab == label
-                                                ? Colors.white
-                                                : siteBlue,
+                                                ? Theme.of(context)
+                                                      .colorScheme
+                                                      .onPrimary
+                                                : Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface,
                                           ),
                                           const SizedBox(width: 10),
                                           Flexible(
@@ -262,8 +284,12 @@ class _TournamentPageState extends State<TournamentPage> {
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,
                                                 color: tab == label
-                                                    ? Colors.white
-                                                    : siteBlue,
+                                                    ? Theme.of(context)
+                                                          .colorScheme
+                                                          .onPrimary
+                                                    : Theme.of(context)
+                                                          .colorScheme
+                                                          .onSurface,
                                               ),
                                             ),
                                           ),
@@ -466,12 +492,16 @@ class _TournamentPageState extends State<TournamentPage> {
         key: ValueKey('$calendarPhase-$chosen'),
         initialValue: chosen,
         isExpanded: true,
-        icon: const Icon(Icons.expand_more_rounded, color: siteBlue),
+        icon: Icon(
+          Icons.expand_more_rounded,
+          color: Theme.of(context).colorScheme.primary,
+        ),
         borderRadius: BorderRadius.circular(18),
-        dropdownColor: Colors.white,
+        dropdownColor: Theme.of(context).colorScheme.surfaceContainerHigh,
         style: Theme.of(context).textTheme.bodyMedium!
             .copyWith(fontWeight: FontWeight.w600),
         decoration: tournamentSelectorDecoration(
+          context,
           calendarPhase == 'REGULAR' ? 'Giornata' : 'Turno',
           Icons.event_outlined,
         ),
@@ -533,6 +563,7 @@ class StandingsTable extends StatelessWidget {
   };
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final count = data.grouped && teams.length < data.perGroup
         ? data.perGroup
         : teams.length;
@@ -548,13 +579,13 @@ class StandingsTable extends StatelessWidget {
       height: header ? 44 : 62,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: color ?? (header ? siteBlue : Colors.white),
-        border: const Border(bottom: BorderSide(color: Color(0xffdbe3f0))),
+        color: color ?? (header ? colors.primary : colors.surfaceContainerLow),
+        border: Border(bottom: BorderSide(color: colors.outlineVariant)),
       ),
       child: Text(
         value,
         style: TextStyle(
-          color: textColor ?? (header ? Colors.white : siteBlue),
+          color: textColor ?? (header ? colors.onPrimary : colors.onSurface),
           fontWeight: header || bold ? FontWeight.bold : FontWeight.normal,
         ),
       ),
@@ -564,7 +595,7 @@ class StandingsTable extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xffdbe3f0)),
+        side: BorderSide(color: colors.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -572,12 +603,12 @@ class StandingsTable extends StatelessWidget {
           if (data.grouped)
             Container(
               padding: const EdgeInsets.all(12),
-              color: const Color(0xffe8edf5),
+              color: colors.surfaceContainerHigh,
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: siteBlue,
+                  color: colors.onSurface,
                   fontSize: 18,
                 ),
               ),
@@ -631,10 +662,10 @@ class StandingsTable extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 6,
                                 ),
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   border: Border(
                                     bottom: BorderSide(
-                                      color: Color(0xffdbe3f0),
+                                      color: colors.outlineVariant,
                                     ),
                                   ),
                                 ),
@@ -657,10 +688,10 @@ class StandingsTable extends StatelessWidget {
                                             : '${team['nome']}',
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
-                                          color: siteBlue,
+                                          color: colors.onSurface,
                                         ),
                                       ),
                                     ),
@@ -727,132 +758,224 @@ class MatchCard extends StatelessWidget {
     final played = stat(match['giocata']) == 1;
     final home = '${match['squadra_casa'] ?? 'Da definire'}';
     final away = '${match['squadra_ospite'] ?? 'Da definire'}';
+    final colors = Theme.of(context).colorScheme;
+    final phaseColor = cupColors[phase] ?? colors.primary;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(
-          color: cupColors[phase] ?? const Color(0xffdbe3f0),
-          width: 2,
-        ),
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: colors.outlineVariant),
       ),
+      clipBehavior: Clip.antiAlias,
+      color: colors.surfaceContainerLow,
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(20),
         onTap: match['id'] == null
             ? null
             : () => openPage(
                 context,
                 MatchPage(api: api, id: '${match['id']}', previewMatch: match),
               ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Text(
-                '${match['data_partita'] ?? 'Data da definire'} · ${match['ora_partita'] ?? ''}',
-                style: const TextStyle(fontSize: 12, color: Color(0xff526176)),
-              ),
-              const SizedBox(height: 12),
-              Row(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+              color: colors.surfaceContainerHigh,
+              child: Row(
                 children: [
+                  Icon(Icons.event_rounded, size: 17, color: phaseColor),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: Column(
-                      children: [
-                        SiteImage(
-                          api: api,
-                          path: '${match['logo_casa'] ?? ''}',
-                          width: 40,
-                          height: 40,
-                          fallback: Icons.shield_outlined,
-                          preserveShape: true,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          home,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: siteBlue,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Text(
-                      played
-                          ? '${match['gol_casa']} : ${match['gol_ospite']}'
-                          : 'VS',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: siteBlue,
+                      '${match['data_partita'] ?? 'Data da definire'} · ${match['ora_partita'] ?? ''}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: colors.onSurface,
                       ),
                     ),
                   ),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        SiteImage(
+                  if (matchLeg(match['fase_leg']).isNotEmpty)
+                    _MatchBadge(
+                      label: matchLeg(match['fase_leg']) == 'ANDATA'
+                          ? 'ANDATA'
+                          : 'RITORNO',
+                      color: phaseColor,
+                    ),
+                  if (matchLeg(match['fase_leg']).isEmpty)
+                    _MatchBadge(
+                      label: played ? 'TERMINATA' : 'IN PROGRAMMA',
+                      color: played ? const Color(0xff21835a) : colors.primary,
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 18, 14, 14),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _MatchTeam(
                           api: api,
-                          path: '${match['logo_ospite'] ?? ''}',
-                          width: 40,
-                          height: 40,
-                          fallback: Icons.shield_outlined,
-                          preserveShape: true,
+                          logo: '${match['logo_casa'] ?? ''}',
+                          name: home,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          away,
+                      ),
+                      Container(
+                        constraints: const BoxConstraints(minWidth: 78),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 9,
+                        ),
+                        decoration: BoxDecoration(
+                          color: played
+                              ? colors.primary
+                              : colors.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          played
+                              ? '${match['gol_casa']}  :  ${match['gol_ospite']}'
+                              : 'VS',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: siteBlue,
+                          style: TextStyle(
+                            fontSize: played ? 21 : 17,
+                            fontWeight: FontWeight.w900,
+                            color: played ? colors.onPrimary : colors.onSurface,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: _MatchTeam(
+                          api: api,
+                          logo: '${match['logo_ospite'] ?? ''}',
+                          name: away,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (stat(match['decisa_rigori']) == 1) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      'Rigori ${match['rigori_casa'] ?? '–'} : ${match['rigori_ospite'] ?? '–'}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                  if ('${match['campo'] ?? ''}'.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.place_outlined,
+                          size: 16,
+                          color: colors.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${match['campo']}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.onSurfaceVariant,
                           ),
                         ),
                       ],
                     ),
+                  ],
+                  const SizedBox(height: 12),
+                  Divider(height: 1, color: colors.outlineVariant),
+                  const SizedBox(height: 9),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Dettaglio e referto',
+                        style: TextStyle(
+                          color: colors.primary,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        color: colors.primary,
+                        size: 16,
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              if (stat(match['decisa_rigori']) == 1)
-                Text(
-                  'Rigori ${match['rigori_casa'] ?? '–'} : ${match['rigori_ospite'] ?? '–'}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              if (matchLeg(match['fase_leg']).isNotEmpty)
-                Text(
-                  matchLeg(match['fase_leg']) == 'ANDATA'
-                      ? 'Andata'
-                      : 'Ritorno',
-                ),
-              if (!played)
-                const Text('Da giocare', style: TextStyle(color: siteRed)),
-              if ('${match['campo'] ?? ''}'.isNotEmpty)
-                Text('${match['campo']}', style: const TextStyle(fontSize: 12)),
-              const SizedBox(height: 6),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Dettaglio e referto',
-                    style: TextStyle(
-                      color: siteRed,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                  Icon(Icons.chevron_right, color: siteRed, size: 18),
-                ],
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+class _MatchBadge extends StatelessWidget {
+  const _MatchBadge({required this.label, required this.color});
+  final String label;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .13),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        fontSize: 9,
+        letterSpacing: .35,
+        fontWeight: FontWeight.w900,
+        color: color,
+      ),
+    ),
+  );
+}
+
+class _MatchTeam extends StatelessWidget {
+  const _MatchTeam({required this.api, required this.logo, required this.name});
+  final TosApi api;
+  final String logo;
+  final String name;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 5),
+    child: Column(
+      children: [
+        SiteImage(
+          api: api,
+          path: logo,
+          width: 48,
+          height: 48,
+          fallback: Icons.shield_outlined,
+          preserveShape: true,
+        ),
+        const SizedBox(height: 9),
+        Text(
+          name,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            height: 1.15,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class TournamentScorers extends StatefulWidget {

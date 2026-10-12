@@ -36,10 +36,16 @@ class SiteImage extends StatelessWidget {
       width: width,
       height: height,
       child: preserveShape
-          ? Icon(fallback, color: siteBlue)
+          ? Icon(
+              fallback,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            )
           : ColoredBox(
-              color: const Color(0xffeeeeee),
-              child: Icon(fallback, color: siteBlue),
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+              child: Icon(
+                fallback,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
     );
     if (path.trim().isEmpty ||
@@ -189,8 +195,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
         child: TextButton(
           onPressed: () => setState(() => order = mode),
           style: TextButton.styleFrom(
-            backgroundColor: order == mode ? siteBlue : Colors.transparent,
-            foregroundColor: order == mode ? Colors.white : siteBlue,
+            backgroundColor: order == mode
+                ? Theme.of(context).colorScheme.primary
+                : Colors.transparent,
+            foregroundColor: order == mode
+                ? Theme.of(context).colorScheme.onPrimary
+                : Theme.of(context).colorScheme.onSurface,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -205,7 +215,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
       return Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: const Color(0xffe8edf2),
+          color: Theme.of(context).colorScheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -243,8 +253,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
           const SizedBox(height: 7),
           Text(
             esport ? 'Ranking EA FC' : 'Classifica giocatori totale',
-            style: const TextStyle(
-              color: siteBlue,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 30,
               fontWeight: FontWeight.w900,
               height: 1.08,
@@ -252,9 +262,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'I protagonisti di Old School',
-            style: TextStyle(color: Color(0xff667585), fontSize: 12),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 20),
           if (!esport) ...[_rankingSelector(), const SizedBox(height: 14)],
@@ -582,7 +595,7 @@ class PlayerRankingCard extends StatelessWidget {
                                 fontWeight: stat == order
                                     ? FontWeight.w800
                                     : FontWeight.w500,
-                                color: siteBlue,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                           ],
@@ -901,11 +914,11 @@ class _HallOfFamePanelState extends State<HallOfFamePanel> {
               isExpanded: true,
               key: ValueKey('hall-year-$currentYear'),
               initialValue: currentYear ?? 0,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Anno',
                 prefixIcon: Icon(Icons.calendar_month_outlined),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(16)),
                   borderSide: BorderSide.none,
@@ -940,7 +953,7 @@ class _HallOfFamePanelState extends State<HallOfFamePanel> {
               labelText: 'Scegli il torneo',
               prefixIcon: const Icon(Icons.emoji_events_outlined),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
@@ -972,7 +985,7 @@ class HallCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(bottom: 12),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
       borderRadius: BorderRadius.circular(18),
     ),
     child: Padding(
@@ -1038,7 +1051,7 @@ class _HallAward extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xfff6f8fb),
+        color: Theme.of(context).colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: accent.withValues(alpha: .2)),
       ),
@@ -1082,9 +1095,9 @@ class _HallAward extends StatelessWidget {
                 const SizedBox(height: 5),
                 Text(
                   '${award['vincitrice'] ?? ''}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w800,
-                    color: siteBlue,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 if (kind == 'SCORER' &&

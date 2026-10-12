@@ -72,4 +72,33 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('Rules sections keep readable surfaces in dark mode', (
+    tester,
+  ) async {
+    final colors = siteDarkTheme().colorScheme;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: siteDarkTheme(),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: TournamentRules(
+              html:
+                  '<h2>Formula</h2><p>Partite <strong>di andata</strong>.</p>',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<Card>(find.byType(Card).first).color,
+      colors.surfaceContainerLow,
+    );
+    final paragraph = tester.widget<SelectableText>(
+      find.byType(SelectableText).first,
+    );
+    expect(paragraph.style?.color, colors.onSurfaceVariant);
+    expect(tester.takeException(), isNull);
+  });
 }

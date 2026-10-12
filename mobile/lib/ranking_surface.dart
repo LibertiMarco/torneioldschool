@@ -6,10 +6,16 @@ class RankingSurface extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => Material(
-    color: index.isEven ? Colors.white : const Color(0xffeef2f6),
+    color: index.isEven
+        ? Theme.of(context).colorScheme.surfaceContainerLow
+        : Theme.of(context).colorScheme.surfaceContainer,
     child: DecoratedBox(
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xffdce5ed))),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
+        ),
       ),
       child: child,
     ),

@@ -30,8 +30,8 @@ class HomeSectionTitle extends StatelessWidget {
         const SizedBox(height: 5),
         Text(
           title,
-          style: const TextStyle(
-            color: siteBlue,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 26,
             fontWeight: FontWeight.w900,
             letterSpacing: -.8,
@@ -60,6 +60,7 @@ class HomeRankingEntry extends StatelessWidget {
   final int index;
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final first = '${row['posizione']}' == '1';
     final statistics = esport
         ? ['punti']
@@ -82,11 +83,11 @@ class HomeRankingEntry extends StatelessWidget {
               width: 42,
               height: 48,
               alignment: Alignment.center,
-              color: const Color(0xffedf1f5),
+              color: colors.surfaceContainerHigh,
               child: Text(
                 initials,
-                style: const TextStyle(
-                  color: siteBlue,
+                style: TextStyle(
+                  color: colors.onSurface,
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                 ),
@@ -105,8 +106,8 @@ class HomeRankingEntry extends StatelessWidget {
       children: [
         Text(
           name,
-          style: const TextStyle(
-            color: siteBlue,
+          style: TextStyle(
+            color: colors.onSurface,
             fontSize: 15,
             fontWeight: FontWeight.w800,
             letterSpacing: -.3,
@@ -116,14 +117,14 @@ class HomeRankingEntry extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             '${row['ruolo']}',
-            style: const TextStyle(color: Color(0xff667585), fontSize: 10),
+            style: TextStyle(color: colors.onSurfaceVariant, fontSize: 10),
           ),
         ],
         if (esport) ...[
           const SizedBox(height: 3),
           Text(
             '${row['tornei_giocati'] ?? 0} tornei · ${row['best_result'] ?? ''}',
-            style: const TextStyle(color: Color(0xff667585), fontSize: 10),
+            style: TextStyle(color: colors.onSurfaceVariant, fontSize: 10),
           ),
         ],
         const SizedBox(height: 8),
@@ -157,8 +158,8 @@ class HomeRankingEntry extends StatelessWidget {
                       esport ? '${row[stat] ?? 0} pt' : '${row[stat] ?? 0}',
                       style: TextStyle(
                         color: stat == statistics.first
-                            ? siteBlue
-                            : const Color(0xff667585),
+                            ? colors.onSurface
+                            : colors.onSurfaceVariant,
                         fontWeight: stat == statistics.first
                             ? FontWeight.w800
                             : FontWeight.w500,
@@ -175,7 +176,7 @@ class HomeRankingEntry extends StatelessWidget {
             padding: const EdgeInsets.only(top: 5),
             child: Text(
               'Media voto: ${row['media_voti']}',
-              style: const TextStyle(fontSize: 10, color: Color(0xff667585)),
+              style: TextStyle(fontSize: 10, color: colors.onSurfaceVariant),
             ),
           ),
       ],
@@ -186,8 +187,8 @@ class HomeRankingEntry extends StatelessWidget {
         onTap: open,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0xffedf0f4))),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: colors.outlineVariant)),
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -204,7 +205,7 @@ class HomeRankingEntry extends StatelessWidget {
                         style: TextStyle(
                           color: !esport || first
                               ? siteRed
-                              : const Color(0xff667585),
+                              : colors.onSurfaceVariant,
                           fontSize: esport ? 17 : 26,
                           fontWeight: FontWeight.w900,
                         ),
@@ -227,10 +228,10 @@ class HomeRankingEntry extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(child: details),
                   const SizedBox(width: 8),
-                  const Icon(
+                  Icon(
                     Icons.north_east,
                     size: 15,
-                    color: Color(0xff8e9aa6),
+                    color: colors.onSurfaceVariant,
                   ),
                 ],
               );
@@ -256,6 +257,7 @@ class HomeNewsTile extends StatelessWidget {
   final bool featured;
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final path = '${row['cover'] ?? row['immagine'] ?? ''}';
     return Material(
       color: featured ? siteBlue : Colors.transparent,
@@ -325,8 +327,10 @@ class HomeNewsTile extends StatelessWidget {
               )
             : Container(
                 padding: const EdgeInsets.symmetric(vertical: 18),
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Color(0xffdfe5eb))),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: colors.outlineVariant),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,16 +341,16 @@ class HomeNewsTile extends StatelessWidget {
                         children: [
                           Text(
                             '${row['data'] ?? ''}',
-                            style: const TextStyle(
-                              color: Color(0xff667585),
+                            style: TextStyle(
+                              color: colors.onSurfaceVariant,
                               fontSize: 10,
                             ),
                           ),
                           const SizedBox(height: 7),
                           Text(
                             '${row['titolo'] ?? ''}',
-                            style: const TextStyle(
-                              color: siteBlue,
+                            style: TextStyle(
+                              color: colors.onSurface,
                               fontSize: 17,
                               fontWeight: FontWeight.w800,
                               height: 1.2,
@@ -360,11 +364,11 @@ class HomeNewsTile extends StatelessWidget {
                     if (path.isNotEmpty)
                       SiteImage(api: api, path: path, width: 76, height: 76)
                     else
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.only(top: 22),
                         child: Icon(
                           Icons.north_east,
-                          color: siteBlue,
+                          color: colors.primary,
                           size: 18,
                         ),
                       ),

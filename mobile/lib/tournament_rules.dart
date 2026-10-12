@@ -51,6 +51,7 @@ class TournamentRules extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final fragment = tournamentRulesFragment(html);
     final sections = <({String title, List<Widget> blocks})>[];
     String heading = 'Regolamento';
@@ -82,10 +83,10 @@ class TournamentRules extends StatelessWidget {
           Expanded(
             child: SelectableText.rich(
               TextSpan(children: inline(node)),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 height: 1.65,
-                color: Color(0xff435368),
+                color: colors.onSurfaceVariant,
               ),
             ),
           ),
@@ -131,62 +132,71 @@ class TournamentRules extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(bottom: 20),
           child: Text(
-            'Formula, qualificazioni e regole di gioco',
-            style: TextStyle(color: Color(0xff778496), fontSize: 14),
+            'FORMULA DEL TORNEO',
+            style: TextStyle(
+              color: colors.primary,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.1,
+            ),
           ),
         ),
         for (var i = 0; i < sections.length; i++)
-          Container(
+          Card(
             margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
+            color: colors.surfaceContainerLow,
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: const Color(0xffe5eaf1)),
+              side: BorderSide(color: colors.outlineVariant),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(9),
-                      decoration: BoxDecoration(
-                        color: const Color(0xffe9edf3),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${i + 1}'.padLeft(2, '0'),
-                        style: const TextStyle(
-                          color: siteBlue,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: colors.primaryContainer,
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: Icon(
+                          i == 0
+                              ? Icons.emoji_events_outlined
+                              : Icons.rule_rounded,
+                          color: colors.onPrimaryContainer,
+                          size: 21,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          sections[i].title,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: siteBlue,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            sections[i].title,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: colors.onSurface,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                ...sections[i].blocks,
-              ],
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Divider(height: 1, color: colors.outlineVariant),
+                  const SizedBox(height: 16),
+                  ...sections[i].blocks,
+                ],
+              ),
             ),
           ),
       ],
