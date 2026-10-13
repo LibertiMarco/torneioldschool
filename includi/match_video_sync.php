@@ -327,11 +327,18 @@ function video_sync_request(string $service, array $params, string $key): array
     $url = 'https://www.googleapis.com/youtube/v3/' . $service . '?' . http_build_query($params + ['key'=>$key], '', '&', PHP_QUERY_RFC3986);
     $curl = curl_init($url);
     curl_setopt_array($curl, [CURLOPT_RETURNTRANSFER=>true, CURLOPT_CONNECTTIMEOUT=>5, CURLOPT_TIMEOUT=>15, CURLOPT_FOLLOWLOCATION=>false]);
+    $body = '';
+    curl_setopt($curl,CURLOPT_WRITEFUNCTION,static function($handle,string $chunk) use (&$body): int {
+        if (strlen($body)+strlen($chunk) > 2097152) return 0;
+        $body .= $chunk;return strlen($chunk);
+    });
     $raw = curl_exec($curl); $status = (int)curl_getinfo($curl,CURLINFO_HTTP_CODE); curl_close($curl);
-    $json = is_string($raw) ? json_decode($raw,true) : null;
+    $json = $raw !== false ? json_decode($body,true) : null;
     if ($status < 200 || $status >= 300 || !is_array($json) || isset($json['error'])) {
         $message = is_array($json) ? (string)($json['error']['message'] ?? '') : '';
-        throw new RuntimeException('YouTube: ' . str_replace($key, '[chiave omessa]', $message ?: 'Connessione o risposta API non disponibile.'));
+        $reason = (string)($json['error']['errors'][0]['reason'] ?? '');
+        $retry = $status === 429 || $status >= 500 || in_array($reason,['rateLimitExceeded','userRateLimitExceeded'],true);
+        throw new RuntimeException('YouTube: ' . ($retry ? 'Temporary API error. ' : '') . str_replace($key, '[chiave omessa]', $message ?: 'Connessione o risposta API non disponibile.'));
     }
     return $json;
 }
@@ -347,42 +354,27 @@ function video_sync_youtube_channel(string $value): array
     throw new InvalidArgumentException('Configura YOUTUBE_CHANNEL_ID con l’ID UC… del canale o il suo @handle.');
 }
 
+function video_sync_youtube_search_params(string $channel, DateTimeImmutable $from, DateTimeImmutable $end): array
+{
+    $utc = new DateTimeZone('UTC');
+    return ['part'=>'snippet','channelId'=>$channel,'type'=>'video','order'=>'relevance','maxResults'=>50,
+        // publishedAfter is exclusive; check exact bounds using videos.list.
+        'publishedAfter'=>$from->modify('-1 second')->setTimezone($utc)->format('Y-m-d\TH:i:s\Z'),
+        'publishedBefore'=>$end->setTimezone($utc)->format('Y-m-d\TH:i:s\Z'),
+        'fields'=>'items(id(videoId)),nextPageToken'];
+}
+
 function video_sync_youtube(string $key, string $channel, DateTimeImmutable $from, DateTimeImmutable $to, ?callable $request = null): array
 {
     if ($key === '' || $channel === '') throw new RuntimeException('YouTube non configurato: imposta YOUTUBE_API_KEY e YOUTUBE_CHANNEL_ID sul server.');
-    $request ??= fn($service,$params) => video_sync_request($service,$params,$key);
-    $channels = $request('channels',['part'=>'contentDetails','fields'=>'items(contentDetails(relatedPlaylists(uploads)))'] + video_sync_youtube_channel($channel));
-    $playlist = $channels['items'][0]['contentDetails']['relatedPlaylists']['uploads'] ?? '';
-    if ($playlist === '') throw new RuntimeException('Canale YouTube o elenco dei caricamenti non trovato.');
-    $ids = []; $pageToken = ''; $seen = [];
-    // Traverse the upload list; do not assume the public video date is ordered by upload date.
-    for ($page=0; $page<100; $page++) {
-        $params = ['part'=>'contentDetails','playlistId'=>$playlist,'maxResults'=>50,'fields'=>'items(contentDetails(videoId)),nextPageToken'];
-        if ($pageToken !== '') $params['pageToken'] = $pageToken;
-        $list = $request('playlistItems',$params);
-        foreach ($list['items'] ?? [] as $item) {
-            $id = $item['contentDetails']['videoId'] ?? '';
-            if (preg_match('/^[A-Za-z0-9_-]{11}$/D',$id)) $ids[$id] = true;
-        }
-        $pageToken = (string)($list['nextPageToken'] ?? '');
-        if ($pageToken === '') break;
-        if (isset($seen[$pageToken]) || $page === 99) throw new RuntimeException('Elenco YouTube incompleto: limite di paginazione raggiunto. Nessun link YouTube preparato.');
-        $seen[$pageToken] = true;
-    }
-    $media = []; $end = $to->modify('+1 day');
-    foreach (array_chunk(array_keys($ids),50) as $batch) {
-        $videos = $request('videos',['part'=>'snippet,status','id'=>implode(',',$batch),'maxResults'=>50,'fields'=>'items(id,snippet(title,description,publishedAt),status(privacyStatus))']);
-        foreach ($videos['items'] ?? [] as $video) {
-            if (($video['status']['privacyStatus'] ?? '') !== 'public') continue;
-            try {$published = new DateTimeImmutable($video['snippet']['publishedAt'] ?? '');} catch (Throwable $e) {continue;}
-            if ($published < $from || $published >= $end || empty($video['snippet']['publishedAt'])) continue;
-            $id = $video['id']; if (!isset($ids[$id])) continue;
-            $media[] = ['platform'=>'youtube','id'=>$id,'url'=>'https://www.youtube.com/watch?v='.$id,
-                'title'=>$video['snippet']['title'] ?? '', 'description'=>$video['snippet']['description'] ?? '',
-                'date'=>$published->setTimezone(new DateTimeZone('Europe/Rome'))->format('Y-m-d')];
-        }
-    }
-    return $media;
+    require_once __DIR__.'/match_video_sync_job.php';
+    $request ??= fn($service,$params)=>video_sync_request($service,$params,$key);
+    $job = video_sync_job_create('youtube',$from->format('Y-m-d'),$to->format('Y-m-d'));
+    $job['window'] = ['start'=>$from->format(DATE_ATOM),'end'=>$to->modify('+1 day')->format(DATE_ATOM)];
+    $job['channel'] = $channel;
+    while ($job['index'] < count($job['sources'])) video_sync_job_step($job,$request);
+    if ($job['errors']) throw new RuntimeException(implode('; ',$job['errors']));
+    return $job['media'];
 }
 
 function video_sync_instagram(DateTimeImmutable $from, DateTimeImmutable $to): array

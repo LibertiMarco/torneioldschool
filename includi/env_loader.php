@@ -197,15 +197,53 @@ if (!function_exists('tos_absolute_url')) {
     }
 }
 
+/** Check boundaries before touching storage, including existing symlink ancestors. */
+function tos_path_allowed(string $path): bool
+{
+    $normalize = static function(string $value): string {
+        $value = str_replace('\\', '/', $value);
+        $parts = [];
+        foreach (explode('/', $value) as $part) {
+            if ($part === '' || $part === '.') continue;
+            if ($part === '..') array_pop($parts); else $parts[] = $part;
+        }
+        return (str_starts_with($value, '/') ? '/' : '') . implode('/', $parts);
+    };
+    $path = $normalize($path);
+    if (!preg_match('~^(?:/|[A-Za-z]:/)~', $path)) return false;
+    $restrictions = (string)ini_get('open_basedir');
+    if ($restrictions === '') return true;
+    foreach (explode(PATH_SEPARATOR, $restrictions) as $root) {
+        if ($root === '.') $root = (string)getcwd();
+        $root = rtrim($normalize($root), '/');
+        $candidate = $path;
+        if (PHP_OS_FAMILY === 'Windows') {$root = strtolower($root);$candidate = strtolower($candidate);}
+        if ($candidate !== $root && !str_starts_with($candidate, $root.'/')) continue;
+        $ancestor = $path;
+        while (($resolved = @realpath($ancestor)) === false && dirname($ancestor) !== $ancestor) $ancestor = dirname($ancestor);
+        if ($resolved === false) return false;
+        $resolved = $normalize($resolved);
+        if (PHP_OS_FAMILY === 'Windows') $resolved = strtolower($resolved);
+        return $resolved === $root || str_starts_with($resolved, $root.'/');
+    }
+    return false;
+}
+
+function tos_runtime_resolve(string $configured, string $default): string
+{
+    $path = rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, trim($configured) ?: $default), DIRECTORY_SEPARATOR);
+    if (!tos_path_allowed($path)) {
+        // Fail before filesystem operations; do not silently switch session/token storage.
+        throw new RuntimeException('Directory runtime fuori dai percorsi consentiti: correggere TOS_RUNTIME_DIR sul server.');
+    }
+    return $path;
+}
+
 if (!function_exists('tos_runtime_root')) {
     function tos_runtime_root(): string
     {
         $configured = trim((string)(getenv('TOS_RUNTIME_DIR') ?: ''));
-        if ($configured !== '') {
-            return rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $configured), DIRECTORY_SEPARATOR);
-        }
-
-        return dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'torneioldschool-runtime';
+        return tos_runtime_resolve($configured, dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'torneioldschool-runtime');
     }
 }
 

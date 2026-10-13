@@ -90,7 +90,7 @@ function tos_instagram_token_state_paths(): array
         $key = strtolower(str_replace('\\', '/', $path));
         $unique[$key] = $path;
     }
-    return array_values($unique);
+    return array_values(array_filter($unique, 'tos_path_allowed'));
 }
 
 function tos_load_instagram_token_state(): ?array

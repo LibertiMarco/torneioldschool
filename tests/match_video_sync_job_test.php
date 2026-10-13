@@ -8,10 +8,10 @@ $title = 'BRASILERAO | GIORNATA 1 | CEARA 5 - 3 MIRASSOL';
 $calls = 0;
 $youtube = function($service,$params) use (&$calls,$title) {
     $calls++;
-    if ($service === 'channels') return ['items'=>[['contentDetails'=>['relatedPlaylists'=>['uploads'=>'uploads']]]]];
-    if ($service === 'playlistItems') return ['items'=>[['contentDetails'=>['videoId'=>empty($params['pageToken']) ? 'abcdefghijk' : 'lmnopqrstuv']]]]+(empty($params['pageToken']) ? ['nextPageToken'=>'next'] : []);
+    if ($service === 'channels') return ['items'=>[['id'=>'UC'.str_repeat('a',22)]]];
+    if ($service === 'search') return ['items'=>[['id'=>['videoId'=>empty($params['pageToken']) ? 'abcdefghijk' : 'lmnopqrstuv']]]]+(empty($params['pageToken']) ? ['nextPageToken'=>'next'] : []);
     $id = $params['id'];
-    return ['items'=>[['id'=>$id,'snippet'=>['title'=>$title,'description'=>'','thumbnails'=>['default'=>['url'=>'https://i.ytimg.com/vi/'.$id.'/default.jpg']],'publishedAt'=>$id === 'abcdefghijk' ? '2026-10-08T22:30:00Z' : '2026-10-09T12:00:00Z'],'status'=>['privacyStatus'=>$id === 'abcdefghijk' ? 'public' : 'private']]]];
+    return ['items'=>[['id'=>$id,'snippet'=>['channelId'=>'UC'.str_repeat('a',22),'title'=>$title,'description'=>'','thumbnails'=>['default'=>['url'=>'https://i.ytimg.com/vi/'.$id.'/default.jpg']],'publishedAt'=>$id === 'abcdefghijk' ? '2026-10-08T22:30:00Z' : '2026-10-09T12:00:00Z'],'status'=>['privacyStatus'=>$id === 'abcdefghijk' ? 'public' : 'private']]]];
 };
 $instagramInit = fn()=>['user'=>'user','token'=>'test-token','version'=>'v26.0'];
 $instagram = function($resource,$params,$state) use (&$calls,$title) {
@@ -42,7 +42,7 @@ job_expect(!str_contains(video_sync_job_progress($job),'test-token'),'Progress e
 // Fail after already reading one YouTube video: nothing from that provider may survive.
 $job = video_sync_job_create('youtube','2026-10-09','2026-10-09');
 $failure = function($service,$params) use ($youtube) {
-    if ($service === 'playlistItems' && !empty($params['pageToken'])) throw new RuntimeException('YouTube unavailable');
+    if ($service === 'search' && !empty($params['pageToken'])) throw new RuntimeException('YouTube unavailable');
     return $youtube($service,$params);
 };
 for ($i=0;$i<4;$i++) video_sync_job_step($job,$failure);
@@ -63,7 +63,7 @@ video_sync_job_step($job,null,$instagram,$instagramInit);
 job_expect(count($job['media']) === 1,'Retry did not preserve the caption');
 
 $job = video_sync_job_create('youtube','2026-10-09','2026-10-09');
-$loop = fn($service,$params)=>$service === 'channels' ? ['items'=>[['contentDetails'=>['relatedPlaylists'=>['uploads'=>'uploads']]]]] : ['items'=>[],'nextPageToken'=>'repeat'];
+$loop = fn($service,$params)=>$service === 'channels' ? ['items'=>[['id'=>'UC'.str_repeat('a',22)]]] : ['items'=>[],'nextPageToken'=>'repeat'];
 for ($i=0;$i<3;$i++) video_sync_job_step($job,$loop);
 job_expect($job['index'] === 1 && count($job['errors']) === 1 && !$job['media'],'Cursor cycle was accepted');
 $job = video_sync_job_create('youtube','2026-10-09','2026-10-09');$job['expires'] = time()-1;

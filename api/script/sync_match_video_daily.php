@@ -38,7 +38,7 @@ try {
     $state = null;
     if (!$dryRun) {
         $path = video_schedule_storage_file(dirname(__DIR__,2),(string)(getenv('TOS_RUNTIME_DIR') ?: ''));$dir = dirname($path);
-        if (!is_dir($dir) && !@mkdir($dir,0700,true) && !is_dir($dir)) throw new RuntimeException('Directory privata del cron non disponibile. Verifica i permessi della cartella private del dominio o configura TOS_RUNTIME_DIR.');
+        if (!is_dir($dir) && !@mkdir($dir,0700,true) && !is_dir($dir)) throw new RuntimeException('Directory privata del cron non disponibile. Verifica permessi e TOS_RUNTIME_DIR.');
         $lock = @fopen($dir.'/run.lock','c');
         if ($lock === false) throw new RuntimeException('Lock del cron non disponibile.');
         if (!flock($lock,LOCK_EX | LOCK_NB)) {$reply(['status'=>'busy','message'=>'Sincronizzazione già in corso.']);exit;}
@@ -58,11 +58,17 @@ try {
     do {
         video_schedule_step($run,$dryRun);
         if (!$dryRun) $persist($path,$run);
+        $wait = (int)($run['job']['state']['retry_at'] ?? 0) - time();
+        if ($wait > 0) {
+            if (!$cli) break;
+            sleep(min($wait,8));
+        }
         // CLI completes the run; URL cron resumes on later invocations with bounded requests.
-    } while ($run['status'] === 'running' && ($cli || microtime(true)-$started < 5));
+    } while ($run['status'] === 'running' && microtime(true)-$started < ($cli ? 120 : 5));
     $reply(['status'=>$run['status'],'window'=>$run['window'],'phase'=>$run['phase'],'dry_run'=>$dryRun,
         'saved'=>$run['saved'],'preserved'=>$run['preserved'],'ambiguous'=>$run['ambiguous'],'errors'=>$run['errors']]);
     if ($run['status'] === 'failed') exit(1);
+    if ($cli && $run['status'] === 'running') exit(2);
 } catch (Throwable $e) {
     if (is_array($run) && !$dryRun) {
         $run['status'] = 'failed';$run['errors'][] = $e->getMessage();$run['retry_after'] = time()+300;

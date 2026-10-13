@@ -51,47 +51,56 @@ function video_sync_job_step(array &$job, ?callable $youtube = null, ?callable $
 {
     if ($job['expires'] < time()) throw new RuntimeException('La ricerca è scaduta. Avviane una nuova.');
     if ($job['index'] >= count($job['sources'])) return;
+    if (($job['state']['retry_at'] ?? 0) > time()) return;
     $job['expires'] = time()+1800;
     $job['steps']++;
     $source = $job['sources'][$job['index']];
     $s =& $job['state'];
-    $from = new DateTimeImmutable($job['from'],new DateTimeZone('Europe/Rome'));
-    $end = (new DateTimeImmutable($job['to'],new DateTimeZone('Europe/Rome')))->modify('+1 day');
+    $from = new DateTimeImmutable($job['window']['start'] ?? $job['from'],new DateTimeZone('Europe/Rome'));
+    $end = isset($job['window']) ? new DateTimeImmutable($job['window']['end']) : (new DateTimeImmutable($job['to'],new DateTimeZone('Europe/Rome')))->modify('+1 day');
     try {
+        if ($job['steps'] > ($job['max_steps'] ?? 400)) throw new RuntimeException('Ricerca incompleta: limite richieste raggiunto.');
         if ($source === 'youtube') {
             if ($youtube === null && trim((string)getenv('YOUTUBE_API_KEY')) === '') throw new RuntimeException('YouTube non configurato: imposta YOUTUBE_API_KEY.');
             $youtube ??= fn($service,$params)=>video_sync_request($service,$params,trim((string)getenv('YOUTUBE_API_KEY')));
             if ($s['phase'] === 'init') {
-                $channel = trim((string)getenv('YOUTUBE_CHANNEL_ID'));
+                $channel = trim((string)($job['channel'] ?? getenv('YOUTUBE_CHANNEL_ID')));
                 if ($channel === '') throw new RuntimeException('YouTube non configurato: imposta YOUTUBE_CHANNEL_ID.');
-                $data = $youtube('channels',['part'=>'contentDetails','fields'=>'items(contentDetails(relatedPlaylists(uploads)))']+video_sync_youtube_channel($channel));
+                $data = $youtube('channels',['part'=>'id','fields'=>'items(id)']+video_sync_youtube_channel($channel));
                 unset($s['retries'],$s['retry_message']);
-                $playlist = $data['items'][0]['contentDetails']['relatedPlaylists']['uploads'] ?? '';
-                if ($playlist === '') throw new RuntimeException('Elenco dei caricamenti YouTube non trovato.');
-                $s = ['phase'=>'page','playlist'=>$playlist,'cursor'=>'','seen'=>[],'ids'=>[],'pages'=>0,'media'=>[]];
+                $channelId = $data['items'][0]['id'] ?? '';
+                if (!preg_match('/^UC[A-Za-z0-9_-]{22}$/D',$channelId)) throw new RuntimeException('Canale YouTube non trovato.');
+                $s = ['phase'=>'page','channel'=>$channelId,'cursor'=>'','seen'=>[],'ids'=>[],'pages'=>0,'media'=>[]];
             } elseif ($s['phase'] === 'page') {
-                $params = ['part'=>'contentDetails','playlistId'=>$s['playlist'],'maxResults'=>50,'fields'=>'items(contentDetails(videoId)),nextPageToken'];
+                $params = video_sync_youtube_search_params($s['channel'],$from,$end);
                 if ($s['cursor'] !== '') $params['pageToken'] = $s['cursor'];
-                $data = $youtube('playlistItems',$params);
+                $data = $youtube('search',$params);
+                if (!isset($data['items']) || !is_array($data['items'])) throw new RuntimeException('YouTube: risposta incompleta.');
                 unset($s['retries'],$s['retry_message']);
                 $s['batch'] = [];
                 foreach ($data['items'] ?? [] as $item) {
-                    $id = $item['contentDetails']['videoId'] ?? '';
-                    if (!preg_match('/^[A-Za-z0-9_-]{11}$/D',$id) || isset($s['ids'][$id])) continue;
+                    $id = $item['id']['videoId'] ?? '';
+                    if (!preg_match('/^[A-Za-z0-9_-]{11}$/D',$id)) throw new RuntimeException('YouTube: identificativo video assente o non valido.');
+                    if (isset($s['ids'][$id])) continue;
                     $s['ids'][$id] = true; $s['batch'][] = $id;
                 }
                 $cursor = (string)($data['nextPageToken'] ?? ''); $s['pages']++;
-                if ($cursor !== '' && (isset($s['seen'][$cursor]) || $s['pages'] >= 1000)) throw new RuntimeException('Elenco YouTube incompleto: limite di paginazione raggiunto. Nessun link YouTube preparato.');
+                if (($cursor !== '' && (isset($s['seen'][$cursor]) || $s['pages'] >= ($job['max_pages'] ?? 10))) || count($s['ids']) >= 500) throw new RuntimeException('Elenco YouTube incompleto: limite di paginazione raggiunto. Nessun link YouTube preparato.');
                 $s['seen'][$cursor] = true; $s['cursor'] = $cursor;
                 $s['phase'] = $s['batch'] ? 'videos' : 'page';
                 if (!$s['batch'] && $cursor === '') video_sync_job_next($job,true);
             } elseif ($s['phase'] === 'videos') {
-                $data = $youtube('videos',['part'=>'snippet,status','id'=>implode(',',$s['batch']),'maxResults'=>50,'fields'=>'items(id,snippet(title,description,publishedAt,thumbnails(default(url))),status(privacyStatus))']);
+                $data = $youtube('videos',['part'=>'snippet,status','id'=>implode(',',$s['batch']),'maxResults'=>50,'fields'=>'items(id,snippet(channelId,title,description,publishedAt,thumbnails(default(url))),status(privacyStatus))']);
                 unset($s['retries'],$s['retry_message']);
-                foreach ($data['items'] ?? [] as $video) {
+                if (!isset($data['items']) || count($data['items']) !== count($s['batch'])) throw new RuntimeException('YouTube: dettagli video incompleti.');
+                $returned = array_column($data['items'],'id');
+                if (count(array_unique($returned)) !== count($s['batch']) || array_diff($s['batch'],$returned)) throw new RuntimeException('YouTube: identificativi video incompleti.');
+                foreach ($data['items'] as $video) {
+                    if (($video['snippet']['channelId'] ?? '') !== $s['channel']) throw new RuntimeException('YouTube: canale video inatteso.');
                     $timestamp = $video['snippet']['publishedAt'] ?? '';
+                    if ($timestamp === '') throw new RuntimeException('YouTube: data pubblicazione assente.');
                     if ($timestamp === '' || ($video['status']['privacyStatus'] ?? '') !== 'public' || !in_array($video['id'] ?? '',$s['batch'],true)) continue;
-                    try {$date = new DateTimeImmutable($timestamp);} catch (Throwable $e) {continue;}
+                    try {$date = new DateTimeImmutable($timestamp);} catch (Throwable $e) {throw new RuntimeException('YouTube: data pubblicazione non valida.');}
                     if ($date < $from || $date >= $end) continue;
                     $s['media'][] = ['platform'=>'youtube','id'=>$video['id'],'url'=>'https://www.youtube.com/watch?v='.$video['id'],
                         'title'=>$video['snippet']['title'] ?? '', 'description'=>$video['snippet']['description'] ?? '', 'thumbnail'=>video_sync_thumbnail_url($video['snippet']['thumbnails']['default']['url'] ?? ''), 'date'=>$date->setTimezone(new DateTimeZone('Europe/Rome'))->format('Y-m-d')];
@@ -112,10 +121,11 @@ function video_sync_job_step(array &$job, ?callable $youtube = null, ?callable $
                     throw $e;
                 }
                 unset($s['retries'],$s['retry_message']);
+                if (!isset($data['data']) || !is_array($data['data'])) throw new RuntimeException('Instagram: risposta incompleta.');
                 $oldest = null;
                 foreach ($data['data'] ?? [] as $item) {
-                    if (empty($item['timestamp'])) continue;
-                    try {$date = new DateTimeImmutable($item['timestamp']);} catch (Throwable $e) {continue;}
+                    if (empty($item['timestamp'])) throw new RuntimeException('Instagram: data pubblicazione assente.');
+                    try {$date = new DateTimeImmutable($item['timestamp']);} catch (Throwable $e) {throw new RuntimeException('Instagram: data pubblicazione non valida.');}
                     $oldest = $oldest === null || $date < $oldest ? $date : $oldest;
                     if ($date < $from || $date >= $end || empty($item['id']) || empty($item['permalink']) || isset($s['ids'][$item['id']])) continue;
                     // Same Reel classification as the CLI provider, without loading credentials in tests.
@@ -130,7 +140,8 @@ function video_sync_job_step(array &$job, ?callable $youtube = null, ?callable $
                 $cursor = !empty($data['paging']['next']) ? (string)($data['paging']['cursors']['after'] ?? '') : '';
                 if ($oldest !== null && $oldest < $from) $cursor = '';
                 $s['pages']++;
-                if ($cursor !== '' && (isset($s['seen'][$cursor]) || $s['pages'] >= 1000)) throw new RuntimeException('Elenco Instagram incompleto: nessun link Instagram preparato.');
+                if (!empty($data['paging']['next']) && $cursor === '' && !($oldest !== null && $oldest < $from)) throw new RuntimeException('Instagram: cursore assente.');
+                if ($cursor !== '' && (isset($s['seen'][$cursor]) || $s['pages'] >= ($job['max_pages'] ?? 100))) throw new RuntimeException('Elenco Instagram incompleto: nessun link Instagram preparato.');
                 $s['seen'][$cursor] = true; $s['cursor'] = $cursor;
                 if ($cursor === '') video_sync_job_next($job,true);
             }
@@ -138,6 +149,7 @@ function video_sync_job_step(array &$job, ?callable $youtube = null, ?callable $
     } catch (Throwable $e) {
         if (preg_match('/timed out|timeout|temporar|please retry|unexpected error|connessione (?:o risposta|api)/i',$e->getMessage()) && ($s['retries'] ?? 0) < 3) {
             $s['retries'] = ($s['retries'] ?? 0)+1;
+            if (isset($job['max_steps'], $job['window'])) $s['retry_at'] = time() + (1 << $s['retries']);
             $s['retry_message'] = 'Connessione lenta: nuovo tentativo '.$s['retries'].' di 3';
             return;
         }

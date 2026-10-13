@@ -1,12 +1,13 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/match_video_sync_job.php';
+require_once __DIR__.'/env_loader.php';
 
 function video_schedule_storage_file(string $siteRoot,string $configuredRuntime = ''): string
 {
     $configuredRuntime = trim($configuredRuntime);
     // Plesk's subscription owns the parent of httpdocs, not the parent of all domains.
-    $root = $configuredRuntime !== '' ? rtrim($configuredRuntime,'/\\') : dirname($siteRoot).'/private/torneioldschool-runtime';
+    $root = tos_runtime_resolve($configuredRuntime, dirname($siteRoot).'/torneioldschool-runtime');
     return $root.'/match-video-daily/state.json';
 }
 
@@ -61,9 +62,17 @@ function video_schedule_step(array &$run,bool $dryRun = false,?callable $scan = 
         $run['matches'] = array_values(array_filter($matches,fn($game)=>video_schedule_game_in_window($game,$run['window'])));
         // Avoid social requests when there is nothing to link.
         $missing = array_filter($run['matches'],fn($game)=>trim((string)($game['link_instagram'] ?? '')) === '' || trim((string)($game['link_youtube'] ?? '')) === '');
+        $run['job']['window'] = $run['window'];
+        $run['job']['max_steps'] = 80;
+        $run['job']['max_pages'] = 10;
+        $run['job']['sources'] = array_values(array_filter(['instagram','youtube'], function($platform) use ($run) {
+            foreach ($run['matches'] as $game) if (trim((string)($game['link_'.$platform] ?? '')) === '') return true;
+            return false;
+        }));
         $run['phase'] = $missing ? 'scan' : 'finish';return;
     }
     if ($run['phase'] === 'scan') {
+        if (!isset($run['job']['window'])) throw new RuntimeException('Stato cron precedente: ripetere con la finestra esatta delle 24 ore.');
         $run['job']['expires'] = time()+1800;
         ($scan ?? 'video_sync_job_step')($run['job']);
         if ($run['job']['index'] < count($run['job']['sources'])) return;

@@ -111,21 +111,21 @@ video_expect(video_sync_youtube_channel('UC'.str_repeat('a',22)) === ['id'=>'UC'
 $calls = [];
 $request = function($service,$params) use (&$calls,$title) {
     $calls[] = [$service,$params];
-    if ($service === 'channels') return ['items'=>[['contentDetails'=>['relatedPlaylists'=>['uploads'=>'UPLOADS']]]]];
-    if ($service === 'playlistItems' && empty($params['pageToken'])) return ['items'=>[['contentDetails'=>['videoId'=>'abcdefghijk']]],'nextPageToken'=>'next'];
-    if ($service === 'playlistItems') return ['items'=>[['contentDetails'=>['videoId'=>'lmnopqrstuv']],['contentDetails'=>['videoId'=>'wxyz0123456']]]];
-    return ['items'=>[
-        ['id'=>'abcdefghijk','snippet'=>['title'=>$title,'description'=>'','publishedAt'=>'2026-10-08T22:30:00Z'],'status'=>['privacyStatus'=>'public']],
-        ['id'=>'lmnopqrstuv','snippet'=>['title'=>$title,'publishedAt'=>'2026-10-09T12:00:00Z'],'status'=>['privacyStatus'=>'private']],
-        ['id'=>'wxyz0123456','snippet'=>['title'=>$title,'publishedAt'=>'2026-10-10T01:00:00Z'],'status'=>['privacyStatus'=>'public']],
-    ]];
+    if ($service === 'channels') return ['items'=>[['id'=>'UC'.str_repeat('a',22)]]];
+    if ($service === 'search' && empty($params['pageToken'])) return ['items'=>[['id'=>['videoId'=>'abcdefghijk']]],'nextPageToken'=>'next'];
+    if ($service === 'search') return ['items'=>[['id'=>['videoId'=>'lmnopqrstuv']],['id'=>['videoId'=>'wxyz0123456']]]];
+    return ['items'=>array_values(array_filter([
+        ['id'=>'abcdefghijk','snippet'=>['channelId'=>'UC'.str_repeat('a',22),'title'=>$title,'description'=>'','publishedAt'=>'2026-10-08T22:30:00Z'],'status'=>['privacyStatus'=>'public']],
+        ['id'=>'lmnopqrstuv','snippet'=>['channelId'=>'UC'.str_repeat('a',22),'title'=>$title,'publishedAt'=>'2026-10-09T12:00:00Z'],'status'=>['privacyStatus'=>'private']],
+        ['id'=>'wxyz0123456','snippet'=>['channelId'=>'UC'.str_repeat('a',22),'title'=>$title,'publishedAt'=>'2026-10-10T01:00:00Z'],'status'=>['privacyStatus'=>'public']],
+    ],fn($video)=>in_array($video['id'],explode(',',$params['id']),true)))];
 };
 $from = new DateTimeImmutable('2026-10-09',new DateTimeZone('Europe/Rome'));
 $media = video_sync_youtube('test-key','@torneioldschool',$from,$from,$request);
 video_expect(count($media) === 1 && $media[0]['date'] === '2026-10-09','Rome timezone, dates or public-video filter');
-video_expect(count($calls) === 4 && $calls[2][1]['pageToken'] === 'next','API pagination or video batching');
+video_expect(count($calls) === 5 && $calls[3][1]['pageToken'] === 'next','API pagination or video batching');
 video_rejects(fn()=>video_sync_youtube('','@torneioldschool',$from,$from,$request));
-$loop = fn($service,$params)=>$service === 'channels' ? ['items'=>[['contentDetails'=>['relatedPlaylists'=>['uploads'=>'uploads']]]]] : ['items'=>[],'nextPageToken'=>'repeat'];
+$loop = fn($service,$params)=>$service === 'channels' ? ['items'=>[['id'=>'UC'.str_repeat('a',22)]]] : ['items'=>[],'nextPageToken'=>'repeat'];
 video_rejects(fn()=>video_sync_youtube('test-key','@torneioldschool',$from,$from,$loop));
 // Including the existing sync script as a provider must not execute it or contact the DB/API.
 define('TOS_INSTAGRAM_SYNC_LIBRARY',true);
