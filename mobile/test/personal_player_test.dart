@@ -146,6 +146,10 @@ void main() {
       await tester.tap(find.text('Esport'));
       await tester.pumpAndSettle();
       expect(api.queries.last, {'section': 'esport'});
+      expect(find.text('I miei tornei'), findsOneWidget);
+      expect(find.text('Storico prestazioni'), findsNothing);
+      await tester.tap(find.text('Calcio'));
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.text('Storico prestazioni'),
         100,
@@ -155,14 +159,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(PlayerHistoryPage), findsOneWidget);
       expect(api.queries.last, {
-        'section': 'esport',
+        'section': 'calcio',
         'type': 'presenze',
         'page': '1',
       });
       await tester.tap(find.text('Marcatori'));
       await tester.pumpAndSettle();
       expect(api.queries.last, {
-        'section': 'esport',
+        'section': 'calcio',
         'type': 'gol',
         'page': '1',
       });

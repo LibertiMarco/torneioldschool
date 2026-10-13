@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includi/esport_account_stats.php';
+require_once __DIR__ . '/../includi/player_awards.php';
 function esport_expect(bool $condition, string $message): void {
     if (!$condition) throw new RuntimeException($message);
 }
@@ -9,34 +10,22 @@ $teams = [
     ['id' => 2, 'nome' => 'Mario Rossi', 'torneo' => 'league', 'sezione' => 'esport'],
     ['id' => 3, 'nome' => 'Mario Rossi', 'torneo' => 'football', 'sezione' => 'calcio'],
     ['id' => 4, 'nome' => 'Mario Rossini', 'torneo' => 'cup', 'sezione' => 'esport'],
-    ['id' => 5, 'nome' => 'Rossi Mario', 'torneo' => 'cup', 'sezione' => 'esport'],
 ];
-$match = ['id' => 10, 'torneo' => 'cup', 'squadra_casa' => 'Mario Rossi', 'squadra_ospite' => 'Luca Bianchi',
-    'gol_casa' => 3, 'gol_ospite' => 1, 'giocata' => 1, 'data_partita' => '2026-10-01', 'ora_partita' => '21:00'];
-$matches = [$match, $match,
-    array_merge($match, ['id' => 11, 'torneo' => 'league', 'squadra_casa' => 'Luca Bianchi', 'squadra_ospite' => 'Mario Rossi', 'gol_ospite' => 2]),
-    array_merge($match, ['id' => 12, 'gol_casa' => 0]),
-    array_merge($match, ['id' => 13, 'giocata' => 0]),
-    array_merge($match, ['id' => 14, 'gol_casa' => null]),
-    array_merge($match, ['id' => 15, 'torneo' => 'football']),
-    array_merge($match, ['id' => 16, 'squadra_casa' => 'Mario Rossini']),
-];
-$result = esport_account_stats_build($user, $teams, $matches);
-esport_expect(count($result['teams']) === 2, 'Only exact full names in esport, across all tournaments');
-esport_expect($result['player']['nome'] === 'Mario' && $result['player']['id'] === 0, 'An account without a football player has a profile');
-esport_expect($result['player']['presenze'] === 3 && $result['player']['reti'] === 5, 'Home and away scores count once; unplayed and unscored excluded');
-esport_expect($result['teams'][0]['presenze'] === 2 && $result['teams'][0]['reti'] === 3, 'Per tournament totals exclude duplicate rows');
-$history = esport_account_stats_build($user, $teams, $matches, 'gol');
-esport_expect(count($history['matches']) === 2 && $history['matches'][0]['partita_id'] === 11, 'Goal history filters zero goals and sorts matches');
-esport_expect($history['player']['totali']['gol'] === 5, 'History includes global totals');
-$empty = esport_account_stats_build(['nome' => 'Altro', 'cognome' => 'Utente'], $teams, $matches);
-esport_expect($empty['teams'] === [] && $empty['player']['reti'] === 0, 'Other users cannot acquire these statistics');
-esport_expect(esport_account_matching_teams(['nome' => '', 'cognome' => 'Rossi'], $teams) === [], 'Incomplete names never match');
+$accounts = [$user, ['nome' => 'Luca', 'cognome' => 'Bianchi']];
+esport_expect(esport_account_has_unique_name($user, $accounts), 'Unique account can be associated');
+$result = esport_account_profile($user, $teams, true);
+esport_expect(count($result['teams']) === 2, 'Only full names in esport across tournaments');
+esport_expect(!isset($result['player']['reti'], $result['player']['presenze']), 'No goals or appearances');
+esport_expect(!isset($result['teams'][0]['reti'], $result['teams'][0]['presenze']), 'No tournament counters');
+$duplicate = ['nome' => '  MARIO ', 'cognome' => ' ROSSI  '];
+$accounts[] = $duplicate;
+esport_expect(!esport_account_has_unique_name($user, $accounts), 'First namesake is blocked');
+esport_expect(!esport_account_has_unique_name($duplicate, $accounts), 'Second namesake is blocked too');
+$blocked = esport_account_profile($user, $teams, false);
+esport_expect($blocked['teams'] === [] && $blocked['awards'] === [] && $blocked['association_ambiguous'], 'Ambiguous accounts see no associations or awards');
+esport_expect(!esport_account_has_unique_name(['nome' => '', 'cognome' => 'Rossi'], $accounts), 'Incomplete identity is blocked');
 esport_expect(esport_account_name_key('  Nicolò   D’Angelo ') === esport_account_name_key('nicolò d’angelo'), 'Unicode and spaces normalize');
-$many = [];
-for ($i = 1; $i <= 101; $i++) $many[] = array_merge($match, ['id' => $i]);
-$first = esport_account_stats_build($user, $teams, $many, 'presenze', 1);
-$second = esport_account_stats_build($user, $teams, $many, 'presenze', 2);
-esport_expect(count($first['matches']) === 100 && $first['pagination']['has_more'], 'History paginates');
-esport_expect(count($second['matches']) === 1 && !$second['pagination']['has_more'], 'Last page is correct');
-echo "Esport account stats tests passed.\n";
+$award = ['tipo' => 'Squadra', 'squadra_id' => 1, 'members' => []];
+esport_expect(player_award_recipient_type($award, $result['player'], $result['teams']) === 'Squadra', 'Esport team awards do not require a football player');
+esport_expect(player_award_recipient_type(['tipo' => 'Individuale', 'giocatore_id' => 10], $result['player'], $result['teams']) === null, 'Other players individual awards stay excluded');
+echo "Esport tournaments, name collisions and awards tests passed.\n";

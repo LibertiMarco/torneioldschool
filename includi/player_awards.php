@@ -282,18 +282,19 @@ function deduplicate_player_awards(array $awards): array {
 
 function player_award_recipient_type(array $record, array $player, array $teams): ?string {
     $playerId = (int)($player['id'] ?? 0);
-    if ($playerId <= 0) return null;
+    $esportAccount = ($player['sezione'] ?? '') === 'esport';
+    if ($playerId <= 0 && !$esportAccount) return null;
     // Individual awards never propagate through the winner's team or roster.
     $individual = !empty($record['giocatore_id'])
         || ($record['tipo'] ?? '') === 'Individuale'
         || ($record['kind'] ?? '') === 'SCORER';
     if ($individual) {
-        return (int)($record['giocatore_id'] ?? 0) === $playerId ? 'Individuale' : null;
+        return $playerId > 0 && (int)($record['giocatore_id'] ?? 0) === $playerId ? 'Individuale' : null;
     }
     if (($record['tipo'] ?? '') !== 'Squadra'
         && premio_team_category((string)($record['premio'] ?? '')) === '') return null;
     $teamIds = array_map('intval', array_column($teams, 'id'));
-    $member = isset($record['members'])
+    $member = !$esportAccount && isset($record['members'])
         ? in_array($playerId, array_map('intval', $record['members']), true)
         : (!empty($record['squadra_id']) && in_array((int)$record['squadra_id'], $teamIds, true));
     return $member ? 'Squadra' : null;

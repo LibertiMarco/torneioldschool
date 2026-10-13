@@ -258,11 +258,12 @@ function fetchMatches(mysqli $conn, int $playerId, array $teams, bool $future = 
 }
 
 $playerId = (int)($giocatore['id'] ?? 0);
-$prossimePartite = $giocatore ? fetchMatches($conn, $playerId, $squadre, true) : [];
-$partiteGiocate  = $giocatore ? fetchMatches($conn, $playerId, $squadre, false) : [];
-$premiGiocatore = $giocatore
+$prossimePartite = $giocatore && $siteSection !== 'esport' ? fetchMatches($conn, $playerId, $squadre, true) : [];
+$partiteGiocate  = $giocatore && $siteSection !== 'esport' ? fetchMatches($conn, $playerId, $squadre, false) : [];
+$premiGiocatore = $siteSection === 'esport' ? $esportStats['awards'] : ($giocatore
     ? player_awards_fetch_all($conn, $giocatore, $squadre, $siteSection)
-    : [];
+    : []);
+if ($siteSection === 'esport') $squadre = array_values(array_column($squadre, null, 'torneo'));
 
 $seo = [
     'title' => 'Statistiche Giocatore',
@@ -526,6 +527,7 @@ $seo = [
             <div>
                 <div class="badge">Profilo giocatore</div>
                 <h2 style="margin:8px 0 4px;"><?= h($giocatore['nome'] . ' ' . $giocatore['cognome']) ?></h2>
+                <?php if ($siteSection !== 'esport'): ?>
                 <div class="hero-stats">
                     <span class="stat-chip">Presenze: <?= (int)$giocatore['presenze'] ?></span>
                     <span class="stat-chip">Gol: <?= (int)$giocatore['reti'] ?></span>
@@ -534,6 +536,7 @@ $seo = [
                     <span class="stat-chip">Rossi: <?= (int)$giocatore['rossi'] ?></span>
                     <span class="stat-chip">Media voto: <?= $giocatore['media_voti'] !== null ? h($giocatore['media_voti']) : 'N/D' ?></span>
                 </div>
+                <?php endif; ?>
             </div>
         </section>
 
@@ -560,7 +563,7 @@ $seo = [
         </section>
 
         <section class="section-card">
-            <h3>Squadre</h3>
+            <h3><?= $siteSection === 'esport' ? 'I miei tornei' : 'Squadre' ?></h3>
             <?php if (empty($squadre)): ?>
                 <p>Non risultano squadre associate.</p>
             <?php else: ?>
@@ -585,6 +588,7 @@ $seo = [
                                     <small><?= h($torneoNome) ?><?= $s['is_captain'] ? ' - Capitano' : '' ?></small>
                                 </div>
                             </div>
+                            <?php if ($siteSection !== 'esport'): ?>
                             <div class="team-stats">
                                 <span><strong>P:</strong> <?= (int)$s['presenze'] ?></span>
                                 <span><strong>G:</strong> <?= (int)$s['reti'] ?></span>
@@ -593,6 +597,7 @@ $seo = [
                                 <span><strong>Rossi:</strong> <?= (int)$s['rossi'] ?></span>
                                 <span><strong>MV:</strong> <?= $s['media_voti'] !== null ? h($s['media_voti']) : 'N/D' ?></span>
                             </div>
+                            <?php endif; ?>
                         <?php if ($torneoLink !== ''): ?>
                         </a>
                         <?php else: ?>
@@ -603,6 +608,7 @@ $seo = [
             <?php endif; ?>
         </section>
 
+        <?php if ($siteSection !== 'esport'): ?>
         <section class="section-card">
             <h3>Prossime partite</h3>
             <?php if (empty($prossimePartite)): ?>
@@ -708,6 +714,7 @@ $seo = [
                 </div>
             <?php endif; ?>
         </section>
+        <?php endif; ?>
     <?php endif; ?>
 </main>
 

@@ -43,46 +43,88 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
       : const Duration(milliseconds: 360);
 
   @override
-  Widget build(BuildContext context) => RefreshIndicator(
-    onRefresh: widget.refresh,
-    child: ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
-      children: [
-        TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0, end: 1),
-          duration: motion,
-          curve: Curves.easeOutCubic,
-          builder: (context, progress, child) => Opacity(
-            opacity: progress,
-            child: Transform.translate(
-              offset: Offset(0, 12 * (1 - progress)),
-              child: child,
-            ),
+  Widget build(BuildContext context) => widget.section == 'esport'
+      ? _esport()
+      : RefreshIndicator(
+          onRefresh: widget.refresh,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+            children: [
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: motion,
+                curve: Curves.easeOutCubic,
+                builder: (context, progress, child) => Opacity(
+                  opacity: progress,
+                  child: Transform.translate(
+                    offset: Offset(0, 12 * (1 - progress)),
+                    child: child,
+                  ),
+                ),
+                child: _athlete(),
+              ),
+              const SizedBox(height: 24),
+              _title('Le mie statistiche', 'IL TUO PERCORSO'),
+              const SizedBox(height: 12),
+              _summary(),
+              const SizedBox(height: 14),
+              _discipline(),
+              const SizedBox(height: 22),
+              _history(),
+              const SizedBox(height: 28),
+              PlayerAwardsSection(api: widget.api, awards: widget.awards),
+              if (widget.teams.isNotEmpty) ...[
+                const SizedBox(height: 26),
+                _chart(),
+              ],
+              const SizedBox(height: 28),
+              _title('Le mie squadre', 'APPARTENENZA'),
+              const SizedBox(height: 16),
+              if (widget.teams.isEmpty)
+                Text('Non risultano squadre associate in questa sezione.'),
+              for (var index = 0; index < widget.teams.length; index++)
+                _team(widget.teams[index], index),
+            ],
           ),
-          child: _athlete(),
-        ),
-        const SizedBox(height: 24),
-        _title('Le mie statistiche', 'IL TUO PERCORSO'),
-        const SizedBox(height: 12),
-        _summary(),
-        const SizedBox(height: 14),
-        _discipline(),
-        const SizedBox(height: 22),
-        _history(),
-        const SizedBox(height: 28),
-        PlayerAwardsSection(api: widget.api, awards: widget.awards),
-        if (widget.teams.isNotEmpty) ...[const SizedBox(height: 26), _chart()],
-        const SizedBox(height: 28),
-        _title('Le mie squadre', 'APPARTENENZA'),
-        const SizedBox(height: 16),
-        if (widget.teams.isEmpty)
-          Text('Non risultano squadre associate in questa sezione.'),
-        for (var index = 0; index < widget.teams.length; index++)
-          _team(widget.teams[index], index),
-      ],
-    ),
-  );
+        );
+
+  Widget _esport() {
+    final tournaments = <String, Map<String, dynamic>>{};
+    for (final team in widget.teams) {
+      tournaments.putIfAbsent('${team['torneo']}', () => team);
+    }
+    return RefreshIndicator(
+      onRefresh: widget.refresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        children: [
+          Text(
+            '${widget.player['nome'] ?? ''} ${widget.player['cognome'] ?? ''}'
+                .trim(),
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 24),
+          _title('I miei tornei', 'ESPORT'),
+          const SizedBox(height: 12),
+          if (tournaments.isEmpty)
+            const Text('Non risultano tornei associati al tuo account.'),
+          for (final team in tournaments.values)
+            Card(
+              child: ListTile(
+                leading: Icon(Icons.sports_esports, color: colors.primary),
+                title: Text('${team['torneo_nome'] ?? team['torneo']}'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => widget.openTeam(team),
+              ),
+            ),
+          const SizedBox(height: 28),
+          PlayerAwardsSection(api: widget.api, awards: widget.awards),
+        ],
+      ),
+    );
+  }
 
   Widget _title(String title, String eyebrow) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
