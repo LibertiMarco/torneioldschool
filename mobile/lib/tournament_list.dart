@@ -131,7 +131,7 @@ class TournamentCard extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: Theme.of(context).brightness == Brightness.dark
-                          ? const [Color(0xff171717), Color(0xff303030)]
+                          ? const [Color(0xff30465b), Color(0xff3e4753)]
                           : const [Color(0xff102237), Color(0xff315977)],
                     ),
                   ),

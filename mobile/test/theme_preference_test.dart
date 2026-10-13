@@ -36,7 +36,10 @@ void main() {
     await tester.tap(find.text('Scuro'));
     await tester.pumpAndSettle();
     expect(storage.values['tos.app.theme'], 'dark');
-    expect(siteDarkTheme().scaffoldBackgroundColor, Colors.black);
+    expect(
+      siteDarkTheme().scaffoldBackgroundColor,
+      const Color(0xff1c2026),
+    );
     expect(
       Theme.of(tester.element(find.text('TORNEI OLD SCHOOL'))).brightness,
       Brightness.dark,
