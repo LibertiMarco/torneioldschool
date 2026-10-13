@@ -75,6 +75,12 @@ void main() {
       expect(find.text('1 strumento'), findsOneWidget);
       final title = tester.widget<Text>(find.text('Calendario e risultati'));
       expect(title.style?.color, siteDarkTheme().colorScheme.onSurface);
+      final row = find.ancestor(
+        of: find.text('Calendario e risultati'),
+        matching: find.byType(ListTile),
+      );
+      expect(tester.getSize(row).width, closeTo(width - 32, 2));
+      expect(tester.getSize(row).height, lessThan(110));
       await Scrollable.ensureVisible(
         tester.element(find.text('Calendario e risultati')),
         alignment: .5,
@@ -90,11 +96,11 @@ void main() {
       await tester.tap(reset);
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
-        find.text('19 strumenti'),
+        find.text('20 strumenti'),
         100,
         scrollable: scroll,
       );
-      expect(find.text('19 strumenti'), findsOneWidget);
+      expect(find.text('20 strumenti'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }

@@ -54,7 +54,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(StaffDashboard), findsOneWidget);
       expect(api.userRequests, 0);
-      expect(find.text('Generatore grafiche'), findsOneWidget);
+      if (role == 'grafico') {
+        expect(find.text('Generatore grafiche'), findsOneWidget);
+      }
       expect(tester.takeException(), isNull);
       if (role == 'grafico') {
         expect(find.text('Gestione account'), findsNothing);
@@ -79,6 +81,8 @@ void main() {
         expect(api.userRequests, 0);
       } else {
         expect(find.text('Dashboard amministratore'), findsOneWidget);
+        await tester.enterText(find.byType(TextField), 'Utenti');
+        await tester.pumpAndSettle();
         await tester.ensureVisible(find.text('Gestione account'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Gestione account'));

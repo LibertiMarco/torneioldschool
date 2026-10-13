@@ -156,6 +156,14 @@ const adminTools = [
   ),
 ];
 
+const accountTool = StaffTool(
+  'Gestione account',
+  'Utenti e abilitazioni',
+  Icons.manage_accounts_outlined,
+  'account-users',
+  'Account',
+);
+
 class StaffDashboard extends StatefulWidget {
   const StaffDashboard({super.key, required this.auth});
   final TosAuth auth;
@@ -184,7 +192,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
       return const Center(child: Text('Area riservata allo staff.'));
     }
     final tools = auth.admin
-        ? [...adminTools, ...graphicsTools]
+        ? [...adminTools, accountTool, ...graphicsTools]
         : graphicsTools;
     final query = search.text.trim().toLowerCase();
     final visible = tools
@@ -236,7 +244,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 21,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -271,39 +279,6 @@ class _StaffDashboardState extends State<StaffDashboard> {
           ),
           const SizedBox(height: 18),
           if (auth.admin) ...[
-            if (query.isEmpty) ...[
-              _StaffShortcut(
-                title: 'Gestione account',
-                subtitle: 'Utenti e abilitazioni',
-                icon: Icons.manage_accounts_outlined,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (context) => StaffTheme(
-                      child: Scaffold(
-                        appBar: AppBar(
-                          leading: Navigator.of(context).canPop()
-                              ? const StaffBackButton()
-                              : null,
-                          title: const Text('Gestione account'),
-                        ),
-                        body: AdminUsersPage(auth: auth),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              _StaffShortcut(
-                title: 'Generatore grafiche',
-                subtitle: 'Matchday, risultati e classifiche',
-                icon: Icons.auto_awesome_outlined,
-                onTap: () => setState(() {
-                  category = 'Grafiche';
-                  search.clear();
-                }),
-              ),
-              const SizedBox(height: 22),
-            ],
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -351,79 +326,16 @@ class _StaffDashboardState extends State<StaffDashboard> {
                 ),
               ],
             ),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final columns = MediaQuery.textScalerOf(context).scale(15) > 22.5
-                  ? 1
-                  : constraints.maxWidth >= 520
-                  ? 3
-                  : 2;
-              // Wrap lets each tool grow naturally, including with enlarged text.
-              return Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  for (final tool in visible)
-                    SizedBox(
-                      width:
-                          (constraints.maxWidth - 10 * (columns - 1)) / columns,
-                      child: StaffTapSurface(
-                        onTap: () => openTool(tool),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [siteBlue, Color(0xff245c78)],
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(tool.icon, color: Colors.white),
-                              ),
-                              const SizedBox(height: 14),
-                              Text(
-                                tool.title,
-                                style: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 15,
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                tool.description,
-                                style: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                  fontSize: 12,
-                                  height: 1.4,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Icon(
-                                  Icons.arrow_forward_rounded,
-                                  size: 18,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
+          for (final tool in visible)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _StaffShortcut(
+                title: tool.title,
+                subtitle: tool.description,
+                icon: tool.icon,
+                onTap: () => openTool(tool),
+              ),
+            ),
         ],
       ),
     );
@@ -444,23 +356,23 @@ class _StaffShortcut extends StatelessWidget {
   Widget build(BuildContext context) => StaffTapSurface(
     onTap: onTap,
     child: ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       leading: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           gradient: const LinearGradient(colors: [siteBlue, Color(0xff245c78)]),
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Icon(icon, color: Colors.white),
+        child: Icon(icon, color: Colors.white, size: 20),
       ),
       title: Text(
         title,
         style: TextStyle(
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
           color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
-      subtitle: Text(subtitle),
+      subtitle: Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
       trailing: const Icon(Icons.arrow_forward_rounded, color: staffAccent),
     ),
   );
@@ -479,6 +391,19 @@ class StaffToolPage extends StatelessWidget {
       return Scaffold(
         appBar: AppBar(title: Text(tool.title)),
         body: const Center(child: Text('Area riservata allo staff.')),
+      );
+    }
+    if (tool.path == accountTool.path) {
+      return StaffTheme(
+        child: Scaffold(
+          appBar: AppBar(
+            leading: Navigator.of(context).canPop()
+                ? const StaffBackButton()
+                : null,
+            title: const Text('Gestione account'),
+          ),
+          body: AdminUsersPage(auth: auth),
+        ),
       );
     }
     return NativeStaffTool(
