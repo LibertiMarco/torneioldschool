@@ -391,34 +391,36 @@ void main() {
       );
     },
   );
-  for (final tool in [...adminTools, ...graphicsTools]) {
-    testWidgets(
-      '${tool.title} opens native controls at 320px without production requests',
-      (tester) async {
-        await tester.binding.setSurfaceSize(const Size(320, 1000));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-        final api = DemoApi(), auth = FixtureAuth(DemoApi());
-        auth.user = api.users.first;
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: siteTheme(),
-            home: StaffToolPage(auth: auth, tool: tool),
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(find.byType(NativeStaffTool), findsOneWidget);
-        expect(find.byType(ExternalLinkButton), findsNothing);
-        expect(auth.starts, 0);
-        expect(tester.takeException(), isNull);
-        if (!tool.path.contains('fantacalcio') &&
-            !tool.path.contains('admin_mobile')) {
-          expect(find.byType(StaffNativeField), findsWidgets);
-        }
-        if (tool.path.contains('blog')) {
-          expect(find.byType(StaffRichEditor), findsOneWidget);
-        }
-      },
-    );
+  for (final theme in [siteTheme(), siteDarkTheme()]) {
+    for (final tool in [...adminTools, ...graphicsTools]) {
+      testWidgets(
+        '${tool.title} opens native controls at 320px in ${theme.brightness.name} without production requests',
+        (tester) async {
+          await tester.binding.setSurfaceSize(const Size(320, 1000));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          final api = DemoApi(), auth = FixtureAuth(DemoApi());
+          auth.user = api.users.first;
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: theme,
+              home: StaffToolPage(auth: auth, tool: tool),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.byType(NativeStaffTool), findsOneWidget);
+          expect(find.byType(ExternalLinkButton), findsNothing);
+          expect(auth.starts, 0);
+          expect(tester.takeException(), isNull);
+          if (!tool.path.contains('fantacalcio') &&
+              !tool.path.contains('admin_mobile')) {
+            expect(find.byType(StaffNativeField), findsWidgets);
+          }
+          if (tool.path.contains('blog')) {
+            expect(find.byType(StaffRichEditor), findsOneWidget);
+          }
+        },
+      );
+    }
   }
   testWidgets(
     'Live renderer changes values, searches select options, confirms writes and drops revoked roles',

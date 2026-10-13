@@ -5,9 +5,6 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:html/dom.dart' as html;
 import 'package:html/parser.dart' as html;
 
-import 'staff_controls.dart';
-import 'theme.dart';
-
 // The article controllers accept HTML. Keep formatting while editing in Flutter.
 List<Map<String, dynamic>> staffHtmlDelta(String value) {
   final ops = <Map<String, dynamic>>[];
@@ -184,20 +181,26 @@ class _StaffRichEditorState extends State<StaffRichEditor> {
       const SizedBox(height: 8),
       DecoratedBox(
         decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xffdbe3f0)),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
           children: [
             QuillSimpleToolbar(
               controller: _controller,
-              config: const QuillSimpleToolbarConfig(
+              config: QuillSimpleToolbarConfig(
                 iconTheme: QuillIconTheme(
                   iconButtonSelectedData: IconButtonData(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     style: ButtonStyle(
-                      backgroundColor: WidgetStatePropertyAll(siteBlue),
-                      foregroundColor: WidgetStatePropertyAll(Colors.white),
+                      backgroundColor: WidgetStatePropertyAll(
+                        Theme.of(context).colorScheme.primary,
+                      ),
+                      foregroundColor: WidgetStatePropertyAll(
+                        Theme.of(context).colorScheme.onPrimary,
+                      ),
                       minimumSize: WidgetStatePropertyAll(Size(48, 48)),
                       shape: WidgetStatePropertyAll(
                         RoundedRectangleBorder(
@@ -207,10 +210,14 @@ class _StaffRichEditorState extends State<StaffRichEditor> {
                     ),
                   ),
                   iconButtonUnselectedData: IconButtonData(
-                    color: staffAccent,
+                    color: Theme.of(context).colorScheme.secondary,
                     style: ButtonStyle(
-                      backgroundColor: WidgetStatePropertyAll(staffPale),
-                      foregroundColor: WidgetStatePropertyAll(staffAccent),
+                      backgroundColor: WidgetStatePropertyAll(
+                        Theme.of(context).colorScheme.secondaryContainer,
+                      ),
+                      foregroundColor: WidgetStatePropertyAll(
+                        Theme.of(context).colorScheme.secondary,
+                      ),
                       minimumSize: WidgetStatePropertyAll(Size(48, 48)),
                       shape: WidgetStatePropertyAll(
                         RoundedRectangleBorder(

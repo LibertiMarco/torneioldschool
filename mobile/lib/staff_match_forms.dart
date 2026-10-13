@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'staff_controls.dart';
 import 'staff_engine.dart';
 import 'theme.dart';
 
@@ -26,10 +25,10 @@ class StaffMatchForm extends StatelessWidget {
               children: [
                 Text(
                   '${section['title']}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: siteBlue,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -99,7 +98,7 @@ class StaffMatchLineup extends StatelessWidget {
                   child: Text(
                     '${model['home']}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
                     ),
@@ -112,7 +111,7 @@ class StaffMatchLineup extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     child: Text(
                       '${model['score']}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
                         fontSize: 30,
@@ -125,7 +124,7 @@ class StaffMatchLineup extends StatelessWidget {
                   child: Text(
                     '${model['away']}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
                     ),
@@ -138,7 +137,7 @@ class StaffMatchLineup extends StatelessWidget {
               Text(
                 '${model['info']}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Color(0xffd2e7f1),
                   fontSize: 12,
                   height: 1.4,
@@ -148,7 +147,7 @@ class StaffMatchLineup extends StatelessWidget {
           ],
         ),
       ),
-      const Padding(
+      Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
         child: Text(
           'Seleziona chi ha giocato e inserisci gli eventi nella distinta. Il risultato si aggiorna con gol e autogol.',
@@ -162,8 +161,8 @@ class StaffMatchLineup extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: model['error'] == true
-                  ? const Color(0xffffe9ed)
-                  : staffPale,
+                  ? Theme.of(context).colorScheme.errorContainer
+                  : Theme.of(context).colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Text('${model['notice']}'),
@@ -179,11 +178,13 @@ class StaffMatchLineup extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                color: siteBlue,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(context).colorScheme.surfaceContainerHigh
+                    : siteBlue,
                 padding: const EdgeInsets.all(16),
                 child: Text(
                   '${team['name']}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
                     fontSize: 19,
                     fontWeight: FontWeight.w800,
@@ -241,8 +242,12 @@ class _LineupPlayer extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: present ? Colors.white : const Color(0xfff4f6f8),
-        border: const Border(top: BorderSide(color: staffBorder)),
+        color: present
+            ? Theme.of(context).colorScheme.surfaceContainerLow
+            : Theme.of(context).colorScheme.surfaceContainerHighest,
+        border: Border(
+          top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
       ),
       child: Material(
         color: Colors.transparent,
@@ -255,7 +260,7 @@ class _LineupPlayer extends StatelessWidget {
                 controlAffinity: ListTileControlAffinity.leading,
                 title: Text(
                   '${player['name']}',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+                  style: TextStyle(fontWeight: FontWeight.w800),
                 ),
                 subtitle: Text(present ? 'Presente' : 'Non presente'),
                 value: present,
@@ -276,13 +281,17 @@ class _LineupPlayer extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: badge == 'DIFFIDATO'
-                            ? const Color(0xffffefbe)
-                            : staffPale,
+                            ? (Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xff574725)
+                                  : const Color(0xffffefbe))
+                            : Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         '$badge',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                         ),
@@ -348,7 +357,9 @@ class _LineupPlayer extends StatelessWidget {
                       field['stat'] == 'cartellino_giallo' ? 'Giallo' : 'Rosso',
                     ),
                     labelStyle: TextStyle(
-                      color: field['checked'] == true ? Colors.white : siteBlue,
+                      color: field['checked'] == true
+                          ? Theme.of(context).colorScheme.onPrimary
+                          : Theme.of(context).colorScheme.onSurface,
                     ),
                     selected: field['checked'] == true,
                     onSelected: field['disabled'] == true
@@ -430,10 +441,10 @@ class _StaffStatCounterState extends State<StaffStatCounter> {
           focusNode: _focus,
           enabled: !disabled,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w800,
-            color: siteBlue,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -441,7 +452,7 @@ class _StaffStatCounterState extends State<StaffStatCounter> {
             labelText: label,
             isDense: true,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerLowest,
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -459,12 +470,12 @@ class _StaffStatCounterState extends State<StaffStatCounter> {
               onPressed: disabled || (int.tryParse(_text.text) ?? 0) <= 0
                   ? null
                   : () => _step(-1),
-              icon: const Icon(Icons.remove_rounded, size: 18),
+              icon: Icon(Icons.remove_rounded, size: 18),
             ),
             IconButton(
               tooltip: 'Aumenta $label',
               onPressed: disabled ? null : () => _step(1),
-              icon: const Icon(Icons.add_rounded, size: 18),
+              icon: Icon(Icons.add_rounded, size: 18),
             ),
           ],
         ),

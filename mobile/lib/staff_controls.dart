@@ -25,37 +25,58 @@ class StaffTheme extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final base = Theme.of(context);
+    final dark = base.brightness == Brightness.dark;
+    final colors = dark
+        ? base.colorScheme.copyWith(
+            secondary: const Color(0xff80cedb),
+            onSecondary: const Color(0xff123b44),
+            secondaryContainer: const Color(0xff294952),
+            onSecondaryContainer: const Color(0xffc3edf1),
+          )
+        : base.colorScheme.copyWith(
+            primary: siteBlue,
+            secondary: staffAccent,
+            secondaryContainer: staffPale,
+            onSecondaryContainer: siteBlue,
+          );
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(16),
     );
-    const label = TextStyle(fontSize: 14, fontWeight: FontWeight.w700);
+    final label = base.textTheme.labelLarge!.copyWith(
+      fontSize: 14,
+      fontWeight: FontWeight.w700,
+    );
     final primary = FilledButton.styleFrom(
-      backgroundColor: siteBlue,
-      foregroundColor: Colors.white,
-      disabledBackgroundColor: const Color(0xffe2e8ef),
-      disabledForegroundColor: const Color(0xff758496),
+      backgroundColor: colors.primary,
+      foregroundColor: colors.onPrimary,
+      disabledBackgroundColor: colors.surfaceContainerHigh,
+      disabledForegroundColor: colors.onSurfaceVariant,
       minimumSize: const Size(48, 50),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       shape: shape,
       textStyle: label,
     );
     final secondary = OutlinedButton.styleFrom(
-      backgroundColor: staffPale,
-      foregroundColor: siteBlue,
-      disabledForegroundColor: const Color(0xff758496),
+      backgroundColor: colors.secondaryContainer,
+      foregroundColor: colors.onSurface,
+      disabledForegroundColor: colors.onSurfaceVariant,
       minimumSize: const Size(48, 50),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       shape: shape,
-      side: const BorderSide(color: staffBorder),
+      side: BorderSide(color: colors.outlineVariant),
       textStyle: label,
     );
     return Theme(
       data: base.copyWith(
-        colorScheme: base.colorScheme.copyWith(
-          primary: siteBlue,
-          secondary: staffAccent,
-          secondaryContainer: staffPale,
-          onSecondaryContainer: siteBlue,
+        colorScheme: colors,
+        inputDecorationTheme: base.inputDecorationTheme.copyWith(
+          filled: true,
+          fillColor: colors.surfaceContainerLowest,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: colors.outlineVariant),
+          ),
         ),
         filledButtonTheme: FilledButtonThemeData(style: primary),
         elevatedButtonTheme: ElevatedButtonThemeData(style: primary),
@@ -67,9 +88,9 @@ class StaffTheme extends StatelessWidget {
         ),
         iconButtonTheme: IconButtonThemeData(
           style: IconButton.styleFrom(
-            foregroundColor: staffAccent,
-            backgroundColor: staffPale,
-            disabledForegroundColor: const Color(0xff8c99a8),
+            foregroundColor: colors.secondary,
+            backgroundColor: colors.secondaryContainer,
+            disabledForegroundColor: colors.onSurfaceVariant,
             minimumSize: const Size(48, 48),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
@@ -77,27 +98,27 @@ class StaffTheme extends StatelessWidget {
           ),
         ),
         chipTheme: base.chipTheme.copyWith(
-          backgroundColor: Colors.white,
-          selectedColor: siteBlue,
-          disabledColor: const Color(0xffe2e8ef),
-          checkmarkColor: Colors.white,
+          backgroundColor: colors.surfaceContainerLow,
+          selectedColor: colors.primary,
+          disabledColor: colors.surfaceContainerHigh,
+          checkmarkColor: colors.onPrimary,
           labelStyle: label,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           shape: const StadiumBorder(),
-          side: const BorderSide(color: staffBorder),
+          side: BorderSide(color: colors.outlineVariant),
           showCheckmark: false,
         ),
         segmentedButtonTheme: SegmentedButtonThemeData(
           style: secondary.copyWith(
             backgroundColor: WidgetStateProperty.resolveWith(
               (states) => states.contains(WidgetState.selected)
-                  ? siteBlue
-                  : Colors.white,
+                  ? colors.primary
+                  : colors.surfaceContainerLow,
             ),
             foregroundColor: WidgetStateProperty.resolveWith(
               (states) => states.contains(WidgetState.selected)
-                  ? Colors.white
-                  : siteBlue,
+                  ? colors.onPrimary
+                  : colors.onSurface,
             ),
           ),
         ),
@@ -123,15 +144,19 @@ class StaffFilter extends StatelessWidget {
     label: Text(label),
     selected: selected,
     onSelected: onSelected,
-    labelStyle: TextStyle(
+    labelStyle: Theme.of(context).textTheme.labelLarge!.copyWith(
       color: onSelected == null
           ? const Color(0xff758496)
           : selected
-          ? Colors.white
-          : siteBlue,
+          ? Theme.of(context).colorScheme.onPrimary
+          : Theme.of(context).colorScheme.onSurface,
       fontWeight: FontWeight.w700,
     ),
-    side: BorderSide(color: selected ? siteBlue : staffBorder),
+    side: BorderSide(
+      color: selected
+          ? Theme.of(context).colorScheme.primary
+          : Theme.of(context).colorScheme.outlineVariant,
+    ),
   );
 }
 
@@ -163,9 +188,9 @@ class StaffActionButton extends StatelessWidget {
       return OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          foregroundColor: const Color(0xffb71f39),
-          backgroundColor: const Color(0xfffff1f3),
-          side: const BorderSide(color: Color(0xffedc6ce)),
+          foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
+          backgroundColor: Theme.of(context).colorScheme.errorContainer,
+          side: BorderSide(color: Theme.of(context).colorScheme.error),
         ),
         child: content,
       );
@@ -175,8 +200,14 @@ class StaffActionButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(
           colors: onPressed == null
-              ? [const Color(0xffe2e8ef), const Color(0xffe2e8ef)]
-              : [siteBlue, const Color(0xff245c78)],
+              ? [
+                  Theme.of(context).colorScheme.surfaceContainerHigh,
+                  Theme.of(context).colorScheme.surfaceContainerHigh,
+                ]
+              : [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.primary,
+                ],
         ),
         boxShadow: onPressed == null
             ? []
@@ -254,13 +285,18 @@ class StaffTapSurface extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Ink(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Colors.white, Color(0xfff0f6fa)],
+          gradient: LinearGradient(
+            colors: [
+              Theme.of(context).colorScheme.surfaceContainerLow,
+              Theme.of(context).colorScheme.surfaceContainer,
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: staffBorder),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
         ),
         child: InkWell(onTap: onTap, child: child),
       ),

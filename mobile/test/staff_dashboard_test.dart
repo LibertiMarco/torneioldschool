@@ -62,7 +62,11 @@ void main() {
         expect(find.text('Apri dashboard'), findsNothing);
         expect(find.text('Tornei'), findsOneWidget); // Only bottom navigation.
         expect(find.text('Matchday'), findsOneWidget);
-        await tester.ensureVisible(find.text('Template'));
+        await Scrollable.ensureVisible(
+          tester.element(find.text('Template')),
+          alignment: 0.5,
+        );
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Template'));
         await tester.pumpAndSettle();
         expect(find.byType(StaffToolPage), findsOneWidget);
@@ -120,11 +124,33 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Grafiche').hitTestable(), 250);
+    await tester.scrollUntilVisible(
+      find.text('Grafiche'),
+      180,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Grafiche')),
+      alignment: .5,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Grafiche'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Matchday').hitTestable(), 250);
+    await tester.scrollUntilVisible(
+      find.text('Matchday').hitTestable(),
+      250,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.pumpAndSettle();
     expect(find.text('Matchday'), findsOneWidget);
     expect(find.text('Calendario e risultati'), findsNothing);

@@ -165,6 +165,13 @@ class StaffDashboard extends StatefulWidget {
 
 class _StaffDashboardState extends State<StaffDashboard> {
   String category = 'Tutti';
+  final search = TextEditingController();
+  @override
+  void dispose() {
+    search.dispose();
+    super.dispose();
+  }
+
   void openTool(StaffTool tool) => Navigator.of(context).push(
     MaterialPageRoute<void>(
       builder: (_) => StaffToolPage(auth: widget.auth, tool: tool),
@@ -179,9 +186,16 @@ class _StaffDashboardState extends State<StaffDashboard> {
     final tools = auth.admin
         ? [...adminTools, ...graphicsTools]
         : graphicsTools;
-    final visible = tools.where(
-      (tool) => category == 'Tutti' || tool.category == category,
-    );
+    final query = search.text.trim().toLowerCase();
+    final visible = tools
+        .where(
+          (tool) =>
+              (category == 'Tutti' || tool.category == category) &&
+              '${tool.title} ${tool.description} ${tool.category}'
+                  .toLowerCase()
+                  .contains(query),
+        )
+        .toList();
     return StaffTheme(
       child: ListView(
         padding: const EdgeInsets.all(16),
@@ -190,8 +204,13 @@ class _StaffDashboardState extends State<StaffDashboard> {
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
-              gradient: const LinearGradient(
-                colors: [Color(0xff10263d), Color(0xff164d69)],
+              gradient: LinearGradient(
+                colors: Theme.of(context).brightness == Brightness.dark
+                    ? [
+                        Theme.of(context).colorScheme.surfaceContainer,
+                        Theme.of(context).colorScheme.primaryContainer,
+                      ]
+                    : const [Color(0xff10263d), Color(0xff164d69)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -200,13 +219,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.dashboard_customize_outlined,
-                  color: Color(0xff7ee9ee),
-                  size: 30,
-                ),
-                const SizedBox(height: 16),
-                const Text(
+                Text(
                   'AREA STAFF',
                   style: TextStyle(
                     color: Color(0xff7ee9ee),
@@ -220,73 +233,124 @@ class _StaffDashboardState extends State<StaffDashboard> {
                   auth.admin
                       ? 'Dashboard amministratore'
                       : 'Generatore grafiche',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 25,
+                    fontSize: 21,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   auth.admin
-                      ? 'Il tuo centro di gestione, a portata di tap.'
+                      ? 'Tornei, risultati, account e contenuti.'
                       : 'Scegli il formato e crea la prossima grafica.',
-                  style: const TextStyle(color: Color(0xffc7dce6), height: 1.4),
+                  style: TextStyle(color: Color(0xffc7dce6), height: 1.4),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 20),
+          TextField(
+            controller: search,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              labelText: 'Cerca uno strumento',
+              hintText: 'Squadre, risultati, grafiche…',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: query.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Cancella ricerca',
+                      icon: const Icon(Icons.close),
+                      onPressed: () => setState(search.clear),
+                    ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
           if (auth.admin) ...[
-            _StaffShortcut(
-              title: 'Gestione account',
-              subtitle: 'Utenti e abilitazioni',
-              icon: Icons.manage_accounts_outlined,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (context) => StaffTheme(
-                    child: Scaffold(
-                      appBar: AppBar(
-                        leading: Navigator.of(context).canPop()
-                            ? const StaffBackButton()
-                            : null,
-                        title: const Text('Gestione account'),
+            if (query.isEmpty) ...[
+              _StaffShortcut(
+                title: 'Gestione account',
+                subtitle: 'Utenti e abilitazioni',
+                icon: Icons.manage_accounts_outlined,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => StaffTheme(
+                      child: Scaffold(
+                        appBar: AppBar(
+                          leading: Navigator.of(context).canPop()
+                              ? const StaffBackButton()
+                              : null,
+                          title: const Text('Gestione account'),
+                        ),
+                        body: AdminUsersPage(auth: auth),
                       ),
-                      body: AdminUsersPage(auth: auth),
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 10),
-            _StaffShortcut(
-              title: 'Generatore grafiche',
-              subtitle: 'Matchday, risultati e classifiche',
-              icon: Icons.auto_awesome_outlined,
-              onTap: () => setState(() => category = 'Grafiche'),
-            ),
-            const SizedBox(height: 22),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final value in [
-                  'Tutti',
-                  'Sport',
-                  'Account',
-                  'Contenuti',
-                  'Grafiche',
-                  'Extra',
-                ])
-                  StaffFilter(
-                    label: value,
-                    selected: category == value,
-                    onSelected: (_) => setState(() => category = value),
-                  ),
-              ],
+              const SizedBox(height: 10),
+              _StaffShortcut(
+                title: 'Generatore grafiche',
+                subtitle: 'Matchday, risultati e classifiche',
+                icon: Icons.auto_awesome_outlined,
+                onTap: () => setState(() {
+                  category = 'Grafiche';
+                  search.clear();
+                }),
+              ),
+              const SizedBox(height: 22),
+            ],
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final value in [
+                    'Tutti',
+                    'Sport',
+                    'Account',
+                    'Contenuti',
+                    'Grafiche',
+                    'Extra',
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: StaffFilter(
+                        label: value,
+                        selected: category == value,
+                        onSelected: (_) => setState(() => category = value),
+                      ),
+                    ),
+                ],
+              ),
             ),
             const SizedBox(height: 18),
           ],
+          Text(
+            '${visible.length} ${visible.length == 1 ? 'strumento' : 'strumenti'}${category == 'Tutti' ? '' : ' · $category'}',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          const SizedBox(height: 12),
+          if (visible.isEmpty)
+            Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('Nessuno strumento corrisponde alla ricerca.'),
+                ),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.filter_alt_off_outlined),
+                  label: const Text('Reimposta ricerca e filtri'),
+                  onPressed: () => setState(() {
+                    category = 'Tutti';
+                    search.clear();
+                  }),
+                ),
+              ],
+            ),
           LayoutBuilder(
             builder: (context, constraints) {
               final columns = MediaQuery.textScalerOf(context).scale(15) > 22.5
@@ -323,8 +387,10 @@ class _StaffDashboardState extends State<StaffDashboard> {
                               const SizedBox(height: 14),
                               Text(
                                 tool.title,
-                                style: const TextStyle(
-                                  color: siteBlue,
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface,
                                   fontWeight: FontWeight.w800,
                                   fontSize: 15,
                                 ),
@@ -332,19 +398,21 @@ class _StaffDashboardState extends State<StaffDashboard> {
                               const SizedBox(height: 5),
                               Text(
                                 tool.description,
-                                style: const TextStyle(
-                                  color: Color(0xff637487),
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
                                   fontSize: 12,
                                   height: 1.4,
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              const Align(
+                              Align(
                                 alignment: Alignment.centerRight,
                                 child: Icon(
                                   Icons.arrow_forward_rounded,
                                   size: 18,
-                                  color: Color(0xff17617b),
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                             ],
@@ -387,7 +455,10 @@ class _StaffShortcut extends StatelessWidget {
       ),
       title: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.w800, color: siteBlue),
+        style: TextStyle(
+          fontWeight: FontWeight.w800,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
       ),
       subtitle: Text(subtitle),
       trailing: const Icon(Icons.arrow_forward_rounded, color: staffAccent),

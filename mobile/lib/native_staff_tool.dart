@@ -235,12 +235,12 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
       context: context,
       builder: (context) => StaffTheme(
         child: AlertDialog(
-          title: const Text('Conferma operazione'),
+          title: Text('Conferma operazione'),
           content: Text('${message['message']}'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Annulla'),
+              child: Text('Annulla'),
             ),
             StaffActionButton(
               onPressed: () => Navigator.pop(context, true),
@@ -424,7 +424,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
           child: ExpansionTile(
             title: Text(
               '${block['title'] ?? 'Impostazioni'}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              style: TextStyle(fontWeight: FontWeight.w700),
             ),
             maintainState: true,
             childrenPadding: const EdgeInsets.all(14),
@@ -437,8 +437,10 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
           padding: const EdgeInsets.only(top: 18, bottom: 8),
           child: Text(
             '${block['text']}',
-            style: Theme.of(context).textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.w800, color: siteBlue),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
           ),
         );
       case 'notice':
@@ -448,7 +450,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
           margin: const EdgeInsets.symmetric(vertical: 8),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xffedf4f8),
+            color: Theme.of(context).colorScheme.surfaceContainerHigh,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Text('${block['text']}'),
@@ -456,7 +458,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
       case 'text':
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 5),
-          child: Text('${block['text']}', style: const TextStyle(height: 1.4)),
+          child: Text('${block['text']}', style: TextStyle(height: 1.4)),
         );
       case 'table':
         return StaffNativeRecords(
@@ -477,8 +479,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
             ? Image.network(
                 url,
                 fit: BoxFit.contain,
-                errorBuilder: (_, _, _) =>
-                    const Icon(Icons.broken_image_outlined),
+                errorBuilder: (_, _, _) => Icon(Icons.broken_image_outlined),
               )
             : const SizedBox.shrink();
         return Card(
@@ -494,7 +495,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
                       '${block['label']}',
-                      style: const TextStyle(fontWeight: FontWeight.w800),
+                      style: TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
                 ConstrainedBox(
@@ -550,7 +551,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                   onPressed: _loading || _actionBusy
                       ? null
                       : () => _click(_lineup!['back'] as Map),
-                  icon: const Icon(Icons.arrow_back_rounded),
+                  icon: Icon(Icons.arrow_back_rounded),
                 )
               : Navigator.of(context).canPop()
               ? const StaffBackButton()
@@ -564,7 +565,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                   backgroundColor: const Color(0xff29445d),
                   foregroundColor: Colors.white,
                 ),
-                icon: const Icon(Icons.refresh_rounded),
+                icon: Icon(Icons.refresh_rounded),
                 onPressed: _loading
                     ? null
                     : _lineup == null
@@ -577,27 +578,33 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
             ? null
             : SafeArea(
                 child: Material(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surfaceContainerLow,
                   child: Container(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                    decoration: const BoxDecoration(
-                      border: Border(top: BorderSide(color: staffBorder)),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                      ),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (_lineup!['finalize'] is Map)
-                          _block(_lineup!['finalize'] as Map),
-                        const Text(
+                        if (_lineup!['save'] is Map)
+                          _block(_lineup!['save'] as Map),
+                        Text(
                           'La finalizzazione segna la partita come giocata e invia le notifiche.',
                           style: TextStyle(
                             fontSize: 11,
-                            color: Color(0xff637487),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
                           ),
                         ),
-                        if (_lineup!['save'] is Map)
-                          _block(_lineup!['save'] as Map),
+                        if (_lineup!['finalize'] is Map)
+                          _block(_lineup!['finalize'] as Map),
                       ],
                     ),
                   ),
@@ -617,7 +624,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                     ),
                   Positioned.fill(
                     child: ColoredBox(
-                      color: siteBackground,
+                      color: Theme.of(context).scaffoldBackgroundColor,
                       child: _error != null
                           ? Center(
                               child: Padding(
@@ -625,10 +632,12 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.cloud_off_outlined,
                                       size: 44,
-                                      color: siteBlue,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
                                     ),
                                     const SizedBox(height: 16),
                                     Text(_error!, textAlign: TextAlign.center),
@@ -691,7 +700,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                                               Expanded(
                                                 child: Text(
                                                   widget.description,
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     color: Colors.white,
                                                     height: 1.4,
                                                   ),
@@ -726,9 +735,10 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                     ),
                   ),
                   if (_loading && _blocks.isNotEmpty)
-                    const Positioned.fill(
+                    Positioned.fill(
                       child: ColoredBox(
-                        color: Color(0x99ffffff),
+                        color: Theme.of(context).colorScheme.surface
+                            .withValues(alpha: .8),
                         child: Center(child: CircularProgressIndicator()),
                       ),
                     ),
@@ -864,7 +874,12 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
                                   title: Text('${option['label']}'),
                                   selected: option['value'] == _value,
                                   trailing: option['value'] == _value
-                                      ? const Icon(Icons.check, color: siteRed)
+                                      ? Icon(
+                                          Icons.check,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .error,
+                                        )
                                       : null,
                                   enabled: option['disabled'] != true,
                                   onTap: () => Navigator.pop(context, [
@@ -970,12 +985,12 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text(label, style: TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: disabled ? null : widget.onPick,
-            icon: const Icon(Icons.upload_file_outlined),
-            label: const Text('Scegli file'),
+            icon: Icon(Icons.upload_file_outlined),
+            label: Text('Scegli file'),
           ),
           for (final name in f['files'] as List? ?? [])
             Text('$name', maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -1002,7 +1017,7 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
             border: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(12)),
             ),
-            suffixIcon: const Icon(Icons.expand_more),
+            suffixIcon: Icon(Icons.expand_more),
           ),
           child: Text(
             selected.isEmpty ? 'Seleziona…' : selected,
@@ -1041,10 +1056,10 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
       maxLines: type == 'textarea' ? 5 : 1,
       textAlign: f['score'] == true ? TextAlign.center : TextAlign.start,
       style: f['score'] == true
-          ? const TextStyle(
+          ? TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w800,
-              color: siteBlue,
+              color: Theme.of(context).colorScheme.onSurface,
             )
           : null,
       keyboardType: type == 'number'
@@ -1092,7 +1107,14 @@ class StaffNativeRecords extends StatefulWidget {
 
 class _StaffNativeRecordsState extends State<StaffNativeRecords> {
   String _search = '';
+  final _searchController = TextEditingController();
   int _page = 0;
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final rows = (widget.table['rows'] as List? ?? [])
@@ -1119,9 +1141,21 @@ class _StaffNativeRecordsState extends State<StaffNativeRecords> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: TextField(
+            controller: _searchController,
             decoration: InputDecoration(
               hintText: 'Cerca nell’elenco (${rows.length})',
-              prefixIcon: const Icon(Icons.search),
+              prefixIcon: Icon(Icons.search),
+              suffixIcon: _search.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Cancella ricerca elenco',
+                      icon: const Icon(Icons.close),
+                      onPressed: () => setState(() {
+                        _searchController.clear();
+                        _search = '';
+                        _page = 0;
+                      }),
+                    ),
               border: const OutlineInputBorder(
                 borderRadius: BorderRadius.all(Radius.circular(14)),
               ),
@@ -1132,6 +1166,14 @@ class _StaffNativeRecordsState extends State<StaffNativeRecords> {
             }),
           ),
         ),
+        if (rows.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Elementi ${page * 20 + 1}–${(page * 20 + 20).clamp(0, rows.length)} di ${rows.length}',
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+          ),
         if (rows.isEmpty)
           const Padding(
             padding: EdgeInsets.all(16),
@@ -1150,10 +1192,10 @@ class _StaffNativeRecordsState extends State<StaffNativeRecords> {
                     if ('${cell['label'] ?? ''}'.isNotEmpty)
                       Text(
                         '${cell['label']}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xff66798e),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     for (final block
@@ -1176,7 +1218,7 @@ class _StaffNativeRecordsState extends State<StaffNativeRecords> {
                     : () => setState(() {
                         _page = page - 1;
                       }),
-                icon: const Icon(Icons.chevron_left),
+                icon: Icon(Icons.chevron_left),
               ),
               Text('${page + 1} / $pages'),
               IconButton(
@@ -1186,7 +1228,7 @@ class _StaffNativeRecordsState extends State<StaffNativeRecords> {
                     : () => setState(() {
                         _page = page + 1;
                       }),
-                icon: const Icon(Icons.chevron_right),
+                icon: Icon(Icons.chevron_right),
               ),
             ],
           ),
