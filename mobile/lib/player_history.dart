@@ -6,7 +6,6 @@ import 'player_awards.dart';
 import 'ranking_mode_selector.dart';
 import 'details.dart' show MatchPage;
 import 'home_dashboard.dart' show SiteImage, openPage;
-import 'theme.dart' show siteBlue;
 import 'tournament_logic.dart' show phaseKey, matchTurn, roundLabel;
 
 class PlayerHistoryPage extends StatefulWidget {
@@ -220,9 +219,9 @@ class PlayerHistoryMatchCard extends StatelessWidget {
             children: [
               Text(
                 '${match['torneo_nome'] ?? match['torneo'] ?? ''}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: siteBlue,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               Text(

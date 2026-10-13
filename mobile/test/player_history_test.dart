@@ -8,6 +8,7 @@ import 'package:tornei_old_school/api.dart';
 import 'package:tornei_old_school/demo.dart';
 import 'package:tornei_old_school/home_dashboard.dart';
 import 'package:tornei_old_school/player_history.dart';
+import 'package:tornei_old_school/theme.dart';
 
 const player = {'id': 7, 'nome': 'Mario', 'cognome': 'Rossi'};
 
@@ -50,6 +51,36 @@ class HistoryApi extends DemoApi {
 }
 
 void main() {
+  testWidgets('Match tournament name is readable in dark history', (
+    tester,
+  ) async {
+    final theme = siteDarkTheme();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        home: Scaffold(
+          body: PlayerHistoryMatchCard(
+            api: DemoApi(),
+            type: 'gol',
+            match: const {
+              'torneo_nome': 'Torneo prova',
+              'fase': 'REGULAR',
+              'giornata': 3,
+              'squadra_casa': 'Casa',
+              'squadra_ospite': 'Ospite',
+            },
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.widget<Text>(find.text('Torneo prova')).style?.color,
+      theme.colorScheme.primary,
+    );
+    expect(find.textContaining('Giornata 3'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   test('History requests use the site endpoint, player ID, selected filter and pagination', () async {
     final api = TosApi(
       baseUrl: Uri.parse('https://example.test/sub/'),

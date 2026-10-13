@@ -6,7 +6,6 @@ import 'player_event_marks.dart';
 import 'player_role_badges.dart';
 import 'player_awards.dart';
 export 'team_page.dart';
-import 'theme.dart';
 import 'tournament_logic.dart' show phaseKey, matchTurn, roundLabel, matchLeg;
 import 'home_dashboard.dart' show SiteImage;
 
@@ -190,6 +189,7 @@ class _MatchPageState extends State<MatchPage> {
       return {'match': results[0], 'events': results[1]};
     },
     render: (data) {
+      final colors = Theme.of(context).colorScheme;
       final match = {
         ...previewMatch,
         ...Map<String, dynamic>.from(data['match'] as Map),
@@ -216,10 +216,10 @@ class _MatchPageState extends State<MatchPage> {
             Text(
               name,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: siteBlue,
+                color: colors.onSurface,
               ),
             ),
           ],
@@ -230,7 +230,7 @@ class _MatchPageState extends State<MatchPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: const Color(0xff778496), size: 20),
+            Icon(icon, color: colors.onSurfaceVariant, size: 20),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -238,18 +238,18 @@ class _MatchPageState extends State<MatchPage> {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xff778496),
+                      color: colors.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     '$value',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: siteBlue,
+                      color: colors.onSurface,
                     ),
                   ),
                 ],
@@ -280,9 +280,9 @@ class _MatchPageState extends State<MatchPage> {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colors.surfaceContainerLow,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xffe5eaf1)),
+          border: Border.all(color: colors.outlineVariant),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,23 +306,23 @@ class _MatchPageState extends State<MatchPage> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: siteBlue,
+                    color: colors.primaryContainer,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Column(
                     children: [
-                      const Text(
+                      Text(
                         'VOTO',
                         style: TextStyle(
-                          color: Color(0xffcdd8e5),
+                          color: colors.onPrimaryContainer,
                           fontSize: 9,
                           letterSpacing: 0.6,
                         ),
                       ),
                       Text(
                         '${event['voto'] ?? '—'}',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: colors.onPrimaryContainer,
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
                         ),
@@ -335,10 +335,10 @@ class _MatchPageState extends State<MatchPage> {
             const SizedBox(height: 12),
             Text(
               '${event['nome']} ${event['cognome']}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: siteBlue,
+                color: colors.onSurface,
               ),
             ),
             PlayerEventMarks(stats: event),
@@ -356,20 +356,20 @@ class _MatchPageState extends State<MatchPage> {
               children: [
                 Text(
                   side,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     letterSpacing: 1.2,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xff778496),
+                    color: colors.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: siteBlue,
+                    color: colors.onSurface,
                   ),
                 ),
               ],
@@ -380,7 +380,7 @@ class _MatchPageState extends State<MatchPage> {
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Text(
                 showAllPlayers ? 'Nessun referto.' : 'Nessun gol o cartellino.',
-                style: TextStyle(fontSize: 12, color: Color(0xff778496)),
+                style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
               ),
             ),
           for (final event in groups[name] ?? <Map<String, dynamic>>[])
@@ -393,9 +393,9 @@ class _MatchPageState extends State<MatchPage> {
           Container(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colors.surfaceContainerLow,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xffe5eaf1)),
+              border: Border.all(color: colors.outlineVariant),
             ),
             child: Column(
               children: [
@@ -406,8 +406,8 @@ class _MatchPageState extends State<MatchPage> {
                   ),
                   decoration: BoxDecoration(
                     color: played
-                        ? const Color(0xffe9edf3)
-                        : const Color(0xffffeded),
+                        ? colors.primaryContainer
+                        : colors.secondaryContainer,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -416,7 +416,9 @@ class _MatchPageState extends State<MatchPage> {
                       fontSize: 10,
                       letterSpacing: 1.2,
                       fontWeight: FontWeight.w700,
-                      color: played ? siteBlue : siteRed,
+                      color: played
+                          ? colors.onPrimaryContainer
+                          : colors.onSecondaryContainer,
                     ),
                   ),
                 ),
@@ -434,10 +436,10 @@ class _MatchPageState extends State<MatchPage> {
                         played
                             ? '${match['gol_casa']} : ${match['gol_ospite']}'
                             : 'VS',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.w800,
-                          color: siteBlue,
+                          color: colors.onSurface,
                         ),
                       ),
                     ),
@@ -448,14 +450,14 @@ class _MatchPageState extends State<MatchPage> {
                   const SizedBox(height: 16),
                   Text(
                     'Rigori ${match['rigori_casa']} : ${match['rigori_ospite']}',
-                    style: const TextStyle(
-                      color: siteRed,
+                    style: TextStyle(
+                      color: colors.secondary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
                 const SizedBox(height: 22),
-                const Divider(height: 1, color: Color(0xffe5eaf1)),
+                Divider(height: 1, color: colors.outlineVariant),
                 const SizedBox(height: 16),
                 Text(
                   [
@@ -465,10 +467,10 @@ class _MatchPageState extends State<MatchPage> {
                       '',
                     ),
                   ].where((value) => value.isNotEmpty).join(' · '),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xff778496),
+                    color: colors.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -478,9 +480,9 @@ class _MatchPageState extends State<MatchPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colors.surfaceContainerLow,
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: const Color(0xffe5eaf1)),
+              border: Border.all(color: colors.outlineVariant),
             ),
             child: Column(
               children: [
@@ -527,14 +529,14 @@ class _MatchPageState extends State<MatchPage> {
             ),
           ),
           MatchLinks(match: match),
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 28, bottom: 8),
             child: Text(
               'Referto giocatori',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
-                color: siteBlue,
+                color: colors.onSurface,
               ),
             ),
           ),
@@ -546,12 +548,12 @@ class _MatchPageState extends State<MatchPage> {
                 runSpacing: 8,
                 children: [
                   ChoiceChip(
-                    label: const Text('Con eventi'),
+                    label: Text('Con eventi'),
                     selected: !showAllPlayers,
                     onSelected: (_) => setState(() => showAllPlayers = false),
                   ),
                   ChoiceChip(
-                    label: const Text('Tutti'),
+                    label: Text('Tutti'),
                     selected: showAllPlayers,
                     onSelected: (_) => setState(() => showAllPlayers = true),
                   ),
@@ -559,7 +561,7 @@ class _MatchPageState extends State<MatchPage> {
               ),
             ),
             if (visibleEvents.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Text(
                   'Nessun gol o cartellino. Tocca “Tutti” per vedere tutti i giocatori.',
@@ -571,20 +573,20 @@ class _MatchPageState extends State<MatchPage> {
               margin: const EdgeInsets.only(top: 12),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colors.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(22),
               ),
-              child: const Column(
+              child: Column(
                 children: [
                   Icon(
                     Icons.assignment_outlined,
                     size: 32,
-                    color: Color(0xff778496),
+                    color: colors.onSurfaceVariant,
                   ),
                   SizedBox(height: 12),
                   Text(
                     'Referto non ancora disponibile.',
-                    style: TextStyle(color: Color(0xff778496)),
+                    style: TextStyle(color: colors.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -605,10 +607,10 @@ class _MatchPageState extends State<MatchPage> {
               padding: const EdgeInsets.only(top: 16, bottom: 12),
               child: Text(
                 name,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xff778496),
+                  color: colors.onSurfaceVariant,
                 ),
               ),
             ),

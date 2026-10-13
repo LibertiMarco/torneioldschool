@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/demo.dart';
 import 'package:tornei_old_school/api.dart';
 import 'package:tornei_old_school/details.dart';
+import 'package:tornei_old_school/theme.dart';
 
 class TwoTeamReportApi extends DemoApi {
   @override
@@ -151,6 +152,32 @@ class GoalkeeperOrderApi extends FilteredReportApi {
 }
 
 void main() {
+  testWidgets('Match details use readable dark information colors', (
+    tester,
+  ) async {
+    final theme = siteDarkTheme();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        home: MatchPage(
+          api: DemoApi(),
+          id: '1',
+          previewMatch: const {'fase': 'REGULAR', 'giornata': 3},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<Text>(find.text('Giornata')).style?.color,
+      theme.colorScheme.onSurfaceVariant,
+    );
+    expect(
+      tester.widget<Text>(find.text('Referto giocatori')).style?.color,
+      theme.colorScheme.onSurface,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'All puts each team goalkeeper first and preserves the remaining order',
     (tester) async {
