@@ -12,6 +12,7 @@ require_once __DIR__ . '/includi/diffidati.php';
 require_once __DIR__ . '/includi/seo.php';
 require_once __DIR__ . '/includi/content_sections.php';
 require_once __DIR__ . '/includi/player_awards.php';
+require_once __DIR__ . '/includi/esport_account_stats.php';
 
 $userId = (int)$_SESSION['user_id'];
 $baseUrl = seo_base_url();
@@ -50,7 +51,7 @@ function fetch_player_team_disciplinary_status(mysqli $conn, int $giocatoreId, a
 
 // Carica il giocatore associato all'account
 $giocatore = null;
-$stmt = $conn->prepare("SELECT id, nome, cognome, ruolo, presenze, reti, assist, gialli, rossi, media_voti, foto FROM giocatori WHERE utente_id = ? LIMIT 1");
+$stmt = $siteSection === 'esport' ? null : $conn->prepare("SELECT id, nome, cognome, ruolo, presenze, reti, assist, gialli, rossi, media_voti, foto FROM giocatori WHERE utente_id = ? LIMIT 1");
 if ($stmt) {
     $stmt->bind_param("i", $userId);
     if ($stmt->execute()) {
@@ -62,14 +63,14 @@ if ($stmt) {
     $stmt->close();
 }
 
-if (!$giocatore) {
+if (!$giocatore && $siteSection !== 'esport') {
     http_response_code(404);
     $msg = "Non risulta alcun profilo giocatore associato al tuo account.";
 }
 
 // Squadre a cui appartiene il giocatore
 $squadre = [];
-if ($giocatore) {
+if ($giocatore && $siteSection !== 'esport') {
     $stmt = $conn->prepare("
         SELECT s.id, s.nome, s.torneo, s.logo,
                sg.is_captain,
@@ -94,6 +95,12 @@ if ($giocatore) {
         }
         $stmt->close();
     }
+}
+
+if ($siteSection === 'esport') {
+    $esportStats = esport_account_stats_fetch($conn, $userId);
+    $giocatore = $esportStats['player'];
+    $squadre = $esportStats['teams'];
 }
 
 function format_match_datetime(?string $data, ?string $ora): string {
@@ -203,7 +210,8 @@ function fetchMatches(mysqli $conn, int $playerId, array $teams, bool $future = 
     if (empty($membershipClauses)) {
         return [];
     }
-    $participationJoin = $future
+    $needsParticipation = !$future && ($GLOBALS['siteSection'] ?? 'calcio') !== 'esport';
+    $participationJoin = !$needsParticipation
         ? ''
         : 'JOIN partita_giocatore pg_player
              ON pg_player.partita_id = p.id
@@ -235,8 +243,8 @@ function fetchMatches(mysqli $conn, int $playerId, array $teams, bool $future = 
     if (!$stmt) {
         return [];
     }
-    $params = $future ? $membershipParams : array_merge([$playerId], $membershipParams);
-    $types = ($future ? '' : 'i') . str_repeat('s', count($membershipParams));
+    $params = $needsParticipation ? array_merge([$playerId], $membershipParams) : $membershipParams;
+    $types = ($needsParticipation ? 'i' : '') . str_repeat('s', count($membershipParams));
     $stmt->bind_param($types, ...$params);
     $matches = [];
     if ($stmt->execute()) {

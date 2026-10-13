@@ -2,6 +2,7 @@
 require_once __DIR__ . '/torneo_phase_rules.php';
 require_once __DIR__ . '/diffidati.php';
 require_once __DIR__ . '/player_awards.php';
+require_once __DIR__ . '/esport_account_stats.php';
 
 function mobile_player_stats_query(array $query): array {
     foreach ($query as $key => $value) {
@@ -25,6 +26,7 @@ function mobile_player_stats_handle(int $userId, array $query): array {
     $conn = new mysqli(getenv('DB_HOST') ?: 'localhost', getenv('DB_USER') ?: '', getenv('DB_PASSWORD') ?: '', getenv('DB_NAME') ?: '', (int)(getenv('DB_PORT') ?: 3306));
     $conn->set_charset('utf8mb4');
     try {
+        if ($section === 'esport') return esport_account_stats_fetch($conn, $userId, $type, $page);
         // The player is resolved exclusively from the authenticated account.
         $stmt = $conn->prepare('SELECT id, nome, cognome, ruolo, foto FROM giocatori WHERE utente_id = ? LIMIT 1');
         $stmt->bind_param('i', $userId);
