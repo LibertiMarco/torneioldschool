@@ -565,10 +565,15 @@ async function selectMatch(){
 const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const canvasBlob=canvas=>new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Impossibile creare il PNG.')),'image/png'));
 async function download(canvasId,name){const canvas=$(canvasId),fallbackWindow=isIOS&&!navigator.share?window.open('about:blank','_blank'):null;try{const blob=await canvasBlob(canvas),file=new File([blob],name,{type:'image/png'});if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){await navigator.share({files:[file],title:name});$('status').textContent='Nel pannello Condividi scegli “Salva immagine”.';return}const url=URL.createObjectURL(blob);if(fallbackWindow){fallbackWindow.location.href=url;$('status').textContent='Tieni premuta l’immagine e scegli “Salva in Foto”.';setTimeout(()=>URL.revokeObjectURL(url),60000);return}const a=document.createElement('a');a.download=name;a.href=url;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}catch(error){if(fallbackWindow)fallbackWindow.close();if(error?.name!=='AbortError')$('status').textContent=error.message}}
+function showInstagramPublishResult(message){
+  $('status').textContent=message;
+  window.alert(message);
+}
 async function publishInstagram(canvasId,captionId,button){
   if(button.disabled)return;
   button.disabled=true;
   const originalText=button.textContent;
+  const graphicName=canvasId==='fulltimeCanvas'?'Fulltime':'MVP';
   button.textContent='Pubblicazione…';
   $('status').textContent='Invio della grafica a Instagram…';
   try{
@@ -580,8 +585,8 @@ async function publishInstagram(canvasId,captionId,button){
     const response=await fetch('/api/instagram_publish.php',{method:'POST',body:form,credentials:'same-origin'});
     const result=await response.json().catch(()=>({}));
     if(!response.ok||!result.ok)throw new Error(result.error||'Instagram non ha accettato la pubblicazione.');
-    $('status').textContent=result.permalink?'Grafica pubblicata su Instagram: '+result.permalink:'Grafica pubblicata su Instagram.';
-  }catch(error){$('status').textContent=error?.message||'Errore durante la pubblicazione su Instagram.';}
+    showInstagramPublishResult(`Grafica ${graphicName} pubblicata su Instagram.`+(result.permalink?'\n'+result.permalink:''));
+  }catch(error){showInstagramPublishResult(`Grafica ${graphicName} non pubblicata su Instagram.\n`+(error?.message||'Errore durante la pubblicazione su Instagram.'));}
   finally{button.disabled=false;button.textContent=originalText;}
 }
 
@@ -616,7 +621,10 @@ document.querySelector('[data-download=fulltime]').addEventListener('click',()=>
 document.querySelector('[data-download=mvp]').addEventListener('click',()=>{if(customTemplates.ready('mvp'))download('mvpCanvas',`mvp-${safeName($('mvpNames').value)}.png`);});
 document.querySelectorAll('[data-publish]').forEach(button=>button.addEventListener('click',()=>{
   const type=button.dataset.publish;
-  if(!customTemplates.ready(type==='fulltime'?'ft':'mvp'))return;
+  if(!customTemplates.ready(type==='fulltime'?'ft':'mvp')){
+    showInstagramPublishResult(`Grafica ${type==='fulltime'?'Fulltime':'MVP'} non pubblicata su Instagram.\n`+$('status').textContent);
+    return;
+  }
   publishInstagram(type==='fulltime'?'fulltimeCanvas':'mvpCanvas',type==='fulltime'?'instagramCaptionFulltime':'instagramCaptionMvp',button);
 }));
 customTemplates.init({editor:templateEditor});
