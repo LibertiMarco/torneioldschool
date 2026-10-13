@@ -280,18 +280,34 @@ function deduplicate_player_awards(array $awards): array {
     return $result;
 }
 
+function player_award_recipient_type(array $record, array $player, array $teams): ?string {
+    $playerId = (int)($player['id'] ?? 0);
+    if ($playerId <= 0) return null;
+    // Individual awards never propagate through the winner's team or roster.
+    $individual = !empty($record['giocatore_id'])
+        || ($record['tipo'] ?? '') === 'Individuale'
+        || ($record['kind'] ?? '') === 'SCORER';
+    if ($individual) {
+        return (int)($record['giocatore_id'] ?? 0) === $playerId ? 'Individuale' : null;
+    }
+    if (($record['tipo'] ?? '') !== 'Squadra'
+        && premio_team_category((string)($record['premio'] ?? '')) === '') return null;
+    $teamIds = array_map('intval', array_column($teams, 'id'));
+    $member = isset($record['members'])
+        ? in_array($playerId, array_map('intval', $record['members']), true)
+        : (!empty($record['squadra_id']) && in_array((int)$record['squadra_id'], $teamIds, true));
+    return $member ? 'Squadra' : null;
+}
+
 function player_awards_fetch_all(mysqli $conn, array $player, array $teams, string $section): array {
     $official=[]; $covered=[];
     foreach (albo_archive_read($conn,$section) as $record) {
         $edition=(int)($record['torneo_id'] ?? 0);
-        $teamIds=array_map('intval',array_column($teams,'id'));
-        $individual=!empty($record['giocatore_id']) && (int)$record['giocatore_id'] === (int)$player['id'];
-        $member=isset($record['members']) ? in_array((int)$player['id'],$record['members'],true)
-            : (!empty($record['squadra_id']) && in_array((int)$record['squadra_id'],$teamIds,true));
+        $recipientType=player_award_recipient_type($record,$player,$teams);
         if ($edition) $covered[albo_slug((string)($record['link_torneo'] ?? '')) . ':' . $record['kind']]=true;
-        if (!$individual && !$member) continue;
+        if ($recipientType === null) continue;
         $team=''; foreach ($teams as $item) if ((int)$item['id'] === (int)($record['squadra_id'] ?? 0)) { $team=(string)$item['nome']; break; }
-        $official[]=['id'=>$record['source_key'] ?? $record['record_id'],'tipo'=>$individual ? 'Individuale' : 'Squadra',
+        $official[]=['id'=>$record['source_key'] ?? $record['record_id'],'tipo'=>$recipientType,
             'premio'=>$record['premio'],'competizione'=>$record['competizione'],'squadra'=>$team,
             'anno'=>$record['anno'],'logo'=>$record['logo_vincitrice'] ?? '', 'link'=>$record['link_torneo'] ?? '',
             'torneo_id'=>$edition,'giocatore_id'=>$record['giocatore_id'] ?? null];

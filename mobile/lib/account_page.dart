@@ -5,7 +5,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
 import 'auth.dart';
 import 'home_dashboard.dart' show SiteImage;
-import 'theme.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key, required this.auth, this.section = 'calcio'});
@@ -16,6 +15,8 @@ class AccountPage extends StatefulWidget {
 }
 
 class _AccountPageState extends State<AccountPage> {
+  ColorScheme get colors => Theme.of(context).colorScheme;
+  bool get dark => Theme.of(context).brightness == Brightness.dark;
   final _form = GlobalKey<FormState>();
   final _scroll = ScrollController();
   final _name = TextEditingController();
@@ -226,9 +227,9 @@ class _AccountPageState extends State<AccountPage> {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colors.surfaceContainerLow,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xffe5eaf1)),
+          border: Border.all(color: colors.outlineVariant),
         ),
         child: Material(
           type: MaterialType.transparency,
@@ -237,7 +238,7 @@ class _AccountPageState extends State<AccountPage> {
             children: [
               Row(
                 children: [
-                  Icon(icon, size: 20, color: siteRed),
+                  Icon(icon, size: 20, color: colors.secondary),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -282,6 +283,8 @@ class _AccountPageState extends State<AccountPage> {
       controller: controller,
       decoration: InputDecoration(
         labelText: label,
+        filled: dark,
+        fillColor: colors.surfaceContainerLowest,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
       ),
       validator: (value) =>
@@ -333,9 +336,9 @@ class _AccountPageState extends State<AccountPage> {
                       const SizedBox(height: 6),
                       Text(
                         '${_profile!['email']}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          color: Color(0xff778496),
+                          color: colors.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -351,9 +354,9 @@ class _AccountPageState extends State<AccountPage> {
             ),
             if (_avatar != null)
               Text(_avatar!.filename, style: const TextStyle(fontSize: 12)),
-            const Text(
+            Text(
               'JPG, PNG, GIF o WEBP · massimo 2MB',
-              style: TextStyle(fontSize: 12, color: Color(0xff778496)),
+              style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
             ),
           ]),
           if (_error != null || _message != null)
@@ -362,14 +365,20 @@ class _AccountPageState extends State<AccountPage> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: _error != null
-                    ? const Color(0xffffe5e5)
+                    ? colors.errorContainer
+                    : dark
+                    ? const Color(0xff244438)
                     : const Color(0xffe8f5ee),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
                 _error ?? _message!,
                 style: TextStyle(
-                  color: _error != null ? siteRed : const Color(0xff16734a),
+                  color: _error != null
+                      ? colors.onErrorContainer
+                      : dark
+                      ? const Color(0xffa7dfbf)
+                      : const Color(0xff16734a),
                 ),
               ),
             ),
@@ -381,6 +390,8 @@ class _AccountPageState extends State<AccountPage> {
               readOnly: true,
               decoration: InputDecoration(
                 labelText: 'Email',
+                filled: dark,
+                fillColor: colors.surfaceContainerLowest,
                 suffixIcon: const Icon(Icons.lock_outline, size: 18),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -413,6 +424,8 @@ class _AccountPageState extends State<AccountPage> {
                       autocorrect: false,
                       decoration: InputDecoration(
                         labelText: field.$1,
+                        filled: dark,
+                        fillColor: colors.surfaceContainerLowest,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -497,9 +510,9 @@ class _AccountPageState extends State<AccountPage> {
                 icon: const Icon(Icons.add_photo_alternate_outlined),
                 label: const Text('Scegli foto giocatore'),
               ),
-              const Text(
+              Text(
                 'JPG, PNG o WEBP · fino a 50MB, compressa sotto 6MB',
-                style: TextStyle(fontSize: 12, color: Color(0xff778496)),
+                style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
               ),
               if (_playerPhoto != null) ...[
                 const SizedBox(height: 12),
@@ -534,9 +547,9 @@ class _AccountPageState extends State<AccountPage> {
             const SizedBox(height: 10),
             TextButton(
               onPressed: () => _open('account_delete.php'),
-              child: const Text(
+              child: Text(
                 'Vai alla cancellazione account',
-                style: TextStyle(color: siteRed),
+                style: TextStyle(color: colors.error),
               ),
             ),
           ]),

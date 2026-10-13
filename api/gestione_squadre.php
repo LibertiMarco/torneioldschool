@@ -264,6 +264,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $torneiList = [];
 $torneiConfigBySlug = [];
 $torneoSectionBySlug = [];
+$torneoAttivoBySlug = [];
 $torneoLabelAllBySlug = [];
 if ($resTornei = $torneoModel->getAll()) {
     while ($r = $resTornei->fetch_assoc()) {
@@ -272,9 +273,17 @@ if ($resTornei = $torneoModel->getAll()) {
         if ($slugValue !== '') {
             $torneiConfigBySlug[$slugValue] = parseTorneoConfigValue($r['config'] ?? null);
             $torneoSectionBySlug[$slugValue] = $rowSection;
+            $torneoAttivoBySlug[$slugValue] = in_array(
+                strtolower(trim((string)($r['stato'] ?? ''))),
+                ['in corso', 'programmato'],
+                true
+            );
             $torneoLabelAllBySlug[$slugValue] = $r['nome'] ?? $slugValue;
         }
         if ($rowSection !== $adminSection) {
+            continue;
+        }
+        if (!($torneoAttivoBySlug[$slugValue] ?? false)) {
             continue;
         }
         // Se il torneo ha il flag "squadre_complete" attivo, non lo mostriamo per la creazione squadre
@@ -296,14 +305,16 @@ foreach ($torneiList as $tRow) {
 $torneiFiltro = [];
 $resFiltro = $squadra->getTornei();
 if (is_array($resFiltro)) {
-    $torneiFiltro = array_values(array_filter($resFiltro, static function (array $row) use ($torneoSectionBySlug, $adminSection): bool {
+    $torneiFiltro = array_values(array_filter($resFiltro, static function (array $row) use ($torneoSectionBySlug, $torneoAttivoBySlug, $adminSection): bool {
         $slug = sanitizeTorneoSlugValue($row['id'] ?? $row['torneo'] ?? $row['nome'] ?? '');
-        return ($torneoSectionBySlug[$slug] ?? 'calcio') === $adminSection;
+        return ($torneoSectionBySlug[$slug] ?? 'calcio') === $adminSection
+            && ($torneoAttivoBySlug[$slug] ?? false);
     }));
 } elseif ($resFiltro) {
     while ($r = $resFiltro->fetch_assoc()) {
         $slug = sanitizeTorneoSlugValue($r['id'] ?? $r['torneo'] ?? $r['nome'] ?? '');
-        if (($torneoSectionBySlug[$slug] ?? 'calcio') === $adminSection) {
+        if (($torneoSectionBySlug[$slug] ?? 'calcio') === $adminSection
+            && ($torneoAttivoBySlug[$slug] ?? false)) {
             $torneiFiltro[] = $r;
         }
     }
