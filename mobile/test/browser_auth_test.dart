@@ -67,6 +67,26 @@ void main() {
       expect(requests.last.body, contains('name="_csrf"'));
       expect(requests.last.body, contains('session-token'));
       expect(requests.last.body, contains('filename="profile.png"'));
+      await auth.authorized(
+        'api/mobile/v1/player_link_requests.php',
+        query: {'q': 'Luca'},
+      );
+      expect(requests.last.url.queryParameters, {
+        'q': 'Luca',
+        'action': 'player_link_requests',
+      });
+      await auth.authorized(
+        'api/mobile/v1/player_link_requests.php',
+        body: {'giocatore_id': 10},
+      );
+      expect(
+        requests.last.url.queryParameters['action'],
+        'player_link_requests',
+      );
+      expect(jsonDecode(requests.last.body), {
+        'giocatore_id': 10,
+        '_csrf': 'session-token',
+      });
       expect(() => auth.authorized('api/delete.php'), throwsA(isA<ApiError>()));
     },
   );

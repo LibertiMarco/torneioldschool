@@ -418,7 +418,7 @@ body.stats-admin-page .admin-container {
 .vote-input { width: 100%; min-height: 36px; border: 1px solid #ccd5df; border-radius: 9px; text-align: center; font-weight: 700; }
 .lineup-labels { display: grid; grid-template-columns: minmax(190px, 1fr) repeat(3, 112px) 70px 70px 92px; gap: 10px; padding: 8px 14px; background: #f8fafc; color: #607083; font-size: 12px; font-weight: 800; text-align: center; }
 .lineup-labels span:first-child { text-align: left; }
-.lineup-footer { position: sticky; bottom: 0; z-index: 20; background: rgba(248,249,251,.96); padding: 14px 0 calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid #dce3ea; }
+.lineup-footer { flex-direction: column; align-items: stretch; position: sticky; bottom: 0; z-index: 20; background: rgba(248,249,251,.96); padding: 14px 0 calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid #dce3ea; }
 .lineup-footer .btn-primary { min-width: 190px; }
 .saving-note { color: #607083; font-size: 13px; }
 @media (max-width: 820px) {

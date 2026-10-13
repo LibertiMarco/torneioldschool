@@ -388,7 +388,9 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
               : StaffActionButton(
                   label: label,
                   icon: danger
-                      ? Icons.delete_outline_rounded
+                      ? label.toLowerCase().contains('rifiuta')
+                            ? Icons.close_rounded
+                            : Icons.delete_outline_rounded
                       : staffActionIcon(label),
                   danger: danger,
                   onPressed: disabled ? null : () => _click(block),
@@ -592,8 +594,8 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (_lineup!['save'] is Map)
-                          _block(_lineup!['save'] as Map),
+                        if (_lineup!['finalize'] is Map)
+                          _block(_lineup!['finalize'] as Map),
                         Text(
                           'La finalizzazione segna la partita come giocata e invia le notifiche.',
                           style: TextStyle(
@@ -603,8 +605,8 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                                 .onSurfaceVariant,
                           ),
                         ),
-                        if (_lineup!['finalize'] is Map)
-                          _block(_lineup!['finalize'] as Map),
+                        if (_lineup!['save'] is Map)
+                          _block(_lineup!['save'] as Map),
                       ],
                     ),
                   ),

@@ -107,7 +107,7 @@ const adminTools = [
   ),
   StaffTool(
     'Account giocatore',
-    'Collega profili e giocatori',
+    'Richieste e associazioni giocatori',
     Icons.link_outlined,
     'api/gestione_account_giocatore.php',
     'Account',

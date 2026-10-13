@@ -7,6 +7,7 @@ import 'home_dashboard.dart' show openPage;
 import 'player_history.dart';
 import 'theme.dart';
 import 'personal_player_design.dart';
+import 'player_link_request_page.dart';
 
 /// The personal tab always resolves its player through the authenticated API.
 class PersonalPlayerPage extends StatefulWidget {
@@ -146,18 +147,11 @@ class _PersonalPlayerPageState extends State<PersonalPlayerPage> {
         }
         final data = snapshot.data!;
         if (data['player'] == null) {
-          return _message(
-            icon: Icons.person_add_alt_1_outlined,
-            title: 'La tua scheda ti aspetta',
-            text: 'Non hai ancora un profilo giocatore collegato. Contatta un amministratore per associare il tuo account al giocatore e ritrovare le tue statistiche.',
-            action: widget.onAccount == null
-                ? null
-                : OutlinedButton.icon(
-                    onPressed: widget.onAccount,
-                    icon: const Icon(Icons.manage_accounts_outlined),
-                    label: const Text('Il mio account'),
-                  ),
-            refresh: true,
+          return PlayerLinkRequestPage(
+            key: ValueKey(_userId),
+            auth: widget.auth,
+            onRefresh: _refresh,
+            onAccount: widget.onAccount,
           );
         }
         final player = Map<String, dynamic>.from(data['player'] as Map);

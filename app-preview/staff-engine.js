@@ -78,7 +78,7 @@
     return {kind: 'action', id: id(element), label: text, disabled: element.matches(':disabled'),
       selected: element.classList.contains('active') || element.getAttribute('aria-selected') === 'true',
       tab: !!element.closest('.tab-buttons,.tabs,.admin-btn-group,.action-selector,.action-switch,.action-toggles') || element.classList.contains('action-toggle'),
-      danger: /elimina|rimuovi|cancella|disattiva/i.test(text)};
+      danger: /elimina|rimuovi|cancella|disattiva|rifiuta/i.test(text)};
   }
   const textNode = (kind, text) => text ? {kind, text} : null;
   function matchForm(form) {

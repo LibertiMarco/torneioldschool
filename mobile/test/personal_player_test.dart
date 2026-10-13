@@ -214,7 +214,16 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('La tua scheda ti aspetta'), findsOneWidget);
       api.linked = true;
-      await tester.scrollUntilVisible(find.text('Verifica associazione'), 100);
+      await tester.scrollUntilVisible(
+        find.text('Verifica associazione'),
+        100,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       await tester.tap(find.text('Verifica associazione'));
       await tester.pumpAndSettle();
       expect(find.text('Luca Rossi'), findsOneWidget);

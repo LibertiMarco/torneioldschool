@@ -4,6 +4,7 @@ import 'about_demo.dart';
 
 // Preview data never uses the live service or credentials.
 class DemoApi extends TosApi {
+  Map<String, dynamic>? playerLinkRequest;
   DemoApi() : super(baseUrl: Uri.parse('https://preview.invalid'));
   @override
   bool get preview => true;
@@ -182,6 +183,27 @@ class DemoApi extends TosApi {
         };
       case 'api/player_awards.php':
         return {'awards': query?['section'] == 'esport' ? [] : awards};
+      case 'api/mobile/v1/player_link_requests.php':
+        if (body != null) {
+          final chosen = players.firstWhere(
+            (p) => p['id'] == body['giocatore_id'],
+          );
+          playerLinkRequest = {'id': 1, 'status': 'pending', ...chosen};
+        }
+        final queryText = query?['q']?.toLowerCase() ?? '';
+        return {
+          'linked': false,
+          'request': playerLinkRequest,
+          'players': queryText.length < 2
+              ? []
+              : players
+                    .where(
+                      (p) => '${p['nome']} ${p['cognome']}'
+                          .toLowerCase()
+                          .contains(queryText),
+                    )
+                    .toList(),
+        };
       case 'api/mobile/v1/player_stats.php':
         final player = {...players.first};
         if (query?['type'] != null) {

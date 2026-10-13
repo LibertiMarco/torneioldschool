@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includi/admin_guard.php';
 
 require_once __DIR__ . '/../includi/db.php';
+require_once __DIR__ . '/../includi/player_link_requests.php';
 
 $messages = [];
 $errors = [];
@@ -11,6 +12,8 @@ $associazioni = [];
 $csrfKey = 'assoc_account_giocatore';
 $csrfToken = csrf_get_token($csrfKey);
 $columnReady = false;
+$linkService = null;
+$pendingLinkRequests = [];
 $selectedUtenteId = (int)($_POST['utente_id'] ?? 0);
 $selectedGiocatoreId = (int)($_POST['giocatore_id'] ?? 0);
 
@@ -45,12 +48,23 @@ if (!$conn || $conn->connect_error) {
 } else {
     $conn->set_charset('utf8mb4');
     $columnReady = ensureUtenteColumn($conn, $errors);
+    if ($columnReady) {
+        try { $linkService = new PlayerLinkRequests(player_link_requests_db()); }
+        catch (Throwable $error) { error_log('Player link request initialization failed'); $errors[] = 'Richieste di collegamento temporaneamente non disponibili.'; }
+    }
 
     if ($columnReady && $_SERVER['REQUEST_METHOD'] === 'POST') {
         csrf_require($csrfKey);
         $azione = $_POST['azione'] ?? '';
 
-        if ($azione === 'associa') {
+        if (in_array($azione, ['accetta_richiesta', 'rifiuta_richiesta'], true)) {
+            try {
+                if (!$linkService) throw new RuntimeException('Request service unavailable');
+                $linkService->review((int)$_SESSION['user_id'], (int)($_POST['richiesta_id'] ?? 0), $azione === 'accetta_richiesta', (string)($_POST['motivo'] ?? ''));
+                $messages[] = $azione === 'accetta_richiesta' ? 'Richiesta accettata: account e giocatore collegati.' : 'Richiesta rifiutata.';
+            } catch (MobileAuthError $error) { $errors[] = $error->getMessage(); }
+            catch (Throwable $error) { error_log('Player link request review failed'); $errors[] = 'Impossibile gestire la richiesta. Ricarica e riprova.'; }
+        } elseif ($azione === 'associa') {
             $utenteId = (int)($_POST['utente_id'] ?? 0);
             $giocatoreId = (int)($_POST['giocatore_id'] ?? 0);
 
@@ -171,6 +185,10 @@ if (!$conn || $conn->connect_error) {
         }
     }
 }
+if ($linkService) {
+    try { $pendingLinkRequests = $linkService->pending((int)$_SESSION['user_id']); }
+    catch (Throwable $error) { $errors[] = 'Impossibile caricare le richieste di collegamento.'; }
+}
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -233,6 +251,33 @@ if (!$conn || $conn->connect_error) {
         <p>Non riesco a preparare il campo necessario nella tabella dei giocatori. Controlla i permessi del database e riprova.</p>
       </div>
     <?php else: ?>
+      <div class="panel-card">
+        <h3>Richieste di collegamento</h3>
+        <?php if (empty($pendingLinkRequests)): ?>
+          <p>Nessuna richiesta in attesa.</p>
+        <?php else: ?>
+          <p>Accetta per collegare l'account al giocatore selezionato, oppure rifiuta la richiesta.</p>
+          <div class="table-wrapper"><table class="assoc-table">
+            <thead><tr><th>Account</th><th>Giocatore richiesto</th><th>Gestisci richiesta</th></tr></thead>
+            <tbody><?php foreach ($pendingLinkRequests as $request): ?>
+              <tr>
+                <td><?= h(trim($request['user_nome'] . ' ' . $request['user_cognome'])) ?><br><?= h($request['email']) ?></td>
+                <td><?= h(trim(($request['nome'] ?? '') . ' ' . ($request['cognome'] ?? ''))) ?><br><?= h($request['ruolo'] ?? '') ?><br>ID giocatore: <?= (int)($request['player_id'] ?? 0) ?></td>
+                <td><form method="POST">
+                  <?= csrf_field($csrfKey) ?>
+                  <input type="hidden" name="richiesta_id" value="<?= (int)$request['id'] ?>">
+                  <label for="motivo-richiesta-<?= (int)$request['id'] ?>">Motivo del rifiuto (facoltativo)</label>
+                  <input id="motivo-richiesta-<?= (int)$request['id'] ?>" name="motivo" type="text" maxlength="500">
+                  <div class="actions">
+                    <button class="btn-primary" type="submit" name="azione" value="accetta_richiesta">Accetta e collega</button>
+                    <button class="btn-danger" type="submit" name="azione" value="rifiuta_richiesta">Rifiuta richiesta</button>
+                  </div>
+                </form></td>
+              </tr>
+            <?php endforeach; ?></tbody>
+          </table></div>
+        <?php endif; ?>
+      </div>
       <div class="panel-card">
         <h3>Crea una nuova associazione</h3>
         <form method="POST" class="form-grid" autocomplete="off">

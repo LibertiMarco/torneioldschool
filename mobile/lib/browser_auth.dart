@@ -68,6 +68,7 @@ class BrowserAuth extends TosAuth {
       'api/mobile/v1/admin/user_features.php' => 'features',
       'api/mobile/v1/account.php' => 'account',
       'api/mobile/v1/player_stats.php' => 'player_stats',
+      'api/mobile/v1/player_link_requests.php' => 'player_link_requests',
       _ => throw const ApiError(
         'Funzione non disponibile in questa anteprima.',
       ),

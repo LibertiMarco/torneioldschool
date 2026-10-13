@@ -5,6 +5,7 @@ require_once __DIR__ . '/../includi/mobile_account_features.php';
 require_once __DIR__ . '/../includi/app_preview.php';
 require_once __DIR__ . '/../includi/mobile_profile.php';
 require_once __DIR__ . '/../includi/mobile_player_stats.php';
+require_once __DIR__ . '/../includi/player_link_requests.php';
 
 try {
     if (empty($_SESSION['user_id'])) {
@@ -26,6 +27,9 @@ try {
     }
     if ($action === 'account') {
         mobile_json(mobile_profile_handle((int)$user['id'], $body, $_FILES, true));
+    }
+    if ($action === 'player_link_requests') {
+        mobile_json(player_link_requests_handle(player_link_requests_db(), (int)$user['id'], $_GET, $body));
     }
     if ($action === 'features') {
         $service = new MobileAccountFeatures($db, static fn() => preview_admin($db, $_SESSION));
