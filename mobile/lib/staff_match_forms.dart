@@ -85,7 +85,7 @@ class StaffMatchLineup extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Container(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           gradient: const LinearGradient(colors: [siteBlue, Color(0xff245c78)]),
           borderRadius: BorderRadius.circular(20),
@@ -114,7 +114,7 @@ class StaffMatchLineup extends StatelessWidget {
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
-                        fontSize: 30,
+                        fontSize: 26,
                       ),
                     ),
                   ),
@@ -148,9 +148,10 @@ class StaffMatchLineup extends StatelessWidget {
         ),
       ),
       Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
+        padding: EdgeInsets.symmetric(vertical: 10),
         child: Text(
-          'Seleziona chi ha giocato e inserisci gli eventi nella distinta. Il risultato si aggiorna con gol e autogol.',
+          'Seleziona i presenti. Gol e autogol aggiornano il risultato.',
+          style: TextStyle(fontSize: 12),
         ),
       ),
       if ('${model['notice'] ?? ''}'.isNotEmpty)
@@ -172,7 +173,7 @@ class StaffMatchLineup extends StatelessWidget {
       for (final team in (model['teams'] as List? ?? []).whereType<Map>())
         Card(
           key: ValueKey(team['id']),
-          margin: const EdgeInsets.only(bottom: 16),
+          margin: const EdgeInsets.only(bottom: 10),
           clipBehavior: Clip.antiAlias,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -181,33 +182,37 @@ class StaffMatchLineup extends StatelessWidget {
                 color: Theme.of(context).brightness == Brightness.dark
                     ? Theme.of(context).colorScheme.surfaceContainerHigh
                     : siteBlue,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 child: Text(
                   '${team['name']}',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 19,
+                    fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final action
-                        in (team['actions'] as List? ?? []).whereType<Map>())
-                      OutlinedButton(
-                        onPressed: action['disabled'] == true
-                            ? null
-                            : () => onAction(action),
-                        child: Text('${action['label']}'),
-                      ),
-                  ],
+              if ((team['actions'] as List? ?? []).isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final action
+                          in (team['actions'] as List? ?? []).whereType<Map>())
+                        OutlinedButton(
+                          onPressed: action['disabled'] == true
+                              ? null
+                              : () => onAction(action),
+                          child: Text('${action['label']}'),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
               for (final player
                   in (team['players'] as List? ?? []).whereType<Map>())
                 _LineupPlayer(
@@ -240,7 +245,7 @@ class _LineupPlayer extends StatelessWidget {
     final presence = fields.where((f) => f['stat'] == 'presenza').firstOrNull;
     final present = presence?['checked'] == true;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: present
             ? Theme.of(context).colorScheme.surfaceContainerLow
@@ -256,13 +261,14 @@ class _LineupPlayer extends StatelessWidget {
           children: [
             if (presence != null)
               CheckboxListTile(
+                dense: true,
+                visualDensity: VisualDensity.compact,
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
                 title: Text(
                   '${player['name']}',
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
-                subtitle: Text(present ? 'Presente' : 'Non presente'),
                 value: present,
                 onChanged: presence['disabled'] == true
                     ? null
@@ -299,26 +305,26 @@ class _LineupPlayer extends StatelessWidget {
                     ),
                 ],
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             LayoutBuilder(
               builder: (context, constraints) {
                 final columns =
-                    constraints.maxWidth >= 312 &&
+                    constraints.maxWidth >= 252 &&
                         MediaQuery.textScalerOf(context).scale(14) < 21
                     ? 3
-                    : constraints.maxWidth >= 216
+                    : constraints.maxWidth >= 184
                     ? 2
                     : 1;
                 return Wrap(
-                  spacing: 8,
-                  runSpacing: 12,
+                  spacing: 6,
+                  runSpacing: 6,
                   children: [
                     for (final field in fields.where(
                       (f) => ['goal', 'assist', 'autogol'].contains(f['stat']),
                     ))
                       SizedBox(
                         width:
-                            (constraints.maxWidth - 8 * (columns - 1)) /
+                            (constraints.maxWidth - 6 * (columns - 1)) /
                             columns,
                         child: StaffStatCounter(
                           key: ValueKey(field['id']),
@@ -331,10 +337,10 @@ class _LineupPlayer extends StatelessWidget {
                 );
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 6,
+              runSpacing: 6,
               children: [
                 for (final field in fields.where(
                   (f) => [
@@ -343,6 +349,9 @@ class _LineupPlayer extends StatelessWidget {
                   ].contains(f['stat']),
                 ))
                   FilterChip(
+                    showCheckmark: false,
+                    padding: const EdgeInsets.all(4),
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 4),
                     avatar: Container(
                       width: 12,
                       height: 17,
@@ -357,6 +366,7 @@ class _LineupPlayer extends StatelessWidget {
                       field['stat'] == 'cartellino_giallo' ? 'Giallo' : 'Rosso',
                     ),
                     labelStyle: TextStyle(
+                      fontSize: 12,
                       color: field['checked'] == true
                           ? Theme.of(context).colorScheme.onPrimary
                           : Theme.of(context).colorScheme.onSurface,
@@ -366,13 +376,10 @@ class _LineupPlayer extends StatelessWidget {
                         ? null
                         : (value) => onChanged(field, {'checked': value}),
                   ),
+                for (final field in fields.where((f) => f['stat'] == 'voto'))
+                  SizedBox(width: 104, child: render(field)),
               ],
             ),
-            for (final field in fields.where((f) => f['stat'] == 'voto'))
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: render(field),
-              ),
           ],
         ),
       ),
@@ -442,7 +449,7 @@ class _StaffStatCounterState extends State<StaffStatCounter> {
           enabled: !disabled,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 20,
             fontWeight: FontWeight.w800,
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -453,7 +460,7 @@ class _StaffStatCounterState extends State<StaffStatCounter> {
             isDense: true,
             filled: true,
             fillColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(vertical: 8),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           onChanged: (value) {
@@ -467,6 +474,11 @@ class _StaffStatCounterState extends State<StaffStatCounter> {
           children: [
             IconButton(
               tooltip: 'Diminuisci $label',
+              style: IconButton.styleFrom(
+                minimumSize: const Size(40, 40),
+                padding: const EdgeInsets.all(4),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               onPressed: disabled || (int.tryParse(_text.text) ?? 0) <= 0
                   ? null
                   : () => _step(-1),
@@ -474,6 +486,11 @@ class _StaffStatCounterState extends State<StaffStatCounter> {
             ),
             IconButton(
               tooltip: 'Aumenta $label',
+              style: IconButton.styleFrom(
+                minimumSize: const Size(40, 40),
+                padding: const EdgeInsets.all(4),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               onPressed: disabled ? null : () => _step(1),
               icon: Icon(Icons.add_rounded, size: 18),
             ),

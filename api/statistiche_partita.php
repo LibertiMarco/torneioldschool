@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/../includi/db.php';
 
@@ -399,10 +399,10 @@ body.stats-admin-page .admin-container {
 .lineup-score { background: #15293e; color: #fff; padding: 12px 18px; border-radius: 12px; font-weight: 800; }
 .lineup-score strong { font-size: 22px; color: #fff; }
 .team-lineup { background: #fff; border: 1px solid #dde3ea; border-radius: 16px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(21,41,62,.07); }
-.team-lineup h2 { margin: 0; padding: 15px 18px; background: #15293e; color: #fff; font-size: 20px; }
+.team-lineup h2 { margin: 0; padding: 10px 12px; background: #15293e; color: #fff; font-size: 17px; }
 .team-actions { padding: 10px 14px; background: #f3f6f9; border-bottom: 1px solid #dde3ea; display: flex; gap: 8px; }
 .team-actions button { border: 1px solid #cbd5e1; background: #fff; border-radius: 8px; padding: 7px 10px; cursor: pointer; font-weight: 700; }
-.player-row { display: grid; grid-template-columns: minmax(190px, 1fr) repeat(3, 112px) 70px 70px 92px; gap: 10px; align-items: center; padding: 12px 14px; border-bottom: 1px solid #edf0f3; }
+.player-row { display: grid; grid-template-columns: minmax(190px, 1fr) repeat(3, 112px) 70px 70px 92px; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid #edf0f3; }
 .player-row:last-child { border-bottom: 0; }
 .player-row:not(.is-present) { opacity: .55; background: #f5f5f5; }
 .player-name { display: flex; gap: 9px; align-items: center; font-weight: 750; min-width: 0; }
@@ -423,13 +423,13 @@ body.stats-admin-page .admin-container {
 .saving-note { color: #607083; font-size: 13px; }
 @media (max-width: 820px) {
   .lineup-labels { display: none; }
-  .player-row { grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
+  .player-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .player-name { grid-column: 1 / -1; }
   .stat-control { min-width: 0; }
-  .stat-control-label { display: block; margin: 0 0 5px; color: #516274; font-size: 12px; font-weight: 800; text-align: center; }
+  .stat-control-label { display: block; margin: 0 0 3px; color: #516274; font-size: 11px; font-weight: 800; text-align: center; }
   .stat-stepper { position: relative; }
-  .event-toggle { margin-top: 8px; }
-  .vote-input { margin-top: 8px; }
+  .event-toggle { margin-top: 2px; }
+  .vote-input { margin-top: 2px; }
 }
 
 </style>
