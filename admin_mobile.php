@@ -43,6 +43,9 @@ $adminHome = login_with_base_path('/admin_dashboard.php');
 <style>body{margin:0;background:#f4f6fb;color:#15293e;font-family:system-ui,sans-serif}main{max-width:640px;margin:48px auto;padding:28px;background:white;border-radius:16px}h1{font-size:28px}p{line-height:1.6}button{background:#15293e;color:white;border:0;border-radius:8px;padding:14px 20px;font:inherit;cursor:pointer}.status{padding:12px;background:#eef3f8;border-radius:8px}.error{color:#a82020}@media(max-width:700px){main{margin:16px;padding:20px}}</style></head><body><main>
 <a href="<?= htmlspecialchars($adminHome, ENT_QUOTES, 'UTF-8') ?>">← Pannello admin</a>
 <h1>Accesso all’app</h1>
+<h2>Prova su Android</h2>
+<p><a href="<?= htmlspecialchars(login_with_base_path('/app-download.php'), ENT_QUOTES, 'UTF-8') ?>">Scarica l’app Android (APK)</a>. Il download è riservato agli amministratori. Apri questa pagina dal telefono, scarica il file e consenti l’installazione dalla sorgente utilizzata.</p>
+<p>La build usa il sito reale: le operazioni salvate nell’app modificano gli stessi dati del sito. Per iPhone serve una build firmata e un invito TestFlight; il file APK funziona soltanto su Android.</p>
 <p class="status">Stato: <strong><?= $enabled ? 'attivo' : 'disattivato' ?></strong></p>
 <?php if ($message): ?><p role="status"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></p><?php endif; ?>
 <?php if ($error): ?><p class="error" role="alert"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p><?php endif; ?>
