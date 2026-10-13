@@ -5,6 +5,7 @@ import 'package:tornei_old_school/details.dart';
 import 'package:tornei_old_school/ranking_surface.dart';
 import 'package:tornei_old_school/theme.dart';
 import 'package:tornei_old_school/tournament_page.dart';
+import 'package:tornei_old_school/tournament_logic.dart';
 
 class GroupedTournamentApi extends DemoApi {
   List<Map<String, dynamic>> get groupedTeams => [
@@ -87,6 +88,81 @@ class CupLegApi extends GroupedTournamentApi {
 }
 
 void main() {
+  testWidgets('Tournament scorer goals use readable theme colors', (
+    tester,
+  ) async {
+    for (final theme in [siteTheme(), siteDarkTheme()]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: theme,
+          home: Scaffold(
+            body: TournamentScorers(
+              api: DemoApi(),
+              players: const [
+                {'id': 1, 'nome': 'Mario', 'cognome': 'Rossi', 'gol': 8},
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<Text>(find.text('8')).style?.color,
+        theme.colorScheme.primary,
+      );
+      expect(
+        tester.widget<Text>(find.text('GOL')).style?.color,
+        theme.colorScheme.onSurfaceVariant,
+      );
+      expect(
+        tester.widget<Text>(find.text('CLASSIFICA MARCATORI')).style?.color,
+        theme.brightness == Brightness.dark
+            ? theme.colorScheme.onSurface
+            : Colors.white,
+      );
+    }
+  });
+
+  testWidgets(
+    'Dark standings positions stay readable on qualification colors',
+    (tester) async {
+      final teams = List.generate(4, (i) => {'nome': 'Squadra ${i + 1}'});
+      final data = TournamentData(
+        {
+          'config': {
+            'formato': 'campionato',
+            'qualificati_gold': 1,
+            'qualificati_silver': 1,
+            'qualificati_bronzo': 1,
+          },
+        },
+        teams,
+        [],
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: siteDarkTheme(),
+          home: Scaffold(
+            body: StandingsTable(
+              api: DemoApi(),
+              slug: 'demo',
+              label: 'Classifica',
+              teams: teams,
+              data: data,
+            ),
+          ),
+        ),
+      );
+      for (final position in ['1', '2', '3']) {
+        expect(tester.widget<Text>(find.text(position)).style?.color, siteBlue);
+      }
+      expect(
+        tester.widget<Text>(find.text('4')).style?.color,
+        siteDarkTheme().colorScheme.onSurface,
+      );
+    },
+  );
+
   testWidgets('Match cards use the dark theme surface and readable labels', (
     tester,
   ) async {

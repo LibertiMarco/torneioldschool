@@ -641,6 +641,8 @@ class StandingsTable extends StatelessWidget {
                                 ? Colors.white
                                 : cup == 'ELIMINATO'
                                 ? const Color(0xff8b1e2d)
+                                : cupColors.containsKey(cup)
+                                ? siteBlue
                                 : null,
                             bold: true,
                           ),
@@ -1022,7 +1024,9 @@ class _TournamentScorersState extends State<TournamentScorers> {
             child: Text(
               'CLASSIFICA MARCATORI',
               style: TextStyle(
-                color: colors.onSurface,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? colors.onSurface
+                    : Colors.white,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.5,
@@ -1074,21 +1078,21 @@ class _TournamentScorersState extends State<TournamentScorers> {
                           children: [
                             Text(
                               '${stat(player['gol'])}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 32,
                                 height: 1,
                                 fontWeight: FontWeight.w800,
-                                color: siteBlue,
+                                color: colors.primary,
                               ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
+                            Text(
                               'GOL',
                               style: TextStyle(
                                 fontSize: 11,
                                 height: 1,
                                 letterSpacing: 1.2,
-                                color: Color(0xff778496),
+                                color: colors.onSurfaceVariant,
                               ),
                             ),
                           ],
