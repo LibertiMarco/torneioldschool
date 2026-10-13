@@ -86,23 +86,22 @@ class _TeamPageState extends State<TeamPage> {
       );
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final team = widget.team;
     Widget metric(String label, dynamic value) => Expanded(
       child: Column(
         children: [
           Text(
             '$value',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: Color(0xffbdcbdc)),
-          ),
+          Text(label, style: TextStyle(fontSize: 12, color: Color(0xffbdcbdc))),
         ],
       ),
     );
@@ -123,7 +122,7 @@ class _TeamPageState extends State<TeamPage> {
             Container(
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colors.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Column(
@@ -145,22 +144,22 @@ class _TeamPageState extends State<TeamPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'SQUADRA',
                                 style: TextStyle(
                                   fontSize: 10,
                                   letterSpacing: 1.6,
                                   fontWeight: FontWeight.w700,
-                                  color: siteRed,
+                                  color: colors.secondary,
                                 ),
                               ),
                               const SizedBox(height: 6),
                               Text(
                                 '${team['nome']}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 26,
                                   fontWeight: FontWeight.w700,
-                                  color: siteBlue,
+                                  color: colors.onSurface,
                                 ),
                               ),
                               if ('${team['girone'] ?? ''}'
@@ -169,8 +168,8 @@ class _TeamPageState extends State<TeamPage> {
                                 const SizedBox(height: 4),
                                 Text(
                                   'Girone ${team['girone']}',
-                                  style: const TextStyle(
-                                    color: Color(0xff778496),
+                                  style: TextStyle(
+                                    color: colors.onSurfaceVariant,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -186,7 +185,7 @@ class _TeamPageState extends State<TeamPage> {
                       horizontal: 16,
                       vertical: 20,
                     ),
-                    color: siteBlue,
+                    color: dark ? colors.surfaceContainer : siteBlue,
                     child: Row(
                       children: [
                         metric('Punti', team['punti'] ?? 0),
@@ -210,9 +209,9 @@ class _TeamPageState extends State<TeamPage> {
                         }.entries)
                           Text(
                             '${team[entry.value] ?? 0} ${entry.key.toLowerCase()}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xff526176),
+                              color: colors.onSurfaceVariant,
                             ),
                           ),
                       ],
@@ -225,7 +224,7 @@ class _TeamPageState extends State<TeamPage> {
             Container(
               padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
-                color: const Color(0xffe5eaf1),
+                color: colors.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Row(
@@ -237,7 +236,7 @@ class _TeamPageState extends State<TeamPage> {
                         selected: tab == name,
                         child: Material(
                           color: tab == name
-                              ? Colors.white
+                              ? colors.primaryContainer
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(14),
                           child: InkWell(
@@ -253,14 +252,14 @@ class _TeamPageState extends State<TeamPage> {
                                         ? Icons.sports_soccer_rounded
                                         : Icons.groups_outlined,
                                     size: 19,
-                                    color: siteBlue,
+                                    color: colors.onSurface,
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
                                     name,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontWeight: FontWeight.w700,
-                                      color: siteBlue,
+                                      color: colors.onSurface,
                                     ),
                                   ),
                                 ],
@@ -289,17 +288,17 @@ class _TeamPageState extends State<TeamPage> {
                             tab == 'Rosa'
                                 ? 'Rosa squadra'
                                 : 'Partite disputate',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w700,
-                              color: siteBlue,
+                              color: colors.onSurface,
                             ),
                           ),
                         ),
                         Text(
                           '${rows.length} ${tab == 'Rosa' ? 'giocatori' : 'partite'}',
-                          style: const TextStyle(
-                            color: Color(0xff778496),
+                          style: TextStyle(
+                            color: colors.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
@@ -310,7 +309,7 @@ class _TeamPageState extends State<TeamPage> {
                       Container(
                         padding: const EdgeInsets.all(28),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colors.surfaceContainerLow,
                           borderRadius: BorderRadius.circular(22),
                         ),
                         child: Column(
@@ -320,7 +319,7 @@ class _TeamPageState extends State<TeamPage> {
                                   ? Icons.groups_outlined
                                   : Icons.sports_soccer_rounded,
                               size: 32,
-                              color: const Color(0xff778496),
+                              color: colors.onSurfaceVariant,
                             ),
                             const SizedBox(height: 12),
                             Text(
@@ -328,7 +327,7 @@ class _TeamPageState extends State<TeamPage> {
                                   ? 'Rosa non ancora disponibile.'
                                   : 'Nessuna partita disputata.',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: Color(0xff778496)),
+                              style: TextStyle(color: colors.onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -387,6 +386,8 @@ class RosterPlayerCard extends StatelessWidget {
   final Map<String, dynamic> player;
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final photo = '${player['foto'] ?? ''}'.trim();
     final hasPhoto =
         photo.isNotEmpty &&
@@ -439,7 +440,7 @@ class RosterPlayerCard extends StatelessWidget {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(22),
         boxShadow: const [
           BoxShadow(
@@ -459,11 +460,16 @@ class RosterPlayerCard extends StatelessWidget {
               LayoutBuilder(
                 builder: (context, constraints) => Container(
                   height: 110,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [siteBlue, Color(0xff345778)],
+                      colors: dark
+                          ? [
+                              colors.primaryContainer,
+                              colors.surfaceContainerHigh,
+                            ]
+                          : [siteBlue, const Color(0xff345778)],
                     ),
                   ),
                   child: Stack(
@@ -488,7 +494,7 @@ class RosterPlayerCard extends StatelessWidget {
                               )
                             : Text(
                                 initials,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 38,
                                   fontWeight: FontWeight.w700,
@@ -528,22 +534,22 @@ class RosterPlayerCard extends StatelessWidget {
                   children: [
                     Text(
                       '${player['nome']} ${player['cognome']}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: siteBlue,
+                        color: colors.onSurface,
                       ),
                     ),
                     const SizedBox(height: 5),
                     Text(
                       role.isEmpty ? 'Giocatore' : role,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xff778496),
+                        color: colors.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 14),
-                    const Divider(height: 1, color: Color(0xffedf0f5)),
+                    Divider(height: 1, color: colors.outlineVariant),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -557,18 +563,18 @@ class RosterPlayerCard extends StatelessWidget {
                               children: [
                                 Text(
                                   '${player[entry.value] ?? 0}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
-                                    color: siteBlue,
+                                    color: colors.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
                                   entry.key,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 10,
-                                    color: Color(0xff778496),
+                                    color: colors.onSurfaceVariant,
                                   ),
                                 ),
                               ],
@@ -599,12 +605,14 @@ class TeamMatchTile extends StatelessWidget {
   final String team;
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final outcome = teamMatchOutcome(match, team);
     final color = outcome == 'Vittoria'
-        ? const Color(0xff18765d)
+        ? (dark ? const Color(0xff9dd6ba) : const Color(0xff18765d))
         : outcome == 'Sconfitta'
-        ? siteRed
-        : const Color(0xff526176);
+        ? colors.secondary
+        : colors.onSurfaceVariant;
     final date = DateTime.tryParse('${match['data_partita'] ?? ''}');
     const months = [
       'gen',
@@ -636,7 +644,7 @@ class TeamMatchTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Material(
@@ -662,9 +670,9 @@ class TeamMatchTile extends StatelessWidget {
                     Expanded(
                       child: Text(
                         dateText,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xff778496),
+                          color: colors.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -706,10 +714,10 @@ class TeamMatchTile extends StatelessWidget {
                           Text(
                             '${match['squadra_casa']}',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: siteBlue,
+                              color: colors.onSurface,
                             ),
                           ),
                         ],
@@ -719,10 +727,10 @@ class TeamMatchTile extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: Text(
                         '${match['gol_casa'] ?? '—'} : ${match['gol_ospite'] ?? '—'}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
-                          color: siteBlue,
+                          color: colors.onSurface,
                         ),
                       ),
                     ),
@@ -741,10 +749,10 @@ class TeamMatchTile extends StatelessWidget {
                           Text(
                             '${match['squadra_ospite']}',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: siteBlue,
+                              color: colors.onSurface,
                             ),
                           ),
                         ],
@@ -756,7 +764,7 @@ class TeamMatchTile extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(
                     'Rigori ${match['rigori_casa'] ?? '—'} : ${match['rigori_ospite'] ?? '—'}',
-                    style: const TextStyle(fontSize: 12, color: siteRed),
+                    style: TextStyle(fontSize: 12, color: siteRed),
                   ),
                 ],
                 const SizedBox(height: 14),
@@ -768,16 +776,16 @@ class TeamMatchTile extends StatelessWidget {
                           phaseName,
                           roundLabel(matchTurn(match, phase), phase),
                         ].join(' · '),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: Color(0xff778496),
+                          color: colors.onSurfaceVariant,
                         ),
                       ),
                     ),
-                    const Icon(
+                    Icon(
                       Icons.arrow_forward_rounded,
                       size: 17,
-                      color: siteBlue,
+                      color: colors.onSurface,
                     ),
                   ],
                 ),

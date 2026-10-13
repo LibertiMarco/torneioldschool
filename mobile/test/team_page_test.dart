@@ -39,6 +39,64 @@ class TeamFixtures extends DemoApi {
 }
 
 void main() {
+  testWidgets('Dark team page adapts match cards, titles and roster surfaces', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = TeamFixtures();
+    final theme = siteDarkTheme();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        home: TeamPage(api: api, slug: 'demo', team: api.teams.first),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<Text>(find.text('Partite disputate')).style?.color,
+      theme.colorScheme.onSurface,
+    );
+    final cards = tester.widgetList<Container>(
+      find.descendant(
+        of: find.byType(TeamMatchTile),
+        matching: find.byType(Container),
+      ),
+    );
+    expect(
+      cards.any(
+        (card) =>
+            (card.decoration is BoxDecoration) &&
+            (card.decoration as BoxDecoration).color ==
+                theme.colorScheme.surfaceContainerLow,
+      ),
+      isTrue,
+    );
+    await tester.ensureVisible(find.text('Rosa'));
+    await tester.tap(find.text('Rosa'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<Text>(find.text('Rosa squadra')).style?.color,
+      theme.colorScheme.onSurface,
+    );
+    final roster = tester.widgetList<Container>(
+      find.descendant(
+        of: find.byType(RosterPlayerCard),
+        matching: find.byType(Container),
+      ),
+    );
+    expect(
+      roster.any(
+        (card) =>
+            (card.decoration is BoxDecoration) &&
+            (card.decoration as BoxDecoration).color ==
+                theme.colorScheme.surfaceContainerLow,
+      ),
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'Roster badges use team role, fallback role and captain flag at 320px',
     (tester) async {
