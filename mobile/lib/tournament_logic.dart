@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'api.dart';
 import 'tournament_list.dart' show normalizedSearch, naturalCategoryOrder;
 
@@ -82,6 +84,23 @@ class TournamentData {
   }
 
   String get rules {
+    final sections = config['regole_sezioni'];
+    if (sections is List &&
+        sections.isNotEmpty &&
+        !RegExp(
+          r'<[a-z][\s\S]*>',
+          caseSensitive: false,
+        ).hasMatch('${config['regole_html'] ?? ''}')) {
+      const escape = HtmlEscape();
+      return sections
+          .whereType<Map>()
+          .map(
+            (section) =>
+                '<h3>${escape.convert('${section['title'] ?? ''}')}</h3>'
+                '<p>${escape.convert('${section['body'] ?? ''}').replaceAll('\n', '<br>')}</p>',
+          )
+          .join();
+    }
     for (final value in [
       config['regole_html'],
       config['regole'],
@@ -124,6 +143,7 @@ class TournamentData {
   }
 
   Map<String, int> get cupPlaces {
+    if (format == 'eliminazione') return {'GOLD': 0, 'SILVER': 0, 'BRONZO': 0};
     if (legacy && !grouped) {
       final gold = stat(layout['legacy_gold'] ?? 16);
       final silver = layout['legacy_silver'] == null
@@ -187,6 +207,7 @@ class TournamentData {
   }
 
   List<String> get phases {
+    if (format == 'eliminazione') return ['GOLD'];
     final present = matches.map((r) => phaseKey(r['fase'])).toSet();
     for (final entry in cupPlaces.entries) {
       if (entry.value > 0) present.add(entry.key);

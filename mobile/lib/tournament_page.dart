@@ -155,9 +155,11 @@ class _TournamentPageState extends State<TournamentPage> {
           'Regole',
         ];
         if (!tabs.contains(tab)) tab = 'Classifica';
-        if (!result.phases.contains(tablePhase)) tablePhase = 'REGULAR';
+        if (!result.phases.contains(tablePhase)) {
+          tablePhase = result.phases.first;
+        }
         if (!result.phases.contains(calendarPhase)) {
-          calendarPhase = 'REGULAR';
+          calendarPhase = result.phases.first;
           round = null;
         }
         return RefreshIndicator(

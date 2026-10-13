@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includi/require_login.php';
+require_once __DIR__ . '/../includi/tournament_rules_render.php';
 require_once __DIR__ . '/../includi/db.php';
 
 $normalizeTorneoText = static function ($value): string {
@@ -14,7 +15,7 @@ $normalizeTorneoText = static function ($value): string {
 
 $torneoSlug = isset($torneoSlug) ? $normalizeTorneoText((string)$torneoSlug) : 'TEMPLATE_SLUG';
 $torneoName = isset($torneoName) ? $normalizeTorneoText((string)$torneoName) : 'Torneo Template';
-$assetVersion = isset($assetVersion) ? (string)$assetVersion : '20260528a';
+$assetVersion = isset($assetVersion) ? (string)$assetVersion : '20261013a';
 $torneoConfigFallback = (isset($torneoConfigFallback) && is_array($torneoConfigFallback)) ? $torneoConfigFallback : [];
 $torneoRulesMarkup = isset($torneoRulesMarkup) ? (string)$torneoRulesMarkup : '';
 
@@ -411,13 +412,15 @@ $qualificatiSilver = array_key_exists('qualificati_silver', $torneoConfig)
 $qualificatiBronzo = array_key_exists('qualificati_bronzo', $torneoConfig)
     ? max(0, (int)$torneoConfig['qualificati_bronzo'])
     : null;
-$showGoldCup = $qualificatiGold === null ? true : $qualificatiGold > 0;
+$isDirectKnockout = ($torneoConfig['formato'] ?? '') === 'eliminazione';
+$showGoldCup = $isDirectKnockout || ($qualificatiGold === null ? true : $qualificatiGold > 0);
 $showSilverCup = $qualificatiSilver === null ? true : $qualificatiSilver > 0;
 $showBronzeCup = $qualificatiBronzo === null ? false : $qualificatiBronzo > 0;
 
 $regoleMarkup = '';
 if (!empty($torneoConfig['regole_html'])) {
-    $regoleMarkup = renderRegoleMarkupFromText((string)$torneoConfig['regole_html']);
+    $regoleMarkup = tournament_rules_sections_markup($torneoConfig)
+        ?? renderRegoleMarkupFromText((string)$torneoConfig['regole_html']);
 } elseif ($torneoRulesMarkup !== '') {
     $regoleMarkup = $torneoRulesMarkup;
 } else {
@@ -706,7 +709,7 @@ if (!empty($torneoConfig['regole_html'])) {
         <label for="faseSelect">Seleziona fase:</label>
         <div class="filtro-fase-selects">
           <select id="faseSelect">
-            <option value="girone" selected>REGULAR SEASON</option>
+            <?php if (!$isDirectKnockout): ?><option value="girone" selected>REGULAR SEASON</option><?php endif; ?>
             <option value="eliminazione">ELIMINAZIONE DIRETTA</option>
           </select>
 
@@ -756,7 +759,7 @@ if (!empty($torneoConfig['regole_html'])) {
         <div class="filtro-riga">
           <label for="faseCalendario">Fase:</label>
           <select id="faseCalendario">
-            <option value="REGULAR" selected>Regular</option>
+            <?php if (!$isDirectKnockout): ?><option value="REGULAR" selected>Regular</option><?php endif; ?>
             <?php if ($showGoldCup): ?>
               <option value="GOLD">Gold</option>
             <?php endif; ?>
@@ -815,7 +818,7 @@ if (!empty($torneoConfig['regole_html'])) {
       const coppaSelect = document.getElementById("coppaSelect");
 
       if (faseSelect && coppaSelect) {
-        faseSelect.value = "girone";
+        faseSelect.value = <?= $isDirectKnockout ? '"eliminazione"' : '"girone"' ?>;
         coppaSelect.style.display = "none";
 
         faseSelect.addEventListener("change", () => {

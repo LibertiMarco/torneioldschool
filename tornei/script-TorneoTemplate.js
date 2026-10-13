@@ -1465,11 +1465,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   loadFavorites();
 
-  caricaClassifica();
+  if (FORMATO_TORNEO !== "eliminazione") caricaClassifica();
   const faseCalendario = document.getElementById("faseCalendario");
   const giornataSelect = document.getElementById("giornataSelect");
   if (faseCalendario) {
-    faseCalendario.value = "REGULAR";
+    faseCalendario.value = FORMATO_TORNEO === "eliminazione" ? "GOLD" : "REGULAR";
   }
   const prevMarcatoriBtn = document.getElementById("prevMarcatori");
   const nextMarcatoriBtn = document.getElementById("nextMarcatori");
@@ -1480,7 +1480,7 @@ document.addEventListener("DOMContentLoaded", () => {
     caricaCalendario(gVal, faseVal);
   };
 
-  caricaCalendario("", "REGULAR");
+  caricaCalendario("", FORMATO_TORNEO === "eliminazione" ? "GOLD" : "REGULAR");
   if (!IS_ESPORT_TORNEO) {
     caricaSquadrePerRosa();
     caricaMarcatori();
@@ -1545,6 +1545,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     loadClassifica(TORNEO);
   });
+
+  if (FORMATO_TORNEO === "eliminazione") {
+    faseSelect.value = "eliminazione";
+    faseSelect.dispatchEvent(new Event("change"));
+  }
 
   // toggle pill per fase/coppa
   const faseToggle = buildPillToggle(faseSelect);

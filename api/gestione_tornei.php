@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includi/admin_guard.php';
+require_once __DIR__ . '/../includi/tournament_format_config.php';
 
 require_once __DIR__ . '/crud/torneo.php';
 $torneo = new Torneo();
@@ -113,7 +114,7 @@ function buildTorneoConfigFromRequest(array $src): array {
         $config['qualificati_bronzo'] = 0;
     }
 
-    return $config;
+    return tournament_format_config($config, $src);
 }
 
 function applyBrasileraoCupConfig(array $config, string $slug): array {
@@ -205,31 +206,7 @@ function scegliTemplatePerFormula(string $formula, string $faseFinale, string $b
         return $defaultEsport;
     }
 
-    $coppaAfrica = [
-        'html' => $baseDir . '/Coppadafrica.php',
-        'js'   => $baseDir . '/script-Coppadafrica.js',
-    ];
-
-    switch ($formula) {
-        case 'campionato':
-            return $defaultCalcio;
-        case 'girone':
-            if ($faseFinale === 'eliminazione_diretta' && file_exists($coppaAfrica['html']) && file_exists($coppaAfrica['js'])) {
-                return $coppaAfrica; // Gironi + eliminazione diretta stile Coppa d'Africa
-            }
-            if ($faseFinale === 'coppe' && file_exists($defaultCalcio['html']) && file_exists($defaultCalcio['js'])) {
-                return $defaultCalcio; // Gironi + Gold/Silver: usa template generico con entrambe le coppe
-            }
-            break;
-        case 'eliminazione':
-            if (file_exists($coppaAfrica['html']) && file_exists($coppaAfrica['js'])) {
-                return $coppaAfrica; // Eliminazione diretta: bracket stile Coppa d'Africa (Gold)
-            }
-            break;
-        default:
-            break;
-    }
-
+    // The generic template adapts tables, brackets and rules from saved config.
     return $defaultCalcio;
 }
 
@@ -778,6 +755,11 @@ if ($lista instanceof mysqli_result) {
                 grid-template-columns: 1fr;
             }
         }
+        .rules-section { border: 1px solid #d6e3ec; border-radius: 14px; padding: 16px; margin: 10px 0; }
+        .rules-section summary { font-weight: 700; cursor: pointer; margin-bottom: 12px; }
+        .rules-section label { display: block; margin: 12px 0 6px; }
+        .rules-section input, .rules-section textarea { width: 100%; box-sizing: border-box; }
+        .rules-section textarea { resize: vertical; min-height: 110px; }
     </style>
 </head>
 <body>
@@ -840,6 +822,11 @@ if ($lista instanceof mysqli_result) {
                     </div>
                 </div>
 
+                <div class="form-subgroup hidden" id="eliminazioneSettings">
+                    <label for="eliminazione_squadre">Numero squadre nel tabellone</label>
+                    <input id="eliminazione_squadre" type="number" name="eliminazione_squadre" min="2" step="1" inputmode="numeric">
+                    <small>Solo eliminazione diretta: nessun girone o classifica di campionato.</small>
+                </div>
                 <div class="form-subgroup" id="faseFinaleSettings">
                     <div class="form-group">
                         <label for="fase_finale">Fase finale prevista</label>
@@ -882,7 +869,7 @@ if ($lista instanceof mysqli_result) {
                         <button type="button" class="notes-reset-btn" data-action="reset-regole">Ripristina testo predefinito</button>
                     </div>
                     <textarea name="regole_html" id="regole_html" class="notes-editor" rows="12" placeholder="Criteri di qualificazione, punti bonus, regole speciali"></textarea>
-                    <small>Per i campionati il testo viene precompilato con righe modificabili in base ai campi inseriti.</small>
+                    <small>Ogni sezione ha un titolo e un testo modificabili. I testi predefiniti seguono la formula; le sezioni personalizzate restano invariate.</small>
                 </div>
 
                 <div class="form-group"><label>Nome</label><input type="text" name="nome" required></div>
@@ -983,6 +970,11 @@ if ($lista instanceof mysqli_result) {
                     </div>
                 </div>
 
+                <div class="form-subgroup hidden" id="eliminazioneSettingsMod">
+                    <label for="mod_eliminazione_squadre">Numero squadre nel tabellone</label>
+                    <input id="mod_eliminazione_squadre" type="number" name="eliminazione_squadre" min="2" step="1" inputmode="numeric">
+                    <small>Solo eliminazione diretta: nessun girone o classifica di campionato.</small>
+                </div>
                 <div class="form-subgroup hidden" id="faseFinaleSettingsMod">
                     <div class="form-group">
                         <label for="mod_fase_finale">Fase finale prevista</label>
@@ -1025,7 +1017,7 @@ if ($lista instanceof mysqli_result) {
                         <button type="button" class="notes-reset-btn" data-action="reset-regole">Ripristina testo predefinito</button>
                     </div>
                     <textarea name="regole_html" id="mod_regole_html" class="notes-editor" rows="12" placeholder="Criteri di qualificazione, punti bonus, regole speciali"></textarea>
-                    <small>Per i campionati il testo viene precompilato con righe modificabili in base ai campi inseriti.</small>
+                    <small>Ogni sezione ha un titolo e un testo modificabili. I testi predefiniti seguono la formula; le sezioni personalizzate restano invariate.</small>
                 </div>
 
                 <div class="form-group"><label>Nome</label><input type="text" name="nome" id="mod_nome"></div>
@@ -1160,6 +1152,7 @@ if ($lista instanceof mysqli_result) {
             });
         });
     </script>
+    <script src="../includi/tournament_rules_editor.js?v=20261013"></script>
     <script>
         (() => {
             function setupFormulaForm(formEl) {
@@ -1167,6 +1160,8 @@ if ($lista instanceof mysqli_result) {
                 const tipoSelect = formEl.querySelector('select[name="formula_torneo"]');
                 const tipoRadios = Array.from(formEl.querySelectorAll('input[name="formula_torneo"]'));
                 const campionatoBox = formEl.querySelector('[id^="campionatoSettings"]');
+                const eliminazioneBox = formEl.querySelector('[id^="eliminazioneSettings"]');
+                const eliminazioneInput = formEl.querySelector('input[name="eliminazione_squadre"]');
                 const gironeBox = formEl.querySelector('[id^="gironeSettings"]');
                 const finaleBox = formEl.querySelector('[id^="faseFinaleSettings"]');
                 const qualificheBox = formEl.querySelector('[id^="qualificazioniSettings"]');
@@ -1182,6 +1177,7 @@ if ($lista instanceof mysqli_result) {
                 const bronzeGroup = formEl.querySelector('[data-role="qualificati-bronzo-group"]');
                 const eliminateInput = formEl.querySelector('input[name="eliminate"]');
                 const regoleInput = formEl.querySelector('textarea[name="regole_html"]');
+                const rulesEditor = regoleInput ? window.TosRulesEditor.create(regoleInput) : null;
                 const resetRegoleBtn = formEl.querySelector('[data-action="reset-regole"]');
 
                 function getTipoValue() {
@@ -1363,9 +1359,9 @@ if ($lista instanceof mysqli_result) {
                     const perGirone = parseInt(squadrePerGironeInput?.value || '0', 10);
                     let computed = 0;
 
-                    if (campVal > 0) {
+                    if (getTipoValue() === 'campionato' && campVal > 0) {
                         computed = campVal;
-                    } else if (gironi > 0 && perGirone > 0) {
+                    } else if (getTipoValue() === 'girone' && gironi > 0 && perGirone > 0) {
                         computed = gironi * perGirone;
                     }
 
@@ -1399,8 +1395,9 @@ if ($lista instanceof mysqli_result) {
                     const gironi = parseInt(numeroGironiInput?.value || '0', 10);
                     const perGirone = parseInt(squadrePerGironeInput?.value || '0', 10);
                     if (totale > 0) return totale;
-                    if (campionato > 0) return campionato;
-                    if (gironi > 0 && perGirone > 0) return gironi * perGirone;
+                    if (getTipoValue() === 'eliminazione') return parseInt(eliminazioneInput?.value || '0', 10);
+                    if (getTipoValue() === 'campionato' && campionato > 0) return campionato;
+                    if (getTipoValue() === 'girone' && gironi > 0 && perGirone > 0) return gironi * perGirone;
                     return 0;
                 }
 
@@ -1525,27 +1522,18 @@ if ($lista instanceof mysqli_result) {
                         ].join('\n\n');
                     }
 
+                    if (formula === 'eliminazione') return [
+                        `Struttura del torneo: Il torneo e composto da ${teamLabel} squadre e si disputa a eliminazione diretta.`,
+                        'Tabellone: Ogni turno elimina la squadra sconfitta. La vincitrice della finale conquista il torneo.',
+                        'Premi finali: Alla conclusione del torneo vengono assegnati i riconoscimenti individuali.',
+                        'Regole di gioco: Ogni partita dura 2 tempi da 25 minuti.\nOgni squadra ha 1 chiamata VAR disponibile per partita.',
+                        'Calendario: Le partite si disputano principalmente il mercoledi e il giovedi.'
+                    ].join('\n\n');
                     return buildDefaultRegole();
                 }
 
                 function syncRegole(force = false) {
-                    if (!regoleInput) return;
-                    const generated = buildFormulaAwareRegole();
-                    const isAuto = regoleInput.dataset.auto === '1';
-                    const isEmpty = regoleInput.value.trim() === '';
-
-                    if (generated === '') {
-                        if (force || isAuto || isEmpty) {
-                            regoleInput.value = '';
-                            regoleInput.dataset.auto = '';
-                        }
-                        return;
-                    }
-
-                    if (force || isAuto || isEmpty) {
-                        regoleInput.value = generated;
-                        regoleInput.dataset.auto = '1';
-                    }
+                    if (rulesEditor) rulesEditor.sync(buildFormulaAwareRegole(), force);
                 }
 
                 function syncFaseDependents() {
@@ -1562,6 +1550,10 @@ if ($lista instanceof mysqli_result) {
                     const hasSelection = value === 'campionato' || value === 'girone' || value === 'eliminazione';
                     const showFinale = hasSelection && value !== 'eliminazione';
 
+                    if (eliminazioneBox) eliminazioneBox.classList.toggle('hidden', value !== 'eliminazione');
+                    setRequired([eliminazioneInput], value === 'eliminazione');
+                    setDisabled([eliminazioneInput], value !== 'eliminazione');
+                    if (totaleInput) totaleInput.dataset.auto = '1';
                     if (campionatoBox) campionatoBox.classList.toggle('hidden', value !== 'campionato');
                     if (gironeBox) gironeBox.classList.toggle('hidden', value !== 'girone');
 
@@ -1587,7 +1579,7 @@ if ($lista instanceof mysqli_result) {
                     finaleSelect.addEventListener('change', () => syncFaseDependents());
                 }
 
-                [campionatoInput, numeroGironiInput, squadrePerGironeInput].forEach(el => {
+                [campionatoInput, numeroGironiInput, squadrePerGironeInput, eliminazioneInput].forEach(el => {
                     if (!el) return;
                     el.addEventListener('input', () => {
                         if (totaleInput) totaleInput.dataset.auto = '1';
@@ -1627,6 +1619,7 @@ if ($lista instanceof mysqli_result) {
                     const formato = resolveFormulaFromConfig(cfg);
                     setTipoValue(formato);
 
+                    if (eliminazioneInput) eliminazioneInput.value = cfg.totale_squadre ?? '';
                     if (campionatoInput) campionatoInput.value = cfg.campionato_squadre ?? '';
                     if (numeroGironiInput) numeroGironiInput.value = cfg.numero_gironi ?? '';
                     if (squadrePerGironeInput) squadrePerGironeInput.value = cfg.squadre_per_girone ?? '';
@@ -1652,20 +1645,12 @@ if ($lista instanceof mysqli_result) {
                     updateTotale();
                     updateEliminate(true);
 
-                    if (regoleInput) {
-                        const regoleValue = typeof cfg.regole_html === 'string' ? cfg.regole_html.trim() : '';
-                        if (regoleValue !== '') {
-                            regoleInput.value = cfg.regole_html;
-                            regoleInput.dataset.auto = '';
-                        } else {
-                            regoleInput.value = '';
-                            syncRegole(true);
-                        }
-                    }
+                    if (rulesEditor) rulesEditor.load(cfg.regole_html || '', cfg.regole_sezioni, buildFormulaAwareRegole());
                 }
 
                 function reset() {
                     setTipoValue('');
+                    if (eliminazioneInput) eliminazioneInput.value = '';
                     if (campionatoInput) campionatoInput.value = '';
                     if (numeroGironiInput) numeroGironiInput.value = '';
                     if (squadrePerGironeInput) squadrePerGironeInput.value = '';

@@ -16,6 +16,67 @@ Map<String, dynamic> team(
   'gol_fatti': 5,
 };
 void main() {
+  test('Structured rules retain arbitrary headings and escape markup', () {
+    final tournament = TournamentData(
+      {
+        'config': {
+          'regole_html': 'Trasporti: Arrivo',
+          'regole_sezioni': [
+            {
+              'title': 'Trasporti & accessi',
+              'body': 'Arrivo\nIngresso <sicuro>',
+            },
+          ],
+        },
+      },
+      [],
+      [],
+    );
+    expect(tournament.rules, contains('<h3>Trasporti &amp; accessi</h3>'));
+    expect(tournament.rules, contains('Arrivo<br>Ingresso &lt;sicuro&gt;'));
+  });
+  test('Direct knockout has no regular table or cup qualifications', () {
+    final knockout = TournamentData(
+      {
+        'config': {
+          'formato': 'eliminazione',
+          'totale_squadre': 8,
+          'numero_gironi': 2,
+          'squadre_per_girone': 4,
+        },
+      },
+      [],
+      [],
+    );
+    expect(knockout.grouped, false);
+    expect(knockout.phases, ['GOLD']);
+    expect(knockout.cupPlaces.values.every((value) => value == 0), true);
+    final league = TournamentData(
+      {
+        'config': {
+          'formato': 'campionato',
+          'numero_gironi': 2,
+          'squadre_per_girone': 4,
+        },
+      },
+      [],
+      [],
+    );
+    expect(league.grouped, false);
+    final groups = TournamentData(
+      {
+        'config': {
+          'formato': 'girone',
+          'numero_gironi': 2,
+          'squadre_per_girone': 4,
+        },
+      },
+      [],
+      [],
+    );
+    expect(groups.grouped, true);
+    expect(groups.groupLabels, ['A', 'B']);
+  });
   test('Cup rounds normalize legacy days and separate both leg encodings', () {
     final matches = [
       {'fase': 'GOLD', 'giornata': 2, 'fase_leg': 'ANDATA', 'giocata': 1},
