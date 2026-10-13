@@ -3,6 +3,7 @@ import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' show parseFragment;
 
 import 'api.dart';
+import 'access_gate.dart';
 import 'about_page.dart';
 import 'article_content.dart';
 import 'player_history.dart';
@@ -107,8 +108,13 @@ class _HomeBlockState extends State<HomeBlock> {
   );
 }
 
-void openPage(BuildContext context, Widget page) =>
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+void openPage(BuildContext context, Widget page) => Navigator.of(context).push(
+  MaterialPageRoute<void>(
+    builder: (_) => page is TournamentPage || page is GlobalRankingPage
+        ? AccessGate(fullPage: true, builder: (_) => page)
+        : page,
+  ),
+);
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({

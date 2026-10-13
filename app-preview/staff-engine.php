@@ -5,7 +5,7 @@ require_once __DIR__ . '/../includi/app_preview.php';
 require_once __DIR__ . '/../includi/staff_engine.php';
 try {
     mobile_method('GET');
-    $authorization = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    $authorization = mobile_authorization_header();
     if ($authorization !== '') {
         if (!mobile_api_enabled()) throw new MobileAuthError('unavailable', 'Accesso mobile non ancora attivo.', 503);
         $https = !empty($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) !== 'off';

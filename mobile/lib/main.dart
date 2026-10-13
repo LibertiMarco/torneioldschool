@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'auth.dart';
+import 'access_gate.dart';
 import 'staff_dashboard.dart';
 import 'account_page.dart';
 import 'personal_player_page.dart';
@@ -142,35 +143,38 @@ class _TosAppState extends State<TosApp> {
     navigatorKey: _navigatorKey,
     title: 'Tornei Old School',
     debugShowCheckedModeBanner: false,
-    builder: widget.api.preview
-        ? (context, child) => Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: Column(
-                children: [
-                  Material(
-                    color: const Color(0xffffe6a7),
-                    child: SafeArea(
-                      bottom: false,
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Text(
-                            'Anteprima · dati dimostrativi',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.labelLarge,
+    builder: (context, child) => AppAuthScope(
+      auth: widget.auth,
+      child: widget.api.preview
+          ? Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Column(
+                  children: [
+                    Material(
+                      color: const Color(0xffffe6a7),
+                      child: SafeArea(
+                        bottom: false,
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Text(
+                              'Anteprima · dati dimostrativi',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.labelLarge,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  Expanded(child: child!),
-                ],
+                    Expanded(child: child!),
+                  ],
+                ),
               ),
-            ),
-          )
-        : null,
+            )
+          : child!,
+    ),
     theme: siteTheme(),
     darkTheme: siteDarkTheme(),
     themeMode: _themeMode,
@@ -199,14 +203,23 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int page = 0;
   String section = 'calcio';
+  bool _hadUser = false;
   @override
   void initState() {
     super.initState();
+    _hadUser = widget.auth.user != null;
     widget.auth.addListener(_authChanged);
     widget.auth.restore();
   }
 
   void _authChanged() {
+    final hasUser = widget.auth.user != null;
+    if (_hadUser && !hasUser) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+      });
+    }
+    _hadUser = hasUser;
     if (mounted) setState(() {});
   }
 
@@ -270,10 +283,12 @@ class _HomePageState extends State<HomePage> {
                           onTournaments: () => setState(() => page = 1),
                         )
                       : selectedPage == 1
-                      ? TournamentList(
-                          key: ValueKey('tournaments-$section'),
-                          api: widget.api,
-                          section: section,
+                      ? AccessGate(
+                          builder: (_) => TournamentList(
+                            key: ValueKey('tournaments-$section'),
+                            api: widget.api,
+                            section: section,
+                          ),
                         )
                       : PersonalPlayerPage(
                           auth: auth,

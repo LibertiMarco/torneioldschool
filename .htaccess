@@ -12,6 +12,13 @@
 RewriteEngine On
 Options -Indexes
 
+# Forward native app bearer credentials to PHP CGI/FastCGI.
+<IfModule mod_setenvif.c>
+  SetEnvIfNoCase Authorization "(.+)" HTTP_AUTHORIZATION=$1
+</IfModule>
+RewriteCond %{HTTP:Authorization} !^$
+RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
 # Il sottodominio eSport condivide i file dell'app, ma ha una homepage propria.
 RewriteCond %{HTTP_HOST} ^esport\.torneioldschool\.it(?::\d+)?$ [NC]
 RewriteRule ^$ esport.php [L]

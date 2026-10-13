@@ -32,6 +32,13 @@ Non impostare `MOBILE_ALLOW_LOCAL_HTTP` in produzione. L'app richiede HTTPS nell
 
 ## Controlli dopo il caricamento
 
+Il backend deve ricevere l'header `Authorization` inviato dall'APK. La radice
+`.htaccess` ne conserva il valore per PHP CGI/FastCGI; API e bridge staff usano
+anche gli header originali esposti dal SAPI. Non inserire token negli URL.
+Una richiesta a `me.php` con un bearer fittizio di 43 caratteri deve rispondere
+401 con `Sessione scaduta.`; `Accesso richiesto.` indica un header assente o
+malformato. Questo controllo non richiede credenziali reali.
+
 1. `GET https://torneioldschool.it/api/mobile/v1/status.php`: deve restituire HTTP 200 con `ready: true`.
 2. `GET https://torneioldschool.it/api/mobile/v1/tournaments.php?section=calcio`: deve restituire l'elenco JSON dei tornei reali. La sezione `esport` è una selezione esplicita.
 3. `GET https://torneioldschool.it/api/mobile/v1/me.php` senza credenziali: deve restituire HTTP 401.

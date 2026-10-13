@@ -210,6 +210,9 @@ void main() {
       expect(api.hallSections.last, 'esport');
       await tester.tap(find.text('Tornei'));
       await tester.pumpAndSettle();
+      expect(find.text('Old School Esport Cup'), findsNothing);
+      await tester.tap(find.text('Accedi'));
+      await tester.pumpAndSettle();
       expect(find.text('Old School Esport Cup'), findsOneWidget);
       expect(find.text('Old School Cup'), findsNothing);
       expect(tester.takeException(), isNull);

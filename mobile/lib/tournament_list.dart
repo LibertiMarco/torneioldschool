@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'main.dart' show ErrorPanel, TournamentPage;
-import 'home_dashboard.dart' show SiteImage;
+import 'home_dashboard.dart' show SiteImage, openPage;
 
 const tournamentStates = {
   'in corso': 'In corso',
@@ -632,13 +632,9 @@ class _TournamentListState extends State<TournamentList> {
                         (row) => TournamentCard(
                           api: widget.api,
                           tournament: row,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => TournamentPage(
-                                api: widget.api,
-                                tournament: row,
-                              ),
-                            ),
+                          onTap: () => openPage(
+                            context,
+                            TournamentPage(api: widget.api, tournament: row),
                           ),
                         ),
                       ),

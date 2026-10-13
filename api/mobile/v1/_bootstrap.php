@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../../includi/env_loader.php';
 require_once __DIR__ . '/../../../includi/mobile_auth.php';
 require_once __DIR__ . '/../../../includi/mobile_config.php';
+require_once __DIR__ . '/../../../includi/mobile_authorization_header.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -57,7 +58,7 @@ function mobile_input(): array
 
 function mobile_bearer(): string
 {
-    $header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    $header = mobile_authorization_header();
     if (!preg_match('/^Bearer ([A-Za-z0-9_-]{43})$/D', $header, $match)) {
         throw new MobileAuthError('invalid_session', 'Accesso richiesto.');
     }
