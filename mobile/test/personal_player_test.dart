@@ -74,6 +74,48 @@ Future<void> captureProfile(
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  testWidgets('Dark profile has readable titles and adapted team surfaces', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = PersonalApi();
+    final auth = DemoAuth(api);
+    await auth.login();
+    final captureKey = GlobalKey();
+    final theme = siteDarkTheme();
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: captureKey,
+        child: MaterialApp(
+          theme: theme,
+          home: Scaffold(
+            body: PersonalPlayerPage(auth: auth, section: 'calcio'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<Text>(find.text('Le mie statistiche')).style?.color,
+      theme.colorScheme.onSurface,
+    );
+    await captureProfile(tester, captureKey, 'profile-dark');
+    await tester.scrollUntilVisible(
+      find.text('Vedi squadra'),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(find.text('Vedi squadra'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<Text>(find.text('Le mie squadre')).style?.color,
+      theme.colorScheme.onSurface,
+    );
+    await captureProfile(tester, captureKey, 'teams-dark');
+    expect(tester.takeException(), isNull);
+  });
+
   setUpAll(() async {
     final roboto = FontLoader('Roboto')
       ..addFont(rootBundle.load('assets/fonts/Roboto-Regular.ttf'))

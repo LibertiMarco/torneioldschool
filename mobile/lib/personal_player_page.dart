@@ -206,20 +206,20 @@ class _PersonalPlayerPageState extends State<PersonalPlayerPage> {
       const SizedBox(height: 28),
       Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 30,
           height: 1.1,
           fontWeight: FontWeight.w900,
-          color: siteBlue,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
       const SizedBox(height: 14),
       Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           height: 1.5,
-          color: Color(0xff586879),
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
       const SizedBox(height: 24),
@@ -233,7 +233,10 @@ class _PersonalPlayerPageState extends State<PersonalPlayerPage> {
       if (error != null)
         Padding(
           padding: const EdgeInsets.only(top: 16),
-          child: Text(error, style: const TextStyle(color: siteRed)),
+          child: Text(
+            error,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
         ),
     ],
   );

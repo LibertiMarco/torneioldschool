@@ -234,17 +234,7 @@ class _HomePageState extends State<HomePage> {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
-                child: selectedPage == 0
-                    ? const Text(
-                        'TORNEI OLD SCHOOL',
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontSize: 16,
-                          letterSpacing: 2,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      )
-                    : const Text('Tornei Old School', maxLines: 1),
+                child: const Text('Tornei Old School', maxLines: 1),
               ),
             ),
           ],

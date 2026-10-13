@@ -32,6 +32,9 @@ class PlayerDashboard extends StatefulWidget {
 
 class _PlayerDashboardState extends State<PlayerDashboard> {
   bool appearances = false;
+  ColorScheme get colors => Theme.of(context).colorScheme;
+  bool get dark => Theme.of(context).brightness == Brightness.dark;
+  Color get panel => dark ? colors.surfaceContainer : siteBlue;
   num number(dynamic value) => num.tryParse('$value') ?? 0;
   String value(dynamic value) =>
       value == null || '$value'.isEmpty ? '—' : '$value';
@@ -74,7 +77,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
         _title('Le mie squadre', 'APPARTENENZA'),
         const SizedBox(height: 16),
         if (widget.teams.isEmpty)
-          const Text('Non risultano squadre associate in questa sezione.'),
+          Text('Non risultano squadre associate in questa sezione.'),
         for (var index = 0; index < widget.teams.length; index++)
           _team(widget.teams[index], index),
       ],
@@ -86,8 +89,8 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
     children: [
       Text(
         eyebrow,
-        style: const TextStyle(
-          color: siteRed,
+        style: TextStyle(
+          color: colors.secondary,
           fontSize: 10,
           letterSpacing: 2,
           fontWeight: FontWeight.w700,
@@ -96,8 +99,8 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
       const SizedBox(height: 5),
       Text(
         title,
-        style: const TextStyle(
-          color: siteBlue,
+        style: TextStyle(
+          color: colors.onSurface,
           fontSize: 25,
           fontWeight: FontWeight.w900,
           letterSpacing: -.7,
@@ -109,7 +112,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
   Widget _athlete() => Container(
     clipBehavior: Clip.antiAlias,
     decoration: BoxDecoration(
-      color: siteBlue,
+      color: panel,
       borderRadius: BorderRadius.circular(24),
       boxShadow: [
         BoxShadow(
@@ -132,13 +135,13 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                   Container(
                     width: 6,
                     height: 6,
-                    decoration: const BoxDecoration(
-                      color: siteRed,
+                    decoration: BoxDecoration(
+                      color: colors.secondary,
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'OLD SCHOOL',
                       style: TextStyle(
@@ -151,7 +154,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                   ),
                   Text(
                     widget.section == 'calcio' ? 'CALCIO' : 'ESPORT',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white70,
                       fontSize: 9,
                       letterSpacing: 1.5,
@@ -168,7 +171,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                   final identity = Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'LA MIA SCHEDA',
                         style: TextStyle(
                           color: Colors.white70,
@@ -180,7 +183,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                       Text(
                         '${widget.player['nome'] ?? ''} ${widget.player['cognome'] ?? ''}'
                             .trim(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
                           fontSize: 30,
                           fontWeight: FontWeight.w900,
@@ -192,7 +195,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                       if ('${widget.player['ruolo'] ?? ''}'.trim().isNotEmpty)
                         Text(
                           '${widget.player['ruolo']}'.toUpperCase(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -272,7 +275,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                 children: [
                   Text(
                     value(count),
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white,
                       fontSize: 46,
                       fontWeight: FontWeight.w900,
@@ -283,12 +286,12 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                   const SizedBox(height: 6),
                   Text(
                     label,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
             ),
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(bottom: 3),
               child: Icon(Icons.north_east, size: 17, color: Colors.white70),
             ),
@@ -313,7 +316,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
     final placeholder = Center(
       child: Text(
         initials,
-        style: const TextStyle(
+        style: TextStyle(
           color: Colors.white,
           fontSize: 38,
           fontWeight: FontWeight.w900,
@@ -334,7 +337,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            const DecoratedBox(
+            DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -354,11 +357,14 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
               )
             else
               placeholder,
-            const Positioned(
+            Positioned(
               bottom: 0,
               left: 0,
               right: 0,
-              child: SizedBox(height: 3, child: ColoredBox(color: siteRed)),
+              child: SizedBox(
+                height: 3,
+                child: ColoredBox(color: colors.secondary),
+              ),
             ),
           ],
         ),
@@ -376,7 +382,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(18),
       ),
       child: LayoutBuilder(
@@ -396,8 +402,8 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                     children: [
                       Text(
                         value(item.$2),
-                        style: const TextStyle(
-                          color: siteBlue,
+                        style: TextStyle(
+                          color: colors.onSurface,
                           fontWeight: FontWeight.w900,
                           fontSize: 28,
                           height: 1,
@@ -407,8 +413,8 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                       const SizedBox(height: 8),
                       Text(
                         item.$1,
-                        style: const TextStyle(
-                          color: Color(0xff586879),
+                        style: TextStyle(
+                          color: colors.onSurfaceVariant,
                           fontSize: 11,
                         ),
                       ),
@@ -450,7 +456,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
       const SizedBox(width: 7),
       Text(
         label,
-        style: const TextStyle(color: Color(0xff586879), fontSize: 11),
+        style: TextStyle(color: colors.onSurfaceVariant, fontSize: 11),
       ),
     ],
   );
@@ -468,20 +474,20 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                color: siteRed.withValues(alpha: .08),
+                color: colors.secondary.withValues(alpha: .12),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Icon(Icons.history, color: siteRed),
+              child: Icon(Icons.history, color: colors.secondary),
             ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Storico prestazioni',
                     style: TextStyle(
-                      color: siteBlue,
+                      color: colors.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                     ),
@@ -489,13 +495,16 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                   SizedBox(height: 3),
                   Text(
                     'Ogni partita racconta la tua storia',
-                    style: TextStyle(color: Color(0xff586879), fontSize: 11),
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.arrow_forward, color: siteBlue, size: 20),
+            Icon(Icons.arrow_forward, color: colors.onSurface, size: 20),
           ],
         ),
       ),
@@ -511,13 +520,13 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: siteBlue,
+        color: panel,
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'IL TUO IMPATTO',
             style: TextStyle(
               color: Colors.white70,
@@ -529,7 +538,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
           const SizedBox(height: 8),
           Text(
             appearances ? 'Presenze per squadra' : 'Gol per squadra',
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
               fontSize: 22,
               fontWeight: FontWeight.w800,
@@ -564,7 +573,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                             children: [
                               Text(
                                 '${team['nome']}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -573,7 +582,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                               const SizedBox(height: 3),
                               Text(
                                 '${team['torneo_nome'] ?? team['torneo'] ?? ''}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: Colors.white70,
                                   fontSize: 10,
                                 ),
@@ -584,7 +593,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                         const SizedBox(width: 12),
                         Text(
                           value(team[field]),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
                             fontSize: 26,
                             fontWeight: FontWeight.w900,
@@ -620,8 +629,13 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(3),
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xffa80000), siteRed],
+                                  gradient: LinearGradient(
+                                    colors: dark
+                                        ? [
+                                            colors.secondaryContainer,
+                                            colors.secondary,
+                                          ]
+                                        : [const Color(0xffa80000), siteRed],
                                   ),
                                 ),
                               ),
@@ -634,7 +648,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                 ),
               ),
             ),
-          const Text(
+          Text(
             'Confronto tra le tue squadre · dati dei tornei',
             style: TextStyle(color: Colors.white70, fontSize: 10),
           ),
@@ -648,16 +662,22 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
     selected: appearances == selected,
     onSelected: (_) => setState(() => appearances = selected),
     showCheckmark: false,
-    selectedColor: Colors.white,
-    backgroundColor: const Color(0xff2e4154),
+    selectedColor: dark ? colors.primaryContainer : Colors.white,
+    backgroundColor: dark
+        ? colors.surfaceContainerHigh
+        : const Color(0xff2e4154),
     color: WidgetStateProperty.resolveWith(
       (states) => states.contains(WidgetState.selected)
-          ? Colors.white
-          : const Color(0xff2e4154),
+          ? (dark ? colors.primaryContainer : Colors.white)
+          : (dark ? colors.surfaceContainerHigh : const Color(0xff2e4154)),
     ),
     side: BorderSide.none,
     labelStyle: TextStyle(
-      color: appearances == selected ? siteBlue : Colors.white,
+      color: dark
+          ? (appearances == selected
+                ? colors.onPrimaryContainer
+                : colors.onSurface)
+          : (appearances == selected ? siteBlue : Colors.white),
       fontWeight: FontWeight.w700,
       fontSize: 12,
     ),
@@ -666,15 +686,15 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
 
   Widget _team(Map<String, dynamic> team, int index) => Container(
     margin: const EdgeInsets.only(bottom: 14),
-    decoration: const BoxDecoration(
-      border: Border(left: BorderSide(color: Color(0xffdce3ea), width: 2)),
+    decoration: BoxDecoration(
+      border: Border(left: BorderSide(color: colors.outlineVariant, width: 2)),
     ),
     child: Padding(
       padding: const EdgeInsets.only(left: 14),
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colors.surfaceContainerLow,
           borderRadius: BorderRadius.circular(18),
         ),
         child: Column(
@@ -687,7 +707,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                   height: 44,
                   padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
-                    color: const Color(0xfff1f4f7),
+                    color: colors.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: SiteImage(
@@ -706,18 +726,18 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                     children: [
                       Text(
                         '${team['nome'] ?? ''}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
-                          color: siteBlue,
+                          color: colors.onSurface,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                       const SizedBox(height: 3),
                       Text(
                         '${team['torneo_nome'] ?? team['torneo'] ?? ''}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: Color(0xff586879),
+                          color: colors.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -732,22 +752,16 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
               children: [
                 Text(
                   'Gol: ${value(team['reti'])}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                 ),
                 Text(
                   'Presenze: ${value(team['presenze'])}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                 ),
                 if (number(team['media_voti']) > 0)
                   Text(
                     'Media voto: ${team['media_voti']}',
-                    style: const TextStyle(fontSize: 12),
+                    style: TextStyle(fontSize: 12),
                   ),
                 if (number(team['gialli']) > 0)
                   _event(
@@ -773,8 +787,8 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
             const SizedBox(height: 8),
             TextButton.icon(
               onPressed: () => widget.openTeam(team),
-              icon: const Icon(Icons.north_east, size: 16),
-              label: const Text('Vedi squadra'),
+              icon: Icon(Icons.north_east, size: 16),
+              label: Text('Vedi squadra'),
             ),
           ],
         ),
@@ -785,13 +799,13 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
   Widget _tag(String label) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
     decoration: BoxDecoration(
-      color: const Color(0xffe8edf5),
+      color: colors.primaryContainer,
       borderRadius: BorderRadius.circular(6),
     ),
     child: Text(
       label,
-      style: const TextStyle(
-        color: siteBlue,
+      style: TextStyle(
+        color: colors.onSurface,
         fontSize: 10,
         fontWeight: FontWeight.w700,
       ),

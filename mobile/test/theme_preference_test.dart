@@ -27,7 +27,7 @@ void main() {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
     expect(
-      Theme.of(tester.element(find.text('TORNEI OLD SCHOOL'))).brightness,
+      Theme.of(tester.element(find.text('Tornei Old School'))).brightness,
       Brightness.light,
     );
 
@@ -41,7 +41,7 @@ void main() {
       const Color(0xff1c2026),
     );
     expect(
-      Theme.of(tester.element(find.text('TORNEI OLD SCHOOL'))).brightness,
+      Theme.of(tester.element(find.text('Tornei Old School'))).brightness,
       Brightness.dark,
     );
 
@@ -49,7 +49,7 @@ void main() {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
     expect(
-      Theme.of(tester.element(find.text('TORNEI OLD SCHOOL'))).brightness,
+      Theme.of(tester.element(find.text('Tornei Old School'))).brightness,
       Brightness.dark,
     );
   });

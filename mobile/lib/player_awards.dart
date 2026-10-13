@@ -4,7 +4,6 @@ import 'api.dart';
 import 'external_link_button.dart';
 import 'home_dashboard.dart' show SiteImage, openPage;
 import 'main.dart' show TournamentPage;
-import 'theme.dart';
 
 class PlayerAwardsSection extends StatefulWidget {
   const PlayerAwardsSection({
@@ -23,6 +22,7 @@ class PlayerAwardsSection extends StatefulWidget {
 }
 
 class _PlayerAwardsSectionState extends State<PlayerAwardsSection> {
+  ColorScheme get colors => Theme.of(context).colorScheme;
   late Future<List<Map<String, dynamic>>> data;
   void load() {
     data = widget.awards != null
@@ -53,20 +53,20 @@ class _PlayerAwardsSectionState extends State<PlayerAwardsSection> {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const Text(
+      Text(
         'PALMARÈS',
         style: TextStyle(
-          color: siteRed,
+          color: colors.secondary,
           fontSize: 10,
           letterSpacing: 2,
           fontWeight: FontWeight.w700,
         ),
       ),
       const SizedBox(height: 5),
-      const Text(
+      Text(
         'Premi vinti',
         style: TextStyle(
-          color: siteBlue,
+          color: colors.onSurface,
           fontSize: 25,
           fontWeight: FontWeight.w900,
         ),
@@ -89,18 +89,18 @@ class _PlayerAwardsSectionState extends State<PlayerAwardsSection> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Premi momentaneamente non disponibili.'),
+                Text('Premi momentaneamente non disponibili.'),
                 TextButton.icon(
                   onPressed: () => setState(load),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Riprova premi'),
+                  icon: Icon(Icons.refresh),
+                  label: Text('Riprova premi'),
                 ),
               ],
             );
           }
           final awards = snapshot.data!;
           if (awards.isEmpty) {
-            return const Text('Nessun premio vinto in questa sezione.');
+            return Text('Nessun premio vinto in questa sezione.');
           }
           return Column(children: [for (final award in awards) _award(award)]);
         },
@@ -126,10 +126,10 @@ class _PlayerAwardsSectionState extends State<PlayerAwardsSection> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.white,
+        color: colors.surfaceContainerLow,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: Color(0xffe2d7b8)),
+          side: BorderSide(color: colors.outlineVariant),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -177,7 +177,7 @@ class _PlayerAwardsSectionState extends State<PlayerAwardsSection> {
                             ),
                             child: Text(
                               '${award['tipo'] ?? 'Premio'}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xff795b13),
@@ -187,8 +187,8 @@ class _PlayerAwardsSectionState extends State<PlayerAwardsSection> {
                           const SizedBox(height: 7),
                           Text(
                             '${award['premio'] ?? 'Premio'}',
-                            style: const TextStyle(
-                              color: siteBlue,
+                            style: TextStyle(
+                              color: colors.onSurface,
                               fontSize: 17,
                               fontWeight: FontWeight.w800,
                             ),
@@ -197,10 +197,10 @@ class _PlayerAwardsSectionState extends State<PlayerAwardsSection> {
                       ),
                     ),
                     if (internal)
-                      const Icon(
+                      Icon(
                         Icons.chevron_right,
                         size: 20,
-                        color: siteBlue,
+                        color: colors.onSurface,
                       ),
                   ],
                 ),
@@ -211,8 +211,8 @@ class _PlayerAwardsSectionState extends State<PlayerAwardsSection> {
                       '${award['competizione']}',
                     if ('${award['anno'] ?? ''}'.isNotEmpty) '${award['anno']}',
                   ].join(' · '),
-                  style: const TextStyle(
-                    color: Color(0xff637487),
+                  style: TextStyle(
+                    color: colors.onSurfaceVariant,
                     fontSize: 13,
                   ),
                 ),
@@ -220,7 +220,7 @@ class _PlayerAwardsSectionState extends State<PlayerAwardsSection> {
                   const SizedBox(height: 5),
                   Text(
                     'Con ${award['squadra']}',
-                    style: const TextStyle(color: siteBlue, fontSize: 13),
+                    style: TextStyle(color: colors.onSurface, fontSize: 13),
                   ),
                 ],
                 if (target != null && !internal) ...[
