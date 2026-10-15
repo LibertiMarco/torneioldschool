@@ -27,10 +27,15 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713"
     }
 
     buildTypes {
         release {
+            // Deliberate native opt-in, separate from the Dart ad-unit switch.
+            if (providers.gradleProperty("tosAdsMonetization").orNull == "true") {
+                manifestPlaceholders["admobAppId"] = "ca-app-pub-8390787841690316~9774422315"
+            }
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")

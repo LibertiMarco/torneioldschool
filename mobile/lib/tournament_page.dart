@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'ads.dart';
 import 'details.dart';
 import 'home_dashboard.dart' show SiteImage, HomeBlock, openPage;
 import 'tournament_rules.dart';
@@ -309,6 +310,7 @@ class _TournamentPageState extends State<TournamentPage> {
                 },
               ),
               if (tab == 'Classifica') ...[
+                if (!widget.api.preview) const StandingsBanner(),
                 title('Classifica'),
                 phaseSelect(
                   result,

@@ -5,6 +5,12 @@
         android:label="Tornei Old School"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Defaults to Google's sample App ID; production requires explicit opt-in. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
+        <meta-data android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT"
+            android:value="true" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

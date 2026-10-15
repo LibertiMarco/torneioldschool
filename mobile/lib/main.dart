@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'auth.dart';
+import 'ads.dart';
 import 'access_gate.dart';
 import 'staff_dashboard.dart';
 import 'account_page.dart';
@@ -66,6 +67,9 @@ class _TosAppState extends State<TosApp> {
   void initState() {
     super.initState();
     _loadTheme();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !widget.api.preview) AdsController.instance.start();
+    });
   }
 
   Future<void> _loadTheme() async {
@@ -253,6 +257,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         actions: [
+          const AdsPrivacyButton(),
           IconButton(
             tooltip: 'Aspetto chiaro o scuro',
             onPressed: widget.onTheme,
