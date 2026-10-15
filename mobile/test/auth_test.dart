@@ -32,6 +32,48 @@ const testUser = {
 };
 
 void main() {
+  test('Content reads use the session, refresh expired tokens and detach on logout', () async {
+    final store = MemorySessionStore()
+      ..value = jsonEncode({'access': 'old', 'refresh': 'refresh'});
+    final contentHeaders = <String?>[];
+    final api = TosApi(
+      baseUrl: Uri.parse('https://example.test'),
+      client: MockClient((request) async {
+        if (request.url.path.endsWith('/token.php')) {
+          expect(jsonDecode(request.body)['grant_type'], 'refresh_token');
+          return http.Response(
+            jsonEncode({
+              'access_token': 'new',
+              'refresh_token': 'new-refresh',
+              'user': testUser,
+            }),
+            200,
+          );
+        }
+        if (request.url.path.endsWith('/me.php')) {
+          expect(request.headers['Authorization'], 'Bearer old');
+          return http.Response(jsonEncode({'user': testUser}), 200);
+        }
+        if (request.url.path.endsWith('/logout.php')) {
+          expect(request.headers['Authorization'], 'Bearer new');
+          return http.Response('{}', 200);
+        }
+        contentHeaders.add(request.headers['Authorization']);
+        if (request.headers['Authorization'] == 'Bearer old') {
+          return http.Response('Expired', 401);
+        }
+        expect(request.url.queryParameters['torneo'], 'Cup');
+        return http.Response('[]', 200);
+      }),
+    );
+    final auth = TosAuth(api, storage: store);
+    await api.standings('Cup');
+    await auth.restore();
+    await api.standings('Cup');
+    await auth.logout();
+    await api.standings('Cup');
+    expect(contentHeaders, [null, 'Bearer old', 'Bearer new', null]);
+  });
   test('Staff controller headers use the refreshed database role and keep bearer out of URLs', () async {
     final store = MemorySessionStore()
       ..value = jsonEncode({'access': 'old', 'refresh': 'refresh'});

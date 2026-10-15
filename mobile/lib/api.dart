@@ -39,6 +39,8 @@ class TosApi {
   }
   final Uri baseUrl;
   final http.Client client;
+  Future<dynamic> Function(String path, Map<String, String>? query)?
+  authenticatedRead;
   bool get preview => false;
   Uri uri(String path, [Map<String, String>? query]) => baseUrl.replace(
     path: '${baseUrl.path.replaceFirst(RegExp(r'/$'), '')}/$path',
@@ -52,6 +54,14 @@ class TosApi {
     String? accessToken,
     List<ApiUpload>? uploads,
   }) async {
+    final sessionRead = authenticatedRead;
+    if (sessionRead != null &&
+        accessToken == null &&
+        body == null &&
+        (uploads == null || uploads.isEmpty) &&
+        path.startsWith('api/')) {
+      return sessionRead(path, query);
+    }
     final headers = <String, String>{'Accept': 'application/json'};
     if (accessToken != null) headers['Authorization'] = 'Bearer $accessToken';
     try {
@@ -92,17 +102,13 @@ class TosApi {
           status: 401,
         );
       }
-      if (response.statusCode == 403) {
-        throw const ApiError(
-          'Non hai i permessi per visualizzare questo contenuto.',
-          status: 403,
-        );
-      }
       try {
         data = jsonDecode(utf8.decode(response.bodyBytes));
       } on FormatException {
         throw ApiError(
-          'Servizio temporaneamente non disponibile.',
+          response.statusCode == 403
+              ? 'Non hai i permessi per visualizzare questo contenuto.'
+              : 'Servizio temporaneamente non disponibile.',
           status: response.statusCode,
         );
       }
@@ -114,6 +120,8 @@ class TosApi {
                 (path.startsWith('api/mobile/v1/') ||
                     path == 'app-preview/api.php')
             ? error['message']?.toString() ?? 'Richiesta non riuscita.'
+            : response.statusCode == 403
+            ? 'Non hai i permessi per visualizzare questo contenuto.'
             : 'Servizio temporaneamente non disponibile.';
         throw ApiError(message, status: response.statusCode);
       }

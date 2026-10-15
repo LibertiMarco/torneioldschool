@@ -286,7 +286,7 @@ class _HomePageState extends State<HomePage> {
                 Expanded(
                   child: selectedPage == 0
                       ? HomeDashboard(
-                          key: ValueKey('home-$section'),
+                          key: ValueKey('home-$section-${auth.user?['id']}'),
                           api: widget.api,
                           section: section,
                           onTournaments: () => setState(() => page = 1),

@@ -36,6 +36,11 @@ accedere. Per gli ospiti anche HTTP 403 propone il login; per gli utenti già
 autenticati indica la mancanza dei permessi. Dopo il login il pulsante ricarica
 il contenuto richiesto. Il controllo copre pannelli dati, dettagli, storico e premi.
 
+La build 4 collega anche le letture dei contenuti alla sessione mobile: invia il
+bearer token, rinnova automaticamente un token scaduto e lo rimuove al logout.
+La Home ricarica i suoi blocchi al cambio utente per eliminare gli errori
+conservati dalla navigazione come ospite.
+
 L'icona Android e il catalogo icone iOS usano il logo originale
 `img/logo_old_school_1200.png`, su fondo bianco. Android include icone adattive.
 Per rigenerare tutte le dimensioni: `mobile/generate-app-icons.ps1`.

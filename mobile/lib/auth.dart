@@ -48,6 +48,10 @@ class TosAuth extends ChangeNotifier {
       base64UrlEncode(sha256.convert(ascii.encode(verifier)).bytes)
           .replaceAll('=', '');
 
+  void _connectReads() {
+    api.authenticatedRead = (path, query) => authorized(path, query: query);
+  }
+
   Future<void> _save(Map<String, dynamic> tokens) async {
     final access = tokens['access_token'] as String;
     final refresh = tokens['refresh_token'] as String;
@@ -57,6 +61,7 @@ class TosAuth extends ChangeNotifier {
     );
     _access = access;
     _refresh = refresh;
+    _connectReads();
     user = Map<String, dynamic>.from(tokens['user'] as Map);
     notifyListeners();
   }
@@ -68,6 +73,7 @@ class TosAuth extends ChangeNotifier {
       final tokens = jsonDecode(saved) as Map;
       _access = tokens['access'] as String;
       _refresh = tokens['refresh'] as String;
+      _connectReads();
       final response = await authorized('api/mobile/v1/me.php');
       user = Map<String, dynamic>.from(response['user'] as Map);
     } on ApiError catch (failure) {
@@ -205,6 +211,7 @@ class TosAuth extends ChangeNotifier {
   }
 
   Future<void> _clear() async {
+    api.authenticatedRead = null;
     _access = null;
     _refresh = null;
     user = null;

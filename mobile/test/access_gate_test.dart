@@ -32,7 +32,56 @@ class AccessApi extends DemoApi {
   }
 }
 
+class LoginRankingApi extends AccessApi {
+  bool signedIn = false;
+  int rankingReads = 0;
+  @override
+  Future<Map<String, dynamic>> playerRanking({
+    String order = 'gol',
+    int page = 1,
+    int perPage = 5,
+    String search = '',
+  }) {
+    rankingReads++;
+    if (!signedIn) {
+      return Future.error(const ApiError('Accesso richiesto.', status: 401));
+    }
+    return super.playerRanking(
+      order: order,
+      page: page,
+      perPage: perPage,
+      search: search,
+    );
+  }
+}
+
 void main() {
+  testWidgets('Logging in from another tab reloads guest homepage errors', (
+    tester,
+  ) async {
+    final api = LoginRankingApi();
+    final auth = DemoAuth(api);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => AppAuthScope(auth: auth, child: child!),
+        home: HomePage(api: api, auth: auth, onTheme: () {}),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Accedi per visualizzare questo contenuto.'),
+      findsWidgets,
+    );
+    final guestReads = api.rankingReads;
+    api.signedIn = true;
+    await auth.login();
+    await tester.pumpAndSettle();
+    expect(api.rankingReads, greaterThan(guestReads));
+    expect(
+      find.text('Accedi per visualizzare questo contenuto.'),
+      findsNothing,
+    );
+  });
   testWidgets('Access errors offer login and reload after authentication', (
     tester,
   ) async {
