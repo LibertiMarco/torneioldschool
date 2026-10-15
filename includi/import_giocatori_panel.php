@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'impor
             $check = $conn->prepare('SELECT id FROM squadre WHERE id = ? AND torneo = ? FOR UPDATE');
             $check->bind_param('is', $teamId, $torneo); $check->execute();
             if (!$check->get_result()->fetch_assoc()) throw new RuntimeException('La squadra non è più disponibile.');
-            $summary = ['elaborati' => count($rows), 'esistenti' => 0, 'nuovi' => 0, 'presenti' => 0, 'sospesi' => 0];
+            $summary = ['elaborati' => count($rows), 'esistenti' => 0, 'nuovi' => 0, 'presenti' => 0, 'sospesi' => 0, 'saltati' => []];
             $pending = [];
             foreach ($rows as $r) {
                 if (!$r['nome'] || !$r['cognome'] || mb_strlen($r['nome']) > 255 || mb_strlen($r['cognome']) > 255) {
@@ -62,7 +62,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'impor
                     if (!$id) throw new RuntimeException('Creazione non riuscita.');
                     $index[$key][] = ['id' => $id, 'nome' => $r['nome'], 'cognome' => $r['cognome'], 'foto' => '/img/giocatori/unknown.jpg'];
                 }
-                if ($pivot->esisteAssociazione($id, $teamId)) { $summary['presenti']++; continue; }
+                if ($pivot->esisteAssociazione($id, $teamId)) {
+                    $summary['presenti']++;
+                    $summary['saltati'][] = $r['nome'] . ' ' . $r['cognome'];
+                    continue; // Preserve the player's data and existing team roles/statistics.
+                }
                 if (!$pivot->aggiungiDaImport($id, $teamId, $r['portiere'], $r['capitano'])) throw new RuntimeException('Associazione non riuscita.');
                 $summary[$new ? 'nuovi' : 'esistenti']++;
             }
@@ -84,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'impor
 <header class="import-header"><p class="import-eyebrow">Gestione rosa</p><h2 class="import-title">Import Giocatori</h2><p class="import-intro">Dalla foto alla squadra: leggi la lista, controlla i nomi e conferma.</p><ol class="import-steps" aria-label="Fasi importazione"><li><span>1</span> Scegli la squadra</li><li><span>2</span> Leggi la foto</li><li><span>3</span> Controlla e importa</li></ol></header>
 <?php if ($error): ?><p class="import-alert" role="alert"><?= import_h($error) ?></p><?php endif; ?>
 <?php if ($summary): ?><div class="import-alert" role="status"><h2>Import completato</h2><ul>
-<li><?= $summary['elaborati'] ?> giocatori elaborati</li><li><?= $summary['esistenti'] ?> giocatori esistenti aggiunti alla squadra</li><li><?= $summary['nuovi'] ?> nuovi giocatori creati</li><li><?= $summary['presenti'] ?> giocatori già presenti nella squadra</li><li><?= $summary['sospesi'] ?> elementi da verificare qui sotto</li></ul></div><?php endif; ?>
+<li><?= $summary['elaborati'] ?> giocatori elaborati</li><li><?= $summary['esistenti'] ?> giocatori esistenti aggiunti alla squadra</li><li><?= $summary['nuovi'] ?> nuovi giocatori creati</li><li><?= $summary['presenti'] ?> giocatori già presenti nella squadra, saltati senza modifiche</li><li><?= $summary['sospesi'] ?> elementi da verificare qui sotto</li></ul><?php if ($summary['saltati']): ?><p>Giocatori saltati: <?= import_h(implode(', ', $summary['saltati'])) ?>.</p><?php endif; ?></div><?php endif; ?>
 <form method="post" action="/api/gestione_giocatori.php" class="admin-form import-form" id="source-form">
 <?= csrf_field('import_giocatori') ?><input type="hidden" name="action" value="import">
 <div class="import-team-grid"><label>Torneo <select name="torneo" id="torneo" required><option value="">Seleziona torneo</option><?php foreach (array_unique(array_column($teams, 'torneo')) as $slug): ?><option <?= $torneo === $slug ? 'selected' : '' ?> value="<?= import_h($slug) ?>"><?= import_h($slug) ?></option><?php endforeach; ?></select></label>
@@ -96,15 +100,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'impor
 <p class="import-hint">La prima parola viene proposta come Nome, le successive come Cognome: controlla i nomi composti nella preview. La foto viene letta nel browser.</p>
 <div class="import-actions"><button type="submit">Mostra anteprima &rarr;</button></div></fieldset></form>
 <?php if ($rows && $team): ?>
-<h2>Anteprima — <?= import_h($team['nome']) ?> (<?= import_h($torneo) ?>)</h2><p>Correggi i dati, poi premi “Aggiorna anteprima” per ricontrollare le corrispondenze. Le omonimie senza scelta resteranno in sospeso. I giocatori già presenti non vengono modificati.</p>
+<h2>Anteprima — <?= import_h($team['nome']) ?> (<?= import_h($torneo) ?>)</h2><p>Correggi i dati, poi premi “Aggiorna anteprima” per ricontrollare le corrispondenze. Le omonimie senza scelta resteranno in sospeso. Puoi importare anche una lista completa per aggiungere giocatori alla rosa: quelli già associati vengono segnalati e saltati automaticamente, senza modificare dati, ruoli o statistiche.</p>
 <form method="post" action="/api/gestione_giocatori.php" class="admin-form import-form"><?= csrf_field('import_giocatori') ?><input type="hidden" name="action" value="import"><input type="hidden" name="team" value="<?= $teamId ?>"><input type="hidden" name="torneo" value="<?= import_h($torneo) ?>">
 <div class="table-wrap"><table><thead><tr><th>Nome</th><th>Cognome</th><th>Portiere</th><th>Capitano</th><th>Stato / scelta</th><th>Escludi</th></tr></thead><tbody>
-<?php foreach ($rows as $i => $r): $matches = $index[import_player_key($r['nome'], $r['cognome'])] ?? []; $suggestions = !$matches ? import_player_suggestions($r['nome'], $r['cognome'], $index) : []; ?>
+<?php foreach ($rows as $i => $r): $matches = $index[import_player_key($r['nome'], $r['cognome'])] ?? []; $suggestions = !$matches ? import_player_suggestions($r['nome'], $r['cognome'], $index) : [];
+$alreadyPresent = false;
+foreach ($matches as $match) {
+    if ((count($matches) === 1 || (int)$match['id'] === $r['selected']) && $pivot->esisteAssociazione($match['id'], $teamId)) $alreadyPresent = true;
+}
+?>
 <tr><td><input aria-label="Nome riga <?= $i+1 ?>" type="text" name="rows[<?= $i ?>][nome]" value="<?= import_h($r['nome']) ?>" maxlength="255" required></td><td><input aria-label="Cognome riga <?= $i+1 ?>" type="text" name="rows[<?= $i ?>][cognome]" value="<?= import_h($r['cognome']) ?>" maxlength="255" required></td>
 <?php foreach (['portiere','capitano'] as $flag): ?><td><input aria-label="<?= ucfirst($flag) ?> riga <?= $i+1 ?>" type="checkbox" name="rows[<?= $i ?>][<?= $flag ?>]" <?= $r[$flag] ? 'checked' : '' ?>></td><?php endforeach; ?>
 <td><?php if (isset($r['issue'])): ?><?= import_h($r['issue']) ?><br><?php endif; ?>
+<?php if ($alreadyPresent): ?><strong>Già associato alla squadra: verrà saltato senza modifiche.</strong><?php endif; ?>
 <?php if (count($matches) > 1): ?><strong>ATTENZIONE: trovati più giocatori chiamati <?= import_h($r['nome'].' '.$r['cognome']) ?>.</strong><select aria-label="Scegli giocatore riga <?= $i+1 ?>" name="rows[<?= $i ?>][selected]"><option value="0">Omonimia da verificare</option><?php foreach ($matches as $m): $assocs = $pivot->getSquadrePerGiocatore($m['id'])->fetch_all(MYSQLI_ASSOC); ?><option value="<?= (int)$m['id'] ?>" <?= $r['selected'] === (int)$m['id'] ? 'selected' : '' ?>>#<?= (int)$m['id'] ?> <?= import_h($m['nome'].' '.$m['cognome']) ?> — <?= import_h(implode(', ', array_map(static function($a){return $a['nome'].' ('.$a['torneo'].')';}, $assocs))) ?></option><?php endforeach; ?></select>
-<?php elseif ($matches): ?><?= $pivot->esisteAssociazione($matches[0]['id'], $teamId) ? 'Già presente nella squadra' : 'Giocatore esistente' ?><?php elseif ($suggestions): ?><div class="import-suggestions"><strong>Possibile errore di lettura. Intendevi:</strong><?php foreach ($suggestions as $suggestion): ?><button type="button" class="import-suggestion" data-nome="<?= import_h($suggestion['nome']) ?>" data-cognome="<?= import_h($suggestion['cognome']) ?>"><?= import_h($suggestion['nome'].' '.$suggestion['cognome']) ?></button><?php endforeach; ?><label><input type="checkbox" name="rows[<?= $i ?>][confirm_new]" <?= !empty($r['confirm_new']) ? 'checked' : '' ?>> Confermo che è un nuovo giocatore</label></div><?php else: ?>Nuovo giocatore<?php endif; ?></td>
+<?php elseif ($matches): ?><?= $alreadyPresent ? 'Nessuna operazione su questo giocatore' : 'Giocatore esistente: verrà aggiunto alla squadra' ?><?php elseif ($suggestions): ?><div class="import-suggestions"><strong>Possibile errore di lettura. Intendevi:</strong><?php foreach ($suggestions as $suggestion): ?><button type="button" class="import-suggestion" data-nome="<?= import_h($suggestion['nome']) ?>" data-cognome="<?= import_h($suggestion['cognome']) ?>"><?= import_h($suggestion['nome'].' '.$suggestion['cognome']) ?></button><?php endforeach; ?><label><input type="checkbox" name="rows[<?= $i ?>][confirm_new]" <?= !empty($r['confirm_new']) ? 'checked' : '' ?>> Confermo che è un nuovo giocatore</label></div><?php else: ?>Nuovo giocatore<?php endif; ?></td>
 <td><input aria-label="Escludi riga <?= $i+1 ?>" type="checkbox" name="rows[<?= $i ?>][skip]"></td></tr><?php endforeach; ?>
 </tbody></table></div><div class="import-actions"><button class="import-secondary" type="submit">Aggiorna anteprima</button><button type="submit" name="commit" value="1">Conferma importazione &rarr;</button></div></form><?php endif; ?>
 </div></section>
