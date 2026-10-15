@@ -32,6 +32,10 @@ android {
 
     buildTypes {
         release {
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             // Deliberate native opt-in, separate from the Dart ad-unit switch.
             if (providers.gradleProperty("tosAdsMonetization").orNull == "true") {
                 manifestPlaceholders["admobAppId"] = "ca-app-pub-8390787841690316~9774422315"

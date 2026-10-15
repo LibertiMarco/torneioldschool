@@ -97,3 +97,25 @@ Riferimenti: [pacchetto ufficiale](https://pub.dev/packages/google_mobile_ads),
 [setup](https://developers.google.com/admob/flutter/quick-start),
 [banner adattivi e ID test](https://developers.google.com/admob/flutter/banner),
 [consenso UMP](https://developers.google.com/admob/flutter/privacy).
+
+## Correzione crash release su Android (15 ottobre 2026)
+
+Il crash rilevato su OPPO CPH2529 / Android 15 avveniva prima di Flutter:
+`Unable to get provider androidx.startup.InitializationProvider`, causato da
+`Failed to create an instance of androidx.work.impl.WorkDatabase`.
+La configurazione Room 2.2.5 transitiva conserva la classe del database, ma
+non il costruttore senza argomenti usato tramite reflection: il precedente
+`usage.txt` R8 riportava `WorkDatabase_Impl.public void <init>()` tra i membri
+rimossi. Non era un errore di login o del consenso.
+
+La release include ora `android/app/proguard-rules.pro`, con una regola
+limitata a `androidx.work.impl.WorkDatabase_Impl` e al suo costruttore pubblico.
+Le ottimizzazioni del resto dell'app rimangono attive.
+
+Verifica: nuova build `flutter build apk --release` riuscita; costruttore
+presente nel mapping R8 e non più nei membri rimossi; installazione `adb
+install -r` sul telefono riuscita senza disinstallazione o cancellazione dati;
+tre avvii a freddo consecutivi con processo persistente, senza crash per il
+nuovo processo. UMP ha caricato correttamente il modulo (`load_complete: ok`).
+Le scelte privacy restano all'utente; non sono stati attivati annunci reali.
+L'APK corretto sostituisce il pacchetto del download admin.
