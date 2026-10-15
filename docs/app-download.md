@@ -5,6 +5,12 @@ admin e restituisce `cache/mobile-builds/tornei-old-school.apk`. La directory de
 pacchetti è bloccata all'accesso HTTP diretto. Il download è disponibile agli
 amministratori del sito, non ai visitatori.
 
+L'endpoint verifica la directory ZIP finale dell'APK prima del download: un
+caricamento troncato restituisce HTTP 503. Durante l'invio disabilita i buffer
+PHP e la compressione, libera la sessione e rimuove il limite di esecuzione PHP.
+Questo evita di accumulare l'intero pacchetto nella memoria della richiesta.
+Verifica locale: `C:\xampp\php\php.exe tests/android_package_test.php`.
+
 Per aggiornare il pacchetto, dalla directory `mobile`:
 
 ```powershell
