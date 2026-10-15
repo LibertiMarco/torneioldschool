@@ -1,5 +1,38 @@
 # Provare l'app su iPhone da Windows
 
+## Aggiornamento AdMob del 15 ottobre 2026
+
+Nel progetto sono ora predisposti nativo Home e banner tornei anche per iOS,
+con UMP prima delle richieste, opzioni privacy e **soli ID Google di test iOS**.
+L'app iOS non è ancora stata registrata dall'utente in AdMob. Android e iOS
+usano identificativi distinti; iOS resta in test anche se viene impostato
+`TOS_ADS_MONETIZATION=true`. Nessuna monetizzazione reale è stata autorizzata.
+
+Sono presenti Podfile compatibile con i plugin CocoaPods e con Swift Package
+Manager, include xcconfig Pods, App ID di esempio e lista SKAdNetwork della
+guida Google. Non aggiungere manualmente un secondo SDK AdMob a Xcode:
+la dipendenza è fornita dal plugin Flutter.
+
+Prima della firma occorre eseguire `flutter pub get` e la build iOS su Mac o
+nel workflow macOS; CocoaPods deve essere installato. Il controllo locale
+Windows copre solo Dart, XML e test con variante iOS, non la compilazione
+nativa. I quattro test obsoleti della suite completa documentati in
+`mobile/ADMOB.md` restano un blocco noto per gli attuali workflow CI: la build
+non è stata avviata o dichiarata riuscita.
+
+Poi provare su iPhone avvio, login, navigazione, moduli UMP, modifica/revoca,
+banner adattivo e scheda nativa (font grandi, orientamento e chiaro/scuro).
+I messaggi del sample App ID possono differire da quelli dell'app reale.
+Non selezionare automaticamente consensi durante le prove.
+
+Per completare la configurazione reale futura, creare in AdMob una nuova app
+**iOS**, un'unità Banner e un'unità Nativo e fornire tutti e tre gli ID.
+Gli ID Android non sono utilizzabili su iOS. La disponibilità di tali ID non
+abilita da sola la monetizzazione.
+
+Le sezioni sotto descrivono il percorso di firma/distribuzione e contengono
+anche informazioni storiche sulla preparazione iniziale dell'app.
+
 Il telefono dell'utente è un iPhone; ha un normale Apple ID e non è iscritto all'Apple Developer Program. La compilazione iOS non è stata eseguita e non esiste ancora una IPA installabile. Il progetto resta una base: la parità completa con il sito, comprese le operazioni admin, è ancora da sviluppare.
 
 ## Account necessario

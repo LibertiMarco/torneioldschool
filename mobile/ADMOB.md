@@ -9,8 +9,12 @@ Nessuna monetizzazione reale è abilitata e nessuna pubblicazione sugli store è
 - Android App ID di test: `ca-app-pub-3940256099942544~3347511713`.
 - Banner adattivo Android di test: `ca-app-pub-3940256099942544/9214589741`.
 - Nativo Android di test: `ca-app-pub-3940256099942544/2247696110`.
-- iOS: solo App ID Google di esempio `ca-app-pub-3940256099942544~1458002511`;
-  inizializzazione, UMP e richieste annunci disabilitati su questa piattaforma.
+- iOS App ID di test: `ca-app-pub-3940256099942544~1458002511`.
+- iOS banner di test: `ca-app-pub-3940256099942544/2435281174`.
+- iOS nativo di test: `ca-app-pub-3940256099942544/3986624511`.
+- Android e iOS: aggiornamento UMP, raccolta/modifica consenso e richieste
+  pubblicitarie solo quando `canRequestAds()` lo permette. iOS usa sempre
+  gli ID di test, anche con opt-in monetizzazione, finché mancano i suoi ID reali.
 - Web, desktop e anteprima demo: nessuna inizializzazione o richiesta annunci.
 - Anche una build release usa gli ID di test senza abilitazione esplicita.
 
@@ -87,13 +91,24 @@ accettazione, rifiuto, riapertura opzioni, revoca, errore rete, rotazione,
 schermi stretti e uscita/rientro dalla classifica. Nessun identificativo di
 dispositivo o forzatura geografica è incluso nelle build attuali.
 
-Per iOS, quando disponibili, inserire **App ID e banner ID iOS separati**,
-sostituire l'App ID di esempio in Info.plist ed estendere esplicitamente la
-selezione piattaforma nel controller e nell'unità banner. Verificare su Mac
-la risoluzione dei plugin, gli eventuali SKAdNetworkIdentifier richiesti dal
-SDK e le dichiarazioni privacy/App Store prima di abilitare annunci iOS.
-Non riutilizzare gli identificativi Android. Nessuna richiesta ATT è stata
-aggiunta a questa configurazione iOS disabilitata.
+Per iOS, quando disponibili, predisporre **App ID, banner ID e nativo ID iOS
+separati** dietro un opt-in esplicito, lasciando i sample ID in tutte le build
+di sviluppo. Non sostituire indiscriminatamente gli ID di test né riutilizzare
+quelli Android. Verificare su Mac la risoluzione dei plugin e su iPhone i
+moduli UMP, la revoca, la navigazione, SafeArea, font grandi e il tema scuro.
+Prima di distribuire la build completare dichiarazioni privacy/App Store.
+Nessuna richiesta ATT è stata aggiunta: gli annunci possono essere richiesti
+senza IDFA; un eventuale flusso IDFA/ATT futuro richiede una configurazione
+dedicata, distinta dal consenso UMP.
+
+`ios/Podfile` deriva dal template della versione Flutter installata e permette
+ai plugin che richiedono CocoaPods (incluso AdMob) di convivere con Swift
+Package Manager già presente nel progetto. Include i target Runner/RunnerTests,
+gli hook Flutter e un minimo iOS 15 per i pod, senza abbassare eventuali minimi
+superiori. I file Debug/Release.xcconfig includono le configurazioni Pods.
+Info.plist include i 50 SKAdNetworkIdentifier della guida Google del 15 ottobre
+2026: [configurazione iOS](https://developers.google.com/admob/ios/quick-start).
+L'elenco dovrà essere ricontrollato prima di una distribuzione reale.
 
 ## Verifiche del 15 ottobre 2026
 
@@ -175,3 +190,24 @@ Scheda di test verificata visivamente nel feed; validatore AdMob nativo:
 “No implementation issues found”. Nessun nuovo crash del processo nei log
 letti. L'APK verificato sostituisce il download admin. Nessun annuncio è
 stato cliccato; nessun consenso è stato scelto automaticamente.
+
+## Preparazione supporto iOS (15 ottobre 2026)
+
+Abilitato il percorso iOS per SDK/UMP e scelti ID ufficiali iOS distinti per
+entrambi i formati. La registrazione dell'app iOS in AdMob non è ancora stata
+eseguita dall'utente: nessun ID reale iOS viene inventato o riutilizzato.
+Le unità reali Android restano dietro i precedenti opt-in espliciti.
+
+Verifiche: `flutter analyze` senza problemi; 27 test mirati superati, compresi
+banner/nativo con variante piattaforma iOS, controllo degli ID effettivamente
+richiesti, revoca, rilascio delle route, blocco web/desktop e protezione degli
+ID iOS anche con monetizzazione richiesta. Info.plist parsato come XML, App ID
+iOS di esempio verificato e 50 identificativi SKAdNetwork unici.
+
+Non eseguibili su questo host Windows: `pod install`, controllo Ruby del
+Podfile, compilazione/linking Xcode e prove su iPhone. Nessuna IPA firmata è
+stata generata o distribuita; nessun workflow TestFlight è stato avviato.
+Il workflow manuale `ios-verification` in `codemagic.yaml` è il prossimo
+controllo nativo su macOS; non va confuso con i test Flutter su piattaforma
+simulata. Le quattro aspettative obsolete della suite completa già documentate
+devono essere risolte prima che quel workflow possa completare tutti gli step.

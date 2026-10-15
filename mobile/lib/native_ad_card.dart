@@ -60,10 +60,11 @@ class _NativeCardState extends State<_NativeCard> {
     final colors = widget.colors;
     final background = colors.surfaceContainerLow;
     final ad = NativeAd(
-      adUnitId: androidNativeId(
+      adUnitId: nativeIdForPlatform(
+        defaultTargetPlatform,
         release: kReleaseMode,
         monetization: const bool.fromEnvironment('TOS_ADS_MONETIZATION'),
-      ),
+      )!,
       request: const AdRequest(),
       nativeAdOptions: NativeAdOptions(
         videoOptions: VideoOptions(startMuted: true),

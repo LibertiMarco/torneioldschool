@@ -15,6 +15,37 @@ String androidNativeId({required bool release, required bool monetization}) =>
     ? 'ca-app-pub-8390787841690316/2123997150'
     : 'ca-app-pub-3940256099942544/2247696110';
 
+bool supportsMobileAds({required bool web, required TargetPlatform platform}) =>
+    !web &&
+    (platform == TargetPlatform.android || platform == TargetPlatform.iOS);
+
+String? bannerIdForPlatform(
+  TargetPlatform platform, {
+  required bool release,
+  required bool monetization,
+}) => switch (platform) {
+  TargetPlatform.android => androidBannerId(
+    release: release,
+    monetization: monetization,
+  ),
+  // iOS production IDs are deliberately unavailable until supplied separately.
+  TargetPlatform.iOS => 'ca-app-pub-3940256099942544/2435281174',
+  _ => null,
+};
+
+String? nativeIdForPlatform(
+  TargetPlatform platform, {
+  required bool release,
+  required bool monetization,
+}) => switch (platform) {
+  TargetPlatform.android => androidNativeId(
+    release: release,
+    monetization: monetization,
+  ),
+  TargetPlatform.iOS => 'ca-app-pub-3940256099942544/3986624511',
+  _ => null,
+};
+
 abstract class AdsPrivacyBackend {
   Future<void> update();
   Future<void> collect();
@@ -68,10 +99,9 @@ class GoogleAdsPrivacy implements AdsPrivacyBackend {
 class AdsController extends ChangeNotifier {
   AdsController({required this.enabled, required this.backend});
   static final instance = AdsController(
-    // iOS remains disabled until its own App ID and ad unit are supplied.
+    // Both mobile platforms use their own official sample IDs by default.
     enabled:
-        !kIsWeb &&
-        defaultTargetPlatform == TargetPlatform.android &&
+        supportsMobileAds(web: kIsWeb, platform: defaultTargetPlatform) &&
         !const bool.fromEnvironment('TOS_PREVIEW'),
     backend: GoogleAdsPrivacy(),
   );
@@ -189,10 +219,11 @@ class _AdaptiveBannerState extends State<_AdaptiveBanner> {
         return;
       }
       final ad = BannerAd(
-        adUnitId: androidBannerId(
+        adUnitId: bannerIdForPlatform(
+          defaultTargetPlatform,
           release: kReleaseMode,
           monetization: const bool.fromEnvironment('TOS_ADS_MONETIZATION'),
-        ),
+        )!,
         size: size,
         request: const AdRequest(),
         listener: BannerAdListener(

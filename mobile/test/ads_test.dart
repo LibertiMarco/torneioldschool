@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/src/ad_instance_manager.dart';
 import 'package:tornei_old_school/ads.dart';
 import 'package:tornei_old_school/native_ad_card.dart';
@@ -61,63 +62,118 @@ void main() {
     },
   );
 
-  for (final native in [false, true]) {
-    testWidgets(
-      '${native ? 'native' : 'banner'}: covered routes dispose the ad; return reloads; revocation disposes',
-      (tester) async {
-        final controller = AdsController(
-          enabled: true,
-          backend: PrivacyFake()..allowed = true,
-        );
-        await controller.start();
-        final calls = <String>[];
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          instanceManager.channel,
-          (call) async {
-            calls.add(call.method);
-            return null;
-          },
-        );
-        addTearDown(
-          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+  for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+    for (final native in [false, true]) {
+      testWidgets(
+        '$platform ${native ? 'native' : 'banner'}: covered routes dispose the ad; return reloads; revocation disposes',
+        (tester) async {
+          final controller = AdsController(
+            enabled: true,
+            backend: PrivacyFake()..allowed = true,
+          );
+          await controller.start();
+          final calls = <String>[];
+          final requestedIds = <String>[];
+          tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
             instanceManager.channel,
-            null,
-          ),
-        );
-        final navigator = GlobalKey<NavigatorState>();
-        await tester.pumpWidget(
-          MaterialApp(
-            navigatorKey: navigator,
-            home: Scaffold(
-              body: native
-                  ? HomeNativeAdCard(controller: controller)
-                  : AdaptiveAdBanner(controller: controller),
+            (call) async {
+              calls.add(call.method);
+              if (call.method == 'loadNativeAd' ||
+                  call.method == 'loadBannerAd') {
+                requestedIds.add((call.arguments as Map)['adUnitId'] as String);
+              }
+              return null;
+            },
+          );
+          addTearDown(
+            () => tester.binding.defaultBinaryMessenger
+                .setMockMethodCallHandler(instanceManager.channel, null),
+          );
+          final navigator = GlobalKey<NavigatorState>();
+          await tester.pumpWidget(
+            MaterialApp(
+              navigatorKey: navigator,
+              home: Scaffold(
+                body: native
+                    ? HomeNativeAdCard(controller: controller)
+                    : AdaptiveAdBanner(controller: controller),
+              ),
             ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        final loadMethod = native ? 'loadNativeAd' : 'loadBannerAd';
-        expect(calls.where((c) => c == loadMethod).length, 1);
-        navigator.currentState!.push(
-          MaterialPageRoute<void>(
-            builder: (_) => const Scaffold(body: Text('Dettaglio')),
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(calls.where((c) => c == 'disposeAd').length, 1);
-        expect(calls.where((c) => c == loadMethod).length, 1);
-        navigator.currentState!.pop();
-        await tester.pumpAndSettle();
-        expect(calls.where((c) => c == loadMethod).length, 2);
-        await controller.showPrivacyOptions();
-        await tester.pumpAndSettle();
-        expect(calls.where((c) => c == 'disposeAd').length, 2);
-        await tester.pumpWidget(const SizedBox());
-        await tester.pumpAndSettle();
-        controller.dispose();
-      },
-    );
+          );
+          await tester.pumpAndSettle();
+          final loadMethod = native ? 'loadNativeAd' : 'loadBannerAd';
+          expect(calls.where((c) => c == loadMethod).length, 1);
+          expect(
+            requestedIds.single,
+            platform == TargetPlatform.iOS
+                ? (native
+                      ? 'ca-app-pub-3940256099942544/3986624511'
+                      : 'ca-app-pub-3940256099942544/2435281174')
+                : (native
+                      ? 'ca-app-pub-3940256099942544/2247696110'
+                      : 'ca-app-pub-3940256099942544/9214589741'),
+          );
+          navigator.currentState!.push(
+            MaterialPageRoute<void>(
+              builder: (_) => const Scaffold(body: Text('Dettaglio')),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(calls.where((c) => c == 'disposeAd').length, 1);
+          expect(calls.where((c) => c == loadMethod).length, 1);
+          navigator.currentState!.pop();
+          await tester.pumpAndSettle();
+          expect(calls.where((c) => c == loadMethod).length, 2);
+          await controller.showPrivacyOptions();
+          await tester.pumpAndSettle();
+          expect(calls.where((c) => c == 'disposeAd').length, 2);
+          await tester.pumpWidget(const SizedBox());
+          await tester.pumpAndSettle();
+          controller.dispose();
+        },
+        variant: TargetPlatformVariant({platform}),
+      );
+    }
   }
+
+  test('web and desktop never enable mobile ads; iOS never uses Android production IDs', () {
+    for (final platform in TargetPlatform.values) {
+      expect(supportsMobileAds(web: true, platform: platform), isFalse);
+      final mobile =
+          platform == TargetPlatform.android || platform == TargetPlatform.iOS;
+      expect(supportsMobileAds(web: false, platform: platform), mobile);
+      if (!mobile) {
+        expect(
+          bannerIdForPlatform(platform, release: true, monetization: true),
+          isNull,
+        );
+        expect(
+          nativeIdForPlatform(platform, release: true, monetization: true),
+          isNull,
+        );
+      }
+    }
+    for (final release in [false, true]) {
+      for (final monetization in [false, true]) {
+        expect(
+          bannerIdForPlatform(
+            TargetPlatform.iOS,
+            release: release,
+            monetization: monetization,
+          ),
+          'ca-app-pub-3940256099942544/2435281174',
+        );
+        expect(
+          nativeIdForPlatform(
+            TargetPlatform.iOS,
+            release: release,
+            monetization: monetization,
+          ),
+          'ca-app-pub-3940256099942544/3986624511',
+        );
+      }
+    }
+  });
 
   testWidgets(
     'native template does not request ads when available width is below 320',
