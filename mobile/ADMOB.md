@@ -39,9 +39,21 @@ successivi seguono il nuovo stato UMP. La revoca della personalizzazione può
 ancora consentire annunci limitati: si usa sempre la decisione di UMP.
 `reset()` non è utilizzato come revoca in produzione.
 
-Il banner compare solo nella scheda Classifica del dettaglio torneo,
-all'interno del contenuto, con SafeArea laterale e colori del tema. La
+Sono disponibili tre posizioni, ciascuna con un solo banner:
+
+- Home: dopo la classifica giocatori, prima delle notizie.
+- Elenco tornei: in fondo ai risultati, solo se esistono tornei con i filtri correnti.
+- Dettaglio torneo: nella scheda Classifica.
+
+Tutti i banner scorrono con il contenuto, con SafeArea laterale, etichetta
+Pubblicità, margini e colori del tema. Nessun annuncio è inserito nei flussi
+di login/account o negli strumenti staff; nessun popup, interstitial, formato
+espandibile o video a schermo intero è stato aggiunto. L'app non introduce
+timer di refresh. Le route coperte da un'altra pagina rimuovono e rilasciano
+il proprio banner. La
 larghezza disponibile e l'orientamento determinano la misura adattiva;
+si usa il formato inline per liste scorrevoli, con altezza massima richiesta
+di 100 dp e misura effettiva letta dal SDK prima di mostrare l'annuncio.
 ridimensionamento e uscita dalla schermata eliminano le vecchie istanze.
 In assenza di annuncio non viene riservato uno spazio vuoto.
 
@@ -119,3 +131,14 @@ tre avvii a freddo consecutivi con processo persistente, senza crash per il
 nuovo processo. UMP ha caricato correttamente il modulo (`load_complete: ok`).
 Le scelte privacy restano all'utente; non sono stati attivati annunci reali.
 L'APK corretto sostituisce il pacchetto del download admin.
+
+## Estensione delle posizioni (15 ottobre 2026)
+
+Verifiche successive: `flutter analyze` senza problemi; 31 test mirati
+superati su pubblicità, Home, elenco tornei, dettaglio torneo e accesso.
+I nuovi test controllano l'assenza di slot senza consenso e il rilascio del
+banner quando una route viene coperta, con nuova istanza solo al ritorno.
+Build release riuscita e installata come aggiornamento sullo stesso OPPO:
+avvio a freddo riuscito, processo senza nuovi crash e verifica visiva del
+banner **Annuncio di testo** di test dopo la classifica Home, prima delle
+notizie. Nessun annuncio è stato toccato durante le verifiche.

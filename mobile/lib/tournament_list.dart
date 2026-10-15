@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'ads.dart';
 import 'main.dart' show ErrorPanel, TournamentPage;
 import 'home_dashboard.dart' show SiteImage, openPage;
 
@@ -643,6 +644,8 @@ class _TournamentListState extends State<TournamentList> {
                       onPressed: () => setState(() => archiveLimit += 12),
                       child: const Text('Carica altri tornei'),
                     ),
+                  if (filtered.isNotEmpty && !widget.api.preview)
+                    const AdaptiveAdBanner(),
                 ],
               ),
             ),

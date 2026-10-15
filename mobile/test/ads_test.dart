@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/src/ad_instance_manager.dart';
 import 'package:tornei_old_school/ads.dart';
 
 class PrivacyFake implements AdsPrivacyBackend {
@@ -34,6 +36,71 @@ class PrivacyFake implements AdsPrivacyBackend {
 }
 
 void main() {
+  testWidgets(
+    'no consent means no banner requests or empty advertising space',
+    (tester) async {
+      final controller = AdsController(enabled: true, backend: PrivacyFake());
+      await controller.start();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: AdaptiveAdBanner(controller: controller)),
+        ),
+      );
+      expect(find.text('Pubblicità'), findsNothing);
+      expect(find.byType(SafeArea), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      controller.dispose();
+    },
+  );
+
+  testWidgets(
+    'covered routes dispose their banner; returning loads a new instance',
+    (tester) async {
+      final controller = AdsController(
+        enabled: true,
+        backend: PrivacyFake()..allowed = true,
+      );
+      await controller.start();
+      final calls = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        instanceManager.channel,
+        (call) async {
+          calls.add(call.method);
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          instanceManager.channel,
+          null,
+        ),
+      );
+      final navigator = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigator,
+          home: Scaffold(body: AdaptiveAdBanner(controller: controller)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(calls.where((c) => c == 'loadBannerAd').length, 1);
+      navigator.currentState!.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Dettaglio')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(calls.where((c) => c == 'disposeAd').length, 1);
+      expect(calls.where((c) => c == 'loadBannerAd').length, 1);
+      navigator.currentState!.pop();
+      await tester.pumpAndSettle();
+      expect(calls.where((c) => c == 'loadBannerAd').length, 2);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+      controller.dispose();
+    },
+  );
+
   test('real ID requires release AND explicit monetization', () {
     for (final release in [false, true]) {
       for (final monetization in [false, true]) {

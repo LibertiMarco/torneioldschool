@@ -143,12 +143,15 @@ class AdsPrivacyButton extends StatelessWidget {
   );
 }
 
-class StandingsBanner extends StatelessWidget {
-  const StandingsBanner({super.key});
+class AdaptiveAdBanner extends StatelessWidget {
+  const AdaptiveAdBanner({super.key, this.controller});
+  final AdsController? controller;
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: AdsController.instance,
-    builder: (context, _) => AdsController.instance.ready
+    listenable: controller ?? AdsController.instance,
+    builder: (context, _) =>
+        (controller ?? AdsController.instance).ready &&
+            (ModalRoute.of(context)?.isCurrent ?? true)
         ? const SafeArea(top: false, bottom: false, child: _AdaptiveBanner())
         : const SizedBox.shrink(),
   );
@@ -162,6 +165,7 @@ class _AdaptiveBanner extends StatefulWidget {
 
 class _AdaptiveBannerState extends State<_AdaptiveBanner> {
   BannerAd? _ad;
+  AdSize? _size;
   bool _loaded = false;
   int _generation = 0;
   String? _layout;
@@ -170,15 +174,13 @@ class _AdaptiveBannerState extends State<_AdaptiveBanner> {
     final generation = ++_generation;
     setState(() {
       _loaded = false;
+      _size = null;
       _ad?.dispose();
       _ad = null;
     });
     try {
-      final size = await AdSize.getLargeAnchoredAdaptiveBannerAdSize(width);
-      if (!mounted ||
-          generation != _generation ||
-          layout != _layout ||
-          size == null) {
+      final size = AdSize.getInlineAdaptiveBannerAdSize(width, 100);
+      if (!mounted || generation != _generation || layout != _layout) {
         return;
       }
       final ad = BannerAd(
@@ -189,12 +191,23 @@ class _AdaptiveBannerState extends State<_AdaptiveBanner> {
         size: size,
         request: const AdRequest(),
         listener: BannerAdListener(
-          onAdLoaded: (ad) {
+          onAdLoaded: (ad) async {
+            AdSize? actualSize;
+            try {
+              actualSize = await (ad as BannerAd).getPlatformAdSize();
+            } catch (_) {
+              // Leave the slot hidden if the native view cannot be measured.
+              return;
+            }
             if (!mounted || generation != _generation) {
               ad.dispose();
               return;
             }
-            setState(() => _loaded = true);
+            if (actualSize == null || actualSize.height <= 0) return;
+            setState(() {
+              _size = actualSize;
+              _loaded = true;
+            });
           },
           onAdFailedToLoad: (ad, error) {
             ad.dispose();
@@ -232,7 +245,7 @@ class _AdaptiveBannerState extends State<_AdaptiveBanner> {
           (_) => _load(width, layout),
         );
       }
-      if (!_loaded || _ad == null || _ad!.size.width > width) {
+      if (!_loaded || _ad == null || _size == null || _size!.width > width) {
         return const SizedBox.shrink();
       }
       return Padding(
@@ -243,8 +256,8 @@ class _AdaptiveBannerState extends State<_AdaptiveBanner> {
             Text('Pubblicità', style: Theme.of(context).textTheme.labelSmall),
             const SizedBox(height: 6),
             SizedBox(
-              width: _ad!.size.width.toDouble(),
-              height: _ad!.size.height.toDouble(),
+              width: _size!.width.toDouble(),
+              height: _size!.height.toDouble(),
               child: AdWidget(ad: _ad!),
             ),
           ],

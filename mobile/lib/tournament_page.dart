@@ -310,7 +310,7 @@ class _TournamentPageState extends State<TournamentPage> {
                 },
               ),
               if (tab == 'Classifica') ...[
-                if (!widget.api.preview) const StandingsBanner(),
+                if (!widget.api.preview) const AdaptiveAdBanner(),
                 title('Classifica'),
                 phaseSelect(
                   result,

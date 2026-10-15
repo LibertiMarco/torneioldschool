@@ -3,6 +3,7 @@ import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' show parseFragment;
 
 import 'api.dart';
+import 'ads.dart';
 import 'access_gate.dart';
 import 'about_page.dart';
 import 'article_content.dart';
@@ -332,6 +333,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               );
             },
           ),
+          if (!api.preview) const AdaptiveAdBanner(),
           const HomeSectionTitle(
             title: 'Ultime notizie',
             eyebrow: 'DENTRO OLD SCHOOL',
