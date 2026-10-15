@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/src/ad_instance_manager.dart';
 import 'package:tornei_old_school/ads.dart';
 import 'package:tornei_old_school/native_ad_card.dart';

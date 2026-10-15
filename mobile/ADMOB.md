@@ -6,6 +6,11 @@
 UMP è incluso nel pacchetto ufficiale: non serve un secondo plugin.
 Nessuna monetizzazione reale è abilitata e nessuna pubblicazione sugli store è stata eseguita.
 
+Stato aggiornato della preparazione: [checklist rilascio](../docs/mobile-release-checklist.md).
+La suite completa passa ora con **181 test**; i quattro fallimenti citati
+nei resoconti storici sotto sono stati risolti aggiornando esclusivamente
+fixture e aspettative obsolete.
+
 - Android App ID di test: `ca-app-pub-3940256099942544~3347511713`.
 - Banner adattivo Android di test: `ca-app-pub-3940256099942544/9214589741`.
 - Nativo Android di test: `ca-app-pub-3940256099942544/2247696110`.

@@ -14,6 +14,9 @@ void main() {
     expect(find.text('Anteprima · dati dimostrativi'), findsOneWidget);
     await tester.tap(find.text('Tornei'));
     await tester.pumpAndSettle();
+    // Tornei and classifiche now require authentication, including in preview.
+    await tester.tap(find.text('Accedi'));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Old School Cup'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Old School Cup'));
@@ -34,13 +37,16 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Calendario'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Giornata 4'));
-    await tester.tap(find.text('Giornata 4'));
+    // Select the round control independently of the date-sensitive default.
+    final roundSelector = find.byType(DropdownButtonFormField<String>).last;
+    await tester.ensureVisible(roundSelector);
+    await tester.pumpAndSettle();
+    await tester.tap(roundSelector);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Tutte').last);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('3 : 1'));
-    await tester.tap(find.text('3 : 1'));
+    await tester.ensureVisible(find.text('3  :  1'));
+    await tester.tap(find.text('3  :  1'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Referto giocatori'),
@@ -68,6 +74,10 @@ void main() {
     await tester.tap(find.text('Accedi come admin demo'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Gestione'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Utenti');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Gestione account'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Gestione account'));
     await tester.pumpAndSettle();

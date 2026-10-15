@@ -21,9 +21,10 @@ la dipendenza è fornita dal plugin Flutter.
 Prima della firma occorre eseguire `flutter pub get` e la build iOS su Mac o
 nel workflow macOS; CocoaPods deve essere installato. Il controllo locale
 Windows copre solo Dart, XML e test con variante iOS, non la compilazione
-nativa. I quattro test obsoleti della suite completa documentati in
-`mobile/ADMOB.md` restano un blocco noto per gli attuali workflow CI: la build
-non è stata avviata o dichiarata riuscita.
+nativa. I quattro test obsoleti sono stati aggiornati: la suite completa
+passa ora con 181 test. Il workflow macOS resta da avviare realmente; la
+build iOS non è stata dichiarata riuscita. Stato e passaggi residui:
+`docs/mobile-release-checklist.md`.
 
 Poi provare su iPhone avvio, login, navigazione, moduli UMP, modifica/revoca,
 banner adattivo e scheda nativa (font grandi, orientamento e chiaro/scuro).

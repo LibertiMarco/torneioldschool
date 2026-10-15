@@ -7,6 +7,7 @@ workflows:
     environment:
       flutter: 3.47.7
       xcode: latest
+      cocoapods: default
     scripts:
       - name: Dipendenze
         script: flutter pub get

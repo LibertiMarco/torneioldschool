@@ -1,7 +1,20 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val storeRelease = providers.gradleProperty("tosStoreRelease").orNull == "true"
+val uploadProperties = Properties()
+val uploadPropertiesFile = rootProject.file("key.properties")
+if (storeRelease) {
+    require(uploadPropertiesFile.exists()) { "Store release requires android/key.properties" }
+    uploadPropertiesFile.inputStream().use { uploadProperties.load(it) }
+    for (name in listOf("storeFile", "storePassword", "keyAlias", "keyPassword")) {
+        require(!uploadProperties.getProperty(name).isNullOrBlank()) { "Missing signing property: $name" }
+    }
 }
 
 android {
@@ -30,6 +43,15 @@ android {
         manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713"
     }
 
+    if (storeRelease) {
+        signingConfigs.create("upload") {
+            storeFile = file(uploadProperties.getProperty("storeFile"))
+            storePassword = uploadProperties.getProperty("storePassword")
+            keyAlias = uploadProperties.getProperty("keyAlias")
+            keyPassword = uploadProperties.getProperty("keyPassword")
+        }
+    }
+
     buildTypes {
         release {
             proguardFiles(
@@ -40,9 +62,9 @@ android {
             if (providers.gradleProperty("tosAdsMonetization").orNull == "true") {
                 manifestPlaceholders["admobAppId"] = "ca-app-pub-8390787841690316~9774422315"
             }
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Personal test APKs keep their existing signature. Store bundles
+            // must deliberately select the private upload key.
+            signingConfig = signingConfigs.getByName(if (storeRelease) "upload" else "debug")
         }
     }
 }

@@ -539,6 +539,11 @@ class _AccountPageState extends State<AccountPage> {
             ],
           ),
           _section('Gestione account', Icons.manage_accounts_outlined, [
+            TextButton.icon(
+              onPressed: () => _open('privacy.php'),
+              icon: const Icon(Icons.policy_outlined),
+              label: const Text('Informativa privacy'),
+            ),
             OutlinedButton.icon(
               onPressed: _saving ? null : widget.auth.logout,
               icon: const Icon(Icons.logout),

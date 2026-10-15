@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'api.dart';
 import 'auth.dart';
@@ -387,6 +388,14 @@ class _HomePageState extends State<HomePage> {
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ),
+      TextButton.icon(
+        onPressed: () => launchUrl(
+          widget.api.baseUrl.resolve('/privacy.php'),
+          mode: LaunchMode.externalApplication,
+        ),
+        icon: const Icon(Icons.policy_outlined),
+        label: const Text('Informativa privacy'),
+      ),
     ],
   );
 }

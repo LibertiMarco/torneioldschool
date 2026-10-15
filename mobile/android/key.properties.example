@@ -1,0 +1,6 @@
+# Copy to key.properties (ignored by Git). Never commit the real values.
+# On Windows, use forward slashes for storeFile.
+storeFile=C:/private/tornei-upload.jks
+storePassword=REPLACE_LOCALLY
+keyAlias=upload
+keyPassword=REPLACE_LOCALLY
