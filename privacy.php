@@ -37,7 +37,7 @@
     <section class="policy-hero">
       <p class="policy-meta">Ultimo aggiornamento: <?php echo $lastUpdate; ?></p>
       <h1>Privacy Policy</h1>
-      <p>Questa informativa spiega come trattiamo i dati quando ti iscrivi ai tornei o navighi sul sito.</p>
+      <p>Questa informativa spiega come trattiamo i dati quando ti iscrivi ai tornei, navighi sul sito o utilizzi l'app Tornei Old School per Android e iOS.</p>
       <p>Newsletter e comunicazioni promozionali sono facoltative: puoi attivarle o revocarle in qualsiasi momento dalla pagina account o dal link "Gestisci preferenze" nel footer.</p>
     </section>
 
@@ -89,6 +89,16 @@
     <section class="policy-block">
       <h2>Pubblicita e monetizzazione</h2>
       <p>Al momento il sito non serve annunci display di terze parti attivi. Se in futuro attiveremo un circuito pubblicitario come Google AdSense, aggiorneremo questa informativa e la Cookie Policy prima dell'attivazione, raccogliendo il consenso dove richiesto.</p>
+    </section>
+
+    <section class="policy-block" id="app-mobile">
+      <h2>App Android e iOS: account e pubblicit&agrave;</h2>
+      <p>L'app utilizza lo stesso account del sito per accedere alle funzioni riservate. Conserva sul dispositivo i token necessari a mantenere la sessione attraverso l'archiviazione sicura del sistema. Il consenso alle comunicazioni promozionali dell'account &egrave; distinto dalle preferenze relative agli annunci.</p>
+      <p>L'app integra Google Mobile Ads (AdMob) per banner e annunci nativi e Google User Messaging Platform (UMP) per le scelte sulla privacy. Nelle build di prova attuali sono utilizzati soltanto identificativi pubblicitari di test; la monetizzazione reale non &egrave; abilitata. Anche gli annunci di test utilizzano i servizi e gli SDK Google.</p>
+      <p>In relazione al funzionamento e alle scelte applicabili, gli SDK pubblicitari possono trattare indirizzo IP (anche per stimare una posizione approssimativa), identificativi del dispositivo o pubblicitari disponibili, interazioni con gli annunci e dati diagnostici, per erogazione e misurazione della pubblicit&agrave;, sicurezza e prevenzione delle frodi. L'app non richiede l'accesso alla posizione precisa per mostrare annunci.</p>
+      <p>All'avvio viene aggiornato lo stato UMP e viene mostrato il modulo di consenso quando richiesto. Gli annunci sono richiesti solo quando UMP lo consente. Quando previsto dal modulo, il pulsante <strong>Preferenze privacy annunci</strong> nella barra superiore dell'app permette di riaprire le opzioni e modificare o revocare le scelte. Il rifiuto della personalizzazione pu&ograve; consentire annunci limitati secondo le impostazioni e lo stato restituito da Google.</p>
+      <p>La configurazione iOS attuale non richiede l'autorizzazione App Tracking Transparency e non autorizza l'accesso all'IDFA. Un eventuale cambiamento di questa configurazione richieder&agrave; i relativi avvisi e permessi. Le scelte dell'app sono separate dal consenso ai cookie del sito.</p>
+      <p>Google pu&ograve; trattare dati attraverso la propria infrastruttura, anche fuori dallo Spazio economico europeo, secondo le condizioni e le garanzie descritte nella sua informativa. Per informazioni su trattamento e conservazione consulta la <a href="https://policies.google.com/privacy">Privacy Policy di Google</a> e <a href="https://policies.google.com/technologies/partner-sites">come Google utilizza i dati delle app che usano i suoi servizi</a>. Per richieste relative al tuo account Tornei Old School puoi scrivere a <a href="mailto:info@torneioldschool.it">info@torneioldschool.it</a>.</p>
     </section>
 
     <section class="policy-block">
