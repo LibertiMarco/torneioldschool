@@ -6,8 +6,10 @@ Nel progetto sono ora predisposti nativo Home e banner tornei anche per iOS,
 con UMP prima delle richieste, opzioni privacy e **soli ID Google di test iOS**.
 L'app iOS è stata registrata dall'utente in AdMob: App ID
 `ca-app-pub-8390787841690316~9044628723`, banner
-`ca-app-pub-8390787841690316/6234457543`. Manca l'ID del nativo iOS.
-Questi identificativi sono soltanto registrati nella documentazione: Android e iOS
+`ca-app-pub-8390787841690316/6234457543`, nativo
+`ca-app-pub-8390787841690316/2726457370`.
+Gli ID sono raccolti in `iosProductionAdIds` (`mobile/lib/ads.dart`) e non
+selezionati dal runtime: Android e iOS
 usano identificativi distinti; iOS resta in test anche se viene impostato
 `TOS_ADS_MONETIZATION=true`. Nessuna monetizzazione reale è stata autorizzata.
 
@@ -28,8 +30,9 @@ banner adattivo e scheda nativa (font grandi, orientamento e chiaro/scuro).
 I messaggi del sample App ID possono differire da quelli dell'app reale.
 Non selezionare automaticamente consensi durante le prove.
 
-Per completare la configurazione reale futura, creare un'unità **Nativo**
-nella stessa app **iOS** appena registrata e fornire il relativo ID.
+Tutti gli identificativi AdMob iOS sono ora disponibili. Prima di
+un'attivazione reale futura occorrono compilazione/prova iPhone, verifica
+dei messaggi UMP e configurazione esplicita degli ID per la sola produzione.
 Gli ID Android non sono utilizzabili su iOS. La disponibilità di tali ID non
 abilita da sola la monetizzazione.
 

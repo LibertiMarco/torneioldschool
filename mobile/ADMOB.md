@@ -14,7 +14,8 @@ Nessuna monetizzazione reale è abilitata e nessuna pubblicazione sugli store è
 - iOS nativo di test: `ca-app-pub-3940256099942544/3986624511`.
 - Android e iOS: aggiornamento UMP, raccolta/modifica consenso e richieste
   pubblicitarie solo quando `canRequestAds()` lo permette. iOS usa sempre
-  gli ID di test, anche con opt-in monetizzazione, finché mancano i suoi ID reali.
+  gli ID di test, anche con opt-in monetizzazione Android, finché la
+  configurazione di produzione iOS non sarà esplicitamente abilitata.
 - Web, desktop e anteprima demo: nessuna inizializzazione o richiesta annunci.
 - Anche una build release usa gli ID di test senza abilitazione esplicita.
 
@@ -33,11 +34,12 @@ Identificativi reali iOS ricevuti (registrati, **non attivati**):
 
 - App ID: `ca-app-pub-8390787841690316~9044628723`.
 - Banner: `ca-app-pub-8390787841690316/6234457543`.
-- Nativo: ancora da fornire.
+- Nativo: `ca-app-pub-8390787841690316/2726457370`.
 
 Info.plist e le richieste iOS continuano a utilizzare i sample ID Google.
-Ricevere gli identificativi non equivale ad abilitare annunci reali; quando
-sarà completata la configurazione iOS, l'eventuale attivazione dovrà avere un
+I tre ID sono raccolti nel record `iosProductionAdIds` di `lib/ads.dart` e
+non vengono selezionati dal percorso runtime. Ricevere gli identificativi non
+equivale ad abilitare annunci reali; l'eventuale attivazione dovrà avere un
 opt-in esplicito e mantenere gli ID di test nelle build di sviluppo.
 
 ## Flusso e interfaccia

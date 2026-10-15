@@ -4,6 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+/// Supplied iOS production configuration. Recorded only: current builds select
+/// Google's sample IDs until a separate production setup is explicitly enabled.
+const iosProductionAdIds = (
+  app: 'ca-app-pub-8390787841690316~9044628723',
+  banner: 'ca-app-pub-8390787841690316/6234457543',
+  native: 'ca-app-pub-8390787841690316/2726457370',
+);
+
 /// Production requires both a release build and an explicit opt-in.
 String androidBannerId({required bool release, required bool monetization}) =>
     release && monetization
@@ -28,7 +36,7 @@ String? bannerIdForPlatform(
     release: release,
     monetization: monetization,
   ),
-  // iOS App ID/banner have been recorded; native ID and live setup are pending.
+  // All iOS production IDs are recorded; live setup is deliberately disabled.
   // Keep the official sample until monetization is explicitly enabled.
   TargetPlatform.iOS => 'ca-app-pub-3940256099942544/2435281174',
   _ => null,
