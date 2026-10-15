@@ -411,24 +411,27 @@ class ErrorPanel extends StatelessWidget {
   final Object error;
   final VoidCallback retry;
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.cloud_off_outlined, size: 40),
-          const SizedBox(height: 16),
-          Text(
-            error is ApiError
-                ? error.toString()
-                : 'Servizio temporaneamente non disponibile.',
-            textAlign: TextAlign.center,
+  Widget build(BuildContext context) =>
+      AccessRequiredPanel.handles(context, error)
+      ? AccessRequiredPanel(retry: retry)
+      : Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.cloud_off_outlined, size: 40),
+                const SizedBox(height: 16),
+                Text(
+                  error is ApiError
+                      ? error.toString()
+                      : 'Servizio temporaneamente non disponibile.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                FilledButton(onPressed: retry, child: const Text('Riprova')),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          FilledButton(onPressed: retry, child: const Text('Riprova')),
-        ],
-      ),
-    ),
-  );
+        );
 }

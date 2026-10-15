@@ -4,6 +4,7 @@ import 'package:tornei_old_school/access_gate.dart';
 import 'package:tornei_old_school/demo.dart';
 import 'package:tornei_old_school/home_dashboard.dart';
 import 'package:tornei_old_school/main.dart';
+import 'package:tornei_old_school/api.dart';
 
 class AccessApi extends DemoApi {
   int tournamentReads = 0;
@@ -32,6 +33,41 @@ class AccessApi extends DemoApi {
 }
 
 void main() {
+  testWidgets('Access errors offer login and reload after authentication', (
+    tester,
+  ) async {
+    final api = AccessApi();
+    final auth = DemoAuth(api);
+    var retries = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => AppAuthScope(auth: auth, child: child!),
+        home: Scaffold(
+          body: ErrorPanel(
+            error: const ApiError(
+              'Servizio temporaneamente non disponibile.',
+              status: 401,
+            ),
+            retry: () => retries++,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Accedi per visualizzare questo contenuto.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Servizio temporaneamente non disponibile.'),
+      findsNothing,
+    );
+    expect(find.text('Riprova'), findsNothing);
+    await tester.tap(find.text('Accedi'));
+    await tester.pumpAndSettle();
+    expect(auth.user, isNotNull);
+    expect(retries, 1);
+  });
   testWidgets(
     'Guest tournament tab does not load tournaments; login unlocks it',
     (tester) async {

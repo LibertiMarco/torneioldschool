@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'access_gate.dart';
 import 'external_link_button.dart';
 import 'player_event_marks.dart';
 import 'player_role_badges.dart';
@@ -41,6 +42,11 @@ class _DataPageState extends State<DataPage> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
+          if (AccessRequiredPanel.handles(context, snapshot.error)) {
+            return AccessRequiredPanel(
+              retry: () => setState(() => data = widget.load()),
+            );
+          }
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24),

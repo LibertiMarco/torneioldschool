@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'access_gate.dart';
 import 'external_link_button.dart';
 import 'home_dashboard.dart' show SiteImage, openPage;
 import 'main.dart' show TournamentPage;
@@ -86,6 +87,9 @@ class _PlayerAwardsSectionState extends State<PlayerAwardsSection> {
             );
           }
           if (snapshot.hasError) {
+            if (AccessRequiredPanel.handles(context, snapshot.error)) {
+              return AccessRequiredPanel(retry: () => setState(load));
+            }
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

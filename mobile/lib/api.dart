@@ -7,6 +7,7 @@ class ApiError implements Exception {
   const ApiError(this.message, {this.status = 0});
   final String message;
   final int status;
+  bool get accessRequired => status == 401;
   @override
   String toString() => message;
 }
@@ -85,6 +86,18 @@ class TosApi {
             .timeout(const Duration(seconds: 20));
       }
       dynamic data;
+      if (response.statusCode == 401) {
+        throw const ApiError(
+          'Accedi per visualizzare questo contenuto.',
+          status: 401,
+        );
+      }
+      if (response.statusCode == 403) {
+        throw const ApiError(
+          'Non hai i permessi per visualizzare questo contenuto.',
+          status: 403,
+        );
+      }
       try {
         data = jsonDecode(utf8.decode(response.bodyBytes));
       } on FormatException {

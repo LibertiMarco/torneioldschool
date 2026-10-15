@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'access_gate.dart';
 import 'player_event_marks.dart';
 import 'player_awards.dart';
 import 'ranking_mode_selector.dart';
@@ -139,12 +140,16 @@ class _PlayerHistoryPageState extends State<PlayerHistoryPage> {
             ),
           ),
           if (error != null) ...[
-            Text(
-              error is ApiError
-                  ? '$error'
-                  : 'Servizio temporaneamente non disponibile.',
-            ),
-            TextButton(onPressed: () => load(), child: const Text('Riprova')),
+            if (AccessRequiredPanel.handles(context, error))
+              AccessRequiredPanel(retry: () => load())
+            else ...[
+              Text(
+                error is ApiError
+                    ? '$error'
+                    : 'Servizio temporaneamente non disponibile.',
+              ),
+              TextButton(onPressed: () => load(), child: const Text('Riprova')),
+            ],
           ] else if (loading)
             const Padding(
               padding: EdgeInsets.all(24),

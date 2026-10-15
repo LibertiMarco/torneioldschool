@@ -7,6 +7,26 @@ import 'package:tornei_old_school/api.dart';
 import 'package:tornei_old_school/auth.dart';
 
 void main() {
+  for (final body in ['<html>Login</html>', '{"error":"Access denied"}']) {
+    test('401 requires login even for legacy response $body', () async {
+      final api = TosApi(
+        baseUrl: Uri.parse('https://example.test'),
+        client: MockClient((_) async => http.Response(body, 401)),
+      );
+      await expectLater(
+        api.standings('test'),
+        throwsA(
+          isA<ApiError>()
+              .having((error) => error.status, 'status', 401)
+              .having(
+                (error) => error.message,
+                'message',
+                'Accedi per visualizzare questo contenuto.',
+              ),
+        ),
+      );
+    });
+  }
   test('All-time homepage preserves ranks without a tournament filter; section reads are explicit', () async {
     final api = TosApi(
       baseUrl: Uri.parse('https://example.test'),
