@@ -219,6 +219,9 @@ class _HomePageState extends State<HomePage> {
 
   void _authChanged() {
     final hasUser = widget.auth.user != null;
+    if (page == 4 && !(widget.auth.admin || widget.auth.graphics)) {
+      page = 0;
+    }
     if (_hadUser && !hasUser) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
@@ -238,7 +241,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final auth = widget.auth;
     final hasStaffAccess = auth.admin || auth.graphics;
-    final selectedPage = page == 4 && !hasStaffAccess ? 3 : page;
+    final selectedPage = page == 4 && !hasStaffAccess ? 0 : page;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
@@ -311,7 +314,10 @@ class _HomePageState extends State<HomePage> {
           : StaffDashboard(auth: auth),
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedPage,
-        onDestinationSelected: (value) => setState(() => page = value),
+        onDestinationSelected: (value) {
+          if (value == 4 && !(auth.admin || auth.graphics)) return;
+          setState(() => page = value);
+        },
         destinations: [
           const NavigationDestination(
             icon: Icon(Icons.home_outlined),

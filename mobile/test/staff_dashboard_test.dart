@@ -30,6 +30,46 @@ class StaffApi extends DemoApi {
 }
 
 void main() {
+  testWidgets(
+    'Management stays hidden for guests and disappears after logout',
+    (tester) async {
+      final api = StaffApi();
+      final auth = DemoAuth(api);
+      await tester.pumpWidget(TosApp(api: api, auth: auth));
+      await tester.pumpAndSettle();
+      expect(find.text('Gestione'), findsNothing);
+      expect(api.userRequests, 0);
+
+      tester
+          .widget<NavigationBar>(find.byType(NavigationBar))
+          .onDestinationSelected!(4);
+      await tester.pumpAndSettle();
+      expect(find.byType(StaffDashboard), findsNothing);
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        0,
+      );
+
+      await auth.login();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Gestione'));
+      await tester.pumpAndSettle();
+      expect(find.byType(StaffDashboard), findsOneWidget);
+
+      await auth.logout();
+      await tester.pumpAndSettle();
+      expect(find.text('Gestione'), findsNothing);
+      expect(find.byType(StaffDashboard), findsNothing);
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        0,
+      );
+      expect(find.text('Consensi e preferenze'), findsNothing);
+      expect(api.userRequests, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final role in ['admin', 'grafico', 'user']) {
     testWidgets('Management dashboard respects $role permissions at 320px', (
       tester,
