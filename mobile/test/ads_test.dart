@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/src/ad_instance_manager.dart';
 import 'package:tornei_old_school/ads.dart';
+import 'package:tornei_old_school/native_ad_card.dart';
 
 class PrivacyFake implements AdsPrivacyBackend {
   bool allowed = false, required = true, fail = false;
@@ -43,7 +44,14 @@ void main() {
       await controller.start();
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(body: AdaptiveAdBanner(controller: controller)),
+          home: Scaffold(
+            body: Column(
+              children: [
+                AdaptiveAdBanner(controller: controller),
+                HomeNativeAdCard(controller: controller),
+              ],
+            ),
+          ),
         ),
       );
       expect(find.text('Pubblicità'), findsNothing);
@@ -53,9 +61,69 @@ void main() {
     },
   );
 
+  for (final native in [false, true]) {
+    testWidgets(
+      '${native ? 'native' : 'banner'}: covered routes dispose the ad; return reloads; revocation disposes',
+      (tester) async {
+        final controller = AdsController(
+          enabled: true,
+          backend: PrivacyFake()..allowed = true,
+        );
+        await controller.start();
+        final calls = <String>[];
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          instanceManager.channel,
+          (call) async {
+            calls.add(call.method);
+            return null;
+          },
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            instanceManager.channel,
+            null,
+          ),
+        );
+        final navigator = GlobalKey<NavigatorState>();
+        await tester.pumpWidget(
+          MaterialApp(
+            navigatorKey: navigator,
+            home: Scaffold(
+              body: native
+                  ? HomeNativeAdCard(controller: controller)
+                  : AdaptiveAdBanner(controller: controller),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final loadMethod = native ? 'loadNativeAd' : 'loadBannerAd';
+        expect(calls.where((c) => c == loadMethod).length, 1);
+        navigator.currentState!.push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('Dettaglio')),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(calls.where((c) => c == 'disposeAd').length, 1);
+        expect(calls.where((c) => c == loadMethod).length, 1);
+        navigator.currentState!.pop();
+        await tester.pumpAndSettle();
+        expect(calls.where((c) => c == loadMethod).length, 2);
+        await controller.showPrivacyOptions();
+        await tester.pumpAndSettle();
+        expect(calls.where((c) => c == 'disposeAd').length, 2);
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpAndSettle();
+        controller.dispose();
+      },
+    );
+  }
+
   testWidgets(
-    'covered routes dispose their banner; returning loads a new instance',
+    'native template does not request ads when available width is below 320',
     (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       final controller = AdsController(
         enabled: true,
         backend: PrivacyFake()..allowed = true,
@@ -75,28 +143,20 @@ void main() {
           null,
         ),
       );
-      final navigator = GlobalKey<NavigatorState>();
       await tester.pumpWidget(
         MaterialApp(
-          navigatorKey: navigator,
-          home: Scaffold(body: AdaptiveAdBanner(controller: controller)),
+          home: Scaffold(
+            body: Padding(
+              padding: const EdgeInsets.all(20),
+              child: HomeNativeAdCard(controller: controller),
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();
-      expect(calls.where((c) => c == 'loadBannerAd').length, 1);
-      navigator.currentState!.push(
-        MaterialPageRoute<void>(
-          builder: (_) => const Scaffold(body: Text('Dettaglio')),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(calls.where((c) => c == 'disposeAd').length, 1);
-      expect(calls.where((c) => c == 'loadBannerAd').length, 1);
-      navigator.currentState!.pop();
-      await tester.pumpAndSettle();
-      expect(calls.where((c) => c == 'loadBannerAd').length, 2);
+      expect(calls, isEmpty);
+      expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
-      await tester.pumpAndSettle();
       controller.dispose();
     },
   );
@@ -109,6 +169,12 @@ void main() {
           release && monetization
               ? 'ca-app-pub-8390787841690316/9634821513'
               : 'ca-app-pub-3940256099942544/9214589741',
+        );
+        expect(
+          androidNativeId(release: release, monetization: monetization),
+          release && monetization
+              ? 'ca-app-pub-8390787841690316/2123997150'
+              : 'ca-app-pub-3940256099942544/2247696110',
         );
       }
     }

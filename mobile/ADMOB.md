@@ -4,10 +4,11 @@
 
 `google_mobile_ads` 9.1.0 (stabile, risolta con Flutter 3.47.7 / Dart 3.13.5).
 UMP è incluso nel pacchetto ufficiale: non serve un secondo plugin.
-Nessuna monetizzazione reale è abilitata e nessuna pubblicazione è stata eseguita.
+Nessuna monetizzazione reale è abilitata e nessuna pubblicazione sugli store è stata eseguita.
 
 - Android App ID di test: `ca-app-pub-3940256099942544~3347511713`.
 - Banner adattivo Android di test: `ca-app-pub-3940256099942544/9214589741`.
+- Nativo Android di test: `ca-app-pub-3940256099942544/2247696110`.
 - iOS: solo App ID Google di esempio `ca-app-pub-3940256099942544~1458002511`;
   inizializzazione, UMP e richieste annunci disabilitati su questa piattaforma.
 - Web, desktop e anteprima demo: nessuna inizializzazione o richiesta annunci.
@@ -20,6 +21,9 @@ Il banner reale (`ca-app-pub-8390787841690316/9634821513`) richiede una build
 Dart release e `TOS_ADS_MONETIZATION=true` via dart-define. Per una futura
 attivazione coerente servono entrambi gli opt-in; nessuno è impostato nel repo.
 Non abilitare questi valori durante sviluppo, QA o test automatici.
+Il nativo reale `ca-app-pub-8390787841690316/2123997150` è predisposto con
+la stessa doppia condizione Dart (release e opt-in monetizzazione), ma non
+viene richiesto nelle build attuali.
 
 ## Flusso e interfaccia
 
@@ -39,9 +43,11 @@ successivi seguono il nuovo stato UMP. La revoca della personalizzazione può
 ancora consentire annunci limitati: si usa sempre la decisione di UMP.
 `reset()` non è utilizzato come revoca in produzione.
 
-Sono disponibili tre posizioni, ciascuna con un solo banner:
+Sono disponibili tre posizioni, ciascuna con un solo annuncio:
 
-- Home: dopo la classifica giocatori, prima delle notizie.
+- Home: scheda nativa compatta dopo la prima notizia; sostituisce il banner
+  precedentemente collocato dopo la classifica. Nessun nativo se le notizie
+  sono vuote o non disponibili.
 - Elenco tornei: in fondo ai risultati, solo se esistono tornei con i filtri correnti.
 - Dettaglio torneo: nella scheda Classifica.
 
@@ -56,6 +62,16 @@ si usa il formato inline per liste scorrevoli, con altezza massima richiesta
 di 100 dp e misura effettiva letta dal SDK prima di mostrare l'annuncio.
 ridimensionamento e uscita dalla schermata eliminano le vecchie istanze.
 In assenza di annuncio non viene riservato uno spazio vuoto.
+
+La Home usa il template nativo ufficiale `TemplateType.small`, con badge,
+CTA e AdChoices gestiti dal SDK, colori chiari/scuri del tema ed etichetta
+Pubblicità esterna. Dimensioni: larghezza tra 320 e 400 dp, altezza 160 dp
+più etichetta e margini. Con meno di 320 dp effettivi lo slot resta nascosto
+e non richiede annunci. Il nativo viene rilasciato in caso di revoca,
+uscita dalla schermata, cambio tema o route coperta; un errore di caricamento
+lascia lo slot vuoto senza bloccare il contenuto. Video richiesti muti.
+Non sono stati aggiunti nuovi plugin o factory native personalizzate.
+Riferimento: [template nativi Google](https://developers.google.com/admob/flutter/native/templates).
 
 ## Configurazione successiva e prove su dispositivo
 
@@ -142,3 +158,20 @@ Build release riuscita e installata come aggiornamento sullo stesso OPPO:
 avvio a freddo riuscito, processo senza nuovi crash e verifica visiva del
 banner **Annuncio di testo** di test dopo la classifica Home, prima delle
 notizie. Nessun annuncio è stato toccato durante le verifiche.
+
+## Formato nativo Home (15 ottobre 2026)
+
+Predisposta l'unità reale Android `ca-app-pub-8390787841690316/2123997150`,
+senza abilitarla. Il banner Home è stato sostituito da un solo nativo dopo
+la prima notizia. Invariati gli slot banner dell'elenco tornei e della
+classifica torneo. Invariati consenso UMP, opt-in monetizzazione e blocco
+web/iOS.
+
+Verifiche: analisi statica senza problemi, 23 test mirati superati (inclusi
+ID nativo di test in debug e release senza opt-in, revoca, rilascio su route
+coperta, ritorno e larghezza insufficiente); build APK release riuscita;
+installazione come aggiornamento su OPPO CPH2529 e avvio a freddo riusciti.
+Scheda di test verificata visivamente nel feed; validatore AdMob nativo:
+“No implementation issues found”. Nessun nuovo crash del processo nei log
+letti. L'APK verificato sostituisce il download admin. Nessun annuncio è
+stato cliccato; nessun consenso è stato scelto automaticamente.

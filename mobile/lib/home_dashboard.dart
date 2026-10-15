@@ -3,7 +3,7 @@ import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' show parseFragment;
 
 import 'api.dart';
-import 'ads.dart';
+import 'native_ad_card.dart';
 import 'access_gate.dart';
 import 'about_page.dart';
 import 'article_content.dart';
@@ -333,7 +333,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
               );
             },
           ),
-          if (!api.preview) const AdaptiveAdBanner(),
           const HomeSectionTitle(
             title: 'Ultime notizie',
             eyebrow: 'DENTRO OLD SCHOOL',
@@ -347,8 +346,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (rows.isEmpty) const Text('Nessuna notizia disponibile.'),
-                  for (var i = 0; i < rows.length && i < 4; i++)
+                  for (var i = 0; i < rows.length && i < 4; i++) ...[
                     NewsCard(api: api, row: rows[i], featured: i == 0),
+                    if (i == 0 && !api.preview) const HomeNativeAdCard(),
+                  ],
                   _link(
                     'Tutte le notizie',
                     () => openPage(

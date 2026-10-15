@@ -10,6 +10,11 @@ String androidBannerId({required bool release, required bool monetization}) =>
     ? 'ca-app-pub-8390787841690316/9634821513'
     : 'ca-app-pub-3940256099942544/9214589741';
 
+String androidNativeId({required bool release, required bool monetization}) =>
+    release && monetization
+    ? 'ca-app-pub-8390787841690316/2123997150'
+    : 'ca-app-pub-3940256099942544/2247696110';
+
 abstract class AdsPrivacyBackend {
   Future<void> update();
   Future<void> collect();
