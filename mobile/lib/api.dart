@@ -192,7 +192,7 @@ class TosApi {
         'giocatore_id': id,
         'tipo': type,
         'page': '$page',
-        'limit': '100',
+        'limit': '10',
       },
     ) as Map,
   );

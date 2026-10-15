@@ -46,6 +46,10 @@ un bearer mobile verificato (scadenza, revoca e account verificato inclusi).
 Il bearer non crea una sessione web e non attribuisce ruoli amministrativi.
 Questa correzione server sblocca gol e presenze con la build 4 già installata.
 
+La build 5 mostra lo storico gol e presenze a pagine di dieci partite, con
+Precedenti, Successive e numero di pagina. Ogni pagina sostituisce la precedente;
+il cambio filtro torna alla prima pagina e gli errori ritentano la pagina richiesta.
+
 L'icona Android e il catalogo icone iOS usano il logo originale
 `img/logo_old_school_1200.png`, su fondo bianco. Android include icone adattive.
 Per rigenerare tutte le dimensioni: `mobile/generate-app-icons.ps1`.

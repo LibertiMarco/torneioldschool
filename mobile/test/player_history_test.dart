@@ -90,7 +90,7 @@ void main() {
           'giocatore_id': '7',
           'tipo': 'presenze',
           'page': '3',
-          'limit': '100',
+          'limit': '10',
         });
         return http.Response(
           jsonEncode({
@@ -167,9 +167,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(find.text('Carica altre partite'), 150);
+      await tester.scrollUntilVisible(find.text('Successive'), 150);
       api.failNext = true;
-      await tester.tap(find.text('Carica altre partite'));
+      await tester.tap(find.text('Successive'));
       await tester.pumpAndSettle();
       expect(find.text('Torneo 1'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Riprova'), 100);
@@ -177,11 +177,90 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.calls.last, '7/gol/2');
       await tester.scrollUntilVisible(find.text('Torneo 2'), 100);
-      expect(find.text('Carica altre partite'), findsNothing);
+      expect(find.text('Torneo 1'), findsNothing);
+      expect(
+        tester
+            .widget<TextButton>(find.widgetWithText(TextButton, 'Successive'))
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(find.text('Precedenti'));
+      await tester.pumpAndSettle();
+      expect(api.calls.last, '7/gol/1');
+      expect(find.text('Torneo 1'), findsOneWidget);
+      expect(find.text('Torneo 2'), findsNothing);
+      await tester.tap(find.text('Successive'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Torneo 2'));
       await tester.pumpAndSettle();
       expect(find.text('Dettaglio partita'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
+
+  for (final type in ['gol', 'presenze']) {
+    testWidgets('$type history replaces each page with the next ten matches', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(600, 6000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final calls = <int>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PlayerHistoryPage(
+            api: DemoApi(),
+            player: player,
+            initialType: type,
+            loadMatches: (filter, page) async {
+              expect(filter, type);
+              calls.add(page);
+              return {
+                'player': player,
+                'matches': List.generate(
+                  10,
+                  (index) => {
+                    'partita_id': (page - 1) * 10 + index + 1,
+                    'torneo_nome': 'Partita ${(page - 1) * 10 + index + 1}',
+                    'squadra_casa': 'Casa',
+                    'squadra_ospite': 'Ospite',
+                    'goal': 1,
+                    'presenza': 1,
+                  },
+                ),
+                'pagination': {'has_more': page == 1},
+              };
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widgetList<PlayerHistoryMatchCard>(
+              find.byType(PlayerHistoryMatchCard),
+            )
+            .length,
+        10,
+      );
+      await tester.scrollUntilVisible(find.text('Successive'), 400);
+      await tester.tap(find.text('Successive'));
+      await tester.pumpAndSettle();
+      expect(calls, [1, 2]);
+      expect(
+        tester
+            .widgetList<PlayerHistoryMatchCard>(
+              find.byType(PlayerHistoryMatchCard),
+            )
+            .length,
+        10,
+      );
+      expect(find.text('Partita 1'), findsNothing);
+      expect(find.text('Partita 11'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Precedenti'), 400);
+      await tester.tap(find.text('Precedenti'));
+      await tester.pumpAndSettle();
+      expect(calls, [1, 2, 1]);
+      expect(find.text('Partita 1'), findsOneWidget);
+    });
+  }
 }

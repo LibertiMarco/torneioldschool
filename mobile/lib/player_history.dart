@@ -31,6 +31,8 @@ class _PlayerHistoryPageState extends State<PlayerHistoryPage> {
   final matches = <Map<String, dynamic>>[];
   Map<String, dynamic> player = {};
   int page = 0, generation = 0;
+  int _requestedPage = 1;
+  final _scroll = ScrollController();
   bool loading = false, hasMore = true;
   Object? error;
   @override
@@ -41,7 +43,13 @@ class _PlayerHistoryPageState extends State<PlayerHistoryPage> {
     load();
   }
 
-  Future<void> load({bool reset = false}) async {
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  Future<void> load({bool reset = false, int? targetPage}) async {
     if (reset) {
       generation++;
       matches.clear();
@@ -50,27 +58,32 @@ class _PlayerHistoryPageState extends State<PlayerHistoryPage> {
     } else if (loading) {
       return;
     }
-    final requestGeneration = generation;
+    final requestGeneration = ++generation;
+    _requestedPage = reset ? 1 : targetPage ?? (page == 0 ? 1 : page);
+    final requestedPage = _requestedPage;
     setState(() {
       loading = true;
       error = null;
     });
     try {
       final result = widget.loadMatches != null
-          ? await widget.loadMatches!(type, page + 1)
+          ? await widget.loadMatches!(type, requestedPage)
           : await widget.api.playerMatches(
               '${widget.player['id']}',
               type: type,
-              page: page + 1,
+              page: requestedPage,
             );
       if (!mounted || requestGeneration != generation) return;
       setState(() {
         player = Map<String, dynamic>.from(result['player'] as Map);
-        matches.addAll(TosApi.rows(result['matches']));
-        page++;
+        matches
+          ..clear()
+          ..addAll(TosApi.rows(result['matches']));
+        page = requestedPage;
         hasMore = (result['pagination'] as Map?)?['has_more'] == true;
         loading = false;
       });
+      if (_scroll.hasClients) _scroll.jumpTo(0);
     } catch (failure) {
       if (!mounted || requestGeneration != generation) return;
       setState(() {
@@ -90,6 +103,7 @@ class _PlayerHistoryPageState extends State<PlayerHistoryPage> {
         ),
       ),
       body: ListView(
+        controller: _scroll,
         padding: const EdgeInsets.all(16),
         children: [
           Card(
@@ -141,24 +155,45 @@ class _PlayerHistoryPageState extends State<PlayerHistoryPage> {
           ),
           if (error != null) ...[
             if (AccessRequiredPanel.handles(context, error))
-              AccessRequiredPanel(retry: () => load())
+              AccessRequiredPanel(retry: () => load(targetPage: _requestedPage))
             else ...[
               Text(
                 error is ApiError
                     ? '$error'
                     : 'Servizio temporaneamente non disponibile.',
               ),
-              TextButton(onPressed: () => load(), child: const Text('Riprova')),
+              TextButton(
+                onPressed: () => load(targetPage: _requestedPage),
+                child: const Text('Riprova'),
+              ),
             ],
           ] else if (loading)
             const Padding(
               padding: EdgeInsets.all(24),
               child: Center(child: CircularProgressIndicator()),
-            )
-          else if (hasMore)
-            TextButton(
-              onPressed: () => load(),
-              child: const Text('Carica altre partite'),
+            ),
+          if (page > 0)
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              children: [
+                TextButton.icon(
+                  onPressed: loading || page <= 1
+                      ? null
+                      : () => load(targetPage: page - 1),
+                  icon: const Icon(Icons.chevron_left),
+                  label: const Text('Precedenti'),
+                ),
+                Text('Pagina $page'),
+                TextButton.icon(
+                  onPressed: loading || !hasMore
+                      ? null
+                      : () => load(targetPage: page + 1),
+                  icon: const Icon(Icons.chevron_right),
+                  label: const Text('Successive'),
+                ),
+              ],
             ),
           const SizedBox(height: 28),
           PlayerAwardsSection(
