@@ -41,6 +41,11 @@ bearer token, rinnova automaticamente un token scaduto e lo rimuove al logout.
 La Home ricarica i suoi blocchi al cambio utente per eliminare gli errori
 conservati dalla navigazione come ospite.
 
+Lo storico `api/giocatore_partite.php` accetta sia la sessione web esistente sia
+un bearer mobile verificato (scadenza, revoca e account verificato inclusi).
+Il bearer non crea una sessione web e non attribuisce ruoli amministrativi.
+Questa correzione server sblocca gol e presenze con la build 4 già installata.
+
 L'icona Android e il catalogo icone iOS usano il logo originale
 `img/logo_old_school_1200.png`, su fondo bianco. Android include icone adattive.
 Per rigenerare tutte le dimensioni: `mobile/generate-app-icons.ps1`.

@@ -2,9 +2,26 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../includi/security.php';
 if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Autenticazione richiesta']);
-    exit;
+    // Native app sessions use bearer tokens, not the browser's PHP cookie.
+    // Validate the mobile session without creating or elevating a web session.
+    require_once __DIR__ . '/mobile/v1/_bootstrap.php';
+    try {
+        if (!mobile_api_enabled()) {
+            throw new MobileAuthError('unavailable', 'Accesso mobile non ancora attivo.', 503);
+        }
+        $https = !empty($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) !== 'off';
+        $local = in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true);
+        if (!$https && !($local && getenv('MOBILE_ALLOW_LOCAL_HTTP') === '1')) {
+            throw new MobileAuthError('https_required', 'È richiesta una connessione HTTPS.', 400);
+        }
+        $access = mobile_bearer();
+        (new MobileAuth(mobile_db()))->authenticate($access);
+    } catch (MobileAuthError $error) {
+        mobile_json(['error' => ['code' => $error->errorCode, 'message' => $error->getMessage()]], $error->status);
+    } catch (Throwable $error) {
+        error_log('Player history mobile authentication failed: ' . get_class($error));
+        mobile_json(['error' => ['code' => 'server_error', 'message' => 'Servizio temporaneamente non disponibile.']], 503);
+    }
 }
 
 require_once __DIR__ . '/../includi/db.php';
