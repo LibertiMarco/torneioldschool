@@ -4,7 +4,10 @@
 
 Nel progetto sono ora predisposti nativo Home e banner tornei anche per iOS,
 con UMP prima delle richieste, opzioni privacy e **soli ID Google di test iOS**.
-L'app iOS non è ancora stata registrata dall'utente in AdMob. Android e iOS
+L'app iOS è stata registrata dall'utente in AdMob: App ID
+`ca-app-pub-8390787841690316~9044628723`, banner
+`ca-app-pub-8390787841690316/6234457543`. Manca l'ID del nativo iOS.
+Questi identificativi sono soltanto registrati nella documentazione: Android e iOS
 usano identificativi distinti; iOS resta in test anche se viene impostato
 `TOS_ADS_MONETIZATION=true`. Nessuna monetizzazione reale è stata autorizzata.
 
@@ -25,8 +28,8 @@ banner adattivo e scheda nativa (font grandi, orientamento e chiaro/scuro).
 I messaggi del sample App ID possono differire da quelli dell'app reale.
 Non selezionare automaticamente consensi durante le prove.
 
-Per completare la configurazione reale futura, creare in AdMob una nuova app
-**iOS**, un'unità Banner e un'unità Nativo e fornire tutti e tre gli ID.
+Per completare la configurazione reale futura, creare un'unità **Nativo**
+nella stessa app **iOS** appena registrata e fornire il relativo ID.
 Gli ID Android non sono utilizzabili su iOS. La disponibilità di tali ID non
 abilita da sola la monetizzazione.
 

@@ -28,7 +28,8 @@ String? bannerIdForPlatform(
     release: release,
     monetization: monetization,
   ),
-  // iOS production IDs are deliberately unavailable until supplied separately.
+  // iOS App ID/banner have been recorded; native ID and live setup are pending.
+  // Keep the official sample until monetization is explicitly enabled.
   TargetPlatform.iOS => 'ca-app-pub-3940256099942544/2435281174',
   _ => null,
 };

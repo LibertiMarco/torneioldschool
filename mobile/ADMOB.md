@@ -29,6 +29,17 @@ Il nativo reale `ca-app-pub-8390787841690316/2123997150` è predisposto con
 la stessa doppia condizione Dart (release e opt-in monetizzazione), ma non
 viene richiesto nelle build attuali.
 
+Identificativi reali iOS ricevuti (registrati, **non attivati**):
+
+- App ID: `ca-app-pub-8390787841690316~9044628723`.
+- Banner: `ca-app-pub-8390787841690316/6234457543`.
+- Nativo: ancora da fornire.
+
+Info.plist e le richieste iOS continuano a utilizzare i sample ID Google.
+Ricevere gli identificativi non equivale ad abilitare annunci reali; quando
+sarà completata la configurazione iOS, l'eventuale attivazione dovrà avere un
+opt-in esplicito e mantenere gli ID di test nelle build di sviluppo.
+
 ## Flusso e interfaccia
 
 Dopo il primo frame di TosApp parte l'aggiornamento UMP della sessione, poi
