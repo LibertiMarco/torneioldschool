@@ -17,7 +17,7 @@ $pendingBreadcrumbs = seo_breadcrumb_schema([
 
 $emailParam = trim($_GET['email'] ?? '');
 $emailPrefill = filter_var($emailParam, FILTER_VALIDATE_EMAIL) ? $emailParam : '';
-$resendCsrf = csrf_get_token('resend_verification');
+$recaptchaSiteKey = getenv('RECAPTCHA_SITE_KEY') ?: '';
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -95,8 +95,8 @@ $resendCsrf = csrf_get_token('resend_verification');
 
       <form method="POST" action="/resend_verification.php">
         <?= csrf_field('resend_form') ?>
-        <input type="hidden" name="from_pending" value="1">
         <input type="email" name="email" required readonly value="<?= htmlspecialchars($emailPrefill) ?>" style="background:#f3f4f6; cursor:not-allowed;">
+        <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($recaptchaSiteKey) ?>"></div>
         <button type="submit">Reinvia email di conferma</button>
       </form>
 
@@ -119,5 +119,6 @@ $resendCsrf = csrf_get_token('resend_verification');
       initHeaderInteractions();
     });
   </script>
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </body>
 </html>

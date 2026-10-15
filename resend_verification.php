@@ -4,6 +4,28 @@ require_once __DIR__ . '/includi/db.php';
 require_once __DIR__ . '/includi/mail_helper.php';
 require_once __DIR__ . '/includi/seo.php';
 
+$recaptchaSiteKey = getenv('RECAPTCHA_SITE_KEY') ?: '';
+$recaptchaSecretKey = getenv('RECAPTCHA_SECRET_KEY') ?: '';
+
+function verify_recaptcha(string $secret, string $token, string $ip = ''): bool
+{
+    if (trim($secret) === '' || trim($token) === '') {
+        return false;
+    }
+    $context = stream_context_create(['http' => [
+        'method' => 'POST',
+        'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+        'content' => http_build_query(['secret' => $secret, 'response' => $token, 'remoteip' => $ip]),
+        'timeout' => 5,
+    ]]);
+    $result = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, $context);
+    if ($result === false) {
+        return false;
+    }
+    $data = json_decode($result, true);
+    return is_array($data) && !empty($data['success']);
+}
+
 $baseUrl = seo_base_url();
 $resendSeo = [
     'title' => 'Reinvia conferma email - Tornei Old School',
@@ -19,10 +41,8 @@ $resendBreadcrumbs = seo_breadcrumb_schema([
 $error = "";
 $success = "";
 $emailField = trim($_POST['email'] ?? '');
-$captchaQuestion = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $fromPending = ($_POST['from_pending'] ?? '') === '1';
     if (!csrf_is_valid($_POST['_csrf'] ?? '', 'resend_form')) {
         $error = "Sessione scaduta. Ricarica e riprova.";
     } elseif (honeypot_triggered()) {
@@ -30,8 +50,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!rate_limit_allow('resend_form', 3, 900)) {
         $wait = rate_limit_retry_after('resend_form', 900);
         $error = "Troppi tentativi ravvicinati. Riprova tra {$wait} secondi.";
-    } elseif (!$fromPending && !captcha_is_valid('resend_form', $_POST['captcha_answer'] ?? null)) {
-        $error = "Verifica anti-spam non valida.";
+    } elseif ($recaptchaSecretKey === '' || $recaptchaSiteKey === '') {
+        $error = "Servizio non disponibile: reCAPTCHA non configurato.";
+    } elseif (!verify_recaptcha($recaptchaSecretKey, $_POST['g-recaptcha-response'] ?? '', $_SERVER['REMOTE_ADDR'] ?? '')) {
+        $error = "Verifica reCAPTCHA non valida. Riprova.";
     }
 
     if (!$error) {
@@ -84,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$captchaQuestion = captcha_generate('resend_form');?>
+?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -219,8 +241,7 @@ $captchaQuestion = captcha_generate('resend_form');?>
         </div>
         <label for="email">Email</label>
         <input type="email" id="email" name="email" required value="<?= htmlspecialchars($emailField) ?>">
-        <label for="captcha_answer">Verifica: quanto fa <?= htmlspecialchars($captchaQuestion) ?>?</label>
-        <input type="number" id="captcha_answer" name="captcha_answer" inputmode="numeric" required>
+        <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($recaptchaSiteKey) ?>"></div>
         <button type="submit">Invia nuovamente il link</button>
       </form>
 
@@ -246,6 +267,7 @@ $captchaQuestion = captcha_generate('resend_form');?>
         }
       });
   </script>
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </body>
 </html>
 
