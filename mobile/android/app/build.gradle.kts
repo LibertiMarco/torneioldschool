@@ -58,8 +58,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            // Deliberate native opt-in, separate from the Dart ad-unit switch.
-            if (providers.gradleProperty("tosAdsMonetization").orNull == "true") {
+            // Play test tracks use our published UMP message too. Ad units remain
+            // Google's samples unless the separate Dart monetization opt-in is set.
+            if (storeRelease || providers.gradleProperty("tosAdsMonetization").orNull == "true") {
                 manifestPlaceholders["admobAppId"] = "ca-app-pub-8390787841690316~9774422315"
             }
             // Personal test APKs keep their existing signature. Store bundles

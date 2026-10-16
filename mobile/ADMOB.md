@@ -1,5 +1,14 @@
 # AdMob e consenso
 
+## Consenso italiano nelle tracce di test Play (16 ottobre 2026)
+
+Le build Android con `tosStoreRelease=true` usano l'App ID AdMob di Tornei
+Old School per caricare il messaggio UMP pubblicato, anche nelle tracce di test.
+Gli ID delle unità pubblicitarie restano quelli di test Google finché manca
+`TOS_ADS_MONETIZATION=true`. Non serve abilitare `tosAdsMonetization` per
+provare il consenso italiano. Le build debug e gli APK personali senza opt-in
+continuano a usare l'App ID sample.
+
 ## Stato predefinito
 
 `google_mobile_ads` 9.1.0 (stabile, risolta con Flutter 3.47.7 / Dart 3.13.5).

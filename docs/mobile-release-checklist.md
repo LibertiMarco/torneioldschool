@@ -27,6 +27,19 @@
 - Nessun ID pubblicitario reale è stato attivato, nessuna app è stata
   pubblicata negli store. Creata una chiave upload Android privata su autorizzazione.
 
+## Aggiornamento consenso italiano nelle tracce di test — 16 ottobre 2026
+
+Le release Android con `tosStoreRelease=true` ora selezionano l'App ID AdMob
+di Tornei Old School, necessario per il messaggio UMP italiano pubblicato.
+Gli ID delle unità pubblicitarie rimangono quelli di test Google senza
+`TOS_ADS_MONETIZATION=true`. Questo sostituisce la precedente scelta dell'App ID
+sample per i bundle Play descritta nel resoconto storico sotto.
+Bundle build 6 generato con successo in
+`mobile/build/app/outputs/bundle/release/app-release.aab`. Manifest release
+verificato: versionCode 6 e App ID `ca-app-pub-8390787841690316~9774422315`.
+I 13 test di `test/ads_test.dart` passano. Nessun caricamento su Play Console;
+la visualizzazione italiana va verificata sul dispositivo dopo l'aggiornamento.
+
 ## AdMob
 
 Nel browser autenticato è stato pubblicato il messaggio **Tornei Old School - Consenso
