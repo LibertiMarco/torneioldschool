@@ -26,14 +26,16 @@ Toccando l'avviso si apre il link HTTPS del sito nel browser interno; eventuale
 login web resta separato dalla sessione nativa. I link esterni sono rifiutati.
 Su Android, un arresto forzato dalle impostazioni richiede di riaprire l'app.
 
-## Passaggi ancora necessari sul server
+## Procedura di configurazione del server
 
 1. In Firebase, Impostazioni progetto → Account di servizio, creare una chiave
    privata per l'invio FCM. Non inserirla nell'app, in Git o nella cartella
    pubblica del sito. `google-services.json` non sostituisce questa chiave.
 2. Collocare la chiave in un percorso privato leggibile da PHP, fuori dalla
    directory pubblica. Il codice rifiuta chiavi collocate nel repository web.
-   Configurare `FCM_SERVICE_ACCOUNT_FILE` con il percorso assoluto del file
+   Su Plesk il percorso predefinito è
+   `private/torneioldschool-runtime/firebase-fcm.json` accanto a `httpdocs`.
+   Su altri host configurare `FCM_SERVICE_ACCOUNT_FILE` con il percorso assoluto
    tramite variabile d'ambiente o l'esistente `includi/env.local.php`.
 3. Verificare che Firebase Cloud Messaging API (HTTP v1) sia abilitata e che
    l'account di servizio abbia il permesso di inviare messaggi in questo progetto.
@@ -58,8 +60,26 @@ Da `mobile`:
 
 Questa build carica il messaggio UMP dell'app reale e mantiene le unità annunci
 di test; non impostare TOS_ADS_MONETIZATION per testare le notifiche.
-Non è stato eseguito alcun deploy backend o caricamento su Play Console.
-Il recapito reale richiede le credenziali server e la prova sul telefono.
+## Attivazione VHosting completata — 16 ottobre 2026
+
+Sul dominio principale in Plesk la credenziale è collocata in
+`private/torneioldschool-runtime/firebase-fcm.json`, fuori da `httpdocs`, con
+permessi 600. Il sender ora usa questo percorso relativo alla radice hosting
+quando `FCM_SERVICE_ACCOUNT_FILE` non è impostata; non è stato modificato il
+file delle altre credenziali del sito.
+
+Eseguita una verifica CLI con PHP 8.3.35 da Plesk, senza salvare una nuova
+attività pianificata: credenziale valida, OAuth Firebase riuscito e tabella
+`mobile_push_devices` creata/verificata con la migrazione idempotente.
+Lo script privato `setup-fcm-server.php` non invia notifiche e rifiuta HTTP.
+Il sender aggiornato è stato pubblicato in `httpdocs/includi/mobile_push.php`.
+L'API pubblica `api/mobile/v1/push.php` risponde 401 senza autenticazione.
+La console Firebase conferma API Cloud Messaging (V1) abilitata. L'informativa
+online include Firebase Cloud Messaging e risponde HTTP 200.
+
+Nessuna notifica reale è stata inviata. Resta la prova dall'app Android build 7
+installata dalla traccia di test Play, dopo attivazione nell'account.
+Non è stato caricato alcun bundle su Play Console da questa procedura.
 
 Verifiche locali: `flutter analyze` senza problemi, suite completa di 199 test
 superata, test PHP `mobile_push_test.php` e `mobile_auth_test.php` superati.

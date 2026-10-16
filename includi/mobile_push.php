@@ -4,7 +4,10 @@ require_once __DIR__ . '/env_loader.php';
 // Server credentials must live outside the document root, never in the app.
 function tos_fcm_credentials(): ?array
 {
-    $path = (string)(getenv('FCM_SERVICE_ACCOUNT_FILE') ?: '');
+    // Plesk keeps private/ alongside httpdocs/. The environment can override it
+    // on other hosts, without putting credentials inside the public directory.
+    $path = (string)(getenv('FCM_SERVICE_ACCOUNT_FILE')
+        ?: dirname(__DIR__, 2) . '/private/torneioldschool-runtime/firebase-fcm.json');
     if ($path === '' || !is_file($path) || !is_readable($path)) { return null; }
     $resolved = strtolower(str_replace('\\', '/', (string)realpath($path)));
     $publicRoot = strtolower(str_replace('\\', '/', (string)realpath(dirname(__DIR__)))) . '/';
