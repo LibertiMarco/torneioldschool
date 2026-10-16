@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1080279212423",
+    "project_id": "tornei-old-school-9e11b",
+    "storage_bucket": "tornei-old-school-9e11b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1080279212423:android:92090e135a79e279cf7322",
+        "android_client_info": {
+          "package_name": "it.torneioldschool.tornei_old_school"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCS4Tvzd3GGiSxTHh8sIkKfC8OhtvOBcOg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

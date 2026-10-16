@@ -92,7 +92,8 @@
     </section>
 
     <section class="policy-block" id="app-mobile">
-      <h2>App Android e iOS: account e pubblicit&agrave;</h2>
+      <h2>App Android e iOS: account, notifiche e pubblicit&agrave;</h2>
+      <p>Su Android, attivando le notifiche dall'account, l'app utilizza Firebase Cloud Messaging (Google) per ricevere aggiornamenti sui risultati e sulle risposte ai commenti. Il server associa il token di registrazione del dispositivo all'account e alla sessione di accesso per recapitare gli avvisi. Puoi disattivare le notifiche nell'app o nelle impostazioni Android; dopo il logout il server non invia pi&ugrave; notifiche alla sessione revocata. Le notifiche di servizio sono separate dai consensi promozionali e pubblicitari. Questa integrazione non abilita Google Analytics.</p>
       <p>L'app utilizza lo stesso account del sito per accedere alle funzioni riservate. Conserva sul dispositivo i token necessari a mantenere la sessione attraverso l'archiviazione sicura del sistema. Il consenso alle comunicazioni promozionali dell'account &egrave; distinto dalle preferenze relative agli annunci.</p>
       <p>L'app integra Google Mobile Ads (AdMob) per banner e annunci nativi e Google User Messaging Platform (UMP) per le scelte sulla privacy. Nelle build di prova attuali sono utilizzati soltanto identificativi pubblicitari di test; la monetizzazione reale non &egrave; abilitata. Anche gli annunci di test utilizzano i servizi e gli SDK Google.</p>
       <p>In relazione al funzionamento e alle scelte applicabili, gli SDK pubblicitari possono trattare indirizzo IP (anche per stimare una posizione approssimativa), identificativi del dispositivo o pubblicitari disponibili, interazioni con gli annunci e dati diagnostici, per erogazione e misurazione della pubblicit&agrave;, sicurezza e prevenzione delle frodi. L'app non richiede l'accesso alla posizione precisa per mostrare annunci.</p>

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/env_loader.php';
+require_once __DIR__ . '/mobile_push.php';
 
 if (!function_exists('tos_push_base64url_encode')) {
     function tos_push_base64url_encode(string $value): string
@@ -411,9 +412,10 @@ if (!function_exists('tos_push_store_notifications_for_users')) {
 if (!function_exists('tos_push_send_to_users')) {
     function tos_push_send_to_users(mysqli $conn, array $userIds, array $payload): array
     {
+        $native = tos_fcm_send_to_users($conn, $userIds, $payload);
         $config = tos_push_vapid_config();
         if (empty($config['configured'])) {
-            return ['sent' => 0, 'failed' => 0, 'subscriptions' => 0];
+            return $native;
         }
 
         $userIds = array_values(array_unique(array_map('intval', $userIds)));
@@ -435,7 +437,7 @@ if (!function_exists('tos_push_send_to_users')) {
         ";
         $stmt = $conn->prepare($sql);
         if (!$stmt) {
-            return ['sent' => 0, 'failed' => 0, 'subscriptions' => 0];
+            return $native;
         }
 
         $stmt->bind_param($types, ...$userIds);
@@ -449,11 +451,11 @@ if (!function_exists('tos_push_send_to_users')) {
         $stmt->close();
 
         if (empty($subscriptions)) {
-            return ['sent' => 0, 'failed' => 0, 'subscriptions' => 0];
+            return $native;
         }
 
-        $sent = 0;
-        $failed = 0;
+        $sent = $native['sent'];
+        $failed = $native['failed'];
         foreach ($subscriptions as $subscription) {
             $result = tos_push_send_to_subscription($conn, $subscription, $payload, $config);
             if (!empty($result['success'])) {
@@ -463,7 +465,7 @@ if (!function_exists('tos_push_send_to_users')) {
             }
         }
 
-        return ['sent' => $sent, 'failed' => $failed, 'subscriptions' => count($subscriptions)];
+        return ['sent' => $sent, 'failed' => $failed, 'subscriptions' => count($subscriptions) + $native['subscriptions']];
     }
 }
 

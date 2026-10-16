@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'api.dart';
 import 'auth.dart';
 import 'ads.dart';
+import 'push.dart';
 import 'access_gate.dart';
 import 'staff_dashboard.dart';
 import 'account_page.dart';
@@ -59,6 +64,16 @@ class TosApp extends StatefulWidget {
 class _TosAppState extends State<TosApp> {
   static const _themeKey = 'tos.app.theme';
   final _navigatorKey = GlobalKey<NavigatorState>();
+  final _messengerKey = GlobalKey<ScaffoldMessengerState>();
+  late final _push = PushController(
+    auth: widget.auth,
+    backend: FirebasePushBackend(),
+    supported:
+        !kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android &&
+        !widget.api.preview,
+  );
+  final List<StreamSubscription<RemoteMessage>> _pushListeners = [];
   late final SessionStore _themeStorage =
       widget.themeStorage ?? const SecureSessionStore();
   ThemeMode _themeMode = ThemeMode.light;
@@ -68,9 +83,58 @@ class _TosAppState extends State<TosApp> {
   void initState() {
     super.initState();
     _loadTheme();
+    _startPush();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && !widget.api.preview) AdsController.instance.start();
     });
+  }
+
+  Future<void> _startPush() async {
+    await _push.start();
+    if (!mounted || !_push.ready) return;
+    _pushListeners.add(
+      FirebaseMessaging.onMessage.listen((message) {
+        if (widget.auth.user == null || !_push.enabled) return;
+        final notification = message.notification;
+        _messengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text(
+              [
+                notification?.title,
+                notification?.body,
+              ].whereType<String>().join('\n'),
+            ),
+            action: pushLink(message.data['url']?.toString()) == null
+                ? null
+                : SnackBarAction(
+                    label: 'Apri',
+                    onPressed: () => _openPush(message),
+                  ),
+          ),
+        );
+      }),
+    );
+    _pushListeners.add(FirebaseMessaging.onMessageOpenedApp.listen(_openPush));
+    try {
+      final initial = await FirebaseMessaging.instance.getInitialMessage();
+      if (mounted && initial != null) _openPush(initial);
+    } catch (_) {
+      // Opening the app must remain possible when a notification cannot be read.
+    }
+  }
+
+  void _openPush(RemoteMessage message) {
+    final url = pushLink(message.data['url']?.toString());
+    if (url != null) launchUrl(url, mode: LaunchMode.inAppBrowserView);
+  }
+
+  @override
+  void dispose() {
+    for (final listener in _pushListeners) {
+      listener.cancel();
+    }
+    _push.dispose();
+    super.dispose();
   }
 
   Future<void> _loadTheme() async {
@@ -146,39 +210,43 @@ class _TosAppState extends State<TosApp> {
   @override
   Widget build(BuildContext context) => MaterialApp(
     navigatorKey: _navigatorKey,
+    scaffoldMessengerKey: _messengerKey,
     title: 'Tornei Old School',
     debugShowCheckedModeBanner: false,
-    builder: (context, child) => AppAuthScope(
-      auth: widget.auth,
-      child: widget.api.preview
-          ? Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
-                child: Column(
-                  children: [
-                    Material(
-                      color: const Color(0xffffe6a7),
-                      child: SafeArea(
-                        bottom: false,
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Text(
-                              'Anteprima · dati dimostrativi',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.labelLarge,
+    builder: (context, child) => PushScope(
+      controller: _push,
+      child: AppAuthScope(
+        auth: widget.auth,
+        child: widget.api.preview
+            ? Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: Column(
+                    children: [
+                      Material(
+                        color: const Color(0xffffe6a7),
+                        child: SafeArea(
+                          bottom: false,
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: Padding(
+                              padding: const EdgeInsets.all(10),
+                              child: Text(
+                                'Anteprima · dati dimostrativi',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.labelLarge,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    Expanded(child: child!),
-                  ],
+                      Expanded(child: child!),
+                    ],
+                  ),
                 ),
-              ),
-            )
-          : child!,
+              )
+            : child!,
+      ),
     ),
     theme: siteTheme(),
     darkTheme: siteDarkTheme(),

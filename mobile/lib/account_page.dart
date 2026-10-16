@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'api.dart';
 import 'auth.dart';
+import 'push.dart';
 import 'home_dashboard.dart' show SiteImage;
 
 class AccountPage extends StatefulWidget {
@@ -526,17 +527,7 @@ class _AccountPageState extends State<AccountPage> {
           _section(
             'Notifiche push sul telefono',
             Icons.notifications_outlined,
-            [
-              const Text(
-                'Gestisci le notifiche del sito per risultati e risposte ai commenti.',
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: () =>
-                    _open('account.php', fragment: 'pushSettingsPanel'),
-                child: const Text('Gestisci notifiche sul sito'),
-              ),
-            ],
+            [const NativePushSettings()],
           ),
           _section('Gestione account', Icons.manage_accounts_outlined, [
             TextButton.icon(
