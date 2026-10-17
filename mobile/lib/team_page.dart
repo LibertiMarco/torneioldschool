@@ -446,6 +446,7 @@ class RosterPlayerCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: .55)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0815293e),
@@ -461,74 +462,134 @@ class RosterPlayerCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              LayoutBuilder(
-                builder: (context, constraints) => Container(
-                  height: 110,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: dark
-                          ? [
-                              colors.primaryContainer,
-                              colors.surfaceContainerHigh,
-                            ]
-                          : [siteBlue, const Color(0xff345778)],
-                    ),
+              Container(
+                height: 124,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: dark
+                        ? [const Color(0xff1c3b52), colors.surfaceContainerHigh]
+                        : [siteBlue, const Color(0xff2c6076)],
                   ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        right: -12,
-                        bottom: -18,
-                        child: Icon(
-                          Icons.sports_soccer_rounded,
-                          size: 100,
-                          color: Colors.white.withValues(alpha: 0.05),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: -20,
+                      bottom: -35,
+                      child: Icon(
+                        Icons.sports_soccer_rounded,
+                        size: 160,
+                        color: Colors.white.withValues(alpha: .05),
+                      ),
+                    ),
+                    Positioned(
+                      left: 14,
+                      bottom: 14,
+                      child: Container(
+                        width: 78,
+                        height: 78,
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: .2),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: .45),
+                          ),
+                        ),
+                        child: ClipOval(
+                          child: hasPhoto
+                              ? SiteImage(
+                                  api: api,
+                                  path: photo,
+                                  width: 70,
+                                  height: 70,
+                                  fallback: Icons.person_outline,
+                                )
+                              : ColoredBox(
+                                  color: const Color(0xff294b63),
+                                  child: Center(
+                                    child: Text(
+                                      initials,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 25,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                         ),
                       ),
-                      Center(
-                        child: hasPhoto
-                            ? SiteImage(
-                                api: api,
-                                path: photo,
-                                width: constraints.maxWidth,
-                                height: 110,
-                                fallback: Icons.person_outline,
-                              )
-                            : Text(
-                                initials,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 38,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 2,
-                                ),
-                              ),
-                      ),
-                      if (goalkeeper || captain)
-                        Positioned(
-                          top: 10,
-                          right: 10,
-                          child: Row(
+                    ),
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Tooltip(
+                        message: 'Media voti con questa squadra nel torneo',
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xfff4d879),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (goalkeeper)
-                                badge(
-                                  'GK',
-                                  'Portiere',
-                                  const Color(0xffffd43b),
-                                  siteBlue,
+                              Text(
+                                average != null &&
+                                        average.isFinite &&
+                                        average > 0
+                                    ? average
+                                          .toStringAsFixed(2)
+                                          .replaceAll('.', ',')
+                                    : '—',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: siteBlue,
                                 ),
-                              if (goalkeeper && captain)
-                                const SizedBox(width: 6),
-                              if (captain)
-                                badge('C', 'Capitano', siteRed, Colors.white),
+                              ),
+                              const Text(
+                                'MEDIA',
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1,
+                                  color: siteBlue,
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                    ],
-                  ),
+                      ),
+                    ),
+                    if (goalkeeper || captain)
+                      Positioned(
+                        bottom: 12,
+                        right: 10,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (goalkeeper)
+                              badge(
+                                'GK',
+                                'Portiere',
+                                const Color(0xffffd43b),
+                                siteBlue,
+                              ),
+                            if (goalkeeper && captain) const SizedBox(width: 4),
+                            if (captain)
+                              badge('C', 'Capitano', siteRed, Colors.white),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
               ),
               Padding(
@@ -553,43 +614,6 @@ class RosterPlayerCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    Tooltip(
-                      message: 'Media voti con questa squadra nel torneo',
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colors.primaryContainer.withValues(alpha: .45),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.star_rounded,
-                              size: 16,
-                              color: colors.primary,
-                            ),
-                            const SizedBox(width: 5),
-                            Flexible(
-                              child: Text(
-                                'Media ${average != null && average.isFinite && average > 0 ? average.toStringAsFixed(2).replaceAll('.', ',') : '—'}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: colors.onSurface,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Divider(height: 1, color: colors.outlineVariant),
-                    const SizedBox(height: 12),
                     Row(
                       children: [
                         for (final entry in {
@@ -598,25 +622,33 @@ class RosterPlayerCard extends StatelessWidget {
                           'Assist': 'assist',
                         }.entries)
                           Expanded(
-                            child: Column(
-                              children: [
-                                Text(
-                                  '${player[entry.value] ?? 0}',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: colors.onSurface,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 2),
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              decoration: BoxDecoration(
+                                color: colors.surface,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    '${player[entry.value] ?? 0}',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: colors.onSurface,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  entry.key,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: colors.onSurfaceVariant,
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    entry.key,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: colors.onSurfaceVariant,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                       ],
