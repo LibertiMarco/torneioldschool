@@ -9,6 +9,7 @@ import 'main.dart' show ErrorPanel;
 import 'theme.dart';
 import 'ranking_surface.dart';
 import 'tournament_logic.dart';
+import 'tournament_notifications.dart';
 
 const cupColors = {
   'GOLD': Color(0xffffd700),
@@ -215,6 +216,8 @@ class _TournamentPageState extends State<TournamentPage> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              TournamentNotifications(key: ValueKey(slug), slug: slug),
               const SizedBox(height: 16),
               LayoutBuilder(
                 builder: (context, constraints) {
