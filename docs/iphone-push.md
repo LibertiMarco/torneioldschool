@@ -1,7 +1,8 @@
 # Notifiche push iPhone
 
-Preparazione del 17 ottobre 2026. Il codice supporta Android e iOS; la consegna
-su iPhone richiede ancora l'attivazione APNs e una nuova build firmata.
+Configurazione del 17 ottobre 2026. Il codice supporta Android e iOS; la chiave
+APNs di produzione è collegata a Firebase. La consegna su iPhone resta da
+verificare con una nuova build firmata e un dispositivo reale.
 
 ## Configurazione client completata
 
@@ -17,17 +18,19 @@ su iPhone richiede ancora l'attivazione APNs e una nuova build firmata.
 - Sender PHP con payload APNs alert e suono standard. Preferenze torneo e
   associazione dispositivo/account usano il backend condiviso con Android.
 
-## Passaggi esterni ancora da completare
+## Stato delle console e passaggi di distribuzione
 
 1. Apple Developer, Identifiers: Push Notifications già abilitato per il bundle
    ID, verificato il 17 ottobre 2026.
-2. Creare o riutilizzare una chiave APNs adatta all'app e all'ambiente di
-   produzione (TestFlight); team Apple `DJX3Z8L84Y`.
-3. Firebase, Impostazioni progetto, Cloud Messaging, configurazione app Apple:
-   caricare la chiave `.p8` con Key ID e Team ID. La chiave privata va custodita
-   fuori dal repository e dal sito pubblico.
-4. Rigenerare il provisioning profile App Store con la capability push e
-   aggiornarlo in Codemagic. La firma di distribuzione deve produrre
+2. Chiave `Tornei Old School Firebase Push` creata con conferma dell'utente:
+   Key ID `28H2JSJF46`, team `DJX3Z8L84Y`, ambiente Production, Topic Specific
+   limitato a `it.torneioldschool.torneiOldSchool`.
+3. Chiave caricata e verificata nella sezione APNs di produzione di Firebase.
+   La copia privata `.p8` è nei Download dell'utente, fuori dal repository e
+   dal sito pubblico. Custodirla: Apple consente un solo download. Nessuna
+   chiave sandbox configurata; questa configurazione serve TestFlight/App Store.
+4. Verificare che il provisioning profile App Store di Codemagic includa la
+   capability push; rigenerarlo se manca. La firma di distribuzione deve produrre
    `aps-environment=production` nell'app esportata, anche se il progetto usa
    `development` per lo sviluppo locale.
 5. Compilare e caricare una nuova build TestFlight, verificando il file Firebase
