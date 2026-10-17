@@ -1180,10 +1180,10 @@ class TournamentCautionedPlayers extends StatelessWidget {
                         child: Text(
                           '${player['cognome'] ?? ''} ${player['nome'] ?? ''}'
                               .trim(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
-                            color: siteBlue,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
