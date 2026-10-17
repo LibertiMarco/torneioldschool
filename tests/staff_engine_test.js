@@ -36,6 +36,11 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
   document.getElementById('tournament').addEventListener('change', () => { document.getElementById('team').innerHTML = '<option value="25">Go Ahead Eagles</option>'; });
   document.getElementById('delete').onclick = () => { if (child.window.confirm('Eliminare il torneo?')) writes.push('delete'); };
   document.getElementById('edit').onclick = () => { document.getElementById('edit').classList.add('active'); document.getElementById('create').classList.remove('active'); };
+  let photoTransform;
+  child.window.PhotoTouchEditor = {
+    describe: () => ({type:'ft',width:1080,height:1350,sx:1,sy:1,dx:0,dy:0}),
+    apply: (id,values) => {photoTransform=values;return true;},
+  };
   window.eval(bridge);
   frame.dispatchEvent(new window.Event('load'));
   await delay();
@@ -87,6 +92,9 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
   document.querySelector('.confirm-modal').style.display = 'none';
   await delay();
   const image = flat(snapshot().blocks).find(block => block.kind === 'image');
+  assert.equal(image.photo.type,'ft','Photo editing metadata crosses the existing channel');
+  command({type:'photoTransform',id:image.id,values:{sx:1.5,sy:1.5,dx:40,dy:50}});
+  assert.equal(photoTransform.dx,40,'Native transforms reach the original compositor');
   command({type:'export', id:image.id, name:'coppa.png'});
   await delay(); assert.equal(messages.findLast(message => message.type === 'download').name, 'coppa.png');
   await child.window.navigator.share({files:[new window.File(['png'],'uno.png',{type:'image/png'}),new window.File(['png'],'due.png',{type:'image/png'})]});

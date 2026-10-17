@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'auth.dart';
+import 'home_dashboard.dart' show SiteImage;
 
 class PlayerLinkRequestPage extends StatefulWidget {
   const PlayerLinkRequestPage({
@@ -175,6 +176,10 @@ class _PlayerLinkRequestPageState extends State<PlayerLinkRequestPage> {
                     const SizedBox(height: 8),
                     Text('${request!['reason']}'),
                   ],
+                  if ('${request!['already_linked']}' == '1')
+                    const Text(
+                      'Giocatore già associato. Lo staff verificherà il conflitto senza modificare automaticamente il collegamento.',
+                    ),
                   if (pending)
                     const Padding(
                       padding: EdgeInsets.only(top: 8),
@@ -204,18 +209,25 @@ class _PlayerLinkRequestPageState extends State<PlayerLinkRequestPage> {
               search.text.trim().length >= 2 &&
               players.isEmpty &&
               error == null)
-            const Text(
-              'Nessun giocatore libero trovato. Prova con un altro nome.',
-            ),
+            const Text('Nessun giocatore trovato. Prova con un altro nome.'),
           for (final player in players)
             Card(
               child: ListTile(
                 selected: selected?['id'] == player['id'],
+                leading: SiteImage(
+                  api: widget.auth.api,
+                  path: '${player['foto'] ?? ''}',
+                  width: 42,
+                  height: 42,
+                  fallback: Icons.person_outline,
+                ),
                 title: Text(name(player)),
                 subtitle: Text(
                   [
                     '${player['ruolo'] ?? ''}',
                     '${player['squadra'] ?? ''}',
+                    if ('${player['already_linked']}' == '1')
+                      'Già associato · verifica amministratore',
                   ].where((value) => value.isNotEmpty).join(' · '),
                 ),
                 trailing: Icon(

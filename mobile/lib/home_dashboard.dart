@@ -3,6 +3,7 @@ import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' show parseFragment;
 
 import 'api.dart';
+import 'comments_section.dart';
 import 'native_ad_card.dart';
 import 'access_gate.dart';
 import 'about_page.dart';
@@ -1187,6 +1188,7 @@ class NewsCard extends StatelessWidget {
                       ),
                     ),
                   ),
+              CommentsSection(api: api, postId: '${row['id']}'),
             ],
           );
         },

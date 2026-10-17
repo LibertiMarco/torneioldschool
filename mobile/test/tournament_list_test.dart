@@ -62,9 +62,9 @@ void main() {
         expect(find.text(name), findsOneWidget);
         expect(tester.widget<Text>(find.text(name)).maxLines, isNull);
         expect(find.text('01/26 - 06/26'), findsOneWidget);
-        await tester.ensureVisible(find.text('Esplora il torneo'));
+        await tester.ensureVisible(find.text(name));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Esplora il torneo'));
+        await tester.tap(find.text(name));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
       }

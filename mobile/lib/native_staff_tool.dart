@@ -2,9 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 
 import 'ads.dart';
+import 'staff_photo_canvas.dart';
 
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -285,17 +288,80 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                 label: 'File supportati',
                 extensions: extensions.isEmpty ? null : extensions,
                 mimeTypes: types.isEmpty ? null : types,
+                uniformTypeIdentifiers:
+                    types.any((type) => type.startsWith('image/')) ||
+                        extensions.any(
+                          (ext) => ['png', 'jpg', 'jpeg', 'webp'].contains(ext),
+                        )
+                    ? const ['public.image']
+                    : types.any((type) => type.startsWith('video/'))
+                    ? const ['public.movie']
+                    : const ['public.data'],
               ),
             ];
-      final files = field['multiple'] == true
-          ? await openFiles(acceptedTypeGroups: groups)
-          : [?await openFile(acceptedTypeGroups: groups)];
+      final imageField =
+          types.any((type) => type.startsWith('image/')) ||
+          extensions.any((ext) => ['png', 'jpg', 'jpeg', 'webp'].contains(ext));
+      final nativePhoto =
+          !kIsWeb &&
+          imageField &&
+          [
+            TargetPlatform.android,
+            TargetPlatform.iOS,
+          ].contains(defaultTargetPlatform);
+      final source = nativePhoto
+          ? await showModalBottomSheet<int>(
+              context: context,
+              showDragHandle: true,
+              builder: (context) => SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.photo_library_outlined),
+                      title: const Text('Scegli dalla galleria'),
+                      onTap: () => Navigator.pop(context, 0),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.folder_open_outlined),
+                      title: const Text('Sfoglia file'),
+                      onTap: () => Navigator.pop(context, 1),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : 1;
+      if (!mounted || source == null) return;
+      final List<XFile> files;
+      if (source == 0) {
+        final picker = ImagePicker();
+        files = field['multiple'] == true
+            ? await picker.pickMultiImage(
+                maxWidth: 4096,
+                imageQuality: 95,
+                requestFullMetadata: false,
+              )
+            : [
+                ?await picker.pickImage(
+                  source: ImageSource.gallery,
+                  maxWidth: 4096,
+                  imageQuality: 95,
+                  requestFullMetadata: false,
+                ),
+              ];
+      } else {
+        files = field['multiple'] == true
+            ? await openFiles(acceptedTypeGroups: groups)
+            : [?await openFile(acceptedTypeGroups: groups)];
+      }
       if (files.isEmpty || !mounted || document != _document) return;
       final uploads = <Map<String, dynamic>>[];
       for (final file in files) {
-        if (await file.length() > 32 * 1024 * 1024) {
+        final limit = (field['maxBytes'] as num?)?.toInt() ?? 32 * 1024 * 1024;
+        if (await file.length() > limit) {
           _notice(
-            'Il file ${file.name} supera 32 MB. Scegli un file più piccolo.',
+            'Il file ${file.name} supera ${limit ~/ (1024 * 1024)} MB. Scegli un file più piccolo.',
           );
           return;
         }
@@ -503,15 +569,37 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                       style: TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: block['export'] == true ? 520 : 180,
+                if (block['photo'] is Map && block['pointerEditor'] != true)
+                  StaffPhotoCanvas(
+                    image: image,
+                    photo: block['photo'] as Map,
+                    onTransform: (values) => _send({
+                      'type': 'photoTransform',
+                      'id': block['id'],
+                      'values': values,
+                    }),
+                  )
+                else if (block['pointerEditor'] == true)
+                  StaffPointerCanvas(
+                    image: image,
+                    width: (block['canvasWidth'] as num).toDouble(),
+                    height: (block['canvasHeight'] as num).toDouble(),
+                    send: (value) => _send({
+                      'type': 'canvasPointer',
+                      'id': block['id'],
+                      ...value,
+                    }),
+                  )
+                else
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: block['export'] == true ? 520 : 180,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: image,
+                    ),
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: image,
-                  ),
-                ),
                 if (block['export'] == true)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),

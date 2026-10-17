@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'api.dart';
 import 'auth.dart';
+import 'login_page.dart';
 import 'ads.dart';
 import 'push.dart';
 import 'access_gate.dart';
@@ -83,6 +84,18 @@ class _TosAppState extends State<TosApp> {
   @override
   void initState() {
     super.initState();
+    if (!kIsWeb && !widget.api.preview) {
+      widget.auth.presentNativeLogin = () async {
+        final navigator = _navigatorKey.currentState;
+        if (navigator != null) {
+          await navigator.push(
+            MaterialPageRoute<void>(
+              builder: (_) => NativeLoginPage(auth: widget.auth),
+            ),
+          );
+        }
+      };
+    }
     _loadTheme();
     _startPush();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -134,6 +147,7 @@ class _TosAppState extends State<TosApp> {
     for (final listener in _pushListeners) {
       listener.cancel();
     }
+    widget.auth.presentNativeLogin = null;
     _push.dispose();
     super.dispose();
   }

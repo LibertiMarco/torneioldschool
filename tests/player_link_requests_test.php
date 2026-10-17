@@ -21,6 +21,7 @@ $db->exec("CREATE TABLE utenti(id INTEGER PRIMARY KEY, ruolo TEXT, email_verific
         (10,'user',1,'Gia','Associato','gia@test');
     INSERT INTO giocatori VALUES (10,NULL,'Mario','Rossi','Attaccante'), (11,NULL,'Luca','Bianchi','Portiere'),
         (12,10,'Gia','Associato','Difensore'), (13,NULL,'Altro','Giocatore','Centrocampista');");
+$db->exec("ALTER TABLE giocatori ADD COLUMN foto TEXT DEFAULT ''");
 $service = new PlayerLinkRequests($db);
 link_reject(fn()=>$service->status(0), 'invalid_session');
 link_reject(fn()=>$service->submit(5,10), 'invalid_session');
@@ -29,12 +30,18 @@ link_reject(fn()=>$service->pending(4), 'forbidden');
 link_expect(count($service->search(2,'Mario Rossi')) === 1, 'Search matches full name');
 link_expect(count($service->search(2,'Rossi Mario')) === 1, 'Search matches surname first');
 link_expect($service->search(2,'%_') === [], 'Wildcards are literal');
-link_expect($service->search(2,'Gia') === [], 'Assigned players are excluded');
+$assigned = $service->search(2,'Gia');
+link_expect(count($assigned) === 1 && (int)$assigned[0]['already_linked'] === 1, 'Assigned players are searchable with conflict flag');
+link_expect(!isset($assigned[0]['utente_id']) && !isset($assigned[0]['email']), 'Search never exposes owner identity');
+$claim = $service->submit(7,12);
+link_expect($claim['request']['status'] === 'pending', 'Assigned player claim remains pending');
+link_expect((int)$db->query('SELECT utente_id FROM giocatori WHERE id=12')->fetchColumn() === 10, 'Submission never replaces owner');
+link_reject(fn()=>$service->review(1,(int)$claim['request']['id'],true), 'conflict');
+$service->review(1,(int)$claim['request']['id'],false,'Verifica completata');
 $first = $service->submit(2,10);
 link_expect($first['request']['status'] === 'pending' && !$first['linked'], 'Submission never creates an association');
 link_expect($db->query('SELECT utente_id FROM giocatori WHERE id=10')->fetchColumn() === null, 'Player remains free until approval');
 link_reject(fn()=>$service->submit(2,11), 'conflict');
-link_reject(fn()=>$service->submit(3,12), 'conflict');
 link_reject(fn()=>$service->submit(3,999), 'conflict');
 $competing = $service->submit(3,10);
 link_expect(count($service->pending(1)) === 2, 'Admins see pending requests');

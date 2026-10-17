@@ -58,6 +58,7 @@ const customTemplates = (() => {
         $('ftRemoveOverlay').addEventListener('click',removeSelectedOverlay);
       }
       const canvas=$(type==='ft'?'fulltimeCanvas':'mvpCanvas');let drag=null;const pointers=new Map();
+      canvas.dataset.tosPointerEditor='true';
       canvas.style.touchAction='none';
       const point=event=>{const rect=canvas.getBoundingClientRect();return{x:(event.clientX-rect.left)*W/rect.width,y:(event.clientY-rect.top)*H/rect.height};};
       const contains=(r,p)=>r&&p.x>=r.x&&p.y>=r.y&&p.x<=r.x+r.w&&p.y<=r.y+r.h;

@@ -9,12 +9,12 @@ if (!function_exists('partita_giocatore_resolved_team_expr')) {
 
 $partita = $_GET["partita"] ?? 0;
 
-$stmtCheck = $conn->prepare("SELECT id FROM partite WHERE id = ?");
+$stmtCheck = $conn->prepare("SELECT id, giocata FROM partite WHERE id = ?");
 $stmtCheck->bind_param("i", $partita);
 $stmtCheck->execute();
 $match = $stmtCheck->get_result()->fetch_assoc();
 
-if (!$match) {
+if (!$match || (int)$match['giocata'] !== 1) {
     echo json_encode([]);
     exit;
 }

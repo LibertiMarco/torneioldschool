@@ -1009,6 +1009,12 @@ class TournamentScorers extends StatefulWidget {
 class _TournamentScorersState extends State<TournamentScorers> {
   int page = 0;
   @override
+  void didUpdateWidget(covariant TournamentScorers oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.players != widget.players) page = 0;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final ranks = <int>[];
@@ -1055,16 +1061,35 @@ class _TournamentScorersState extends State<TournamentScorers> {
             .entries
             .map((entry) {
               final player = entry.value;
+              final position = ranks[page * perPage + entry.key];
+              final medal = switch (position) {
+                1 => const Color(0xffb68a2e),
+                2 => const Color(0xff8795a6),
+                3 => const Color(0xffb77a53),
+                _ => colors.onSurfaceVariant,
+              };
               return RankingSurface(
                 index: page * perPage + entry.key,
                 child: ListTile(
                   leading: SizedBox(
-                    width: 74,
+                    width: 78,
                     child: Row(
                       children: [
-                        Text(
-                          '${ranks[page * perPage + entry.key]}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        Container(
+                          width: 26,
+                          height: 30,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: medal.withValues(alpha: .15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '$position',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: medal,
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 8),
                         SiteImage(

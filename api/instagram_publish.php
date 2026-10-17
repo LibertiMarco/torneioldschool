@@ -191,15 +191,25 @@ $publicDir = dirname(__DIR__) . '/img/instagram-publish';
 if (!is_dir($publicDir) && !@mkdir($publicDir, 0755, true) && !is_dir($publicDir)) {
     instagram_publish_json(['ok' => false, 'error' => 'Cartella temporanea di pubblicazione non disponibile sul server.'], 503);
 }
-foreach (glob($publicDir . '/*.png') ?: [] as $staleImage) {
+foreach (array_merge(glob($publicDir . '/*.png') ?: [], glob($publicDir . '/*.jpg') ?: []) as $staleImage) {
     if (is_file($staleImage) && (filemtime($staleImage) ?: time()) < time() - 86400) {
         @unlink($staleImage);
     }
 }
-$fileName = bin2hex(random_bytes(20)) . '.png';
+if (!function_exists('imagecreatefrompng') || !function_exists('imagejpeg')) {
+    instagram_publish_json(['ok'=>false,'error'=>'Il server richiede GD per preparare il JPEG supportato da Instagram. Scarica il PNG e condividilo manualmente.'], 503);
+}
+$fileName = bin2hex(random_bytes(20)) . '.jpg';
 $filePath = $publicDir . '/' . $fileName;
-if (!@move_uploaded_file($tmpPath, $filePath)) {
-    instagram_publish_json(['ok' => false, 'error' => 'Il server non è riuscito a preparare la grafica.'], 500);
+// Meta image publishing accepts JPEG. Keep the user's PNG export unchanged.
+$source = @imagecreatefrompng($tmpPath);
+$jpeg = imagecreatetruecolor(1080, 1350);
+if (!$source || !$jpeg) instagram_publish_json(['ok'=>false,'error'=>'Impossibile preparare il JPEG.'], 500);
+imagefill($jpeg, 0, 0, imagecolorallocate($jpeg, 255, 255, 255));
+imagecopy($jpeg, $source, 0, 0, 0, 0, 1080, 1350);
+if (!imagejpeg($jpeg, $filePath, 95)) {
+    @unlink($filePath);
+    instagram_publish_json(['ok'=>false,'error'=>'Impossibile salvare la grafica per Instagram.'], 500);
 }
 
 $containerId = null;
@@ -254,6 +264,7 @@ try {
         throw new RuntimeException((string)($published['error'] ?? 'Instagram non ha pubblicato la grafica.'));
     }
 
+    if (empty($published['data']['id'])) throw new RuntimeException('Instagram non ha confermato l’identificativo del post.');
     @unlink($filePath);
     instagram_publish_json(['ok' => true, 'id' => (string)($published['data']['id'] ?? '')]);
 } catch (Throwable $error) {

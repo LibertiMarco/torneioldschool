@@ -3,6 +3,7 @@ require_once __DIR__ . '/torneo_phase_rules.php';
 require_once __DIR__ . '/diffidati.php';
 require_once __DIR__ . '/player_awards.php';
 require_once __DIR__ . '/esport_account_stats.php';
+require_once __DIR__ . '/player_rankings.php';
 
 function mobile_player_stats_query(array $query): array {
     foreach ($query as $key => $value) {
@@ -37,6 +38,16 @@ function mobile_player_stats_handle(int $userId, array $query): array {
         $id = (int)$player['id'];
         $totals = torneo_stats_fetch_player_global_totals($conn, $id, $section);
         $player = array_merge($player, $totals);
+        // General rankings are all-time and exclude SerieB, exactly as on the site.
+        $player['rankings'] = ['gol'=>null, 'presenze'=>null];
+        foreach (['gol', 'presenze'] as $rankingType) {
+            foreach (player_rankings_rows($conn, $rankingType) as $ranked) {
+                if ((int)$ranked['id'] === $id) {
+                    $player['rankings'][$rankingType] = (int)$ranked['posizione'];
+                    break;
+                }
+            }
+        }
         if ($type !== null) {
             $teamExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
             $resolved = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');

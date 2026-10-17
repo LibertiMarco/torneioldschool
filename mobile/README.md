@@ -41,6 +41,14 @@ con CSRF. Richiede OpenSSL e `playwright-core` (percorso Chromium configurabile 
 `TOS_TEST_CHROMIUM`). Android/iOS e il salvataggio nel rullino vanno verificati
 anche su dispositivi fisici.
 
+## Revisione ottobre 2026
+
+Accesso mobile con email/password Flutter e verifica reCAPTCHA integrata, commenti
+sulle strutture esistenti, associazioni in conflitto, controlli condivisi e bridge
+touch delle foto: [stato e verifica](../docs/app-revision-2026-10.md).
+La preview si ricompila con `bash scripts/build_mobile_preview.sh` dalla radice.
+Il report distingue verifiche locali e integrazioni ancora da provare sul server.
+
 ## Getting Started
 
 Usare Flutter 3.47.7. La configurazione `TOS_BASE_URL` consente di selezionare il backend; il valore predefinito è `https://torneioldschool.it`.

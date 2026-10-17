@@ -167,9 +167,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(find.text('Successive'), 150);
+      await tester.scrollUntilVisible(find.byTooltip('Pagina successiva'), 150);
       api.failNext = true;
-      await tester.tap(find.text('Successive'));
+      await tester.tap(find.byTooltip('Pagina successiva'));
       await tester.pumpAndSettle();
       expect(find.text('Torneo 1'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Riprova'), 100);
@@ -180,16 +180,22 @@ void main() {
       expect(find.text('Torneo 1'), findsNothing);
       expect(
         tester
-            .widget<TextButton>(find.widgetWithText(TextButton, 'Successive'))
+            .widget<IconButton>(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is IconButton &&
+                    widget.tooltip == 'Pagina successiva',
+              ),
+            )
             .onPressed,
         isNull,
       );
-      await tester.tap(find.text('Precedenti'));
+      await tester.tap(find.byTooltip('Pagina precedente'));
       await tester.pumpAndSettle();
       expect(api.calls.last, '7/gol/1');
       expect(find.text('Torneo 1'), findsOneWidget);
       expect(find.text('Torneo 2'), findsNothing);
-      await tester.tap(find.text('Successive'));
+      await tester.tap(find.byTooltip('Pagina successiva'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Torneo 2'));
       await tester.pumpAndSettle();
@@ -242,8 +248,8 @@ void main() {
             .length,
         10,
       );
-      await tester.scrollUntilVisible(find.text('Successive'), 400);
-      await tester.tap(find.text('Successive'));
+      await tester.scrollUntilVisible(find.byTooltip('Pagina successiva'), 400);
+      await tester.tap(find.byTooltip('Pagina successiva'));
       await tester.pumpAndSettle();
       expect(calls, [1, 2]);
       expect(
@@ -256,8 +262,8 @@ void main() {
       );
       expect(find.text('Partita 1'), findsNothing);
       expect(find.text('Partita 11'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Precedenti'), 400);
-      await tester.tap(find.text('Precedenti'));
+      await tester.scrollUntilVisible(find.byTooltip('Pagina precedente'), 400);
+      await tester.tap(find.byTooltip('Pagina precedente'));
       await tester.pumpAndSettle();
       expect(calls, [1, 2, 1]);
       expect(find.text('Partita 1'), findsOneWidget);

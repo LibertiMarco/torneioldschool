@@ -10,7 +10,7 @@ const logoCalls = [];
 const context = new Proxy({}, {get: (target,key) => target[key] || (()=>{}), set:(target,key,value)=>(target[key]=value,true)});
 context.fillText=(value,x,y)=>textCalls.push({value,x,y,color:context.fillStyle});
 function node(id) {
-  if(!nodes.has(id)) nodes.set(id, {id,value:'',style:{},getBoundingClientRect(){return {left:0,top:0,width:540,height:675};},setPointerCapture(id){(this.captures||(this.captures=new Set())).add(id);this.capture=id;},hasPointerCapture(id){return this.captures?.has(id);},releasePointerCapture(id){this.captures.delete(id);this.capture=null;},listeners:{},files:[],checked:false,
+  if(!nodes.has(id)) nodes.set(id, {id,value:'',style:{},dataset:{},getBoundingClientRect(){return {left:0,top:0,width:540,height:675};},setPointerCapture(id){(this.captures||(this.captures=new Set())).add(id);this.capture=id;},hasPointerCapture(id){return this.captures?.has(id);},releasePointerCapture(id){this.captures.delete(id);this.capture=null;},listeners:{},files:[],checked:false,
     addEventListener(event,fn){this.listeners[event]=fn;},
     replaceChildren(){this.value="";}, append(option){if(!this.value)this.value=option.value;}, prepend(){},
     querySelectorAll(){return [];}, checkValidity(){return true;}, getContext(){return context;}});
@@ -39,6 +39,7 @@ const templates=sandbox.templates;
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 (async()=>{
   templates.init({editor:true});
+  assert.equal(node('fulltimeCanvas').dataset.tosPointerEditor,'true','Template pointer editor is exposed to the native bridge');
   assert(node('ftBaseControls').disabled,'No tournament must disable upload');
   responses.set('1',{ft:{image:'base-one',layout:{}},mvp:{image:'mvp-one',layout:{}}});
   responses.set('2',{ft:{image:'base-two',layout:{}},mvp:null});

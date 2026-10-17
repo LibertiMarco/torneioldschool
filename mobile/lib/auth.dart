@@ -36,6 +36,7 @@ class TosAuth extends ChangeNotifier {
   String? _access;
   String? _refresh;
   Future<void>? _refreshing;
+  Future<void> Function()? presentNativeLogin;
   bool busy = false;
   String? error;
   String get _storageKey => 'tos.session.${api.baseUrl}';
@@ -87,6 +88,10 @@ class TosAuth extends ChangeNotifier {
   }
 
   Future<void> login() async {
+    if (presentNativeLogin != null) {
+      await presentNativeLogin!();
+      return;
+    }
     if (busy) return;
     busy = true;
     error = null;
@@ -130,6 +135,39 @@ class TosAuth extends ChangeNotifier {
       error = failure.message;
     } catch (_) {
       error = 'Accesso interrotto. Puoi riprovare.';
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> loginWithPassword(
+    String email,
+    String password,
+    String captcha,
+  ) async {
+    if (busy) return false;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      final response = await api.request(
+        'api/mobile/v1/login.php',
+        body: {
+          'client_id': 'tos-mobile',
+          'email': email.trim(),
+          'password': password,
+          'captcha': captcha,
+        },
+      );
+      await _save(Map<String, dynamic>.from(response as Map));
+      return true;
+    } on ApiError catch (failure) {
+      error = failure.message;
+      return false;
+    } catch (_) {
+      error = 'Accesso non riuscito. Riprova.';
+      return false;
     } finally {
       busy = false;
       notifyListeners();
