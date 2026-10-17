@@ -17,6 +17,8 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
   TosAuth? _auth;
   String? _userId;
   bool? _followed;
+  bool _all = false;
+  List<String> _teams = [], _available = [];
   bool _busy = false;
   String? _error;
   int _generation = 0;
@@ -39,13 +41,16 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
     _userId = id;
     _generation++;
     _followed = null;
+    _all = false;
+    _teams = [];
+    _available = [];
     _busy = false;
     _error = null;
     if (mounted) setState(() {});
     if (id != null) _request();
   }
 
-  Future<void> _request({bool? followed}) async {
+  Future<void> _request({bool? followed, List<String>? teams}) async {
     final generation = ++_generation;
     setState(() {
       _busy = true;
@@ -57,11 +62,14 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
         query: followed == null ? {'torneo': widget.slug} : null,
         body: followed == null
             ? null
-            : {'torneo': widget.slug, 'followed': followed},
+            : {'torneo': widget.slug, 'followed': followed, 'teams': teams},
       );
       if (!mounted || generation != _generation) return;
       setState(() {
         _followed = result['followed'] == true;
+        _all = result['all'] == true;
+        _teams = List<String>.from(result['teams'] ?? []);
+        _available = List<String>.from(result['available_teams'] ?? []);
       });
     } catch (_) {
       if (!mounted || generation != _generation) return;
@@ -75,6 +83,102 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
         });
       }
     }
+  }
+
+  Future<void> _chooseTeams() async {
+    final userId = _userId;
+    var all = _followed != true || _all;
+    final selected = (_followed == true ? _teams : _available).toSet();
+    final choice = await showModalBottomSheet<({bool all, List<String> teams})>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, update) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * .7,
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                    'Quali squadre vuoi seguire?',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                CheckboxListTile(
+                  title: const Text('Tutte le squadre'),
+                  value: all,
+                  onChanged: (value) => update(() {
+                    all = value == true;
+                    selected.clear();
+                    if (all) selected.addAll(_available);
+                  }),
+                ),
+                Expanded(
+                  child: ListView(
+                    children: [
+                      for (final team in _available)
+                        CheckboxListTile(
+                          title: Text(team),
+                          value: all || selected.contains(team),
+                          onChanged: (value) => update(() {
+                            if (all) {
+                              selected.addAll(_available);
+                              all = false;
+                            }
+                            if (value == true) {
+                              selected.add(team);
+                            } else {
+                              selected.remove(team);
+                            }
+                            if (_available.isNotEmpty &&
+                                selected.length == _available.length) {
+                              all = true;
+                            }
+                          }),
+                        ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, (
+                          all: false,
+                          teams: <String>[],
+                        )),
+                        child: const Text('Disattiva'),
+                      ),
+                      const Spacer(),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(context, (
+                          all: all,
+                          teams: selected.toList(),
+                        )),
+                        child: const Text('Salva'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!mounted ||
+        choice == null ||
+        _userId != userId ||
+        _auth?.user?['id']?.toString() != userId) {
+      return;
+    }
+    await _request(
+      followed: choice.all || choice.teams.isNotEmpty,
+      teams: choice.all ? null : choice.teams,
+    );
   }
 
   @override
@@ -149,7 +253,7 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                 const SizedBox(width: 8),
                 Tooltip(
                   message: followed
-                      ? 'Non seguire più il torneo'
+                      ? 'Scegli le squadre da seguire'
                       : 'Ricevi gli aggiornamenti sui risultati',
                   child: FilledButton.tonal(
                     style: FilledButton.styleFrom(
@@ -162,9 +266,9 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                     ),
                     onPressed: _busy
                         ? null
-                        : () => _request(
-                            followed: _followed == null ? null : !followed,
-                          ),
+                        : _followed == null
+                        ? () => _request()
+                        : _chooseTeams,
                     child: _busy
                         ? const SizedBox(
                             width: 16,
@@ -173,7 +277,11 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                           )
                         : Text(
                             followed
-                                ? 'Seguito'
+                                ? _all
+                                      ? 'Tutte'
+                                      : _teams.length == 1
+                                      ? '1 squadra'
+                                      : '${_teams.length} squadre'
                                 : _followed == null
                                 ? 'Riprova'
                                 : 'Segui',

@@ -8,6 +8,8 @@ import 'push_test.dart' show PushAuth;
 
 class FollowAuth extends PushAuth {
   bool followed = false;
+  bool all = false;
+  List<String> teams = [];
   @override
   Future<dynamic> authorized(
     String path, {
@@ -17,8 +19,17 @@ class FollowAuth extends PushAuth {
   }) async {
     expect(path, 'api/mobile/v1/follow.php');
     expect(body?['torneo'] ?? query?['torneo'], 'summer');
-    if (body != null) followed = body['followed'] == true;
-    return {'followed': followed};
+    if (body != null) {
+      followed = body['followed'] == true;
+      all = followed && body['teams'] == null;
+      teams = all ? ['Alpha', 'Beta'] : List<String>.from(body['teams'] ?? []);
+    }
+    return {
+      'followed': followed,
+      'all': all,
+      'teams': teams,
+      'available_teams': ['Alpha', 'Beta'],
+    };
   }
 }
 
@@ -49,9 +60,36 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('Segui'));
       await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<CheckboxListTile>(
+              find.widgetWithText(CheckboxListTile, 'Tutte le squadre'),
+            )
+            .value,
+        isTrue,
+      );
+      await tester.tap(find.text('Salva'));
+      await tester.pumpAndSettle();
       expect(auth.followed, isTrue);
-      expect(find.text('Seguito'), findsOneWidget);
-      await tester.tap(find.text('Seguito'));
+      expect(auth.all, isTrue);
+      await tester.tap(find.text('Tutte'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Beta'));
+      await tester.tap(find.text('Salva'));
+      await tester.pumpAndSettle();
+      expect(auth.teams, ['Alpha']);
+      expect(auth.all, isFalse);
+      await tester.tap(find.text('1 squadra'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<CheckboxListTile>(
+              find.widgetWithText(CheckboxListTile, 'Beta'),
+            )
+            .value,
+        isFalse,
+      );
+      await tester.tap(find.text('Disattiva'));
       await tester.pumpAndSettle();
       expect(auth.followed, isFalse);
       auth.signOut();

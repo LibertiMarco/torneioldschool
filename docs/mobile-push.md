@@ -9,6 +9,16 @@ profilo di firma e verifica TestFlight sono descritti in `docs/iphone-push.md`.
 
 ## Comportamento
 
+Dal 17 ottobre 2026, il comando Segui nei tornei apre la scelta delle squadre:
+tutte sono selezionate al primo utilizzo. Il salvataggio di tutte segue anche
+le future squadre del torneo; una selezione parziale salva soltanto i nomi
+scelti. Disattiva elimina i seguiti di quel torneo, senza toccare gli altri.
+API native e preview condividono `includi/mobile_follow.php`. La selezione
+parziale rimuove anche gli eventuali seguiti squadra creati dal vecchio comando
+web Segui torneo, per evitare avvisi delle squadre escluse. I sender esistenti
+inviano gli esiti ai follower del torneo oppure di una delle due squadre,
+deduplicando gli utenti.
+
 L'account mostra Attiva notifiche, Disattiva notifiche e Invia notifica di test.
 L'avvio non chiede il permesso e non registra dispositivi senza scelta esplicita.
 L'attivazione richiede prima un backend configurato, poi il permesso Android.
