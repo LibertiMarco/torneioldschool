@@ -217,7 +217,14 @@ class _TournamentPageState extends State<TournamentPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              TournamentNotifications(key: ValueKey(slug), slug: slug),
+              TournamentNotifications(
+                key: ValueKey(slug),
+                slug: slug,
+                teamLogos: {
+                  for (final team in result.teams)
+                    '${team['nome']}': '${team['logo'] ?? ''}',
+                },
+              ),
               const SizedBox(height: 16),
               LayoutBuilder(
                 builder: (context, constraints) {

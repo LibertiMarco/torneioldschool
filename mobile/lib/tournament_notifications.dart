@@ -3,10 +3,16 @@ import 'package:flutter/material.dart';
 import 'access_gate.dart';
 import 'auth.dart';
 import 'push.dart';
+import 'home_dashboard.dart' show SiteImage;
 
 class TournamentNotifications extends StatefulWidget {
-  const TournamentNotifications({super.key, required this.slug});
+  const TournamentNotifications({
+    super.key,
+    required this.slug,
+    this.teamLogos = const {},
+  });
   final String slug;
+  final Map<String, String> teamLogos;
 
   @override
   State<TournamentNotifications> createState() =>
@@ -89,84 +95,279 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
     final userId = _userId;
     var all = _followed != true || _all;
     final selected = (_followed == true ? _teams : _available).toSet();
-    final choice = await showModalBottomSheet<({bool all, List<String> teams})>(
+    var search = '';
+    final choice = await showDialog<({bool all, List<String> teams})>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
       builder: (context) => StatefulBuilder(
-        builder: (context, update) => SafeArea(
-          child: SizedBox(
-            height: MediaQuery.sizeOf(context).height * .7,
-            child: Column(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Text(
-                    'Quali squadre vuoi seguire?',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                  ),
-                ),
-                CheckboxListTile(
-                  title: const Text('Tutte le squadre'),
-                  value: all,
-                  onChanged: (value) => update(() {
-                    all = value == true;
-                    selected.clear();
-                    if (all) selected.addAll(_available);
-                  }),
-                ),
-                Expanded(
-                  child: ListView(
-                    children: [
-                      for (final team in _available)
-                        CheckboxListTile(
-                          title: Text(team),
-                          value: all || selected.contains(team),
-                          onChanged: (value) => update(() {
-                            if (all) {
-                              selected.addAll(_available);
-                              all = false;
-                            }
-                            if (value == true) {
-                              selected.add(team);
-                            } else {
-                              selected.remove(team);
-                            }
-                            if (_available.isNotEmpty &&
-                                selected.length == _available.length) {
-                              all = true;
-                            }
-                          }),
-                        ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, (
-                          all: false,
-                          teams: <String>[],
-                        )),
-                        child: const Text('Disattiva'),
-                      ),
-                      const Spacer(),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(context, (
-                          all: all,
-                          teams: selected.toList(),
-                        )),
-                        child: const Text('Salva'),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+        builder: (context, update) {
+          final colors = Theme.of(context).colorScheme;
+          final visible = _available
+              .where(
+                (team) => team.toLowerCase().contains(search.toLowerCase()),
+              )
+              .toList();
+          final count = all ? _available.length : selected.length;
+          return Dialog(
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 24,
             ),
-          ),
-        ),
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 480,
+                maxHeight: MediaQuery.sizeOf(context).height * .8,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 8, 16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          colors.primaryContainer,
+                          colors.surfaceContainerLow,
+                        ],
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: colors.surface.withValues(alpha: .7),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(
+                            Icons.notifications_active_outlined,
+                            color: colors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Segui le tue squadre',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'Scegli di chi ricevere i risultati',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: colors.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Chiudi',
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: TextField(
+                      onChanged: (value) => update(() => search = value),
+                      decoration: InputDecoration(
+                        hintText: 'Cerca squadra',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        filled: true,
+                        fillColor: colors.surfaceContainerLow,
+                        isDense: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: CheckboxListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      tileColor: colors.primaryContainer.withValues(alpha: .3),
+                      secondary: Icon(
+                        Icons.groups_rounded,
+                        color: colors.primary,
+                      ),
+                      title: const Text(
+                        'Tutte le squadre',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      value: all,
+                      onChanged: (value) => update(() {
+                        all = value == true;
+                        selected.clear();
+                        if (all) selected.addAll(_available);
+                      }),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '$count di ${_available.length} selezionate',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Flexible(
+                    child: visible.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Text('Nessuna squadra trovata'),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: visible.length,
+                            itemBuilder: (context, index) {
+                              final team = visible[index];
+                              final checked = all || selected.contains(team);
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                margin: const EdgeInsets.only(bottom: 6),
+                                decoration: BoxDecoration(
+                                  color: checked
+                                      ? colors.primaryContainer.withValues(
+                                          alpha: .18,
+                                        )
+                                      : colors.surfaceContainerLow,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: checked
+                                        ? colors.primary.withValues(alpha: .3)
+                                        : Colors.transparent,
+                                  ),
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  borderRadius: BorderRadius.circular(14),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: CheckboxListTile(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 3,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    secondary: Container(
+                                      width: 40,
+                                      height: 40,
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: colors.surface,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: SiteImage(
+                                        api: _auth!.api,
+                                        path: widget.teamLogos[team] ?? '',
+                                        width: 32,
+                                        height: 32,
+                                        fallback: Icons.shield_outlined,
+                                        preserveShape: true,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      team,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    value: checked,
+                                    onChanged: (value) => update(() {
+                                      if (all) {
+                                        selected.addAll(_available);
+                                        all = false;
+                                      }
+                                      if (value == true) {
+                                        selected.add(team);
+                                      } else {
+                                        selected.remove(team);
+                                      }
+                                      if (_available.isNotEmpty &&
+                                          selected.length ==
+                                              _available.length) {
+                                        all = true;
+                                      }
+                                    }),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, (
+                            all: false,
+                            teams: <String>[],
+                          )),
+                          child: const Text(
+                            'Disattiva',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        FilledButton.icon(
+                          onPressed: () => Navigator.pop(context, (
+                            all: all,
+                            teams: selected.toList(),
+                          )),
+                          icon: const Icon(Icons.check_rounded, size: 18),
+                          label: const Text(
+                            'Salva',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
     if (!mounted ||

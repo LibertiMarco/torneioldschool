@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/access_gate.dart';
 import 'package:tornei_old_school/api.dart';
 import 'package:tornei_old_school/tournament_notifications.dart';
+import 'package:tornei_old_school/home_dashboard.dart' show SiteImage;
 
 import 'push_test.dart' show PushAuth;
 
@@ -60,6 +61,15 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('Segui'));
       await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(find.byType(SiteImage), findsNWidgets(2));
+      await tester.enterText(find.byType(TextField), 'Alpha');
+      await tester.pumpAndSettle();
+      expect(find.text('Beta'), findsNothing);
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
       expect(
         tester
             .widget<CheckboxListTile>(
@@ -73,6 +83,8 @@ void main() {
       expect(auth.followed, isTrue);
       expect(auth.all, isTrue);
       await tester.tap(find.text('Tutte'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Beta'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Beta'));
       await tester.tap(find.text('Salva'));
