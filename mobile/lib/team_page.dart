@@ -497,38 +497,61 @@ class RosterPlayerCard extends StatelessWidget {
                               message:
                                   'Media voti con questa squadra nel torneo',
                               child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 9,
-                                  vertical: 7,
-                                ),
+                                width: 62,
+                                height: 62,
+                                padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: colors.surface.withValues(alpha: .95),
-                                  borderRadius: BorderRadius.circular(10),
+                                  color: siteBlue.withValues(alpha: .95),
+                                  shape: BoxShape.circle,
                                 ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
+                                child: Stack(
+                                  alignment: Alignment.center,
                                   children: [
-                                    Text(
-                                      average != null &&
-                                              average.isFinite &&
-                                              average > 0
-                                          ? average
-                                                .toStringAsFixed(2)
-                                                .replaceAll('.', ',')
-                                          : '—',
-                                      style: TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w800,
-                                        color: colors.onSurface,
+                                    Positioned.fill(
+                                      child: CircularProgressIndicator(
+                                        value:
+                                            average != null &&
+                                                average.isFinite &&
+                                                average > 0
+                                            ? (average / 10).clamp(0.0, 1.0)
+                                            : 0,
+                                        strokeWidth: 3,
+                                        strokeCap: StrokeCap.round,
+                                        backgroundColor: Colors.white
+                                            .withValues(alpha: .15),
+                                        valueColor:
+                                            const AlwaysStoppedAnimation(
+                                              Color(0xff7ee0cc),
+                                            ),
                                       ),
                                     ),
-                                    Text(
-                                      'Media',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w500,
-                                        color: colors.onSurfaceVariant,
-                                      ),
+                                    Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          average != null &&
+                                                  average.isFinite &&
+                                                  average > 0
+                                              ? average
+                                                    .toStringAsFixed(2)
+                                                    .replaceAll('.', ',')
+                                              : '—',
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const Text(
+                                          'MEDIA',
+                                          style: TextStyle(
+                                            fontSize: 7,
+                                            letterSpacing: .8,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xffbed0dd),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -567,33 +590,45 @@ class RosterPlayerCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+              Container(
+                margin: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                decoration: BoxDecoration(
+                  color: siteBlue,
+                  borderRadius: BorderRadius.circular(13),
+                  border: const Border(
+                    left: BorderSide(color: siteRed, width: 3),
+                  ),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       '${player['nome']} ${player['cognome']}',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: colors.onSurface,
+                        color: Colors.white,
+                        height: 1.2,
                       ),
                     ),
                     const SizedBox(height: 5),
                     Text(
                       role.isEmpty ? 'Giocatore' : role,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colors.onSurfaceVariant,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xffbed0dd),
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    Divider(
-                      height: 1,
-                      color: colors.outlineVariant.withValues(alpha: .6),
-                    ),
-                    const SizedBox(height: 4),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
                       children: [
                         for (final entry in {
@@ -606,6 +641,18 @@ class RosterPlayerCard extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(vertical: 9),
                               child: Column(
                                 children: [
+                                  Icon(
+                                    entry.key == 'Presenze'
+                                        ? Icons.sports_rounded
+                                        : entry.key == 'Gol'
+                                        ? Icons.sports_soccer_rounded
+                                        : Icons.assistant_direction_outlined,
+                                    size: 15,
+                                    color: dark
+                                        ? const Color(0xfff09b9b)
+                                        : siteRed,
+                                  ),
+                                  const SizedBox(height: 5),
                                   Text(
                                     '${player[entry.value] ?? 0}',
                                     style: TextStyle(
