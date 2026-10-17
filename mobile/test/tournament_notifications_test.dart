@@ -26,6 +26,10 @@ void main() {
   testWidgets(
     'load, follow, unfollow and logout update tournament preference',
     (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       final auth = FollowAuth();
       await tester.pumpWidget(
         MaterialApp(
@@ -38,20 +42,22 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Segui il torneo'));
+      expect(
+        tester.getSize(find.byType(TournamentNotifications)).height,
+        lessThanOrEqualTo(80),
+      );
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Segui'));
       await tester.pumpAndSettle();
       expect(auth.followed, isTrue);
-      expect(find.text('Non seguire più il torneo'), findsOneWidget);
-      await tester.tap(find.text('Non seguire più il torneo'));
+      expect(find.text('Seguito'), findsOneWidget);
+      await tester.tap(find.text('Seguito'));
       await tester.pumpAndSettle();
       expect(auth.followed, isFalse);
       auth.signOut();
       await tester.pumpAndSettle();
-      expect(find.text('Segui il torneo'), findsNothing);
-      expect(
-        find.text('Accedi dal tuo account per seguire il torneo.'),
-        findsOneWidget,
-      );
+      expect(find.text('Segui'), findsNothing);
+      expect(find.text('Accedi per seguire il torneo'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
       auth.dispose();
     },

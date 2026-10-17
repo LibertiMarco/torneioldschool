@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'admin.dart';
+import 'ads.dart';
 import 'auth.dart';
 import 'staff_controls.dart';
 import 'native_staff_tool.dart';
@@ -208,6 +209,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const AdaptiveAdBanner(),
           Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(

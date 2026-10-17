@@ -3,6 +3,9 @@ import 'dart:convert';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+
+import 'ads.dart';
+
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -729,6 +732,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                                           ),
                                         ),
                                       _column(_blocks),
+                                      const AdaptiveAdBanner(),
                                     ],
                                   ),
                                 ),

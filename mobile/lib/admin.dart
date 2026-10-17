@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'auth.dart';
+import 'ads.dart';
 import 'staff_controls.dart';
 import 'api.dart';
 
@@ -60,6 +61,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  const AdaptiveAdBanner(),
                   const Text(
                     'Utenti',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -261,6 +263,7 @@ class _AdminFeaturesPageState extends State<AdminFeaturesPage> {
             body: ListView(
               padding: const EdgeInsets.all(20),
               children: [
+                const AdaptiveAdBanner(),
                 Text(
                   '${widget.user['nome']} ${widget.user['cognome']}',
                   style: Theme.of(context).textTheme.headlineSmall,

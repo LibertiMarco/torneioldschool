@@ -89,62 +89,132 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
     final push = context
         .dependOnInheritedWidgetOfExactType<PushScope>()
         ?.notifier;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Notifiche risultati',
-              style: TextStyle(fontWeight: FontWeight.bold),
+    final colors = Theme.of(context).colorScheme;
+    final followed = _followed == true;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: followed
+                ? colors.primaryContainer.withValues(alpha: .35)
+                : colors.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: followed
+                  ? colors.primary.withValues(alpha: .3)
+                  : colors.outlineVariant,
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Segui questo torneo per ricevere gli aggiornamenti quando vengono confermati i risultati delle partite.',
-            ),
-            if (_userId == null)
-              const Text('Accedi dal tuo account per seguire il torneo.')
-            else ...[
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: _busy
-                    ? null
-                    : () => _request(
-                        followed: _followed == null ? null : !_followed!,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                followed
+                    ? Icons.notifications_active_outlined
+                    : Icons.notifications_none_rounded,
+                size: 20,
+                color: colors.primary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Notifiche risultati',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
-                icon: Icon(
-                  _followed == true
-                      ? Icons.notifications_active
-                      : Icons.notifications_none,
+                    ),
+                    Text(
+                      _userId == null
+                          ? 'Accedi per seguire il torneo'
+                          : 'A fine partita',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
-                label: Text(
-                  _busy
-                      ? 'Aggiornamento…'
-                      : _followed == true
+              ),
+              if (_userId != null) ...[
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: followed
                       ? 'Non seguire più il torneo'
-                      : _followed == null
-                      ? 'Riprova'
-                      : 'Segui il torneo',
+                      : 'Ricevi gli aggiornamenti sui risultati',
+                  child: FilledButton.tonal(
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      minimumSize: const Size(0, 40),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onPressed: _busy
+                        ? null
+                        : () => _request(
+                            followed: _followed == null ? null : !followed,
+                          ),
+                    child: _busy
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            followed
+                                ? 'Seguito'
+                                : _followed == null
+                                ? 'Riprova'
+                                : 'Segui',
+                          ),
+                  ),
                 ),
-              ),
-              if (_followed == true &&
-                  push?.supported == true &&
-                  push?.enabled != true)
-                const NativePushSettings(),
-              if (_followed == true && push?.supported != true)
-                const Text(
-                  'Per ricevere le notifiche sul telefono, attivale dall’app Android o iPhone.',
-                ),
+                if (followed &&
+                    push?.supported == true &&
+                    push?.enabled != true)
+                  IconButton(
+                    tooltip: 'Attiva notifiche sul telefono',
+                    onPressed: () => showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      showDragHandle: true,
+                      builder: (_) => SafeArea(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(20),
+                          child: PushScope(
+                            controller: push!,
+                            child: const NativePushSettings(),
+                          ),
+                        ),
+                      ),
+                    ),
+                    icon: const Icon(Icons.settings_outlined, size: 20),
+                  ),
+              ],
             ],
-            if (_error != null)
-              Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-          ],
+          ),
         ),
-      ),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 12),
+            child: Text(
+              _error!,
+              style: TextStyle(fontSize: 12, color: colors.error),
+            ),
+          ),
+      ],
     );
   }
 }
