@@ -61,6 +61,8 @@
 		<dict><key>SKAdNetworkIdentifier</key><string>97r2b46745.skadnetwork</string></dict>
 		<dict><key>SKAdNetworkIdentifier</key><string>3qcr597p9d.skadnetwork</string></dict>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Tornei Old School accede alle tue foto per permetterti di scegliere e caricare la foto del profilo e del giocatore.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Consenti il salvataggio delle grafiche di Tornei Old School nelle tue foto.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
