@@ -70,7 +70,8 @@ class _TosAppState extends State<TosApp> {
     backend: FirebasePushBackend(),
     supported:
         !kIsWeb &&
-        defaultTargetPlatform == TargetPlatform.android &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS) &&
         !widget.api.preview,
   );
   final List<StreamSubscription<RemoteMessage>> _pushListeners = [];

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import 'auth.dart';
 
@@ -46,6 +47,18 @@ class FirebasePushBackend implements PushBackend {
   @override
   Future<String?> token() async {
     await FirebaseMessaging.instance.setAutoInitEnabled(true);
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      // APNs registration can complete after the permission dialog closes.
+      for (var attempt = 0; attempt < 20; attempt++) {
+        if (await FirebaseMessaging.instance.getAPNSToken() != null) {
+          return FirebaseMessaging.instance.getToken();
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      }
+      throw StateError(
+        'Registrazione notifiche Apple in corso. Riprova tra poco.',
+      );
+    }
     return FirebaseMessaging.instance.getToken();
   }
 
@@ -235,7 +248,7 @@ class PushController extends ChangeNotifier with WidgetsBindingObserver {
       }
       if (!await backend.requestPermission()) {
         throw StateError(
-          'Consenti le notifiche nelle impostazioni Android dell’app.',
+          'Consenti le notifiche nelle impostazioni del telefono per Tornei Old School.',
         );
       }
       _requireUser(userId);
@@ -274,7 +287,7 @@ class PushController extends ChangeNotifier with WidgetsBindingObserver {
       'api/mobile/v1/push.php',
       body: {'action': 'test', 'token': _token},
     );
-    message = 'Test inviato. Con l’app aperta compare un avviso; con l’app in background una notifica Android.';
+    message = 'Test inviato. Con l’app aperta compare un avviso; con l’app in background una notifica sul telefono.';
   });
 
   Future<void> _perform(Future<void> Function() action) async {
@@ -322,7 +335,7 @@ class NativePushSettings extends StatelessWidget {
         ?.notifier;
     if (push == null || !push.supported) {
       return const Text(
-        'Le notifiche sul telefono sono disponibili nell’app Android.',
+        'Le notifiche sul telefono sono disponibili nell’app Android e iPhone.',
       );
     }
     return Column(

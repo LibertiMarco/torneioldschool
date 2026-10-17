@@ -134,7 +134,7 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                 const NativePushSettings(),
               if (_followed == true && push?.supported != true)
                 const Text(
-                  'Le notifiche push sono attualmente disponibili nell’app Android. Su iPhone la configurazione è in preparazione.',
+                  'Per ricevere le notifiche sul telefono, attivale dall’app Android o iPhone.',
                 ),
             ],
             if (_error != null)

@@ -75,6 +75,8 @@ function tos_fcm_message(string $token, array $payload): array
         'notification' => ['title' => (string)($payload['title'] ?? 'Tornei Old School'),
             'body' => (string)($payload['body'] ?? '')],
         'data' => ['url' => $url],
+        'apns' => ['headers' => ['apns-push-type' => 'alert', 'apns-priority' => '10'],
+            'payload' => ['aps' => ['sound' => 'default']]],
         'android' => ['priority' => 'HIGH', 'ttl' => '86400s',
             'restricted_package_name' => 'it.torneioldschool.tornei_old_school',
             'notification' => ['icon' => 'ic_notification', 'sound' => 'default', 'channel_id' => 'tos_updates',

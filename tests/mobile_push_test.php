@@ -39,6 +39,9 @@ foreach (['https://evil.test/path', '//evil.test', 'http://torneioldschool.it', 
 $message = tos_fcm_message('test-token', ['url' => '/articolo.php?id=4', 'title' => 'Risposta']);
 push_expect($message['message']['data']['url'] === 'https://torneioldschool.it/articolo.php?id=4', 'Relative site link retained');
 push_expect($message['message']['android']['restricted_package_name'] === 'it.torneioldschool.tornei_old_school', 'Package restricted');
+push_expect($message['message']['apns']['headers']['apns-push-type'] === 'alert', 'Apple visible notification delivery');
+push_expect($message['message']['apns']['headers']['apns-priority'] === '10', 'Apple immediate alert priority');
+push_expect($message['message']['apns']['payload']['aps']['sound'] === 'default', 'Apple notification sound');
 push_expect(!tos_fcm_unregistered(['error' => ['code' => 404]]), 'Generic 404 does not delete token');
 push_expect(tos_fcm_unregistered(['error' => ['details' => [[
     '@type' => 'type.googleapis.com/google.firebase.fcm.v1.FcmError', 'errorCode' => 'UNREGISTERED',

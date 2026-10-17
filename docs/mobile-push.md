@@ -4,7 +4,8 @@ Progetto Firebase: `tornei-old-school-9e11b`, pacchetto
 `it.torneioldschool.tornei_old_school`. Il file client `google-services.json`
 è installato in `mobile/android/app/`. Firebase Core 4.0.0 e Messaging 16.0.0
 usano i token di registrazione FCM, compatibili con il sender HTTP v1.
-La configurazione iOS non è stata abilitata.
+Il supporto iOS è stato aggiunto il 17 ottobre 2026; configurazione APNs,
+profilo di firma e verifica TestFlight sono descritti in `docs/iphone-push.md`.
 
 ## Comportamento
 
