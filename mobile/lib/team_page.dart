@@ -389,6 +389,10 @@ class RosterPlayerCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final photo = '${player['foto'] ?? ''}'.trim();
+    // get_rosa returns the average scoped to this team and tournament.
+    final average = double.tryParse(
+      '${player['media_voti'] ?? ''}'.replaceAll(',', '.'),
+    );
     final hasPhoto =
         photo.isNotEmpty &&
         !RegExp(
@@ -549,6 +553,41 @@ class RosterPlayerCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 14),
+                    Tooltip(
+                      message: 'Media voti con questa squadra nel torneo',
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.primaryContainer.withValues(alpha: .45),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.star_rounded,
+                              size: 16,
+                              color: colors.primary,
+                            ),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                'Media ${average != null && average.isFinite && average > 0 ? average.toStringAsFixed(2).replaceAll('.', ',') : '—'}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: colors.onSurface,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Divider(height: 1, color: colors.outlineVariant),
                     const SizedBox(height: 12),
                     Row(
