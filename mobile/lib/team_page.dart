@@ -737,8 +737,18 @@ class TeamMatchTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
+        color: dark ? colors.surfaceContainerLow : Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: dark ? null : Border.all(color: const Color(0xffd5dfe8)),
+        boxShadow: dark
+            ? null
+            : const [
+                BoxShadow(
+                  color: Color(0x0c15293e),
+                  blurRadius: 14,
+                  offset: Offset(0, 4),
+                ),
+              ],
       ),
       child: Material(
         color: Colors.transparent,
