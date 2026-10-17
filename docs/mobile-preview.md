@@ -28,6 +28,8 @@ Per aggiornare la preview compilare dalla cartella `mobile`:
 
 Copiare l'output verificato in `app-preview/build/` (senza file `.map` e log), poi pubblicare con il normale deploy Git. `app-preview/build/.htaccess` impedisce l'apertura diretta di `index.html`; l'ingresso è il PHP protetto. Gli asset compilati non contengono segreti. La configurazione CanvasKit e i font sono locali per rispettare la CSP del sito.
 
+Prima di copiare una build che modifica le API della preview, verificare che il JavaScript generato contenga anche il relativo mapping di `BrowserAuth` (per esempio il percorso `api/mobile/v1/follow.php` associato all'azione `follow`). Se il mapping manca nonostante il sorgente aggiornato, spostare la cache locale `mobile/.dart_tool/flutter_build` e ricompilare da zero. La sola presenza del testo del pulsante non garantisce che la build contenga il collegamento API aggiornato.
+
 Il vecchio demo rimane opzionale solo per test automatici/offline, con `mobile/preview.cmd -Demo`. In quella modalità compare il banner giallo e non si fanno chiamate al sito. Non è la versione da usare per provare il database reale. `mobile/preview.cmd` senza opzioni indica la preview reale.
 
 L'anteprima non certifica il comportamento iOS di login, portachiavi, file e notifiche. Non è ancora la versione completa: mancano gli altri moduli elencati in `app-mobile.md`. Per provarla come app nativa sul proprio iPhone servirà una build macOS e poi installazione personale (ad esempio AltStore); TestFlight e pubblicazione sono rimandati.

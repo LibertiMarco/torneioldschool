@@ -142119,6 +142119,7 @@ var $async$uo=A.w(function(a0,a1){if(a0===1){o.push(a1)
 s=p}for(;;)switch(s){case 0:A:{if("api/mobile/v1/admin/users.php"===a){h="users"
 break A}if("api/mobile/v1/admin/user_features.php"===a){h="features"
 break A}if("api/mobile/v1/account.php"===a){h="account"
+break A}if("api/mobile/v1/follow.php"===a){h="follow"
 break A}if("api/mobile/v1/player_stats.php"===a){h="player_stats"
 break A}if("api/mobile/v1/player_link_requests.php"===a){h="player_link_requests"
 break A}h=A.O(B.YI)}m=h
