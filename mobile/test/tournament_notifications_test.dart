@@ -59,6 +59,7 @@ void main() {
         lessThanOrEqualTo(80),
       );
       expect(tester.takeException(), isNull);
+      expect(find.text('Disattivate'), findsOneWidget);
       await tester.tap(find.text('Segui'));
       await tester.pumpAndSettle();
       expect(find.byType(Dialog), findsOneWidget);
@@ -82,7 +83,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(auth.followed, isTrue);
       expect(auth.all, isTrue);
-      await tester.tap(find.text('Tutte'));
+      expect(find.text('Attive · Tutte le squadre'), findsOneWidget);
+      await tester.tap(find.byTooltip('Scegli le squadre da seguire'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Beta'));
       await tester.pumpAndSettle();
@@ -91,7 +93,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(auth.teams, ['Alpha']);
       expect(auth.all, isFalse);
-      await tester.tap(find.text('1 squadra'));
+      expect(find.text('Attive · 1 squadra selezionata'), findsOneWidget);
+      await tester.tap(find.byTooltip('Scegli le squadre da seguire'));
       await tester.pumpAndSettle();
       expect(
         tester

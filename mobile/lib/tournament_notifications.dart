@@ -396,31 +396,62 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
         ?.notifier;
     final colors = Theme.of(context).colorScheme;
     final followed = _followed == true;
+    final phoneDisabled =
+        followed && push?.supported == true && push?.enabled != true;
+    final accent = phoneDisabled
+        ? colors.tertiary
+        : followed
+        ? const Color(0xff16866c)
+        : colors.onSurfaceVariant;
+    final selection = _all
+        ? 'Tutte le squadre'
+        : _teams.length == 1
+        ? '1 squadra selezionata'
+        : '${_teams.length} squadre selezionate';
+    final status = _userId == null
+        ? 'Accedi per seguire il torneo'
+        : _busy
+        ? 'Aggiornamento…'
+        : _followed == null
+        ? 'Preferenza non disponibile'
+        : !followed
+        ? 'Disattivate'
+        : phoneDisabled
+        ? 'Da attivare sul telefono'
+        : 'Attive · $selection';
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: followed
-                ? colors.primaryContainer.withValues(alpha: .35)
+                ? accent.withValues(alpha: .07)
                 : colors.surfaceContainerLow,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: followed
-                  ? colors.primary.withValues(alpha: .3)
+                  ? accent.withValues(alpha: .22)
                   : colors.outlineVariant,
             ),
           ),
           child: Row(
             children: [
-              Icon(
-                followed
-                    ? Icons.notifications_active_outlined
-                    : Icons.notifications_none_rounded,
-                size: 20,
-                color: colors.primary,
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  followed
+                      ? Icons.notifications_active_outlined
+                      : Icons.notifications_none_rounded,
+                  size: 20,
+                  color: accent,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -437,16 +468,30 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    if (_userId == null)
-                      Text(
-                        'Accedi per seguire il torneo',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: colors.onSurfaceVariant,
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        if (_userId != null && !_busy) ...[
+                          Container(
+                            width: 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: accent,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                        ],
+                        Expanded(
+                          child: Text(
+                            status,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 11, color: accent),
+                          ),
                         ),
-                      ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -476,17 +521,9 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : Text(
-                            followed
-                                ? _all
-                                      ? 'Tutte'
-                                      : _teams.length == 1
-                                      ? '1 squadra'
-                                      : '${_teams.length} squadre'
-                                : _followed == null
-                                ? 'Riprova'
-                                : 'Segui',
-                          ),
+                        : followed
+                        ? const Icon(Icons.tune_rounded, size: 20)
+                        : Text(_followed == null ? 'Riprova' : 'Segui'),
                   ),
                 ),
                 if (followed &&
