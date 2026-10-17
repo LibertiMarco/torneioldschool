@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'sport_controls.dart';
+import 'match_report_logic.dart';
+import 'venue_navigation.dart';
+
+import 'package:url_launcher/url_launcher.dart';
+
 import 'access_gate.dart';
 import 'external_link_button.dart';
 import 'player_event_marks.dart';
@@ -188,11 +194,11 @@ class _MatchPageState extends State<MatchPage> {
     key: ValueKey((api, id)),
     title: 'Dettaglio partita',
     load: () async {
-      final results = await Future.wait<dynamic>([
-        api.match(id),
-        api.events(id),
-      ]);
-      return {'match': results[0], 'events': results[1]};
+      final match = await api.match(id);
+      final events = matchWasPlayed(match)
+          ? await api.events(id)
+          : <Map<String, dynamic>>[];
+      return {'match': match, 'events': events};
     },
     render: (data) {
       final colors = Theme.of(context).colorScheme;
@@ -200,11 +206,13 @@ class _MatchPageState extends State<MatchPage> {
         ...previewMatch,
         ...Map<String, dynamic>.from(data['match'] as Map),
       };
-      final events = TosApi.rows(data['events']);
+      final played = matchWasPlayed(match);
+      final events = played
+          ? TosApi.rows(data['events'])
+          : <Map<String, dynamic>>[];
       final visibleEvents = showAllPlayers
           ? events
           : events.where(hasPlayerEvents).toList();
-      final played = '${match['giocata']}' == '1';
       final home = '${match['squadra_casa'] ?? 'Da definire'}';
       final away = '${match['squadra_ospite'] ?? 'Da definire'}';
       Widget team(String name, String logo) => Expanded(
@@ -213,12 +221,12 @@ class _MatchPageState extends State<MatchPage> {
             SiteImage(
               api: api,
               path: logo,
-              width: 56,
-              height: 56,
+              width: 44,
+              height: 44,
               preserveShape: true,
               fallback: Icons.shield_outlined,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
               name,
               textAlign: TextAlign.center,
@@ -232,7 +240,7 @@ class _MatchPageState extends State<MatchPage> {
         ),
       );
       Widget information(IconData icon, String label, dynamic value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 7),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -276,10 +284,7 @@ class _MatchPageState extends State<MatchPage> {
       }
       if (showAllPlayers) {
         for (final entry in groups.entries) {
-          groups[entry.key] = [
-            ...entry.value.where(isGoalkeeper),
-            ...entry.value.where((player) => !isGoalkeeper(player)),
-          ];
+          groups[entry.key] = orderedMatchPlayers(entry.value);
         }
       }
       Widget playerCard(Map<String, dynamic> event) => Container(
@@ -348,6 +353,16 @@ class _MatchPageState extends State<MatchPage> {
               ),
             ),
             PlayerEventMarks(stats: event),
+            if ((int.tryParse('${event['assist']}') ?? 0) > 0)
+              Text(
+                'Assist: ${event['assist']}',
+                style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
+              ),
+            if ((int.tryParse('${event['autogol']}') ?? 0) > 0)
+              Text(
+                'Autogol: ${event['autogol']}',
+                style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
+              ),
           ],
         ),
       );
@@ -370,13 +385,29 @@ class _MatchPageState extends State<MatchPage> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: colors.onSurface,
-                  ),
+                Row(
+                  children: [
+                    SiteImage(
+                      api: api,
+                      path:
+                          '${match[side == 'CASA' ? 'logo_casa' : 'logo_ospite'] ?? ''}',
+                      width: 22,
+                      height: 22,
+                      preserveShape: true,
+                      fallback: Icons.shield_outlined,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: colors.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -397,7 +428,7 @@ class _MatchPageState extends State<MatchPage> {
         padding: const EdgeInsets.all(16),
         children: [
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: colors.surfaceContainerLow,
               borderRadius: BorderRadius.circular(24),
@@ -428,7 +459,7 @@ class _MatchPageState extends State<MatchPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 14),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -452,7 +483,7 @@ class _MatchPageState extends State<MatchPage> {
                     team(away, '${match['logo_ospite'] ?? ''}'),
                   ],
                 ),
-                if ('${match['decisa_rigori']}' == '1') ...[
+                if (played && '${match['decisa_rigori']}' == '1') ...[
                   const SizedBox(height: 16),
                   Text(
                     'Rigori ${match['rigori_casa']} : ${match['rigori_ospite']}',
@@ -462,7 +493,7 @@ class _MatchPageState extends State<MatchPage> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 22),
+                const SizedBox(height: 12),
                 Divider(height: 1, color: colors.outlineVariant),
                 const SizedBox(height: 16),
                 Text(
@@ -490,80 +521,115 @@ class _MatchPageState extends State<MatchPage> {
               borderRadius: BorderRadius.circular(22),
               border: Border.all(color: colors.outlineVariant),
             ),
-            child: Column(
-              children: [
-                if ('${match['campo'] ?? ''}'.trim().isNotEmpty)
-                  information(
-                    Icons.location_on_outlined,
-                    'Campo',
-                    match['campo'],
-                  ),
-                if ('${match['arbitro'] ?? ''}'.trim().isNotEmpty)
-                  information(
-                    Icons.sports_outlined,
-                    'Arbitro',
-                    match['arbitro'],
-                  ),
-                if (match['giornata'] != null &&
-                    phaseKey(match['fase']) == 'REGULAR')
-                  information(
-                    Icons.calendar_today_outlined,
-                    'Giornata',
-                    match['giornata'],
-                  ),
-                if ('${match['fase'] ?? ''}'.trim().isNotEmpty)
-                  information(Icons.layers_outlined, 'Fase', match['fase']),
-                if (phaseKey(match['fase']) != 'REGULAR')
-                  information(
-                    Icons.emoji_events_outlined,
-                    'Turno',
-                    roundLabel(
-                      matchTurn(match, phaseKey(match['fase'])),
-                      phaseKey(match['fase']),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final twoColumns =
+                    constraints.maxWidth >= 300 &&
+                    MediaQuery.textScalerOf(context).scale(14) < 20;
+                final items = <Widget>[
+                  if ('${match['campo'] ?? ''}'.trim().isNotEmpty)
+                    InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: venueNavigationUri(match) == null
+                          ? null
+                          : () async {
+                              try {
+                                if (await launchUrl(
+                                  venueNavigationUri(match)!,
+                                  mode: LaunchMode.externalApplication,
+                                )) {
+                                  return;
+                                }
+                              } catch (_) {
+                                /* Show an actionable failure below. */
+                              }
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Impossibile aprire la navigazione.',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                      child: information(
+                        Icons.location_on_outlined,
+                        venueNavigationUri(match) == null
+                            ? 'Campo'
+                            : 'Campo · Indicazioni',
+                        match['campo'],
+                      ),
                     ),
-                  ),
-                if (phaseKey(match['fase']) == 'REGULAR' &&
-                    matchLeg(match['fase_leg']).isNotEmpty)
-                  information(
-                    Icons.swap_horiz_rounded,
-                    'Incontro',
-                    matchLeg(match['fase_leg']) == 'ANDATA'
-                        ? 'Andata'
-                        : 'Ritorno',
-                  ),
-              ],
+                  if ('${match['arbitro'] ?? ''}'.trim().isNotEmpty)
+                    information(
+                      Icons.sports_outlined,
+                      'Arbitro',
+                      match['arbitro'],
+                    ),
+                  if (match['giornata'] != null &&
+                      phaseKey(match['fase']) == 'REGULAR')
+                    information(
+                      Icons.calendar_today_outlined,
+                      'Giornata',
+                      match['giornata'],
+                    ),
+                  if ('${match['fase'] ?? ''}'.trim().isNotEmpty)
+                    information(Icons.layers_outlined, 'Fase', match['fase']),
+                  if (phaseKey(match['fase']) != 'REGULAR')
+                    information(
+                      Icons.emoji_events_outlined,
+                      'Turno',
+                      roundLabel(
+                        matchTurn(match, phaseKey(match['fase'])),
+                        phaseKey(match['fase']),
+                      ),
+                    ),
+                  if (phaseKey(match['fase']) == 'REGULAR' &&
+                      matchLeg(match['fase_leg']).isNotEmpty)
+                    information(
+                      Icons.swap_horiz_rounded,
+                      'Incontro',
+                      matchLeg(match['fase_leg']) == 'ANDATA'
+                          ? 'Andata'
+                          : 'Ritorno',
+                    ),
+                ];
+                return Wrap(
+                  spacing: 12,
+                  children: [
+                    for (final item in items)
+                      SizedBox(
+                        width: twoColumns
+                            ? (constraints.maxWidth - 12) / 2
+                            : constraints.maxWidth,
+                        child: item,
+                      ),
+                  ],
+                );
+              },
             ),
           ),
           MatchLinks(match: match),
-          Padding(
-            padding: EdgeInsets.only(top: 28, bottom: 8),
-            child: Text(
-              'Referto giocatori',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: colors.onSurface,
+          if (played)
+            Padding(
+              padding: EdgeInsets.only(top: 20, bottom: 8),
+              child: Text(
+                'Referto giocatori',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: colors.onSurface,
+                ),
               ),
             ),
-          ),
           if (events.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ChoiceChip(
-                    label: Text('Con eventi'),
-                    selected: !showAllPlayers,
-                    onSelected: (_) => setState(() => showAllPlayers = false),
-                  ),
-                  ChoiceChip(
-                    label: Text('Tutti'),
-                    selected: showAllPlayers,
-                    onSelected: (_) => setState(() => showAllPlayers = true),
-                  ),
-                ],
+              child: SportSegments<bool>(
+                value: showAllPlayers,
+                options: const {false: 'Con eventi', true: 'Tutti'},
+                onChanged: (value) => setState(() => showAllPlayers = value),
               ),
             ),
             if (visibleEvents.isEmpty)
@@ -591,7 +657,7 @@ class _MatchPageState extends State<MatchPage> {
                   ),
                   SizedBox(height: 12),
                   Text(
-                    'Referto non ancora disponibile.',
+                    played ? 'Referto non ancora disponibile.' : 'Partita da disputare. Il referto sarà disponibile dopo la gara.',
                     style: TextStyle(color: colors.onSurfaceVariant),
                   ),
                 ],

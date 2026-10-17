@@ -95,7 +95,7 @@ class _TeamPageState extends State<TeamPage> {
           Text(
             '$value',
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 22,
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
@@ -128,7 +128,7 @@ class _TeamPageState extends State<TeamPage> {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(22),
+                    padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
                         SiteImage(
@@ -183,7 +183,7 @@ class _TeamPageState extends State<TeamPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 20,
+                      vertical: 14,
                     ),
                     color: dark ? colors.surfaceContainer : siteBlue,
                     child: Row(
@@ -207,11 +207,22 @@ class _TeamPageState extends State<TeamPage> {
                           'Perse': 'perse',
                           'Subiti': 'gol_subiti',
                         }.entries)
-                          Text(
-                            '${team[entry.value] ?? 0} ${entry.key.toLowerCase()}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colors.onSurfaceVariant,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${team[entry.value] ?? 0} ${entry.key.toLowerCase()}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: colors.onSurface,
+                              ),
                             ),
                           ),
                       ],

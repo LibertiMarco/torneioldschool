@@ -176,6 +176,9 @@ if ($azione === 'commenti' && isset($_GET['id'])) {
     $currentUserId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
     $isAdmin = user_has_admin_access((string)($_SESSION['ruolo'] ?? ''));
 
+    $paginated = isset($_GET['page']);
+    $page = max(1, min(100000, (int)($_GET['page'] ?? 1)));
+    $offset = ($page - 1) * 20;
     $stmt = $conn->prepare(
         "SELECT c.id,
                 c.utente_id,
@@ -187,7 +190,7 @@ if ($azione === 'commenti' && isset($_GET['id'])) {
          FROM blog_commenti c
          INNER JOIN utenti u ON u.id = c.utente_id
          WHERE c.post_id = ?
-         ORDER BY c.creato_il ASC"
+         " . ($paginated ? "ORDER BY c.creato_il DESC, c.id DESC LIMIT 21 OFFSET $offset" : "ORDER BY c.creato_il ASC, c.id ASC")
     );
 
     if (!$stmt) {
@@ -198,6 +201,17 @@ if ($azione === 'commenti' && isset($_GET['id'])) {
     $stmt->execute();
     $result = $stmt->get_result();
     $rows = $result->fetch_all(MYSQLI_ASSOC);
+
+    if ($paginated) {
+        $hasMore = count($rows) > 20;
+        $rows = array_slice($rows, 0, 20);
+        foreach ($rows as &$row) {
+            $row['can_delete'] = $isAdmin || ($currentUserId && (int)$row['utente_id'] === $currentUserId);
+            unset($row['utente_id']);
+        }
+        unset($row);
+        json_response(['data'=>$rows, 'pagination'=>['page'=>$page, 'has_more'=>$hasMore]]);
+    }
 
     $lookup = [];
 
@@ -230,7 +244,7 @@ if ($azione === 'commenti' && isset($_GET['id'])) {
 
 // Elimina commento (owner o admin)
 if ($azione === 'commenti_elimina' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!tos_request_is_same_origin()) {
+    if (!defined('TOS_MOBILE_COMMENTS_AUTHENTICATED') && !tos_request_is_same_origin()) {
         json_response(['error' => 'Richiesta non autorizzata.'], 400);
     }
 
@@ -277,7 +291,7 @@ if ($azione === 'commenti_elimina' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Salva commento
 if ($azione === 'commenti_salva' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!tos_request_is_same_origin()) {
+    if (!defined('TOS_MOBILE_COMMENTS_AUTHENTICATED') && !tos_request_is_same_origin()) {
         json_response(['error' => 'Richiesta non autorizzata.'], 400);
     }
 
@@ -297,6 +311,10 @@ if ($azione === 'commenti_salva' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $length = function_exists('mb_strlen') ? mb_strlen($commento) : strlen($commento);
     if ($length > 1200) {
         json_response(['error' => 'Il commento è troppo lungo. Limite 1.200 caratteri.'], 400);
+    }
+
+    if (!rate_limit_allow('blog_comment_' . (int)$_SESSION['user_id'], 5, 60)) {
+        json_response(['error' => 'Troppi commenti. Attendi un minuto e riprova.'], 429);
     }
 
     $check = $conn->prepare("SELECT id FROM blog_post WHERE id = ?");

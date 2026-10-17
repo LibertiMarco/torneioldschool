@@ -94,12 +94,15 @@ final class MobileAuth
         ];
     }
 
-    public function authorize(int $userId, string $challenge): string
+    public function authorize(int $userId, string $challenge, ?string $passwordFingerprint = null): string
     {
         if (!preg_match('/^[A-Za-z0-9_-]{43}$/D', $challenge)) {
             throw new MobileAuthError('invalid_request', 'Richiesta non valida.', 400);
         }
         $user = $this->account($userId);
+        if ($passwordFingerprint !== null && !hash_equals($passwordFingerprint, hash('sha256', $user['password']))) {
+            throw new MobileAuthError('invalid_credentials', 'Credenziali modificate. Accedi nuovamente.');
+        }
         $code = self::randomToken();
         $this->execute('INSERT INTO mobile_auth_codes (code_hash, user_id, challenge, password_fingerprint, expires_at) VALUES (?, ?, ?, ?, ?)',
             [hash('sha256', $code), $userId, $challenge, hash('sha256', $user['password']), $this->now() + 120]);
@@ -136,6 +139,26 @@ final class MobileAuth
             if ($this->db->inTransaction()) { $this->db->rollBack(); }
             throw $error;
         }
+    }
+
+    /** Caller must verify anti-abuse challenge and rate limits before entry. */
+    public function loginCredentials(string $email, string $password): array
+    {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254 || strlen($password) > 1024) {
+            throw new MobileAuthError('invalid_credentials', 'Email o password errati.');
+        }
+        $user = $this->row('SELECT id, password, email_verificata FROM utenti WHERE email = ?', [$email]);
+        // A valid constant hash keeps the missing-account branch comparably expensive.
+        $hash = $user['password'] ?? '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
+        if (!password_verify($password, $hash) || !$user) {
+            throw new MobileAuthError('invalid_credentials', 'Email o password errati.');
+        }
+        if ((int)$user['email_verificata'] !== 1) {
+            throw new MobileAuthError('email_unverified', 'Verifica la tua email prima di accedere.', 403);
+        }
+        // Reuse opaque credentials, expiry, rotation and password-change revocation.
+        $verifier = self::randomToken();
+        return $this->exchange($this->authorize((int)$user['id'], self::challenge($verifier), hash('sha256', $user['password'])), $verifier);
     }
 
     public function refresh(string $refresh): array

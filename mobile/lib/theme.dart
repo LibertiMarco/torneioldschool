@@ -20,6 +20,20 @@ ThemeData siteTheme() => ThemeData(
     onSurface: siteBlue,
   ),
   scaffoldBackgroundColor: siteBackground,
+  inputDecorationTheme: InputDecorationTheme(
+    filled: true,
+    fillColor: const Color(0xffeef1f5),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: Color(0xffdbe3eb)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: siteBlue, width: 1.5),
+    ),
+  ),
   appBarTheme: const AppBarTheme(
     backgroundColor: siteBlue,
     foregroundColor: Colors.white,
@@ -81,6 +95,20 @@ ThemeData siteDarkTheme() => ThemeData(
     onErrorContainer: Color(0xffffdad6),
   ),
   scaffoldBackgroundColor: const Color(0xff1c2026),
+  inputDecorationTheme: InputDecorationTheme(
+    filled: true,
+    fillColor: const Color(0xff2c323b),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: Color(0xff434d5a)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: Color(0xffb8c0cb), width: 1.5),
+    ),
+  ),
   appBarTheme: const AppBarTheme(
     backgroundColor: Color(0xff252a31),
     foregroundColor: Color(0xffe8ebef),

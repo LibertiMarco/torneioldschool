@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'sport_controls.dart';
 import 'access_gate.dart';
 import 'player_event_marks.dart';
 import 'player_awards.dart';
@@ -173,27 +174,14 @@ class _PlayerHistoryPageState extends State<PlayerHistoryPage> {
               child: Center(child: CircularProgressIndicator()),
             ),
           if (page > 0)
-            Wrap(
-              alignment: WrapAlignment.center,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              children: [
-                TextButton.icon(
-                  onPressed: loading || page <= 1
-                      ? null
-                      : () => load(targetPage: page - 1),
-                  icon: const Icon(Icons.chevron_left),
-                  label: const Text('Precedenti'),
-                ),
-                Text('Pagina $page'),
-                TextButton.icon(
-                  onPressed: loading || !hasMore
-                      ? null
-                      : () => load(targetPage: page + 1),
-                  icon: const Icon(Icons.chevron_right),
-                  label: const Text('Successive'),
-                ),
-              ],
+            SportPagination(
+              page: page,
+              previous: loading || page <= 1
+                  ? null
+                  : () => load(targetPage: page - 1),
+              next: loading || !hasMore
+                  ? null
+                  : () => load(targetPage: page + 1),
             ),
           const SizedBox(height: 28),
           PlayerAwardsSection(

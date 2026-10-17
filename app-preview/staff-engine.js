@@ -15,6 +15,7 @@
   let doc, generation = 0, sequence = 0, ids, elements, timer, observer;
   let lastAction = null, approved = null, lastSnapshot = '', busy = false;
   let uploads = new Map();
+  let previewTimer = null;
   const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
   const editable = element => element.isContentEditable || element.getAttribute('contenteditable') === 'true';
   const emit = (type, data = {}) => {
@@ -62,6 +63,7 @@
       checked: !!element.checked, required: !!element.required, disabled: element.matches(':disabled') || !!element.readOnly,
       min: element.min || '', max: element.max || '', step: element.step || '',
       multiple: !!element.multiple, accept: element.accept || '',
+      maxBytes: element.type === 'file' && element.id === 'image' ? 20 * 1024 * 1024 : 32 * 1024 * 1024,
       values: type === 'select' ? Array.from(element.selectedOptions).map(option => option.value) : [],
       options: type === 'select' ? Array.from(element.options).map(option => ({value: option.value, label: clean(option.text), disabled: option.disabled})) : [],
       files: type === 'file' ? Array.from(element.files || []).map(file => file.name) : []};
@@ -142,7 +144,7 @@
     if (element.nodeType === 3) return textNode('text', clean(element.textContent));
     if (element.nodeType !== 1) return null;
     const tag = element.tagName;
-    if (['SCRIPT','STYLE','LINK','META','NOSCRIPT','HEADER','FOOTER'].includes(tag) || element.matches('#header-container,#footer-container,.editor-toolbar,input#edit[type="checkbox"]')) return null;
+    if (['SCRIPT','STYLE','LINK','META','NOSCRIPT','HEADER','FOOTER'].includes(tag) || element.matches('#header-container,#footer-container,.editor-toolbar')) return null;
     // Website file inputs are frequently visually hidden behind a custom label.
     if (tag === 'INPUT' && element.type === 'file') {
       if (visible(element.parentElement)) return control(element);
@@ -160,6 +162,9 @@
         if (!preview.width || !preview.height) return null;
         preview.getContext('2d').drawImage(element, 0, 0, preview.width, preview.height);
         return {kind: 'image', id: id(element), data: preview.toDataURL('image/png'),
+          photo: doc.defaultView.PhotoTouchEditor?.describe?.(element.id) || null,
+          pointerEditor: element.classList.contains('editing') || element.dataset.tosPointerEditor === 'true',
+          canvasWidth: element.width, canvasHeight: element.height,
           label: clean(element.closest('.card,article,section')?.querySelector('h2,h3')?.textContent) || 'Anteprima grafica', export: true};
       } catch (_) { return textNode('notice', 'Anteprima non disponibile. Puoi usare il pulsante di esportazione.'); }
     }
@@ -206,6 +211,11 @@
     } catch (_) { emit('error', {message: 'Impossibile aggiornare lo strumento. Riprova.'}); }
   }
   const schedule = () => { clearTimeout(timer); timer = setTimeout(snapshot, 120); };
+  // Pointer/scale streams must not continually postpone the preview snapshot.
+  const previewChanged = () => {
+    if (previewTimer !== null) return;
+    previewTimer = setTimeout(() => {previewTimer=null;snapshot();}, 60);
+  };
   const readFile = (blob, name) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve({name: name || 'grafica.png', mime: blob.type || 'application/octet-stream', data: reader.result});
@@ -218,6 +228,7 @@
   }
   function attach() {
     observer?.disconnect(); clearTimeout(timer);
+    clearTimeout(previewTimer);previewTimer=null;
     try {
       doc = frame.contentDocument;
       const path = doc.location.pathname;
@@ -310,6 +321,28 @@
         element.click(); approved = null;
       } else if (message.type === 'export' && element.tagName === 'CANVAS') {
         element.toBlob(blob => blob && fileMessage(blob, message.name || 'grafica.png'), 'image/png');
+      } else if (message.type === 'photoTransform' && element.tagName === 'CANVAS') {
+        if (!doc.defaultView.PhotoTouchEditor?.apply?.(element.id, message.values || {})) {
+          emit('error', {message: 'Foto non disponibile. Ricarica l’anteprima.'});
+        }
+        previewChanged();
+      } else if (message.type === 'canvasPointer' && element.tagName === 'CANVAS' &&
+          (element.classList.contains('editing') || element.dataset.tosPointerEditor === 'true')) {
+        const {event,x,y,pointer}=message;
+        if (!['pointerdown','pointermove','pointerup','pointercancel'].includes(event) ||
+            ![x,y,pointer].every(Number.isFinite) || Math.abs(x)>10 || Math.abs(y)>10) return;
+        const rect=element.getBoundingClientRect();
+        // Pointer capture is owned by Flutter. Synthetic DOM events have no
+        // browser pointer to capture, while the original editor still receives
+        // its unmodified coordinate/gesture logic.
+        const capture=element.setPointerCapture;
+        element.setPointerCapture=()=>{};
+        try {
+          element.dispatchEvent(new doc.defaultView.PointerEvent(event,{bubbles:true,cancelable:true,
+            pointerId:pointer,pointerType:'touch',button:0,
+            clientX:rect.left+x*rect.width,clientY:rect.top+y*rect.height}));
+        } finally {element.setPointerCapture=capture;}
+        previewChanged();
       } else if (message.type === 'reload' && doc.location.pathname === '/api/statistiche_partita.php' && element.matches('form#lineupForm')) {
         doc.defaultView.location.reload();
       }

@@ -23,6 +23,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Rose'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Old School FC'), 150);
     await tester.tap(find.text('Old School FC'));
     await tester.pumpAndSettle();
     expect(find.text('Luca Rossi'), findsOneWidget);

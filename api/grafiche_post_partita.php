@@ -625,6 +625,7 @@ document.querySelectorAll('[data-publish]').forEach(button=>button.addEventListe
     showInstagramPublishResult(`Grafica ${type==='fulltime'?'Fulltime':'MVP'} non pubblicata su Instagram.\n`+$('status').textContent);
     return;
   }
+  if(!window.confirm('Confermi la pubblicazione di questa grafica sull’account Instagram autorizzato?'))return;
   publishInstagram(type==='fulltime'?'fulltimeCanvas':'mvpCanvas',type==='fulltime'?'instagramCaptionFulltime':'instagramCaptionMvp',button);
 }));
 customTemplates.init({editor:templateEditor});

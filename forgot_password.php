@@ -24,55 +24,9 @@ $error = '';
 $success = '';
 $csrf = csrf_get_token('forgot_password');
 
-function verify_recaptcha(string $secret, string $token, string $ip = '', string $expectedAction = '', float $minScore = 0.0): bool
-{
-    if (trim($secret) === '' || trim($token) === '') {
-        return false;
-    }
-    $payload = http_build_query([
-        'secret' => $secret,
-        'response' => $token,
-        'remoteip' => $ip,
-    ]);
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => "Content-type: application/x-www-form-urlencoded\r\n",
-            'content' => $payload,
-            'timeout' => 5,
-        ]
-    ]);
-    $result = @file_get_contents('https://www.google.com/recaptcha/api/siteverify', false, $context);
-    if ($result === false) {
-        return false;
-    }
-    $data = json_decode($result, true);
-    if (!is_array($data) || empty($data['success'])) {
-        return false;
-    }
-    if ($expectedAction !== '' && isset($data['action']) && $data['action'] !== $expectedAction) {
-        return false;
-    }
-    if ($minScore > 0 && isset($data['score']) && $data['score'] < $minScore) {
-        return false;
-    }
-    return true;
-}
+require_once __DIR__ . '/includi/recaptcha.php';
 
-function create_reset_token(mysqli $conn, int $userId, string $token, DateTime $expires): bool
-{
-    // annulla token precedenti
-    $conn->query("DELETE FROM password_reset_tokens WHERE user_id = " . (int)$userId);
-    $stmt = $conn->prepare("INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)");
-    if (!$stmt) {
-        return false;
-    }
-    $expStr = $expires->format('Y-m-d H:i:s');
-    $stmt->bind_param("iss", $userId, $token, $expStr);
-    $ok = $stmt->execute();
-    $stmt->close();
-    return $ok;
-}
+require_once __DIR__ . '/includi/password_recovery.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_is_valid($_POST['_csrf'] ?? '', 'forgot_password')) {
