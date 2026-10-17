@@ -132,17 +132,16 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Text(
-                      _userId == null
-                          ? 'Accedi per seguire il torneo'
-                          : 'A fine partita',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: colors.onSurfaceVariant,
+                    if (_userId == null)
+                      Text(
+                        'Accedi per seguire il torneo',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: colors.onSurfaceVariant,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),

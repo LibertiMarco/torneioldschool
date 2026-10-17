@@ -147290,22 +147290,22 @@ if(r==null){r=g.u
 if(r==null)r=g.k3}}r=A.hQ(r,1)
 q=f?B.abM:B.ac9
 q=A.bx(q,g.b,j,20)
-p=k.e==null?"Accedi per seguire il torneo":"A fine partita"
-o=g.rx
-n=t.p
-o=A.b([q,B.fe,A.bi(A.ag(A.b([B.b6i,A.v(p,1,B.aQ,j,j,A.ae(j,j,o==null?g.k3:o,j,j,j,j,j,j,j,j,11,j,j,j,j,j,!0,j,j,j,j,j,j,j,j),j,j,j)],n),B.J,j,B.i,B.a0,0,B.o),1)],n)
-if(k.e!=null){q=f?"Non seguire pi\xf9 il torneo":"Ricevi gli aggiornamenti sui risultati"
-p=A.If(j,j,j,j,B.b_6,B.nn,j,j,B.b2c)
+p=t.p
+o=A.b([B.b6i],p)
+if(k.e==null){n=g.rx
+o.push(A.v("Accedi per seguire il torneo",1,B.aQ,j,j,A.ae(j,j,n==null?g.k3:n,j,j,j,j,j,j,j,j,11,j,j,j,j,j,!0,j,j,j,j,j,j,j,j),j,j,j))}q=A.b([q,B.fe,A.bi(A.ag(o,B.J,j,B.i,B.a0,0,B.o),1)],p)
+if(k.e!=null){o=f?"Non seguire pi\xf9 il torneo":"Ricevi gli aggiornamenti sui risultati"
+n=A.If(j,j,j,j,B.b_6,B.nn,j,j,B.b2c)
 m=k.r
 l=m?j:new A.bbt(k,f)
 if(m)m=B.b_B
 else{if(f)m="Seguito"
 else m=k.f==null?"Riprova":"Segui"
-m=A.v(m,j,j,j,j,j,j,j,j)}q=A.b([B.ff,A.tQ(new A.rl(B.bbQ,!1,l,j,j,j,p,B.r,j,!1,j,!0,j,m,j),j,q,j,j)],n)
-p=!1
+m=A.v(m,j,j,j,j,j,j,j,j)}o=A.b([B.ff,A.tQ(new A.rl(B.bbQ,!1,l,j,j,j,n,B.r,j,!1,j,!0,j,m,j),j,o,j,j)],p)
+n=!1
 if(f){m=h==null
-if((m&&j)===!0)p=(m?j:h.f)!==!0}if(p)q.push(A.eT(j,!1,j,j,j,j,j,j,j,B.acm,j,j,j,new A.bbu(a,h),j,j,j,j,j,"Attiva notifiche sul telefono",j))
-B.b.I(o,q)}i=A.b([A.b9(j,A.aQ(o,B.p,B.i,B.j,0,j),B.r,j,j,new A.aP(i,j,r,s,j,j,j,B.y),j,j,j,j,B.a9u,j,j,j)],n)
+if((m&&j)===!0)n=(m?j:h.f)!==!0}if(n)o.push(A.eT(j,!1,j,j,j,j,j,j,j,B.acm,j,j,j,new A.bbu(a,h),j,j,j,j,j,"Attiva notifiche sul telefono",j))
+B.b.I(q,o)}i=A.b([A.b9(j,A.aQ(q,B.p,B.i,B.j,0,j),B.r,j,j,new A.aP(i,j,r,s,j,j,j,B.y),j,j,j,j,B.a9u,j,j,j)],p)
 s=k.w
 if(s!=null)i.push(new A.a0(B.a9t,A.v(s,j,j,j,j,A.ae(j,j,g.fy,j,j,j,j,j,j,j,j,12,j,j,j,j,j,!0,j,j,j,j,j,j,j,j),j,j,j),j))
 return A.ag(i,B.J,j,B.i,B.a0,0,B.o)}}
