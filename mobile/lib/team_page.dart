@@ -447,13 +447,6 @@ class RosterPlayerCard extends StatelessWidget {
         color: colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: colors.outlineVariant.withValues(alpha: .55)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0815293e),
-            blurRadius: 16,
-            offset: Offset(0, 5),
-          ),
-        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -462,134 +455,116 @@ class RosterPlayerCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                height: 124,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: dark
-                        ? [const Color(0xff1c3b52), colors.surfaceContainerHigh]
-                        : [siteBlue, const Color(0xff2c6076)],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      right: -20,
-                      bottom: -35,
-                      child: Icon(
-                        Icons.sports_soccer_rounded,
-                        size: 160,
-                        color: Colors.white.withValues(alpha: .05),
-                      ),
-                    ),
-                    Positioned(
-                      left: 14,
-                      bottom: 14,
-                      child: Container(
-                        width: 78,
-                        height: 78,
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: .2),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: .45),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => SizedBox(
+                      height: 144,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ColoredBox(
+                            color: dark
+                                ? colors.surfaceContainerHigh
+                                : const Color(0xffe8edf1),
                           ),
-                        ),
-                        child: ClipOval(
-                          child: hasPhoto
-                              ? SiteImage(
-                                  api: api,
-                                  path: photo,
-                                  width: 70,
-                                  height: 70,
-                                  fallback: Icons.person_outline,
-                                )
-                              : ColoredBox(
-                                  color: const Color(0xff294b63),
-                                  child: Center(
-                                    child: Text(
-                                      initials,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 25,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 1,
+                          if (hasPhoto)
+                            SiteImage(
+                              api: api,
+                              path: photo,
+                              width: constraints.maxWidth,
+                              height: 144,
+                              fallback: Icons.person_outline,
+                            )
+                          else
+                            Center(
+                              child: Text(
+                                initials,
+                                style: TextStyle(
+                                  fontSize: 54,
+                                  fontWeight: FontWeight.w300,
+                                  letterSpacing: -3,
+                                  color: colors.primary.withValues(alpha: .5),
+                                ),
+                              ),
+                            ),
+                          Positioned(
+                            top: 10,
+                            right: 10,
+                            child: Tooltip(
+                              message:
+                                  'Media voti con questa squadra nel torneo',
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 9,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colors.surface.withValues(alpha: .95),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      average != null &&
+                                              average.isFinite &&
+                                              average > 0
+                                          ? average
+                                                .toStringAsFixed(2)
+                                                .replaceAll('.', ',')
+                                          : '—',
+                                      style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w800,
+                                        color: colors.onSurface,
                                       ),
                                     ),
-                                  ),
+                                    Text(
+                                      'Media',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w500,
+                                        color: colors.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                        ),
+                              ),
+                            ),
+                          ),
+                          if (goalkeeper || captain)
+                            Positioned(
+                              bottom: 10,
+                              left: 10,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (goalkeeper)
+                                    badge(
+                                      'GK',
+                                      'Portiere',
+                                      const Color(0xffffd43b),
+                                      siteBlue,
+                                    ),
+                                  if (goalkeeper && captain)
+                                    const SizedBox(width: 4),
+                                  if (captain)
+                                    badge(
+                                      'C',
+                                      'Capitano',
+                                      siteRed,
+                                      Colors.white,
+                                    ),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: Tooltip(
-                        message: 'Media voti con questa squadra nel torneo',
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xfff4d879),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                average != null &&
-                                        average.isFinite &&
-                                        average > 0
-                                    ? average
-                                          .toStringAsFixed(2)
-                                          .replaceAll('.', ',')
-                                    : '—',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: siteBlue,
-                                ),
-                              ),
-                              const Text(
-                                'MEDIA',
-                                style: TextStyle(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1,
-                                  color: siteBlue,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (goalkeeper || captain)
-                      Positioned(
-                        bottom: 12,
-                        right: 10,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (goalkeeper)
-                              badge(
-                                'GK',
-                                'Portiere',
-                                const Color(0xffffd43b),
-                                siteBlue,
-                              ),
-                            if (goalkeeper && captain) const SizedBox(width: 4),
-                            if (captain)
-                              badge('C', 'Capitano', siteRed, Colors.white),
-                          ],
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
               ),
               Padding(
@@ -614,6 +589,11 @@ class RosterPlayerCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 14),
+                    Divider(
+                      height: 1,
+                      color: colors.outlineVariant.withValues(alpha: .6),
+                    ),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
                         for (final entry in {
@@ -623,12 +603,7 @@ class RosterPlayerCard extends StatelessWidget {
                         }.entries)
                           Expanded(
                             child: Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 2),
                               padding: const EdgeInsets.symmetric(vertical: 9),
-                              decoration: BoxDecoration(
-                                color: colors.surface,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
                               child: Column(
                                 children: [
                                   Text(
