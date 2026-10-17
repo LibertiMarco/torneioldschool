@@ -6,6 +6,7 @@ require_once __DIR__ . '/../includi/app_preview.php';
 require_once __DIR__ . '/../includi/mobile_profile.php';
 require_once __DIR__ . '/../includi/mobile_player_stats.php';
 require_once __DIR__ . '/../includi/player_link_requests.php';
+require_once __DIR__ . '/../includi/mobile_follow.php';
 
 try {
     if (empty($_SESSION['user_id'])) {
@@ -24,6 +25,9 @@ try {
         }
     } elseif ($method !== 'GET') {
         throw new MobileAuthError('method_not_allowed', 'Metodo non consentito.', 405);
+    }
+    if ($action === 'follow') {
+        mobile_json(mobile_follow_handle($db, (int)$user['id'], $body ?? $_GET, $method === 'POST'));
     }
     if ($action === 'account') {
         mobile_json(mobile_profile_handle((int)$user['id'], $body, $_FILES, true));

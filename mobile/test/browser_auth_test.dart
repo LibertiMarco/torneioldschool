@@ -49,6 +49,16 @@ void main() {
       expect(jsonDecode(requests.last.body)['_csrf'], 'session-token');
       expect(requests.last.headers.containsKey('Authorization'), false);
       await auth.authorized(
+        'api/mobile/v1/follow.php',
+        body: {'torneo': 'summer', 'followed': true},
+      );
+      expect(requests.last.url.queryParameters['action'], 'follow');
+      expect(jsonDecode(requests.last.body), {
+        'torneo': 'summer',
+        'followed': true,
+        '_csrf': 'session-token',
+      });
+      await auth.authorized(
         'api/mobile/v1/account.php',
         body: {'nome': 'Marco', 'cognome': 'Demo', 'consenso_newsletter': 0},
         uploads: [
