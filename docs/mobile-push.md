@@ -79,7 +79,15 @@ online include Firebase Cloud Messaging e risponde HTTP 200.
 
 Nessuna notifica reale è stata inviata. Resta la prova dall'app Android build 7
 installata dalla traccia di test Play, dopo attivazione nell'account.
-Non è stato caricato alcun bundle su Play Console da questa procedura.
+Verifica successiva su Play Console: la release Alpha disponibile ai tester
+conteneva ancora la build 5, pubblicata il 15 ottobre alle 17:48. È stata
+caricata la build 7 (SHA256
+`A2D72F3696BF587EE6C1731E6944410377E3EFBDC36B858293910587E6D4EB46`),
+preparata la release "Build 7 - Consenso italiano e notifiche" e salvata nella
+Panoramica della pubblicazione. Stato: una modifica non ancora inviata per
+la revisione; non è ancora disponibile ai tester. La pubblicazione gestita
+risulta disattivata: dopo l'invio e l'approvazione la release potrà essere
+distribuita nella traccia di test chiuso Alpha.
 
 Verifiche locali: `flutter analyze` senza problemi, suite completa di 199 test
 superata, test PHP `mobile_push_test.php` e `mobile_auth_test.php` superati.
