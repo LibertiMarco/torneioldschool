@@ -402,7 +402,7 @@ $stmt = $conn->prepare("SELECT p.id, p.torneo, COALESCE(t.nome, p.torneo) AS tor
 if (!$stmt) {
     sync_instagram_fail('Query delle partite non disponibile.');
 }
-$matchStart = $targetDay->modify('-1 day')->format('Y-m-d');
+$matchStart = $targetDay->modify('-2 days')->format('Y-m-d');
 $matchEnd = $targetDay->modify('+1 day')->format('Y-m-d');
 $stmt->bind_param('ss', $matchStart,$matchEnd);
 if (!$stmt->execute()) {

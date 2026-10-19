@@ -5,11 +5,11 @@ function date_expect(bool $ok,string $message): void {if (!$ok) throw new Runtim
 $game = ['id'=>1,'torneo'=>'CoppaItaliaB','torneo_nome'=>'COPPA ITALIA B','giornata'=>4,'fase_round'=>null,
     'squadra_casa'=>'Napoli','squadra_ospite'=>'Juve Stabia','gol_casa'=>2,'gol_ospite'=>4,'giocata'=>1,'data_partita'=>'2026-10-09','link_instagram'=>null,'link_youtube'=>null];
 $media = ['platform'=>'instagram','id'=>'date','url'=>'https://www.instagram.com/reel/date/','title'=>'🇮🇹🏆COPPA ITALIA | Napoli-Juve Stabia 2-4','description'=>'','date'=>'2026-10-10'];
-foreach (['2026-10-10','2026-10-09'] as $day) {
+foreach (['2026-10-10','2026-10-09','2026-10-08'] as $day) {
     $plan = video_sync_plan([$media],[array_replace($game,['data_partita'=>$day])]);$row = reset($plan);
     date_expect(count($row['candidates']) === 1 && $row['automatic'],'Same-day or previous-day game missed');
 }
-foreach (['2026-10-08','2026-10-11','2025-10-09'] as $day) {
+foreach (['2026-10-07','2026-10-11','2025-10-09'] as $day) {
     $plan = video_sync_plan([$media],[array_replace($game,['data_partita'=>$day])]);date_expect(!reset($plan)['candidates'],'Game outside the two-day window accepted');
 }
 foreach (['Napoli-Juve Stabia 2-4',"Torneo scritto diversamente\nNapoli-Juve Stabia 2-4",'TORNEO ERRATO | GIORNATA 99 | Napoli 2 - 4 Juve Stabia'] as $text) {
@@ -37,7 +37,7 @@ $betis = array_replace($game,['squadra_casa'=>'Rayo Vallecano','squadra_ospite'=
 $betisVideo = array_replace($media,['date'=>'2026-10-09','title'=>"LA LIGA CALCIO A 8 🇪🇸\nRAYO VALLECANO - BETIS SIVIGLIA 9-2"]);
 $plan = video_sync_plan([$betisVideo],[$betis]);date_expect(reset($plan)['automatic'],'Betis Siviglia did not match the registered Betis team');
 $plan = video_sync_plan([$betisVideo],[array_replace($betis,['gol_ospite'=>3])]);date_expect(reset($plan)['automatic'],'Different Betis score blocked team/date matching');
-$plan = video_sync_plan([$betisVideo],[array_replace($betis,['data_partita'=>'2026-10-07'])]);date_expect(!reset($plan)['candidates'],'Betis alias bypassed the two-day window');
+$plan = video_sync_plan([$betisVideo],[array_replace($betis,['data_partita'=>'2026-10-06'])]);date_expect(!reset($plan)['candidates'],'Betis alias bypassed the two-day window');
 date_expect(video_sync_team_key('Betis Siviglia FC') === video_sync_team_key('Betis'),'Betis alias with a club suffix failed');
 date_expect(video_sync_team_key('Betis Juniors') !== video_sync_team_key('Betis Siviglia'),'Betis alias merged a distinct team');
 
@@ -62,11 +62,35 @@ $plan = video_sync_plan([$feyenoordVideo],[$feyenoord,$duplicateGame]);
 date_expect(count(reset($plan)['candidates']) === 2 && !reset($plan)['automatic'],'Exact score was used to guess between two compatible games');
 $plan = video_sync_plan([$feyenoordVideo],[array_replace($feyenoord,['link_instagram'=>'https://www.instagram.com/reel/existing/'])]);
 date_expect(!reset($plan)['automatic'],'Incorrect-score caption overwrote an existing link');
-$plan = video_sync_plan([$feyenoordVideo],[array_replace($feyenoord,['data_partita'=>'2026-10-04'])]);
+$plan = video_sync_plan([$feyenoordVideo],[array_replace($feyenoord,['data_partita'=>'2026-10-03'])]);
 date_expect(!reset($plan)['candidates'],'Ignoring score expanded the allowed date window');
 $sameTeamsLines = video_sync_parse_result("Feyenoord-Telstar 8-1\nFeyenoord-Telstar 9-1");
 date_expect($sameTeamsLines !== null,'Different scores for one team pair blocked caption parsing');
 date_expect(video_sync_parse_result("Feyenoord-Telstar 8-1\nExcelsior-Ajax 3-5") === null,'Multiple team pairs were arbitrarily parsed');
 $plan = video_sync_plan([array_replace($feyenoordVideo,['title'=>'EREDIVISE | Feyenoord-Telstar 9-1'])],[$feyenoord]);
 date_expect(reset($plan)['automatic'],'Exact Feyenoord result was not linked');
-echo "PASS: today/yesterday team matching, ignored scores, save validation, reversed teams, aliases, preserved links and ambiguity\n";
+$atletico = array_replace($game,['torneo'=>'LaLiga','torneo_nome'=>'LA LIGA','squadra_casa'=>'Atl.Madrid','squadra_ospite'=>'Real Madrid']);
+$atleticoVideo = array_replace($media,['title'=>'LA LIGA | Atletico Madrid-Real Madrid 3-1']);
+foreach (['LA LIGA | Atletico Madrid-Real Madrid 3-1',"LA LIGA\nReal Madrid-Atletico Madrid 1-3",'LA LIGA | Nome sbagliato-Real Madrid 3-1'] as $text) {
+    $item = array_replace($atleticoVideo,['title'=>$text]);
+    $plan = video_sync_plan([$item],[$atletico]);
+    date_expect(reset($plan)['automatic'],'Tournament and one correct team did not link');
+    date_expect(video_sync_result_match(reset($plan)['identity'],$atletico,$item['date']),'Save validation rejected a single-team match');
+}
+foreach (['Atletico Madrid-Real Madrid 3-1','ALTRO TORNEO | Atletico Madrid-Real Madrid 3-1','LA LIGA 2 | Atletico Madrid-Real Madrid 3-1','LA LIGA | Atletico Madrid-Barcelona 3-1'] as $text) {
+    $plan = video_sync_plan([array_replace($atleticoVideo,['title'=>$text])],[$atletico]);
+    date_expect(!reset($plan)['candidates'],'Single-team match ignored a missing/wrong tournament or absent team');
+}
+$rival = array_replace($atletico,['id'=>99,'squadra_casa'=>'Valencia']);
+$plan = video_sync_plan([$atleticoVideo],[$atletico,$rival]);
+date_expect(count(reset($plan)['candidates']) === 2 && !reset($plan)['automatic'],'Single-team ambiguity selected a game');
+foreach ([['data_partita'=>'2026-10-07'],['giocata'=>0]] as $change) {
+    $plan = video_sync_plan([$atleticoVideo],[array_replace($atletico,$change)]);
+    date_expect(!reset($plan)['candidates'],'Single-team match bypassed date or completion checks');
+}
+$plan = video_sync_plan([$atleticoVideo],[array_replace($atletico,['link_instagram'=>'https://www.instagram.com/reel/existing/'])]);
+date_expect(!reset($plan)['automatic'],'Single-team match overwrote an existing link');
+$plan = video_sync_plan([array_replace($youtube,['title'=>'Atletico Madrid-Real Madrid 3-1','description'=>$atleticoVideo['title']])],[$atletico]);
+date_expect(reset($plan)['automatic'],'YouTube description tournament was lost');
+
+echo "PASS: today/yesterday team matching, tournament plus one team, ignored scores, save validation, reversed teams, aliases, preserved links and ambiguity\n";

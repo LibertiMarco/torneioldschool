@@ -48,7 +48,6 @@ workflows:
         script: |
           set -euo pipefail
           flutter build ipa --release \
-            --build-number="$((BUILD_NUMBER + 1))" \
             --dart-define=TOS_BASE_URL=https://torneioldschool.it \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:

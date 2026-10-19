@@ -8,16 +8,18 @@ Aprire **Dashboard amministratore → Video delle partite → Sincronizza link**
 
 ## Regola di abbinamento
 
-Le due squadre identificano la partita, anche quando il punteggio nella descrizione è diverso da quello registrato, nel giorno di pubblicazione del video oppure nel giorno precedente, in Europe/Rome. Il nome del torneo e la giornata nella descrizione non sono vincolanti: il torneo corretto viene ricavato dalla partita nel database.
+Le due squadre identificano la partita, anche quando il punteggio nella descrizione è diverso da quello registrato, nel giorno di pubblicazione del video oppure nei due giorni precedenti, in Europe/Rome. Il nome del torneo e la giornata nella descrizione non sono vincolanti: il torneo corretto viene ricavato dalla partita nel database.
 
-La query del database limita le gare all'intervallo di pubblicazione selezionato, includendo il giorno precedente alla data iniziale. Un indice in memoria confronta ogni contenuto solo con le gare dei suoi due giorni: non vengono eseguite migliaia di query, una per ciascun Reel.
+Se uno dei nomi squadra è errato o diverso da quello sul sito, basta una squadra riconosciuta insieme al torneo corrispondente, sempre nel giorno del video o nei due giorni precedenti. Per esempio, `LA LIGA | Atletico Madrid-Real Madrid 3-1` può collegarsi ad `Atl.Madrid-Real Madrid`. Senza un torneo riconosciuto servono entrambe le squadre. Se più gare rispettano queste condizioni, occorre scegliere manualmente; i link esistenti vengono conservati.
+
+La query del database limita le gare all'intervallo di pubblicazione selezionato, includendo i due giorni precedenti alla data iniziale. Un indice in memoria confronta ogni contenuto solo con le gare del giorno di pubblicazione e dei due precedenti: non vengono eseguite migliaia di query, una per ciascun Reel.
 
 - La partita deve essere conclusa (`giocata=1`) e avere entrambi i punteggi.
 - È ammesso l'ordine invertito delle squadre; il punteggio non vincola l'abbinamento.
 - Accenti, maiuscole/minuscole, sigle societarie comuni e l'equivalenza confermata Barcelona/Barcellona vengono normalizzati.
 - Il link esistente della stessa piattaforma viene sempre conservato. Instagram e YouTube hanno campi distinti.
-- Più gare compatibili nei due giorni, oppure più video della stessa piattaforma per la stessa gara, richiedono una scelta manuale.
-- Una pubblicazione oltre il giorno successivo alla partita non viene collegata con questa regola.
+- Più gare compatibili nella finestra di ricerca, oppure più video della stessa piattaforma per la stessa gara, richiedono una scelta manuale.
+- Una pubblicazione oltre due giorni dopo la partita non viene collegata con questa regola.
 
 ## Descrizioni
 
@@ -51,7 +53,7 @@ La dashboard effettua al massimo una chiamata social per richiesta HTTP, con ava
 
 La lettura consente fino a 1000 pagine per piattaforma. Un elenco incompleto non produce abbinamenti dalla piattaforma coinvolta. Il salvataggio automatico procede in blocchi da 50, ricontrollando le partite in una transazione e preservando i link inseriti da altri operatori. I risultati e i salvataggi manuali sono divisi in pagine da 100 per non superare i limiti PHP dei campi POST.
 
-Le anteprime e lo stato della ricerca sono conservati nella sessione amministratore. Non è stato configurato un nuovo cron. Lo script esistente `api/script/sync_instagram_match_links.php` usa la stessa finestra di due giorni; `--dry-run` cerca senza salvare.
+Le anteprime e lo stato della ricerca sono conservati nella sessione amministratore. Non è stato configurato un nuovo cron. Lo script esistente `api/script/sync_instagram_match_links.php` usa la stessa finestra dal giorno del video ai due giorni precedenti; `--dry-run` cerca senza salvare.
 
 ## Configurazione e distribuzione
 
@@ -73,7 +75,7 @@ La pagina richiede inoltre il JavaScript già introdotto `api/sincronizza_video_
 
 ## Verifiche
 
-- `php tests/match_video_date_test.php`: giorno del video e precedente, cambio mese, descrizioni prive di torneo, squadre invertite, punteggi, alias, link già presenti e ambiguità.
+- `php tests/match_video_date_test.php`: giorno del video e due giorni precedenti, cambio mese, descrizioni prive di torneo, squadre invertite, punteggi, alias, link già presenti e ambiguità.
 - `php tests/match_video_sync_job_test.php`: 2400 Reel, 48 chiamate simulate da 50 contenuti, 2400 abbinamenti e 49 passi totali di lettura (48 pagine + inizializzazione), stato serializzato, retry, copertine e isolamento degli errori.
 - `php tests/match_video_sync_test.php`: parser, provider e verifiche del vecchio matcher mantenuto separatamente per regressione.
 - `node tests/match_video_sync_frontend_test.js` e `node tests/match_video_sync_browser_test.js`: flusso del browser, CSRF, endpoint e recupero dagli errori.
