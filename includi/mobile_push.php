@@ -99,6 +99,11 @@ function tos_fcm_deliver(string $token, array $payload, array $credentials, stri
         'https://fcm.googleapis.com/v1/projects/' . rawurlencode($credentials['project_id']) . '/messages:send',
         ['Content-Type: application/json', 'Authorization: Bearer ' . $access],
         json_encode(tos_fcm_message($token, $payload), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
+    if ($status !== 200) {
+        // Record only status codes: never log tokens, credentials or message text.
+        $errorCode = (string)($result['error']['status'] ?? 'TRANSPORT_ERROR');
+        error_log('FCM: delivery failed HTTP ' . $status . ' status ' . preg_replace('/[^A-Z0-9_]/', '', $errorCode));
+    }
     return ['success' => $status === 200, 'unregistered' => tos_fcm_unregistered($result)];
 }
 
@@ -127,9 +132,15 @@ function tos_fcm_send_to_users(mysqli $conn, array $userIds, array $payload): ar
         $stmt->execute();
         $devices = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
-        if (!$devices) { return $result; }
+        if (!$devices) {
+            error_log('FCM: automatic notification has no eligible registered devices');
+            return $result;
+        }
         $access = tos_fcm_access_token($credentials);
-        if (!$access) { return ['sent' => 0, 'failed' => count($devices), 'subscriptions' => count($devices)]; }
+        if (!$access) {
+            error_log('FCM: automatic notification OAuth authorization failed');
+            return ['sent' => 0, 'failed' => count($devices), 'subscriptions' => count($devices)];
+        }
         foreach ($devices as $device) {
             $sent = tos_fcm_deliver($device['token'], $payload, $credentials, $access);
             $result['subscriptions']++;

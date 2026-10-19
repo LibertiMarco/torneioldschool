@@ -140,7 +140,19 @@ class _TosAppState extends State<TosApp> {
 
   void _openPush(RemoteMessage message) {
     final url = pushLink(message.data['url']?.toString());
-    if (url != null) launchUrl(url, mode: LaunchMode.inAppBrowserView);
+    if (url == null) return;
+    if (url.path == '/account.php') {
+      final navigator = _navigatorKey.currentState;
+      if (navigator != null) {
+        navigator.push(
+          MaterialPageRoute<void>(
+            builder: (_) => AccountPage(auth: widget.auth, section: 'calcio'),
+          ),
+        );
+      }
+      return;
+    }
+    launchUrl(url, mode: LaunchMode.inAppBrowserView);
   }
 
   @override
