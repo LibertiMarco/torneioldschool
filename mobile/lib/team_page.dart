@@ -90,19 +90,44 @@ class _TeamPageState extends State<TeamPage> {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final team = widget.team;
     Widget metric(String label, dynamic value) => Expanded(
-      child: Column(
-        children: [
-          Text(
-            '$value',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 3),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 3),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: label == 'Punti' ? .14 : .06),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: .09)),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              label == 'Punti'
+                  ? Icons.emoji_events_outlined
+                  : label == 'Giocate'
+                  ? Icons.event_available_outlined
+                  : Icons.sports_soccer_rounded,
+              size: 18,
+              color: label == 'Punti'
+                  ? const Color(0xff7ee0cc)
+                  : const Color(0xffbdcbdc),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(label, style: TextStyle(fontSize: 12, color: Color(0xffbdcbdc))),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              '$value',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: Color(0xffbdcbdc)),
+            ),
+          ],
+        ),
       ),
     );
     return Scaffold(
@@ -124,6 +149,9 @@ class _TeamPageState extends State<TeamPage> {
               decoration: BoxDecoration(
                 color: colors.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: colors.outlineVariant.withValues(alpha: .65),
+                ),
               ),
               child: Column(
                 children: [
@@ -131,13 +159,25 @@ class _TeamPageState extends State<TeamPage> {
                     padding: const EdgeInsets.all(22),
                     child: Row(
                       children: [
-                        SiteImage(
-                          api: widget.api,
-                          path: '${team['logo'] ?? ''}',
-                          width: 68,
-                          height: 68,
-                          preserveShape: true,
-                          fallback: Icons.shield_outlined,
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: colors.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: colors.outlineVariant.withValues(
+                                alpha: .5,
+                              ),
+                            ),
+                          ),
+                          child: SiteImage(
+                            api: widget.api,
+                            path: '${team['logo'] ?? ''}',
+                            width: 52,
+                            height: 52,
+                            preserveShape: true,
+                            fallback: Icons.shield_outlined,
+                          ),
                         ),
                         const SizedBox(width: 18),
                         Expanded(
@@ -157,7 +197,7 @@ class _TeamPageState extends State<TeamPage> {
                               Text(
                                 '${team['nome']}',
                                 style: TextStyle(
-                                  fontSize: 26,
+                                  fontSize: 24,
                                   fontWeight: FontWeight.w700,
                                   color: colors.onSurface,
                                 ),
@@ -182,8 +222,8 @@ class _TeamPageState extends State<TeamPage> {
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 20,
+                      horizontal: 10,
+                      vertical: 12,
                     ),
                     color: dark ? colors.surfaceContainer : siteBlue,
                     child: Row(
@@ -207,11 +247,21 @@ class _TeamPageState extends State<TeamPage> {
                           'Perse': 'perse',
                           'Subiti': 'gol_subiti',
                         }.entries)
-                          Text(
-                            '${team[entry.value] ?? 0} ${entry.key.toLowerCase()}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colors.onSurfaceVariant,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.surface,
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            child: Text(
+                              '${team[entry.value] ?? 0} ${entry.key.toLowerCase()}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colors.onSurfaceVariant,
+                              ),
                             ),
                           ),
                       ],

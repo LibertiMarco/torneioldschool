@@ -1035,16 +1035,28 @@ class _TournamentScorersState extends State<TournamentScorers> {
                   : siteBlue,
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             ),
-            child: Text(
-              'CLASSIFICA MARCATORI',
-              style: TextStyle(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? colors.onSurface
-                    : Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
-              ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.emoji_events_outlined,
+                  size: 22,
+                  color: Color(0xff7ee0cc),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'CLASSIFICA MARCATORI',
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? colors.onSurface
+                          : Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ...widget.players
@@ -1055,61 +1067,116 @@ class _TournamentScorersState extends State<TournamentScorers> {
             .entries
             .map((entry) {
               final player = entry.value;
+              final position = ranks[page * perPage + entry.key];
+              final podium = position <= 3;
               return RankingSurface(
                 index: page * perPage + entry.key,
                 child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  horizontalTitleGap: 10,
                   leading: SizedBox(
-                    width: 74,
+                    width: 82,
                     child: Row(
                       children: [
-                        Text(
-                          '${ranks[page * perPage + entry.key]}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        Container(
+                          width: 28,
+                          height: 32,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: podium
+                                ? colors.primaryContainer
+                                : colors.surface,
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(
+                              color: podium
+                                  ? colors.primary.withValues(alpha: .25)
+                                  : colors.outlineVariant,
+                            ),
+                          ),
+                          child: FittedBox(
+                            child: Text(
+                              '$position',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: colors.onSurface,
+                              ),
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 8),
-                        SiteImage(
-                          api: widget.api,
-                          path: '${player['foto'] ?? ''}',
-                          width: 40,
-                          height: 40,
-                          fallback: Icons.person_outline,
+                        ClipOval(
+                          child: SiteImage(
+                            api: widget.api,
+                            path: '${player['foto'] ?? ''}',
+                            width: 40,
+                            height: 40,
+                            fallback: Icons.person_outline,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   title: Text(
                     '${player['nome']} ${player['cognome']}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: colors.onSurface,
+                    ),
                   ),
-                  subtitle: Text('${player['squadra'] ?? ''}'),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 5),
+                    child: Text(
+                      '${player['squadra'] ?? ''}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
                   trailing: Semantics(
                     label: '${stat(player['gol'])} gol',
                     child: ExcludeSemantics(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '${stat(player['gol'])}',
-                              style: TextStyle(
-                                fontSize: 32,
-                                height: 1,
-                                fontWeight: FontWeight.w800,
-                                color: colors.primary,
+                      child: Container(
+                        width: 46,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.primaryContainer.withValues(alpha: .5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${stat(player['gol'])}',
+                                style: TextStyle(
+                                  fontSize: 25,
+                                  height: 1,
+                                  fontWeight: FontWeight.w800,
+                                  color: colors.primary,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'GOL',
-                              style: TextStyle(
-                                fontSize: 11,
-                                height: 1,
-                                letterSpacing: 1.2,
-                                color: colors.onSurfaceVariant,
+                              const SizedBox(height: 4),
+                              Text(
+                                'GOL',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  height: 1,
+                                  letterSpacing: 1.2,
+                                  color: colors.onSurfaceVariant,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
