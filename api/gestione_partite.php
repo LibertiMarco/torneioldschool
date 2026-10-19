@@ -2479,7 +2479,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
         String(p.giornata ?? '') === gVal
       );
       filtrate.forEach(p => {
-        const label = `${p.data_partita} ${(p.ora_partita ?? '').slice(0,5)} · ${p.squadra_casa} - ${p.squadra_ospite} · ${Number(p.giocata) === 1 ? `${p.gol_casa}-${p.gol_ospite}` : 'Da giocare'} · ${p.torneo} · ${p.giornata == null ? (p.fase_round || p.fase) : `Giornata ${p.giornata}`}`;
+        const label = partitaId === 'selPartitaMod' ? `${p.data_partita} ${(p.ora_partita ?? '').slice(0,5)} · ${p.squadra_casa} - ${p.squadra_ospite}` : `${p.data_partita} ${(p.ora_partita ?? '').slice(0,5)} · ${p.squadra_casa} - ${p.squadra_ospite} · ${Number(p.giocata) === 1 ? `${p.gol_casa}-${p.gol_ospite}` : 'Da giocare'} · ${p.torneo} · ${p.giornata == null ? (p.fase_round || p.fase) : `Giornata ${p.giornata}`}`;
         const opt = new Option(label, p.id);
         partSel.add(opt);
       });
