@@ -580,8 +580,8 @@ function inviaNotificaEsito(mysqli $conn, int $partitaId, ?array $info = null): 
   $osp = $info['squadra_ospite'] ?? $row['squadra_ospite'];
   $golCasa = $info['gol_casa'] ?? (int)($row['gol_casa'] ?? 0);
   $golOsp = $info['gol_ospite'] ?? (int)($row['gol_ospite'] ?? 0);
-  $matchLabel = $casa . ' - ' . $osp;
-  $scoreLabel = $golCasa . ' - ' . $golOsp;
+  $matchLabel = 'Risultato finale';
+  $scoreLabel = $casa . ' ' . $golCasa . ' - ' . $golOsp . ' ' . $osp;
   $matchLink = '/tornei/partita_eventi.php?id=' . $partitaId . '&torneo=' . rawurlencode($torneo);
 
   $uids = array_unique(array_merge(
