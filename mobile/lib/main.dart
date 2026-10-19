@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'api.dart';
+import 'update_gate.dart';
 import 'auth.dart';
 import 'login_page.dart';
 import 'ads.dart';
@@ -260,6 +261,10 @@ class _TosAppState extends State<TosApp> {
                   ),
                 ),
               )
+            : !kIsWeb &&
+                  (defaultTargetPlatform == TargetPlatform.android ||
+                      defaultTargetPlatform == TargetPlatform.iOS)
+            ? UpdateGate(api: widget.api, child: child!)
             : child!,
       ),
     ),

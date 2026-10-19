@@ -17,5 +17,14 @@ import UserNotifications
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "TosAppVersion")!
+    let channel = FlutterMethodChannel(name: "tos/app_version", binaryMessenger: registrar.messenger())
+    channel.setMethodCallHandler { call, result in
+      if call.method == "buildNumber" {
+        result(Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "") ?? 0)
+      } else {
+        result(FlutterMethodNotImplemented)
+      }
+    }
   }
 }
