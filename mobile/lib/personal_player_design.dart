@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
-import 'home_dashboard.dart' show SiteImage;
+import 'home_dashboard.dart' show SiteImage, openPage;
+import 'details.dart' show MatchPage;
 import 'theme.dart';
 import 'player_awards.dart';
 
@@ -16,11 +17,13 @@ class PlayerDashboard extends StatefulWidget {
     required this.history,
     required this.openTeam,
     this.awards = const [],
+    this.upcomingMatches = const [],
   });
   final TosApi api;
   final Map<String, dynamic> player;
   final List<Map<String, dynamic>> teams;
   final List<Map<String, dynamic>> awards;
+  final List<Map<String, dynamic>> upcomingMatches;
   final String section;
   final Future<void> Function() refresh;
   final void Function(String) history;
@@ -64,6 +67,8 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                 ),
                 child: _athlete(),
               ),
+              const SizedBox(height: 24),
+              _upcomingMatches(),
               const SizedBox(height: 24),
               _title('Le mie statistiche', 'IL TUO PERCORSO'),
               const SizedBox(height: 12),
@@ -126,6 +131,53 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
             ],
           ),
         );
+
+  Widget _upcomingMatches() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _title('Le tue prossime partite', 'IL TUO CALENDARIO'),
+      const SizedBox(height: 12),
+      if (widget.upcomingMatches.isEmpty)
+        const Text('Non ci sono partite da disputare per le tue squadre.'),
+      for (final match in widget.upcomingMatches)
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.event_outlined),
+            title: Text(
+              '${match['squadra_casa']} - ${match['squadra_ospite']}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            subtitle: Text(
+              [
+                '${match['torneo_nome'] ?? match['torneo'] ?? ''}',
+                _matchSchedule(match),
+              ].where((part) => part.isNotEmpty).join('\n'),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => openPage(
+              context,
+              MatchPage(
+                api: widget.api,
+                id: '${match['id']}',
+                previewMatch: match,
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
+
+  String _matchSchedule(Map<String, dynamic> match) {
+    final date = DateTime.tryParse('${match['data_partita']}');
+    final time = '${match['ora_partita'] ?? ''}';
+    return [
+      if (date != null)
+        '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}'
+      else
+        'Data da definire',
+      if (time.isNotEmpty) time.length >= 5 ? time.substring(0, 5) : time,
+    ].join(' · ');
+  }
 
   Widget _esport() {
     final tournaments = <String, Map<String, dynamic>>{};

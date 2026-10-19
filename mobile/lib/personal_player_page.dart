@@ -161,6 +161,7 @@ class _PersonalPlayerPageState extends State<PersonalPlayerPage> {
           player: player,
           teams: teams,
           awards: TosApi.rows(data['awards']),
+          upcomingMatches: TosApi.rows(data['upcoming_matches']),
           section: widget.section,
           refresh: _refresh,
           history: (type) => _history(player, type),

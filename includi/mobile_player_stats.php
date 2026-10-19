@@ -84,7 +84,20 @@ function mobile_player_stats_handle(int $userId, array $query): array {
             $team = array_merge($team, $stats, ['diffidato' => count(diffidati_fetch($conn, $team['torneo'], $id, (int)$team['id'])) > 0]);
         }
         unset($team);
-        return ['player' => $player, 'teams' => $teams, 'awards' => player_awards_fetch_all($conn, $player, $teams, $section)];
+        $stmt = $conn->prepare("SELECT p.*, COALESCE(t.nome, p.torneo) AS torneo_nome
+            FROM partite p
+            LEFT JOIN tornei t ON (t.filetorneo = p.torneo OR t.filetorneo = CONCAT(p.torneo, '.php') OR t.nome = p.torneo)
+            WHERE COALESCE(p.giocata, 0) = 0 AND COALESCE(t.sezione, 'calcio') = ?
+              AND EXISTS (SELECT 1 FROM squadre_giocatori sg
+                JOIN squadre s ON s.id = sg.squadra_id
+                WHERE sg.giocatore_id = ? AND s.torneo = p.torneo
+                  AND s.nome IN (p.squadra_casa, p.squadra_ospite))
+            ORDER BY p.data_partita IS NULL, p.data_partita ASC, p.ora_partita ASC, p.id ASC");
+        $stmt->bind_param('si', $section, $id);
+        $stmt->execute();
+        $upcoming = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return ['player' => $player, 'teams' => $teams, 'upcoming_matches' => $upcoming, 'awards' => player_awards_fetch_all($conn, $player, $teams, $section)];
     } finally {
         $conn->close();
     }
