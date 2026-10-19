@@ -110,12 +110,14 @@ function tos_fcm_deliver(string $token, array $payload, array $credentials, stri
 // Shared by the mysqli event producers and the PDO mobile API.
 function tos_fcm_recipients_sql(string $placeholders): string
 {
+    // Compare exact bytes without mixing the ascii_bin column collation with
+    // the connection collation returned by SHA2 (MySQL error 1267).
     return "SELECT d.token_hash, d.token FROM mobile_push_devices d
         JOIN mobile_sessions s ON s.id = d.session_id AND s.user_id = d.user_id
         JOIN utenti u ON u.id = d.user_id
         WHERE d.active = 1 AND d.user_id IN ($placeholders)
         AND s.revoked_at IS NULL AND s.refresh_expires_at > ?
-        AND s.password_fingerprint = SHA2(u.password, 256) AND u.email_verificata = 1";
+        AND HEX(s.password_fingerprint) = HEX(SHA2(u.password, 256)) AND u.email_verificata = 1";
 }
 
 function tos_fcm_send_to_users(mysqli $conn, array $userIds, array $payload): array
