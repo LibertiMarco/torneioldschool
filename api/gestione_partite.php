@@ -581,7 +581,7 @@ function inviaNotificaEsito(mysqli $conn, int $partitaId, ?array $info = null): 
   $golCasa = $info['gol_casa'] ?? (int)($row['gol_casa'] ?? 0);
   $golOsp = $info['gol_ospite'] ?? (int)($row['gol_ospite'] ?? 0);
   $matchLabel = 'Risultato finale';
-  $scoreLabel = $casa . ' ' . $golCasa . ' - ' . $golOsp . ' ' . $osp;
+  $scoreLabel = $casa . ' ' . $golCasa . ' - ' . $golOsp . ' ' . $osp . "\nScopri il risultato e la classifica.";
   $matchLink = '/tornei/partita_eventi.php?id=' . $partitaId . '&torneo=' . rawurlencode($torneo);
 
   $uids = array_unique(array_merge(
