@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../api/crud/torneo.php';
-require_once __DIR__ . '/../api/crud/Squadra.php';
+require_once __DIR__ . '/../api/crud/squadra.php';
 require_once __DIR__ . '/../includi/squadra_gironi.php';
 
 function expect_girone($condition, string $message): void {

@@ -156,7 +156,7 @@ class _TeamPageState extends State<TeamPage> {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(22),
+                    padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
                         Container(
@@ -250,17 +250,18 @@ class _TeamPageState extends State<TeamPage> {
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
-                              vertical: 6,
+                              vertical: 7,
                             ),
                             decoration: BoxDecoration(
-                              color: colors.surface,
-                              borderRadius: BorderRadius.circular(9),
+                              color: colors.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
                               '${team[entry.value] ?? 0} ${entry.key.toLowerCase()}',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: colors.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                                color: colors.onSurface,
                               ),
                             ),
                           ),

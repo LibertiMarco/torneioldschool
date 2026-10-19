@@ -17,10 +17,23 @@ CREATE TABLE mobile_auth_codes (code_hash TEXT PRIMARY KEY, user_id INTEGER, cha
 CREATE TABLE mobile_sessions (id TEXT PRIMARY KEY, user_id INTEGER, password_fingerprint TEXT, access_hash TEXT UNIQUE, access_expires_at INTEGER, refresh_expires_at INTEGER, revoked_at INTEGER);
 CREATE TABLE mobile_refresh_tokens (token_hash TEXT PRIMARY KEY, session_id TEXT, expires_at INTEGER, used_at INTEGER);');
 $db->exec("INSERT INTO utenti VALUES (1, 'fixture@example.test', 'Test', 'User', 'user', NULL, 'test-password-hash', 1, '{\"totocalcio\":true}')");
+$password = password_hash(' exact native password ', PASSWORD_DEFAULT);
+$stmt = $db->prepare("INSERT INTO utenti VALUES (2, 'native@example.test', 'Native', 'User', 'user', NULL, ?, 1, '{}')");
+$stmt->execute([$password]);
+$nativeAuth = new MobileAuth($db);
+mobile_rejected(fn()=>$nativeAuth->loginCredentials('native@example.test', 'wrong'), 'invalid_credentials');
+mobile_rejected(fn()=>$nativeAuth->loginCredentials('missing@example.test', 'wrong'), 'invalid_credentials');
+$nativeTokens = $nativeAuth->loginCredentials('native@example.test', ' exact native password ');
+mobile_expect($nativeAuth->authenticate($nativeTokens['access_token'])['id'] === 2, 'Native credentials issue normal session');
+$db->exec('UPDATE utenti SET email_verificata=0 WHERE id=2');
+mobile_rejected(fn()=>$nativeAuth->loginCredentials('native@example.test', ' exact native password '), 'email_unverified');
+mobile_rejected(fn()=>$nativeAuth->refresh($nativeTokens['refresh_token']), 'invalid_session');
+$db->exec('DELETE FROM utenti WHERE id=2');
 $now = 10000;
 $auth = new MobileAuth($db, static function () use (&$now): int { return $now; });
 $verifier = str_repeat('a', 64);
 $challenge = MobileAuth::challenge($verifier);
+mobile_rejected(fn()=>$auth->authorize(1,$challenge,hash('sha256','different-password-hash')), 'invalid_credentials');
 mobile_expect(MobileAuth::challenge('dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk') === 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM', 'RFC 7636 S256 vector');
 $request = ['client_id' => 'tos-mobile', 'redirect_uri' => MobileAuth::CALLBACK, 'response_type' => 'code',
     'code_challenge_method' => 'S256', 'code_challenge' => $challenge, 'state' => str_repeat('s', 43)];

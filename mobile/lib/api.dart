@@ -96,17 +96,13 @@ class TosApi {
             .timeout(const Duration(seconds: 20));
       }
       dynamic data;
-      if (response.statusCode == 401) {
-        throw const ApiError(
-          'Accedi per visualizzare questo contenuto.',
-          status: 401,
-        );
-      }
       try {
         data = jsonDecode(utf8.decode(response.bodyBytes));
       } on FormatException {
         throw ApiError(
-          response.statusCode == 403
+          response.statusCode == 401
+              ? 'Accedi per visualizzare questo contenuto.'
+              : response.statusCode == 403
               ? 'Non hai i permessi per visualizzare questo contenuto.'
               : 'Servizio temporaneamente non disponibile.',
           status: response.statusCode,
@@ -120,6 +116,10 @@ class TosApi {
                 (path.startsWith('api/mobile/v1/') ||
                     path == 'app-preview/api.php')
             ? error['message']?.toString() ?? 'Richiesta non riuscita.'
+            : error is String && path == 'api/mobile/v1/comments.php'
+            ? error
+            : response.statusCode == 401
+            ? 'Accedi per visualizzare questo contenuto.'
             : response.statusCode == 403
             ? 'Non hai i permessi per visualizzare questo contenuto.'
             : 'Servizio temporaneamente non disponibile.';
@@ -188,12 +188,7 @@ class TosApi {
   }) async => Map<String, dynamic>.from(
     await request(
       'api/giocatore_partite.php',
-      query: {
-        'giocatore_id': id,
-        'tipo': type,
-        'page': '$page',
-        'limit': '10',
-      },
+      query: {'giocatore_id': id, 'tipo': type, 'page': '$page', 'limit': '10'},
     ) as Map,
   );
   Future<Map<String, dynamic>> esportRanking({int limit = 5}) async =>

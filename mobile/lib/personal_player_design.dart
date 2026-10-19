@@ -68,6 +68,44 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
               _title('Le mie statistiche', 'IL TUO PERCORSO'),
               const SizedBox(height: 12),
               _summary(),
+              if (widget.player['rankings'] is Map) ...[
+                const SizedBox(height: 12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Classifiche generali · tutti i tempi',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 8),
+                        for (final entry in {
+                          'gol': 'Marcatori',
+                          'presenze': 'Presenze',
+                        }.entries)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Expanded(child: Text(entry.value)),
+                                Text(
+                                  widget.player['rankings'][entry.key] == null
+                                      ? 'Non in classifica'
+                                      : '${widget.player['rankings'][entry.key]}°',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
               _discipline(),
               const SizedBox(height: 22),
@@ -555,7 +593,10 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
 
   Widget _chart() {
     final field = appearances ? 'presenze' : 'reti';
-    final max = widget.teams.fold<num>(
+    final playedTeams = widget.teams
+        .where((team) => number(team['presenze']) > 0)
+        .toList();
+    final max = playedTeams.fold<num>(
       0,
       (a, team) => number(team[field]) > a ? number(team[field]) : a,
     );
@@ -597,7 +638,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
             ],
           ),
           const SizedBox(height: 24),
-          for (final team in widget.teams)
+          for (final team in playedTeams)
             Padding(
               padding: const EdgeInsets.only(bottom: 20),
               child: Semantics(

@@ -4,6 +4,7 @@ import 'package:tornei_old_school/demo.dart';
 import 'package:tornei_old_school/api.dart';
 import 'package:tornei_old_school/details.dart';
 import 'package:tornei_old_school/theme.dart';
+import 'package:tornei_old_school/sport_controls.dart';
 
 class TwoTeamReportApi extends DemoApi {
   @override
@@ -245,9 +246,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Con eventi'))
-            .selected,
-        true,
+            .widget<SportSegments<bool>>(find.byType(SportSegments<bool>))
+            .value,
+        false,
       );
       expect(find.text('Solo Gol'), findsOneWidget);
       expect(find.text('GK'), findsOneWidget);
@@ -269,8 +270,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Tutti'))
-            .selected,
+            .widget<SportSegments<bool>>(find.byType(SportSegments<bool>))
+            .value,
         true,
       );
       expect(find.text('Senza Eventi'), findsOneWidget);

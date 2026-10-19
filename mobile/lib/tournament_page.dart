@@ -1009,6 +1009,12 @@ class TournamentScorers extends StatefulWidget {
 class _TournamentScorersState extends State<TournamentScorers> {
   int page = 0;
   @override
+  void didUpdateWidget(covariant TournamentScorers oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.players != widget.players) page = 0;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final ranks = <int>[];
@@ -1069,6 +1075,12 @@ class _TournamentScorersState extends State<TournamentScorers> {
               final player = entry.value;
               final position = ranks[page * perPage + entry.key];
               final podium = position <= 3;
+              final medal = switch (position) {
+                1 => const Color(0xffb68a2e),
+                2 => const Color(0xff8795a6),
+                3 => const Color(0xffb77a53),
+                _ => colors.onSurfaceVariant,
+              };
               return RankingSurface(
                 index: page * perPage + entry.key,
                 child: ListTile(
@@ -1087,12 +1099,12 @@ class _TournamentScorersState extends State<TournamentScorers> {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: podium
-                                ? colors.primaryContainer
+                                ? medal.withValues(alpha: .15)
                                 : colors.surface,
                             borderRadius: BorderRadius.circular(9),
                             border: Border.all(
                               color: podium
-                                  ? colors.primary.withValues(alpha: .25)
+                                  ? medal.withValues(alpha: .25)
                                   : colors.outlineVariant,
                             ),
                           ),
@@ -1102,7 +1114,7 @@ class _TournamentScorersState extends State<TournamentScorers> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
-                                color: colors.onSurface,
+                                color: medal,
                               ),
                             ),
                           ),

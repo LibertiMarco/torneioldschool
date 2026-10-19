@@ -36,6 +36,8 @@ window.PhotoTouchEditor = (() => {
     const redraw=options.onChange||(()=>drawAll());
     for (const {type,id,maxWidth=540} of canvases) {
       const s=state(type), canvas=document.getElementById(id);
+      if (!canvas) continue;
+      s.canvasId=id;s.redraw=redraw;
       s.width=canvas.width||1080;s.height=canvas.height||1350;
       s.autoEnable = options.autoEnable === true;
       const wrap=document.createElement('div');
@@ -103,5 +105,32 @@ window.PhotoTouchEditor = (() => {
   function reset(type) {
     const s=state(type);if(s.stop)s.stop();Object.assign(s,{sx:1,sy:1,dx:0,dy:0});
   }
-  return {init,transform,sync,reset};
+  // The Flutter preview uses the same photo state and redraw as the website.
+  // Values are in source canvas pixels, independently of the rendered size.
+  function describe(canvasId) {
+    for (const [type,s] of states) {
+      if(s.canvasId===canvasId && s.image && s.box) return {
+        type,width:s.width,height:s.height,sx:s.sx,sy:s.sy,dx:s.dx,dy:s.dy
+      };
+    }
+    return null;
+  }
+  function apply(canvasId,values) {
+    for (const [type,s] of states) {
+      if(s.canvasId!==canvasId || !s.image || !s.box) continue;
+      if(values.reset===true) reset(type);
+      else {
+        const {sx,sy,dx,dy}=values;
+        if(![sx,sy,dx,dy].every(Number.isFinite)) return false;
+        const scale=Math.max(.05,Math.min(20,sx));
+        // One factor preserves the source image's aspect ratio.
+        Object.assign(s,{sx:scale,sy:scale,
+          dx:Math.max(-s.width*20,Math.min(s.width*20,dx)),
+          dy:Math.max(-s.height*20,Math.min(s.height*20,dy))});
+      }
+      s.redraw();return true;
+    }
+    return false;
+  }
+  return {init,transform,sync,reset,describe,apply};
 })();

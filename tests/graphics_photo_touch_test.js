@@ -54,5 +54,12 @@ for(const [type,id] of [['ft','fulltimeCanvas'],['mvp','mvpCanvas']]){
   sandbox.drawAll();assert.equal(rendered.x,130,'Export redraw lost photo position');
   drag('e',100,0);assert.equal(rendered.w,900);assert.equal(rendered.h,787.5,'Final photo did not scale proportionally');
   sandbox.drawAll();assert.equal(rendered.h,787.5,'Export redraw lost photo proportions');
+  assert.equal(editor.apply(id,{sx:2,sy:2,dx:15,dy:25}),true,'Native editor applies the same source state');
+  assert.equal(editor.describe(id).dx,15);
+  assert.equal(rendered.x,65);assert.equal(rendered.y,225);
+  assert.equal(rendered.w,1600);assert.equal(rendered.h,1400);
+  assert.equal(editor.apply(id,{sx:Infinity,sy:1,dx:0,dy:0}),false,'Reject non-finite bridge transforms');
+  assert.equal(editor.apply(id,{reset:true}),true);
+  assert.equal(rendered.x,50);assert.equal(rendered.w,800);
 }
 console.log('PASS: Full Time and MVP photo drag, all eight proportional handles, limits, pinch, cancellation, reset and export redraw.');

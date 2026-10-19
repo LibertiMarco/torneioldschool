@@ -141,6 +141,7 @@ function fetch_player_cup_awards(mysqli $conn, array $teams): array {
                 'premio' => $labels[$phase] ?? ('Coppa ' . ucfirst(strtolower($phase))),
                 'competizione' => (string)($final['latest']['torneo_nome'] ?: $final['latest']['torneo']),
                 'squadra' => (string)$team['nome'],
+                'data_riconoscimento' => $final['latest']['data_partita'] ?? '',
                 'anno' => !empty($final['latest']['data_partita']) ? date('Y', strtotime((string)$final['latest']['data_partita'])) : '',
                 'logo' => (string)($team['logo'] ?? ''),
                 'link' => resolve_torneo_link((string)($final['latest']['torneo_file'] ?: $final['latest']['torneo'])),
@@ -198,6 +199,7 @@ function fetch_player_regular_season_awards(mysqli $conn, array $teams): array {
                 'premio' => 'Regular Season',
                 'competizione' => (string)($leader['torneo_nome'] ?: $torneo),
                 'squadra' => (string)$leader['nome'],
+                'data_riconoscimento' => $lastRegular,
                 'anno' => $lastRegular !== '' ? date('Y', strtotime($lastRegular)) : '',
                 'logo' => (string)($leader['logo'] ?? ''),
                 'link' => resolve_torneo_link((string)($leader['torneo_file'] ?: $torneo)),
@@ -251,6 +253,7 @@ function fetch_player_awards(mysqli $conn, array $giocatore, array $teams, strin
                 'premio_originale' => (string)$row['premio'],
                 'competizione' => (string)($bound['competizione'] ?? $row['competizione']),
                 'squadra' => (string)($team['nome'] ?? ''),
+                'data_riconoscimento' => ($bound['data_evento'] ?? '') ?: ($bound['data_fine'] ?? ''),
                 'anno' => (string)($row['fine_anno'] ?: $row['inizio_anno'] ?: ''),
                 'logo' => $isTeamAward
                     ? ((string)($row['vincitrice_logo'] ?? '') ?: (string)($team['logo'] ?? ''))
@@ -310,14 +313,31 @@ function player_awards_fetch_all(mysqli $conn, array $player, array $teams, stri
         $team=''; foreach ($teams as $item) if ((int)$item['id'] === (int)($record['squadra_id'] ?? 0)) { $team=(string)$item['nome']; break; }
         $official[]=['id'=>$record['source_key'] ?? $record['record_id'],'tipo'=>$recipientType,
             'premio'=>$record['premio'],'competizione'=>$record['competizione'],'squadra'=>$team,
+            'data_riconoscimento'=>($record['data_evento'] ?? '') ?: ($record['data_fine'] ?? ''),
             'anno'=>$record['anno'],'logo'=>$record['logo_vincitrice'] ?? '', 'link'=>$record['link_torneo'] ?? '',
             'torneo_id'=>$edition,'giocatore_id'=>$record['giocatore_id'] ?? null];
     }
     $inferred=array_merge(fetch_player_regular_season_awards($conn,$teams),fetch_player_cup_awards($conn,$teams));
     $inferred=array_values(array_filter($inferred,static fn($award)=>!isset($covered[albo_slug((string)$award['link']) . ':' . albo_kind((string)$award['premio'])])));
-    return deduplicate_player_awards(array_merge(
+    return sort_player_awards(deduplicate_player_awards(array_merge(
         $official,
         $inferred,
         fetch_player_awards($conn, $player, $teams, $section)
-    ));
+    )));
+}
+
+/** Stable order by recognition date/edition year; never use insertion date or ID. */
+function sort_player_awards(array $awards): array {
+    $indexed = [];
+    foreach ($awards as $index => $award) {
+        $date = trim((string)($award['data_riconoscimento'] ?? ''));
+        $time = $date !== '' ? (strtotime($date) ?: 0) : 0;
+        if (!$time && preg_match('/(?:19|20)\d{2}/', (string)($award['anno'] ?? ''), $year)) {
+            preg_match_all('/(?:19|20)\d{2}/', (string)$award['anno'], $years);
+            $time = strtotime(max($years[0]) . '-01-01') ?: 0;
+        }
+        $indexed[] = ['award'=>$award, 'time'=>$time, 'index'=>$index];
+    }
+    usort($indexed, static fn($a,$b) => ($b['time'] <=> $a['time']) ?: ($a['index'] <=> $b['index']));
+    return array_column($indexed, 'award');
 }

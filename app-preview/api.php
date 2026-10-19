@@ -26,6 +26,16 @@ try {
     } elseif ($method !== 'GET') {
         throw new MobileAuthError('method_not_allowed', 'Metodo non consentito.', 405);
     }
+    if ($action === 'comments') {
+        $operation = $_GET['operation'] ?? 'list';
+        if ($method === 'GET') $_GET['azione'] = 'commenti';
+        elseif ($operation === 'create') $_GET['azione'] = 'commenti_salva';
+        elseif ($operation === 'delete') $_GET['azione'] = 'commenti_elimina';
+        else throw new MobileAuthError('invalid_request', 'Operazione non valida.', 400);
+        $_GET['page'] ??= '1';
+        require __DIR__ . '/../api/blog.php';
+        exit;
+    }
     if ($action === 'follow') {
         mobile_json(mobile_follow_handle($db, (int)$user['id'], $body ?? $_GET, $method === 'POST'));
     }

@@ -262,7 +262,7 @@ if ($linkService) {
             <tbody><?php foreach ($pendingLinkRequests as $request): ?>
               <tr>
                 <td><?= h(trim($request['user_nome'] . ' ' . $request['user_cognome'])) ?><br><?= h($request['email']) ?></td>
-                <td><?= h(trim(($request['nome'] ?? '') . ' ' . ($request['cognome'] ?? ''))) ?><br><?= h($request['ruolo'] ?? '') ?><br>ID giocatore: <?= (int)($request['player_id'] ?? 0) ?></td>
+                <td><?= h(trim(($request['nome'] ?? '') . ' ' . ($request['cognome'] ?? ''))) ?><br><?= h($request['ruolo'] ?? '') ?><br>ID giocatore: <?= (int)($request['player_id'] ?? 0) ?><?php if (!empty($request['utente_id'])): ?><p role="status">Già associato: verifica il conflitto. Per approvare, risolvi prima il collegamento esistente con la funzione di rimozione.</p><?php endif; ?></td>
                 <td><form method="POST">
                   <?= csrf_field($csrfKey) ?>
                   <input type="hidden" name="richiesta_id" value="<?= (int)$request['id'] ?>">

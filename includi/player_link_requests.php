@@ -43,7 +43,8 @@ final class PlayerLinkRequests {
     public function status(int $userId): array {
         $this->user($userId);
         $row = $this->one('SELECT r.id, r.stato AS status, r.created_at, r.reviewed_at, r.reason,
-            g.id AS player_id, g.nome, g.cognome, g.ruolo
+            g.id AS player_id, g.nome, g.cognome, g.ruolo,
+            CASE WHEN g.utente_id IS NULL THEN 0 ELSE 1 END AS already_linked
             FROM player_link_requests r LEFT JOIN giocatori g ON g.id = r.giocatore_id
             WHERE r.user_id = ? ORDER BY r.id DESC LIMIT 1', [$userId]);
         return ['linked'=>$this->linked($userId), 'request'=>$row];
@@ -56,11 +57,12 @@ final class PlayerLinkRequests {
         $name = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? "CONCAT(nome, ' ', cognome)" : "nome || ' ' || cognome";
         $reverse = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? "CONCAT(cognome, ' ', nome)" : "cognome || ' ' || nome";
         $term = '%' . str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $query) . '%';
-        $stmt = $this->db->prepare("SELECT g.id, g.nome, g.cognome, g.ruolo,
+        $stmt = $this->db->prepare("SELECT g.id, g.nome, g.cognome, g.ruolo, g.foto,
+            CASE WHEN g.utente_id IS NULL THEN 0 ELSE 1 END AS already_linked,
             (SELECT s.nome FROM squadre_giocatori sg JOIN squadre s ON s.id = sg.squadra_id
              WHERE sg.giocatore_id = g.id ORDER BY sg.created_at DESC LIMIT 1) AS squadra
             FROM giocatori g
-            WHERE utente_id IS NULL AND ($name LIKE ? ESCAPE '!' OR $reverse LIKE ? ESCAPE '!')
+            WHERE ($name LIKE ? ESCAPE '!' OR $reverse LIKE ? ESCAPE '!')
             ORDER BY cognome, nome, id LIMIT 20");
         $stmt->execute([$term, $term]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -75,7 +77,7 @@ final class PlayerLinkRequests {
                 throw new MobileAuthError('conflict', 'Hai già una richiesta in attesa di approvazione.', 409);
             }
             $player = $this->one('SELECT id, utente_id FROM giocatori WHERE id = ?' . $this->lock(), [$playerId]);
-            if (!$player || $player['utente_id'] !== null) throw new MobileAuthError('conflict', 'Questo giocatore non è disponibile per il collegamento.', 409);
+            if (!$player) throw new MobileAuthError('conflict', 'Giocatore non disponibile.', 409);
             $stmt = $this->db->prepare("INSERT INTO player_link_requests (user_id, giocatore_id, stato, pending_user_id, created_at) VALUES (?, ?, 'pending', ?, ?)");
             $stmt->execute([$userId, $playerId, $userId, gmdate('Y-m-d H:i:s')]);
             $this->db->commit();

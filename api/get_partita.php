@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 header("Content-Type: application/json; charset=UTF-8");
 
 // --- CONNESSIONE DATABASE + MODEL ---
@@ -21,7 +21,13 @@ if(!$dati){
     exit;
 }
 
-// Output in stile identico agli altri
+$logos = [];
+$stmt = $conn->prepare('SELECT nome, logo FROM squadre WHERE torneo = ? AND nome IN (?, ?)');
+$stmt->bind_param('sss', $dati['torneo'], $dati['squadra_casa'], $dati['squadra_ospite']);
+$stmt->execute();
+foreach ($stmt->get_result() as $team) $logos[$team['nome']] = $team['logo'];
+$stmt->close();
+// Additive metadata; venue stays the real value used by website Maps search.
 echo json_encode([
     "id"             => (int)$dati['id'],
     "torneo"         => $dati['torneo'] ?? '',
@@ -34,6 +40,8 @@ echo json_encode([
     "gol_ospite"     => isset($dati['gol_ospite']) ? (int)$dati['gol_ospite'] : 0,
     "data_partita"   => $dati['data_partita'] ?? '',
     "ora_partita"    => $dati['ora_partita'] ?? '',
+    "logo_casa" => $logos[$dati['squadra_casa']] ?? '',
+    "logo_ospite" => $logos[$dati['squadra_ospite']] ?? '',
     "campo"          => $dati['campo'] ?? '',
     "giornata"       => array_key_exists('giornata', $dati) && $dati['giornata'] !== null ? (int)$dati['giornata'] : null,
     "giocata"        => isset($dati['giocata']) ? (int)$dati['giocata'] : 0,

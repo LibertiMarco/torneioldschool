@@ -2,13 +2,13 @@
 
 La versione corrente è una base di sviluppo, non la versione completa richiesta per gli store.
 
-Implementato: progetto Android/iOS, navigazione Calcio/Esport, elenco tornei, classifiche, partite con dettaglio e referto, squadre con rose e statistiche giocatori nel torneo, accesso tramite login web con PKCE S256, sessioni mobile revocabili, profilo e logout, consultazione utenti e modifica delle abilitazioni Totocalcio/Fantacalcio per admin. Palette e logo sono quelli del sito. L'anteprima browser principale è riservata ad admin e grafici e usa account/database reali: `../docs/mobile-preview.md`.
+Implementato: progetto Android/iOS, navigazione Calcio/Esport, elenco tornei, classifiche, partite con dettaglio e referto, squadre con rose e statistiche giocatori nel torneo, accesso nativo email/password con reCAPTCHA e sessioni condivise con il precedente flusso PKCE S256, sessioni mobile revocabili, profilo e logout, consultazione utenti e modifica delle abilitazioni Totocalcio/Fantacalcio per admin. Palette e logo sono quelli del sito. L'anteprima browser principale è riservata ad admin e grafici e usa account/database reali: `../docs/mobile-preview.md`.
 
 La dashboard staff e i suoi 19 strumenti hanno ora interfacce Flutter per moduli,
 selezioni, elenchi, editor articoli e grafiche. Un controller interno non visibile
 riutilizza i salvataggi PHP e i relativi controlli; dettagli e limiti sono in
 `README.md`. Sono presenti anche storico e premi giocatore e lettura del blog.
-Restano in sviluppo commenti, preferiti, notifiche native e moduli fantasy;
+I commenti riutilizzano ora il servizio del sito con paginazione e permessi; restano in sviluppo preferiti e moduli fantasy;
 la parità con tutte le varianti di torneo richiede ulteriori verifiche. La mappa
 completa è in `../docs/app-mobile.md`.
 
@@ -46,7 +46,7 @@ Prima di attivarle nell'ambiente scelto:
 
 Per il database locale è disponibile `C:\xampp\php\php.exe api/script/mobile_migrate.php --apply` dalla radice del progetto. Senza `--apply` stampa soltanto l'anteprima. Il database locale è stato avviato per la prova ma rifiuta le credenziali configurate (1045); la migrazione non è stata applicata. L'utente ha scelto infine il sito reale. I file sono stati pubblicati su master con il commit `4d5862d`; l'attivazione delle API e la migrazione online restano da confermare dal pannello admin. I passaggi di rilascio sono in `../docs/mobile-production.md`.
 
-Il login dell'app apre il login del sito nel browser del sistema. L'endpoint `authorize.php` emette un codice monouso con scadenza di 120 secondi; l'app lo scambia con il verificatore PKCE. Non viene introdotto un endpoint password che aggiri reCAPTCHA. La callback ammessa è soltanto `tosoldschool://auth/callback`.
+Il normale login mobile ora usa campi Flutter e `api/mobile/v1/login.php`, con la stessa verifica reCAPTCHA del sito mostrata in un pannello integrato. Il flusso web PKCE precedente resta disponibile come metodo compatibile; non è il percorso normale dell’app. L'endpoint `authorize.php` emette un codice monouso con scadenza di 120 secondi; l'app lo scambia con il verificatore PKCE. Il nuovo endpoint password richiede reCAPTCHA e il rate limit già utilizzato dal sito, senza bypass. La callback ammessa è soltanto `tosoldschool://auth/callback`.
 
 Gli access token scadono dopo 15 minuti. Le sessioni durano al massimo 30 giorni. I refresh token ruotano ad ogni uso; riutilizzare un vecchio refresh revoca l'intera sessione. Si conservano soltanto hash dei token nel database. Cambio password, email non verificata ed eliminazione account rendono le credenziali inutilizzabili. Ruoli e abilitazioni sono letti nuovamente ad ogni richiesta autenticata.
 
@@ -72,7 +72,7 @@ La dipendenza `flutter_web_auth_2` è fissata a `6.0.0-alpha.8` per compatibilit
 
 La Home è distinta dall’elenco tornei. Usa le API esistenti `classifica_giocatori.php` (totali senza filtro torneo), `esport_ranking.php`, `blog.php` e `albo_doro.php`: conserva i conteggi e le posizioni calcolati dal sito, senza sommare nuovamente i singoli tornei sul client. Classifica totale paginata e ricercabile; prime 5 in homepage, alternabili fra gol e presenze. Esport conserva i limiti imposti dal server. News e albo sono filtrati esplicitamente per sezione nelle letture; il default del sito per dominio rimane valido.
 
-I tornei hanno gli stessi gruppi e ordinamenti della pagina `tornei.php`; ricerca per nome/categoria/periodo/stato, categorie in ordine naturale, archivio iniziale di 12 con caricamento successivo. Le letture native e preview includono l’intero archivio. Le notizie sono leggibili nelle schermate Flutter con testo e immagini. Il contenuto mantiene grassetti (`**testo**` e `==testo==`), titoli e sezioni (`#`, `##` e il formato del sito `==Titolo==` su una riga), paragrafi, elenchi e citazioni. Sono gestiti anche i corrispondenti tag HTML; script e contenuti incorporati vengono rimossi. Commenti e media video restano fra i moduli da completare. I test `article_content_test.dart` verificano la formattazione e l’apertura dell’articolo a 320 px.
+I tornei hanno gli stessi gruppi e ordinamenti della pagina `tornei.php`; ricerca per nome/categoria/periodo/stato, categorie in ordine naturale, archivio iniziale di 12 con caricamento successivo. Le letture native e preview includono l’intero archivio. Le notizie sono leggibili nelle schermate Flutter con testo e immagini. Il contenuto mantiene grassetti (`**testo**` e `==testo==`), titoli e sezioni (`#`, `##` e il formato del sito `==Titolo==` su una riga), paragrafi, elenchi e citazioni. Sono gestiti anche i corrispondenti tag HTML; script e contenuti incorporati vengono rimossi. I commenti sono integrati tramite il servizio esistente; la riproduzione dei media video resta da completare. I test `article_content_test.dart` verificano la formattazione e l’apertura dell’articolo a 320 px.
 Il dettaglio torneo condiviso include Classifica, Marcatori (Calcio, pagine di 15), Calendario, Rose e Regole. mobile_tournament_layout.php legge le impostazioni pubbliche dei tornei storici senza eseguire PHP/JavaScript; la configurazione DB e i dati delle API esistenti completano gironi e qualificazioni. Test dedicati verificano gironi, scontri diretti, soglie storiche, spareggio e navigazione a 320 px.
 
 L’albo d’oro nella Home e nella pagina completa include il selettore del torneo: parte dall’ultima competizione inserita (data e ID del record, come sul sito) e mostra solo i premi del torneo scelto. L’elenco usa le API filtrate per la sezione Calcio/Esport. I test `hall_of_fame_test.dart` verificano selezione, premi, navigazione, stato vuoto e layout a 320 px.

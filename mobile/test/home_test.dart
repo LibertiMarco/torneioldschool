@@ -84,7 +84,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Cup'));
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Team A'), 150);
       expect(find.text('Team A'), findsOneWidget);
+      await tester.ensureVisible(find.text('Calendario'));
       await tester.tap(find.text('Calendario'));
       await tester.pumpAndSettle();
       expect(find.text('2  :  0'), findsOneWidget);
