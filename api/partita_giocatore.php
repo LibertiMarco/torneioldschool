@@ -431,7 +431,6 @@ function inviaNotificaEsito(mysqli $conn, int $partitaId, ?array $info = null): 
     $golOsp = $info['gol_ospite'] ?? (int)($row['gol_ospite'] ?? 0);
     $matchLabel = $casa . ' - ' . $osp;
     $scoreLabel = $golCasa . ' - ' . $golOsp;
-    $whenLabel = trim(($row['data_partita'] ?? '') . ' ' . ($row['ora_partita'] ?? ''));
     $matchLink = '/tornei/partita_eventi.php?id=' . $partitaId . '&torneo=' . rawurlencode($torneo);
 
     $uids = array_unique(array_merge(
@@ -445,8 +444,8 @@ function inviaNotificaEsito(mysqli $conn, int $partitaId, ?array $info = null): 
             $conn,
             $uids,
             'match_finale',
-            'Risultato finale',
-            $matchLabel . ' | ' . $scoreLabel . ($whenLabel ? ' | ' . $whenLabel : ''),
+            $matchLabel,
+            $scoreLabel,
             $matchLink
         );
     }
