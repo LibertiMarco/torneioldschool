@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -24,12 +25,30 @@ class SignedInTestAuth extends TosAuth {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  const versionChannel = MethodChannel('tos/app_version');
+  final currentVersionResponse = jsonEncode({
+    'android': {'build': 8, 'url': 'https://example.test/update'},
+    'ios': {'build': 8, 'url': 'https://example.test/update'},
+  });
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(versionChannel, (_) async => 8);
+  });
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(versionChannel, null);
+  });
+
   testWidgets(
     'Signed-in user browses tournaments and scores without admin tools',
     (tester) async {
       final api = TosApi(
         baseUrl: Uri.parse('https://example.test'),
         client: MockClient((request) async {
+          if (request.url.path.endsWith('app_version.php')) {
+            return http.Response(currentVersionResponse, 200);
+          }
           if (request.url.path.endsWith('tournaments.php')) {
             return http.Response(
               jsonEncode({
@@ -98,10 +117,13 @@ void main() {
     (tester) async {
       final api = TosApi(
         baseUrl: Uri.parse('https://example.test'),
-        client: MockClient(
-          (_) async =>
-              http.Response('{"error":{"message":"Unavailable"}}', 503),
-        ),
+        client: MockClient((request) async {
+          // Version verification succeeds; only content services are offline.
+          if (request.url.path.endsWith('app_version.php')) {
+            return http.Response(currentVersionResponse, 200);
+          }
+          return http.Response('{"error":{"message":"Unavailable"}}', 503);
+        }),
       );
       await tester.pumpWidget(TosApp(api: api, auth: SignedInTestAuth(api)));
       await tester.pumpAndSettle();
