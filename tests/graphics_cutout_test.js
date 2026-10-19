@@ -26,6 +26,15 @@ assert.strictEqual(out[12*w+18],0,'Detached ghost silhouette remains');
 assert(out[4*w+5]>90&&out[4*w+5]<180,'Connected soft detail became binary');
 assert.strictEqual(out[0],0,'Faint haze remains');
 assert(cleanMatte(new Float32Array(100).fill(.4),10,10).every(a=>a===0),'An uncertain mask must not become a ghost photo');
+// A confident background person used to survive the same as the two captains.
+for(let y=1;y<5;y++)for(let x=30;x<34;x++)alpha[y*w+x]=1;
+const foreground=cleanMatte(alpha,w,h,'main');
+assert.strictEqual(foreground[2*w+31],0,'Smaller confident background person remains');
+assert.strictEqual(foreground[10*w+5],255,'Largest subject removed');
+assert(foreground[10*w+30]>245,'Second captain removed');
+assert(foreground[4*w+5]>90&&foreground[4*w+5]<180,'Foreground hair lost its soft edge');
+assert.strictEqual(cleanMatte(alpha,w,h,'all')[2*w+31],255,'Group mode removed a smaller person');
+assert(cleanMatte(new Float32Array(100),10,10,'main').every(a=>a===0),'Empty mask became opaque');
 const page=fs.readFileSync(path.join(__dirname,'../api/grafiche_post_partita.php'),'utf8');
 vm.runInContext(page.slice(page.indexOf('function cover('),page.indexOf('const visibleImageBounds=')),sandbox);
 for(const [iw,ih] of [[400,1800],[2400,600],[600,800]])for(const zoom of [10,50,100,250]) {
@@ -40,3 +49,4 @@ for(const [iw,ih] of [[400,1800],[2400,600],[600,800]])for(const zoom of [10,50,
   assert.deepStrictEqual(clip,[20,30,600,800]);assert(restored);
 }
 console.log('Proportional zoom 10-250%, portrait/landscape padding, multiple subjects, ghost removal and soft edges: OK');
+

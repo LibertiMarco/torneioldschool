@@ -39,10 +39,12 @@ const GraphicsCutout = (() => {
     const w = Math.max(32, Math.ceil(dw / 32) * 32), h = Math.max(32, Math.ceil(dh / 32) * 32);
     return {width:w, height:h, x:(w - dw) / 2, y:(h - dh) / 2, dw, dh};
   }
-  function cleanMatte(alpha, width, height) {
-    // Remove detached, uncertain silhouettes, keeping ALL confident subjects.
+  function cleanMatte(alpha, width, height, subjects = 'all') {
+    // Keep soft edges with their subject, but compare confident areas so haze
+    // cannot make a distant silhouette look as large as the foreground players.
     const out = new Uint8ClampedArray(alpha.length), seen = new Uint8Array(alpha.length);
     const queue = new Int32Array(alpha.length);
+    const components = [];
     for (let start = 0; start < alpha.length; start++) {
       if (seen[start] || !(alpha[start] > .08)) continue;
       let head = 0, tail = 1, solid = 0;
@@ -57,22 +59,28 @@ const GraphicsCutout = (() => {
         }
       }
       if (solid < 4) continue;
-      for (let i = 0; i < tail; i++) {
-        const p = queue[i];
+      components.push({pixels:queue.slice(0, tail), solid});
+    }
+    const largest = components.reduce((size, component) => Math.max(size, component.solid), 0);
+    for (const component of components) {
+      if (subjects === 'main' && component.solid < largest * .25) continue;
+      const {pixels} = component;
+      for (let i = 0; i < pixels.length; i++) {
+        const p = pixels[i];
         const value = Math.max(0, Math.min(1, (alpha[p] - .08) / .88));
         out[p] = Math.round(value * 255);
       }
     }
     return out;
   }
-  function maskFromMatte(original, result, g) {
+  function maskFromMatte(original, result, g, subjects = 'all') {
     if (result.width !== g.width || result.height !== g.height || result.alpha.length !== g.width * g.height) throw new Error('Maschera di ritaglio non valida.');
     const small = document.createElement('canvas'), mask = document.createElement('canvas');
     small.width = g.width;small.height = g.height;
     mask.width = original.naturalWidth;mask.height = original.naturalHeight;
     try {
       const ctx = small.getContext('2d'), pixels = ctx.createImageData(g.width, g.height);
-      const alpha = cleanMatte(result.alpha, g.width, g.height);
+      const alpha = cleanMatte(result.alpha, g.width, g.height, subjects);
       if (!alpha.some(value => value > 128)) throw new Error('Non è stato possibile riconoscere una persona. Prova una foto più ravvicinata.');
       for (let p = 0; p < alpha.length; p++) {
         const i = p * 4;
@@ -86,7 +94,7 @@ const GraphicsCutout = (() => {
     } catch (error) { mask.width = mask.height = 1;throw error; }
     finally { small.width = small.height = 1; }
   }
-  async function createMask(original) {
+  async function createMask(original, {subjects = 'main'} = {}) {
     const g = geometry(original.naturalWidth, original.naturalHeight), canvas = document.createElement('canvas');
     canvas.width = g.width;canvas.height = g.height;
     let data;
@@ -99,7 +107,8 @@ const GraphicsCutout = (() => {
       for (let p = 0; p < size; p++) for (let c = 0; c < 3; c++) data[c * size + p] = rgba[p * 4 + c] / 127.5 - 1;
     } finally { canvas.width = canvas.height = 1; }
     const result = await infer(data, g.width, g.height);
-    return maskFromMatte(original, result, g);
+    return maskFromMatte(original, result, g, subjects);
   }
   return {createMask, geometry, cleanMatte, maskFromMatte};
 })();
+
