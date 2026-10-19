@@ -161,6 +161,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     }
   </style>
   <link rel="stylesheet" href="/api/grafiche_file_inputs.css?v=20261007">
+  <link rel="stylesheet" href="grafiche_scontorno_editor.css?v=20261019">
 </head>
 <body class="<?= $embedded ? 'is-embedded' : 'with-site-header' ?>">
 <?php if (!$embedded): ?><?php include __DIR__ . '/../includi/header.php'; ?><?php endif; ?>
@@ -192,7 +193,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
           <label>Logo casa (facoltativo)<input id="ftHomeLogo" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label>Logo ospite (facoltativo)<input id="ftAwayLogo" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label class="wide">Foto pre-match dei capitani<input id="ftCaptains" type="file" accept="image/png,image/jpeg,image/webp"></label>
-          <div id="ftPhotoActions" class="wide remove-bg-actions" hidden><button id="ftRemoveBg" type="button">Rimuovi sfondo</button><button id="ftRestorePhoto" class="secondary" type="button" hidden>Ripristina originale</button></div>
+          <div id="ftPhotoActions" class="wide remove-bg-actions" hidden><label>Persone da mantenere<select id="ftCutoutSubjects"><option value="main">Soggetti più grandi</option><option value="all">Tutte le persone (foto di gruppo)</option></select></label><button id="ftRemoveBg" type="button">Rimuovi sfondo</button><button id="ftRestorePhoto" class="secondary" type="button" hidden>Ripristina originale</button></div>
           <p class="wide hint" style="margin:0">La foto viene elaborata sul dispositivo. Il primo utilizzo scarica il modello di segmentazione.</p>
           <label>Zoom foto <span class="range-value" id="ftZoomValue">100%</span><input id="ftZoom" type="range" min="10" max="250" value="100"></label>
           <label>Posizione orizzontale <span class="range-value" id="ftXValue">50%</span><input id="ftX" type="range" min="0" max="100" value="50"></label>
@@ -213,7 +214,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
           <label class="wide">Selezione<input id="mvpNames" value="" readonly></label>
           <label class="wide">Squadra<input id="mvpTeam" value="" readonly></label>
           <label class="wide">Foto MVP<input id="mvpPhoto" type="file" accept="image/png,image/jpeg,image/webp"></label>
-          <div id="mvpPhotoActions" class="wide remove-bg-actions" hidden><button id="mvpRemoveBg" type="button">Rimuovi sfondo</button><button id="mvpRestorePhoto" class="secondary" type="button" hidden>Ripristina originale</button></div>
+          <div id="mvpPhotoActions" class="wide remove-bg-actions" hidden><label>Persone da mantenere<select id="mvpCutoutSubjects"><option value="main">Soggetti più grandi</option><option value="all">Tutte le persone (foto di gruppo)</option></select></label><button id="mvpRemoveBg" type="button">Rimuovi sfondo</button><button id="mvpRestorePhoto" class="secondary" type="button" hidden>Ripristina originale</button></div>
           <p class="wide hint" style="margin:0">La foto viene elaborata sul dispositivo. Il primo utilizzo scarica il modello di segmentazione.</p>
           <label>Zoom foto <span class="range-value" id="mvpZoomValue">100%</span><input id="mvpZoom" type="range" min="10" max="250" value="100"></label>
           <label>Posizione orizzontale <span class="range-value" id="mvpXValue">50%</span><input id="mvpX" type="range" min="0" max="100" value="50"></label>
@@ -251,7 +252,8 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="grafiche_basi.js?v=20261007-mvp-shared-logo"></script>
 <script src="grafiche_foto_touch.js?v=20261007-aspect-ratio"></script>
-<script src="grafiche_scontorno.js?v=20260927-modnet"></script>
+<script src="grafiche_scontorno.js?v=20261019-subjects"></script>
+<script src="grafiche_scontorno_editor.js?v=20261019"></script>
 <script>
 const $ = id => document.getElementById(id);
 const instagramPublishCsrf = <?= json_encode($canPublishInstagram ? csrf_get_token('instagram_publish') : '') ?>;
@@ -397,7 +399,7 @@ function drawMvpTech(){const match=currentMatch(),name=$('mvpTournament').value,
 function drawMvp(){if(customTemplates.draw('mvp'))return;prepareTheme($('mvpTournament').value,currentMatch());const {concept,motif,variant}=TOURNAMENT_STYLE;if(['italian','desert','africa','festive'].includes(concept))return (motif+variant)%2?drawMvpEditorial():drawMvpRoyal();if(['champions','cup'].includes(concept))return (motif+variant)%2?drawMvpCinematic():drawMvpPoster();if(['speed','esport','urban','german','premier'].includes(concept))return (motif+variant)%2?drawMvpDynamic():drawMvpTech();return [drawMvpPoster,drawMvpEditorial,drawMvpCinematic][(motif+variant)%3]();}
 function footer(ctx,tournament){ctx.fillStyle=GOLD;ctx.fillRect(48,1258,W-96,2);ctx.fillStyle=MUTED;ctx.font='600 18px Arial';ctx.textAlign='left';ctx.fillText(upper(tournament,'TORNEO'),48,1300,650);ctx.textAlign='right';ctx.fillText('torneioldschool.it',W-48,1300);}
 function drawAll(){updateCropLabels();drawFulltime();drawMvp();PhotoTouchEditor.sync('ft',imageState.ftCaptains);PhotoTouchEditor.sync('mvp',imageState.mvpPhoto);$('status').textContent='Anteprime aggiornate.';}
-async function updateImage(id){const file=$(id).files?.[0],version=matchLoadVersion;if(!file)return;$('status').textContent='Preparazione immagine…';const img=await fileImage(file,2048);if(!img)throw new Error('Formato della foto non leggibile. Usa una foto JPG, PNG o WebP.');if(version!==matchLoadVersion)return;imageState[id]=img;if(id==='ftCaptains'||id==='mvpPhoto'){imageState[id+'Original']=img;$(id==='ftCaptains'?'ftPhotoActions':'mvpPhotoActions').hidden=false;$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto').hidden=true;const removeButton=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg');removeButton.hidden=false;removeButton.disabled=false;}drawAll();}
+async function updateImage(id){const file=$(id).files?.[0],version=matchLoadVersion;if(!file)return;$('status').textContent='Preparazione immagine…';const img=await fileImage(file,2048);if(!img)throw new Error('Formato della foto non leggibile. Usa una foto JPG, PNG o WebP.');if(version!==matchLoadVersion)return;imageState[id]=img;if(id==='ftCaptains'||id==='mvpPhoto'){imageState[id+'Original']=img;$(id==='ftCaptains'?'ftPhotoActions':'mvpPhotoActions').hidden=false;$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto').hidden=true;const removeButton=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg');removeButton.hidden=false;removeButton.textContent='Rimuovi sfondo';removeButton.disabled=false;}drawAll();}
 let backgroundRemovalBusy=false;
 async function removePhotoBackground(id) {
   const original=imageState[id+'Original'];
@@ -409,7 +411,13 @@ async function removePhotoBackground(id) {
   ['ftRemoveBg','mvpRemoveBg'].forEach(key=>$(key).disabled=true);
   $('status').textContent='Rimozione sfondo in corso… Al primo utilizzo viene scaricato il modello (26 MB).';
   try {
-    mask=await GraphicsCutout.createMask(original);
+    mask=await GraphicsCutout.createMask(original,{subjects:$(id==='ftCaptains'?'ftCutoutSubjects':'mvpCutoutSubjects').value});
+    if(!isCurrent())return;
+    $('status').textContent='Controlla lo scontorno e cancella eventuali persone rimaste sullo sfondo.';
+    if(!await GraphicsCutoutEditor.refine(original,mask)){
+      if(isCurrent())$('status').textContent='Scontorno annullato: foto precedente conservata.';
+      return;
+    }
     if(!isCurrent())return;
     const w=original.naturalWidth,h=original.naturalHeight;
     canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
@@ -421,7 +429,7 @@ async function removePhotoBackground(id) {
     const cutout=await loadImage(await readImageData(blob));
     if(!cutout)throw new Error('Impossibile leggere la foto senza sfondo.');
     if(!isCurrent())return;
-    imageState[id]=cutout;button.hidden=true;restore.hidden=false;drawAll();
+    imageState[id]=cutout;button.hidden=false;button.textContent='Rifai scontorno';restore.hidden=false;drawAll();
     $('status').textContent='Sfondo rimosso e bordi rifiniti. La foto è stata elaborata sul dispositivo.';
   } catch(error) {
     if(isCurrent())$('status').textContent=error.message||'Rimozione sfondo non riuscita.';
@@ -432,7 +440,7 @@ async function removePhotoBackground(id) {
     ['ftRemoveBg','mvpRemoveBg'].forEach(key=>$(key).disabled=false);
   }
 }
-function restoreOriginalPhoto(id){imageState[id]=imageState[id+'Original'];const button=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg'),restore=$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto');button.hidden=false;button.disabled=false;restore.hidden=true;drawAll();$('status').textContent='Foto originale ripristinata.';}
+function restoreOriginalPhoto(id){imageState[id]=imageState[id+'Original'];const button=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg'),restore=$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto');button.hidden=false;button.textContent='Rimuovi sfondo';button.disabled=false;restore.hidden=true;drawAll();$('status').textContent='Foto originale ripristinata.';}
 function uniqueBy(items,keyFn){const map=new Map();items.forEach(item=>{const key=keyFn(item);if(key&&!map.has(key))map.set(key,item);});return [...map.entries()];}
 function setOptions(select,placeholder,options){select.innerHTML='';select.append(new Option(placeholder,''));options.forEach(([value,label])=>select.append(new Option(label,value)));select.disabled=options.length===0;}
 function roundKey(match){return match.fase_round ? `round:${match.fase_round}` : `day:${match.giornata??''}`;}
@@ -528,7 +536,7 @@ async function updateMvpSelection(){
 function clearMatch(){
   matchLoadVersion++;
   imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});
-  imageState.ftCaptainsOriginal=imageState.mvpPhotoOriginal=null;['ft','mvp'].forEach(prefix=>{$(prefix+'PhotoActions').hidden=true;$(prefix+'RemoveBg').hidden=false;$(prefix+'RemoveBg').disabled=false;$(prefix+'RestorePhoto').hidden=true;});
+  imageState.ftCaptainsOriginal=imageState.mvpPhotoOriginal=null;['ft','mvp'].forEach(prefix=>{$(prefix+'PhotoActions').hidden=true;$(prefix+'RemoveBg').hidden=false;$(prefix+'RemoveBg').textContent='Rimuovi sfondo';$(prefix+'RemoveBg').disabled=false;$(prefix+'RestorePhoto').hidden=true;});
   const tournament=tournaments.find(item=>String(item.id)===$('ftTournamentSelect').value);
   $('ftTournament').value=tournament?.nome||'';$('ftHome').value='';$('ftAway').value='';$('ftHomeScore').value=0;$('ftAwayScore').value=0;$('ftRound').value='';
   if($('instagramCaptionFulltime'))$('instagramCaptionFulltime').value='';
@@ -616,7 +624,7 @@ function queueInputDraw(){
 }
 document.querySelectorAll('input:not([type=file])').forEach(input=>input.addEventListener('input',queueInputDraw));
 $('generate').addEventListener('click',drawAll);
-$('reset').addEventListener('click',async()=>{const version=++matchLoadVersion;imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});imageState.ftCaptainsOriginal=imageState.mvpPhotoOriginal=null;['ft','mvp'].forEach(prefix=>{$(prefix+'PhotoActions').hidden=true;$(prefix+'RemoveBg').hidden=false;$(prefix+'RemoveBg').disabled=false;$(prefix+'RestorePhoto').hidden=true;});drawAll();const match=currentMatch();if(match){const logos=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);if(version!==matchLoadVersion)return;[imageState.ftHomeLogo,imageState.ftAwayLogo]=logos;}drawAll();$('status').textContent='Foto rimosse e loghi originali ripristinati. Basi conservate.';});
+$('reset').addEventListener('click',async()=>{const version=++matchLoadVersion;imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});imageState.ftCaptainsOriginal=imageState.mvpPhotoOriginal=null;['ft','mvp'].forEach(prefix=>{$(prefix+'PhotoActions').hidden=true;$(prefix+'RemoveBg').hidden=false;$(prefix+'RemoveBg').textContent='Rimuovi sfondo';$(prefix+'RemoveBg').disabled=false;$(prefix+'RestorePhoto').hidden=true;});drawAll();const match=currentMatch();if(match){const logos=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);if(version!==matchLoadVersion)return;[imageState.ftHomeLogo,imageState.ftAwayLogo]=logos;}drawAll();$('status').textContent='Foto rimosse e loghi originali ripristinati. Basi conservate.';});
 document.querySelector('[data-download=fulltime]').addEventListener('click',()=>{if(customTemplates.ready('ft'))download('fulltimeCanvas',`fulltime-${safeName($('ftHome').value)}-${safeName($('ftAway').value)}.png`);});
 document.querySelector('[data-download=mvp]').addEventListener('click',()=>{if(customTemplates.ready('mvp'))download('mvpCanvas',`mvp-${safeName($('mvpNames').value)}.png`);});
 document.querySelectorAll('[data-publish]').forEach(button=>button.addEventListener('click',()=>{
@@ -660,3 +668,4 @@ if(window.parent!==window){
 </script>
 </body>
 </html>
+
