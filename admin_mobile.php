@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includi/admin_guard.php';
 require_once __DIR__ . '/api/mobile/v1/_bootstrap.php';
+require_once __DIR__ . '/includi/mobile_push.php';
 header('Content-Type: text/html; charset=utf-8');
 $error = '';
 $message = '';
@@ -37,6 +38,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $enabled = mobile_api_enabled();
 $csrf = csrf_get_token('admin_mobile');
 $adminHome = login_with_base_path('/admin_dashboard.php');
+$pushDiagnostics = [];
+try {
+    $pushDiagnostics['Credenziale Firebase leggibile'] = tos_fcm_credentials() !== null ? 'Sì' : 'No';
+    $pushDiagnostics['Estensione cURL'] = function_exists('curl_init') ? 'Disponibile' : 'Assente';
+    $pushDiagnostics['Estensione OpenSSL'] = function_exists('openssl_sign') ? 'Disponibile' : 'Assente';
+    $pushDb = mobile_db();
+    $pushUserId = (int)$_SESSION['user_id'];
+    $pushCount = $pushDb->prepare('SELECT COUNT(*) FROM mobile_push_devices WHERE user_id = ? AND active = 1');
+    $pushCount->execute([$pushUserId]);
+    $pushDiagnostics['Dispositivi attivi del tuo account'] = (string)$pushCount->fetchColumn();
+    $pushEligible = $pushDb->prepare(tos_fcm_recipients_sql('?'));
+    $pushEligible->execute([$pushUserId, time()]);
+    $pushDiagnostics['Dispositivi idonei agli invii automatici'] = (string)count($pushEligible->fetchAll(PDO::FETCH_ASSOC));
+} catch (Throwable $pushFailure) {
+    $pushDiagnostics['Verifica database notifiche'] = 'Non riuscita: ' . get_class($pushFailure);
+}
 ?>
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Accesso app — Tornei Old School</title>
@@ -58,4 +75,12 @@ $adminHome = login_with_base_path('/admin_dashboard.php');
 <input type="hidden" name="action" value="<?= $enabled ? 'disable' : 'enable' ?>">
 <button type="submit"><?= $enabled ? 'Disattiva accesso mobile' : 'Prepara e attiva accesso mobile' ?></button></form>
 <?php endif; ?>
+<h2>Diagnostica notifiche app</h2>
+<p>Controllo del solo account con cui sei entrato nel sito. Usa lo stesso account dell’app. Non invia notifiche e non mostra token o chiavi.</p>
+<dl>
+<?php foreach ($pushDiagnostics as $pushLabel => $pushValue): ?>
+<dt><?= htmlspecialchars($pushLabel, ENT_QUOTES, 'UTF-8') ?></dt>
+<dd><strong><?= htmlspecialchars($pushValue, ENT_QUOTES, 'UTF-8') ?></strong></dd>
+<?php endforeach; ?>
+</dl>
 </main></body></html>
