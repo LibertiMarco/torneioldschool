@@ -53,6 +53,16 @@ try {
     $pushDiagnostics['Dispositivi idonei agli invii automatici'] = (string)count($pushEligible->fetchAll(PDO::FETCH_ASSOC));
 } catch (Throwable $pushFailure) {
     $pushDiagnostics['Verifica database notifiche'] = 'Non riuscita: ' . get_class($pushFailure);
+    if ($pushFailure instanceof PDOException) {
+        $pushSqlInfo = $pushFailure->errorInfo ?? [];
+        $pushDriverCode = (int)($pushSqlInfo[1] ?? 0);
+        $pushDiagnostics['Errore SQL notifiche'] = 'SQLSTATE ' . $pushFailure->getCode() . ' / MySQL ' . $pushDriverCode;
+        // Only schema/query errors from these fixed queries are displayed.
+        // Connection errors can contain hosting account details.
+        if (in_array($pushDriverCode, [1054, 1064, 1146, 1267, 1271, 1305], true)) {
+            $pushDiagnostics['Dettaglio query notifiche'] = (string)($pushSqlInfo[2] ?? '');
+        }
+    }
 }
 ?>
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
