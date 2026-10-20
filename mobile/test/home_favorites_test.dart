@@ -20,6 +20,20 @@ class FavoritesApi extends DemoApi {
   Completer<dynamic>? pending;
   List<Map<String, dynamic>>? items;
   @override
+  Future<List<Map<String, dynamic>>> tournaments(String section) async {
+    if (items == null) return super.tournaments(section);
+    return {
+      for (final item in items!)
+        '${item['torneo_slug']}': {
+          'id': item['torneo_id'],
+          'nome': item['torneo_nome'],
+          'filetorneo': item['filetorneo'],
+          'stato': 'in corso',
+        },
+    }.values.toList();
+  }
+
+  @override
   Future<dynamic> request(
     String path, {
     Map<String, String>? query,
@@ -48,10 +62,10 @@ class FavoritesApi extends DemoApi {
 
 Map<String, dynamic> favorite(int id, {bool team = false}) => {
   'tipo': team ? 'squadra' : 'torneo',
-  'torneo_slug': 'demo',
+  'torneo_slug': 'demo-$id',
   'torneo_nome': 'Coppa $id',
   'torneo_id': id,
-  'filetorneo': 'demo.php',
+  'filetorneo': 'demo-$id.php',
   'torneo_logo': '',
   'squadra_nome': 'Squadra $id',
   'squadra_logo': '',
@@ -93,6 +107,29 @@ void main() {
     await tester.tap(target);
     await tester.pumpAndSettle();
   }
+
+  testWidgets('Several followed teams share one tournament shortcut', (
+    tester,
+  ) async {
+    final first = favorite(1, team: true);
+    final second = {...first, 'squadra_nome': 'Seconda squadra'};
+    final api = FavoritesApi()..items = [first, second, second];
+    final auth = DemoAuth(api);
+    await auth.login();
+    await show(tester, auth);
+    expect(find.text('Coppa 1'), findsOneWidget);
+    expect(find.textContaining('Squadra 1'), findsOneWidget);
+    expect(find.textContaining('Seconda squadra'), findsOneWidget);
+    expect(find.byType(ListTile), findsOneWidget);
+    await tap(tester, find.text('Coppa 1'));
+    expect(
+      tester
+          .widget<TournamentPage>(find.byType(TournamentPage))
+          .tournament['id'],
+      1,
+    );
+    expect(find.byType(TeamPage), findsNothing);
+  });
 
   testWidgets(
     'No guest request; login shows existing follows and logout removes them',

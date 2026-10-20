@@ -19,6 +19,11 @@ associati ai nomi e filtrati per torneo. Gli scudetti vengono quindi caricati
 anche nella gestione preferiti, senza dover aprire prima il dettaglio torneo;
 le immagini assenti o non raggiungibili mantengono il simbolo neutro.
 
+Se sono seguite più squadre dello stesso torneo, il riepilogo le raggruppa sotto
+una sola voce con nome e logo del torneo e i nomi delle squadre in piccolo.
+Quella voce apre il torneo; una singola squadra continua ad aprire la sua scheda.
+Il limite di tre voci in Home e il conteggio «Mostra tutti» usano i gruppi.
+
 I preferiti riutilizzano le scelte «Segui» già salvate in `seguiti`, incluse quelle
 effettuate sul sito. Sono quindi associati all'account e condivisi fra Android,
 iOS e preview. Non sono segnalibri separati dalle preferenze sui risultati:

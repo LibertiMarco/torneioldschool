@@ -9,6 +9,24 @@ import 'tournament_page.dart';
 import 'tournament_notifications.dart';
 import 'tournament_list.dart' show normalizedSearch;
 
+/// Several selected teams from one tournament share a single Home shortcut.
+List<Map<String, dynamic>> groupFavoriteItems(
+  List<Map<String, dynamic>> items,
+) {
+  final groups = <String, List<Map<String, dynamic>>>{};
+  for (final item in items) {
+    groups.putIfAbsent('${item['torneo_slug']}', () => []).add(item);
+  }
+  return groups.values.map((rows) {
+    final wholeTournament = rows.where((row) => row['tipo'] == 'torneo');
+    if (wholeTournament.isNotEmpty) return wholeTournament.first;
+    final teams = rows.map((row) => '${row['squadra_nome']}').toSet().toList();
+    return teams.length <= 1
+        ? rows.first
+        : {...rows.first, 'tipo': 'torneo', 'squadre_seguite': teams};
+  }).toList();
+}
+
 class HomeFavorites extends StatelessWidget {
   const HomeFavorites({
     super.key,
@@ -147,6 +165,7 @@ class _FavoritesContentState extends State<_FavoritesContent> {
 
   Widget _favorite(Map<String, dynamic> item) {
     final team = item['tipo'] == 'squadra';
+    final selectedTeams = List<String>.from(item['squadre_seguite'] ?? []);
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(vertical: 4),
       leading: SiteImage(
@@ -161,7 +180,19 @@ class _FavoritesContentState extends State<_FavoritesContent> {
         '${item[team ? 'squadra_nome' : 'torneo_nome']}',
         style: const TextStyle(fontWeight: FontWeight.w700),
       ),
-      subtitle: Text(team ? '${item['torneo_nome']}' : 'Torneo seguito'),
+      subtitle: Text(
+        selectedTeams.isNotEmpty
+            ? selectedTeams.join(' · ')
+            : team
+            ? '${item['torneo_nome']}'
+            : 'Torneo seguito',
+        style: TextStyle(
+          fontSize: 12,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+        maxLines: widget.fullPage ? null : 2,
+        overflow: widget.fullPage ? null : TextOverflow.ellipsis,
+      ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => _open(item),
     );
@@ -201,12 +232,14 @@ class _FavoritesContentState extends State<_FavoritesContent> {
           )
           .toList();
       final activeSlugs = tournaments.map(TosApi.tournamentSlug).toSet();
-      final items = TosApi.rows(snapshot.data!['items'])
-          .where(
-            (item) =>
-                !widget.fullPage || activeSlugs.contains(item['torneo_slug']),
-          )
-          .toList();
+      final items = groupFavoriteItems(
+        TosApi.rows(snapshot.data!['items'])
+            .where(
+              (item) =>
+                  !widget.fullPage || activeSlugs.contains(item['torneo_slug']),
+            )
+            .toList(),
+      );
       final header = Row(
         children: [
           const Expanded(

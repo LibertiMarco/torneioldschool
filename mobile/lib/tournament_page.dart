@@ -62,9 +62,11 @@ class TournamentPage extends StatefulWidget {
     super.key,
     required this.api,
     required this.tournament,
+    this.initialTab = 'Classifica',
   });
   final TosApi api;
   final Map<String, dynamic> tournament;
+  final String initialTab;
   @override
   State<TournamentPage> createState() => _TournamentPageState();
 }
@@ -78,6 +80,7 @@ class _TournamentPageState extends State<TournamentPage> {
   @override
   void initState() {
     super.initState();
+    tab = widget.initialTab;
     data = TournamentData.load(widget.api, slug);
   }
 

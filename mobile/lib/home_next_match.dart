@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'auth.dart';
-import 'details.dart' show MatchPage;
-import 'home_dashboard.dart' show SiteImage;
+import 'home_dashboard.dart' show SiteImage, openPage;
 import 'personal_match_order.dart';
+import 'tournament_page.dart';
 
 /// Uses only the player resolved by the authenticated server, never a client ID.
 class HomeNextMatch extends StatelessWidget {
@@ -189,6 +189,8 @@ class _NextMatchState extends State<_NextMatch> {
       final tournament = '${match['torneo_nome'] ?? match['torneo'] ?? ''}'
           .trim();
       final field = '${match['campo'] ?? ''}'.trim();
+      final tournamentFile = '${match['torneo_file'] ?? match['torneo'] ?? ''}'
+          .trim();
       return _card([
         const Text(
           'LA TUA PROSSIMA PARTITA',
@@ -254,17 +256,23 @@ class _NextMatchState extends State<_NextMatch> {
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => MatchPage(
-                  api: widget.auth.api,
-                  id: '${match['id']}',
-                  previewMatch: match,
-                ),
-              ),
-            ),
+            onPressed: tournamentFile.isEmpty
+                ? null
+                : () => openPage(
+                    context,
+                    TournamentPage(
+                      api: widget.auth.api,
+                      tournament: {
+                        'id': match['torneo_id'],
+                        'nome': tournament,
+                        'filetorneo': tournamentFile,
+                        'sezione': widget.section,
+                      },
+                      initialTab: 'Calendario',
+                    ),
+                  ),
             icon: const Icon(Icons.arrow_forward),
-            label: const Text('Dettagli partita'),
+            label: const Text('Vai al torneo'),
           ),
         ),
       ]);

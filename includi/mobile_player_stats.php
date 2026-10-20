@@ -85,6 +85,7 @@ function mobile_player_stats_handle(int $userId, array $query): array {
         }
         unset($team);
         $stmt = $conn->prepare("SELECT p.*, COALESCE(t.nome, p.torneo) AS torneo_nome,
+            t.id AS torneo_id, t.filetorneo AS torneo_file,
             (SELECT s.logo FROM squadre s WHERE s.nome = p.squadra_casa AND s.torneo = p.torneo ORDER BY s.id LIMIT 1) AS logo_casa,
             (SELECT s.logo FROM squadre s WHERE s.nome = p.squadra_ospite AND s.torneo = p.torneo ORDER BY s.id LIMIT 1) AS logo_ospite
             FROM partite p

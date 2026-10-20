@@ -86,3 +86,9 @@ poi gli incontri senza data, infine quelli con date passate ancora da disputare.
 L'ordine resta cronologico all'interno dei gruppi e non modifica i dati ricevuti.
 La Home usa lo stesso ordinamento per scegliere la prossima partita. Test dedicati
 verificano il cambio giorno e il caricamento progressivo di sette incontri.
+
+La scheda «La tua prossima partita» in Home ora propone «Vai al torneo» e apre
+direttamente la scheda Calendario della competizione, invece del referto ancora
+vuoto. Il servizio personale include ID e file canonico del torneo per gestire
+anche gli incontri storici che usano il nome anziché lo slug. Gli altri ingressi
+al torneo mantengono Classifica come scheda iniziale predefinita.

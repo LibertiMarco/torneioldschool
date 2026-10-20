@@ -8,7 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/api.dart';
 import 'package:tornei_old_school/demo.dart';
-import 'package:tornei_old_school/details.dart';
+import 'package:tornei_old_school/tournament_page.dart';
+import 'package:tornei_old_school/access_gate.dart';
 import 'package:tornei_old_school/home_dashboard.dart';
 import 'package:tornei_old_school/home_next_match.dart';
 import 'package:tornei_old_school/theme.dart';
@@ -25,6 +26,9 @@ class NextApi extends DemoApi {
       'logo_casa': '/img/home-fixture.png',
       'logo_ospite': '/img/away-fixture.png',
       'torneo_nome': 'Torneo autunnale',
+      'torneo': 'legacy-name',
+      'torneo_file': 'demo.php',
+      'torneo_id': 1,
       'data_partita': '2026-10-25',
       'ora_partita': '20:30:00',
       'campo': 'Centro sportivo Old School',
@@ -63,6 +67,7 @@ void main() {
   Future<void> show(WidgetTester tester, DemoAuth auth, {int revision = 0}) =>
       tester.pumpWidget(
         MaterialApp(
+          builder: (context, child) => AppAuthScope(auth: auth, child: child!),
           home: Scaffold(
             body: ListView(
               children: [
@@ -96,10 +101,11 @@ void main() {
       );
       expect(find.text('25/10/2026 · 20:30'), findsOneWidget);
       expect(find.text('Centro sportivo Old School'), findsOneWidget);
-      await tester.tap(find.text('Dettagli partita'));
+      await tester.tap(find.text('Vai al torneo'));
       await tester.pumpAndSettle();
-      final page = tester.widget<MatchPage>(find.byType(MatchPage));
-      expect(page.id, '12');
+      final page = tester.widget<TournamentPage>(find.byType(TournamentPage));
+      expect(TosApi.tournamentSlug(page.tournament), 'demo');
+      expect(page.initialTab, 'Calendario');
       await tester.pageBack();
       await tester.pumpAndSettle();
       await auth.logout();
@@ -130,7 +136,7 @@ void main() {
       find.text('Non ci sono partite da disputare per le tue squadre.'),
       findsOneWidget,
     );
-    expect(find.text('Dettagli partita'), findsNothing);
+    expect(find.text('Vai al torneo'), findsNothing);
   });
 
   testWidgets(
