@@ -11,7 +11,7 @@ const GraphicsCutoutCore = (() => {
     const people = [];
     for (let i = 0; i < count; i++) {
       const person = logits[i*classes], score = 1/(1+Math.exp(-person));
-      if (score < .5 || !Number.isFinite(score)) continue;
+      if (score < (subjects==='main' ? .25 : .5) || !Number.isFinite(score)) continue;
       let strongest = true;
       for (let c = 1; c < classes; c++) if (logits[i*classes+c] > person) {strongest=false;break;}
       if (!strongest) continue;
@@ -24,10 +24,11 @@ const GraphicsCutoutCore = (() => {
     people.sort((a,b)=>b.score-a.score);
     const unique=[];
     for (const person of people) if (!unique.some(other=>overlap(person,other)>.75)) unique.push(person);
-    if (!unique.length) throw new Error('Non è stato possibile riconoscere una persona. Prova una foto più ravvicinata.');
-    const largest=Math.max(...unique.map(person=>person.area));
+    const confirmed=unique.filter(person=>person.score>=.5);
+    if (!confirmed.length) throw new Error('Non è stato possibile riconoscere una persona. Prova una foto più ravvicinata.');
+    const largest=Math.max(...confirmed.map(person=>person.area));
     return {
-      foreground:unique.filter(person=>subjects==='all'||person.area>=largest*.25),
+      foreground:confirmed.filter(person=>subjects==='all'||person.area>=largest*.25),
       background:unique.filter(person=>subjects!=='all'&&person.area<largest*.25)
     };
   }

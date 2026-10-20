@@ -67,3 +67,15 @@ for(const [iw,ih] of [[400,1800],[2400,600],[600,800]])for(const zoom of [10,50,
 }
 console.log('Zoom/aspect ratio, person instances, group selection, touching background, enclosed gaps and soft alpha: OK');
 
+
+// A partially visible head can have low confidence: exclude it in main mode,
+// without promoting weak large detections or changing the all-people mode.
+const occludedLogits=new Float32Array([8,-8,7,-8,-.4,-8,-.4,-8]);
+const occludedBoxes=new Float32Array([.35,.55,.25,.7,.65,.55,.28,.72,.55,.24,.025,.03,.5,.5,.8,.8]);
+const occluded=selectPeople(occludedLogits,occludedBoxes,4,2,'main');
+assert.strictEqual(occluded.foreground.length,2);
+assert.strictEqual(occluded.background.length,1,'Partially occluded head was discarded');
+const occludedAll=selectPeople(occludedLogits,occludedBoxes,4,2,'all');
+assert.strictEqual(occludedAll.foreground.length,2,'Weak detections must not become group subjects');
+assert.strictEqual(occludedAll.background.length,0);
+assert.throws(()=>selectPeople(new Float32Array([-.4,-8]),new Float32Array([.5,.5,.5,.5]),1,2,'main'),/persona/);

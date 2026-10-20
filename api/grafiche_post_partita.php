@@ -253,7 +253,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="grafiche_basi.js?v=20261007-mvp-shared-logo"></script>
 <script src="grafiche_foto_touch.js?v=20261007-aspect-ratio"></script>
-<script src="grafiche_scontorno.js?v=20261020-diagnostics-7"></script>
+<script src="grafiche_scontorno.js?v=20261020-occluded-8"></script>
 <script src="grafiche_scontorno_editor.js?v=20261019"></script>
 <script>
 const $ = id => document.getElementById(id);

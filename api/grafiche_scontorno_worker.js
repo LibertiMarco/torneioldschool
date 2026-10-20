@@ -1,6 +1,6 @@
 /* Local person detection, instance segmentation and matting. See TERZE_PARTI.md. */
 'use strict';
-importScripts('grafiche_scontorno_core.js?v=20261020-instances-2');
+importScripts('grafiche_scontorno_core.js?v=20261020-occluded-8');
 const runtimeBase='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/dist/';
 const modelFiles={
   detector:'rtdetr-r18-int8-ec641af.onnx',
@@ -58,10 +58,20 @@ async function segment(width,height,people,embedding) {
     for(const person of [...people.foreground,...people.background]) {
       // Native corner labels 2/3 need the SAM box decoder; point-only exports
       // do not support them and can corrupt the resulting object mask.
+      const selected=people.foreground.includes(person);
+      // Negative point prompts prevent SAM from merging a selected figure
+      // with a small, partially occluded person touching its outline.
+      const excluded=selected?people.background:[];
+      const coords=[person.left*width,person.top*height,person.right*width,person.bottom*height];
+      const labels=[2,3];
+      for(const other of excluded) {
+        coords.push((other.left+other.right)*width/2,(other.top+other.bottom)*height/2);
+        labels.push(0);
+      }
       const feeds={
         image_embeddings:embeddings.image_embeddings,
-        point_coords:new ort.Tensor('float32',new Float32Array([person.left*width,person.top*height,person.right*width,person.bottom*height]),[1,2,2]),
-        point_labels:new ort.Tensor('float32',new Float32Array([2,3]),[1,2]),
+        point_coords:new ort.Tensor('float32',new Float32Array(coords),[1,labels.length,2]),
+        point_labels:new ort.Tensor('float32',new Float32Array(labels),[1,labels.length]),
         mask_input:new ort.Tensor('float32',new Float32Array(256*256),[1,1,256,256]),
         has_mask_input:new ort.Tensor('float32',new Float32Array([0]),[1]),
         orig_im_size:new ort.Tensor('float32',new Float32Array([height,width]),[2])

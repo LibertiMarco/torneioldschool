@@ -1,7 +1,7 @@
 /* Person instances and soft matting. Photos stay on the device. */
 'use strict';
 const GraphicsCutout = (() => {
-  const workerUrl = new URL('grafiche_scontorno_worker.js?v=20261020-diagnostics-7', document.currentScript.src);
+  const workerUrl = new URL('grafiche_scontorno_worker.js?v=20261020-occluded-8', document.currentScript.src);
   let worker = null, pending = null, serial = 0;
   let cached = null;
   const diagnosticKey='graphics-cutout-interrupted';
