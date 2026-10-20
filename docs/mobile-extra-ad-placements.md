@@ -1,4 +1,4 @@
-﻿# Spazi pubblicitari aggiuntivi - 20 ottobre 2026
+# Spazi pubblicitari aggiuntivi - 20 ottobre 2026
 
 Aggiunti due posizionamenti del banner adattivo gia esistente nella pagina torneo:
 
@@ -18,3 +18,7 @@ Da provare sui dispositivi: calendario con meno/almeno tre incontri e rose con
 meno/almeno quattro squadre; consenso negato, caricamento fallito, apertura di una
 partita e ritorno; orientamento e leggibilita. Non interagire con annunci reali
 per eseguire i test.
+
+Estensione: nella singola squadra, scheda Rosa, un banner dopo la griglia dei
+giocatori quando la rosa contiene almeno quattro giocatori. Nessun annuncio
+aggiunto alle schede personali o alla scheda Partite della squadra.

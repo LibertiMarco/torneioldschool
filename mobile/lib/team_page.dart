@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'ads.dart';
 import 'details.dart' show MatchPage, PlayerPage;
 import 'home_dashboard.dart' show SiteImage, HomeBlock, openPage;
 import 'theme.dart';
@@ -352,6 +353,8 @@ class _TeamPageState extends State<TeamPage> {
                           match: match,
                           team: '${team['nome']}',
                         ),
+                    if (tab == 'Rosa' && rows.length >= 4 && !widget.api.preview)
+                      const AdaptiveAdBanner(),
                   ],
                 );
               },
