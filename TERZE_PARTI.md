@@ -2,6 +2,8 @@
 
 Il generatore Full Time/MVP esegue sul dispositivo rilevamento delle persone con RT-DETR, segmentazione delle singole figure con SAM e rifinitura dell'alpha con MODNet. Le foto non vengono inviate a servizi esterni e non sono richieste chiavi API.
 
+Su iPhone/iPad il percorso automatico usa RT-DETR e MODNet con ingresso letterboxed 512 x 512, senza caricare l'encoder SAM. La maschera MODNet viene limitata ai riquadri dei soggetti selezionati (con margine del 2%) ed esclude i riquadri delle persone di sfondo. Questa selezione geometrica non equivale alla segmentazione per istanza di SAM: in presenza di sovrapposizioni i contorni possono differire. La maschera viene riportata alle dimensioni originali della foto. Nessun ritaglio manuale viene imposto.
+
 «Soggetti più grandi» conserva le persone con area del riquadro almeno pari al 25% della più grande; «Tutte le persone» conserva tutte quelle rilevate. Le maschere delle persone escluse vengono sottratte anche nei contatti con i soggetti principali, limitatamente al riquadro della persona esclusa e a un margine di 2 pixel. Il precedente filtro morfologico per le sagome collegate non viene più usato.
 
 SAM fornisce l'appartenenza binaria alla figura; MODNet fornisce l'alpha fisico morbido. Un margine di 5 pixel recupera capelli e contorni sottili. I tessuti sicuramente opachi dentro i riquadri dei soggetti vengono recuperati se la maschera grossolana li omette, solo quando sono collegati alla figura selezionata. Le persone escluse hanno sempre precedenza sul recupero dei dettagli. Nessuna coordinata della foto di test viene usata dall'algoritmo.

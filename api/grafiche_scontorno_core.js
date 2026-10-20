@@ -86,5 +86,20 @@ const GraphicsCutoutCore = (() => {
     }
     return output;
   }
-  return {selectPeople,resizeRGB,composeMatte};
+  function composeCompactMatte(detail,width,height,people) {
+    const size=width*height,foreground=new Uint8Array(size),background=new Uint8Array(size);
+    // MODNet supplies the actual silhouette; boxes only select which people
+    // may contribute. Keep a margin so detector bounds do not clip hair/limbs.
+    for(const person of people.foreground){
+      const margin=.02;
+      for(let y=Math.max(0,Math.floor((person.top-margin)*height));y<Math.min(height,Math.ceil((person.bottom+margin)*height));y++)
+        for(let x=Math.max(0,Math.floor((person.left-margin)*width));x<Math.min(width,Math.ceil((person.right+margin)*width));x++)foreground[y*width+x]=1;
+    }
+    for(const person of people.background){
+      for(let y=Math.max(0,Math.floor(person.top*height));y<Math.min(height,Math.ceil(person.bottom*height));y++)
+        for(let x=Math.max(0,Math.floor(person.left*width));x<Math.min(width,Math.ceil(person.right*width));x++)background[y*width+x]=1;
+    }
+    return composeMatte(detail,foreground,background,width,height,0);
+  }
+  return {selectPeople,resizeRGB,composeMatte,composeCompactMatte};
 })();

@@ -1,6 +1,6 @@
 /* Local person detection, instance segmentation and matting. See TERZE_PARTI.md. */
 'use strict';
-importScripts('grafiche_scontorno_core.js?v=20261020-occluded-8');
+importScripts('grafiche_scontorno_core.js?v=20261020-auto-10');
 const runtimeBase='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/dist/';
 const modelFiles={
   detector:'rtdetr-r18-int8-ec641af.onnx',
@@ -112,16 +112,19 @@ async function matte(rgb,width,height) {
   } finally {input.dispose();dispose(output);await releaseModel('matte');}
 }
 self.onmessage=async event=>{
-  const {id,data,width,height,subjects='main',stage,people,embedding,masks}=event.data;
+  const {id,data,width,height,subjects='main',stage,people,embedding,masks,compact=false}=event.data;
   try {
-    if(width!==1024||height!==1024||!(data instanceof Float32Array)||data.length!==3*width*height||!['main','all'].includes(subjects))throw new Error('Dati della foto non validi.');
+    const side=compact?512:1024;
+    if(width!==side||height!==side||!(data instanceof Float32Array)||data.length!==3*width*height||!['main','all'].includes(subjects))throw new Error('Dati della foto non validi.');
     let result;
     if(stage==='detect')result={people:await detect(data,width,height,subjects)};
     else if(stage==='encode')result={embedding:await encode(data,width,height)};
     else if(stage==='segment')result={masks:await segment(width,height,people,embedding)};
     else if(stage==='matte') {
       const detail=await matte(data,width,height);
-      const alpha=GraphicsCutoutCore.composeMatte(detail,masks.foreground,masks.background,width,height,5,people.foreground);
+      const alpha=compact
+        ?GraphicsCutoutCore.composeCompactMatte(detail,width,height,people)
+        :GraphicsCutoutCore.composeMatte(detail,masks.foreground,masks.background,width,height,5,people.foreground);
       self.postMessage({id,alpha,width,height},[alpha.buffer]);return;
     } else throw new Error('Fase di elaborazione non valida.');
     const transfers=[data.buffer];

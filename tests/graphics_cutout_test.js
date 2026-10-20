@@ -79,3 +79,13 @@ const occludedAll=selectPeople(occludedLogits,occludedBoxes,4,2,'all');
 assert.strictEqual(occludedAll.foreground.length,2,'Weak detections must not become group subjects');
 assert.strictEqual(occludedAll.background.length,0);
 assert.throws(()=>selectPeople(new Float32Array([-.4,-8]),new Float32Array([.5,.5,.5,.5]),1,2,'main'),/persona/);
+
+const compactDetail=new Float32Array(32*32);
+for(let y=4;y<28;y++)for(let x=8;x<24;x++)compactDetail[y*32+x]=1;
+compactDetail[4*32+8]=.4;
+const compactPeople={foreground:[{left:.2,right:.8,top:.1,bottom:.9}],background:[{left:.5,right:.6,top:.2,bottom:.3}]};
+const compactMask=sandbox.core.composeCompactMatte(compactDetail,32,32,compactPeople);
+assert.strictEqual(compactMask[20*32+12],1,'Compact mode removed the selected body');
+assert.strictEqual(compactMask[7*32+17],0,'Compact mode retained an excluded head');
+assert(Math.abs(compactMask[4*32+8]-.4)<1e-6,'Compact mode hardened hair alpha');
+assert.strictEqual(compactMask[0],0);
