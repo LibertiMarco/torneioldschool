@@ -160,7 +160,9 @@ void main() {
             release: release,
             monetization: monetization,
           ),
-          'ca-app-pub-3940256099942544/2435281174',
+          release && monetization
+              ? iosProductionAdIds.banner
+              : 'ca-app-pub-3940256099942544/2435281174',
         );
         expect(
           nativeIdForPlatform(
@@ -168,7 +170,9 @@ void main() {
             release: release,
             monetization: monetization,
           ),
-          'ca-app-pub-3940256099942544/3986624511',
+          release && monetization
+              ? iosProductionAdIds.native
+              : 'ca-app-pub-3940256099942544/3986624511',
         );
       }
     }

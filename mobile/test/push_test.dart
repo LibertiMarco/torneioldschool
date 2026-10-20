@@ -99,6 +99,53 @@ void main() {
   });
 
   test(
+    'initial permission prompts once and subscribes after consent',
+    () async {
+      await push.start();
+      await push.requestInitialPermission();
+      await push.requestInitialPermission();
+      expect(backend.requests, 1);
+      expect(push.enabled, true);
+      expect(
+        auth.requests.where((r) => r['action'] == 'subscribe'),
+        hasLength(1),
+      );
+    },
+  );
+
+  test('guest gets prompt without registering a device', () async {
+    auth.signOut();
+    await push.start();
+    await push.requestInitialPermission();
+    expect(backend.requests, 1);
+    expect(backend.tokens, 0);
+    expect(auth.requests, isEmpty);
+  });
+
+  test('initial denial is not prompted again', () async {
+    backend.granted = false;
+    await push.start();
+    await push.requestInitialPermission();
+    await push.requestInitialPermission();
+    expect(backend.requests, 1);
+    expect(push.enabled, false);
+    expect(backend.tokens, 0);
+  });
+
+  test('manual disable survives restore after initial permission', () async {
+    await push.start();
+    await push.requestInitialPermission();
+    await push.setEnabled(false);
+    push.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    await Future<void>.delayed(Duration.zero);
+    expect(push.enabled, false);
+    expect(
+      auth.requests.where((r) => r['action'] == 'subscribe'),
+      hasLength(1),
+    );
+  });
+
+  test(
     'startup asks no permission and registers no device without opt-in',
     () async {
       await push.start();
@@ -143,7 +190,9 @@ void main() {
       expect(auth.requests.every((r) => r['token'] == 'device-token'), true);
       expect(backend.deleted, 1);
       expect(push.enabled, false);
-      expect((auth.storage as MemoryStore).values, isEmpty);
+      expect((auth.storage as MemoryStore).values, {
+        'tos.push.https://torneioldschool.it.1': '0',
+      });
     },
   );
   test(

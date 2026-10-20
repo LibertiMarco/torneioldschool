@@ -3,6 +3,7 @@ import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' show parseFragment;
 
 import 'api.dart';
+import 'ads.dart';
 import 'comments_section.dart';
 import 'native_ad_card.dart';
 import 'access_gate.dart';
@@ -334,6 +335,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               );
             },
           ),
+          if (!api.preview) const AdaptiveAdBanner(),
           const HomeSectionTitle(
             title: 'Ultime notizie',
             eyebrow: 'DENTRO OLD SCHOOL',
@@ -360,9 +362,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         load: () => api.news(widget.section, all: true),
                         render: (data) => ListView(
                           padding: const EdgeInsets.all(20),
-                          children: TosApi.rows(data)
-                              .map((r) => NewsCard(api: api, row: r))
-                              .toList(),
+                          children: [
+                            for (final entry in TosApi.rows(
+                              data,
+                            ).asMap().entries) ...[
+                              NewsCard(api: api, row: entry.value),
+                              if (!api.preview && (entry.key + 1) % 6 == 0)
+                                const HomeNativeAdCard(),
+                            ],
+                          ],
                         ),
                       ),
                     ),

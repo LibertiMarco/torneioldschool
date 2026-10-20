@@ -1,0 +1,32 @@
+const assert=require('assert');
+const fs=require('fs');
+const vm=require('vm');
+const source=fs.readFileSync(require('path').join(__dirname,'../api/grafiche_scontorno_worker.js'),'utf8');
+async function scenario(subjects,fail=false) {
+  let active=0,maximum=0;
+  const loaded=[],released=[],messages=[];
+  class Tensor {
+    constructor(type,data,dims){this.data=data;this.dims=dims;}
+    dispose(){}
+  }
+  const sandbox={Float32Array,Uint8Array,Map,URL,console,importScripts(){},
+    GraphicsCutoutCore:{resizeRGB(){return new Float32Array(3);},selectPeople(a,b,c,d,mode){assert.strictEqual(mode,subjects);return {foreground:[{left:0,top:0,right:1,bottom:1}],background:[]};},composeMatte(detail){return detail;}},
+    ort:{Tensor,env:{wasm:{}},InferenceSession:{async create(url){
+      const name=url.includes('rtdetr')?'detector':url.includes('vision')?'encoder':url.includes('decoder')?'decoder':'matte';
+      loaded.push(name);maximum=Math.max(maximum,++active);
+      return {inputNames:['input'],outputNames:['alpha'],async release(){active--;released.push(name);},async run(){
+        if(name==='detector')return {logits:new Tensor('',new Float32Array(1),[1,1,1]),pred_boxes:new Tensor('',new Float32Array(4),[1,1,4])};
+        if(name==='encoder'){if(fail)throw new Error('Inference failed');return {image_embeddings:new Tensor('',new Float32Array([42]),[1,1])};}
+        if(name==='decoder')return {masks:new Tensor('',new Float32Array(1024*1024),[1,1,1024,1024])};
+        return {alpha:new Tensor('',new Float32Array(1024*1024),[1,1,1024,1024])};
+      }};
+    }}},self:{location:{href:'https://example.test/api/worker.js'},postMessage(message){messages.push(message);}}};
+  vm.createContext(sandbox);vm.runInContext(source,sandbox);
+  await sandbox.self.onmessage({data:{id:1,data:new Float32Array(3*1024*1024),width:1024,height:1024,subjects}});
+  assert.strictEqual(maximum,1,'Models overlapped in memory');
+  assert.strictEqual(active,0,'Model leaked');
+  assert.deepStrictEqual(released,loaded);
+  assert.strictEqual(Boolean(messages[messages.length-1].error),fail);
+  if(!fail)assert.deepStrictEqual(loaded,['detector','encoder','decoder','matte']);
+}
+(async()=>{await scenario('main');await scenario('all');await scenario('main',true);console.log('Full pipeline: subject modes, sequential model lifetime and failure cleanup OK');})().catch(error=>{console.error(error);process.exitCode=1;});

@@ -4,8 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-/// Supplied iOS production configuration. Recorded only: current builds select
-/// Google's sample IDs until a separate production setup is explicitly enabled.
+/// Production units are used only in release builds with monetization enabled.
 const iosProductionAdIds = (
   app: 'ca-app-pub-8390787841690316~9044628723',
   banner: 'ca-app-pub-8390787841690316/6234457543',
@@ -36,9 +35,10 @@ String? bannerIdForPlatform(
     release: release,
     monetization: monetization,
   ),
-  // All iOS production IDs are recorded; live setup is deliberately disabled.
-  // Keep the official sample until monetization is explicitly enabled.
-  TargetPlatform.iOS => 'ca-app-pub-3940256099942544/2435281174',
+  TargetPlatform.iOS =>
+    release && monetization
+        ? iosProductionAdIds.banner
+        : 'ca-app-pub-3940256099942544/2435281174',
   _ => null,
 };
 
@@ -51,7 +51,10 @@ String? nativeIdForPlatform(
     release: release,
     monetization: monetization,
   ),
-  TargetPlatform.iOS => 'ca-app-pub-3940256099942544/3986624511',
+  TargetPlatform.iOS =>
+    release && monetization
+        ? iosProductionAdIds.native
+        : 'ca-app-pub-3940256099942544/3986624511',
   _ => null,
 };
 

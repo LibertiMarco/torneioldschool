@@ -143,13 +143,8 @@ void main() {
       expect(find.text('Luca Rossi'), findsOneWidget);
       expect(find.byType(AppBar), findsOneWidget);
       expect(find.text('Profilo'), findsOneWidget);
-      await tester.tap(find.text('Esport'));
-      await tester.pumpAndSettle();
-      expect(api.queries.last, {'section': 'esport'});
-      expect(find.text('I miei tornei'), findsOneWidget);
-      expect(find.text('Storico prestazioni'), findsNothing);
-      await tester.tap(find.text('Calcio'));
-      await tester.pumpAndSettle();
+      expect(find.text('Esport'), findsNothing);
+      expect(api.queries.last, {'section': 'calcio'});
       await tester.scrollUntilVisible(
         find.text('Storico prestazioni'),
         100,

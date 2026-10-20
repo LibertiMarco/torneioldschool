@@ -9,9 +9,9 @@
 		<string>fetch</string>
 		<string>remote-notification</string>
 	</array>
-	<!-- Google iOS sample App ID only. Never substitute the Android App ID. -->
+	<!-- Debug uses Google's sample app; release uses our iOS app for UMP. -->
 	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<string>$(TOS_ADMOB_APP_ID)</string>
 	<key>GADDelayAppMeasurementInit</key>
 	<true/>
 	<!-- Google AdMob iOS quick-start list, reviewed 2026-10-15. -->

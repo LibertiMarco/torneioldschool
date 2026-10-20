@@ -18,8 +18,13 @@ function model(name) {
   }
   if(!sessions.has(name))sessions.set(name,ort.InferenceSession.create(
     new URL('models/'+modelFiles[name],self.location.href).href,
-    {executionProviders:['wasm'],graphOptimizationLevel:'all'}));
+    {executionProviders:['wasm'],graphOptimizationLevel:'all',enableCpuMemArena:false,enableMemPattern:false}));
   return sessions.get(name);
+}
+async function releaseModel(name) {
+  const pending=sessions.get(name);
+  sessions.delete(name);
+  if(pending)await (await pending).release();
 }
 function dispose(tensors) {if(tensors)Object.values(tensors).forEach(tensor=>tensor.dispose());}
 async function detect(rgb,width,height,subjects) {
@@ -31,17 +36,24 @@ async function detect(rgb,width,height,subjects) {
     const {logits,pred_boxes:boxes}=output;
     if(logits?.dims.length!==3||boxes?.dims[2]!==4||logits.dims[1]!==boxes.dims[1])throw new Error('Risultato del riconoscimento non valido.');
     return GraphicsCutoutCore.selectPeople(logits.data,boxes.data,logits.dims[1],logits.dims[2],subjects);
-  } finally {input.dispose();dispose(output);}
+  } finally {input.dispose();dispose(output);await releaseModel('detector');}
 }
 async function segment(rgb,width,height,people) {
   const size=width*height,foreground=new Uint8Array(size),background=new Uint8Array(size);
-  const encoder=await model('encoder'),decoder=await model('decoder');
+  const encoder=await model('encoder');
   const normalized=new Float32Array(rgb.length),mean=[.485,.456,.406],std=[.229,.224,.225];
   for(let c=0;c<3;c++)for(let p=0;p<size;p++)normalized[c*size+p]=(rgb[c*size+p]-mean[c])/std[c];
   const input=new ort.Tensor('float32',normalized,[1,3,height,width]);
   let embeddings;
   try {
-    embeddings=await encoder.run({pixel_values:input});
+    let encoded;
+    try {
+      encoded=await encoder.run({pixel_values:input});
+      // Keep only the small embedding; release the encoder before loading the decoder.
+      const tensor=encoded.image_embeddings;
+      embeddings={image_embeddings:new ort.Tensor('float32',new Float32Array(tensor.data),tensor.dims)};
+    } finally {dispose(encoded);await releaseModel('encoder');}
+    const decoder=await model('decoder');
     for(const person of [...people.foreground,...people.background]) {
       // Native corner labels 2/3 need the SAM box decoder; point-only exports
       // do not support them and can corrupt the resulting object mask.
@@ -74,7 +86,7 @@ async function segment(rgb,width,height,people) {
       }
     }
     return {foreground,background};
-  } finally {input.dispose();dispose(embeddings);}
+  } finally {input.dispose();dispose(embeddings);await releaseModel('encoder');await releaseModel('decoder');}
 }
 async function matte(rgb,width,height) {
   const session=await model('matte'),normalized=new Float32Array(rgb.length);
@@ -86,13 +98,14 @@ async function matte(rgb,width,height) {
     const result=output[session.outputNames[0]];
     if(result.data.length!==width*height)throw new Error('Maschera dei bordi non valida.');
     return new Float32Array(result.data);
-  } finally {input.dispose();dispose(output);}
+  } finally {input.dispose();dispose(output);await releaseModel('matte');}
 }
 self.onmessage=async event=>{
   const {id,data,width,height,subjects='main'}=event.data;
   const progress=message=>self.postMessage({id,progress:message});
   try {
-    if(width!==1024||height!==1024||!(data instanceof Float32Array)||data.length!==3*width*height||!['main','all'].includes(subjects))throw new Error('Dati della foto non validi.');
+    const side=1024;
+    if(width!==side||height!==side||!(data instanceof Float32Array)||data.length!==3*width*height||!['main','all'].includes(subjects))throw new Error('Dati della foto non validi.');
     progress('Riconoscimento delle persone in corso…');
     const people=await detect(data,width,height,subjects);
     progress('Separazione dei soggetti e delle persone sullo sfondo…');

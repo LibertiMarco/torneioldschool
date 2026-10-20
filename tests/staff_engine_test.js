@@ -23,6 +23,8 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
     </main><div class="confirm-modal" style="display:none"><p>Eliminare?</p><button>Annulla</button><button>Conferma</button></div>`, {url:'https://example.test/api/gestione_tornei.php?embed=1', runScripts:'outside-only'});
   Object.defineProperty(frame, 'contentDocument', {get: () => child.window.document});
   const document = child.window.document;
+  // Website cookie UI must not replace the native management form.
+  document.body.insertAdjacentHTML('beforeend', '<div id="tos-consent-banner"><div role="dialog">Privacy e cookie<button>Accetta</button></div></div>');
   const messages = [], writes = [];
   window.tosStaffChannel = 'fixture-channel-012345678901234567890';
   window.TosStaff = {postMessage: raw => messages.push(JSON.parse(raw))};
@@ -48,6 +50,8 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
   const flat = (blocks) => blocks.flatMap(block => [block, ...flat(block.blocks || []), ...(block.rows || []).flatMap(row => row.cells.flatMap(cell => flat(cell.blocks)))]);
   const find = (kind, label) => flat(snapshot().blocks).find(block => block.kind === kind && block.label === label);
   const command = data => window.tosStaffCommand({channel:window.tosStaffChannel, document:snapshot().document, ...data});
+  assert.equal(snapshot().modal, false, 'Cookie dialog is not a staff modal');
+  assert(!JSON.stringify(snapshot()).includes('Privacy e cookie'));
   assert(!JSON.stringify(snapshot()).includes('secret-csrf'));
   assert(!JSON.stringify(snapshot()).includes('hidden-secret'));
   assert(!JSON.stringify(snapshot()).includes('never-share-password'));

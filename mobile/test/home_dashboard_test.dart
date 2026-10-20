@@ -187,37 +187,24 @@ void main() {
     expect(api.hallSections.last, 'calcio');
     expect(tester.takeException(), isNull);
   });
-  testWidgets(
-    'Esport section persists from homepage to tournaments at phone width',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(320, 800));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      final api = HomeApi();
-      await tester.pumpWidget(TosApp(api: api, auth: DemoAuth(api)));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Esport'));
-      await tester.pumpAndSettle();
-      expect(find.text('Ranking EA FC'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Luca Rossi'), 100);
-      await tester.pumpAndSettle();
-      expect(find.text('40 pt'), findsOneWidget);
-      expect(api.orders, isNot(contains('presenze')));
-      await tester.scrollUntilVisible(find.text('La nuova stagione'), 150);
-      await tester.pumpAndSettle();
-      expect(api.newsSections.last, 'esport');
-      await tester.scrollUntilVisible(find.text('Old School FC'), 150);
-      await tester.pumpAndSettle();
-      expect(api.hallSections.last, 'esport');
-      await tester.tap(find.text('Tornei'));
-      await tester.pumpAndSettle();
-      expect(find.text('Old School Esport Cup'), findsNothing);
-      await tester.tap(find.text('Accedi'));
-      await tester.pumpAndSettle();
-      expect(find.text('Old School Esport Cup'), findsOneWidget);
-      expect(find.text('Old School Cup'), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('Esport is hidden and navigation stays on football', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = HomeApi();
+    await tester.pumpWidget(TosApp(api: api, auth: DemoAuth(api)));
+    await tester.pumpAndSettle();
+    expect(find.text('Esport'), findsNothing);
+    expect(find.text('Ranking EA FC'), findsNothing);
+    await tester.tap(find.text('Tornei'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Accedi'));
+    await tester.pumpAndSettle();
+    expect(find.text('Old School Cup'), findsOneWidget);
+    expect(find.text('Old School Esport Cup'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
   test('Articles decode HTML entities and preserve paragraphs without executing markup', () {
     expect(
       articleText(

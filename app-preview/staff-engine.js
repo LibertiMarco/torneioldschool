@@ -24,6 +24,7 @@
     else window.parent.postMessage(message, window.location.origin);
   };
   const visible = element => {
+    if (element?.closest('#tos-consent-banner')) return false;
     if (!element || element.hidden || element.closest('[hidden], [aria-hidden="true"]')) return false;
     for (let node = element; node && node.nodeType === 1; node = node.parentElement) {
       const style = doc.defaultView.getComputedStyle(node);

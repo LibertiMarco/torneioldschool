@@ -209,13 +209,42 @@ class PushController extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// Ask once per installation, including guests; account subscription follows login.
+  Future<void> requestInitialPermission() => _serialize(() async {
+    if (!ready || !supported) return;
+    final key = 'tos.push.permissionPrompted';
+    if (await auth.storage.read(key) != null) return;
+    await auth.storage.write(key, '1');
+    try {
+      final granted = await backend.requestPermission();
+      await auth.storage.write(
+        'tos.push.initialPermission',
+        granted ? '1' : '0',
+      );
+      await _restore();
+    } catch (_) {
+      // Allow a retry after a transient platform error.
+      await auth.storage.delete(key);
+    }
+  });
+
   Future<void> _restore() async {
     final userId = auth.user?['id']?.toString();
     _userId = userId;
     if (userId == null) return;
     final preferenceKey = _preferenceKey;
     try {
-      final optedIn = await auth.storage.read(preferenceKey) == '1';
+      var preference = await auth.storage.read(preferenceKey);
+      if (preference == null &&
+          await auth.storage.read('tos.push.initialPermission') == '1') {
+        final status = await auth.authorized('api/mobile/v1/push.php');
+        _requireUser(userId);
+        if (status['configured'] == true) {
+          await auth.storage.write(preferenceKey, '1');
+          preference = '1';
+        }
+      }
+      final optedIn = preference == '1';
       final savedToken = await auth.storage.read('$preferenceKey.token');
       final allowed = optedIn && await backend.allowed();
       _requireUser(userId);
@@ -284,7 +313,7 @@ class PushController extends ChangeNotifier with WidgetsBindingObserver {
         );
       }
       await backend.deleteToken();
-      await auth.storage.delete(preferenceKey);
+      await auth.storage.write(preferenceKey, '0');
       await auth.storage.delete('$preferenceKey.token');
       _requireUser(userId);
       _token = null;

@@ -1,8 +1,9 @@
 /* Person instances and soft matting. Photos stay on the device. */
 'use strict';
 const GraphicsCutout = (() => {
-  const workerUrl = new URL('grafiche_scontorno_worker.js?v=20261020-instances-2', document.currentScript.src);
+  const workerUrl = new URL('grafiche_scontorno_worker.js?v=20261020-speed-5', document.currentScript.src);
   let worker = null, pending = null, serial = 0, idleTimer = null;
+  let cached = null;
 
   function dispose() {
     clearTimeout(idleTimer);
@@ -18,7 +19,7 @@ const GraphicsCutout = (() => {
         if (pending?.id !== id) return;
         clearTimeout(pending.timer);pending = null;
         if (error) { dispose();reject(error); }
-        else { idleTimer = setTimeout(dispose, 90000);resolve(result); }
+        else { dispose();resolve(result); }
       };
       pending = {id, timer:setTimeout(() => finish(new Error('La rimozione sta impiegando troppo. Controlla la connessione e riprova.')), 300000)};
       try {
@@ -36,9 +37,10 @@ const GraphicsCutout = (() => {
   function geometry(width, height) {
     if (!(Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0)) throw new Error('Dimensioni della foto non valide.');
     // Fixed model input; letterboxing keeps people and clothing proportional.
-    const scale = 1024 / Math.max(width, height);
+    const side = 1024;
+    const scale = side / Math.max(width, height);
     const dw = width * scale, dh = height * scale;
-    const w = 1024, h = 1024;
+    const w = side, h = side;
     return {width:w, height:h, x:(w - dw) / 2, y:(h - dh) / 2, dw, dh};
   }
   function cleanMatte(alpha, width, height) {
@@ -69,7 +71,14 @@ const GraphicsCutout = (() => {
     finally { small.width = small.height = 1; }
   }
   async function createMask(original, {subjects = 'main', onProgress = null} = {}) {
-    const g = geometry(original.naturalWidth, original.naturalHeight), canvas = document.createElement('canvas');
+    const g = geometry(original.naturalWidth, original.naturalHeight);
+    // Cache the automatic alpha, never the mask modified by the editor.
+    // Retain only one result (4 MiB), without keeping the decoded photo alive.
+    if (cached?.original.deref() === original && cached.subjects === subjects) {
+      return maskFromMatte(original, cached.result, g, subjects);
+    }
+    cached = null;
+    const canvas = document.createElement('canvas');
     canvas.width = g.width;canvas.height = g.height;
     let data;
     try {
@@ -82,7 +91,9 @@ const GraphicsCutout = (() => {
       for (let p = 0; p < size; p++) for (let c = 0; c < 3; c++) data[c * size + p] = rgba[p * 4 + c] / 255;
     } finally { canvas.width = canvas.height = 1; }
     const result = await infer(data, g.width, g.height, subjects, onProgress);
-    return maskFromMatte(original, result, g, subjects);
+    const mask = maskFromMatte(original, result, g, subjects);
+    if (typeof WeakRef !== 'undefined') cached = {original:new WeakRef(original), subjects, result};
+    return mask;
   }
   return {createMask, geometry, cleanMatte, maskFromMatte};
 })();

@@ -98,10 +98,18 @@ class _TosAppState extends State<TosApp> {
       };
     }
     _loadTheme();
-    _startPush();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !widget.api.preview) AdsController.instance.start();
+      if (mounted && !widget.api.preview) {
+        unawaited(_startServices());
+      }
     });
+  }
+
+  Future<void> _startServices() async {
+    await AdsController.instance.start();
+    if (!mounted) return;
+    await _startPush();
+    if (mounted) await _push.requestInitialPermission();
   }
 
   Future<void> _startPush() async {
@@ -376,12 +384,9 @@ class _HomePageState extends State<HomePage> {
       body: selectedPage <= 2
           ? Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: SectionSelector(
-                    section: section,
-                    onChanged: (value) => setState(() => section = value),
-                  ),
+                SectionSelector(
+                  section: section,
+                  onChanged: (value) => setState(() => section = value),
                 ),
                 Expanded(
                   child: selectedPage == 0
