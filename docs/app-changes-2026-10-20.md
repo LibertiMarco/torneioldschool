@@ -44,3 +44,21 @@ prossime partite, gestione, Home e annunci superati. Un secondo gruppo di
 delle aspettative sulla rimozione di Esport. Passano anche
 `tests/staff_engine_test.php` e `tests/staff_engine_test.js`, quest'ultimo con
 un banner cookie visibile nella fixture e conferme/modali staff ancora funzionanti.
+
+## Primo intervento sulla Home personalizzata
+
+La Home mostra ora «La tua prossima partita» prima delle classifiche agli utenti
+con un giocatore associato. Il riquadro include squadre, torneo, data, ora e campo
+se disponibile, con apertura del dettaglio partita. Usa l'endpoint autenticato
+già impiegato dal Profilo e il suo ordinamento, senza ID giocatore dal client.
+Gestisce calendario vuoto, data da definire, caricamento e riprova; si ricarica
+con il refresh della Home e scompare al logout, anche con richieste in corso.
+Gli ospiti non effettuano richieste personali; per account non associati il
+riquadro non viene mostrato. Classifiche e notizie restano sotto il riquadro.
+
+Verifiche: 29 test superati su Home, nuovo riquadro, Profilo e tema, inclusi
+schermi a 320 px con testo ingrandito in modalità chiara/scura; analisi Flutter
+senza problemi. Anteprima locale con fixture controllata visivamente in
+`mobile/build/home-review/next-match.png` (non versionata). Modifica locale,
+non distribuita sugli store. Preferiti e altri interventi restano fuori da
+questo passaggio.

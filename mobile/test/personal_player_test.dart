@@ -139,7 +139,11 @@ void main() {
       await tester.tap(find.text('Profilo'));
       await tester.pumpAndSettle();
       expect(find.byType(PersonalPlayerPage), findsOneWidget);
-      expect(api.queries.single, {'section': 'calcio'});
+      // Home and Profile both resolve the player through the authenticated API.
+      expect(api.queries, [
+        {'section': 'calcio'},
+        {'section': 'calcio'},
+      ]);
       expect(find.text('Luca Rossi'), findsOneWidget);
       expect(find.byType(AppBar), findsOneWidget);
       expect(find.text('Profilo'), findsOneWidget);

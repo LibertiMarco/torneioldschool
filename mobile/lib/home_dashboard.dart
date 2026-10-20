@@ -4,6 +4,8 @@ import 'package:html/parser.dart' show parseFragment;
 
 import 'api.dart';
 import 'ads.dart';
+import 'auth.dart';
+import 'home_next_match.dart';
 import 'comments_section.dart';
 import 'native_ad_card.dart';
 import 'access_gate.dart';
@@ -125,10 +127,12 @@ class HomeDashboard extends StatefulWidget {
     required this.api,
     required this.section,
     required this.onTournaments,
+    this.auth,
   });
   final TosApi api;
   final String section;
   final VoidCallback onTournaments;
+  final TosAuth? auth;
   @override
   State<HomeDashboard> createState() => _HomeDashboardState();
 }
@@ -250,6 +254,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           const SizedBox(height: 12),
+          if (widget.auth != null)
+            HomeNextMatch(
+              auth: widget.auth!,
+              section: widget.section,
+              revision: reload,
+            ),
           const Text(
             'LA COMMUNITY IN CAMPO',
             style: TextStyle(

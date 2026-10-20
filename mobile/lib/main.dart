@@ -393,6 +393,7 @@ class _HomePageState extends State<HomePage> {
                       ? HomeDashboard(
                           key: ValueKey('home-$section-${auth.user?['id']}'),
                           api: widget.api,
+                          auth: auth,
                           section: section,
                           onTournaments: () => setState(() => page = 1),
                         )
