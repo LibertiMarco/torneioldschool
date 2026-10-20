@@ -1,0 +1,61 @@
+{
+  "width": 960,
+  "height": 1280,
+  "regions": [
+    {
+      "name": "Left face",
+      "bounds": [
+        395,
+        223,
+        451,
+        286
+      ],
+      "foreground": true,
+      "minimum": 0.98
+    },
+    {
+      "name": "Left hair and headband",
+      "bounds": [
+        408,
+        201,
+        445,
+        217
+      ],
+      "foreground": true,
+      "minimum": 0.95
+    },
+    {
+      "name": "Right face",
+      "bounds": [
+        554,
+        215,
+        610,
+        280
+      ],
+      "foreground": true,
+      "minimum": 0.98
+    },
+    {
+      "name": "Right scalp",
+      "bounds": [
+        569,
+        184,
+        602,
+        204
+      ],
+      "foreground": true,
+      "minimum": 0.98
+    },
+    {
+      "name": "Field background",
+      "bounds": [
+        40,
+        520,
+        150,
+        740
+      ],
+      "foreground": false,
+      "minimum": 0.98
+    }
+  ]
+}

@@ -32,7 +32,11 @@ const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.end(`<!doctype html><script src="/api/grafiche_scontorno.js"></script><script>
       (async () => {
-        const results = [];
+        const results = [], detections = [];
+        const NativeWorker=window.Worker;
+        window.Worker=class extends NativeWorker {
+          constructor(...args){super(...args);this.addEventListener('message',event=>{if(event.data.people)detections.push(event.data.people);});}
+        };
         for (const src of ${JSON.stringify(sources)}) {
           const image = new Image();image.src = src;await image.decode();
           const start = performance.now();
@@ -76,7 +80,7 @@ const server = http.createServer((req, res) => {
           await fetch('/preview?name='+src.split('/').pop()+'-qa', {method:'POST',body:qa.toDataURL('image/png')});
           mask.width=mask.height=1;
         }
-        await fetch('/result',{method:'POST',body:JSON.stringify({results})});
+        await fetch('/result',{method:'POST',body:JSON.stringify({results,detections})});
       })().catch(error=>fetch('/result',{method:'POST',body:JSON.stringify({error:error.message})}));
     </script>`);
     return;

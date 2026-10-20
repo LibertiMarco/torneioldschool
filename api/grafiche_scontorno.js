@@ -1,7 +1,7 @@
 /* Person instances and soft matting. Photos stay on the device. */
 'use strict';
 const GraphicsCutout = (() => {
-  const workerUrl = new URL('grafiche_scontorno_worker.js?v=20261020-silhouette-11', document.currentScript.src);
+  const workerUrl = new URL('grafiche_scontorno_worker.js?v=20261020-mobilesam-12', document.currentScript.src);
   let worker = null, pending = null, serial = 0;
   let cached = null;
   const diagnosticKey='graphics-cutout-interrupted';
@@ -17,9 +17,6 @@ const GraphicsCutout = (() => {
     } catch (_) {return null;}
   }
 
-  function compactMode() {
-    return typeof navigator!=='undefined' && (/iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1));
-  }
   function dispose() {
     if (worker) worker.terminate();
     worker = null;
@@ -50,15 +47,11 @@ const GraphicsCutout = (() => {
     });
   }
   async function infer(data,width,height,subjects,onProgress) {
-    const base={width,height,subjects,compact:compactMode()};
+    const base={width,height,subjects};
     const progress=message=>{markPhase(message);if(onProgress)onProgress(message);};
     progress('Riconoscimento delle persone in corso...');
     const detection=await runStage({...base,data,stage:'detect'});
     const people=detection.people;
-    if(base.compact){
-      progress('Rimozione dello sfondo e rifinitura dei bordi...');
-      return runStage({...base,data:detection.data,people,stage:'matte'});
-    }
     progress('Preparazione dei soggetti in corso...');
     const encoded=await runStage({...base,data:detection.data,stage:'encode'});
     progress('Separazione dei soggetti e delle persone sullo sfondo...');
@@ -69,7 +62,7 @@ const GraphicsCutout = (() => {
   function geometry(width, height) {
     if (!(Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0)) throw new Error('Dimensioni della foto non valide.');
     // Fixed model input; letterboxing keeps people and clothing proportional.
-    const side = compactMode() ? 512 : 1024;
+    const side = 1024;
     const scale = side / Math.max(width, height);
     const dw = width * scale, dh = height * scale;
     const w = side, h = side;
@@ -132,6 +125,6 @@ const GraphicsCutout = (() => {
     if (typeof WeakRef !== 'undefined') cached = {original:new WeakRef(original), subjects, result};
     return mask;
   }
-  return {createMask, geometry, cleanMatte, maskFromMatte, markPhase, clearPhase, interruptedPhase, compactMode};
+  return {createMask, geometry, cleanMatte, maskFromMatte, markPhase, clearPhase, interruptedPhase};
 })();
 

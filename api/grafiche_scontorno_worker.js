@@ -1,10 +1,10 @@
 /* Local person detection, instance segmentation and matting. See TERZE_PARTI.md. */
 'use strict';
-importScripts('grafiche_scontorno_core.js?v=20261020-silhouette-11');
+importScripts('grafiche_scontorno_core.js?v=20261020-mobilesam-12');
 const runtimeBase='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/dist/';
 const modelFiles={
   detector:'rtdetr-r18-int8-ec641af.onnx',
-  encoder:'slimsam-vision-d827ef0.onnx',
+  encoder:'mobilesam-encoder-0d3b403.onnx',
   decoder:'sam-decoder-b64d034.onnx',
   matte:'modnet-fa2fa546.onnx'
 };
@@ -40,12 +40,14 @@ async function detect(rgb,width,height,subjects) {
 }
 async function encode(rgb,width,height) {
   const encoder=await model('encoder'),size=width*height;
-  const normalized=new Float32Array(rgb.length),mean=[.485,.456,.406],std=[.229,.224,.225];
-  for(let c=0;c<3;c++)for(let p=0;p<size;p++)normalized[c*size+p]=(rgb[c*size+p]-mean[c])/std[c];
-  const input=new ort.Tensor('float32',normalized,[1,3,height,width]);
+  // This MobileSAM export accepts HWC RGB in 0..255 and embeds its own
+  // normalization. Do not apply SlimSAM's normalized NCHW preprocessing.
+  const pixels=new Float32Array(rgb.length);
+  for(let p=0;p<size;p++)for(let c=0;c<3;c++)pixels[p*3+c]=rgb[c*size+p]*255;
+  const input=new ort.Tensor('float32',pixels,[height,width,3]);
   let output;
   try {
-    output=await encoder.run({pixel_values:input});
+    output=await encoder.run({[encoder.inputNames[0]]:input});
     const tensor=output.image_embeddings;
     return {data:new Float32Array(tensor.data),dims:tensor.dims};
   } finally {input.dispose();dispose(output);await releaseModel('encoder');}
@@ -112,9 +114,9 @@ async function matte(rgb,width,height) {
   } finally {input.dispose();dispose(output);await releaseModel('matte');}
 }
 self.onmessage=async event=>{
-  const {id,data,width,height,subjects='main',stage,people,embedding,masks,compact=false}=event.data;
+  const {id,data,width,height,subjects='main',stage,people,embedding,masks}=event.data;
   try {
-    const side=compact?512:1024;
+    const side=1024;
     if(width!==side||height!==side||!(data instanceof Float32Array)||data.length!==3*width*height||!['main','all'].includes(subjects))throw new Error('Dati della foto non validi.');
     let result;
     if(stage==='detect')result={people:await detect(data,width,height,subjects)};
@@ -122,9 +124,7 @@ self.onmessage=async event=>{
     else if(stage==='segment')result={masks:await segment(width,height,people,embedding)};
     else if(stage==='matte') {
       const detail=await matte(data,width,height);
-      const alpha=compact
-        ?GraphicsCutoutCore.composeCompactMatte(detail,width,height,people)
-        :GraphicsCutoutCore.composeMatte(detail,masks.foreground,masks.background,width,height,5,people.foreground);
+      const alpha=GraphicsCutoutCore.composeMatte(detail,masks.foreground,masks.background,width,height,5,people.foreground);
       self.postMessage({id,alpha,width,height},[alpha.buffer]);return;
     } else throw new Error('Fase di elaborazione non valida.');
     const transfers=[data.buffer];
