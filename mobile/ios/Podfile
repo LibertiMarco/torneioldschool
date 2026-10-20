@@ -41,6 +41,11 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
     # Match Runner's minimum and support Xcode 27 without lowering newer pods.
     target.build_configurations.each do |config|
+      # google_mobile_ads 9.1 exposes GoogleMobileAds_Beta.h from the SDK's
+      # private headers. Allow that vendor include only for the ads plugin.
+      if target.name == 'google_mobile_ads'
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      end
       minimum = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
       if minimum.nil? || Gem::Version.new(minimum) < Gem::Version.new('15.0')
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
