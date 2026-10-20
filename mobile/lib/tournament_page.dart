@@ -421,6 +421,8 @@ class _TournamentPageState extends State<TournamentPage> {
                         ),
                       ),
                     ),
+                if (result.teams.length >= 4 && !widget.api.preview)
+                  const AdaptiveAdBanner(),
                 if (result.teams.isEmpty)
                   const Text('Squadre non ancora disponibili.'),
               ],
@@ -551,6 +553,8 @@ class _TournamentPageState extends State<TournamentPage> {
                   ),
             ],
           ),
+      if (visible.length >= 3 && !widget.api.preview)
+        const AdaptiveAdBanner(),
     ];
   }
 }
