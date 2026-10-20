@@ -1,15 +1,24 @@
-﻿# Componenti di terze parti
+# Componenti di terze parti
 
-Il generatore Full Time/MVP usa MODNet per lo scontorno delle persone. Il modello viene servito dal sito e lavora in un Web Worker sul dispositivo: le foto non vengono inviate a servizi esterni.
+Il generatore Full Time/MVP esegue sul dispositivo rilevamento delle persone con RT-DETR, segmentazione delle singole figure con SAM e rifinitura dell'alpha con MODNet. Le foto non vengono inviate a servizi esterni e non sono richieste chiavi API.
 
-- Modello originale: https://github.com/ZHKKKe/MODNet — codice, modelli e demo (escluse le GIF) Apache-2.0.
-- Conversione ONNX di Xenova: https://huggingface.co/Xenova/modnet/tree/fa2fa546052fba4c08921230a26cc69a333fca12
-- File originale, non modificato: `onnx/model.onnx`, distribuito come `api/models/modnet-fa2fa546.onnx` (25.888.640 byte).
-- SHA-256: `07c308cf0fc7e6e8b2065a12ed7fc07e1de8febb7dc7839d7b7f15dd66584df9`.
-- Licenza inclusa: `api/models/MODNet-LICENSE.txt`.
-- ONNX Runtime Web `1.17.3`, caricato su richiesta da jsDelivr: https://www.npmjs.com/package/onnxruntime-web/v/1.17.3 — licenza MIT: https://github.com/microsoft/onnxruntime/blob/v1.17.3/LICENSE.
+«Soggetti più grandi» conserva le persone con area del riquadro almeno pari al 25% della più grande; «Tutte le persone» conserva tutte quelle rilevate. Le maschere delle persone escluse vengono sottratte anche nei contatti con i soggetti principali, limitatamente al riquadro della persona esclusa e a un margine di 2 pixel. Il precedente filtro morfologico per le sagome collegate non viene più usato.
 
-La prima rimozione scarica il modello (circa 26 MB) e il runtime WebAssembly. Il worker viene chiuso dopo 90 secondi di inattività; il modello può essere conservato nella cache HTTP del browser.
+SAM fornisce l'appartenenza binaria alla figura; MODNet fornisce l'alpha fisico morbido. Un margine di 5 pixel recupera capelli e contorni sottili. I tessuti sicuramente opachi dentro i riquadri dei soggetti vengono recuperati se la maschera grossolana li omette, solo quando sono collegati alla figura selezionata. Le persone escluse hanno sempre precedenza sul recupero dei dettagli. Nessuna coordinata della foto di test viene usata dall'algoritmo.
+
+Modelli distribuiti, originali non modificati:
+
+- **RT-DETR R18 quantizzato**: [conversione ONNX Community](https://huggingface.co/onnx-community/rtdetr_r18vd/tree/ec641af14c7cc8f93cd641a1458f498abbbbb533), file `onnx/model_quantized.onnx` → `api/models/rtdetr-r18-int8-ec641af.onnx`, 21.713.196 byte. SHA-256: `85703b0f56dbaceb89b21122e580fd11e11a879111fd727d0e9abdaf0e3620bf`. [Originale RT-DETR](https://github.com/lyuwenyu/RT-DETR), Apache-2.0; licenza inclusa in `api/models/RT-DETR-LICENSE.txt`.
+- **SlimSAM 77 uniform, encoder FP32**: [conversione Xenova](https://huggingface.co/Xenova/slimsam-77-uniform/tree/d827ef0), file `onnx/vision_encoder.onnx` → `api/models/slimsam-vision-d827ef0.onnx`, 23.276.014 byte. SHA-256: `9f8433273a6750b587779baa0cf5508111001bf7e7acfcf585d370139fd366d0`. [Originale nielsr](https://huggingface.co/nielsr/slimsam-77-uniform), Apache-2.0; testo della licenza Apache incluso in `api/models/SAM-LICENSE.txt`.
+- **SAM ViT-B, decoder con riquadri nativi**: [conversione samexporter distribuita da schmuell](https://huggingface.co/schmuell/sam-b-fp16/tree/b64d034), file `sam_vit_b_01ec64.decoder.onnx` → `api/models/sam-decoder-b64d034.onnx`, 16.501.299 byte. SHA-256: `0b972411be8e7a6abf6d1c14db1a84cc29a456818f6bbe69dfd6e24b09e7e6fb`. [Originale Meta SAM](https://github.com/facebookresearch/segment-anything), Apache-2.0; licenza inclusa in `api/models/SAM-LICENSE.txt`. Le etichette 2/3 rappresentano gli angoli del riquadro; i decoder HF che esportano solo prompt a punti non sono sostituibili direttamente.
+- **MODNet**: [conversione Xenova](https://huggingface.co/Xenova/modnet/tree/fa2fa546052fba4c08921230a26cc69a333fca12), file `onnx/model.onnx` → `api/models/modnet-fa2fa546.onnx`, 25.888.640 byte. SHA-256: `07c308cf0fc7e6e8b2065a12ed7fc07e1de8febb7dc7839d7b7f15dd66584df9`. [Originale MODNet](https://github.com/ZHKKKe/MODNet), Apache-2.0; licenza inclusa in `api/models/MODNet-LICENSE.txt`.
+- **ONNX Runtime Web 1.17.3**, caricato su richiesta da [jsDelivr](https://www.npmjs.com/package/onnxruntime-web/v/1.17.3), [licenza MIT](https://github.com/microsoft/onnxruntime/blob/v1.17.3/LICENSE).
+
+Input RGB float32 con padding proporzionale a 1024×1024. RT-DETR usa resize bilineare a 640×640 e valori [0,1]; SAM usa media ImageNet [0.485,0.456,0.406] e deviazione [0.229,0.224,0.225]; MODNet usa [-1,1]. Il padding viene rimosso dalla maschera finale. Il compositing usa i colori della foto originale.
+
+Il primo utilizzo scarica circa 88 MB di modelli, oltre al runtime WebAssembly. I file completi devono essere inclusi nel deploy; non sono puntatori Git LFS. Il worker viene chiuso dopo 90 secondi di inattività; i file versionati usano la cache HTTP annuale. Il timeout è di 5 minuti. Tempi e memoria disponibile dipendono dal dispositivo; nessun fallback silenzioso al precedente algoritmo.
+
+Verifiche: `node tests/graphics_cutout_test.js` e `node tests/graphics_cutout_flow_test.js`. La prova reale `node tests/graphics_cutout_model_browser_test.js` usa Chromium e la CSP del sito e salva PNG trasparenti e confronti su bianco/scuro in una cartella temporanea. Una foto privata può essere passata con `CUTOUT_TEST_IMAGE`; `CUTOUT_TEST_PROFILE=tests/fixtures/graphics_captains_cutout.json` verifica 20 regioni della foto campione a 960×1280, compresi persone dietro, spalla, erba tra i corpi, volti, tessuti, mani e quattro scarpe. La foto privata non è inclusa nel repository.
 
 Import Giocatori usa [Tesseract.js 5.1.1](https://github.com/naptha/tesseract.js) (Apache-2.0), caricato da jsDelivr, con le lingue italiana e inglese. Il motore WebAssembly e i dati delle lingue vengono scaricati al primo utilizzo. Il riconoscimento avviene nel browser: al sito viene inviato solo il testo da controllare, senza caricare la foto nel database o inviarla a un servizio OCR.
 

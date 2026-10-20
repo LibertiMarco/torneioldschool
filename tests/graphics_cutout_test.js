@@ -10,31 +10,48 @@ for (const [w,h] of [[400,1800],[2400,600],[600,800],[500,500],[1,500]]) {
   const g = geometry(w,h);
   assert(Math.abs(g.dw / g.dh - w / h) < 1e-8, 'Preprocessing stretches the photo');
   assert.strictEqual(g.width % 32,0);assert.strictEqual(g.height % 32,0);
-  assert(g.width<=768&&g.height<=768,'Unbounded mobile inference size');
+  assert(g.width===1024&&g.height===1024,'Unbounded mobile inference size');
   assert(g.dw<=g.width&&g.dh<=g.height&&g.x>=0&&g.y>=0);
 }
-const w=40,h=30,alpha=new Float32Array(w*h);
-for(let y=5;y<25;y++)for(let x=3;x<12;x++)alpha[y*w+x]=1;
-for(let y=8;y<22;y++)for(let x=26;x<36;x++)alpha[y*w+x]=.95;
-for(let y=10;y<20;y++)for(let x=17;x<21;x++)alpha[y*w+x]=.45;
-alpha[4*w+5]=.5;
-alpha[0]=.04;
-const out=cleanMatte(alpha,w,h);
-assert.strictEqual(out[10*w+5],255,'First person removed');
-assert(out[10*w+30]>245,'Second disconnected person removed');
-assert.strictEqual(out[12*w+18],0,'Detached ghost silhouette remains');
-assert(out[4*w+5]>90&&out[4*w+5]<180,'Connected soft detail became binary');
-assert.strictEqual(out[0],0,'Faint haze remains');
-assert(cleanMatte(new Float32Array(100).fill(.4),10,10).every(a=>a===0),'An uncertain mask must not become a ghost photo');
-// A confident background person used to survive the same as the two captains.
-for(let y=1;y<5;y++)for(let x=30;x<34;x++)alpha[y*w+x]=1;
-const foreground=cleanMatte(alpha,w,h,'main');
-assert.strictEqual(foreground[2*w+31],0,'Smaller confident background person remains');
-assert.strictEqual(foreground[10*w+5],255,'Largest subject removed');
-assert(foreground[10*w+30]>245,'Second captain removed');
-assert(foreground[4*w+5]>90&&foreground[4*w+5]<180,'Foreground hair lost its soft edge');
-assert.strictEqual(cleanMatte(alpha,w,h,'all')[2*w+31],255,'Group mode removed a smaller person');
-assert(cleanMatte(new Float32Array(100),10,10,'main').every(a=>a===0),'Empty mask became opaque');
+assert.throws(()=>geometry(0,100),/Dimensioni/);
+assert.throws(()=>geometry(Infinity,100),/Dimensioni/);
+assert.deepStrictEqual(Array.from(cleanMatte(new Float32Array([0,.5,1,NaN,-1,2]),3,2)),[0,128,255,0,0,255],'Physical alpha must remain soft and bounded');
+assert.throws(()=>cleanMatte(new Float32Array(2),3,2),/Maschera/);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../api/grafiche_scontorno_core.js'),'utf8')+'\nthis.core=GraphicsCutoutCore;',sandbox);
+const {selectPeople,composeMatte,resizeRGB}=sandbox.core;
+const logits=new Float32Array([9,-8,-8,8,-8,-8,7,-8,-8,6,-8,-8,2,8,-8]);
+const boxes=new Float32Array([.33,.55,.3,.75,.63,.55,.28,.72,.8,.25,.04,.12,.33,.55,.3,.75,.5,.5,.6,.8]);
+const main=selectPeople(logits,boxes,5,3,'main');
+assert.strictEqual(main.foreground.length,2,'Two foreground players must be retained');
+assert.strictEqual(main.background.length,1,'A smaller background person must be excluded');
+const all=selectPeople(logits,boxes,5,3,'all');
+assert.strictEqual(all.foreground.length,3,'Group mode must preserve smaller people');
+assert.strictEqual(all.background.length,0);
+assert.throws(()=>selectPeople(new Float32Array([-10,5,1]),new Float32Array([.5,.5,.8,.8]),1,3),/persona/);
+const width=32,height=32,detail=new Float32Array(width*height).fill(1),foreground=new Uint8Array(width*height),background=new Uint8Array(width*height);
+for(let y=5;y<28;y++)for(let x=7;x<26;x++)foreground[y*width+x]=1;
+for(let y=5;y<12;y++)for(let x=24;x<28;x++)background[y*width+x]=1;
+detail[15*width+16]=0; // grass in an enclosed gap, even inside a coarse SAM mask
+const hair=4*width+10;detail[hair]=.4;
+const matte=composeMatte(detail,foreground,background,width,height,2);
+assert.strictEqual(matte[16*width+12],1,'Foreground body interior erased');
+assert.strictEqual(matte[8*width+25],0,'Background person touching a shoulder restored');
+assert.strictEqual(matte[8*width+27],0,'Edge recovery restored an excluded person');
+assert.strictEqual(matte[15*width+16],0,'Grass between bodies filled back in');
+assert(Math.abs(matte[hair]-.4)<1e-6,'Soft hair outside the semantic contour was lost');
+assert.strictEqual(matte[0],0,'Matting must not restore distant background');
+const recovered=composeMatte(detail,foreground,background,width,height,2,[{left:0,right:1,top:0,bottom:1}]);
+assert.strictEqual(recovered[0],1,'Opaque clothing at a photo border was cut');
+assert.strictEqual(recovered[8*width+25],0,'Clothing recovery restored an excluded background person');
+assert.strictEqual(recovered[15*width+16],0,'Clothing recovery filled an enclosed background gap');
+const islands=new Float32Array(detail);
+for(let y=0;y<3;y++)for(let x=0;x<3;x++)islands[y*width+x]=0;
+islands[0]=1;
+const isolated=composeMatte(islands,foreground,background,width,height,2,[{left:0,right:1,top:0,bottom:1}]);
+assert.strictEqual(isolated[0],0,'Opaque recovery restored a floating background fragment');
+assert.strictEqual(isolated[20*width],1,'Connected opaque clothing at the photo border was lost');
+const rgb=new Float32Array([0,1,1,0,.25,.25,.25,.25,.75,.75,.75,.75]);
+assert.deepStrictEqual(Array.from(resizeRGB(rgb,2,2,1)),[.5,.25,.75],'Detector resize must interpolate all three RGB channels');
 const page=fs.readFileSync(path.join(__dirname,'../api/grafiche_post_partita.php'),'utf8');
 vm.runInContext(page.slice(page.indexOf('function cover('),page.indexOf('const visibleImageBounds=')),sandbox);
 for(const [iw,ih] of [[400,1800],[2400,600],[600,800]])for(const zoom of [10,50,100,250]) {
@@ -48,5 +65,5 @@ for(const [iw,ih] of [[400,1800],[2400,600],[600,800]])for(const zoom of [10,50,
   assert(Math.abs(dx+dw/2-320)<1e-8&&Math.abs(dy+dh/2-430)<1e-8,'Position drifted');
   assert.deepStrictEqual(clip,[20,30,600,800]);assert(restored);
 }
-console.log('Proportional zoom 10-250%, portrait/landscape padding, multiple subjects, ghost removal and soft edges: OK');
+console.log('Zoom/aspect ratio, person instances, group selection, touching background, enclosed gaps and soft alpha: OK');
 

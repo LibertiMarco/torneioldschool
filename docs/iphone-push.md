@@ -1,5 +1,41 @@
 # Notifiche push iPhone
 
+## Correzione registrazione del 20 ottobre 2026
+
+Verificato il sorgente della versione installata: Firebase Messaging 16.0.0
+inizializzava registrazione APNs e delegate notifiche soltanto nell'osservatore
+`UIApplicationDidFinishLaunchingNotification`. Con UIScene il motore implicito
+può registrare il plugin dopo questo evento, saltando l'intera inizializzazione.
+La sola richiesta esplicita del token non copre ricezione, rinnovo e apertura.
+
+Aggiornati e bloccati Firebase Core 4.14.0 e Messaging 16.7.0 (Apple SDK 12.19.0).
+Questa versione include le correzioni ufficiali per registrazione tardiva UIScene
+e inizializzazione Firebase da Dart. AppDelegate usa
+`FLTFirebaseMessagingPlugin.configureNotificationCenterDelegate()` prima del
+ritorno dal callback di avvio. Il plugin gestisce token e inoltro degli eventi;
+il canale `tos/push_registration` permette nuovi tentativi e lettura degli errori
+nativi. Attesa APNs fino a 30 secondi, con interruzione immediata su errore Apple.
+
+Prima della pubblicazione TestFlight, Codemagic esegue
+`mobile/tool/verify_ios_push.dart` sull'IPA esportata: verifica firma codesign,
+entitlement `aps-environment=production` sia nell'app sia nel provisioning profile,
+team/application identifier e configurazione Firebase inclusa. Un errore ferma
+il workflow prima del caricamento. Il controllo richiede macOS ed è coperto da
+test della validazione con configurazioni valide e non valide.
+
+La modifica richiede una nuova build iOS; non aggiorna le app già installate.
+Compilazione Swift, entitlement dell'IPA e attivazione su iPhone reale restano
+da verificare su macOS/TestFlight. Se il problema persiste, controllare anche
+il provisioning profile e la connessione ad APNs.
+
+Fonti: [changelog ufficiale](https://pub.dev/packages/firebase_messaging/changelog)
+e [inizializzazione UIScene](https://pub.dev/packages/firebase_messaging).
+
+Verifica locale del 20 ottobre: suite Flutter completa, 231 test superati;
+11 test specifici backend Firebase/validazione IPA rieseguiti dopo l'ultimo
+adeguamento dell'attesa APNs; analisi Flutter senza problemi; test PHP push
+e parsing YAML Codemagic superati. Nessuna build macOS o invio Apple eseguito.
+
 Configurazione del 17 ottobre 2026. Il codice supporta Android e iOS; la chiave
 APNs di produzione è collegata a Firebase. La consegna su iPhone resta da
 verificare con una nuova build firmata e un dispositivo reale.

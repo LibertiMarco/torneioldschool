@@ -50,6 +50,12 @@ workflows:
           flutter build ipa --release \
             --dart-define=TOS_BASE_URL=https://torneioldschool.it \
             --export-options-plist=/Users/builder/export_options.plist
+      - name: Verifica notifiche nella IPA firmata
+        script: |
+          set -euo pipefail
+          ipa_files=(build/ios/ipa/*.ipa)
+          test "${#ipa_files[@]}" -eq 1
+          dart run tool/verify_ios_push.dart "${ipa_files[0]}"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log

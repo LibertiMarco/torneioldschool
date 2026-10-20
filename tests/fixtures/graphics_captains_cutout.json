@@ -1,0 +1,26 @@
+{
+  "width": 960,
+  "height": 1280,
+  "regions": [
+    {"name":"Blue background player", "bounds":[640,344,658,377], "foreground":false, "minimum":0.98},
+    {"name":"Purple background player", "bounds":[649,376,671,425], "foreground":false, "minimum":0.98},
+    {"name":"Striped background player", "bounds":[709,373,737,449], "foreground":false, "minimum":0.98},
+    {"name":"Detached dark background fragment", "bounds":[695,370,710,405], "foreground":false, "minimum":0.98},
+    {"name":"Background legs above right shoulder", "bounds":[710,463,730,474], "foreground":false, "minimum":0.98},
+    {"name":"Grass enclosed between bodies", "bounds":[488,630,493,680], "foreground":false, "minimum":0.98},
+    {"name":"Left black and red shirt", "bounds":[335,470,460,750], "foreground":true, "minimum":0.98},
+    {"name":"Right black and red shirt", "bounds":[535,485,655,780], "foreground":true, "minimum":0.98},
+    {"name":"Left black shorts", "bounds":[320,780,480,885], "foreground":true, "minimum":0.98},
+    {"name":"Right black shorts", "bounds":[515,815,645,885], "foreground":true, "minimum":0.98},
+    {"name":"Black sleeve", "bounds":[255,540,295,610], "foreground":true, "minimum":0.98},
+    {"name":"Right forearm", "bounds":[675,635,715,650], "foreground":true, "minimum":0.98},
+    {"name":"Left fist", "bounds":[365,555,385,580], "foreground":true, "minimum":0.98},
+    {"name":"Right fist", "bounds":[596,605,616,630], "foreground":true, "minimum":0.98},
+    {"name":"Left face", "bounds":[380,350,420,400], "foreground":true, "minimum":0.98},
+    {"name":"Right face", "bounds":[555,350,600,400], "foreground":true, "minimum":0.98},
+    {"name":"Left red shoe", "bounds":[355,1050,375,1100], "foreground":true, "minimum":0.98},
+    {"name":"Front red shoe", "bounds":[465,1090,480,1120], "foreground":true, "minimum":0.98},
+    {"name":"Back blue shoe", "bounds":[511,1045,521,1055], "foreground":true, "minimum":0.98},
+    {"name":"Front blue shoe", "bounds":[620,1120,640,1160], "foreground":true, "minimum":0.98}
+  ]
+}

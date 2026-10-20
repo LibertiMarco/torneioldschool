@@ -252,7 +252,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="grafiche_basi.js?v=20261007-mvp-shared-logo"></script>
 <script src="grafiche_foto_touch.js?v=20261007-aspect-ratio"></script>
-<script src="grafiche_scontorno.js?v=20261019-subjects"></script>
+<script src="grafiche_scontorno.js?v=20261020-instances-2"></script>
 <script src="grafiche_scontorno_editor.js?v=20261019"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -409,11 +409,11 @@ async function removePhotoBackground(id) {
   let mask=null,canvas=null;
   backgroundRemovalBusy=true;
   ['ftRemoveBg','mvpRemoveBg'].forEach(key=>$(key).disabled=true);
-  $('status').textContent='Rimozione sfondo in corso… Al primo utilizzo viene scaricato il modello (26 MB).';
+  $('status').textContent='Rimozione sfondo e rifinitura dei bordi in corso… Al primo utilizzo vengono scaricati i modelli (circa 88 MB).';
   try {
-    mask=await GraphicsCutout.createMask(original,{subjects:$(id==='ftCaptains'?'ftCutoutSubjects':'mvpCutoutSubjects').value});
+    mask=await GraphicsCutout.createMask(original,{subjects:$(id==='ftCaptains'?'ftCutoutSubjects':'mvpCutoutSubjects').value,onProgress:message=>{if(isCurrent())$('status').textContent=message;}});
     if(!isCurrent())return;
-    $('status').textContent='Controlla lo scontorno e cancella eventuali persone rimaste sullo sfondo.';
+    $('status').textContent='Controlla i bordi: usa Gomma per i residui e Recupera per eventuali dettagli mancanti.';
     if(!await GraphicsCutoutEditor.refine(original,mask)){
       if(isCurrent())$('status').textContent='Scontorno annullato: foto precedente conservata.';
       return;

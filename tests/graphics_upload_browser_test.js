@@ -15,7 +15,7 @@ function fixture() {
   page = page.replace(/<\?php if \(!\$embedded\): \?>fetch\([\s\S]*?<\?php endif; \?>/, '');
   page = page.replace(/<\?[\s\S]*?\?>/g, '');
   page = page.replace('</body>', `<button id="runPhotoTest">Verifica foto Fulltime e MVP</button><pre id="testResult" role="status"></pre>
-<button id="runRealTest">Verifica MODNet su foto reale</button><button id="runPortraitTest">Verifica MODNet su ritratto verticale</button><pre id="realResult" role="status"></pre><div id="realPreview" style="display:flex;background:#ccc;gap:20px;padding:20px"></div>
+<button id="runRealTest">Verifica RT-DETR + SAM + MODNet su foto reale</button><button id="runPortraitTest">Verifica RT-DETR + SAM + MODNet su ritratto verticale</button><pre id="realResult" role="status"></pre><div id="realPreview" style="display:flex;background:#ccc;gap:20px;padding:20px"></div>
 <script>
 document.getElementById('runPhotoTest').onclick=async()=>{
   const result=document.getElementById('testResult');
@@ -129,7 +129,7 @@ async function runRealPhotoTest(portrait=false){
       const ctx=canvas.getContext('2d');ctx.fillStyle=label.includes('scuro')?'#07111d':'#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0);
       figure.style.cssText='margin:0;flex:1;min-width:0;color:#000';figure.append(caption,canvas);preview.append(figure);
     }
-    result.textContent='PASS: modello MODNet reale, '+(portrait?'ritratto verticale':'foto di gruppo')+', PNG e CSP produzione. '+Math.round(performance.now()-start)+' ms.';
+    result.textContent='PASS: modello RT-DETR + SAM + MODNet reale, '+(portrait?'ritratto verticale':'foto di gruppo')+', PNG e CSP produzione. '+Math.round(performance.now()-start)+' ms.';
   }catch(error){result.textContent='FAIL: '+error.message;}
 };
 document.getElementById('runRealTest').onclick=()=>runRealPhotoTest();
@@ -151,8 +151,10 @@ http.createServer((req,res)=>{
     res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fs.readFileSync(path.join(root,'api/grafiche_scontorno.js')));
   }else if(req.url.startsWith('/grafiche_scontorno_worker.js')){
     res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fs.readFileSync(path.join(root,'api/grafiche_scontorno_worker.js')));
-  }else if(req.url==='/models/modnet-fa2fa546.onnx'){
-    res.setHeader('Content-Type','application/octet-stream');fs.createReadStream(path.join(root,'api/models/modnet-fa2fa546.onnx')).pipe(res);
+  }else if(req.url.startsWith('/grafiche_scontorno_core.js')){
+    res.setHeader('Content-Type','text/javascript; charset=utf-8');res.end(fs.readFileSync(path.join(root,'api/grafiche_scontorno_core.js')));
+  }else if(['/models/rtdetr-r18-int8-ec641af.onnx','/models/slimsam-vision-d827ef0.onnx','/models/sam-decoder-b64d034.onnx','/models/modnet-fa2fa546.onnx'].includes(req.url)){
+    res.setHeader('Content-Type','application/octet-stream');fs.createReadStream(path.join(root,'api',req.url.slice(1))).pipe(res);
   }else if(req.url==='/test-team.jpg'){
     res.setHeader('Content-Type','image/jpeg');res.end(fs.readFileSync(path.join(root,'img/blog/vincitriceseriea.jpg')));
   }else if(req.url==='/test-portrait.jpg'){

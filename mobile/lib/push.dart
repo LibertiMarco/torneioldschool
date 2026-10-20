@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import 'auth.dart';
 
@@ -29,6 +30,7 @@ abstract class PushBackend {
 }
 
 class FirebasePushBackend implements PushBackend {
+  static const _appleRegistration = MethodChannel('tos/push_registration');
   @override
   Future<void> initialize() async {
     if (Firebase.apps.isEmpty) await Firebase.initializeApp();
@@ -48,15 +50,25 @@ class FirebasePushBackend implements PushBackend {
   Future<String?> token() async {
     await FirebaseMessaging.instance.setAutoInitEnabled(true);
     if (defaultTargetPlatform == TargetPlatform.iOS) {
+      await _appleRegistration.invokeMethod<void>('register');
       // APNs registration can complete after the permission dialog closes.
-      for (var attempt = 0; attempt < 20; attempt++) {
+      for (var attempt = 0; attempt <= 60; attempt++) {
         if (await FirebaseMessaging.instance.getAPNSToken() != null) {
           return FirebaseMessaging.instance.getToken();
         }
+        final registrationError = await _appleRegistration.invokeMethod<String>(
+          'registrationError',
+        );
+        if (registrationError != null) {
+          throw StateError(
+            'Registrazione notifiche Apple non riuscita: $registrationError',
+          );
+        }
+        if (attempt == 60) break;
         await Future<void>.delayed(const Duration(milliseconds: 500));
       }
       throw StateError(
-        'Registrazione notifiche Apple in corso. Riprova tra poco.',
+        'Apple non ha completato la registrazione notifiche. Verifica la connessione e riprova.',
       );
     }
     return FirebaseMessaging.instance.getToken();

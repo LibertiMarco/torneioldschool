@@ -100,7 +100,7 @@ RewriteRule ^tornei/(.+)\.html$ /tornei/$1.php [L,QSA,NC]
   ExpiresByType font/woff2 "access plus 12 months"
 </IfModule>
 <IfModule mod_headers.c>
-  <FilesMatch "^modnet-[a-f0-9]+\.onnx$">
+  <FilesMatch "^(modnet-[a-f0-9]+|rtdetr-r18-int8-[a-f0-9]+|slimsam-vision-[a-f0-9]+|sam-decoder-[a-f0-9]+)\.onnx$">
     ForceType application/octet-stream
     Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
