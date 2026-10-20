@@ -10,6 +10,10 @@ si può seguirlo interamente oppure scegliere le singole squadre; le modifiche
 si applicano solo con «Salva» o «Rimuovi». La Home si ricarica al ritorno dalla
 gestione e dai dettagli, oltre che con il normale trascinamento per aggiornare.
 
+La pagina di gestione mostra solo i tornei con stato «in corso» o «programmato»,
+sia nei preferiti elencati sia nella ricerca/selezione. I salvataggi relativi a
+tornei terminati non vengono cancellati e restano accessibili dalla Home.
+
 I preferiti riutilizzano le scelte «Segui» già salvate in `seguiti`, incluse quelle
 effettuate sul sito. Sono quindi associati all'account e condivisi fra Android,
 iOS e preview. Non sono segnalibri separati dalle preferenze sui risultati:

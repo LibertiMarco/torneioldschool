@@ -192,7 +192,21 @@ class _FavoritesContentState extends State<_FavoritesContent> {
           ),
         );
       }
-      final items = TosApi.rows(snapshot.data!['items']);
+      final tournaments = TosApi.rows(snapshot.data!['tournaments'])
+          .where(
+            (t) => const {
+              'in corso',
+              'programmato',
+            }.contains('${t['stato'] ?? ''}'.trim().toLowerCase()),
+          )
+          .toList();
+      final activeSlugs = tournaments.map(TosApi.tournamentSlug).toSet();
+      final items = TosApi.rows(snapshot.data!['items'])
+          .where(
+            (item) =>
+                !widget.fullPage || activeSlugs.contains(item['torneo_slug']),
+          )
+          .toList();
       final header = Row(
         children: [
           const Expanded(
@@ -236,7 +250,6 @@ class _FavoritesContentState extends State<_FavoritesContent> {
           ),
         );
       }
-      final tournaments = TosApi.rows(snapshot.data!['tournaments']);
       final filtered = tournaments
           .where(
             (t) =>
