@@ -1069,16 +1069,18 @@ class _HallAward extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final kind = '${award['kind'] ?? ''}';
+    final colors = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final individual =
         award['tipo'] == 'Individuale' ||
         ['SCORER', 'MVP', 'KEEPER', 'DEFENDER', 'ATTACKER'].contains(kind);
     final accent = kind == 'GOLD'
-        ? const Color(0xff9d7116)
+        ? (dark ? const Color(0xfff4d47d) : const Color(0xff9d7116))
         : kind == 'SILVER'
-        ? const Color(0xff697e91)
+        ? (dark ? const Color(0xffc3d2e0) : const Color(0xff697e91))
         : kind == 'BRONZO'
-        ? const Color(0xffa65c35)
-        : siteBlue;
+        ? (dark ? const Color(0xffe9b28e) : const Color(0xffa65c35))
+        : colors.primary;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -1136,9 +1138,9 @@ class _HallAward extends StatelessWidget {
                     (int.tryParse('${award['gol']}') ?? 0) > 0)
                   Text(
                     '${award['gol']} gol',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xff637487),
+                      color: colors.onSurfaceVariant,
                     ),
                   ),
               ],
