@@ -289,13 +289,13 @@ class _NextMatchState extends State<_NextMatch> {
         ),
         const SizedBox(height: 20),
         const Divider(height: 1),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
         _info(Icons.event_outlined, _schedule(match)),
         if (field.isNotEmpty) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: 2),
           _venue(match, field),
         ],
-        const SizedBox(height: 20),
+        const SizedBox(height: 8),
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
