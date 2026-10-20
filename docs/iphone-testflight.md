@@ -67,3 +67,25 @@ Riferimento configurazione: https://docs.codemagic.io/yaml-quick-start/building-
 Prima del login, un admin deve preparare e attivare l'accesso mobile su `https://torneioldschool.it/admin_mobile.php`. Controllare poi elenco tornei, classifiche e partite, login con ritorno dal browser, ripristino della sessione dopo chiusura, logout e permessi admin. Le prove di scrittura sui dati reali richiederanno casi concordati quando quelle funzioni saranno implementate.
 
 Resta da verificare su macOS e sul telefono anche la dipendenza prerelease `flutter_web_auth_2` e la firma del portachiavi. Icone e materiale per lo store sono ancora da completare.
+
+## Correzione risoluzione Firebase iOS - 21 ottobre 2026
+
+La build 11 si fermava prima della compilazione: i Package.swift di firebase_core
+4.14.0 e firebase_messaging 16.7.0 richiedono esattamente Firebase iOS 12.18.0 e
+12.19.0. Non e un errore delle notifiche, della firma o dei pacchetti Dart obsoleti.
+
+Configurato nel pubspec del progetto `flutter.config.enable-swift-package-manager:
+false`. Il workflow usa cosi il Podfile esistente anche sui runner Codemagic, senza
+dipendere dalle preferenze globali del Mac. Con CocoaPods firebase_messaging legge
+firebase_sdk_version.rb di firebase_core: entrambi richiedono 12.18.0. Non sono
+stati alterati cache, plugin, versioni Dart o lockfile. Questa e una soluzione di
+compatibilita per i pin SwiftPM delle versioni correnti, da rivedere quando i plugin
+saranno aggiornati insieme a versioni compatibili con SwiftPM.
+
+Verifica locale: flutter pub get --offline completato; configurazione plugin iOS
+SwiftPM false; progetto Xcode tracciato senza riferimenti SwiftPM generati. La
+compilazione IPA firmata resta da verificare sul Mac Codemagic rilanciando
+`ios-testflight` su master aggiornato. La build 11 puo essere riutilizzata se la
+precedente esecuzione si e fermata prima di caricare l'IPA su App Store Connect.
+
+Riferimento: https://docs.flutter.dev/packages-and-plugins/swift-package-manager/for-app-developers
