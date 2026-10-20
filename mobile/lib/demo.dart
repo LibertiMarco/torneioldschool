@@ -6,6 +6,10 @@ import 'about_demo.dart';
 class DemoApi extends TosApi {
   Map<String, dynamic>? playerLinkRequest;
   final Map<String, Map<String, dynamic>> followedTournaments = {};
+  final Map<String, dynamic> notificationPreferences = {
+    'results': true,
+    'comments': true,
+  };
   DemoApi() : super(baseUrl: Uri.parse('https://preview.invalid'));
   @override
   bool get preview => true;
@@ -181,6 +185,11 @@ class DemoApi extends TosApi {
           'message': body == null
               ? ''
               : 'Impostazioni aggiornate con successo.',
+        };
+      case 'api/mobile/v1/notification_preferences.php':
+        notificationPreferences.addAll(body ?? {});
+        return {
+          'preferences': Map<String, dynamic>.from(notificationPreferences),
         };
       case 'api/mobile/v1/follow.php':
         const available = ['Old School FC', 'Sporting Club'];

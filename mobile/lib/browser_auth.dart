@@ -69,6 +69,7 @@ class BrowserAuth extends TosAuth {
       'api/mobile/v1/account.php' => 'account',
       'api/mobile/v1/comments.php' => 'comments',
       'api/mobile/v1/follow.php' => 'follow',
+      'api/mobile/v1/notification_preferences.php' => 'notification_preferences',
       'api/mobile/v1/player_stats.php' => 'player_stats',
       'api/mobile/v1/player_link_requests.php' => 'player_link_requests',
       _ => throw const ApiError(

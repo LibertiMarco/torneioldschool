@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/env_loader.php';
 require_once __DIR__ . '/mobile_push.php';
+require_once __DIR__ . '/notification_preferences.php';
 
 if (!function_exists('tos_push_base64url_encode')) {
     function tos_push_base64url_encode(string $value): string
@@ -362,6 +363,7 @@ if (!function_exists('tos_push_build_payload')) {
         if (!empty($extra['data']) && is_array($extra['data'])) {
             $payload['data'] = $extra['data'];
         }
+        if (isset($extra['category'])) $payload['category'] = $extra['category'];
 
         return $payload;
     }
@@ -412,6 +414,8 @@ if (!function_exists('tos_push_store_notifications_for_users')) {
 if (!function_exists('tos_push_send_to_users')) {
     function tos_push_send_to_users(mysqli $conn, array $userIds, array $payload): array
     {
+        $userIds = notification_filter_recipients($userIds, $payload);
+        if (!$userIds) return ['sent' => 0, 'failed' => 0, 'subscriptions' => 0];
         $native = tos_fcm_send_to_users($conn, $userIds, $payload);
         $config = tos_push_vapid_config();
         if (empty($config['configured'])) {

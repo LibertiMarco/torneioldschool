@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
 import 'auth.dart';
 import 'push.dart';
+import 'notification_preferences.dart';
 import 'home_dashboard.dart' show SiteImage;
 
 class AccountPage extends StatefulWidget {
@@ -527,7 +528,14 @@ class _AccountPageState extends State<AccountPage> {
           _section(
             'Notifiche push sul telefono',
             Icons.notifications_outlined,
-            [const NativePushSettings()],
+            [
+              NotificationPreferences(
+                key: ValueKey(widget.auth),
+                auth: widget.auth,
+              ),
+              const SizedBox(height: 16),
+              const NativePushSettings(),
+            ],
           ),
           _section('Gestione account', Icons.manage_accounts_outlined, [
             TextButton.icon(

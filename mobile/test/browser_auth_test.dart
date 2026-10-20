@@ -48,6 +48,21 @@ void main() {
       );
       expect(jsonDecode(requests.last.body)['_csrf'], 'session-token');
       expect(requests.last.headers.containsKey('Authorization'), false);
+      await auth.authorized('api/mobile/v1/notification_preferences.php');
+      expect(requests.last.method, 'GET');
+      expect(
+        requests.last.url.queryParameters['action'],
+        'notification_preferences',
+      );
+      await auth.authorized(
+        'api/mobile/v1/notification_preferences.php',
+        body: {'results': false},
+      );
+      expect(requests.last.method, 'POST');
+      expect(jsonDecode(requests.last.body), {
+        'results': false,
+        '_csrf': 'session-token',
+      });
       await auth.authorized(
         'api/mobile/v1/follow.php',
         body: {'torneo': 'summer', 'followed': true},
