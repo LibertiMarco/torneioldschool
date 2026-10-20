@@ -78,3 +78,11 @@ con logo e nome della squadra, al posto dell'icona calendario. Torneo, data e
 apertura del dettaglio restano disponibili sull'intera scheda. Usa i campi logo
 già aggiunti al backend personale. Verificati 12 test Profilo/calendario e analisi
 Flutter senza problemi; preview web ricompilata per la pubblicazione.
+
+Il calendario personale ora mostra inizialmente tre incontri e ne aggiunge tre
+con «Mostra altre partite». Dopo il refresh riparte dai primi tre. Le date sono
+confrontate con il giorno corrente del dispositivo: prima oggi e le date future,
+poi gli incontri senza data, infine quelli con date passate ancora da disputare.
+L'ordine resta cronologico all'interno dei gruppi e non modifica i dati ricevuti.
+La Home usa lo stesso ordinamento per scegliere la prossima partita. Test dedicati
+verificano il cambio giorno e il caricamento progressivo di sette incontri.

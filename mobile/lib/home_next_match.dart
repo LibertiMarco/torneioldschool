@@ -4,6 +4,7 @@ import 'api.dart';
 import 'auth.dart';
 import 'details.dart' show MatchPage;
 import 'home_dashboard.dart' show SiteImage;
+import 'personal_match_order.dart';
 
 /// Uses only the player resolved by the authenticated server, never a client ID.
 class HomeNextMatch extends StatelessWidget {
@@ -167,8 +168,9 @@ class _NextMatchState extends State<_NextMatch> {
       }
       final data = snapshot.data as Map;
       if (data['player'] == null) return const SizedBox.shrink();
-      // The authenticated endpoint orders scheduled matches first, then undated.
-      final matches = TosApi.rows(data['upcoming_matches']);
+      final matches = orderPersonalMatches(
+        TosApi.rows(data['upcoming_matches']),
+      );
       if (matches.isEmpty) {
         return _card([
           const Text(

@@ -5,6 +5,7 @@ import 'home_dashboard.dart' show SiteImage, openPage;
 import 'details.dart' show MatchPage;
 import 'theme.dart';
 import 'player_awards.dart';
+import 'personal_match_order.dart';
 
 class PlayerDashboard extends StatefulWidget {
   const PlayerDashboard({
@@ -35,6 +36,18 @@ class PlayerDashboard extends StatefulWidget {
 
 class _PlayerDashboardState extends State<PlayerDashboard> {
   bool appearances = false;
+  int _visibleMatches = 3;
+
+  @override
+  void didUpdateWidget(covariant PlayerDashboard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.upcomingMatches != widget.upcomingMatches ||
+        oldWidget.player['id'] != widget.player['id'] ||
+        oldWidget.section != widget.section) {
+      _visibleMatches = 3;
+    }
+  }
+
   ColorScheme get colors => Theme.of(context).colorScheme;
   bool get dark => Theme.of(context).brightness == Brightness.dark;
   Color get panel => dark ? colors.surfaceContainer : siteBlue;
@@ -132,65 +145,76 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
           ),
         );
 
-  Widget _upcomingMatches() => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      _title('Le tue prossime partite', 'IL TUO CALENDARIO'),
-      const SizedBox(height: 12),
-      if (widget.upcomingMatches.isEmpty)
-        const Text('Non ci sono partite da disputare per le tue squadre.'),
-      for (final match in widget.upcomingMatches)
-        Card(
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => openPage(
-              context,
-              MatchPage(
-                api: widget.api,
-                id: '${match['id']}',
-                previewMatch: match,
+  Widget _upcomingMatches() {
+    final matches = orderPersonalMatches(widget.upcomingMatches);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _title('Le tue prossime partite', 'IL TUO CALENDARIO'),
+        const SizedBox(height: 12),
+        if (widget.upcomingMatches.isEmpty)
+          const Text('Non ci sono partite da disputare per le tue squadre.'),
+        for (final match in matches.take(_visibleMatches))
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => openPage(
+                context,
+                MatchPage(
+                  api: widget.api,
+                  id: '${match['id']}',
+                  previewMatch: match,
+                ),
               ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _upcomingTeam(
-                    '${match['squadra_casa']}',
-                    '${match['logo_casa'] ?? ''}',
-                  ),
-                  const SizedBox(height: 10),
-                  _upcomingTeam(
-                    '${match['squadra_ospite']}',
-                    '${match['logo_ospite'] ?? ''}',
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          [
-                            '${match['torneo_nome'] ?? match['torneo'] ?? ''}',
-                            _matchSchedule(match),
-                          ].where((part) => part.isNotEmpty).join('\n'),
-                          style: TextStyle(
-                            color: colors.onSurfaceVariant,
-                            height: 1.4,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _upcomingTeam(
+                      '${match['squadra_casa']}',
+                      '${match['logo_casa'] ?? ''}',
+                    ),
+                    const SizedBox(height: 10),
+                    _upcomingTeam(
+                      '${match['squadra_ospite']}',
+                      '${match['logo_ospite'] ?? ''}',
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            [
+                              '${match['torneo_nome'] ?? match['torneo'] ?? ''}',
+                              _matchSchedule(match),
+                            ].where((part) => part.isNotEmpty).join('\n'),
+                            style: TextStyle(
+                              color: colors.onSurfaceVariant,
+                              height: 1.4,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.chevron_right),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 8),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-    ],
-  );
+        if (_visibleMatches < matches.length)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: OutlinedButton(
+              onPressed: () => setState(() => _visibleMatches += 3),
+              child: const Text('Mostra altre partite'),
+            ),
+          ),
+      ],
+    );
+  }
 
   Widget _upcomingTeam(String name, String logo) => Row(
     children: [
