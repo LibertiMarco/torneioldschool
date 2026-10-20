@@ -11,12 +11,13 @@ $db = new FollowFixture('sqlite::memory:');
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $db->exec("CREATE TABLE utenti (id INTEGER PRIMARY KEY); INSERT INTO utenti VALUES (1), (2);
 CREATE TABLE tornei (id INTEGER PRIMARY KEY, filetorneo TEXT); INSERT INTO tornei VALUES (1, 'summer.php');
-CREATE TABLE squadre (nome TEXT, torneo TEXT); INSERT INTO squadre VALUES ('Alpha', 'summer'), ('Beta', 'summer'), ('Other', 'winter');
+CREATE TABLE squadre (nome TEXT, torneo TEXT, logo TEXT); INSERT INTO squadre VALUES ('Alpha', 'summer', '/alpha.png'), ('Beta', 'summer', '/beta.png'), ('Other', 'winter', '/other.png');
 CREATE TABLE seguiti (utente_id INTEGER, tipo TEXT, torneo_slug TEXT, squadra_nome TEXT);
 INSERT INTO seguiti VALUES (2, 'torneo', 'summer', NULL), (1, 'squadra', 'winter', 'Other');");
 $read = fn() => mobile_follow_handle($db, 1, ['torneo' => 'summer'], false);
 $save = fn($teams, $followed = true) => mobile_follow_handle($db, 1, ['torneo' => 'summer', 'followed' => $followed, 'teams' => $teams], true);
 follow_expect(!$read()['followed']);
+follow_expect((array)$read()['team_logos'] === ['Alpha' => '/alpha.png', 'Beta' => '/beta.png']);
 follow_expect($save(null)['all']);
 // Simulate old web follows which also inserted every individual team.
 $db->exec("INSERT INTO seguiti VALUES (1, 'squadra', 'summer', 'Beta')");

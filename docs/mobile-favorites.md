@@ -14,6 +14,11 @@ La pagina di gestione mostra solo i tornei con stato «in corso» o «programmat
 sia nei preferiti elencati sia nella ricerca/selezione. I salvataggi relativi a
 tornei terminati non vengono cancellati e restano accessibili dalla Home.
 
+Il selettore delle squadre riceve ora anche `team_logos` dal servizio follow,
+associati ai nomi e filtrati per torneo. Gli scudetti vengono quindi caricati
+anche nella gestione preferiti, senza dover aprire prima il dettaglio torneo;
+le immagini assenti o non raggiungibili mantengono il simbolo neutro.
+
 I preferiti riutilizzano le scelte «Segui» già salvate in `seguiti`, incluse quelle
 effettuate sul sito. Sono quindi associati all'account e condivisi fra Android,
 iOS e preview. Non sono segnalibri separati dalle preferenze sui risultati:

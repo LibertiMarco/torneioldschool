@@ -12,9 +12,15 @@ function mobile_follow_handle(PDO $db, int $userId, array $input, bool $save): a
     $stmt = $db->prepare('SELECT id FROM tornei WHERE filetorneo IN (?, ?, ?, ?)');
     $stmt->execute([$slug, $slug . '.php', $slug . '.html', $slug . '.htm']);
     if (!$stmt->fetchColumn()) { throw new MobileAuthError('not_found', 'Torneo non trovato.', 404); }
-    $stmt = $db->prepare('SELECT nome FROM squadre WHERE torneo = ? ORDER BY nome');
+    $stmt = $db->prepare('SELECT nome, logo FROM squadre WHERE torneo = ? ORDER BY nome, logo');
     $stmt->execute([$slug]);
-    $available = array_values(array_unique($stmt->fetchAll(PDO::FETCH_COLUMN)));
+    $teamRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $available = array_values(array_unique(array_column($teamRows, 'nome')));
+    $logos = [];
+    foreach ($teamRows as $team) {
+        $name = $team['nome'];
+        if (empty($logos[$name])) $logos[$name] = (string)($team['logo'] ?? '');
+    }
     if ($save) {
         if (!is_bool($input['followed'] ?? null)) {
             throw new MobileAuthError('invalid_request', 'Preferenza non valida.', 422);
@@ -53,7 +59,8 @@ function mobile_follow_handle(PDO $db, int $userId, array $input, bool $save): a
     $all = in_array('torneo', array_column($rows, 'tipo'), true);
     $selected = array_values(array_intersect($available, array_column($rows, 'squadra_nome')));
     return ['followed' => $all || count($selected) > 0, 'all' => $all,
-        'teams' => $all ? $available : $selected, 'available_teams' => $available];
+        'teams' => $all ? $available : $selected, 'available_teams' => $available,
+        'team_logos' => (object)$logos];
 }
 
 /** Account-owned shortcuts; reuse existing follows without creating subscriptions. */

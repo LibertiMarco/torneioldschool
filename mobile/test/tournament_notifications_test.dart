@@ -30,6 +30,7 @@ class FollowAuth extends PushAuth {
       'all': all,
       'teams': teams,
       'available_teams': ['Alpha', 'Beta'],
+      'team_logos': {'Alpha': '/img/alpha.png', 'Beta': '/img/beta.png'},
     };
   }
 }
@@ -65,6 +66,12 @@ void main() {
       expect(find.byType(Dialog), findsOneWidget);
       expect(find.byType(BottomSheet), findsNothing);
       expect(find.byType(SiteImage), findsNWidgets(2));
+      expect(
+        tester
+            .widgetList<SiteImage>(find.byType(SiteImage))
+            .map((image) => image.path),
+        ['/img/alpha.png', '/img/beta.png'],
+      );
       await tester.enterText(find.byType(TextField), 'Alpha');
       await tester.pumpAndSettle();
       expect(find.text('Beta'), findsNothing);

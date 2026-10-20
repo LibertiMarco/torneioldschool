@@ -29,6 +29,7 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
   bool? _followed;
   bool _all = false;
   List<String> _teams = [], _available = [];
+  Map<String, String> _teamLogos = {};
   bool _busy = false;
   String? _error;
   int _generation = 0;
@@ -54,6 +55,7 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
     _all = false;
     _teams = [];
     _available = [];
+    _teamLogos = {};
     _busy = false;
     _error = null;
     if (mounted) setState(() {});
@@ -80,6 +82,10 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
         _all = result['all'] == true;
         _teams = List<String>.from(result['teams'] ?? []);
         _available = List<String>.from(result['available_teams'] ?? []);
+        _teamLogos = {
+          for (final entry in (result['team_logos'] as Map? ?? {}).entries)
+            '${entry.key}': '${entry.value ?? ''}',
+        };
       });
       if (followed != null) widget.onChanged?.call();
     } catch (_) {
@@ -305,7 +311,10 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                                       ),
                                       child: SiteImage(
                                         api: _auth!.api,
-                                        path: widget.teamLogos[team] ?? '',
+                                        path:
+                                            _teamLogos[team]?.isNotEmpty == true
+                                            ? _teamLogos[team]!
+                                            : widget.teamLogos[team] ?? '',
                                         width: 32,
                                         height: 32,
                                         fallback: Icons.shield_outlined,
