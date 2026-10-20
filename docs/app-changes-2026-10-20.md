@@ -72,3 +72,9 @@ Le immagini mantengono le proporzioni; un simbolo neutro gestisce immagini
 assenti o non raggiungibili. Verificati 14 test Home/calendario, analisi Flutter
 e test PHP del servizio personale. La preview web viene ricompilata insieme
 all'aggiornamento del backend condiviso da Android e iOS.
+
+Anche «Le tue prossime partite» nel Profilo mostra ora gli scudetti: due righe
+con logo e nome della squadra, al posto dell'icona calendario. Torneo, data e
+apertura del dettaglio restano disponibili sull'intera scheda. Usa i campi logo
+già aggiunti al backend personale. Verificati 12 test Profilo/calendario e analisi
+Flutter senza problemi; preview web ricompilata per la pubblicazione.
