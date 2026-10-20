@@ -13,6 +13,7 @@ class NotificationPreferences extends StatefulWidget {
 class _NotificationPreferencesState extends State<NotificationPreferences> {
   Map<String, dynamic>? _preferences;
   bool _busy = false;
+  bool _remindersAvailable = false;
   String? _error;
   @override
   void initState() {
@@ -31,6 +32,7 @@ class _NotificationPreferencesState extends State<NotificationPreferences> {
         body: patch,
       );
       if (mounted) {
+        _remindersAvailable = response['reminders_available'] == true;
         setState(
           () => _preferences = Map<String, dynamic>.from(
             response['preferences'] as Map,
@@ -56,6 +58,21 @@ class _NotificationPreferencesState extends State<NotificationPreferences> {
         'Scegli gli avvisi per il tuo account. I risultati riguardano le tue partite e le squadre o i tornei che segui.',
       ),
       if (_preferences != null) ...[
+        if (_remindersAvailable)
+          DropdownButtonFormField<String>(
+            key: ValueKey('${_preferences!["reminder"]}-$_busy'),
+            initialValue: _preferences!['reminder'] as String? ?? 'off',
+            decoration: const InputDecoration(labelText: 'Promemoria partita'),
+            items: const [
+              DropdownMenuItem(value: 'off', child: Text('Disattivato')),
+              DropdownMenuItem(value: '1h', child: Text('1 ora prima')),
+              DropdownMenuItem(value: '2h', child: Text('2 ore prima')),
+              DropdownMenuItem(value: '1d', child: Text('Il giorno prima')),
+            ],
+            onChanged: _busy ? null : (value) {
+              if (value != null) _request({'reminder': value});
+            },
+          ),
         for (final entry in {
           'results': 'Risultati delle partite',
           'comments': 'Risposte ai tuoi commenti',

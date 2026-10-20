@@ -18,9 +18,9 @@ Il filtro centrale agisce su push web e FCM per i tag risultati/commenti esisten
 Un errore di lettura sopprime gli avvisi della categoria per il solo account
 interessato. Altri tipi di notifiche mantengono il comportamento precedente.
 
-Promemoria e cambi di calendario non sono inclusi in questo intervento e non
-vengono mostrati come disponibili: serve un worker periodico con deduplicazione
-e verifica dell'attivazione sul server.
+Promemoria: vedere `docs/match-reminders.md` per worker, deduplicazione e
+verifica dell'attivazione. La scelta resta nascosta finche il worker non risulta
+attivo. Gli avvisi sui cambi di calendario restano un intervento separato.
 
 Il codice Flutter e comune ad Android/iOS e alla preview. La pubblicazione della
 preview non distribuisce nuovi binari negli store.

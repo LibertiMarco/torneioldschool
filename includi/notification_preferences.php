@@ -9,7 +9,7 @@ final class TosNotificationPreferences
         $this->directory = $directory ?? tos_runtime_path('notification-preferences');
     }
     public static function defaults(): array {
-        return ['results' => true, 'comments' => true];
+        return ['results' => true, 'comments' => true, 'reminder' => 'off'];
     }
     private function path(int $userId): string {
         if ($userId < 1) throw new InvalidArgumentException('Invalid account');
@@ -27,7 +27,7 @@ final class TosNotificationPreferences
     public static function validate(array $patch): array {
         foreach ($patch as $key => $value) {
             if (!array_key_exists($key, self::defaults()) ||
-                !is_bool($value)) {
+                ($key === 'reminder' ? !in_array($value, ['off', '1h', '2h', '1d'], true) : !is_bool($value))) {
                 throw new InvalidArgumentException('Preferenza notifiche non valida.');
             }
         }
@@ -60,13 +60,26 @@ final class TosNotificationPreferences
 
 function notification_preferences_handle(int $userId, ?array $patch, ?TosNotificationPreferences $store = null): array {
     if ($userId < 1) throw new MobileAuthError('invalid_session', 'Accesso richiesto.', 401);
+    if (isset($patch['reminder']) && $patch['reminder'] !== 'off' && !notification_reminders_available()) {
+        throw new MobileAuthError('unavailable', 'Servizio promemoria non disponibile.', 503);
+    }
     $store ??= new TosNotificationPreferences();
     try {
         $preferences = $patch === null ? $store->read($userId) : $store->update($userId, $patch);
     } catch (InvalidArgumentException $error) {
         throw new MobileAuthError('invalid_request', 'Preferenza notifiche non valida.', 422);
     }
-    return ['preferences' => $preferences];
+    return ['preferences' => $preferences, 'reminders_available' => notification_reminders_available()];
+}
+
+/** Only a recent, successful scheduled run makes the control available. */
+function notification_reminders_available(): bool {
+    $path = tos_runtime_path('match-reminders/heartbeat.json');
+    if (!is_file($path)) return false;
+    $state = json_decode((string)@file_get_contents($path), true);
+    $now = time();
+    return is_array($state) && ($state['successful_runs'] ?? 0) >= 2
+        && ($state['last_success'] ?? 0) <= $now && ($state['last_success'] ?? 0) >= $now - 180;
 }
 
 function notification_category(array $payload): ?string {
@@ -74,11 +87,13 @@ function notification_category(array $payload): ?string {
     if (in_array($category, ['results', 'comments'], true)) return $category;
     $tag = (string)($payload['tag'] ?? '');
     if (str_starts_with($tag, 'comment-reply-')) return 'comments';
+    if (str_starts_with($tag, 'match-reminder-')) return 'reminder';
     if ($tag === 'match-match_finale') return 'results';
     return null;
 }
 
 function notification_preference_allows(array $preferences, string $category): bool {
+    if ($category === 'reminder') return in_array($preferences['reminder'] ?? 'off', ['1h', '2h', '1d'], true);
     return ($preferences[$category] ?? true) === true;
 }
 
