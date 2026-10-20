@@ -640,51 +640,80 @@ class RosterPlayerCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        for (final entry in {
-                          'Presenze': 'presenze',
-                          'Gol': 'reti',
-                          'Assist': 'assist',
-                        }.entries)
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 9),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    entry.key == 'Presenze'
-                                        ? Icons.sports_rounded
-                                        : entry.key == 'Gol'
-                                        ? Icons.sports_soccer_rounded
-                                        : Icons.assistant_direction_outlined,
-                                    size: 15,
-                                    color: dark
-                                        ? const Color(0xfff09b9b)
-                                        : siteRed,
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    '${player[entry.value] ?? 0}',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                      color: colors.onSurface,
+                    LayoutBuilder(
+                      builder: (context, constraints) => Wrap(
+                        children: [
+                          for (final entry in {
+                            'Presenze': 'presenze',
+                            'Gol': 'reti',
+                            'Gialli': 'gialli',
+                            'Rossi': 'rossi',
+                          }.entries)
+                            SizedBox(
+                              width:
+                                  constraints.maxWidth /
+                                  (MediaQuery.textScalerOf(context).scale(10) >
+                                          14
+                                      ? 1
+                                      : 2),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 9,
+                                ),
+                                child: Column(
+                                  children: [
+                                    if (entry.key == 'Gialli' ||
+                                        entry.key == 'Rossi')
+                                      Tooltip(
+                                        message: entry.key == 'Gialli'
+                                            ? 'Cartellini gialli'
+                                            : 'Cartellini rossi',
+                                        child: Container(
+                                          width: 12,
+                                          height: 18,
+                                          decoration: BoxDecoration(
+                                            color: entry.key == 'Gialli'
+                                                ? const Color(0xffffd43b)
+                                                : const Color(0xffe03131),
+                                            borderRadius: BorderRadius.circular(
+                                              2,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      Icon(
+                                        entry.key == 'Presenze'
+                                            ? Icons.sports_rounded
+                                            : Icons.sports_soccer_rounded,
+                                        size: 15,
+                                        color: dark
+                                            ? const Color(0xfff09b9b)
+                                            : siteRed,
+                                      ),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      '${player[entry.value] ?? 0}',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        color: colors.onSurface,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    entry.key,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: colors.onSurfaceVariant,
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      entry.key,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: colors.onSurfaceVariant,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
