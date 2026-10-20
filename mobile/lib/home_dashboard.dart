@@ -6,6 +6,7 @@ import 'api.dart';
 import 'ads.dart';
 import 'auth.dart';
 import 'home_next_match.dart';
+import 'home_favorites.dart';
 import 'comments_section.dart';
 import 'native_ad_card.dart';
 import 'access_gate.dart';
@@ -256,6 +257,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
           const SizedBox(height: 12),
           if (widget.auth != null)
             HomeNextMatch(
+              auth: widget.auth!,
+              section: widget.section,
+              revision: reload,
+            ),
+          if (widget.auth != null)
+            HomeFavorites(
               auth: widget.auth!,
               section: widget.section,
               revision: reload,

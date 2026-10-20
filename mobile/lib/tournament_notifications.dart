@@ -10,9 +10,13 @@ class TournamentNotifications extends StatefulWidget {
     super.key,
     required this.slug,
     this.teamLogos = const {},
+    this.favoritesMode = false,
+    this.onChanged,
   });
   final String slug;
   final Map<String, String> teamLogos;
+  final bool favoritesMode;
+  final VoidCallback? onChanged;
 
   @override
   State<TournamentNotifications> createState() =>
@@ -77,6 +81,7 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
         _teams = List<String>.from(result['teams'] ?? []);
         _available = List<String>.from(result['available_teams'] ?? []);
       });
+      if (followed != null) widget.onChanged?.call();
     } catch (_) {
       if (!mounted || generation != _generation) return;
       setState(() {
@@ -143,7 +148,9 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(
-                            Icons.notifications_active_outlined,
+                            widget.favoritesMode
+                                ? Icons.star_rounded
+                                : Icons.notifications_active_outlined,
                             color: colors.primary,
                           ),
                         ),
@@ -152,8 +159,10 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Segui le tue squadre',
+                              Text(
+                                widget.favoritesMode
+                                    ? 'Scegli i preferiti'
+                                    : 'Segui le tue squadre',
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -163,7 +172,9 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                'Scegli di chi ricevere i risultati',
+                                widget.favoritesMode
+                                    ? 'Torneo completo o singole squadre'
+                                    : 'Scegli di chi ricevere i risultati',
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -344,8 +355,8 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                             all: false,
                             teams: <String>[],
                           )),
-                          child: const Text(
-                            'Disattiva',
+                          child: Text(
+                            widget.favoritesMode ? 'Rimuovi' : 'Disattiva',
                             style: TextStyle(fontSize: 12),
                           ),
                         ),
@@ -397,11 +408,14 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
     final colors = Theme.of(context).colorScheme;
     final followed = _followed == true;
     final phoneDisabled =
-        followed && push?.supported == true && push?.enabled != true;
+        !widget.favoritesMode &&
+        followed &&
+        push?.supported == true &&
+        push?.enabled != true;
     final accent = phoneDisabled
         ? colors.tertiary
         : followed
-        ? const Color(0xff16866c)
+        ? (widget.favoritesMode ? colors.primary : const Color(0xff16866c))
         : colors.onSurfaceVariant;
     final selection = _all
         ? 'Tutte le squadre'
@@ -415,7 +429,9 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
         : _followed == null
         ? 'Preferenza non disponibile'
         : !followed
-        ? 'Disattivate'
+        ? (widget.favoritesMode ? 'Nessun preferito' : 'Disattivate')
+        : widget.favoritesMode
+        ? (_all ? 'Torneo nei preferiti' : selection)
         : phoneDisabled
         ? 'Da attivare sul telefono'
         : 'Attive · $selection';
@@ -447,8 +463,12 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                 ),
                 child: Icon(
                   followed
-                      ? Icons.notifications_active_outlined
-                      : Icons.notifications_none_rounded,
+                      ? (widget.favoritesMode
+                            ? Icons.star_rounded
+                            : Icons.notifications_active_outlined)
+                      : (widget.favoritesMode
+                            ? Icons.star_border_rounded
+                            : Icons.notifications_none_rounded),
                   size: 20,
                   color: accent,
                 ),
@@ -459,8 +479,10 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Notifiche risultati',
+                    Text(
+                      widget.favoritesMode
+                          ? 'I tuoi preferiti'
+                          : 'Notifiche risultati',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -527,6 +549,7 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                   ),
                 ),
                 if (followed &&
+                    !widget.favoritesMode &&
                     push?.supported == true &&
                     push?.enabled != true)
                   IconButton(

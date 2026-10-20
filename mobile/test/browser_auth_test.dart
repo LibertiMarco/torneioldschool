@@ -59,6 +59,16 @@ void main() {
         '_csrf': 'session-token',
       });
       await auth.authorized(
+        'api/mobile/v1/follow.php',
+        query: {'list': '1', 'section': 'calcio'},
+      );
+      expect(requests.last.method, 'GET');
+      expect(requests.last.url.queryParameters, {
+        'list': '1',
+        'section': 'calcio',
+        'action': 'follow',
+      });
+      await auth.authorized(
         'api/mobile/v1/account.php',
         body: {'nome': 'Marco', 'cognome': 'Demo', 'consenso_newsletter': 0},
         uploads: [

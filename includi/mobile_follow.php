@@ -1,6 +1,10 @@
 <?php
 function mobile_follow_handle(PDO $db, int $userId, array $input, bool $save): array
 {
+    if ($userId < 1) throw new MobileAuthError('invalid_session', 'Accesso richiesto.', 401);
+    if (!$save && ($input['list'] ?? null) === '1') {
+        return mobile_follow_list($db, $userId, $input['section'] ?? 'calcio');
+    }
     $slug = $input['torneo'] ?? '';
     if (!is_string($slug) || $slug === '' || strlen($slug) > 255) {
         throw new MobileAuthError('invalid_request', 'Torneo non valido.', 422);
@@ -50,4 +54,25 @@ function mobile_follow_handle(PDO $db, int $userId, array $input, bool $save): a
     $selected = array_values(array_intersect($available, array_column($rows, 'squadra_nome')));
     return ['followed' => $all || count($selected) > 0, 'all' => $all,
         'teams' => $all ? $available : $selected, 'available_teams' => $available];
+}
+
+/** Account-owned shortcuts; reuse existing follows without creating subscriptions. */
+function mobile_follow_list(PDO $db, int $userId, mixed $section): array
+{
+    if (!in_array($section, ['calcio', 'esport'], true)) {
+        throw new MobileAuthError('invalid_request', 'Sezione non valida.', 422);
+    }
+    $stmt = $db->prepare("SELECT DISTINCT f.tipo, f.torneo_slug, f.squadra_nome,
+        t.id AS torneo_id, t.nome AS torneo_nome, t.img AS torneo_logo, t.filetorneo, t.sezione,
+        s.id AS squadra_id, s.logo AS squadra_logo
+        FROM seguiti f
+        JOIN tornei t ON t.filetorneo IN (f.torneo_slug, CONCAT(f.torneo_slug, '.php'), CONCAT(f.torneo_slug, '.html'), CONCAT(f.torneo_slug, '.htm'))
+        LEFT JOIN squadre s ON s.id = (SELECT MIN(s2.id) FROM squadre s2 WHERE s2.nome = f.squadra_nome AND s2.torneo = f.torneo_slug)
+        WHERE f.utente_id = ? AND COALESCE(t.sezione, 'calcio') = ?
+          AND (f.tipo = 'torneo' OR (f.tipo = 'squadra' AND s.id IS NOT NULL
+            AND NOT EXISTS (SELECT 1 FROM seguiti all_f WHERE all_f.utente_id = f.utente_id
+              AND all_f.torneo_slug = f.torneo_slug AND all_f.tipo = 'torneo')))
+        ORDER BY t.nome, f.tipo, f.squadra_nome");
+    $stmt->execute([$userId, $section]);
+    return ['items' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
 }

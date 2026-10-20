@@ -5,6 +5,7 @@ import 'about_demo.dart';
 // Preview data never uses the live service or credentials.
 class DemoApi extends TosApi {
   Map<String, dynamic>? playerLinkRequest;
+  final Map<String, Map<String, dynamic>> followedTournaments = {};
   DemoApi() : super(baseUrl: Uri.parse('https://preview.invalid'));
   @override
   bool get preview => true;
@@ -180,6 +181,49 @@ class DemoApi extends TosApi {
           'message': body == null
               ? ''
               : 'Impostazioni aggiornate con successo.',
+        };
+      case 'api/mobile/v1/follow.php':
+        const available = ['Old School FC', 'Sporting Club'];
+        if (query?['list'] == '1') {
+          return {
+            'items': [
+              for (final entry in followedTournaments.entries)
+                if (entry.value['followed'] == true)
+                  for (final team
+                      in (entry.value['all'] == true
+                          ? <String?>[null]
+                          : List<String>.from(entry.value['teams'])))
+                    {
+                      'tipo': team == null ? 'torneo' : 'squadra',
+                      'torneo_slug': entry.key,
+                      'torneo_id': 1,
+                      'torneo_nome': 'Old School Cup',
+                      'filetorneo': '${entry.key}.php',
+                      'torneo_logo': '',
+                      'squadra_nome': team,
+                      'squadra_logo': '',
+                      'sezione': 'calcio',
+                    },
+            ],
+          };
+        }
+        final slug = '${body?['torneo'] ?? query?['torneo'] ?? 'demo'}';
+        if (body != null) {
+          final all = body['followed'] == true && body['teams'] == null;
+          followedTournaments[slug] = {
+            'followed': body['followed'] == true,
+            'all': all,
+            'teams': all ? available : body['teams'] ?? <String>[],
+          };
+        }
+        return {
+          ...?followedTournaments[slug],
+          if (!followedTournaments.containsKey(slug)) ...{
+            'followed': false,
+            'all': false,
+            'teams': <String>[],
+          },
+          'available_teams': available,
         };
       case 'api/player_awards.php':
         return {'awards': query?['section'] == 'esport' ? [] : awards};
