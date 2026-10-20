@@ -1,18 +1,28 @@
 /* Person instances and soft matting. Photos stay on the device. */
 'use strict';
 const GraphicsCutout = (() => {
-  const workerUrl = new URL('grafiche_scontorno_worker.js?v=20261020-speed-5', document.currentScript.src);
-  let worker = null, pending = null, serial = 0, idleTimer = null;
+  const workerUrl = new URL('grafiche_scontorno_worker.js?v=20261020-diagnostics-7', document.currentScript.src);
+  let worker = null, pending = null, serial = 0;
   let cached = null;
+  const diagnosticKey='graphics-cutout-interrupted';
+  function markPhase(phase) {
+    try {localStorage.setItem(diagnosticKey,JSON.stringify({phase,time:Date.now()}));} catch (_) {}
+  }
+  function clearPhase() {try {localStorage.removeItem(diagnosticKey);} catch (_) {}}
+  function interruptedPhase() {
+    try {
+      const record=JSON.parse(localStorage.getItem(diagnosticKey));
+      clearPhase();
+      return record && Date.now()-record.time<86400000 ? record.phase : null;
+    } catch (_) {return null;}
+  }
 
   function dispose() {
-    clearTimeout(idleTimer);
     if (worker) worker.terminate();
     worker = null;
   }
-  function infer(data, width, height, subjects, onProgress) {
+  function runStage(payload) {
     if (pending) return Promise.reject(new Error('Attendi la rimozione sfondo in corso.'));
-    clearTimeout(idleTimer);
     return new Promise((resolve, reject) => {
       const id = ++serial;
       const finish = (error, result) => {
@@ -23,16 +33,31 @@ const GraphicsCutout = (() => {
       };
       pending = {id, timer:setTimeout(() => finish(new Error('La rimozione sta impiegando troppo. Controlla la connessione e riprova.')), 300000)};
       try {
-        if (!worker) worker = new Worker(workerUrl);
+        worker = new Worker(workerUrl);
         worker.onmessage = event => {
           if (event.data.id !== id) return;
-          if (event.data.progress) { if (onProgress) onProgress(event.data.progress);return; }
           finish(event.data.error ? new Error(event.data.error) : null, event.data);
         };
         worker.onerror = event => { event.preventDefault();finish(new Error('Impossibile avviare la rimozione sfondo. Controlla la connessione e riprova.')); };
-        worker.postMessage({id, data, width, height, subjects}, [data.buffer]);
+        const transfers=[payload.data.buffer];
+        if(payload.embedding)transfers.push(payload.embedding.data.buffer);
+        if(payload.masks)transfers.push(payload.masks.foreground.buffer,payload.masks.background.buffer);
+        worker.postMessage({id,...payload},transfers);
       } catch (error) { finish(error); }
     });
+  }
+  async function infer(data,width,height,subjects,onProgress) {
+    const base={width,height,subjects};
+    const progress=message=>{markPhase(message);if(onProgress)onProgress(message);};
+    progress('Riconoscimento delle persone in corso...');
+    const detection=await runStage({...base,data,stage:'detect'});
+    const people=detection.people;
+    progress('Preparazione dei soggetti in corso...');
+    const encoded=await runStage({...base,data:detection.data,stage:'encode'});
+    progress('Separazione dei soggetti e delle persone sullo sfondo...');
+    const segmented=await runStage({...base,data:encoded.data,people,embedding:encoded.embedding,stage:'segment'});
+    progress('Rifinitura di capelli, bordi e spazi tra i corpi...');
+    return runStage({...base,data:segmented.data,people,masks:segmented.masks,stage:'matte'});
   }
   function geometry(width, height) {
     if (!(Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0)) throw new Error('Dimensioni della foto non valide.');
@@ -78,6 +103,10 @@ const GraphicsCutout = (() => {
       return maskFromMatte(original, cached.result, g, subjects);
     }
     cached = null;
+    markPhase('Preparazione della foto');
+    if(onProgress)onProgress('Preparazione della foto...');
+    // Let Safari paint the feedback before canvas readback and runtime startup.
+    await new Promise(resolve=>setTimeout(resolve,50));
     const canvas = document.createElement('canvas');
     canvas.width = g.width;canvas.height = g.height;
     let data;
@@ -91,10 +120,11 @@ const GraphicsCutout = (() => {
       for (let p = 0; p < size; p++) for (let c = 0; c < 3; c++) data[c * size + p] = rgba[p * 4 + c] / 255;
     } finally { canvas.width = canvas.height = 1; }
     const result = await infer(data, g.width, g.height, subjects, onProgress);
+    markPhase('Creazione della maschera');
     const mask = maskFromMatte(original, result, g, subjects);
     if (typeof WeakRef !== 'undefined') cached = {original:new WeakRef(original), subjects, result};
     return mask;
   }
-  return {createMask, geometry, cleanMatte, maskFromMatte};
+  return {createMask, geometry, cleanMatte, maskFromMatte, markPhase, clearPhase, interruptedPhase};
 })();
 

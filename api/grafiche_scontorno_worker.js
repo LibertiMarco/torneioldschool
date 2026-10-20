@@ -38,22 +38,23 @@ async function detect(rgb,width,height,subjects) {
     return GraphicsCutoutCore.selectPeople(logits.data,boxes.data,logits.dims[1],logits.dims[2],subjects);
   } finally {input.dispose();dispose(output);await releaseModel('detector');}
 }
-async function segment(rgb,width,height,people) {
-  const size=width*height,foreground=new Uint8Array(size),background=new Uint8Array(size);
-  const encoder=await model('encoder');
+async function encode(rgb,width,height) {
+  const encoder=await model('encoder'),size=width*height;
   const normalized=new Float32Array(rgb.length),mean=[.485,.456,.406],std=[.229,.224,.225];
   for(let c=0;c<3;c++)for(let p=0;p<size;p++)normalized[c*size+p]=(rgb[c*size+p]-mean[c])/std[c];
   const input=new ort.Tensor('float32',normalized,[1,3,height,width]);
-  let embeddings;
+  let output;
   try {
-    let encoded;
-    try {
-      encoded=await encoder.run({pixel_values:input});
-      // Keep only the small embedding; release the encoder before loading the decoder.
-      const tensor=encoded.image_embeddings;
-      embeddings={image_embeddings:new ort.Tensor('float32',new Float32Array(tensor.data),tensor.dims)};
-    } finally {dispose(encoded);await releaseModel('encoder');}
-    const decoder=await model('decoder');
+    output=await encoder.run({pixel_values:input});
+    const tensor=output.image_embeddings;
+    return {data:new Float32Array(tensor.data),dims:tensor.dims};
+  } finally {input.dispose();dispose(output);await releaseModel('encoder');}
+}
+async function segment(width,height,people,embedding) {
+  const size=width*height,foreground=new Uint8Array(size),background=new Uint8Array(size);
+  const decoder=await model('decoder');
+  const embeddings={image_embeddings:new ort.Tensor('float32',embedding.data,embedding.dims)};
+  try {
     for(const person of [...people.foreground,...people.background]) {
       // Native corner labels 2/3 need the SAM box decoder; point-only exports
       // do not support them and can corrupt the resulting object mask.
@@ -86,7 +87,7 @@ async function segment(rgb,width,height,people) {
       }
     }
     return {foreground,background};
-  } finally {input.dispose();dispose(embeddings);await releaseModel('encoder');await releaseModel('decoder');}
+  } finally {dispose(embeddings);await releaseModel('decoder');}
 }
 async function matte(rgb,width,height) {
   const session=await model('matte'),normalized=new Float32Array(rgb.length);
@@ -101,19 +102,22 @@ async function matte(rgb,width,height) {
   } finally {input.dispose();dispose(output);await releaseModel('matte');}
 }
 self.onmessage=async event=>{
-  const {id,data,width,height,subjects='main'}=event.data;
-  const progress=message=>self.postMessage({id,progress:message});
+  const {id,data,width,height,subjects='main',stage,people,embedding,masks}=event.data;
   try {
-    const side=1024;
-    if(width!==side||height!==side||!(data instanceof Float32Array)||data.length!==3*width*height||!['main','all'].includes(subjects))throw new Error('Dati della foto non validi.');
-    progress('Riconoscimento delle persone in corso…');
-    const people=await detect(data,width,height,subjects);
-    progress('Separazione dei soggetti e delle persone sullo sfondo…');
-    const masks=await segment(data,width,height,people);
-    progress('Rifinitura di capelli, bordi e spazi tra i corpi…');
-    const detail=await matte(data,width,height);
-    const alpha=GraphicsCutoutCore.composeMatte(detail,masks.foreground,masks.background,width,height,5,people.foreground);
-    self.postMessage({id,alpha,width,height},[alpha.buffer]);
+    if(width!==1024||height!==1024||!(data instanceof Float32Array)||data.length!==3*width*height||!['main','all'].includes(subjects))throw new Error('Dati della foto non validi.');
+    let result;
+    if(stage==='detect')result={people:await detect(data,width,height,subjects)};
+    else if(stage==='encode')result={embedding:await encode(data,width,height)};
+    else if(stage==='segment')result={masks:await segment(width,height,people,embedding)};
+    else if(stage==='matte') {
+      const detail=await matte(data,width,height);
+      const alpha=GraphicsCutoutCore.composeMatte(detail,masks.foreground,masks.background,width,height,5,people.foreground);
+      self.postMessage({id,alpha,width,height},[alpha.buffer]);return;
+    } else throw new Error('Fase di elaborazione non valida.');
+    const transfers=[data.buffer];
+    if(result.embedding)transfers.push(result.embedding.data.buffer);
+    if(result.masks)transfers.push(result.masks.foreground.buffer,result.masks.background.buffer);
+    self.postMessage({id,data,width,height,...result},transfers);
   } catch(error) {
     console.error('Graphics cutout:',error);
     self.postMessage({id,error:error instanceof Error&&/persona|valid/.test(error.message)?error.message:'Rimozione sfondo non riuscita. Controlla la connessione e riprova con una foto JPG, PNG o WebP.'});

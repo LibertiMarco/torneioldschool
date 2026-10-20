@@ -22,7 +22,17 @@ async function scenario(subjects,fail=false) {
       }};
     }}},self:{location:{href:'https://example.test/api/worker.js'},postMessage(message){messages.push(message);}}};
   vm.createContext(sandbox);vm.runInContext(source,sandbox);
-  await sandbox.self.onmessage({data:{id:1,data:new Float32Array(3*1024*1024),width:1024,height:1024,subjects}});
+  let state={id:1,data:new Float32Array(3*1024*1024),width:1024,height:1024,subjects};
+  for(const stage of ['detect','encode','segment','matte']) {
+    // A fresh global/runtime per stage, matching the browser worker lifecycle.
+    const context={...sandbox,self:{...sandbox.self}};
+    vm.createContext(context);vm.runInContext(source,context);
+    await context.self.onmessage({data:{...state,stage}});
+    const result=messages[messages.length-1];
+    if(result.error)break;
+    state={...state,...result};
+    assert.strictEqual(active,0,'Stage retained a model');
+  }
   assert.strictEqual(maximum,1,'Models overlapped in memory');
   assert.strictEqual(active,0,'Model leaked');
   assert.deepStrictEqual(released,loaded);

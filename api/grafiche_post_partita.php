@@ -231,6 +231,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
       </div>
       <p class="hint">Riduci lo zoom sotto il 100% per rimpicciolire la foto, anche se è già senza sfondo. Usa i controlli di posizione per sistemarla nella grafica.</p>
       </div>
+      <p id="cutoutRecovery" class="status" role="status" hidden></p>
       <div id="status" class="status" aria-live="polite"></div>
       <?php if ($canPublishInstagram): ?><p class="hint">Per attivare la pubblicazione, <a href="/instagram/login.php" target="_blank" rel="noopener">collega direttamente Instagram</a>, poi configura <code>INSTAGRAM_ACCESS_TOKEN</code> e <code>INSTAGRAM_USER_ID</code> sul server.</p><?php endif; ?>
     </section>
@@ -252,7 +253,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="grafiche_basi.js?v=20261007-mvp-shared-logo"></script>
 <script src="grafiche_foto_touch.js?v=20261007-aspect-ratio"></script>
-<script src="grafiche_scontorno.js?v=20261020-speed-5"></script>
+<script src="grafiche_scontorno.js?v=20261020-diagnostics-7"></script>
 <script src="grafiche_scontorno_editor.js?v=20261019"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -278,6 +279,8 @@ const matchPlayers=<?= json_encode($giocatoriGrafiche, JSON_UNESCAPED_UNICODE | 
 const imageState={ftHomeLogo:null,ftAwayLogo:null,ftCaptains:null,mvpPhoto:null,brand:null,ftCaptainsOriginal:null,mvpPhotoOriginal:null};
 const imageFields=['ftCaptains','mvpPhoto','ftHomeLogo','ftAwayLogo'];
 let matchLoadVersion=0;
+const interruptedCutout=GraphicsCutout.interruptedPhase();
+if(interruptedCutout){$('cutoutRecovery').hidden=false;$('cutoutRecovery').textContent='Lo scontorno precedente si \u00e8 interrotto durante: '+interruptedCutout;}
 const safeName=value=>String(value||'grafica').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
 const upper=(value,fallback='')=>String(value||fallback).trim().toUpperCase();
 
@@ -407,18 +410,23 @@ async function removePhotoBackground(id) {
   const version=matchLoadVersion,button=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg'),restore=$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto');
   const isCurrent=()=>version===matchLoadVersion&&imageState[id+'Original']===original;
   let mask=null,canvas=null;
+  const previousButtonText=button.textContent;
   backgroundRemovalBusy=true;
+  button.textContent='Preparazione della foto...';
+  GraphicsCutout.markPhase?.('Avvio dello scontorno');
   ['ftRemoveBg','mvpRemoveBg'].forEach(key=>$(key).disabled=true);
   $('status').textContent='Rimozione sfondo e rifinitura dei bordi in corso… Al primo utilizzo vengono scaricati i modelli (circa 88 MB).';
   try {
-    mask=await GraphicsCutout.createMask(original,{subjects:$(id==='ftCaptains'?'ftCutoutSubjects':'mvpCutoutSubjects').value,onProgress:message=>{if(isCurrent())$('status').textContent=message;}});
+    mask=await GraphicsCutout.createMask(original,{subjects:$(id==='ftCaptains'?'ftCutoutSubjects':'mvpCutoutSubjects').value,onProgress:message=>{if(isCurrent()){$('status').textContent=message;button.textContent=message;}} });
     if(!isCurrent())return;
     $('status').textContent='Controlla i bordi: usa Gomma per i residui e Recupera per eventuali dettagli mancanti.';
+    GraphicsCutout.markPhase?.('Apertura e uso editor');
     if(!await GraphicsCutoutEditor.refine(original,mask)){
       if(isCurrent())$('status').textContent='Scontorno annullato: foto precedente conservata.';
       return;
     }
     if(!isCurrent())return;
+    GraphicsCutout.markPhase?.('Creazione foto trasparente');
     const w=original.naturalWidth,h=original.naturalHeight;
     canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
     const ctx=canvas.getContext('2d');
@@ -436,6 +444,8 @@ async function removePhotoBackground(id) {
   } finally {
     if(mask)mask.width=mask.height=1;
     if(canvas)canvas.width=canvas.height=1;
+    GraphicsCutout.clearPhase?.();
+    if(button.textContent!=='Rifai scontorno')button.textContent=previousButtonText;
     backgroundRemovalBusy=false;
     ['ftRemoveBg','mvpRemoveBg'].forEach(key=>$(key).disabled=false);
   }
