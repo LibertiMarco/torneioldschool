@@ -14,13 +14,13 @@ stesso interprete e utente del cron video:
 
 - Script: `httpdocs/api/script/send_match_reminders.php`
 - Argomenti: `--scheduled`
-- Pianificazione cron: `* * * * *` (ogni minuto).
+- Pianificazione cron: `*/5 * * * *` (ogni cinque minuti).
 
 Prima eseguire con `--dry-run`: legge DB e preferenze senza inviare push, creare
 stato o modificare dati. Poi impostare `--scheduled` e verificare almeno due
 esecuzioni automatiche riuscite e distanziate di almeno 30 secondi.
 L'API espone `reminders_available` solo con due esecuzioni riuscite recenti.
-Dopo tre minuti senza heartbeat la scelta scompare; le preferenze restano salvate.
+Dopo undici minuti senza heartbeat la scelta scompare; le preferenze restano salvate.
 Questa verifica prova l'esecuzione del worker, non la consegna su un dispositivo:
 verificare successivamente un promemoria scelto da un account di prova consenziente.
 

@@ -58,7 +58,7 @@ try {
         $path = $directory.'/heartbeat.json';
         $previous = is_file($path) ? json_decode((string)file_get_contents($path), true, 16, JSON_THROW_ON_ERROR) : [];
         $last = (int)($previous['last_success'] ?? 0); $timestamp = time();
-        $runs = $timestamp - $last <= 180 ? (int)($previous['successful_runs'] ?? 0) : 0;
+        $runs = $timestamp - $last <= 660 ? (int)($previous['successful_runs'] ?? 0) : 0;
         reminder_write($path, ['last_success'=>$timestamp, 'successful_runs'=>min(2, $runs + ($timestamp-$last >= 30 ? 1 : 0))]);
     }
     echo json_encode(['status'=>'done', 'dry_run'=>$dry, 'due'=>$due, 'attempted'=>$attempted]).PHP_EOL;

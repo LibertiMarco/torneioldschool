@@ -79,7 +79,7 @@ function notification_reminders_available(): bool {
     $state = json_decode((string)@file_get_contents($path), true);
     $now = time();
     return is_array($state) && ($state['successful_runs'] ?? 0) >= 2
-        && ($state['last_success'] ?? 0) <= $now && ($state['last_success'] ?? 0) >= $now - 180;
+        && ($state['last_success'] ?? 0) <= $now && ($state['last_success'] ?? 0) >= $now - 660;
 }
 
 function notification_category(array $payload): ?string {
