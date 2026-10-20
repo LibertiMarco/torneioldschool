@@ -694,9 +694,9 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
 
   Widget _chart() {
     final field = appearances ? 'presenze' : 'reti';
-    final playedTeams = widget.teams
-        .where((team) => number(team['presenze']) > 0)
-        .toList();
+    final playedTeams =
+        widget.teams.where((team) => number(team['presenze']) > 0).toList()
+          ..sort((a, b) => number(b[field]).compareTo(number(a[field])));
     final max = playedTeams.fold<num>(
       0,
       (a, team) => number(team[field]) > a ? number(team[field]) : a,
