@@ -13,3 +13,30 @@ Il link Android preimpostato usa l’application ID del progetto: verificarne la
 Il controllo legge il numero realmente installato tramite le API native, all’avvio, alla ripresa e ogni minuto. Le anteprime web/demo sono escluse. Quando la build è inferiore a quella pubblicata l’intera navigazione viene coperta dalla schermata di aggiornamento, senza pulsante per saltarla.
 
 Al primo controllo, se il server non risponde, l’app resta sulla verifica con possibilità di riprovare. Dopo una verifica riuscita, un errore di rete mantiene l’ultimo esito della sessione: un blocco già rilevato resta attivo.
+
+## Verifica del 20 ottobre 2026
+
+- Policy pubblica letta da `api/mobile/v1/app_version.php`: build minima 8 per
+  Android e iOS. Non aumentata: le modifiche correnti non sono ancora distribuite.
+- iOS e attualmente distribuito tramite TestFlight, secondo conferma dell'utente.
+  L'URL configurato porta ancora al sito: non e un percorso di aggiornamento
+  verificato. Prima di richiedere una nuova build configurare e provare un link
+  TestFlight valido per i destinatari (o App Store quando l'app sara pubblicata).
+- Il link pubblico Android ha restituito HTTP 404 dal controllo esterno. Questo
+  non dimostra che l'app non sia disponibile ai tester autorizzati. Verificare il
+  link con l'account Google iscritto alla traccia prima di rendere obbligatorio
+  l'aggiornamento; non usare la risposta pubblica per cambiare la distribuzione.
+- Sei test widget superati: piattaforme Android/iOS, controllo alla ripresa,
+  controllo periodico, tasto indietro, blocco persistente dopo errore di rete,
+  primo avvio senza rete con recupero tramite Riprova, copertura di una rotta
+  interna gia aperta tramite il builder reale della navigazione.
+- Lettura nativa del build number presente per Android (versionCode) e iOS
+  (CFBundleVersion). Questo controllo del sorgente e i test simulati non
+  sostituiscono la prova con due build installabili sui dispositivi.
+
+Da verificare sui telefoni prima dell'attivazione: installare una build precedente
+che contenga UpdateGate; rendere disponibile la successiva ai tester; controllare
+il link di download con quegli account; alzare la policy solo dopo disponibilita;
+verificare avvio, ripresa, pagina interna aperta, ritorno dallo store e sblocco
+sulla nuova build. Non alzare temporaneamente la policy pubblica per una prova:
+bloccherebbe anche gli altri utenti con build precedenti.
