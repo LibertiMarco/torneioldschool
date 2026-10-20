@@ -200,6 +200,19 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('LA TUA PROSSIMA PARTITA'), findsOneWidget);
+      if (dark) {
+        final colors = siteDarkTheme().colorScheme;
+        final card = tester.widget<Card>(
+          find.widgetWithText(Card, 'LA TUA PROSSIMA PARTITA'),
+        );
+        expect(card.color, colors.surfaceContainer);
+        expect(
+          DefaultTextStyle.of(tester.element(find.text('Old School FC')))
+              .style
+              .color,
+          colors.onSurface,
+        );
+      }
       expect(tester.takeException(), isNull);
     });
   }
@@ -223,7 +236,9 @@ void main() {
         key: key,
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
-          theme: siteTheme(),
+          theme: const bool.fromEnvironment('CAPTURE_HOME_DARK')
+              ? siteDarkTheme()
+              : siteTheme(),
           home: Scaffold(
             body: HomeDashboard(
               api: api,
@@ -247,7 +262,10 @@ void main() {
         final image = await boundary.toImage(pixelRatio: 2);
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
         await Directory('build/home-review').create(recursive: true);
-        await File('build/home-review/next-match.png')
+        final name = const bool.fromEnvironment('CAPTURE_HOME_DARK')
+            ? 'next-match-dark'
+            : 'next-match';
+        await File('build/home-review/$name.png')
             .writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
       });

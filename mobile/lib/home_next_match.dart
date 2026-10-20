@@ -42,6 +42,10 @@ class _NextMatch extends StatefulWidget {
 
 class _NextMatchState extends State<_NextMatch> {
   late Future<dynamic> _data = _load();
+  bool get _dark => Theme.of(context).brightness == Brightness.dark;
+  Color get _foreground => _dark
+      ? Theme.of(context).colorScheme.onSurface
+      : Theme.of(context).colorScheme.onPrimaryContainer;
 
   Future<dynamic> _load() async => widget.auth.authorized(
     'api/mobile/v1/player_stats.php',
@@ -67,11 +71,11 @@ class _NextMatchState extends State<_NextMatch> {
       padding: const EdgeInsets.only(bottom: 24),
       child: Card(
         margin: EdgeInsets.zero,
-        color: colors.primaryContainer,
+        color: _dark ? colors.surfaceContainer : colors.primaryContainer,
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: DefaultTextStyle.merge(
-            style: TextStyle(color: colors.onPrimaryContainer),
+            style: TextStyle(color: _foreground),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: children,
@@ -87,7 +91,7 @@ class _NextMatchState extends State<_NextMatch> {
     final crest = Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: colors.surface,
+        color: _dark ? colors.surfaceContainerHigh : colors.surface,
         borderRadius: BorderRadius.circular(20),
       ),
       child: SiteImage(
@@ -217,7 +221,7 @@ class _NextMatchState extends State<_NextMatch> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  color: _foreground,
                 ),
               ),
             );
