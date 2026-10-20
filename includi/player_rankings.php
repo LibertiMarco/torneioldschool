@@ -48,7 +48,9 @@ if ($extraGoalsUsesExcludedFilter) {
     $extraGoalsField = 'COALESCE(extra_agg.gol_extra, 0)';
 }
 $goalField = "(COALESCE(agg.gol, 0) + {$extraGoalsField})";
-$presenzeField = "COALESCE(agg.presenze, 0)";
+$nightCondition = torneo_stats_is_night_expr('p.torneo');
+$nightCount = torneo_stats_night_count_expr('g.id', null, $excludedTournaments);
+$presenzeField = "(COALESCE(agg.presenze, 0) + $nightCount)";
 
 $conditionsBase = [];
 $searchConditions = [];
@@ -83,7 +85,7 @@ $aggregateSubquery = "
     SELECT 
         pg.giocatore_id,
         SUM(pg.goal) AS gol,
-        SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END) AS presenze,
+        SUM(CASE WHEN pg.presenza = 1 AND NOT $nightCondition THEN 1 ELSE 0 END) AS presenze,
         CASE 
             WHEN SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN 1 ELSE 0 END) > 0
                 THEN ROUND(SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN pg.voto ELSE 0 END) / SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN 1 ELSE 0 END), 2)

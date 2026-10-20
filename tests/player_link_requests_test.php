@@ -22,7 +22,12 @@ $db->exec("CREATE TABLE utenti(id INTEGER PRIMARY KEY, ruolo TEXT, email_verific
     INSERT INTO giocatori VALUES (10,NULL,'Mario','Rossi','Attaccante'), (11,NULL,'Luca','Bianchi','Portiere'),
         (12,10,'Gia','Associato','Difensore'), (13,NULL,'Altro','Giocatore','Centrocampista');");
 $db->exec("ALTER TABLE giocatori ADD COLUMN foto TEXT DEFAULT ''");
-$service = new PlayerLinkRequests($db);
+$notifications = [];
+$service = new PlayerLinkRequests($db, function ($ids, $title, $text, $link, $requestId) use ($db, &$notifications) {
+    link_expect(!$db->inTransaction(), 'Notify only after commit');
+    link_expect((int)$db->query('SELECT COUNT(*) FROM player_link_requests WHERE id=' . $requestId)->fetchColumn() === 1, 'Notified request exists');
+    $notifications[] = compact('ids', 'title', 'text', 'link', 'requestId');
+});
 link_reject(fn()=>$service->status(0), 'invalid_session');
 link_reject(fn()=>$service->submit(5,10), 'invalid_session');
 link_reject(fn()=>$service->submit(2,0), 'invalid_request');
@@ -34,6 +39,10 @@ $assigned = $service->search(2,'Gia');
 link_expect(count($assigned) === 1 && (int)$assigned[0]['already_linked'] === 1, 'Assigned players are searchable with conflict flag');
 link_expect(!isset($assigned[0]['utente_id']) && !isset($assigned[0]['email']), 'Search never exposes owner identity');
 $claim = $service->submit(7,12);
+link_expect(count($notifications) === 1, 'Invalid submissions never notify');
+link_expect($notifications[0]['ids'] === [1,6], 'Notify admins and sysadmins only');
+link_expect(str_contains($notifications[0]['text'], 'Altro Utente') && str_contains($notifications[0]['text'], 'Gia Associato'), 'Notification identifies requester and player');
+link_expect($notifications[0]['link'] === '/api/gestione_account_giocatore.php', 'Notification opens request management');
 link_expect($claim['request']['status'] === 'pending', 'Assigned player claim remains pending');
 link_expect((int)$db->query('SELECT utente_id FROM giocatori WHERE id=12')->fetchColumn() === 10, 'Submission never replaces owner');
 link_reject(fn()=>$service->review(1,(int)$claim['request']['id'],true), 'conflict');
@@ -43,6 +52,7 @@ link_expect($first['request']['status'] === 'pending' && !$first['linked'], 'Sub
 link_expect($db->query('SELECT utente_id FROM giocatori WHERE id=10')->fetchColumn() === null, 'Player remains free until approval');
 link_reject(fn()=>$service->submit(2,11), 'conflict');
 link_reject(fn()=>$service->submit(3,999), 'conflict');
+link_expect(count($notifications) === 2, 'Duplicate and missing player submissions never notify');
 $competing = $service->submit(3,10);
 link_expect(count($service->pending(1)) === 2, 'Admins see pending requests');
 link_reject(fn()=>$service->review(3,(int)$first['request']['id'],true), 'forbidden');
@@ -72,4 +82,7 @@ link_reject(fn()=>$service->review(1,(int)$fourth['request']['id'],false), 'forb
 link_reject(fn()=>player_link_requests_handle($db,7,[],['giocatore_id'=>13,'user_id'=>2]), 'invalid_request');
 link_reject(fn()=>player_link_requests_handle($db,7,['q'=>[]],null), 'invalid_request');
 link_expect(!isset($service->status(7)['request']['email']), 'User status never exposes another account email');
+$failingNotifications = new PlayerLinkRequests($db, function () { throw new RuntimeException('Simulated delivery failure'); });
+$saved = $failingNotifications->submit(4,13);
+link_expect($saved['request']['status'] === 'pending', 'Delivery failure preserves successful submission');
 echo "Player link requests: authentication, roles, search, pending state, approval, rejection, history and conflicts passed.\n";

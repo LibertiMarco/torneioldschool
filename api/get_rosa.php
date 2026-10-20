@@ -31,12 +31,13 @@ $phaseClause = torneo_stats_team_phase_clause($conn, $torneo, 'p.fase');
 $teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
 $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
 $extraTeamGoalsExpr = giocatore_goal_extra_team_expr($conn, 'g.id', 's.id');
+$nightCondition = torneo_stats_is_night_expr('s.torneo');
 $sql = "
     SELECT 
         g.id, g.nome, g.cognome, g.ruolo,
         sg.ruolo AS ruolo_squadra,
         sg.is_captain,
-        COALESCE(agg.presenze, 0) AS presenze,
+        CASE WHEN $nightCondition THEN 1 ELSE COALESCE(agg.presenze, 0) END AS presenze,
         COALESCE(agg.reti, 0) + {$extraTeamGoalsExpr} AS reti,
         COALESCE(agg.assist, 0) AS assist,
         COALESCE(agg.gialli, 0) AS gialli,

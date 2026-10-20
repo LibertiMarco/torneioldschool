@@ -65,7 +65,13 @@ class SquadraGiocatore {
         $stmt = $this->conn->prepare($sql);
         $foto = $foto !== '' ? $foto : null;
         $ruolo = $stats['ruolo'] ?? null;
-        $presenze = (int)$stats['presenze'];
+        $nightTeam = torneo_stats_is_night_expr('torneo');
+        $nightStmt = $this->conn->prepare("SELECT $nightTeam AS night FROM squadre WHERE id = ?");
+        $nightStmt->bind_param('i', $squadraId);
+        $nightStmt->execute();
+        $isNight = (bool)($nightStmt->get_result()->fetch_assoc()['night'] ?? false);
+        $nightStmt->close();
+        $presenze = $isNight ? 1 : (int)$stats['presenze'];
         $reti = (int)$stats['reti'];
         $assist = (int)$stats['assist'];
         $gialli = (int)$stats['gialli'];
@@ -175,13 +181,14 @@ class SquadraGiocatore {
 
     private function aggiornaTotaliGiocatore($giocatoreId) {
         $goalExtraGlobal = giocatore_goal_extra_fetch_global_total($this->conn, (int)$giocatoreId);
+        $nightTeam = torneo_stats_is_night_expr('s.torneo');
         $globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($this->conn, 's.torneo');
         $sql = "
             UPDATE giocatori g
             LEFT JOIN (
                 SELECT 
                     sg.giocatore_id,
-                    SUM(sg.presenze) AS sum_presenze,
+                    SUM(CASE WHEN NOT $nightTeam THEN sg.presenze ELSE 0 END) + COUNT(DISTINCT CASE WHEN $nightTeam THEN s.torneo END) AS sum_presenze,
                     SUM(sg.reti) AS sum_reti,
                     SUM(sg.assist) AS sum_assist,
                     SUM(sg.gialli) AS sum_gialli,

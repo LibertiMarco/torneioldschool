@@ -104,6 +104,7 @@ function finish(code) {
 server.listen(0, '127.0.0.1', () => {
   browser=spawn(process.env.CHROMIUM_BIN || 'C:/Program Files/Google/Chrome/Application/chrome.exe', [
     '--headless=new','--disable-gpu','--no-first-run','--disable-extensions',
+    ...(process.env.CUTOUT_TEST_IOS?['--user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1']:[]),
     '--user-data-dir='+path.join(dir,'profile'),'http://127.0.0.1:'+server.address().port
   ], {stdio:'ignore'});
   browser.on('error', error=>{console.error(error);finish(1);});

@@ -21,8 +21,20 @@ function player_link_requests_db(): PDO {
     return $db;
 }
 
+function player_link_requests_notify_admins(array $userIds, string $title, string $text, string $link, int $requestId): void {
+    require_once __DIR__ . '/push_notifications.php';
+    $conn = new mysqli(getenv('DB_HOST') ?: 'localhost', getenv('DB_USER') ?: '', getenv('DB_PASSWORD') ?: '',
+        getenv('DB_NAME') ?: '', (int)(getenv('DB_PORT') ?: 3306));
+    if ($conn->connect_errno) throw new RuntimeException('Notification database unavailable');
+    try {
+        $conn->set_charset('utf8mb4');
+        tos_push_store_notifications_for_users($conn, $userIds, 'player_link_request', $title, $text, $link,
+            ['tag' => 'player-link-request-' . $requestId]);
+    } finally { $conn->close(); }
+}
+
 final class PlayerLinkRequests {
-    public function __construct(private PDO $db) {
+    public function __construct(private PDO $db, private $notifyAdmins = 'player_link_requests_notify_admins') {
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
     private function lock(): string { return $this->db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql' ? ' FOR UPDATE' : ''; }
@@ -80,8 +92,27 @@ final class PlayerLinkRequests {
             if (!$player) throw new MobileAuthError('conflict', 'Giocatore non disponibile.', 409);
             $stmt = $this->db->prepare("INSERT INTO player_link_requests (user_id, giocatore_id, stato, pending_user_id, created_at) VALUES (?, ?, 'pending', ?, ?)");
             $stmt->execute([$userId, $playerId, $userId, gmdate('Y-m-d H:i:s')]);
+            $requestId = (int)$this->db->lastInsertId();
             $this->db->commit();
         } catch (Throwable $error) { if ($this->db->inTransaction()) $this->db->rollBack(); throw $error; }
+        // Notify only committed requests; delivery failures must not invite duplicate submissions.
+        try {
+            $adminIds = [];
+            foreach ($this->db->query('SELECT id, ruolo FROM utenti')->fetchAll(PDO::FETCH_ASSOC) as $user) {
+                if (user_has_admin_access((string)$user['ruolo'])) $adminIds[] = (int)$user['id'];
+            }
+            if ($adminIds) {
+                $requester = $this->one('SELECT nome, cognome FROM utenti WHERE id = ?', [$userId]);
+                $player = $this->one('SELECT nome, cognome FROM giocatori WHERE id = ?', [$playerId]);
+                $accountName = trim(($requester['nome'] ?? '') . ' ' . ($requester['cognome'] ?? '')) ?: 'Account #' . $userId;
+                $playerName = trim(($player['nome'] ?? '') . ' ' . ($player['cognome'] ?? '')) ?: 'Giocatore #' . $playerId;
+                ($this->notifyAdmins)($adminIds, 'Nuova richiesta di associazione giocatore',
+                    $accountName . ' ha richiesto di associare il proprio account a ' . $playerName . '.',
+                    '/api/gestione_account_giocatore.php', $requestId);
+            }
+        } catch (Throwable $error) {
+            error_log('player_link_requests: notifica admin fallita per richiesta #' . $requestId . ': ' . $error->getMessage());
+        }
         return $this->status($userId);
     }
     public function pending(int $adminId): array {

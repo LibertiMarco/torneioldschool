@@ -87,19 +87,32 @@ const GraphicsCutoutCore = (() => {
     return output;
   }
   function composeCompactMatte(detail,width,height,people) {
-    const size=width*height,foreground=new Uint8Array(size),background=new Uint8Array(size);
-    // MODNet supplies the actual silhouette; boxes only select which people
-    // may contribute. Keep a margin so detector bounds do not clip hair/limbs.
+    const size=width*height;
+    if(detail.length!==size)throw new Error('Maschera dei bordi non valida.');
+    const selected=new Uint8Array(size),visited=new Uint8Array(size);
+    const output=new Float32Array(size),queue=new Int32Array(size);
+    // Boxes select whole connected silhouettes. They must never cut pixels
+    // from a face, head or limb, nor act as rectangular erasers on overlaps.
     for(const person of people.foreground){
       const margin=.02;
       for(let y=Math.max(0,Math.floor((person.top-margin)*height));y<Math.min(height,Math.ceil((person.bottom+margin)*height));y++)
-        for(let x=Math.max(0,Math.floor((person.left-margin)*width));x<Math.min(width,Math.ceil((person.right+margin)*width));x++)foreground[y*width+x]=1;
+        for(let x=Math.max(0,Math.floor((person.left-margin)*width));x<Math.min(width,Math.ceil((person.right+margin)*width));x++)selected[y*width+x]=1;
     }
-    for(const person of people.background){
-      for(let y=Math.max(0,Math.floor(person.top*height));y<Math.min(height,Math.ceil(person.bottom*height));y++)
-        for(let x=Math.max(0,Math.floor(person.left*width));x<Math.min(width,Math.ceil(person.right*width));x++)background[y*width+x]=1;
+    for(let start=0;start<size;start++){
+      if(visited[start]||!Number.isFinite(detail[start])||detail[start]<=.01)continue;
+      let head=0,tail=1,keep=false;queue[0]=start;visited[start]=1;
+      while(head<tail){
+        const p=queue[head++],x=p%width,y=Math.floor(p/width);
+        if(selected[p])keep=true;
+        for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+          if((!dx&&!dy)||x+dx<0||x+dx>=width||y+dy<0||y+dy>=height)continue;
+          const q=p+dy*width+dx;
+          if(!visited[q]&&Number.isFinite(detail[q])&&detail[q]>.01){visited[q]=1;queue[tail++]=q;}
+        }
+      }
+      if(keep)for(let i=0;i<tail;i++)output[queue[i]]=clamp(detail[queue[i]]);
     }
-    return composeMatte(detail,foreground,background,width,height,0);
+    return output;
   }
   return {selectPeople,resizeRGB,composeMatte,composeCompactMatte};
 })();

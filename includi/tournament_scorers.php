@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/partite_schema.php';
+require_once __DIR__ . '/night_appearances.php';
 require_once __DIR__ . '/giocatore_goal_extra.php';
 
 function get_torneo_details(mysqli $conn, string $torneo): array
@@ -118,6 +119,7 @@ $matchStatsSubquery = "
     GROUP BY pg.giocatore_id, squadra_ref
 ";
 
+$nightCondition = torneo_stats_is_night_expr('s.torneo');
 $sql = "
     SELECT 
         g.id,
@@ -128,7 +130,7 @@ $sql = "
         COALESCE(sg.foto, g.foto, s.logo) AS foto,
         s.torneo AS torneo,
         {$goalField} AS gol,
-        COALESCE(match_stats.presenze, 0) AS presenze
+        CASE WHEN $nightCondition THEN 1 ELSE COALESCE(match_stats.presenze, 0) END AS presenze
     FROM squadre_giocatori sg
     JOIN squadre s ON s.id = sg.squadra_id
     JOIN giocatori g ON g.id = sg.giocatore_id

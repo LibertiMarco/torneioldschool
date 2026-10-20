@@ -86,6 +86,24 @@ compactDetail[4*32+8]=.4;
 const compactPeople={foreground:[{left:.2,right:.8,top:.1,bottom:.9}],background:[{left:.5,right:.6,top:.2,bottom:.3}]};
 const compactMask=sandbox.core.composeCompactMatte(compactDetail,32,32,compactPeople);
 assert.strictEqual(compactMask[20*32+12],1,'Compact mode removed the selected body');
-assert.strictEqual(compactMask[7*32+17],0,'Compact mode retained an excluded head');
+assert.strictEqual(compactMask[7*32+17],1,'Overlapping background box punched a hole in the selected face');
 assert(Math.abs(compactMask[4*32+8]-.4)<1e-6,'Compact mode hardened hair alpha');
 assert.strictEqual(compactMask[0],0);
+
+const twoPeople=new Float32Array(64*64);
+// Two heads extend above their imprecise detector boxes.
+for(const [left,right] of [[10,25],[35,50]]){
+ for(let y=7;y<18;y++)for(let x=left;x<right;x++)twoPeople[y*64+x]=1;
+ for(let y=18;y<55;y++)for(let x=left+2;x<right-2;x++)twoPeople[y*64+x]=1;
+}
+twoPeople[7*64+10]=.35;
+twoPeople[3*64+60]=1; // Unrelated, isolated background silhouette.
+const keepTwo=sandbox.core.composeCompactMatte(twoPeople,64,64,{
+ foreground:[{left:.18,right:.36,top:.23,bottom:.9},{left:.58,right:.76,top:.23,bottom:.9}],
+ background:[{left:.13,right:.4,top:.08,bottom:.3},{left:.53,right:.81,top:.08,bottom:.3}]
+});
+assert.strictEqual(keepTwo[10*64+15],1,'First head clipped');
+assert.strictEqual(keepTwo[10*64+40],1,'Second head clipped');
+assert.strictEqual(keepTwo[40*64+15],1);assert.strictEqual(keepTwo[40*64+40],1);
+assert(Math.abs(keepTwo[7*64+10]-.35)<1e-6,'Hair alpha lost');
+assert.strictEqual(keepTwo[3*64+60],0,'Unselected distant silhouette retained');

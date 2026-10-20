@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/partite_schema.php';
+require_once __DIR__ . '/night_appearances.php';
 require_once __DIR__ . '/giocatore_goal_extra.php';
 
 if (!function_exists('torneo_stats_table_has_column')) {
@@ -269,10 +270,11 @@ if (!function_exists('torneo_stats_fetch_player_global_totals')) {
             ? "LEFT JOIN tornei t_scope ON (t_scope.filetorneo = p.torneo OR t_scope.filetorneo = CONCAT(p.torneo, '.php') OR t_scope.nome = p.torneo)"
             : '';
         $sectionWhere = $section !== null ? "AND COALESCE(t_scope.sezione, 'calcio') = ?" : '';
+        $nightCondition = torneo_stats_is_night_expr('p.torneo');
         $globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($conn, 'p.torneo');
         $stmt = $conn->prepare("
             SELECT
-                COALESCE(SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END), 0) AS presenze,
+                COALESCE(SUM(CASE WHEN pg.presenza = 1 AND NOT $nightCondition THEN 1 ELSE 0 END), 0) AS presenze,
                 COALESCE(SUM(pg.goal), 0) AS reti,
                 COALESCE(SUM(pg.assist), 0) AS assist,
                 COALESCE(SUM(pg.cartellino_giallo), 0) AS gialli,
@@ -312,6 +314,8 @@ if (!function_exists('torneo_stats_fetch_player_global_totals')) {
         $stmt->close();
         $numVoti = (int)($row['num_voti'] ?? 0);
 
+        $nightExpr = torneo_stats_night_count_expr((string)$giocatoreId, $section);
+        $nightCount = (int)$conn->query("SELECT $nightExpr AS n")->fetch_assoc()['n'];
         $extraGoals = giocatore_goal_extra_fetch_global_total($conn, $giocatoreId);
         if ($section !== null && giocatore_goal_extra_table_exists($conn)) {
             $extraGoals = 0;
@@ -338,7 +342,7 @@ if (!function_exists('torneo_stats_fetch_player_global_totals')) {
         }
 
         return [
-            'presenze' => (int)($row['presenze'] ?? 0),
+            'presenze' => (int)($row['presenze'] ?? 0) + $nightCount,
             'reti' => (int)($row['reti'] ?? 0) + $extraGoals,
             'assist' => (int)($row['assist'] ?? 0),
             'gialli' => (int)($row['gialli'] ?? 0),
@@ -357,12 +361,13 @@ if (!function_exists('torneo_stats_fetch_player_team_totals')) {
             return torneo_stats_empty_player_totals();
         }
 
+        $nightCondition = torneo_stats_is_night_expr('p.torneo');
         $phaseClause = torneo_stats_team_phase_clause($conn, $torneo, 'p.fase');
         $teamIdExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
         $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamIdExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
         $sql = "
             SELECT
-                COALESCE(SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END), 0) AS presenze,
+                COALESCE(SUM(CASE WHEN pg.presenza = 1 AND NOT $nightCondition THEN 1 ELSE 0 END), 0) AS presenze,
                 COALESCE(SUM(pg.goal), 0) AS reti,
                 COALESCE(SUM(pg.assist), 0) AS assist,
                 COALESCE(SUM(pg.cartellino_giallo), 0) AS gialli,
@@ -394,9 +399,15 @@ if (!function_exists('torneo_stats_fetch_player_team_totals')) {
         $row = $stmt->get_result()->fetch_assoc() ?: [];
         $stmt->close();
 
+        $nightTeam = torneo_stats_is_night_expr('s.torneo');
+        $nightStmt = $conn->prepare("SELECT COUNT(*) AS n FROM squadre s JOIN squadre_giocatori sg ON sg.squadra_id = s.id WHERE sg.giocatore_id = ? AND s.torneo = ? AND s.nome = ? AND $nightTeam");
+        $nightStmt->bind_param('iss', $giocatoreId, $torneo, $teamName);
+        $nightStmt->execute();
+        $nightCount = (int)$nightStmt->get_result()->fetch_assoc()['n'] > 0 ? 1 : 0;
+        $nightStmt->close();
         $numVoti = (int)($row['num_voti'] ?? 0);
         return [
-            'presenze' => (int)($row['presenze'] ?? 0),
+            'presenze' => (int)($row['presenze'] ?? 0) + $nightCount,
             'reti' => (int)($row['reti'] ?? 0),
             'assist' => (int)($row['assist'] ?? 0),
             'gialli' => (int)($row['gialli'] ?? 0),
@@ -497,9 +508,11 @@ if (!function_exists('torneo_stats_rebuild_all_player_aggregates')) {
             'giocatori_globali' => 0,
             'associazioni_squadra' => 0,
         ];
+        $nightCondition = torneo_stats_is_night_expr('p.torneo');
         $globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($conn, 'p.torneo');
         $globalExtraGoalsExpr = giocatore_goal_extra_global_expr($conn, 'g.id');
 
+        $nightCountExpr = torneo_stats_night_count_expr('g.id');
         $sqlGlobal = "
             UPDATE giocatori g
             LEFT JOIN (
@@ -509,7 +522,7 @@ if (!function_exists('torneo_stats_rebuild_all_player_aggregates')) {
                     SUM(pg.assist) AS assist,
                     SUM(pg.cartellino_giallo) AS gialli,
                     SUM(pg.cartellino_rosso) AS rossi,
-                    SUM(CASE WHEN pg.presenza = 1 THEN 1 ELSE 0 END) AS presenze,
+                    SUM(CASE WHEN pg.presenza = 1 AND NOT $nightCondition THEN 1 ELSE 0 END) AS presenze,
                     SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN pg.voto ELSE 0 END) AS somma_voti,
                     SUM(CASE WHEN pg.voto IS NOT NULL AND $globalMediaTournamentCondition THEN 1 ELSE 0 END) AS num_voti
                 FROM partita_giocatore pg
@@ -517,7 +530,7 @@ if (!function_exists('torneo_stats_rebuild_all_player_aggregates')) {
                 GROUP BY pg.giocatore_id
             ) agg ON agg.giocatore_id = g.id
             SET
-                g.presenze = COALESCE(agg.presenze, 0),
+                g.presenze = COALESCE(agg.presenze, 0) + $nightCountExpr,
                 g.reti = COALESCE(agg.goal, 0) + {$globalExtraGoalsExpr},
                 g.assist = COALESCE(agg.assist, 0),
                 g.gialli = COALESCE(agg.gialli, 0),

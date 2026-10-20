@@ -1,6 +1,6 @@
 /* Local person detection, instance segmentation and matting. See TERZE_PARTI.md. */
 'use strict';
-importScripts('grafiche_scontorno_core.js?v=20261020-auto-10');
+importScripts('grafiche_scontorno_core.js?v=20261020-silhouette-11');
 const runtimeBase='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/dist/';
 const modelFiles={
   detector:'rtdetr-r18-int8-ec641af.onnx',

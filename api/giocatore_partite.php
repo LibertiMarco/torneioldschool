@@ -131,6 +131,8 @@ function giocatore_partite_fetch_extra_goals(mysqli $conn, int $giocatoreId, str
     return (int)($row['totale'] ?? 0);
 }
 
+$nightCondition = torneo_stats_is_night_expr('p.torneo');
+$nightCount = torneo_stats_night_count_expr('g.id', $siteSection, $excludedTournaments);
 // Dati riepilogativi del giocatore
 $sqlPlayer = "
     SELECT 
@@ -140,7 +142,7 @@ $sqlPlayer = "
         g.ruolo,
         {$fotoSelect},
         COALESCE(SUM(CASE WHEN p.id IS NOT NULL THEN pg.goal ELSE 0 END), 0) AS gol_totali,
-        COALESCE(SUM(CASE WHEN p.id IS NOT NULL AND pg.presenza = 1 THEN 1 ELSE 0 END), 0) AS presenze_totali,
+        COALESCE(SUM(CASE WHEN p.id IS NOT NULL AND pg.presenza = 1 AND NOT $nightCondition THEN 1 ELSE 0 END), 0) + $nightCount AS presenze_totali,
         COALESCE(SUM(CASE WHEN p.id IS NOT NULL THEN pg.assist ELSE 0 END), 0) AS assist_totali
     FROM giocatori g
     LEFT JOIN partita_giocatore pg ON pg.giocatore_id = g.id
