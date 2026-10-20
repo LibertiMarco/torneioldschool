@@ -558,7 +558,6 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
       if (number(widget.player['media_voti']) > 0)
         ('Media voto', widget.player['media_voti']),
       ('Squadre', widget.teams.length),
-      if (widget.player['assist'] != null) ('Assist', widget.player['assist']),
     ];
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 18),
