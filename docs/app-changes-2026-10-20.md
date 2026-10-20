@@ -62,3 +62,13 @@ senza problemi. Anteprima locale con fixture controllata visivamente in
 `mobile/build/home-review/next-match.png` (non versionata). Modifica locale,
 non distribuita sugli store. Preferiti e altri interventi restano fuori da
 questo passaggio.
+
+La scheda della prossima partita include ora scudetti e nomi delle due squadre
+affiancati con VS, torneo in testata, data/campo con icone e pulsante a larghezza
+piena. Con caratteri ingranditi le squadre passano in verticale. Il backend
+personale restituisce `logo_casa` e `logo_ospite`, cercati per nome e torneo;
+le sottoquery non moltiplicano le partite in presenza di squadre omonime.
+Le immagini mantengono le proporzioni; un simbolo neutro gestisce immagini
+assenti o non raggiungibili. Verificati 14 test Home/calendario, analisi Flutter
+e test PHP del servizio personale. La preview web viene ricompilata insieme
+all'aggiornamento del backend condiviso da Android e iOS.

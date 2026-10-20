@@ -84,7 +84,9 @@ function mobile_player_stats_handle(int $userId, array $query): array {
             $team = array_merge($team, $stats, ['diffidato' => count(diffidati_fetch($conn, $team['torneo'], $id, (int)$team['id'])) > 0]);
         }
         unset($team);
-        $stmt = $conn->prepare("SELECT p.*, COALESCE(t.nome, p.torneo) AS torneo_nome
+        $stmt = $conn->prepare("SELECT p.*, COALESCE(t.nome, p.torneo) AS torneo_nome,
+            (SELECT s.logo FROM squadre s WHERE s.nome = p.squadra_casa AND s.torneo = p.torneo ORDER BY s.id LIMIT 1) AS logo_casa,
+            (SELECT s.logo FROM squadre s WHERE s.nome = p.squadra_ospite AND s.torneo = p.torneo ORDER BY s.id LIMIT 1) AS logo_ospite
             FROM partite p
             LEFT JOIN tornei t ON (t.filetorneo = p.torneo OR t.filetorneo = CONCAT(p.torneo, '.php') OR t.nome = p.torneo)
             WHERE COALESCE(p.giocata, 0) = 0 AND COALESCE(t.sezione, 'calcio') = ?

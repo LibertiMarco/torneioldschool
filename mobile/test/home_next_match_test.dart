@@ -22,6 +22,8 @@ class NextApi extends DemoApi {
       'id': 12,
       'squadra_casa': 'Old School FC',
       'squadra_ospite': 'Atletico Roma',
+      'logo_casa': '/img/home-fixture.png',
+      'logo_ospite': '/img/away-fixture.png',
       'torneo_nome': 'Torneo autunnale',
       'data_partita': '2026-10-25',
       'ora_partita': '20:30:00',
@@ -85,7 +87,13 @@ void main() {
       expect(api.calls, 0);
       await auth.login();
       await tester.pumpAndSettle();
-      expect(find.text('Old School FC – Atletico Roma'), findsOneWidget);
+      expect(find.text('Old School FC'), findsOneWidget);
+      expect(find.text('Atletico Roma'), findsOneWidget);
+      expect(find.byType(SiteImage), findsNWidgets(2));
+      expect(
+        tester.widgetList<SiteImage>(find.byType(SiteImage)).map((w) => w.path),
+        ['/img/home-fixture.png', '/img/away-fixture.png'],
+      );
       expect(find.text('25/10/2026 · 20:30'), findsOneWidget);
       expect(find.text('Centro sportivo Old School'), findsOneWidget);
       await tester.tap(find.text('Dettagli partita'));
@@ -96,7 +104,7 @@ void main() {
       await tester.pumpAndSettle();
       await auth.logout();
       await tester.pumpAndSettle();
-      expect(find.text('Old School FC – Atletico Roma'), findsNothing);
+      expect(find.text('Old School FC'), findsNothing);
     },
   );
 
@@ -112,12 +120,12 @@ void main() {
     api.fail = false;
     await tester.tap(find.text('Riprova'));
     await tester.pumpAndSettle();
-    expect(find.text('Old School FC – Atletico Roma'), findsOneWidget);
+    expect(find.text('Old School FC'), findsOneWidget);
     api.upcoming = [];
     await show(tester, auth, revision: 1);
     await tester.pumpAndSettle();
     expect(api.calls, 3);
-    expect(find.text('Old School FC – Atletico Roma'), findsNothing);
+    expect(find.text('Old School FC'), findsNothing);
     expect(
       find.text('Non ci sono partite da disputare per le tue squadre.'),
       findsOneWidget,
@@ -203,9 +211,9 @@ void main() {
       ..addFont(rootBundle.load('assets/fonts/Roboto-Regular.ttf'))
       ..addFont(rootBundle.load('assets/fonts/Roboto-Bold.ttf'));
     await fonts.load();
-    await (FontLoader('MaterialIcons')
-          ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf')))
-        .load();
+    await (FontLoader(
+      'MaterialIcons',
+    )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
     final api = NextApi();
     final auth = DemoAuth(api);
     await auth.login();

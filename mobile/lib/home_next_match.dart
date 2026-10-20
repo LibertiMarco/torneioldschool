@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'auth.dart';
 import 'details.dart' show MatchPage;
+import 'home_dashboard.dart' show SiteImage;
 
 /// Uses only the player resolved by the authenticated server, never a client ID.
 class HomeNextMatch extends StatelessWidget {
@@ -81,6 +82,57 @@ class _NextMatchState extends State<_NextMatch> {
     );
   }
 
+  Widget _team(String name, String logo, {required bool compact}) {
+    final colors = Theme.of(context).colorScheme;
+    final crest = Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: SiteImage(
+        api: widget.auth.api,
+        path: logo,
+        width: 52,
+        height: 52,
+        fallback: Icons.shield_outlined,
+        preserveShape: true,
+      ),
+    );
+    final label = Text(
+      name,
+      textAlign: compact ? TextAlign.left : TextAlign.center,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w800,
+        height: 1.25,
+      ),
+    );
+    return compact
+        ? Row(
+            children: [
+              crest,
+              const SizedBox(width: 12),
+              Expanded(child: label),
+            ],
+          )
+        : Column(children: [crest, const SizedBox(height: 12), label]);
+  }
+
+  Widget _info(IconData icon, String text) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Icon(icon, size: 18),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
+      ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) => FutureBuilder<dynamic>(
     future: _data,
@@ -140,24 +192,61 @@ class _NextMatchState extends State<_NextMatch> {
             letterSpacing: 1.2,
           ),
         ),
-        const SizedBox(height: 16),
-        Text(
-          '${match['squadra_casa']} – ${match['squadra_ospite']}',
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-        ),
         if (tournament.isNotEmpty) ...[
           const SizedBox(height: 8),
           Text(tournament),
         ],
-        const SizedBox(height: 16),
-        Text(
-          _schedule(match),
-          style: const TextStyle(fontWeight: FontWeight.w700),
+        const SizedBox(height: 24),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = MediaQuery.textScalerOf(context).scale(16) > 24;
+            final home = _team(
+              '${match['squadra_casa']}',
+              '${match['logo_casa'] ?? ''}',
+              compact: compact,
+            );
+            final away = _team(
+              '${match['squadra_ospite']}',
+              '${match['logo_ospite'] ?? ''}',
+              compact: compact,
+            );
+            final vs = Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(
+                'VS',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
+              ),
+            );
+            return compact
+                ? Column(children: [home, vs, away])
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: home),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: vs,
+                      ),
+                      Expanded(child: away),
+                    ],
+                  );
+          },
         ),
-        if (field.isNotEmpty) ...[const SizedBox(height: 6), Text(field)],
+        const SizedBox(height: 20),
+        const Divider(height: 1),
         const SizedBox(height: 16),
-        Align(
-          alignment: Alignment.centerLeft,
+        _info(Icons.event_outlined, _schedule(match)),
+        if (field.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _info(Icons.location_on_outlined, field),
+        ],
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
           child: FilledButton.icon(
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
