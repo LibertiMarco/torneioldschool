@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'api.dart';
 import 'auth.dart';
 import 'home_dashboard.dart' show SiteImage, openPage;
 import 'personal_match_order.dart';
 import 'tournament_page.dart';
+import 'venue_navigation.dart';
 
 /// Uses only the player resolved by the authenticated server, never a client ID.
 class HomeNextMatch extends StatelessWidget {
@@ -138,6 +140,47 @@ class _NextMatchState extends State<_NextMatch> {
     ],
   );
 
+  Widget _venue(Map<String, dynamic> match, String field) {
+    final uri = venueNavigationUri(match);
+    if (uri == null) return _info(Icons.location_on_outlined, field);
+    return Tooltip(
+      message: 'Apri indicazioni',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () async {
+          try {
+            if (await launchUrl(
+              uri,
+              mode: LaunchMode.externalApplication,
+              webOnlyWindowName: '_blank',
+            )) {
+              return;
+            }
+          } catch (_) {
+            // Keep the match card usable when navigation cannot be opened.
+          }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Impossibile aprire la navigazione. Riprova.'),
+              ),
+            );
+          }
+        },
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Row(
+            children: [
+              Expanded(child: _info(Icons.location_on_outlined, field)),
+              const SizedBox(width: 8),
+              Icon(Icons.near_me_outlined, size: 18, color: _foreground),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<dynamic>(
     future: _data,
@@ -250,7 +293,7 @@ class _NextMatchState extends State<_NextMatch> {
         _info(Icons.event_outlined, _schedule(match)),
         if (field.isNotEmpty) ...[
           const SizedBox(height: 10),
-          _info(Icons.location_on_outlined, field),
+          _venue(match, field),
         ],
         const SizedBox(height: 20),
         SizedBox(

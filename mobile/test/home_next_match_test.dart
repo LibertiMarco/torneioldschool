@@ -101,6 +101,27 @@ void main() {
       );
       expect(find.text('25/10/2026 · 20:30'), findsOneWidget);
       expect(find.text('Centro sportivo Old School'), findsOneWidget);
+      const launcher = MethodChannel('plugins.flutter.io/url_launcher');
+      String? launched;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(launcher, (
+        call,
+      ) async {
+        if (call.method == 'launch') {
+          launched = (call.arguments as Map)['url'] as String;
+        }
+        return true;
+      });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          launcher,
+          null,
+        ),
+      );
+      await tester.tap(find.text('Centro sportivo Old School'));
+      await tester.pumpAndSettle();
+      final navigation = Uri.parse(launched!);
+      expect(navigation.host, 'www.google.com');
+      expect(navigation.queryParameters['query'], 'Centro sportivo Old School');
       await tester.tap(find.text('Vai al torneo'));
       await tester.pumpAndSettle();
       final page = tester.widget<TournamentPage>(find.byType(TournamentPage));
