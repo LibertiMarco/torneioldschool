@@ -52,4 +52,17 @@ post_install do |installer|
       end
     end
   end
+  # Runner imports the ads framework from GeneratedPluginRegistrant too.
+  # Swift's Clang importer needs the same vendor-header compatibility setting.
+  installer.aggregate_targets.map(&:user_project).uniq.each do |project|
+    project.native_targets.select { |target| target.name == 'Runner' }.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+        flags = Array(config.build_settings['OTHER_SWIFT_FLAGS'] || '$(inherited)')
+        flag = '-Wno-error=non-modular-include-in-framework-module'
+        config.build_settings['OTHER_SWIFT_FLAGS'] = flags + ['-Xcc', flag] unless flags.include?(flag)
+      end
+    end
+    project.save
+  end
 end
