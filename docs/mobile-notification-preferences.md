@@ -20,7 +20,7 @@ interessato. Altri tipi di notifiche mantengono il comportamento precedente.
 
 Promemoria: vedere `docs/match-reminders.md` per worker, deduplicazione e
 verifica dell'attivazione. La scelta resta nascosta finche il worker non risulta
-attivo. Gli avvisi sui cambi di calendario restano un intervento separato.
+attivo. Gli avvisi sui cambi di calendario sono descritti in `docs/match-schedule-changes.md`.
 
 Il codice Flutter e comune ad Android/iOS e alla preview. La pubblicazione della
 preview non distribuisce nuovi binari negli store.

@@ -7,6 +7,7 @@ import 'package:tornei_old_school/notification_preferences.dart';
 class PreferencesApi extends DemoApi {
   bool fail = false;
   bool remindersAvailable = false;
+  bool scheduleChangesAvailable = false;
   @override
   Future<dynamic> request(
     String path, {
@@ -24,13 +25,35 @@ class PreferencesApi extends DemoApi {
       uploads: uploads,
     );
     if (path.contains('notification_preferences')) {
-      return <String, dynamic>{...response, 'reminders_available': remindersAvailable};
+      return <String, dynamic>{...response, 'reminders_available': remindersAvailable,
+        'schedule_changes_available': scheduleChangesAvailable};
     }
     return response;
   }
 }
 
 void main() {
+  testWidgets('Schedule alerts require worker readiness and preserve opt-in on failure', (tester) async {
+    final api = PreferencesApi();
+    final auth = DemoAuth(api);
+    await auth.login();
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: NotificationPreferences(auth: auth))));
+    await tester.pumpAndSettle();
+    expect(find.text('Cambi di data, orario o campo'), findsNothing);
+    api.scheduleChangesAvailable = true;
+    await tester.tap(find.text('Risultati delle partite'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(find.byType(SwitchListTile).last).value, false);
+    await tester.tap(find.text('Cambi di data, orario o campo'));
+    await tester.pumpAndSettle();
+    expect(api.notificationPreferences['schedule_changes'], true);
+    expect(api.notificationPreferences['results'], false);
+    expect(api.notificationPreferences['comments'], true);
+    api.fail = true;
+    await tester.tap(find.text('Cambi di data, orario o campo'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(find.byType(SwitchListTile).last).value, true);
+  });
   testWidgets('Reminder choice requires active worker and saves separately', (tester) async {
     final api = PreferencesApi();
     final auth = DemoAuth(api);

@@ -14,6 +14,7 @@ class _NotificationPreferencesState extends State<NotificationPreferences> {
   Map<String, dynamic>? _preferences;
   bool _busy = false;
   bool _remindersAvailable = false;
+  bool _scheduleChangesAvailable = false;
   String? _error;
   @override
   void initState() {
@@ -33,6 +34,7 @@ class _NotificationPreferencesState extends State<NotificationPreferences> {
       );
       if (mounted) {
         _remindersAvailable = response['reminders_available'] == true;
+        _scheduleChangesAvailable = response['schedule_changes_available'] == true;
         setState(
           () => _preferences = Map<String, dynamic>.from(
             response['preferences'] as Map,
@@ -76,6 +78,8 @@ class _NotificationPreferencesState extends State<NotificationPreferences> {
         for (final entry in {
           'results': 'Risultati delle partite',
           'comments': 'Risposte ai tuoi commenti',
+          if (_scheduleChangesAvailable)
+            'schedule_changes': 'Cambi di data, orario o campo',
         }.entries)
           SwitchListTile(
             contentPadding: EdgeInsets.zero,

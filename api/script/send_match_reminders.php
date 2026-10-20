@@ -3,6 +3,7 @@ declare(strict_types=1);
 // CLI only: no public execution endpoint or tokens in URLs.
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 require_once __DIR__.'/../../includi/match_reminders.php';
+require_once __DIR__.'/../../includi/match_schedule_changes.php';
 if (in_array('--help', $argv, true)) {
     echo "Uso: php api/script/send_match_reminders.php --scheduled | --dry-run\n"; exit;
 }
@@ -54,14 +55,15 @@ try {
             });
         }
     }
+    $schedule = schedule_changes_run($db, $directory, $dry, $now, $store, $started + 45);
     if (!$dry) {
         $path = $directory.'/heartbeat.json';
         $previous = is_file($path) ? json_decode((string)file_get_contents($path), true, 16, JSON_THROW_ON_ERROR) : [];
         $last = (int)($previous['last_success'] ?? 0); $timestamp = time();
         $runs = $timestamp - $last <= 660 ? (int)($previous['successful_runs'] ?? 0) : 0;
-        reminder_write($path, ['last_success'=>$timestamp, 'successful_runs'=>min(2, $runs + ($timestamp-$last >= 30 ? 1 : 0))]);
+        reminder_write($path, ['last_success'=>$timestamp, 'successful_runs'=>min(2, $runs + ($timestamp-$last >= 30 ? 1 : 0)), 'schedule_changes_ready'=>true]);
     }
-    echo json_encode(['status'=>'done', 'dry_run'=>$dry, 'due'=>$due, 'attempted'=>$attempted]).PHP_EOL;
+    echo json_encode(['status'=>'done', 'dry_run'=>$dry, 'due'=>$due, 'attempted'=>$attempted, 'schedule_changes'=>$schedule]).PHP_EOL;
 } catch (Throwable $error) {
     // Diagnostics stay in the hosting task log, never in a public response.
     fwrite(STDERR, 'Promemoria: '.$error->getMessage().PHP_EOL); exit(1);

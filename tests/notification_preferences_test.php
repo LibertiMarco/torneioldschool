@@ -9,6 +9,10 @@ try {
     $store->update(1, ['comments' => false]);
     notification_expect($store->read(1)['results'] === false);
     notification_expect($store->read(2)['results'] === true);
+    notification_expect(notification_filter_recipients([1,2], ['tag'=>'match-schedule-5-1'], $store) === []);
+    $store->update(2, ['schedule_changes'=>true]);
+    notification_expect(notification_filter_recipients([1,2,2], ['tag'=>'match-schedule-5-1'], $store) === [2]);
+    notification_expect($store->read(2)['comments'] === true);
     notification_expect(notification_filter_recipients([1,2], ['tag'=>'match-reminder-99'], $store) === []);
     $store->update(2, ['reminder'=>'1h']);
     notification_expect(notification_filter_recipients([1,2,2], ['tag'=>'match-reminder-99'], $store) === [2]);
