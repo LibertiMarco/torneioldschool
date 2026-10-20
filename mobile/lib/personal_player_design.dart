@@ -141,19 +141,8 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
         const Text('Non ci sono partite da disputare per le tue squadre.'),
       for (final match in widget.upcomingMatches)
         Card(
-          child: ListTile(
-            leading: const Icon(Icons.event_outlined),
-            title: Text(
-              '${match['squadra_casa']} - ${match['squadra_ospite']}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            subtitle: Text(
-              [
-                '${match['torneo_nome'] ?? match['torneo'] ?? ''}',
-                _matchSchedule(match),
-              ].where((part) => part.isNotEmpty).join('\n'),
-            ),
-            trailing: const Icon(Icons.chevron_right),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
             onTap: () => openPage(
               context,
               MatchPage(
@@ -162,8 +151,68 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                 previewMatch: match,
               ),
             ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _upcomingTeam(
+                    '${match['squadra_casa']}',
+                    '${match['logo_casa'] ?? ''}',
+                  ),
+                  const SizedBox(height: 10),
+                  _upcomingTeam(
+                    '${match['squadra_ospite']}',
+                    '${match['logo_ospite'] ?? ''}',
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          [
+                            '${match['torneo_nome'] ?? match['torneo'] ?? ''}',
+                            _matchSchedule(match),
+                          ].where((part) => part.isNotEmpty).join('\n'),
+                          style: TextStyle(
+                            color: colors.onSurfaceVariant,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_right),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
+    ],
+  );
+
+  Widget _upcomingTeam(String name, String logo) => Row(
+    children: [
+      Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: colors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: SiteImage(
+          api: widget.api,
+          path: logo,
+          width: 34,
+          height: 34,
+          fallback: Icons.shield_outlined,
+          preserveShape: true,
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
+      ),
     ],
   );
 
