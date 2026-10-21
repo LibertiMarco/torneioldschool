@@ -40,3 +40,23 @@ il link di download con quegli account; alzare la policy solo dopo disponibilita
 verificare avvio, ripresa, pagina interna aperta, ritorno dallo store e sblocco
 sulla nuova build. Non alzare temporaneamente la policy pubblica per una prova:
 bloccherebbe anche gli altri utenti con build precedenti.
+
+## Regola richiesta: solo l'ultima build distribuita
+
+Dal 21 ottobre 2026 la build minima coincide con l'ultima effettivamente
+disponibile per ogni piattaforma. Prima dell'attivazione sono state verificate
+le console: iOS 11 in TestFlight (Test in corso); Android 11 ancora in bozza,
+ultima distribuita 10. Soglie attivate: iOS 11, Android 10.
+
+Il collegamento iOS della policy usa `/app-update.php?platform=ios`, con istruzioni
+per TestFlight e pulsante di apertura; non richiede un invito pubblico e non
+inventa un link App Store dell'app non ancora pubblicata. L'apertura del pulsante
+sul telefono resta da verificare; e sempre disponibile l'istruzione di aprire
+TestFlight dalla Home. Non rimuovere un tester dalla build precedente prima di
+aver reso disponibile la successiva anche a quel tester.
+
+Per le prossime versioni la soglia deve avanzare solo dopo disponibilita reale,
+indipendentemente dalla creazione del bundle, dal push o dal caricamento in bozza.
+L'API pubblica non interroga ancora automaticamente le console store: quel
+collegamento richiede un'integrazione di rilascio dedicata. Non equiparare
+l'aggiornamento di pubspec.yaml a una versione pubblicata.
