@@ -105,7 +105,9 @@ class _TosAppState extends State<TosApp> {
     }
     _loadTheme();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !widget.api.preview) {
+      if (mounted &&
+          !widget.api.preview &&
+          !const bool.fromEnvironment('TOS_SCREENSHOTS')) {
         unawaited(_startServices());
       }
     });
