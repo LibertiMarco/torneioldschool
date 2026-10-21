@@ -11,6 +11,7 @@ import 'auth.dart';
 import 'login_page.dart';
 import 'ads.dart';
 import 'push.dart';
+import 'notification_navigation.dart';
 import 'access_gate.dart';
 import 'staff_dashboard.dart';
 import 'account_page.dart';
@@ -67,6 +68,11 @@ class _TosAppState extends State<TosApp> {
   static const _themeKey = 'tos.app.theme';
   final _navigatorKey = GlobalKey<NavigatorState>();
   final _messengerKey = GlobalKey<ScaffoldMessengerState>();
+  late final _notificationNavigator = NotificationNavigator(
+    api: widget.api,
+    auth: widget.auth,
+    navigatorKey: _navigatorKey,
+  );
   late final _push = PushController(
     auth: widget.auth,
     backend: FirebasePushBackend(),
@@ -147,20 +153,10 @@ class _TosAppState extends State<TosApp> {
   }
 
   void _openPush(RemoteMessage message) {
-    final url = pushLink(message.data['url']?.toString());
-    if (url == null) return;
-    if (url.path == '/account.php') {
-      final navigator = _navigatorKey.currentState;
-      if (navigator != null) {
-        navigator.push(
-          MaterialPageRoute<void>(
-            builder: (_) => AccountPage(auth: widget.auth, section: 'calcio'),
-          ),
-        );
-      }
-      return;
-    }
-    launchUrl(url, mode: LaunchMode.inAppBrowserView);
+    _notificationNavigator.open(
+      message.data['url']?.toString(),
+      messageId: message.messageId,
+    );
   }
 
   @override
@@ -169,6 +165,7 @@ class _TosAppState extends State<TosApp> {
       listener.cancel();
     }
     widget.auth.presentNativeLogin = null;
+    _notificationNavigator.dispose();
     _push.dispose();
     super.dispose();
   }
@@ -246,6 +243,7 @@ class _TosAppState extends State<TosApp> {
   @override
   Widget build(BuildContext context) => MaterialApp(
     navigatorKey: _navigatorKey,
+    navigatorObservers: [_notificationNavigator],
     scaffoldMessengerKey: _messengerKey,
     title: 'Tornei Old School',
     debugShowCheckedModeBanner: false,

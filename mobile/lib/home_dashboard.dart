@@ -1174,53 +1174,58 @@ class NewsCard extends StatelessWidget {
     api: api,
     row: row,
     featured: featured,
-    open: () => openPage(
-      context,
-      DataPage(
-        title: 'Notizia',
-        load: () => api.article('${row['id']}'),
-        render: (value) {
-          final article = Map<String, dynamic>.from(value as Map);
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              Text(
-                '${article['titolo'] ?? ''}',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 8),
-              Text('${article['data'] ?? ''}'),
-              const SizedBox(height: 16),
-              if ('${article['cover'] ?? ''}'.isNotEmpty)
-                SiteImage(
-                  api: api,
-                  path: '${article['cover']}',
-                  width: double.infinity,
-                  height: 200,
-                ),
-              const SizedBox(height: 16),
-              ArticleContent(content: '${article['contenuto'] ?? ''}'),
-              ...TosApi.rows(article['media'])
-                  .where(
-                    (m) => m['tipo'] == 'image' && m['url'] != article['cover'],
-                  )
-                  .map(
-                    (m) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: SiteImage(
-                        api: api,
-                        path: '${m['url']}',
-                        width: double.infinity,
-                        height: 220,
-                      ),
-                    ),
+    open: () => openPage(context, ArticlePage(api: api, id: '${row['id']}')),
+  );
+}
+
+class ArticlePage extends StatelessWidget {
+  const ArticlePage({super.key, required this.api, required this.id});
+  final TosApi api;
+  final String id;
+  @override
+  Widget build(BuildContext context) => DataPage(
+    title: 'Notizia',
+    load: () => api.article(id),
+    render: (value) {
+      final article = Map<String, dynamic>.from(value as Map);
+      return ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Text(
+            '${article['titolo'] ?? ''}',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Text('${article['data'] ?? ''}'),
+          const SizedBox(height: 16),
+          if ('${article['cover'] ?? ''}'.isNotEmpty)
+            SiteImage(
+              api: api,
+              path: '${article['cover']}',
+              width: double.infinity,
+              height: 200,
+            ),
+          const SizedBox(height: 16),
+          ArticleContent(content: '${article['contenuto'] ?? ''}'),
+          ...TosApi.rows(article['media'])
+              .where(
+                (m) => m['tipo'] == 'image' && m['url'] != article['cover'],
+              )
+              .map(
+                (m) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: SiteImage(
+                    api: api,
+                    path: '${m['url']}',
+                    width: double.infinity,
+                    height: 220,
                   ),
-              CommentsSection(api: api, postId: '${row['id']}'),
-            ],
-          );
-        },
-      ),
-    ),
+                ),
+              ),
+          CommentsSection(api: api, postId: id),
+        ],
+      );
+    },
   );
 }
 
