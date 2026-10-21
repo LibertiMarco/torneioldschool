@@ -1,0 +1,10 @@
+﻿Note per i tester - 0.1.1 (11)
+
+- Preferenze separate per risultati, risposte ai commenti e avvisi di calendario.
+- Promemoria partita: disattivato, un'ora, due ore o giorno prima.
+- Miglioramenti alla prossima partita, ai preferiti e alle statistiche giocatore.
+- Correzioni di leggibilita in modalita notte.
+- Spazi pubblicitari aggiuntivi in fondo a calendari e rose.
+
+Da provare: ricezione delle notifiche sul telefono, navigazione dalle notifiche,
+apertura delle voci Gestione senza popup cookie, caricamento degli annunci di test.
