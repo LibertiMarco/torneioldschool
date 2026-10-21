@@ -1,22 +1,23 @@
 # Provare l'app su iPhone da Windows
 
-## Aggiornamento AdMob del 15 ottobre 2026
+## Aggiornamento AdMob del 21 ottobre 2026
 
-Nel progetto sono ora predisposti nativo Home e banner tornei anche per iOS,
-con UMP prima delle richieste, opzioni privacy e **soli ID Google di test iOS**.
-L'app iOS è stata registrata dall'utente in AdMob: App ID
-`ca-app-pub-8390787841690316~9044628723`, banner
-`ca-app-pub-8390787841690316/6234457543`, nativo
-`ca-app-pub-8390787841690316/2726457370`.
-Gli ID sono raccolti in `iosProductionAdIds` (`mobile/lib/ads.dart`) e non
-selezionati dal runtime: Android e iOS
-usano identificativi distinti; iOS resta in test anche se viene impostato
-`TOS_ADS_MONETIZATION=true`. Nessuna monetizzazione reale è stata autorizzata.
+Il workflow `ios-testflight` compila la versione **0.1.1, build 13**, con
+`--dart-define=TOS_ADS_MONETIZATION=true`, su richiesta dell'utente.
+Le build release usano gli ID ufficiali iOS:
 
-Sono presenti Podfile compatibile con i plugin CocoaPods e con Swift Package
-Manager, include xcconfig Pods, App ID di esempio e lista SKAdNetwork della
-guida Google. Non aggiungere manualmente un secondo SDK AdMob a Xcode:
-la dipendenza è fornita dal plugin Flutter.
+- App ID: `ca-app-pub-8390787841690316~9044628723`
+- Banner: `ca-app-pub-8390787841690316/6234457543`
+- Nativo: `ca-app-pub-8390787841690316/2726457370`
+
+Gli ID sono raccolti in `iosProductionAdIds` (`mobile/lib/ads.dart`).
+Le build debug o senza il flag continuano a usare le unità Google di test.
+Il consenso UMP precede le richieste e restano disponibili le opzioni privacy.
+La build 13 va ancora avviata su Codemagic, provata e selezionata in App Store Connect.
+
+Il progetto usa CocoaPods e App ID ufficiale nella configurazione Release.
+Non aggiungere manualmente un secondo SDK AdMob a Xcode: la dipendenza è
+fornita dal plugin Flutter.
 
 Prima della firma occorre eseguire `flutter pub get` e la build iOS su Mac o
 nel workflow macOS; CocoaPods deve essere installato. Il controllo locale

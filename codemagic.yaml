@@ -67,6 +67,7 @@ workflows:
           set -euo pipefail
           flutter build ipa --release \
             --dart-define=TOS_BASE_URL=https://torneioldschool.it \
+            --dart-define=TOS_ADS_MONETIZATION=true \
             --export-options-plist=/Users/builder/export_options.plist
       - name: Verifica notifiche nella IPA firmata
         script: |
