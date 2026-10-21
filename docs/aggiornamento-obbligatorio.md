@@ -60,3 +60,12 @@ indipendentemente dalla creazione del bundle, dal push o dal caricamento in bozz
 L'API pubblica non interroga ancora automaticamente le console store: quel
 collegamento richiede un'integrazione di rilascio dedicata. Non equiparare
 l'aggiornamento di pubspec.yaml a una versione pubblicata.
+
+Il pulsante della vecchia app riceve ora un URL HTTPS con `open=1`: il server
+risponde con redirect fisso `itms-beta://`, per aprire direttamente TestFlight
+senza richiedere un nuovo binario solo per il collegamento. Nessun URL ricevuto
+dall'utente viene usato come destinazione. La pagina senza open=1 resta disponibile
+come guida e fallback manuale. Il redirect HTTP e verificabile sul server; l'apertura
+nativa di TestFlight e la comparsa del blocco vanno provate su un iPhone con build
+precedente. Il blocco nativo esistente e una schermata non aggirabile con Aggiorna
+ora, non un avviso facoltativo che consente di continuare con la vecchia versione.

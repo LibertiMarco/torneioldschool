@@ -1,4 +1,11 @@
 <?php
+// Fixed destination only: compatible with older apps accepting HTTPS policy URLs.
+// A user tap on Aggiorna ora reaches this URL and opens the installed TestFlight app.
+if (($_GET['open'] ?? '') === '1') {
+    header('Cache-Control: no-store');
+    header('Location: itms-beta://', true, 302);
+    exit;
+}
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');

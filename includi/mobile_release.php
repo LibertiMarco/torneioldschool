@@ -6,6 +6,6 @@ return [
     ],
     'ios' => [
         'build' => 11,
-        'url' => 'https://torneioldschool.it/app-update.php?platform=ios',
+        'url' => 'https://torneioldschool.it/app-update.php?platform=ios&open=1',
     ],
 ];
