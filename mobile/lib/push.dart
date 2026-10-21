@@ -403,11 +403,6 @@ class NativePushSettings extends StatelessWidget {
                 : 'Attiva notifiche',
           ),
         ),
-        if (push.enabled)
-          TextButton(
-            onPressed: push.busy ? null : push.sendTest,
-            child: const Text('Invia notifica di test'),
-          ),
         if (push.message != null) ...[
           const SizedBox(height: 8),
           Text(push.message!),
