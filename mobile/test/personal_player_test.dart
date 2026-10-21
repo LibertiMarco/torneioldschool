@@ -154,6 +154,9 @@ void main() {
         100,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Storico prestazioni'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Storico prestazioni'));
       await tester.pumpAndSettle();
       expect(find.byType(PlayerHistoryPage), findsOneWidget);

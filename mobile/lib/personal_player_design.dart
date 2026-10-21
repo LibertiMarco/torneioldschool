@@ -65,7 +65,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
           onRefresh: widget.refresh,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
             children: [
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0, end: 1),
