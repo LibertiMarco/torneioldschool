@@ -322,7 +322,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _hadUser = widget.auth.user != null;
     widget.auth.addListener(_authChanged);
-    widget.auth.restore();
+    widget.auth.ensureRestored();
   }
 
   void _authChanged() {

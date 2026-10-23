@@ -57,6 +57,8 @@ class NotificationNavigator extends NavigatorObserver {
   final Set<String> _seen = {};
   bool _scheduled = false;
   bool _disposed = false;
+  bool _sessionReady = false;
+  bool _waitingForSession = false;
 
   bool open(String? value, {String? messageId}) {
     if (_disposed) return false;
@@ -79,6 +81,17 @@ class NotificationNavigator extends NavigatorObserver {
 
   void _schedule() {
     if (_disposed || _scheduled || _pending == null) return;
+    if (!_sessionReady) {
+      if (!_waitingForSession) {
+        _waitingForSession = true;
+        auth.ensureRestored().then((_) {
+          if (_disposed) return;
+          _sessionReady = true;
+          _schedule();
+        });
+      }
+      return;
+    }
     _scheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scheduled = false;

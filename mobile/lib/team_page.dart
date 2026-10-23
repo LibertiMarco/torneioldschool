@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'access_gate.dart';
 import 'ads.dart';
 import 'details.dart' show MatchPage, PlayerPage;
 import 'home_dashboard.dart' show SiteImage, HomeBlock, openPage;
@@ -72,6 +73,35 @@ class _TeamPageState extends State<TeamPage> {
   late String tab;
   List<Map<String, dynamic>>? players, matches;
   int reload = 0;
+  late Future<Map<String, dynamic>> _team = loadTeam();
+
+  Future<Map<String, dynamic>> loadTeam({bool refresh = false}) async {
+    const metrics = [
+      'punti',
+      'giocate',
+      'vinte',
+      'pareggiate',
+      'perse',
+      'gol_fatti',
+      'gol_subiti',
+    ];
+    if (!refresh && metrics.every((key) => widget.team[key] != null)) {
+      return widget.team;
+    }
+    final standings = await widget.api.standings(widget.slug);
+    final id = '${widget.team['id'] ?? ''}';
+    final name = normalizedSearch('${widget.team['nome']}');
+    final rows = standings.where(
+      (row) => id.isNotEmpty
+          ? '${row['id']}' == id
+          : normalizedSearch('${row['nome']}') == name,
+    );
+    if (rows.isEmpty) {
+      throw const ApiError('Statistiche della squadra non disponibili.');
+    }
+    return {...widget.team, ...rows.first};
+  }
+
   @override
   void initState() {
     super.initState();
@@ -86,10 +116,41 @@ class _TeamPageState extends State<TeamPage> {
         '${widget.team['nome']}',
       );
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>>(
+    future: _team,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.done &&
+          snapshot.hasData) {
+        return buildTeam(context, snapshot.data!);
+      }
+      void retry() => setState(() {
+        _team = loadTeam(refresh: true);
+      });
+      return Scaffold(
+        appBar: AppBar(title: Text('${widget.team['nome']}')),
+        body: snapshot.hasError
+            ? AccessRequiredPanel.handles(context, snapshot.error)
+                  ? AccessRequiredPanel(retry: retry)
+                  : Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('Impossibile caricare le statistiche.'),
+                          TextButton(
+                            onPressed: retry,
+                            child: const Text('Riprova'),
+                          ),
+                        ],
+                      ),
+                    )
+            : const Center(child: CircularProgressIndicator()),
+      );
+    },
+  );
+
+  Widget buildTeam(BuildContext context, Map<String, dynamic> team) {
     final colors = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final team = widget.team;
     Widget metric(String label, dynamic value) => Expanded(
       child: Column(
         children: [
@@ -113,6 +174,7 @@ class _TeamPageState extends State<TeamPage> {
           setState(() {
             players = null;
             matches = null;
+            _team = loadTeam(refresh: true);
             reload++;
           });
         },
@@ -353,7 +415,9 @@ class _TeamPageState extends State<TeamPage> {
                           match: match,
                           team: '${team['nome']}',
                         ),
-                    if (tab == 'Rosa' && rows.length >= 4 && !widget.api.preview)
+                    if (tab == 'Rosa' &&
+                        rows.length >= 4 &&
+                        !widget.api.preview)
                       const AdaptiveAdBanner(),
                   ],
                 );

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/access_gate.dart';
@@ -37,7 +39,54 @@ class NotificationApi extends DemoApi {
   }
 }
 
+class RestoringNotificationAuth extends DemoAuth {
+  RestoringNotificationAuth(super.api);
+  final restored = Completer<void>();
+  int restores = 0;
+
+  @override
+  Future<void> restore() async {
+    restores++;
+    await restored.future;
+    await login();
+  }
+}
+
 void main() {
+  testWidgets('Notification waits for saved session without asking for login', (
+    tester,
+  ) async {
+    final api = NotificationApi();
+    final auth = RestoringNotificationAuth(api);
+    final homeRestore = auth.ensureRestored();
+    final key = GlobalKey<NavigatorState>();
+    final routing = NotificationNavigator(
+      api: api,
+      auth: auth,
+      navigatorKey: key,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: key,
+        navigatorObservers: [routing],
+        builder: (_, child) => AppAuthScope(auth: auth, child: child!),
+        home: const Scaffold(body: Text('Home app')),
+      ),
+    );
+    routing.open('https://torneioldschool.it/tornei/partita_eventi.php?id=42');
+    await tester.pumpAndSettle();
+    expect(api.opened, isEmpty);
+    expect(find.text('Accesso richiesto'), findsNothing);
+    expect(auth.restores, 1);
+    auth.restored.complete();
+    await homeRestore;
+    await tester.pumpAndSettle();
+    expect(find.byType(MatchPage), findsOneWidget);
+    expect(find.text('Accesso richiesto'), findsNothing);
+    expect(api.opened, ['match:42', 'events:42']);
+    routing.dispose();
+  });
+
   test('Routes valid match and article links, rejects untrusted or malformed links', () {
     final target = pushDestination(
       'https://torneioldschool.it/tornei/partita_eventi.php?id=42&torneo=Coppa',

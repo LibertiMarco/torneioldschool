@@ -36,6 +36,7 @@ class TosAuth extends ChangeNotifier {
   String? _access;
   String? _refresh;
   Future<void>? _refreshing;
+  Future<void>? _restoring;
   Future<void> Function()? presentNativeLogin;
   bool busy = false;
   String? error;
@@ -52,6 +53,10 @@ class TosAuth extends ChangeNotifier {
   void _connectReads() {
     api.authenticatedRead = (path, query) => authorized(path, query: query);
   }
+
+  /// Share startup restoration with routes opened by notification taps.
+  Future<void> ensureRestored() =>
+      user != null ? Future<void>.value() : (_restoring ??= restore());
 
   Future<void> _save(Map<String, dynamic> tokens) async {
     final access = tokens['access_token'] as String;

@@ -20,6 +20,26 @@ class FavoritesApi extends DemoApi {
   Completer<dynamic>? pending;
   List<Map<String, dynamic>>? items;
   @override
+  Future<List<Map<String, dynamic>>> standings(String slug) async {
+    if (items == null) return super.standings(slug);
+    return [
+      for (final item in items!)
+        if (item['tipo'] == 'squadra' && item['torneo_slug'] == slug)
+          {
+            'id': item['squadra_id'],
+            'nome': item['squadra_nome'],
+            'punti': 17,
+            'giocate': 8,
+            'vinte': 5,
+            'pareggiate': 2,
+            'perse': 1,
+            'gol_fatti': 23,
+            'gol_subiti': 9,
+          },
+    ];
+  }
+
+  @override
   Future<List<Map<String, dynamic>>> tournaments(String section) async {
     if (items == null) return super.tournaments(section);
     return {
@@ -68,6 +88,7 @@ Map<String, dynamic> favorite(int id, {bool team = false}) => {
   'filetorneo': 'demo-$id.php',
   'torneo_logo': '',
   'squadra_nome': 'Squadra $id',
+  'squadra_id': team ? id : null,
   'squadra_logo': '',
 };
 
@@ -165,6 +186,9 @@ void main() {
         tester.widget<TeamPage>(find.byType(TeamPage)).team['nome'],
         'Squadra 2',
       );
+      expect(find.text('17'), findsOneWidget);
+      expect(find.text('23'), findsOneWidget);
+      expect(find.text('5 vinte'), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
       await tap(tester, find.text('Coppa 1'));

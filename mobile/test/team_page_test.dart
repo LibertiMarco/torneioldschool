@@ -4,6 +4,17 @@ import 'package:tornei_old_school/team_page.dart';
 import 'package:tornei_old_school/demo.dart';
 import 'package:tornei_old_school/theme.dart';
 import 'package:tornei_old_school/details.dart' show MatchPage;
+import 'package:tornei_old_school/api.dart';
+
+class RetryingTeamStatsApi extends DemoApi {
+  bool fail = true;
+  @override
+  Future<List<Map<String, dynamic>>> standings(String slug) async {
+    expect(slug, 'demo');
+    if (fail) throw const ApiError('Offline');
+    return teams;
+  }
+}
 
 class TeamFixtures extends DemoApi {
   @override
@@ -39,6 +50,31 @@ class TeamFixtures extends DemoApi {
 }
 
 void main() {
+  testWidgets(
+    'Missing statistics show an error and retry loads the team by ID',
+    (tester) async {
+      final api = RetryingTeamStatsApi();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TeamPage(
+            api: api,
+            slug: 'demo',
+            team: {'id': '1', 'nome': 'Old School FC'},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Impossibile caricare le statistiche.'), findsOneWidget);
+      expect(find.text('0 vinte'), findsNothing);
+      api.fail = false;
+      await tester.tap(find.text('Riprova'));
+      await tester.pumpAndSettle();
+      expect(find.text('9'), findsOneWidget);
+      expect(find.text('3 vinte'), findsOneWidget);
+      expect(find.text('Impossibile caricare le statistiche.'), findsNothing);
+    },
+  );
+
   testWidgets('Dark team page adapts match cards, titles and roster surfaces', (
     tester,
   ) async {
