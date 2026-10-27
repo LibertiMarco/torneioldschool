@@ -11,7 +11,20 @@ try {
         throw new MobileAuthError('invalid_csrf', 'Sessione scaduta. Ricarica la pagina.', 403);
     }
     if (!is_string($body['name'] ?? null)) throw new InvalidArgumentException('Inserisci nome e cognome.');
-    mobile_json(['name'=>$service->create($body['name'])]);
+    $action = $body['action'] ?? 'create';
+    if ($action === 'remove') {
+        $service->remove($body['name']);
+        mobile_json(['referees'=>$service->names()]);
+    }
+    if ($action === 'rename') {
+        if (!is_string($body['old_name'] ?? null)) throw new InvalidArgumentException('Seleziona un arbitro.');
+        $name = $service->rename($body['old_name'], $body['name']);
+    } elseif ($action === 'create') {
+        $name = $service->create($body['name']);
+    } else {
+        throw new InvalidArgumentException('Operazione non valida.');
+    }
+    mobile_json(['name'=>$name, 'referees'=>$service->names()]);
 } catch (InvalidArgumentException $error) {
     mobile_json(['error'=>['message'=>$error->getMessage()]], 400);
 } catch (MobileAuthError $error) {
