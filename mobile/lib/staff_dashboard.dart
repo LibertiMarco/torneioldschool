@@ -65,6 +65,13 @@ const graphicsTools = [
 ];
 const adminTools = [
   StaffTool(
+    'Arbitri',
+    'Gestisci i nomi nella picklist',
+    Icons.sports_outlined,
+    'api/gestione_arbitri.php',
+    'Sport',
+  ),
+  StaffTool(
     'Tornei',
     'Competizioni e impostazioni',
     Icons.emoji_events_outlined,

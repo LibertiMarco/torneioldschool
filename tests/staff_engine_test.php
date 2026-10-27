@@ -13,6 +13,7 @@ $admin = ['admin' => true, 'graphics' => true];
 $graphic = ['graphics' => true, 'admin' => false];
 $public = ['graphics' => false, 'admin' => false];
 $routes = [
+    'gestione_arbitri',
     'gestione_tornei', 'gestione_partite', 'gestione_squadre', 'gestione_giocatori',
     'crea_giornata_automatica', 'sincronizza_video_partite', 'gestione_account_giocatore',
     'gestione_blog', 'gestione_staff', 'gestione_albo', 'gestione_totocalcio', 'gestione_fantacalcio',

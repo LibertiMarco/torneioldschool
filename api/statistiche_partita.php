@@ -570,7 +570,13 @@ async function loadLineup() {
   document.getElementById("partitaInfo").innerHTML = `<b>${escapeHtml(matchInfo.squadra_casa)} - ${escapeHtml(matchInfo.squadra_ospite)}</b><br>${escapeHtml(matchInfo.data_partita || "")} | ${escapeHtml(String(matchInfo.ora_partita || "").slice(0,5))}<br><span style="font-size:14px;color:#444;">${escapeHtml(matchInfo.torneo || "")} - ${escapeHtml(matchInfo.fase || "REGULAR")}</span>`;
   document.getElementById("homeScoreName").textContent = matchInfo.squadra_casa || "Casa";
   document.getElementById("awayScoreName").textContent = matchInfo.squadra_ospite || "Ospite";
-  document.getElementById("finalizzaPartita").checked = Number(matchInfo.giocata || 0) === 1;
+  const played = Number(matchInfo.giocata || 0) === 1;
+  document.getElementById("finalizzaPartita").checked = played;
+  document.getElementById("finalizzaPartita").disabled = played;
+  document.getElementById("lineupForm")?.setAttribute('data-played', played ? '1' : '0');
+  document.querySelector('.last-stat-desc').textContent = played
+    ? 'Modifica presenze ed eventi: nessuna nuova notifica viene inviata.'
+    : 'Segna la partita come giocata e invia le notifiche.';
   document.getElementById("lineupRoot").innerHTML = ["casa", "ospite"].map(side => renderTeam(side, players.filter(p => p.lato === side))).join("");
   updateLiveScore();
 }

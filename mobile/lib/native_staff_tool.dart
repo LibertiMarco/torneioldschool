@@ -688,7 +688,9 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                         if (_lineup!['finalize'] is Map)
                           _block(_lineup!['finalize'] as Map),
                         Text(
-                          'La finalizzazione segna la partita come giocata e invia le notifiche.',
+                          _lineup!['played'] == true
+                              ? 'Modifica presenze ed eventi senza inviare nuove notifiche.'
+                              : 'La finalizzazione segna la partita come giocata e invia le notifiche.',
                           style: TextStyle(
                             fontSize: 11,
                             color: Theme.of(context)

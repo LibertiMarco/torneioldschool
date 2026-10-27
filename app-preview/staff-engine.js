@@ -6,7 +6,7 @@
   const frame = document.getElementById('staff-source');
   const channel = window.tosStaffChannel;
   const routes = new Set([
-    'gestione_tornei', 'gestione_partite', 'gestione_squadre', 'gestione_giocatori',
+    'gestione_arbitri', 'gestione_tornei', 'gestione_partite', 'gestione_squadre', 'gestione_giocatori',
     'crea_giornata_automatica', 'sincronizza_video_partite', 'gestione_account_giocatore',
     'gestione_blog', 'gestione_staff', 'gestione_albo', 'gestione_totocalcio', 'gestione_fantacalcio',
     'grafiche_settimana', 'grafiche_post_partita', 'copertina_partite', 'grafiche_classifiche',
@@ -135,6 +135,7 @@
       away:clean(form.querySelector('#awayScoreName')?.textContent),
       score:clean(form.querySelector('#liveScore')?.textContent),
       back:doc.querySelector('#btnBackStats') ? action(doc.querySelector('#btnBackStats')) : null,
+      played: form.dataset.played === '1',
       finalize, save,
       notice:doc.querySelector('#msgBox')?.style.opacity === '1' ? clean(doc.querySelector('#msgBox').textContent) : '',
       error:doc.querySelector('#msgBox')?.classList.contains('msg-error') || false,

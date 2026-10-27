@@ -410,6 +410,8 @@ function get_utenti_per_squadre(mysqli $conn, string $torneo, array $squadre): a
 }
 
 function inviaNotificaEsito(mysqli $conn, int $partitaId, ?array $info = null): void {
+    // Corrections to an already finalized report must never send another result.
+    if ($info !== null && (int)($info['old_giocata'] ?? 0) === 1) return;
     ensure_partite_notifica_flag($conn);
 
     $meta = $conn->prepare("SELECT torneo, fase, squadra_casa, squadra_ospite, gol_casa, gol_ospite, giocata, notifica_esito_inviata, data_partita, ora_partita FROM partite WHERE id=?");

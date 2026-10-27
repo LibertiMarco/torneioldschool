@@ -1459,13 +1459,22 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     <h1 class="admin-title">Gestione Partite</h1>
     <p><a href="/api/crea_calendario_allinone.php">Genera calendario gironi AllInOneNight</a></p>
 
+    <p><a href="/api/gestione_arbitri.php">Gestione picklist arbitri</a></p>
     <div class="tab-buttons">
+      <button type="button" data-tab="esitate">Presenze partite esitate</button>
       <button type="button" data-tab="crea" class="<?= $tabAttiva === 'crea' ? 'active' : '' ?>">Crea</button>
       <button type="button" data-tab="modifica" class="<?= $tabAttiva === 'modifica' ? 'active' : '' ?>">Modifica</button>
       <button type="button" data-tab="elimina" class="<?= $tabAttiva === 'elimina' ? 'active' : '' ?>">Elimina</button>
       <button type="button" data-tab="campi" class="<?= $tabAttiva === 'campi' ? 'active' : '' ?>">Campi</button>
     </div>
 
+    <section class="tab-section" data-tab="esitate">
+      <div class="form-card"><h3>Presenze partite esitate</h3>
+      <p>Modifica o rimuovi presenze senza inviare nuovamente notifiche.</p>
+      <?php foreach ($partiteGiocate as $p): ?>
+        <p><a href="/api/statistiche_partita.php?partitaid=<?= (int)$p['id'] ?>"><?= htmlspecialchars($p['torneo'].' | '.$p['data_partita'].' | '.$p['squadra_casa'].' - '.$p['squadra_ospite'], ENT_QUOTES, 'UTF-8') ?></a></p>
+      <?php endforeach; ?></div>
+    </section>
     <!-- CREA -->
     <section class="tab-section <?= $tabAttiva === 'crea' ? 'active' : '' ?>" data-tab="crea">
       <div class="form-card">
@@ -2341,7 +2350,21 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     toggleRigoriGroup('decisa_rigori_mod', 'rigoriFieldsMod');
   });
 
-  const fillField = (id, val) => { const el = document.getElementById(id); if (el) { if (el.type === 'checkbox') { el.checked = !!val; } else { el.value = val ?? ''; } } };
+  const fillField = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Keep a historical referee assigned even after removal from the picklist.
+    if (id.startsWith('arbitro') && el.tagName === 'SELECT') {
+      el.querySelectorAll('option[data-historical]').forEach(option => option.remove());
+      if (val && !Array.from(el.options).some(option => option.value === val)) {
+        const option = new Option(`${val} (già assegnato)`, val);
+        option.dataset.historical = '1';
+        el.add(option);
+      }
+    }
+    if (el.type === 'checkbox') el.checked = !!val;
+    else el.value = val ?? '';
+  };
   const clearModificaFields = () => {
     const ids = [
       'torneo_mod','fase_mod','squadra_casa_mod','squadra_ospite_mod',
@@ -2527,10 +2550,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     partitaId: 'selPartitaLink',
     getData: () => partiteGiocateData,
     onPartita: (partita) => {
-      const fill = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.value = val ?? '';
-      };
+      const fill = fillField;
       if (!partita) {
         fill('arbitro_link', '');
         fill('link_youtube_link', '');

@@ -3,7 +3,7 @@
 function staff_engine_source(array $query, array $permissions): string
 {
     $admin = [
-        'api/gestione_tornei.php', 'api/gestione_partite.php', 'api/gestione_squadre.php',
+        'api/gestione_arbitri.php', 'api/gestione_tornei.php', 'api/gestione_partite.php', 'api/gestione_squadre.php',
         'api/gestione_giocatori.php', 'api/crea_giornata_automatica.php',
         'api/sincronizza_video_partite.php', 'api/gestione_account_giocatore.php',
         'admin_mobile.php', 'api/gestione_blog.php', 'api/gestione_staff.php',

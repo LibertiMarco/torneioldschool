@@ -25,6 +25,7 @@ const delay = () => new Promise(resolve => setTimeout(resolve, 180));
     {giocatore_id:1,squadra_id:10,lato:'casa',squadra:'Go Ahead Eagles',nome:'Marco',cognome:'Rossi',ruolo:'Portiere',is_captain:1,diffidato:1,goal:0,assist:0,autogol:0,voto:6},
     {giocatore_id:2,squadra_id:20,lato:'ospite',squadra:'Napoli',nome:'Luca',cognome:'Bianchi',ruolo:'Difensore',goal:0,assist:0,autogol:0,voto:6},
   ];
+  let played = 0;
   source.window.fetch = async (url, options) => {
     if (options?.method === 'POST') {
       writes.push({action:options.body.get('azione'),match:options.body.get('partita_id'),
@@ -32,7 +33,7 @@ const delay = () => new Promise(resolve => setTimeout(resolve, 180));
       return {ok:true,json:async () => ({success:true,message:'Distinta salvata'})};
     }
     return {ok:true,json:async () => url.startsWith('/api/get_partita') ?
-      {squadra_casa:'Go Ahead Eagles',squadra_ospite:'Napoli',data_partita:'2026-10-11',ora_partita:'20:30:00',torneo:'Brasilerao',fase:'GOLD',giocata:0} : players};
+      {squadra_casa:'Go Ahead Eagles',squadra_ospite:'Napoli',data_partita:'2026-10-11',ora_partita:'20:30:00',torneo:'Brasilerao',fase:'GOLD',giocata:played} : players};
   };
   source.window.eval(controller);
   await delay();
@@ -78,6 +79,18 @@ const delay = () => new Promise(resolve => setTimeout(resolve, 180));
   const count = writes.length;
   command({type:'click',id:lineup().save.id,document:'stale'});
   assert.equal(writes.length, count);
+  played = 1;
+  await source.window.loadLineup();
+  await delay();
+  assert.equal(lineup().played, true, 'Played state reaches the native app');
+  assert(lineup().finalize.disabled && lineup().finalize.checked);
+  assert(doc.querySelector('.last-stat-desc').textContent.includes('nessuna nuova notifica'));
+  command({type:'change',id:lineup().finalize.id,checked:false});
+  assert(doc.getElementById('finalizzaPartita').checked, 'Corrections keep the match finalized');
+  command({type:'change',id:field(1,'presenza').id,checked:false});
+  command({type:'click',id:lineup().save.id});
+  await delay();
+  assert.equal(writes.at(-1).rows[1].presenza, 0, 'A saved appearance can be removed');
   doc.getElementById('lineupRoot').innerHTML = '<p>Caricamento distinta...</p>';
   await delay();
   assert(lineup().save.disabled && lineup().finalize.disabled, 'Saving is disabled while attendance is unavailable');

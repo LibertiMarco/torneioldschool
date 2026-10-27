@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'own_goal_icon.dart';
+
 bool hasPlayerEvents(Map<String, dynamic> stats) => [
   'goal',
+  'autogol',
   'cartellino_giallo',
   'cartellino_rosso',
 ].any((key) => (int.tryParse('${stats[key] ?? 0}') ?? 0) > 0);
@@ -53,6 +56,21 @@ class PlayerEventMarks extends StatelessWidget {
                       height: 22,
                       excludeFromSemantics: true,
                     ),
+                ],
+              ),
+            ),
+          if (count('autogol') > 0)
+            Tooltip(
+              message: "Autogol: ${count('autogol')}",
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const OwnGoalIcon(),
+                  const SizedBox(width: 4),
+                  Text(
+                    "×${count('autogol')} · Autogol",
+                    semanticsLabel: "${count('autogol')} autogol",
+                  ),
                 ],
               ),
             ),

@@ -358,11 +358,6 @@ class _MatchPageState extends State<MatchPage> {
                 'Assist: ${event['assist']}',
                 style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
               ),
-            if ((int.tryParse('${event['autogol']}') ?? 0) > 0)
-              Text(
-                'Autogol: ${event['autogol']}',
-                style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
-              ),
           ],
         ),
       );
