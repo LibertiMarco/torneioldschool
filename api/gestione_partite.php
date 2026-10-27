@@ -1471,9 +1471,38 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     <section class="tab-section" data-tab="esitate">
       <div class="form-card"><h3>Presenze partite esitate</h3>
       <p>Modifica o rimuovi presenze senza inviare nuovamente notifiche.</p>
-      <?php foreach ($partiteGiocate as $p): ?>
-        <p><a href="/api/statistiche_partita.php?partitaid=<?= (int)$p['id'] ?>"><?= htmlspecialchars($p['torneo'].' | '.$p['data_partita'].' | '.$p['squadra_casa'].' - '.$p['squadra_ospite'], ENT_QUOTES, 'UTF-8') ?></a></p>
-      <?php endforeach; ?></div>
+      <form class="admin-form inline" method="GET" action="/api/statistiche_partita.php" id="formPresenzeEsitate">
+        <div class="full">
+          <label for="selTorneoEsitate" class="required-label">Seleziona torneo</label>
+          <select id="selTorneoEsitate" required>
+            <option value="">-- Seleziona torneo --</option>
+            <?php foreach ($torneiDisponibili as $t): ?>
+              <option value="<?= htmlspecialchars($t['slug']) ?>"><?= htmlspecialchars($t['nome']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label for="selFaseEsitate" class="required-label">Fase</label>
+          <select id="selFaseEsitate" required disabled>
+            <option value="">-- Seleziona torneo --</option>
+          </select>
+        </div>
+        <div>
+          <label for="selGiornataEsitate" class="required-label">Giornata / Turno</label>
+          <select id="selGiornataEsitate" required disabled>
+            <option value="">-- Seleziona fase --</option>
+          </select>
+        </div>
+        <div>
+          <label for="selPartitaEsitate" class="required-label">Partita</label>
+          <select name="partitaid" id="selPartitaEsitate" required disabled>
+            <option value="">-- Seleziona giornata/turno --</option>
+          </select>
+        </div>
+        <div class="full stats-button-row">
+          <button type="submit" id="btnPresenzeEsitate" class="btn-stats" disabled>Modifica presenze</button>
+        </div>
+      </form></div>
     </section>
     <!-- CREA -->
     <section class="tab-section <?= $tabAttiva === 'crea' ? 'active' : '' ?>" data-tab="crea">
@@ -2249,6 +2278,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
 
   [
     { torneoId: 'selTorneoMod', faseId: 'selFaseMod', placeholder: '-- Seleziona fase --' },
+    { torneoId: 'selTorneoEsitate', faseId: 'selFaseEsitate', placeholder: '-- Seleziona fase --' },
     { torneoId: 'torneo_mod', faseId: 'fase_mod' },
     { torneoId: 'selTorneoGioc', faseId: 'selFaseGioc', placeholder: '-- Seleziona fase --' },
     { torneoId: 'selTorneoLink', faseId: 'selFaseLink', placeholder: '-- Seleziona fase --' },
@@ -2258,6 +2288,10 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     const faseSelect = document.getElementById(faseId);
     syncPhaseSelectOptions(faseSelect, torneoSelect?.value || '', placeholder);
     torneoSelect?.addEventListener('change', () => {
+      if (faseId === 'selFaseEsitate' && faseSelect) {
+        faseSelect.value = '';
+        faseSelect.disabled = !torneoSelect.value;
+      }
       syncPhaseSelectOptions(faseSelect, torneoSelect.value || '', placeholder);
     });
   });
@@ -2464,6 +2498,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
       if (!torneoSel || !faseSel || !giorSel) return;
       resetSelect(giorSel, '-- Seleziona fase --');
       resetSelect(partSel, '-- Seleziona giornata/turno --');
+      onPartita?.(null);
       const torneoVal = torneoSel.value;
       const faseVal = (faseSel.value || '').toUpperCase();
       if (!torneoVal || !faseVal) return;
@@ -2491,6 +2526,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     const populatePartite = () => {
       if (!torneoSel || !faseSel || !giorSel || !partSel) return;
       resetSelect(partSel, '-- Seleziona giornata/turno --');
+      onPartita?.(null);
       const torneoVal = torneoSel.value;
       const faseVal = (faseSel.value || '').toUpperCase();
       const gVal = giorSel.value;
@@ -2517,6 +2553,18 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
       onPartita?.(partita || null);
     });
   };
+
+  setupSelector({
+    torneoId: 'selTorneoEsitate',
+    faseId: 'selFaseEsitate',
+    giornataId: 'selGiornataEsitate',
+    partitaId: 'selPartitaEsitate',
+    getData: () => partiteGiocateData,
+    onPartita: (partita) => {
+      const button = document.getElementById('btnPresenzeEsitate');
+      if (button) button.disabled = !partita;
+    }
+  });
 
   setupSelector({
     torneoId: 'selTorneoMod',
@@ -2741,6 +2789,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   const refreshSelectorsFromData = () => {
     populateSquadreFiltrate();
     document.getElementById('selTorneoMod')?.dispatchEvent(new Event('change'));
+    document.getElementById('selTorneoEsitate')?.dispatchEvent(new Event('change'));
     document.getElementById('selTorneoElim')?.dispatchEvent(new Event('change'));
     document.getElementById('selTorneoGioc')?.dispatchEvent(new Event('change'));
     document.getElementById('selTorneoLink')?.dispatchEvent(new Event('change'));
