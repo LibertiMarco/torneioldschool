@@ -3,7 +3,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import 'api.dart';
 import 'auth.dart';
-import 'external_link_button.dart';
+import 'auth_web_page.dart';
 
 class NativeLoginPage extends StatefulWidget {
   const NativeLoginPage({super.key, required this.auth});
@@ -17,6 +17,47 @@ class _NativeLoginPageState extends State<NativeLoginPage> {
   final _email = TextEditingController(), _password = TextEditingController();
   bool _hidden = true, _pending = false, _recovery = false;
   String? _message;
+  Future<void> _openEmailLink() async {
+    var input = '';
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Link ricevuto via email'),
+        content: TextField(
+          onChanged: (value) => input = value,
+          decoration: const InputDecoration(
+            labelText: 'Incolla il link di conferma o recupero',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annulla'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, input),
+            child: const Text('Apri'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || value == null) return;
+    final uri = accountEmailLink(widget.auth.api.baseUrl, value);
+    if (uri == null) {
+      setState(
+        () => _message =
+            'Inserisci un link di conferma o recupero di Tornei Old School.',
+      );
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            AuthWebPage(uri: uri, title: 'Conferma account o password'),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _email.dispose();
@@ -189,11 +230,24 @@ class _NativeLoginPageState extends State<NativeLoginPage> {
                     ),
                   ),
                   if (!_recovery)
-                    ExternalLinkButton(
-                      uri: widget.auth.api.uri('register.php'),
-                      label: 'Crea un account',
-                      icon: Icons.person_add_alt_outlined,
+                    TextButton.icon(
+                      onPressed: _pending
+                          ? null
+                          : () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => AuthWebPage(
+                                  uri: widget.auth.api.uri('register.php'),
+                                  title: 'Crea un account',
+                                ),
+                              ),
+                            ),
+                      label: const Text('Crea un account'),
+                      icon: const Icon(Icons.person_add_alt_outlined),
                     ),
+                  TextButton(
+                    onPressed: _pending ? null : _openEmailLink,
+                    child: const Text('Apri link ricevuto via email'),
+                  ),
                 ],
               ),
             ),

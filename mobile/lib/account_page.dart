@@ -1,9 +1,11 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'api.dart';
 import 'auth.dart';
+import 'delete_account_page.dart';
 import 'push.dart';
 import 'notification_preferences.dart';
 import 'home_dashboard.dart' show SiteImage;
@@ -550,7 +552,20 @@ class _AccountPageState extends State<AccountPage> {
             ),
             const SizedBox(height: 10),
             TextButton(
-              onPressed: () => _open('account_delete.php'),
+              onPressed: _saving
+                  ? null
+                  : () {
+                      if (kIsWeb) {
+                        _open('account_delete.php');
+                      } else {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                DeleteAccountPage(auth: widget.auth),
+                          ),
+                        );
+                      }
+                    },
               child: Text(
                 'Vai alla cancellazione account',
                 style: TextStyle(color: colors.error),

@@ -32,6 +32,47 @@ const testUser = {
 };
 
 void main() {
+  test(
+    'Account deletion uses bearer and clears local session only after success',
+    () async {
+      final store = MemorySessionStore()
+        ..value = jsonEncode({'access': 'access', 'refresh': 'refresh'});
+      var fail = true;
+      final auth = TosAuth(
+        TosApi(
+          baseUrl: Uri.parse('https://example.test'),
+          client: MockClient((request) async {
+            if (request.url.path.endsWith('/account_delete.php')) {
+              expect(request.headers['Authorization'], 'Bearer access');
+              expect(jsonDecode(request.body), {
+                'password': ' exact password ',
+                'confirm_delete': true,
+              });
+              return fail
+                  ? http.Response(
+                      '{"error":{"message":"Password non corretta."}}',
+                      403,
+                    )
+                  : http.Response('{"success":true}', 200);
+            }
+            return http.Response(jsonEncode({'user': testUser}), 200);
+          }),
+        ),
+        storage: store,
+      );
+      await auth.restore();
+      await expectLater(
+        auth.deleteAccount(' exact password '),
+        throwsA(isA<ApiError>()),
+      );
+      expect(store.value, isNotNull);
+      expect(auth.user, isNotNull);
+      fail = false;
+      await auth.deleteAccount(' exact password ');
+      expect(store.value, isNull);
+      expect(auth.user, isNull);
+    },
+  );
   test('Content reads use the session, refresh expired tokens and detach on logout', () async {
     final store = MemorySessionStore()
       ..value = jsonEncode({'access': 'old', 'refresh': 'refresh'});

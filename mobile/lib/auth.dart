@@ -277,4 +277,12 @@ class TosAuth extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> deleteAccount(String password) async {
+    await authorized(
+      'api/mobile/v1/account_delete.php',
+      body: {'password': password, 'confirm_delete': true},
+    );
+    await _clear();
+  }
 }
