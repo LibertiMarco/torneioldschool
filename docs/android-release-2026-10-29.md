@@ -1,5 +1,21 @@
 # Bundle Google Play del 29 ottobre 2026
 
+## Aggiornamento: build 15 con eccezione account
+
+Il file da caricare aggiornato è
+`mobile/build/app/outputs/bundle/release/tornei-old-school-0.1.1-build-15.aab`.
+Include l'eccezione di visualizzazione per `oldschooltornei@gmail.com`:
+emblemi a iniziali indipendentemente dal flag globale, dopo l'accesso.
+Versione 0.1.1, versionCode 15; stessa configurazione produzione e firma della
+build 14. Compilazione completata, firma JAR verificata e certificato confrontato
+con il certificato upload esistente: corrispondente. Manifest generato verificato.
+
+SHA256: `EC7B1BFDFC15E0B0F190E8218B07197642F0CA146D1F4FFA8F12375A52762D35`.
+Nessun caricamento su Play Console effettuato. La build 14 seguente resta
+documentata come precedente e non include l'eccezione account.
+
+## Build 14 precedente
+
 Generato `mobile/build/app/outputs/bundle/release/tornei-old-school-0.1.1-build-14.aab`.
 
 - Versione: 0.1.1; versionCode: 14.
