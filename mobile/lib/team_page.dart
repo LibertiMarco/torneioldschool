@@ -195,6 +195,7 @@ class _TeamPageState extends State<TeamPage> {
                     child: Row(
                       children: [
                         SiteImage(
+                          identityName: '${team['nome'] ?? ''}',
                           api: widget.api,
                           path: '${team['logo'] ?? ''}',
                           width: 68,
@@ -913,6 +914,7 @@ class TeamMatchTile extends StatelessWidget {
                       child: Column(
                         children: [
                           SiteImage(
+                            identityName: '${match['squadra_casa'] ?? ''}',
                             api: api,
                             path: '${match['logo_casa'] ?? ''}',
                             width: 32,
@@ -948,6 +950,7 @@ class TeamMatchTile extends StatelessWidget {
                       child: Column(
                         children: [
                           SiteImage(
+                            identityName: '${match['squadra_ospite'] ?? ''}',
                             api: api,
                             path: '${match['logo_ospite'] ?? ''}',
                             width: 32,

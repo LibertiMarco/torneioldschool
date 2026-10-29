@@ -310,6 +310,7 @@ class _TournamentNotificationsState extends State<TournamentNotifications> {
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: SiteImage(
+                                        identityName: team,
                                         api: _auth!.api,
                                         path:
                                             _teamLogos[team]?.isNotEmpty == true

@@ -98,6 +98,7 @@ class _NextMatchState extends State<_NextMatch> {
         borderRadius: BorderRadius.circular(20),
       ),
       child: SiteImage(
+        identityName: name,
         api: widget.auth.api,
         path: logo,
         width: 52,

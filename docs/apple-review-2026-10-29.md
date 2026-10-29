@@ -1,5 +1,10 @@
 # Revisione Apple: autenticazione e identita sportive
 
+**Immagini e proposta grafica:** aprire [l'allegato visivo dei loghi](apple-review-loghi.html).
+Contiene sei immagini effettive del progetto con i percorsi di origine, quattro
+esempi di stemmi originali e una simulazione di classifica. Le immagini sono
+incorporate nel file HTML, consultabile anche senza connessione al sito.
+
 Stato: modifiche locali, nessun deploy e nessuna modifica ai dati del sito.
 Non e stata prodotta o provata una IPA su iPhone. La conformita finale e la
 risposta di Apple sui nomi restano da confermare.
@@ -30,6 +35,16 @@ Un eventuale ritorno automatico richiede associazione dominio/app, file AASA,
 gestione link a freddo/caldo e prove su dispositivi; non basta lo schema PKCE.
 
 ## Loghi: fonti e superfici da coprire
+
+Esempi visivi dei file individuati (non prova di utilizzo nel database live):
+
+| Squadra | Squadra | Competizione |
+| --- | --- | --- |
+| ![Atalanta](../img/scudetti/Atalanta.png) | ![Bologna](../img/scudetti/Bologna.png) | ![Serie A](../img/tornei/seriea.png) |
+| `img/scudetti/Atalanta.png` | `img/scudetti/Bologna.png` | `img/tornei/seriea.png` |
+
+Per immagini con dimensioni uniformi e anteprima degli stemmi proposti usare
+[l'allegato HTML](apple-review-loghi.html).
 
 L'inventario e del codice e dei file locali, non una lettura del database live.
 Un percorso salvato nel database puo riferirsi a un file locale sul server oppure

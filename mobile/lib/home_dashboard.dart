@@ -19,6 +19,7 @@ import 'details.dart' show DataPage;
 import 'main.dart' show ErrorPanel, TournamentPage;
 import 'theme.dart' show siteBlue, siteRed;
 import 'home_design.dart';
+import 'original_emblem.dart';
 
 class SiteImage extends StatelessWidget {
   const SiteImage({
@@ -29,14 +30,24 @@ class SiteImage extends StatelessWidget {
     this.height = 56,
     this.fallback = Icons.image_outlined,
     this.preserveShape = false,
+    this.identityName,
   });
   final TosApi api;
   final String path;
   final double width, height;
   final IconData fallback;
   final bool preserveShape;
+  final String? identityName;
   @override
   Widget build(BuildContext context) {
+    if (identityName != null) {
+      return OriginalEmblem(
+        name: identityName!,
+        tournament: fallback == Icons.emoji_events_outlined,
+        width: width,
+        height: height,
+      );
+    }
     final parsed = Uri.tryParse(path.trim());
     final uri = parsed == null ? null : api.baseUrl.resolveUri(parsed);
     Widget placeholder() => SizedBox(
@@ -1035,6 +1046,7 @@ class HallCard extends StatelessWidget {
           Row(
             children: [
               SiteImage(
+                identityName: '${row['competizione'] ?? ''}',
                 api: api,
                 path: '${row['torneo_logo'] ?? ''}',
                 fallback: Icons.emoji_events_outlined,
@@ -1099,6 +1111,7 @@ class _HallAward extends StatelessWidget {
       child: Row(
         children: [
           SiteImage(
+            identityName: individual ? null : '${award['vincitrice'] ?? ''}',
             api: api,
             path: '${award['logo_vincitrice'] ?? ''}',
             width: 44,

@@ -185,6 +185,7 @@ class _TournamentPageState extends State<TournamentPage> {
                   child: Row(
                     children: [
                       SiteImage(
+                        identityName: '${info['nome'] ?? ''}',
                         api: widget.api,
                         path: '${info['img'] ?? ''}',
                         width: 72,
@@ -392,6 +393,7 @@ class _TournamentPageState extends State<TournamentPage> {
                       (team) => Card(
                         child: ListTile(
                           leading: SiteImage(
+                            identityName: '${team['nome'] ?? ''}',
                             api: widget.api,
                             path: '${team['logo'] ?? ''}',
                             width: 44,
@@ -696,6 +698,7 @@ class StandingsTable extends StatelessWidget {
                                   children: [
                                     if (team != null)
                                       SiteImage(
+                                        identityName: '${team['nome'] ?? ''}',
                                         api: api,
                                         path: '${team['logo'] ?? ''}',
                                         width: 24,
@@ -977,6 +980,7 @@ class _MatchTeam extends StatelessWidget {
     child: Column(
       children: [
         SiteImage(
+          identityName: name,
           api: api,
           path: logo,
           width: 48,

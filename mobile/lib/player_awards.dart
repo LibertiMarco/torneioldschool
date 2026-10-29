@@ -158,6 +158,7 @@ class _PlayerAwardsSectionState extends State<PlayerAwardsSection> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SiteImage(
+                      identityName: '${award['competizione'] ?? ''}',
                       api: widget.api,
                       path: '${award['logo'] ?? ''}',
                       width: 48,

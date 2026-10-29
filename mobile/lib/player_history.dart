@@ -218,6 +218,7 @@ class PlayerHistoryMatchCard extends StatelessWidget {
       child: Column(
         children: [
           SiteImage(
+            identityName: '${match['squadra_$side'] ?? ''}',
             api: api,
             path: '${match['logo_$side'] ?? ''}',
             width: 36,

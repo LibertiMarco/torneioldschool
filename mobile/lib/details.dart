@@ -219,6 +219,7 @@ class _MatchPageState extends State<MatchPage> {
         child: Column(
           children: [
             SiteImage(
+              identityName: name,
               api: api,
               path: logo,
               width: 44,
@@ -383,6 +384,8 @@ class _MatchPageState extends State<MatchPage> {
                 Row(
                   children: [
                     SiteImage(
+                      identityName:
+                          '${match[side == 'CASA' ? 'squadra_casa' : 'squadra_ospite'] ?? ''}',
                       api: api,
                       path:
                           '${match[side == 'CASA' ? 'logo_casa' : 'logo_ospite'] ?? ''}',

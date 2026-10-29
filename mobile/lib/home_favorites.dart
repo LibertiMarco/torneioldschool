@@ -169,6 +169,7 @@ class _FavoritesContentState extends State<_FavoritesContent> {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(vertical: 4),
       leading: SiteImage(
+        identityName: '${item[team ? 'squadra_nome' : 'torneo_nome'] ?? ''}',
         api: widget.auth.api,
         path: '${item[team ? 'squadra_logo' : 'torneo_logo'] ?? ''}',
         width: 40,
@@ -321,6 +322,7 @@ class _FavoritesContentState extends State<_FavoritesContent> {
               child: ExpansionTile(
                 key: ValueKey(TosApi.tournamentSlug(tournament)),
                 leading: SiteImage(
+                  identityName: '${tournament['nome'] ?? ''}',
                   api: widget.auth.api,
                   path: '${tournament['img'] ?? ''}',
                   width: 36,

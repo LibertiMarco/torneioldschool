@@ -225,6 +225,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
           borderRadius: BorderRadius.circular(12),
         ),
         child: SiteImage(
+          identityName: name,
           api: widget.api,
           path: logo,
           width: 34,
@@ -918,6 +919,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: SiteImage(
+                    identityName: '${team['nome'] ?? ''}',
                     api: widget.api,
                     path: '${team['logo'] ?? ''}',
                     width: 34,

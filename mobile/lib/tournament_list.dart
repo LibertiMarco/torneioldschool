@@ -46,6 +46,7 @@ class TournamentCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SiteImage(
+                identityName: '${tournament['nome'] ?? ''}',
                 api: api,
                 path: '${tournament['img'] ?? ''}',
                 width: 52,
