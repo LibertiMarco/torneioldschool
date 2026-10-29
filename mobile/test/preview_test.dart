@@ -80,7 +80,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Utenti');
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Gestione account'));
+    await tester.scrollUntilVisible(
+      find.text('Gestione account'),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Gestione account'));
     await tester.pumpAndSettle();

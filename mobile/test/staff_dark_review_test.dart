@@ -96,11 +96,14 @@ void main() {
       await tester.tap(reset);
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
-        find.text('20 strumenti'),
-        100,
+        find.text('${adminTools.length + graphicsTools.length + 1} strumenti'),
+        -100,
         scrollable: scroll,
       );
-      expect(find.text('20 strumenti'), findsOneWidget);
+      expect(
+        find.text('${adminTools.length + graphicsTools.length + 1} strumenti'),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     });
   }
