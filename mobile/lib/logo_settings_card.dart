@@ -60,7 +60,8 @@ class _LogoSettingsCardState extends State<LogoSettingsCard> {
               title: const Text('Loghi originali di squadre e tornei'),
               subtitle: const Text(
                 'Attivo: mostra i loghi originali. Disattivo: mostra gli emblemi '
-                'con iniziali. Vale per tutti nell’app e nella preview.',
+                'con iniziali. Vale nell’app e nella preview; '
+                'oldschooltornei@gmail.com usa sempre le iniziali.',
               ),
               value: enabled,
               onChanged: _busy || !_loaded ? null : _request,

@@ -38,3 +38,14 @@ all'avvio il valore di ripiego è emblemi a iniziali.
 
 Il deploy deve includere entrambi gli endpoint PHP e i sorgenti condivisi,
 oltre alla build web ricompilata e alla nuova build mobile.
+
+## Eccezione account
+
+L'account autenticato `oldschooltornei@gmail.com` visualizza sempre gli emblemi
+a iniziali per squadre e tornei, anche quando il flag globale abilita i loghi
+originali. Il confronto email ignora maiuscole e spazi esterni. Il comportamento
+si aggiorna con login, logout e cambio account, senza modificare il flag globale.
+L'eccezione è indicata nel controllo riservato agli admin. È condivisa tra app
+e preview; non riguarda foto, immagini editoriali o loghi incorporati in grafiche.
+Il bundle Android build 14 preparato prima di questa modifica non la contiene:
+per distribuirla occorre una nuova compilazione mobile.

@@ -43,6 +43,9 @@ class TosAuth extends ChangeNotifier {
   String get _storageKey => 'tos.session.${api.baseUrl}';
   bool get admin => (user?['permissions'] as Map?)?['admin'] == true;
   bool get graphics => (user?['permissions'] as Map?)?['graphics'] == true;
+  bool get alwaysUseOriginalEmblems =>
+      '${user?['email'] ?? ''}'.trim().toLowerCase() ==
+      'oldschooltornei@gmail.com';
   static String randomValue() => base64UrlEncode(
     List<int>.generate(32, (_) => Random.secure().nextInt(256)),
   ).replaceAll('=', '');

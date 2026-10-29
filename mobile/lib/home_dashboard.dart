@@ -39,10 +39,16 @@ class SiteImage extends StatelessWidget {
   final bool preserveShape;
   final String? identityName;
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
-    valueListenable: api.originalLogos,
-    builder: (context, originalLogos, _) => _buildImage(context, originalLogos),
-  );
+  Widget build(BuildContext context) {
+    final auth = AppAuthScope.of(context);
+    return ListenableBuilder(
+      listenable: Listenable.merge([api.originalLogos, auth]),
+      builder: (context, _) => _buildImage(
+        context,
+        api.originalLogos.value && !(auth?.alwaysUseOriginalEmblems ?? false),
+      ),
+    );
+  }
 
   Widget _buildImage(BuildContext context, bool originalLogos) {
     if (identityName != null && !originalLogos) {
