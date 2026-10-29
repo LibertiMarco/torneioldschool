@@ -14,7 +14,7 @@ final class MobileAuth
 {
     public const CALLBACK = 'tosoldschool://auth/callback';
     public const ACCESS_TTL = 900;
-    public const REFRESH_TTL = 2592000;
+    public const REFRESH_TTL = 365 * 24 * 60 * 60;
     private Closure $clock;
 
     public function __construct(private PDO $db, ?Closure $clock = null)
