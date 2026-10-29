@@ -123,7 +123,14 @@ void main() {
         expect(find.text('Dashboard amministratore'), findsOneWidget);
         await tester.enterText(find.byType(TextField), 'Utenti');
         await tester.pumpAndSettle();
-        await tester.ensureVisible(find.text('Gestione account'));
+        await tester.scrollUntilVisible(
+          find.text('Gestione account'),
+          150,
+          scrollable: find.descendant(
+            of: find.byType(StaffDashboard),
+            matching: find.byType(Scrollable),
+          ).first,
+        );
         await tester.pumpAndSettle();
         await tester.tap(find.text('Gestione account'));
         await tester.pumpAndSettle();

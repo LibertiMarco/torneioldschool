@@ -42,6 +42,22 @@ class TosApi {
   Future<dynamic> Function(String path, Map<String, String>? query)?
   authenticatedRead;
   bool get preview => false;
+  final originalLogos = ValueNotifier<bool>(false);
+
+  Future<Map<String, dynamic>> logoSettings() async =>
+      Map<String, dynamic>.from(
+        await request('api/mobile/v1/logo_settings.php') as Map,
+      );
+
+  Future<void> refreshLogoSettings() async {
+    try {
+      final settings = await logoSettings();
+      originalLogos.value = settings['original_logos'] == true;
+    } catch (_) {
+      // Keep the last known value when offline; initial state uses emblems.
+    }
+  }
+
   Uri uri(String path, [Map<String, String>? query]) => baseUrl.replace(
     path: '${baseUrl.path.replaceFirst(RegExp(r'/$'), '')}/$path',
     queryParameters: query,

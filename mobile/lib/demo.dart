@@ -411,6 +411,9 @@ class DemoApi extends TosApi {
             .toList();
       case 'api/mobile/v1/admin/users.php':
         return {'users': users, 'has_more': false};
+      case 'api/mobile/v1/logo_settings.php':
+        if (body != null) originalLogos.value = body['original_logos'] == true;
+        return {'original_logos': originalLogos.value};
       case 'api/mobile/v1/admin/user_features.php':
         final id = '${body?['id'] ?? query?['id']}';
         final user = users.firstWhere((row) => '${row['id']}' == id);

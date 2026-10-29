@@ -25,7 +25,13 @@ class OriginalEmblem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final normalized = name
+    var identity = name;
+    // Remove innermost groups repeatedly to support nested annotations too.
+    final parentheses = RegExp(r'\([^()]*\)');
+    while (parentheses.hasMatch(identity)) {
+      identity = identity.replaceAll(parentheses, ' ');
+    }
+    final normalized = identity
         .trim()
         .replaceAll(RegExp(r'\s+'), ' ')
         .toUpperCase();

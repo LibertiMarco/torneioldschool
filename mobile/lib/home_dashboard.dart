@@ -39,8 +39,13 @@ class SiteImage extends StatelessWidget {
   final bool preserveShape;
   final String? identityName;
   @override
-  Widget build(BuildContext context) {
-    if (identityName != null) {
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+    valueListenable: api.originalLogos,
+    builder: (context, originalLogos, _) => _buildImage(context, originalLogos),
+  );
+
+  Widget _buildImage(BuildContext context, bool originalLogos) {
+    if (identityName != null && !originalLogos) {
       return OriginalEmblem(
         name: identityName!,
         tournament: fallback == Icons.emoji_events_outlined,

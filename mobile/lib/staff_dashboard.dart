@@ -6,6 +6,7 @@ import 'auth.dart';
 import 'staff_controls.dart';
 import 'native_staff_tool.dart';
 import 'theme.dart';
+import 'logo_settings_card.dart';
 
 class StaffTool {
   const StaffTool(
@@ -267,6 +268,10 @@ class _StaffDashboardState extends State<StaffDashboard> {
             ),
           ),
           const SizedBox(height: 20),
+          if (auth.admin) ...[
+            LogoSettingsCard(auth: auth),
+            const SizedBox(height: 20),
+          ],
           TextField(
             controller: search,
             onChanged: (_) => setState(() {}),

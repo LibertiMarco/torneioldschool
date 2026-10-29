@@ -5,6 +5,33 @@ import 'package:tornei_old_school/home_dashboard.dart';
 import 'package:tornei_old_school/original_emblem.dart';
 
 void main() {
+  testWidgets('Parenthetical annotations do not change initials or color', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Row(
+          children: [
+            OriginalEmblem(name: 'Eredivisie', tournament: true),
+            OriginalEmblem(name: 'Eredivisie (Fascia C)', tournament: true),
+            OriginalEmblem(name: 'Eredivisie (Fascia B (2026))', tournament: true),
+          ],
+        ),
+      ),
+    );
+    expect(find.text('E'), findsNWidgets(3));
+    final colors = tester
+        .widgetList<DecoratedBox>(
+          find.descendant(
+            of: find.byType(OriginalEmblem),
+            matching: find.byType(DecoratedBox),
+          ),
+        )
+        .map((box) => (box.decoration as BoxDecoration).color)
+        .toSet();
+    expect(colors.length, 1);
+  });
+
   testWidgets('Team and tournament identities never render remote artwork', (
     tester,
   ) async {

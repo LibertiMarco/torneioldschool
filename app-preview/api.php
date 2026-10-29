@@ -8,6 +8,7 @@ require_once __DIR__ . '/../includi/mobile_player_stats.php';
 require_once __DIR__ . '/../includi/player_link_requests.php';
 require_once __DIR__ . '/../includi/mobile_follow.php';
 require_once __DIR__ . '/../includi/notification_preferences.php';
+require_once __DIR__ . '/../includi/mobile_logo_settings.php';
 
 try {
     if (empty($_SESSION['user_id'])) {
@@ -26,6 +27,10 @@ try {
         }
     } elseif ($method !== 'GET') {
         throw new MobileAuthError('method_not_allowed', 'Metodo non consentito.', 405);
+    }
+    if ($action === 'logo_settings') {
+        if ($method === 'POST') preview_admin($db, $_SESSION);
+        mobile_json(mobile_logo_settings($body));
     }
     if ($action === 'comments') {
         $operation = $_GET['operation'] ?? 'list';

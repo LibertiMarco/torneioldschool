@@ -4,6 +4,12 @@ import 'auth.dart';
 class BrowserApi extends TosApi {
   BrowserApi({required super.baseUrl, super.client});
   @override
+  Future<Map<String, dynamic>> logoSettings() async =>
+      Map<String, dynamic>.from(
+        await request('app-preview/api.php', query: {'action': 'logo_settings'})
+            as Map,
+      );
+  @override
   Future<List<Map<String, dynamic>>> tournaments(String section) async {
     final data = await request(
       'app-preview/api.php',
@@ -64,12 +70,14 @@ class BrowserAuth extends TosAuth {
     List<ApiUpload>? uploads,
   }) async {
     final action = switch (path) {
+      'api/mobile/v1/logo_settings.php' => 'logo_settings',
       'api/mobile/v1/admin/users.php' => 'users',
       'api/mobile/v1/admin/user_features.php' => 'features',
       'api/mobile/v1/account.php' => 'account',
       'api/mobile/v1/comments.php' => 'comments',
       'api/mobile/v1/follow.php' => 'follow',
-      'api/mobile/v1/notification_preferences.php' => 'notification_preferences',
+      'api/mobile/v1/notification_preferences.php' =>
+        'notification_preferences',
       'api/mobile/v1/player_stats.php' => 'player_stats',
       'api/mobile/v1/player_link_requests.php' => 'player_link_requests',
       _ => throw const ApiError(

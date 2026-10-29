@@ -64,7 +64,7 @@ class TosApp extends StatefulWidget {
   State<TosApp> createState() => _TosAppState();
 }
 
-class _TosAppState extends State<TosApp> {
+class _TosAppState extends State<TosApp> with WidgetsBindingObserver {
   static const _themeKey = 'tos.app.theme';
   final _navigatorKey = GlobalKey<NavigatorState>();
   final _messengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -91,6 +91,8 @@ class _TosAppState extends State<TosApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(widget.api.refreshLogoSettings());
     if (!kIsWeb && !widget.api.preview) {
       widget.auth.presentNativeLogin = () async {
         final navigator = _navigatorKey.currentState;
@@ -163,6 +165,7 @@ class _TosAppState extends State<TosApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     for (final listener in _pushListeners) {
       listener.cancel();
     }
@@ -170,6 +173,13 @@ class _TosAppState extends State<TosApp> {
     _notificationNavigator.dispose();
     _push.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(widget.api.refreshLogoSettings());
+    }
   }
 
   Future<void> _loadTheme() async {
