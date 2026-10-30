@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'details.dart' show MatchPage, PlayerPage, TeamPage;
+import 'home_dashboard.dart' show SiteImage;
 
 /// Un unico prospetto generale, sotto le classifiche dei giocatori.
 class RecordsTable extends StatefulWidget {
@@ -235,8 +236,8 @@ class _RecordsTableState extends State<RecordsTable> {
 
   Widget holder(Map h, dynamic value, String recordKey) {
     final p = h['match'] as Map;
+    final tournamentName = '${p['torneo_nome'] ?? ''}'.trim();
     final individual = h['player_id'] != null;
-    final type = individual ? 11.0 : 14.0;
     final shade = individual ? colors.onSurfaceVariant : colors.onSurface;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -282,23 +283,17 @@ class _RecordsTableState extends State<RecordsTable> {
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Wrap(
-                alignment: WrapAlignment.center,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 10,
-                runSpacing: 3,
+              child: Row(
                 children: [
-                  Text(
-                    '${p['squadra_casa']}',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: shade,
-                      fontSize: type,
-                      fontWeight: individual
-                          ? FontWeight.w400
-                          : FontWeight.w500,
+                  Expanded(
+                    child: team(
+                      '${p['squadra_casa']}',
+                      p['logo_casa']?.toString(),
+                      true,
+                      individual,
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     '${p['gol_casa']}–${p['gol_ospite']}',
                     style: TextStyle(
@@ -307,19 +302,29 @@ class _RecordsTableState extends State<RecordsTable> {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  Text(
-                    '${p['squadra_ospite']}',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: shade,
-                      fontSize: type,
-                      fontWeight: individual
-                          ? FontWeight.w400
-                          : FontWeight.w500,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: team(
+                      '${p['squadra_ospite']}',
+                      p['logo_ospite']?.toString(),
+                      false,
+                      individual,
                     ),
                   ),
                 ],
               ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Text(
+            tournamentName.isEmpty ? '${p['torneo']}' : tournamentName,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: colors.onSurfaceVariant,
+              fontSize: 10.5,
+              height: 1.4,
             ),
           ),
         ),
@@ -329,6 +334,38 @@ class _RecordsTableState extends State<RecordsTable> {
             style: TextStyle(color: colors.onSurfaceVariant, fontSize: 11),
           ),
       ],
+    );
+  }
+
+  Widget team(String name, String? logo, bool home, bool individual) {
+    final size = individual ? 18.0 : 24.0;
+    final crest = ExcludeSemantics(
+      child: SiteImage(
+        api: widget.api,
+        identityName: name,
+        path: logo ?? '',
+        width: size,
+        height: size,
+        preserveShape: true,
+        fallback: Icons.shield_outlined,
+      ),
+    );
+    final label = Flexible(
+      child: Text(
+        name,
+        textAlign: home ? TextAlign.right : TextAlign.left,
+        style: TextStyle(
+          color: individual ? colors.onSurfaceVariant : colors.onSurface,
+          fontSize: individual ? 11 : 14,
+          fontWeight: individual ? FontWeight.w400 : FontWeight.w500,
+        ),
+      ),
+    );
+    return Row(
+      mainAxisAlignment: home ? MainAxisAlignment.end : MainAxisAlignment.start,
+      children: home
+          ? [label, const SizedBox(width: 6), crest]
+          : [crest, const SizedBox(width: 6), label],
     );
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/api.dart';
 import 'package:tornei_old_school/records_table.dart';
+import 'package:tornei_old_school/home_dashboard.dart' show SiteImage;
 
 void main() {
   testWidgets('tabella generale con sette record e pari merito a 320px', (
@@ -78,6 +79,7 @@ void main() {
     expect(find.text('Vittoria più larga senza subire gol'), findsOneWidget);
     expect(queries.single!['scope'], 'records');
     expect(find.text('12 gol'), findsOneWidget);
+    expect(find.byType(SiteImage), findsNWidgets(2));
     expect(find.text('Detentore 4'), findsNothing);
     await tester.ensureVisible(find.text('Altri detentori · 3'));
     await tester.tap(find.text('Altri detentori · 3'));

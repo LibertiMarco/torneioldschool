@@ -2,6 +2,15 @@
   const root=document.getElementById('tos-records-table');if(!root)return;
   const el=(tag,text,parent)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;if(parent)parent.append(n);return n;};
   const link=(text,url,parent)=>{const a=el('a',text,parent);a.href=url;return a;};
+  const team=(name,logo,home,parent)=>{
+    const block=el('span',null,parent);block.className='records-team '+(home?'records-team--home':'records-team--away');
+    const label=el('span',name);
+    const crest=el('img',null);crest.alt='';crest.width=24;crest.height=24;crest.loading='lazy';crest.decoding='async';
+    const fallback='/img/scudetti/placeholder-dark.svg';
+    try{const url=new URL(typeof logo==='string'&&logo.trim()?logo:fallback,window.location.href);crest.src=['http:','https:'].includes(url.protocol)?url.href:fallback;}catch{crest.src=fallback;}
+    crest.onerror=()=>{crest.onerror=null;crest.src=fallback;};
+    if(home)block.append(label,crest);else block.append(crest,label);
+  };
   async function load(){
     root.replaceChildren(el('p','Calcolo dei record in corso…'));root.firstChild.className='records-state';
     try{
@@ -22,9 +31,10 @@
               el('strong',`${record.value} gol`,player).className='records-player-goals';
             }
             const match=link('','/tornei/partita_eventi.php?'+new URLSearchParams({id:p.id,torneo:p.torneo}),item);match.className='records-match'+(holder.player_id?' records-match--secondary':'');
-            el('span',p.squadra_casa,match);el('strong',`${p.gol_casa}–${p.gol_ospite}`,match);el('span',p.squadra_ospite,match);
+            team(p.squadra_casa,p.logo_casa,true,match);el('strong',`${p.gol_casa}–${p.gol_ospite}`,match);team(p.squadra_ospite,p.logo_ospite,false,match);
             const date=/^\d{4}-\d{2}-\d{2}$/.test(p.data_partita)?p.data_partita.split('-').reverse().join('/'):p.data_partita;
             match.title=`${p.torneo_nome||p.torneo} · ${date}`;
+            el('small',p.torneo_nome||p.torneo,item).className='records-tournament';
             if(key==='scorers')el('small',`${record.value} marcatori diversi`,item).className='records-count';
           };
           const list=el('ul',null,cell);add(record.holders[0],list);

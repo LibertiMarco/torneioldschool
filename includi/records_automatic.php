@@ -36,5 +36,19 @@ function records_automatic_compute(array $matches,array $rows,array $verified,ar
 function records_automatic_fetch(mysqli $db): array {
     [$matches,$rows,$verified]=records_source($db,false);
     $tournaments=$db->query('SELECT nome,filetorneo,sezione FROM tornei ORDER BY id')->fetch_all(MYSQLI_ASSOC);
-    return records_automatic_compute($matches,$rows,$verified,$tournaments);
+    $data=records_automatic_compute($matches,$rows,$verified,$tournaments);
+    $logos=[];
+    foreach($db->query('SELECT torneo,nome,logo FROM squadre ORDER BY id')->fetch_all(MYSQLI_ASSOC) as $team) {
+        $logos[$team['torneo']][$team['nome']]=$team['logo'];
+    }
+    // Arricchimento solo in lettura: i loghi non modificano le impronte
+    // dei risultati o dei tabellini usate dalle statistiche portieri.
+    foreach($data['groups'] as &$group) foreach($group['records'] as &$record) foreach($record['holders'] as &$holder) {
+        $match=&$holder['match'];
+        $match['logo_casa']=$logos[$match['torneo']][$match['squadra_casa']]??null;
+        $match['logo_ospite']=$logos[$match['torneo']][$match['squadra_ospite']]??null;
+        unset($match);
+    }
+    unset($group,$record,$holder);
+    return $data;
 }

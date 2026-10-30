@@ -15,7 +15,7 @@ try {
         $db->query("CREATE TABLE partite(id {$type} PRIMARY KEY,torneo VARCHAR(80),squadra_casa VARCHAR(80),squadra_ospite VARCHAR(80),gol_casa INT,gol_ospite INT,data_partita DATE,ora_partita TIME,giocata INT) ENGINE=InnoDB");
         $db->query('CREATE TABLE tornei(id INT PRIMARY KEY,nome VARCHAR(80),filetorneo VARCHAR(80),sezione VARCHAR(20),categoria VARCHAR(80))');
         $db->query('CREATE TABLE giocatori(id INT PRIMARY KEY,nome VARCHAR(80),cognome VARCHAR(80))');
-        $db->query('CREATE TABLE squadre(id INT PRIMARY KEY,nome VARCHAR(80),torneo VARCHAR(80))');
+        $db->query('CREATE TABLE squadre(id INT PRIMARY KEY,nome VARCHAR(80),torneo VARCHAR(80),logo VARCHAR(255))');
         $db->query('CREATE TABLE partita_giocatore(id INT PRIMARY KEY,partita_id INT,giocatore_id INT,squadra_id INT,presenza INT,goal INT,autogol INT)');
         $db->query('CREATE TABLE squadre_giocatori(giocatore_id INT,squadra_id INT)');
         $automatic=records_automatic_fetch($db);
@@ -26,12 +26,14 @@ try {
         db_check(!$matches && !$verified,'Schema vuoto disponibile senza migrazione manuale');
         $db->query("INSERT INTO tornei VALUES(1,'Coppa','coppa','calcio','Calcio a 5')");
         $db->query("INSERT INTO partite VALUES(1,'coppa','A','B',2,0,'2026-10-01','20:00:00',1)");
-        $db->query("INSERT INTO squadre VALUES(1,'A','coppa'),(2,'B','coppa')");
+        $db->query("INSERT INTO squadre VALUES(1,'A','coppa','/img/scudetti/a.png'),(2,'B','coppa',NULL)");
         $db->query("INSERT INTO giocatori VALUES(1,'Portiere','Casa'),(2,'Attaccante','Casa'),(3,'Portiere','Ospite')");
         $db->query('INSERT INTO partita_giocatore VALUES(1,1,1,1,1,0,0),(2,1,2,1,1,2,0),(3,1,3,2,1,0,0)');
         $db->query('INSERT INTO squadre_giocatori VALUES(1,1),(2,1),(3,2)');
         $automatic=records_automatic_fetch($db);
         db_check($automatic['groups']['Generali']['records']['player']['value']===2,'Record storico calcolato senza nuova attestazione');
+        db_check($automatic['groups']['Generali']['records']['player']['holders'][0]['match']['logo_casa']==='/img/scudetti/a.png','Scudetto squadra del torneo nel payload');
+        db_check($automatic['groups']['Generali']['records']['player']['holders'][0]['match']['logo_ospite']===null,'Logo mancante esplicito per fallback');
         [$matches,$rows]=records_source($db);$p=$matches[0];
         $keepers=[['player_id'=>1,'goals'=>0,'full'=>true],['player_id'=>3,'goals'=>2,'full'=>true]];
         records_validate_keepers($p,$rows[1],$keepers);

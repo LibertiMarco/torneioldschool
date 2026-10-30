@@ -10,14 +10,21 @@
 .tos-records .records-label{margin:0 0 7px;font-size:.75rem;line-height:1.4;color:#687b90;font-weight:500}
 .tos-records ul{list-style:none;margin:0;padding:0}
 .tos-records li+li{margin-top:10px;padding-top:10px;border-top:1px solid #edf0f4}
-.tos-records .records-match{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:6px 12px;padding:3px 0;color:#15293e;text-decoration:none;font-size:.88rem;line-height:1.4;font-weight:500}
+.tos-records .records-match{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px;max-width:560px;margin:0 auto;padding:3px 0;color:#15293e;text-decoration:none;font-size:.88rem;line-height:1.4;font-weight:500}
+.tos-records .records-team{display:flex;align-items:center;gap:7px;min-width:0}
+.tos-records .records-team--home{justify-content:flex-end;text-align:right}
+.tos-records .records-team--away{justify-content:flex-start;text-align:left}
+.tos-records .records-team img{display:block;flex:0 0 24px;width:24px;height:24px;object-fit:contain}
+.tos-records .records-team>span{min-width:0;overflow-wrap:anywhere}
 .tos-records .records-match strong{font-size:1.12rem;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
 .tos-records .records-player{display:flex;justify-content:center;align-items:baseline;flex-wrap:wrap;gap:6px 12px;font-size:.9rem;line-height:1.5;font-weight:700}
 .tos-records .records-player a{color:#15293e;text-decoration:none}
 .tos-records .records-player-goals{font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums}
 .tos-records .records-match--secondary{font-size:.69rem;font-weight:400;color:#687b90;margin-top:3px;gap:7px}
 .tos-records .records-match--secondary strong{font-size:.75rem;color:#687b90;font-weight:600}
+.tos-records .records-match--secondary .records-team img{width:18px;height:18px;flex-basis:18px}
 .tos-records .records-count{display:block;font-size:.68rem;color:#687b90;margin-top:3px}
+.tos-records .records-tournament{display:block;margin-top:2px;text-align:center;font-size:.65rem;font-weight:400;line-height:1.4;color:#687b90}
 .tos-records a:hover{text-decoration:underline;text-underline-offset:3px}
 .tos-records :is(a,summary,button):focus-visible{outline:2px solid #617c99;outline-offset:3px;border-radius:3px}
 .tos-records summary{display:flex;justify-content:center;align-items:center;gap:7px;width:fit-content;max-width:100%;margin:5px auto 0;padding:4px 0;cursor:pointer;color:#687b90;font-size:.65rem;font-weight:400;line-height:1.4;list-style:none}
