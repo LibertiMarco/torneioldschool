@@ -4,7 +4,7 @@ import 'api.dart';
 import 'details.dart' show MatchPage, PlayerPage, TeamPage;
 import 'theme.dart' show siteBlue;
 
-/// Tabella nella classifica generale: nessuna pagina o tab dedicati.
+/// Un unico prospetto generale, sotto le classifiche dei giocatori.
 class RecordsTable extends StatefulWidget {
   const RecordsTable({super.key, required this.api});
   final TosApi api;
@@ -14,14 +14,6 @@ class RecordsTable extends StatefulWidget {
 
 class _RecordsTableState extends State<RecordsTable> {
   ColorScheme get colors => Theme.of(context).colorScheme;
-  ButtonStyle get linkStyle => TextButton.styleFrom(
-    padding: const EdgeInsets.symmetric(vertical: 2),
-    minimumSize: const Size(0, 26),
-    alignment: Alignment.centerLeft,
-    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    foregroundColor: colors.onSurface,
-  );
-
   final expanded = <String>{};
   late Future<dynamic> data = load();
   Future<dynamic> load() =>
@@ -33,178 +25,228 @@ class _RecordsTableState extends State<RecordsTable> {
     });
   }
 
+  ButtonStyle get subjectStyle => TextButton.styleFrom(
+    padding: EdgeInsets.zero,
+    minimumSize: const Size(0, 22),
+    alignment: Alignment.centerLeft,
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    foregroundColor: colors.onSurface,
+  );
+
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 16, bottom: 8),
-          child: Text(
-            'Record TOS',
-            style: TextStyle(
-              color: colors.onSurface,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -.4,
+    padding: const EdgeInsets.symmetric(vertical: 16),
+    child: Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: siteBlue,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            child: const Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Record TOS',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -.4,
+                    ),
+                  ),
+                ),
+                Text(
+                  'GENERALI',
+                  style: TextStyle(
+                    color: Color(0xffc0cedd),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.3,
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-        FutureBuilder<dynamic>(
-          future: data,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Column(
-                children: [
-                  const Text('Impossibile calcolare i record.'),
-                  TextButton(onPressed: reload, child: const Text('Riprova')),
-                ],
-              );
-            }
-            if (!snapshot.hasData) {
-              return const LinearProgressIndicator();
-            }
-            final result = Map<String, dynamic>.from(snapshot.data as Map),
-                groups = Map<String, dynamic>.from(result['groups'] as Map);
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (groups.isEmpty)
-                  const Text(
-                    'Nessuna partita conclusa con risultato disponibile.',
+          FutureBuilder<dynamic>(
+            future: data,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Impossibile calcolare i record.'),
+                      TextButton(
+                        onPressed: reload,
+                        child: const Text('Riprova'),
+                      ),
+                    ],
                   ),
-                for (final entry in groups.entries) ...[
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final compact = constraints.maxWidth < 560;
-                      return Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: colors.outlineVariant),
+                );
+              }
+              if (!snapshot.hasData) {
+                return const Padding(
+                  padding: EdgeInsets.all(14),
+                  child: LinearProgressIndicator(),
+                );
+              }
+              final result = Map<String, dynamic>.from(snapshot.data as Map);
+              final groups = Map<String, dynamic>.from(result['groups'] as Map);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (groups.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Text(
+                        'Nessuna partita conclusa con risultato disponibile.',
+                        style: TextStyle(
+                          color: colors.onSurfaceVariant,
+                          fontSize: 12,
                         ),
-                        clipBehavior: Clip.antiAlias,
-                        child: Table(
+                      ),
+                    ),
+                  for (final group in groups.values)
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final compact = constraints.maxWidth < 560;
+                        return Table(
                           border: TableBorder(
                             horizontalInside: BorderSide(
-                              color: colors.outlineVariant,
+                              color: colors.outlineVariant.withValues(
+                                alpha: .6,
+                              ),
                             ),
                           ),
                           columnWidths: compact
-                              ? const {0: FlexColumnWidth()}
+                              ? const {
+                                  0: FlexColumnWidth(),
+                                  1: FixedColumnWidth(58),
+                                }
                               : const {
                                   0: FlexColumnWidth(3),
-                                  1: FixedColumnWidth(80),
+                                  1: FixedColumnWidth(74),
                                   2: FlexColumnWidth(5),
                                 },
                           defaultVerticalAlignment:
                               TableCellVerticalAlignment.top,
                           children: [
-                            TableRow(
-                              decoration: BoxDecoration(color: siteBlue),
-                              children: [
-                                header(compact ? 'Record e partite' : 'Record'),
-                                if (!compact) header('Valore'),
-                                if (!compact) header('Detentori e partite'),
-                              ],
-                            ),
-                            for (final recordEntry
-                                in (entry.value['records'] as Map).entries)
-                              row(
-                                '${entry.key}-${recordEntry.key}',
-                                recordEntry.value as Map,
+                            if (!compact)
+                              TableRow(
+                                decoration: BoxDecoration(
+                                  color: colors.surfaceContainerLow,
+                                ),
+                                children: [
+                                  columnHeading('Record'),
+                                  columnHeading('Valore'),
+                                  columnHeading('Detentori e partite'),
+                                ],
+                              ),
+                            for (final entry
+                                in (group['records'] as Map).entries)
+                              recordRow(
+                                entry.key.toString(),
+                                entry.value as Map,
                                 compact,
-                                (entry.value['records'] as Map).keys
-                                    .toList()
-                                    .indexOf(recordEntry.key),
                               ),
                           ],
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                ExpansionTile(
-                  dense: true,
-                  minTileHeight: 36,
-                  tilePadding: EdgeInsets.zero,
-                  childrenPadding: const EdgeInsets.only(bottom: 12),
-                  shape: const Border(),
-                  collapsedShape: const Border(),
-                  leading: Icon(
-                    Icons.info_outline,
-                    size: 18,
-                    color: colors.onSurfaceVariant,
-                  ),
-                  title: Text(
-                    'Come vengono calcolati',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colors.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
+                        );
+                      },
                     ),
-                  ),
-                  children: [
-                    Text(
-                      '${result['coverage']}',
-                      style: TextStyle(
-                        color: colors.onSurfaceVariant,
-                        fontSize: 11,
-                        height: 1.6,
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(
+                          color: colors.outlineVariant.withValues(alpha: .6),
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              ],
-            );
-          },
-        ),
-      ],
+                    child: ExpansionTile(
+                      dense: true,
+                      minTileHeight: 32,
+                      tilePadding: const EdgeInsets.symmetric(horizontal: 14),
+                      childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                      shape: const Border(),
+                      collapsedShape: const Border(),
+                      title: Text(
+                        'Come vengono calcolati',
+                        style: TextStyle(
+                          color: colors.onSurfaceVariant,
+                          fontSize: 10.5,
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.expand_more,
+                        size: 15,
+                        color: colors.onSurfaceVariant,
+                      ),
+                      children: [
+                        Text(
+                          '${result['coverage']}',
+                          style: TextStyle(
+                            color: colors.onSurfaceVariant,
+                            fontSize: 11,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget columnHeading(String text) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+    child: Text(
+      text.toUpperCase(),
+      style: TextStyle(
+        color: colors.onSurfaceVariant,
+        fontSize: 9,
+        letterSpacing: 1,
+        fontWeight: FontWeight.w600,
+      ),
     ),
   );
   Widget cell(Widget child) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     child: child,
   );
-  Widget header(String label) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-    child: Text(
-      label.toUpperCase(),
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        letterSpacing: .6,
-      ),
-    ),
-  );
-  Widget valueBadge(dynamic value) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-    decoration: BoxDecoration(
-      color: value == null ? colors.surfaceContainerHigh : colors.primary,
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Text(
-      '${value ?? '—'}',
-      style: TextStyle(
-        color: value == null ? colors.onSurfaceVariant : colors.onPrimary,
-        fontSize: 18,
-        fontWeight: FontWeight.w900,
-        height: 1.1,
-      ),
-    ),
-  );
-  TableRow row(String key, Map record, bool compact, int index) {
+  TableRow recordRow(String key, Map record, bool compact) {
     final holders = record['holders'] as List;
     final visible = expanded.contains(key) ? holders : holders.take(1);
     final label = Text(
       '${record['label']}',
       style: TextStyle(
-        color: colors.onSurface,
-        fontWeight: FontWeight.w700,
-        fontSize: 13,
-        height: 1.5,
+        color: colors.onSurfaceVariant,
+        fontSize: compact ? 11.5 : 13,
+        fontWeight: compact ? FontWeight.w500 : FontWeight.w600,
+        height: 1.4,
+      ),
+    );
+    final value = Text(
+      '${record['value'] ?? '—'}',
+      style: TextStyle(
+        color: record['value'] == null
+            ? colors.onSurfaceVariant.withValues(alpha: .6)
+            : colors.onSurface,
+        fontSize: record['value'] == null ? 20 : 27,
+        fontWeight: record['value'] == null ? FontWeight.w400 : FontWeight.w800,
+        letterSpacing: -1,
+        height: 1.1,
       ),
     );
     final details = Column(
@@ -215,176 +257,191 @@ class _RecordsTableState extends State<RecordsTable> {
             'Dati insufficienti',
             style: TextStyle(
               color: colors.onSurfaceVariant,
-              fontSize: 12,
+              fontSize: 11,
               height: 1.5,
             ),
           ),
-        for (final h in visible) holder(h as Map),
+        for (final entry in visible.toList().asMap().entries)
+          Padding(
+            padding: EdgeInsets.only(top: entry.key == 0 ? 0 : 8),
+            child: holder(entry.value as Map),
+          ),
         if (holders.length > 1)
-          TextButton(
+          TextButton.icon(
+            style: subjectStyle.copyWith(
+              foregroundColor: WidgetStatePropertyAll(colors.onSurfaceVariant),
+            ),
             onPressed: () => setState(() {
               if (!expanded.add(key)) expanded.remove(key);
             }),
-            child: Text(
+            icon: Icon(
+              expanded.contains(key)
+                  ? Icons.keyboard_arrow_up
+                  : Icons.keyboard_arrow_down,
+              size: 14,
+            ),
+            label: Text(
               expanded.contains(key)
                   ? 'Mostra meno'
-                  : 'Mostra altri ${holders.length - 1} pari merito',
+                  : 'Altri detentori · ${holders.length - 1}',
+              style: const TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
       ],
     );
     return TableRow(
-      decoration: BoxDecoration(
-        color: index.isEven ? colors.surfaceContainerLow : colors.surface,
-      ),
-      children: [
-        if (compact)
-          cell(
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+      children: compact
+          ? [
+              cell(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: label),
-                    const SizedBox(width: 14),
-                    valueBadge(record['value']),
-                  ],
+                  children: [label, const SizedBox(height: 6), details],
                 ),
-                const SizedBox(height: 6),
-                details,
-              ],
-            ),
-          )
-        else ...[
-          cell(label),
-          cell(
-            Align(
-              alignment: Alignment.topLeft,
-              child: valueBadge(record['value']),
-            ),
-          ),
-          cell(details),
-        ],
-      ],
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 12, 14, 12),
+                child: Align(alignment: Alignment.topRight, child: value),
+              ),
+            ]
+          : [
+              cell(label),
+              cell(Align(alignment: Alignment.topCenter, child: value)),
+              cell(details),
+            ],
     );
   }
 
   Widget holder(Map h) {
     final p = h['match'] as Map;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (h['player_id'] != null)
+    final showSubject =
+        h['player_id'] != null ||
+        ![
+          '${p['squadra_casa']} / ${p['squadra_ospite']}',
+          'Pareggio',
+        ].contains(h['subject']);
+    final profileAvailable =
+        h['player_id'] != null ||
+        [p['squadra_casa'], p['squadra_ospite']].contains(h['subject']);
+    final subject = Text(
+      '${h['subject']}',
+      style: TextStyle(
+        color: colors.onSurface,
+        fontSize: 12.5,
+        fontWeight: FontWeight.w700,
+        height: 1.4,
+      ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (showSubject) ...[
+          if (profileAvailable)
             TextButton(
-              style: linkStyle,
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => PlayerPage(
-                    api: widget.api,
-                    player: {
-                      'id': h['player_id'],
-                      'nome': h['subject'],
-                      'cognome': '',
-                    },
-                  ),
-                ),
-              ),
-              child: Text(
-                '${h['subject']}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  height: 1.5,
-                ),
-              ),
-            )
-          else if ([
-            p['squadra_casa'],
-            p['squadra_ospite'],
-          ].contains(h['subject']))
-            TextButton(
-              style: linkStyle,
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => TeamPage(
-                    api: widget.api,
-                    slug: '${p['torneo']}',
-                    team: {'nome': h['subject']},
-                  ),
-                ),
-              ),
-              child: Text(
-                '${h['subject']}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  height: 1.5,
-                ),
-              ),
+              style: subjectStyle,
+              onPressed: () => openSubject(h),
+              child: subject,
             )
           else
-            Text(
-              '${h['subject']}',
-              style: TextStyle(
-                color: colors.onSurface,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                height: 1.5,
-              ),
+            subject,
+          const SizedBox(height: 2),
+        ],
+        InkWell(
+          borderRadius: BorderRadius.circular(4),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => MatchPage(api: widget.api, id: '${p['id']}'),
             ),
-          TextButton(
-            style: linkStyle,
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => MatchPage(api: widget.api, id: '${p['id']}'),
-              ),
-            ),
-            child: Wrap(
-              spacing: 5,
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(
               children: [
-                Text(
-                  '${p['squadra_casa']}',
-                  style: const TextStyle(fontSize: 11, height: 1.5),
+                Expanded(
+                  child: Text(
+                    '${p['squadra_casa']}',
+                    style: TextStyle(
+                      color: colors.onSurface,
+                      fontSize: 11.5,
+                      height: 1.4,
+                    ),
+                  ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(5),
-                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Text(
                     '${p['gol_casa']}–${p['gol_ospite']}',
                     style: TextStyle(
                       color: colors.onSurface,
-                      fontSize: 11,
+                      fontSize: 14,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
-                Text(
-                  '${p['squadra_ospite']}',
-                  style: const TextStyle(fontSize: 11, height: 1.5),
+                Expanded(
+                  child: Text(
+                    '${p['squadra_ospite']}',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      color: colors.onSurface,
+                      fontSize: 11.5,
+                      height: 1.4,
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          Text(
-            '${p['torneo_nome'] ?? p['torneo']} · ${displayDate('${p['data_partita']}')}',
-            style: TextStyle(
-              color: colors.onSurfaceVariant,
-              fontSize: 10,
-              height: 1.6,
+        ),
+        const SizedBox(height: 3),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                '${p['torneo_nome'] ?? p['torneo']}',
+                style: TextStyle(
+                  color: colors.onSurfaceVariant,
+                  fontSize: 10,
+                  height: 1.5,
+                ),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Text(
+              displayDate('${p['data_partita']}'),
+              style: TextStyle(
+                color: colors.onSurfaceVariant,
+                fontSize: 10,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void openSubject(Map h) {
+    final p = h['match'] as Map;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => h['player_id'] != null
+            ? PlayerPage(
+                api: widget.api,
+                player: {
+                  'id': h['player_id'],
+                  'nome': h['subject'],
+                  'cognome': '',
+                },
+              )
+            : TeamPage(
+                api: widget.api,
+                slug: '${p['torneo']}',
+                team: {'nome': h['subject']},
+              ),
       ),
     );
   }

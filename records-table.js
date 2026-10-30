@@ -17,13 +17,15 @@
           const row=el('tr',null,body);el('td',record.label,row);const value=el('span',record.value==null?'—':String(record.value),el('td',null,row));value.className='records-value'+(record.value==null?' is-empty':'');const cell=el('td',null,row);
           if(!record.holders.length){el('span','Dati insufficienti',cell).className='records-empty';continue;}
           const add=(holder,list)=>{const item=el('li',null,list),p=holder.match;
-            const subject=holder.player_id?link(holder.subject,'/giocatore_partite.php?'+new URLSearchParams({id:holder.player_id}),item):el('strong',holder.subject,item);subject.className='records-subject';
-            const match=link('','/tornei/partita_eventi.php?'+new URLSearchParams({id:p.id,torneo:p.torneo}),item);match.className='records-match';match.append(document.createTextNode(p.squadra_casa+' '));el('span',`${p.gol_casa}–${p.gol_ospite}`,match).className='records-score';match.append(document.createTextNode(' '+p.squadra_ospite));
+            if(holder.player_id || ![p.squadra_casa+' / '+p.squadra_ospite,'Pareggio'].includes(holder.subject)){
+              const subject=holder.player_id?link(holder.subject,'/giocatore_partite.php?'+new URLSearchParams({id:holder.player_id}),item):el('strong',holder.subject,item);subject.className='records-subject';
+            }
+            const match=link('','/tornei/partita_eventi.php?'+new URLSearchParams({id:p.id,torneo:p.torneo}),item);match.className='records-match';el('span',p.squadra_casa,match).className='records-home';el('span',`${p.gol_casa}–${p.gol_ospite}`,match).className='records-score';el('span',p.squadra_ospite,match).className='records-away';
             const date=/^\d{4}-\d{2}-\d{2}$/.test(p.data_partita)?p.data_partita.split('-').reverse().join('/'):p.data_partita;
-            el('small',`${p.torneo_nome||p.torneo} · ${date}`,item);
+            const meta=el('small',null,item);meta.className='records-meta';el('span',p.torneo_nome||p.torneo,meta);el('time',date,meta).dateTime=p.data_partita;
           };
           const list=el('ul',null,cell);record.holders.slice(0,1).forEach(h=>add(h,list));
-          if(record.holders.length>1){const more=el('details',null,cell);el('summary',`Mostra altri ${record.holders.length-1} pari merito`,more);const rest=el('ul',null,more);record.holders.slice(1).forEach(h=>add(h,rest));}
+          if(record.holders.length>1){const more=el('details',null,cell);el('summary',`Altri detentori · ${record.holders.length-1}`,more);const rest=el('ul',null,more);record.holders.slice(1).forEach(h=>add(h,rest));}
         }
       }
       const method=el('details',null,root);method.className='records-method';el('summary','Come vengono calcolati',method);el('p',data.coverage,method);

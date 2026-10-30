@@ -78,8 +78,8 @@ void main() {
     expect(find.text('Vittoria più larga senza subire gol'), findsOneWidget);
     expect(queries.single!['scope'], 'records');
     expect(find.text('Detentore 4'), findsNothing);
-    await tester.ensureVisible(find.text('Mostra altri 3 pari merito'));
-    await tester.tap(find.text('Mostra altri 3 pari merito'));
+    await tester.ensureVisible(find.text('Altri detentori · 3'));
+    await tester.tap(find.text('Altri detentori · 3'));
     await tester.pumpAndSettle();
     expect(find.text('Detentore 4'), findsOneWidget);
     expect(find.byType(DropdownButtonFormField<String>), findsNothing);
