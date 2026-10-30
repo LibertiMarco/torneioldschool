@@ -237,6 +237,7 @@ class _RecordsTableState extends State<RecordsTable> {
   Widget holder(Map h, dynamic value, String recordKey) {
     final p = h['match'] as Map;
     final tournamentName = '${p['torneo_nome'] ?? ''}'.trim();
+    final matchDate = displayDate('${p['data_partita'] ?? ''}');
     final individual = h['player_id'] != null;
     final shade = individual ? colors.onSurfaceVariant : colors.onSurface;
     return Column(
@@ -319,7 +320,7 @@ class _RecordsTableState extends State<RecordsTable> {
         Padding(
           padding: const EdgeInsets.only(top: 2),
           child: Text(
-            tournamentName.isEmpty ? '${p['torneo']}' : tournamentName,
+            '${tournamentName.isEmpty ? p['torneo'] : tournamentName}${matchDate.isEmpty ? '' : ' · $matchDate'}',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: colors.onSurfaceVariant,

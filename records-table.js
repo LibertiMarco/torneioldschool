@@ -34,7 +34,7 @@
             team(p.squadra_casa,p.logo_casa,true,match);el('strong',`${p.gol_casa}–${p.gol_ospite}`,match);team(p.squadra_ospite,p.logo_ospite,false,match);
             const date=/^\d{4}-\d{2}-\d{2}$/.test(p.data_partita)?p.data_partita.split('-').reverse().join('/'):p.data_partita;
             match.title=`${p.torneo_nome||p.torneo} · ${date}`;
-            el('small',p.torneo_nome||p.torneo,item).className='records-tournament';
+            el('small',`${p.torneo_nome||p.torneo}${date?' · '+date:''}`,item).className='records-tournament';
             if(key==='scorers')el('small',`${record.value} marcatori diversi`,item).className='records-count';
           };
           const list=el('ul',null,cell);add(record.holders[0],list);
