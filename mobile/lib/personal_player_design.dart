@@ -1,3 +1,5 @@
+import 'records_page.dart';
+
 import 'package:flutter/material.dart';
 
 import 'api.dart';
@@ -81,6 +83,10 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                 child: _athlete(),
               ),
               const SizedBox(height: 24),
+              GoalkeeperSummary(
+                api: widget.api,
+                playerId: '${widget.player['id']}',
+              ),
               _upcomingMatches(),
               const SizedBox(height: 24),
               _title('Le mie statistiche', 'IL TUO PERCORSO'),

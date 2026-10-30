@@ -70,6 +70,7 @@ class BrowserAuth extends TosAuth {
     List<ApiUpload>? uploads,
   }) async {
     final action = switch (path) {
+      'api/records.php' => 'records',
       'api/mobile/v1/logo_settings.php' => 'logo_settings',
       'api/mobile/v1/admin/users.php' => 'users',
       'api/mobile/v1/admin/user_features.php' => 'features',

@@ -32,6 +32,11 @@ try {
         if ($method === 'POST') preview_admin($db, $_SESSION);
         mobile_json(mobile_logo_settings($body));
     }
+    if ($action === 'records') {
+        mobile_method('GET');
+        require __DIR__.'/../api/records.php';
+        exit;
+    }
     if ($action === 'comments') {
         $operation = $_GET['operation'] ?? 'list';
         if ($method === 'GET') $_GET['azione'] = 'commenti';

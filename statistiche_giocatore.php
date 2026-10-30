@@ -516,7 +516,7 @@ $seo = [
 <body>
 <?php include __DIR__ . '/includi/header.php'; ?>
 
-<main class="page-container player-page">
+<main class="page-container player-page"><?php if ($playerId > 0): ?><section><h2>Statistiche portiere</h2><div id="records" data-player="<?= $playerId ?>" data-keepers-only="1"></div><script src="/records.js"></script></section><?php endif; ?>
     <h1 class="page-title">Statistiche giocatore</h1>
 
     <?php if (isset($msg)): ?>

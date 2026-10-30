@@ -1,4 +1,4 @@
-﻿-- Schema SQL per torneioldschool
+-- Schema SQL per torneioldschool
 -- Tabelle derivate dalle query presenti in register.php, login.php, api/gestione_*, api/blog.php e tornei/Script-SerieA.js
 
 CREATE DATABASE IF NOT EXISTS torneioldschool CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS totocalcio_partite;
 DROP TABLE IF EXISTS totocalcio_competizioni_accessi;
 DROP TABLE IF EXISTS totocalcio_competizioni;
 DROP TABLE IF EXISTS fanta_old_school_leads;
+DROP TABLE IF EXISTS match_record_verification;
 DROP TABLE IF EXISTS partita_giocatore;
 DROP TABLE IF EXISTS squadre_giocatori;
 DROP TABLE IF EXISTS partite;
@@ -492,4 +493,18 @@ CREATE TABLE IF NOT EXISTS newsletter_log (
     KEY idx_news_post (post_id, sent_at),
     KEY idx_news_email (email),
     CONSTRAINT fk_newsletter_post FOREIGN KEY (post_id) REFERENCES blog_post(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Nessun backfill: attestazioni e presenze in porta devono essere verificate dallo staff.
+CREATE TABLE IF NOT EXISTS match_record_verification (
+ partita_id INT UNSIGNED PRIMARY KEY,
+ formato VARCHAR(80) NOT NULL,
+ esito ENUM('confermato','annullata','tavolino') NOT NULL,
+ risultato_hash CHAR(64) NOT NULL,
+ marcature_hash CHAR(64) DEFAULT NULL,
+ portieri_hash CHAR(64) DEFAULT NULL,
+ portieri_json LONGTEXT NOT NULL,
+ verified_by INT UNSIGNED NOT NULL,
+ verified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ FOREIGN KEY (partita_id) REFERENCES partite(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

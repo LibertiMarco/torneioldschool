@@ -103,6 +103,24 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
   await delay(); assert.equal(messages.findLast(message => message.type === 'download').name, 'coppa.png');
   await child.window.navigator.share({files:[new window.File(['png'],'uno.png',{type:'image/png'}),new window.File(['png'],'due.png',{type:'image/png'})]});
   assert.deepEqual(messages.findLast(message => message.type === 'download').files.map(file=>file.name), ['uno.png','due.png']);
+  child.reconfigure({url:'https://example.test/api/statistiche_partita.php?partitaid=1'});
+  document.body.innerHTML = `<main><form id="lineupForm"><div id="lineupRoot"></div></form>
+    <details id="recordsStaff" open><summary>Verifica Record</summary><form id="recordVerification">
+      <input type="hidden" name="records_csrf" value="records-secret">
+      <label>Gol subiti<input id="keeperGoals" type="number" name="keeper_goals[7]" value="0"></label>
+      <button type="submit">Salva verifica Record e portieri</button></form></details></main>`;
+  let keeperWrite;
+  document.querySelector('#recordVerification').addEventListener('submit', event => {
+    event.preventDefault(); keeperWrite = {goals:document.querySelector('#keeperGoals').value,csrf:document.querySelector('[name="records_csrf"]').value};
+  });
+  frame.dispatchEvent(new window.Event('load')); await delay();
+  assert(snapshot().blocks.some(block=>block.kind==='match-lineup'));
+  assert(find('field','Gol subiti'), 'Portieri disponibili insieme alla distinta nativa');
+  assert(!JSON.stringify(snapshot()).includes('records-secret'));
+  command({type:'change',id:find('field','Gol subiti').id,value:'2'});
+  command({type:'click',id:find('action','Salva verifica Record e portieri').id}); await delay();
+  assert.equal(keeperWrite.csrf,'records-secret');
+  assert.equal(keeperWrite.goals,'2');
   child.window.close(); window.close();
   console.log('Staff engine: native snapshots, dependent controls, protected submit, confirmation, modal, export and stale commands passed.');
 })().catch(error => {console.error(error); process.exit(1);});

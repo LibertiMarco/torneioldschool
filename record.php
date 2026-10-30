@@ -1,0 +1,4 @@
+<?php require_once __DIR__.'/includi/require_login.php'; ?>
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Record - Tornei Old School</title><link rel="stylesheet" href="/style.css"><style>.records-page{max-width:1100px;margin:110px auto 40px;padding:20px}.records-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}.record-card{padding:20px;border:1px solid #8886;border-radius:16px}.record-card summary{cursor:pointer}.record-card li{margin:15px 0}.record-filters{display:flex;gap:15px;flex-wrap:wrap;margin:20px 0}.record-filters select{padding:10px;max-width:100%}</style></head><body>
+<?php include __DIR__.'/includi/header.php'; ?>
+<main class="records-page"><h1>Record</h1><div id="records" data-player="<?= max(0,(int)($_GET['player_id']??0)) ?>"></div></main><script src="/records.js"></script></body></html>

@@ -133,7 +133,7 @@ $headerNavLinks = [
     </div>
 
     <!-- NAVIGAZIONE DESKTOP + MOBILE -->
-    <nav class="header-nav" id="mainNav">
+    <nav class="header-nav" id="mainNav"><a href="/record.php">Record</a>
         <?php foreach ($headerNavLinks as $navLink): ?>
             <a href="<?= htmlspecialchars(login_with_base_path($navLink['path'])) ?>"><?= htmlspecialchars($navLink['label']) ?></a>
         <?php endforeach; ?>

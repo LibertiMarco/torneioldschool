@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'records_page.dart';
 import 'sport_controls.dart';
 import 'match_report_logic.dart';
 import 'venue_navigation.dart';
@@ -128,6 +129,10 @@ class PlayerPage extends StatelessWidget {
               trailing: Text('${player[entry.value]}'),
             ),
         if (api != null) ...[
+          GoalkeeperSummary(
+            api: api!,
+            playerId: '${player['id'] ?? player['giocatore_id'] ?? ''}',
+          ),
           const SizedBox(height: 28),
           PlayerAwardsSection(
             api: api!,

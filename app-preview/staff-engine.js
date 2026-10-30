@@ -207,7 +207,8 @@
       const modal = Array.from(doc.querySelectorAll('[role="dialog"],dialog[open],.modal,.modal-overlay,.confirm-overlay,.confirm-modal,.delete-modal')).find(visible);
       const root = modal || doc.querySelector('main') || doc.querySelector('.admin-container') || doc.body;
       const lineup = !modal && doc.location.pathname === '/api/statistiche_partita.php' && doc.querySelector('form#lineupForm');
-      const data = {blocks: lineup ? [matchLineup(lineup)] : children(root, false), modal: !!modal};
+      const records = lineup && doc.querySelector('#recordsStaff');
+      const data = {blocks: lineup ? [matchLineup(lineup), ...(records ? [walk(records, false)].filter(Boolean) : [])] : children(root, false), modal: !!modal};
       const serialized = JSON.stringify(data);
       if (serialized !== lastSnapshot) { lastSnapshot = serialized; emit('snapshot', data); }
     } catch (_) { emit('error', {message: 'Impossibile aggiornare lo strumento. Riprova.'}); }
