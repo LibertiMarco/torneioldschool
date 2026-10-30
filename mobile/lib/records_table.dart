@@ -181,9 +181,9 @@ class _RecordsTableState extends State<RecordsTable> {
                 '${record['label']}',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: colors.onSurfaceVariant,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  color: colors.onSurface,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
                   height: 1.4,
                 ),
               ),
