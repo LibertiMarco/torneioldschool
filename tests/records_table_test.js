@@ -8,6 +8,8 @@ const {JSDOM}=require('jsdom');
  dom.window.eval(fs.readFileSync(path.join(__dirname,'../records-table.js'),'utf8'));await new Promise(r=>setTimeout(r,0));
  const doc=dom.window.document;
  assert.equal(doc.querySelectorAll('tbody tr').length,7);
+ assert.equal(doc.querySelectorAll('thead').length,0);
+ assert.equal(doc.querySelector('.records-player-goals').textContent,'12 gol');
  assert.equal(doc.querySelector('caption').textContent,'Generali');
  assert.equal(doc.querySelector('summary').textContent,'Altri detentori · 3');
  assert(doc.querySelector('a[href*="partita_eventi.php"]'));

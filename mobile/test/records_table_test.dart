@@ -30,7 +30,7 @@ void main() {
                 4,
                 (j) => {
                   'subject': 'Detentore ${j + 1}',
-                  'player_id': null,
+                  'player_id': 7,
                   'match': {
                     'id': 1,
                     'torneo': 'Coppa',
@@ -77,6 +77,7 @@ void main() {
     expect(find.text('Record TOS'), findsOneWidget);
     expect(find.text('Vittoria più larga senza subire gol'), findsOneWidget);
     expect(queries.single!['scope'], 'records');
+    expect(find.text('12 gol'), findsOneWidget);
     expect(find.text('Detentore 4'), findsNothing);
     await tester.ensureVisible(find.text('Altri detentori · 3'));
     await tester.tap(find.text('Altri detentori · 3'));
