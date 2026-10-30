@@ -22,8 +22,8 @@
             const date=/^\d{4}-\d{2}-\d{2}$/.test(p.data_partita)?p.data_partita.split('-').reverse().join('/'):p.data_partita;
             el('small',`${p.torneo_nome||p.torneo} · ${date}`,item);
           };
-          const list=el('ul',null,cell);record.holders.slice(0,3).forEach(h=>add(h,list));
-          if(record.holders.length>3){const more=el('details',null,cell);el('summary',`Mostra altri ${record.holders.length-3} pari merito`,more);const rest=el('ul',null,more);record.holders.slice(3).forEach(h=>add(h,rest));}
+          const list=el('ul',null,cell);record.holders.slice(0,1).forEach(h=>add(h,list));
+          if(record.holders.length>1){const more=el('details',null,cell);el('summary',`Mostra altri ${record.holders.length-1} pari merito`,more);const rest=el('ul',null,more);record.holders.slice(1).forEach(h=>add(h,rest));}
         }
       }
       const method=el('details',null,root);method.className='records-method';el('summary','Come vengono calcolati',method);el('p',data.coverage,method);

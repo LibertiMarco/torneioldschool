@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'details.dart' show MatchPage, PlayerPage, TeamPage;
-import 'home_design.dart' show HomeSectionTitle;
 import 'theme.dart' show siteBlue;
 
 /// Tabella nella classifica generale: nessuna pagina o tab dedicati.
@@ -16,8 +15,8 @@ class RecordsTable extends StatefulWidget {
 class _RecordsTableState extends State<RecordsTable> {
   ColorScheme get colors => Theme.of(context).colorScheme;
   ButtonStyle get linkStyle => TextButton.styleFrom(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    minimumSize: const Size(0, 32),
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    minimumSize: const Size(0, 26),
     alignment: Alignment.centerLeft,
     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     foregroundColor: colors.onSurface,
@@ -36,23 +35,22 @@ class _RecordsTableState extends State<RecordsTable> {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 24),
+    padding: const EdgeInsets.only(bottom: 12),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const HomeSectionTitle(
-          title: 'Record TOS',
-          eyebrow: 'LE MIGLIORI PRESTAZIONI',
-        ),
-        Text(
-          'I risultati e i protagonisti di tutti i tornei, in una classifica generale.',
-          style: TextStyle(
-            color: colors.onSurfaceVariant,
-            fontSize: 12,
-            height: 1.6,
+        Padding(
+          padding: const EdgeInsets.only(top: 16, bottom: 8),
+          child: Text(
+            'Record TOS',
+            style: TextStyle(
+              color: colors.onSurface,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -.4,
+            ),
           ),
         ),
-        const SizedBox(height: 16),
         FutureBuilder<dynamic>(
           future: data,
           builder: (context, snapshot) {
@@ -77,36 +75,6 @@ class _RecordsTableState extends State<RecordsTable> {
                     'Nessuna partita conclusa con risultato disponibile.',
                   ),
                 for (final entry in groups.entries) ...[
-                  Container(
-                    margin: const EdgeInsets.only(top: 18, bottom: 10),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 9,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colors.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.sports_soccer_outlined,
-                          size: 15,
-                          color: colors.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          entry.key,
-                          style: TextStyle(
-                            color: colors.onSurface,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final compact = constraints.maxWidth < 560;
@@ -155,9 +123,11 @@ class _RecordsTableState extends State<RecordsTable> {
                       );
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                 ],
                 ExpansionTile(
+                  dense: true,
+                  minTileHeight: 36,
                   tilePadding: EdgeInsets.zero,
                   childrenPadding: const EdgeInsets.only(bottom: 12),
                   shape: const Border(),
@@ -194,11 +164,11 @@ class _RecordsTableState extends State<RecordsTable> {
     ),
   );
   Widget cell(Widget child) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
     child: child,
   );
   Widget header(String label) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
     child: Text(
       label.toUpperCase(),
       style: const TextStyle(
@@ -210,7 +180,7 @@ class _RecordsTableState extends State<RecordsTable> {
     ),
   );
   Widget valueBadge(dynamic value) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
     decoration: BoxDecoration(
       color: value == null ? colors.surfaceContainerHigh : colors.primary,
       borderRadius: BorderRadius.circular(10),
@@ -219,7 +189,7 @@ class _RecordsTableState extends State<RecordsTable> {
       '${value ?? '—'}',
       style: TextStyle(
         color: value == null ? colors.onSurfaceVariant : colors.onPrimary,
-        fontSize: 22,
+        fontSize: 18,
         fontWeight: FontWeight.w900,
         height: 1.1,
       ),
@@ -227,7 +197,7 @@ class _RecordsTableState extends State<RecordsTable> {
   );
   TableRow row(String key, Map record, bool compact, int index) {
     final holders = record['holders'] as List;
-    final visible = expanded.contains(key) ? holders : holders.take(3);
+    final visible = expanded.contains(key) ? holders : holders.take(1);
     final label = Text(
       '${record['label']}',
       style: TextStyle(
@@ -250,7 +220,7 @@ class _RecordsTableState extends State<RecordsTable> {
             ),
           ),
         for (final h in visible) holder(h as Map),
-        if (holders.length > 3)
+        if (holders.length > 1)
           TextButton(
             onPressed: () => setState(() {
               if (!expanded.add(key)) expanded.remove(key);
@@ -258,7 +228,7 @@ class _RecordsTableState extends State<RecordsTable> {
             child: Text(
               expanded.contains(key)
                   ? 'Mostra meno'
-                  : 'Mostra altri ${holders.length - 3} pari merito',
+                  : 'Mostra altri ${holders.length - 1} pari merito',
             ),
           ),
       ],
@@ -281,7 +251,7 @@ class _RecordsTableState extends State<RecordsTable> {
                     valueBadge(record['value']),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
                 details,
               ],
             ),
@@ -303,7 +273,7 @@ class _RecordsTableState extends State<RecordsTable> {
   Widget holder(Map h) {
     final p = h['match'] as Map;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -387,13 +357,13 @@ class _RecordsTableState extends State<RecordsTable> {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: colors.secondaryContainer,
+                    color: colors.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: Text(
                     '${p['gol_casa']}–${p['gol_ospite']}',
                     style: TextStyle(
-                      color: colors.onSecondaryContainer,
+                      color: colors.onSurface,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                     ),
@@ -407,7 +377,7 @@ class _RecordsTableState extends State<RecordsTable> {
             ),
           ),
           Text(
-            '${p['torneo_nome'] ?? p['torneo']}\n${displayDate('${p['data_partita']}')}',
+            '${p['torneo_nome'] ?? p['torneo']} · ${displayDate('${p['data_partita']}')}',
             style: TextStyle(
               color: colors.onSurfaceVariant,
               fontSize: 10,

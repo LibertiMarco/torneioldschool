@@ -9,7 +9,7 @@ const {JSDOM}=require('jsdom');
  const doc=dom.window.document;
  assert.equal(doc.querySelectorAll('tbody tr').length,7);
  assert.equal(doc.querySelector('caption').textContent,'Generali');
- assert.equal(doc.querySelector('summary').textContent,'Mostra altri 1 pari merito');
+ assert.equal(doc.querySelector('summary').textContent,'Mostra altri 3 pari merito');
  assert(doc.querySelector('a[href*="partita_eventi.php"]'));
  assert(!doc.querySelector('a[href*="record.php"]'));
  assert(queries[0].includes('scope=records'));
