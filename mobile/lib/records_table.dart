@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'details.dart' show MatchPage, PlayerPage, TeamPage;
+import 'home_design.dart' show HomeSectionTitle;
+import 'theme.dart' show siteBlue;
 
 /// Tabella nella classifica generale: nessuna pagina o tab dedicati.
 class RecordsTable extends StatefulWidget {
@@ -12,6 +14,14 @@ class RecordsTable extends StatefulWidget {
 }
 
 class _RecordsTableState extends State<RecordsTable> {
+  ColorScheme get colors => Theme.of(context).colorScheme;
+  ButtonStyle get linkStyle => TextButton.styleFrom(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    minimumSize: const Size(0, 32),
+    alignment: Alignment.centerLeft,
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    foregroundColor: colors.onSurface,
+  );
   String tournament = '', format = '';
   final expanded = <String>{};
   late Future<dynamic> data = load();
@@ -37,7 +47,15 @@ class _RecordsTableState extends State<RecordsTable> {
       key: ValueKey('$label-$value'),
       initialValue: value,
       isExpanded: true,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(
+          label == 'Torneo'
+              ? Icons.emoji_events_outlined
+              : Icons.sports_soccer_outlined,
+          size: 19,
+        ),
+      ),
       items: [
         DropdownMenuItem(
           value: '',
@@ -58,12 +76,23 @@ class _RecordsTableState extends State<RecordsTable> {
   );
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 24),
+    padding: const EdgeInsets.only(bottom: 24),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Record TOS', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 12),
+        const HomeSectionTitle(
+          title: 'Record TOS',
+          eyebrow: 'LE MIGLIORI PRESTAZIONI',
+        ),
+        Text(
+          'I risultati e i protagonisti che hanno lasciato il segno.',
+          style: TextStyle(
+            color: colors.onSurfaceVariant,
+            fontSize: 12,
+            height: 1.6,
+          ),
+        ),
+        const SizedBox(height: 16),
         FutureBuilder<dynamic>(
           future: data,
           builder: (context, snapshot) {
@@ -83,74 +112,145 @@ class _RecordsTableState extends State<RecordsTable> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                filter(
-                  'Torneo',
-                  result['tournaments'] as List,
-                  tournament,
-                  (v) => tournament = v,
-                ),
-                filter(
-                  'Formato',
-                  result['formats'] as List,
-                  format,
-                  (v) => format = v,
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text('${result['coverage']}'),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final tournamentFilter = filter(
+                      'Torneo',
+                      result['tournaments'] as List,
+                      tournament,
+                      (v) => tournament = v,
+                    );
+                    final formatFilter = filter(
+                      'Formato',
+                      result['formats'] as List,
+                      format,
+                      (v) => format = v,
+                    );
+                    return constraints.maxWidth < 560
+                        ? Column(children: [tournamentFilter, formatFilter])
+                        : Row(
+                            children: [
+                              Expanded(flex: 2, child: tournamentFilter),
+                              const SizedBox(width: 14),
+                              Expanded(child: formatFilter),
+                            ],
+                          );
+                  },
                 ),
                 if (groups.isEmpty)
                   const Text(
                     'Nessuna partita conclusa con risultato e formato disponibili per questi filtri.',
                   ),
                 for (final entry in groups.entries) ...[
-                  Text(
-                    entry.key,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const Text(
-                    'Scorri la tabella orizzontalmente per tutti i dettagli.',
-                  ),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SizedBox(
-                      width: 700,
-                      child: Table(
-                        border: TableBorder.all(
-                          color: Theme.of(context).colorScheme.outlineVariant,
-                        ),
-                        columnWidths: const {
-                          0: FixedColumnWidth(210),
-                          1: FixedColumnWidth(65),
-                          2: FlexColumnWidth(),
-                        },
-                        defaultVerticalAlignment:
-                            TableCellVerticalAlignment.top,
-                        children: [
-                          TableRow(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                            ),
-                            children: [
-                              cell(const Text('Record')),
-                              cell(const Text('Valore')),
-                              cell(const Text('Detentori e partite')),
-                            ],
-                          ),
-                          for (final recordEntry
-                              in (entry.value['records'] as Map).entries)
-                            row(
-                              '${entry.key}-${recordEntry.key}',
-                              recordEntry.value as Map,
-                            ),
-                        ],
-                      ),
+                  Container(
+                    margin: const EdgeInsets.only(top: 18, bottom: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 9,
                     ),
+                    decoration: BoxDecoration(
+                      color: colors.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.sports_soccer_outlined,
+                          size: 15,
+                          color: colors.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          entry.key,
+                          style: TextStyle(
+                            color: colors.onSurface,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxWidth < 560;
+                      return Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: colors.outlineVariant),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Table(
+                          border: TableBorder(
+                            horizontalInside: BorderSide(
+                              color: colors.outlineVariant,
+                            ),
+                          ),
+                          columnWidths: compact
+                              ? const {0: FlexColumnWidth()}
+                              : const {
+                                  0: FlexColumnWidth(3),
+                                  1: FixedColumnWidth(80),
+                                  2: FlexColumnWidth(5),
+                                },
+                          defaultVerticalAlignment:
+                              TableCellVerticalAlignment.top,
+                          children: [
+                            TableRow(
+                              decoration: BoxDecoration(color: siteBlue),
+                              children: [
+                                header(compact ? 'Record e partite' : 'Record'),
+                                if (!compact) header('Valore'),
+                                if (!compact) header('Detentori e partite'),
+                              ],
+                            ),
+                            for (final recordEntry
+                                in (entry.value['records'] as Map).entries)
+                              row(
+                                '${entry.key}-${recordEntry.key}',
+                                recordEntry.value as Map,
+                                compact,
+                                (entry.value['records'] as Map).keys
+                                    .toList()
+                                    .indexOf(recordEntry.key),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                 ],
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.only(bottom: 12),
+                  shape: const Border(),
+                  collapsedShape: const Border(),
+                  leading: Icon(
+                    Icons.info_outline,
+                    size: 18,
+                    color: colors.onSurfaceVariant,
+                  ),
+                  title: Text(
+                    'Come vengono calcolati',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colors.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  children: [
+                    Text(
+                      '${result['coverage']}',
+                      style: TextStyle(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 11,
+                        height: 1.6,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             );
           },
@@ -158,40 +258,109 @@ class _RecordsTableState extends State<RecordsTable> {
       ],
     ),
   );
-  Widget cell(Widget child) =>
-      Padding(padding: const EdgeInsets.all(12), child: child);
-  TableRow row(String key, Map record) {
+  Widget cell(Widget child) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+    child: child,
+  );
+  Widget header(String label) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    child: Text(
+      label.toUpperCase(),
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: .6,
+      ),
+    ),
+  );
+  Widget valueBadge(dynamic value) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    decoration: BoxDecoration(
+      color: value == null ? colors.surfaceContainerHigh : colors.primary,
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Text(
+      '${value ?? '—'}',
+      style: TextStyle(
+        color: value == null ? colors.onSurfaceVariant : colors.onPrimary,
+        fontSize: 22,
+        fontWeight: FontWeight.w900,
+        height: 1.1,
+      ),
+    ),
+  );
+  TableRow row(String key, Map record, bool compact, int index) {
     final holders = record['holders'] as List;
     final visible = expanded.contains(key) ? holders : holders.take(3);
-    return TableRow(
+    final label = Text(
+      '${record['label']}',
+      style: TextStyle(
+        color: colors.onSurface,
+        fontWeight: FontWeight.w700,
+        fontSize: 13,
+        height: 1.5,
+      ),
+    );
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        cell(Text('${record['label']}')),
-        cell(
+        if (holders.isEmpty)
           Text(
-            '${record['value'] ?? '—'}',
-            style: const TextStyle(fontWeight: FontWeight.w700),
+            'Dati insufficienti',
+            style: TextStyle(
+              color: colors.onSurfaceVariant,
+              fontSize: 12,
+              height: 1.5,
+            ),
           ),
-        ),
-        cell(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (holders.isEmpty) const Text('Dati insufficienti'),
-              for (final h in visible) holder(h as Map),
-              if (holders.length > 3)
-                TextButton(
-                  onPressed: () => setState(() {
-                    if (!expanded.add(key)) expanded.remove(key);
-                  }),
-                  child: Text(
-                    expanded.contains(key)
-                        ? 'Mostra meno'
-                        : 'Mostra altri ${holders.length - 3} pari merito',
-                  ),
+        for (final h in visible) holder(h as Map),
+        if (holders.length > 3)
+          TextButton(
+            onPressed: () => setState(() {
+              if (!expanded.add(key)) expanded.remove(key);
+            }),
+            child: Text(
+              expanded.contains(key)
+                  ? 'Mostra meno'
+                  : 'Mostra altri ${holders.length - 3} pari merito',
+            ),
+          ),
+      ],
+    );
+    return TableRow(
+      decoration: BoxDecoration(
+        color: index.isEven ? colors.surfaceContainerLow : colors.surface,
+      ),
+      children: [
+        if (compact)
+          cell(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: label),
+                    const SizedBox(width: 14),
+                    valueBadge(record['value']),
+                  ],
                 ),
-            ],
+                const SizedBox(height: 12),
+                details,
+              ],
+            ),
+          )
+        else ...[
+          cell(label),
+          cell(
+            Align(
+              alignment: Alignment.topLeft,
+              child: valueBadge(record['value']),
+            ),
           ),
-        ),
+          cell(details),
+        ],
       ],
     );
   }
@@ -205,6 +374,7 @@ class _RecordsTableState extends State<RecordsTable> {
         children: [
           if (h['player_id'] != null)
             TextButton(
+              style: linkStyle,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => PlayerPage(
@@ -217,13 +387,21 @@ class _RecordsTableState extends State<RecordsTable> {
                   ),
                 ),
               ),
-              child: Text('${h['subject']}'),
+              child: Text(
+                '${h['subject']}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  height: 1.5,
+                ),
+              ),
             )
           else if ([
             p['squadra_casa'],
             p['squadra_ospite'],
           ].contains(h['subject']))
             TextButton(
+              style: linkStyle,
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => TeamPage(
@@ -233,26 +411,83 @@ class _RecordsTableState extends State<RecordsTable> {
                   ),
                 ),
               ),
-              child: Text('${h['subject']}'),
+              child: Text(
+                '${h['subject']}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  height: 1.5,
+                ),
+              ),
             )
           else
             Text(
               '${h['subject']}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              style: TextStyle(
+                color: colors.onSurface,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                height: 1.5,
+              ),
             ),
           TextButton(
+            style: linkStyle,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => MatchPage(api: widget.api, id: '${p['id']}'),
               ),
             ),
-            child: Text(
-              '${p['squadra_casa']} ${p['gol_casa']}–${p['gol_ospite']} ${p['squadra_ospite']}',
+            child: Wrap(
+              spacing: 5,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  '${p['squadra_casa']}',
+                  style: const TextStyle(fontSize: 11, height: 1.5),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.secondaryContainer,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Text(
+                    '${p['gol_casa']}–${p['gol_ospite']}',
+                    style: TextStyle(
+                      color: colors.onSecondaryContainer,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${p['squadra_ospite']}',
+                  style: const TextStyle(fontSize: 11, height: 1.5),
+                ),
+              ],
             ),
           ),
-          Text('${p['torneo_nome'] ?? p['torneo']} · ${p['data_partita']}'),
+          Text(
+            '${p['torneo_nome'] ?? p['torneo']}\n${displayDate('${p['data_partita']}')}',
+            style: TextStyle(
+              color: colors.onSurfaceVariant,
+              fontSize: 10,
+              height: 1.6,
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  String displayDate(String value) {
+    final date = DateTime.tryParse(value);
+    return date == null
+        ? value
+        : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 }
