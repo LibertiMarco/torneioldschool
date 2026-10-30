@@ -1,10 +1,27 @@
 # Record e statistiche portieri
 
-Implementazione: PHP condiviso in `includi/records.php`, API di lettura
-`api/records.php`, pagina `record.php`, schermate e schede Flutter
-`mobile/lib/records_page.dart`. Il profilo personale web e i profili Flutter
-mostrano le statistiche; il pulsante Record è nella navigazione del sito e
-nella barra dell'app. Il bridge staff include anche il nuovo modulo.
+Record TOS è una **tabella sotto le classifiche totali di marcatori e presenze**,
+nella home e nella classifica completa del sito e dell'app. Non è una pagina,
+una voce di navigazione o un tab aggiuntivo. Il componente web è
+`includi/records_table.php` / `records-table.js`; quello Flutter è `RecordsTable`.
+
+Il servizio `api/records.php?scope=records` calcola automaticamente i sette record
+con `includi/records_automatic.php`, riutilizzando il motore condiviso. Le partite
+devono avere `giocata=1` e punteggi disponibili. Il formato proviene dalla categoria
+del torneo. Le marcature vengono riscontrate con il punteggio di entrambe le
+squadre, inclusi gli autogol; tabellini incoerenti o con squadre ambigue non entrano
+nei record individuali. Nessuna attestazione nuova, backfill o migrazione richiesta
+per i record: il percorso è in sola lettura, anche senza la tabella verifiche.
+Correzioni ed eliminazioni si riflettono alla lettura successiva. Annullate e
+tavolino sono esclusi quando segnalati nei dati; vecchi esiti speciali non registrati
+non sono riconoscibili. I rigori finali sono separati e non vengono sommati.
+
+Test automatici: `tests/records_automatic_test.php`, `tests/records_database_test.php`
+(MySQL isolato), `tests/records_table_test.js` (jsdom),
+`mobile/test/records_table_test.dart` (320px, filtri e pari merito).
+Le sezioni successive descrivono il flusso di attestazione, che rimane necessario
+per le statistiche dei portieri: le attribuzioni individuali non si deducono dal
+ruolo anagrafico o dalla convocazione.
 
 ## Database e rilascio
 

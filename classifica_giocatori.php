@@ -91,6 +91,7 @@ $leadersBreadcrumbs = seo_breadcrumb_schema([
             </div>
         </div>
     </section>
+    <?php include __DIR__ . '/includi/records_table.php'; ?>
 </div>
 
 <div id="footer-container"></div>

@@ -1,11 +1,16 @@
 <?php
 require_once __DIR__.'/../includi/db.php';
 require_once __DIR__.'/../includi/records.php';
+require_once __DIR__.'/../includi/records_automatic.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 try {
-    [$matches,$rows,$verified]=records_source($conn);
-    $data=records_compute($matches,$rows,$verified,(string)($_GET['torneo']??''),(string)($_GET['formato']??''),max(0,(int)($_GET['player_id']??0)));
+    if(($_GET['scope']??'')==='records') {
+        $data=records_automatic_fetch($conn,(string)($_GET['torneo']??''),(string)($_GET['formato']??''));
+    } else {
+        [$matches,$rows,$verified]=records_source($conn);
+        $data=records_compute($matches,$rows,$verified,(string)($_GET['torneo']??''),(string)($_GET['formato']??''),max(0,(int)($_GET['player_id']??0)));
+    }
     $data['groups']=(object)$data['groups'];
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {

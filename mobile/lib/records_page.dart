@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
-import 'details.dart' show MatchPage, PlayerPage, TeamPage;
 
 class GoalkeeperSummary extends StatefulWidget {
   const GoalkeeperSummary({
@@ -109,8 +108,10 @@ class _GoalkeeperSummaryState extends State<GoalkeeperSummary> {
             onPressed: () async {
               await Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) =>
-                      RecordsPage(api: widget.api, playerId: widget.playerId),
+                  builder: (_) => GoalkeeperStatsPage(
+                    api: widget.api,
+                    playerId: widget.playerId,
+                  ),
                 ),
               );
               if (mounted) {
@@ -154,15 +155,19 @@ class _GoalkeeperSummaryState extends State<GoalkeeperSummary> {
   );
 }
 
-class RecordsPage extends StatefulWidget {
-  const RecordsPage({super.key, required this.api, this.playerId});
+class GoalkeeperStatsPage extends StatefulWidget {
+  const GoalkeeperStatsPage({
+    super.key,
+    required this.api,
+    required this.playerId,
+  });
   final TosApi api;
-  final String? playerId;
+  final String playerId;
   @override
-  State<RecordsPage> createState() => _RecordsPageState();
+  State<GoalkeeperStatsPage> createState() => _GoalkeeperStatsPageState();
 }
 
-class _RecordsPageState extends State<RecordsPage> {
+class _GoalkeeperStatsPageState extends State<GoalkeeperStatsPage> {
   String tournament = '', format = '';
   late Future<dynamic> data = load();
   Future<dynamic> load() => widget.api.request(
@@ -170,7 +175,7 @@ class _RecordsPageState extends State<RecordsPage> {
     query: {
       'torneo': tournament,
       'formato': format,
-      if (widget.playerId != null) 'player_id': widget.playerId!,
+      'player_id': widget.playerId,
     },
   );
   void reload() => setState(() {
@@ -207,9 +212,7 @@ class _RecordsPageState extends State<RecordsPage> {
   );
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: Text(widget.playerId == null ? 'Record' : 'Statistiche portiere'),
-    ),
+    appBar: AppBar(title: const Text('Statistiche portiere')),
     body: FutureBuilder<dynamic>(
       future: data,
       builder: (context, snapshot) {
@@ -263,38 +266,7 @@ class _RecordsPageState extends State<RecordsPage> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
-                if (widget.playerId != null) _keeper(entry.value as Map),
-                if (widget.playerId == null)
-                  for (final record in (entry.value['records'] as Map).values)
-                    Card(
-                      child: ExpansionTile(
-                        title: Text('${record['label']}'),
-                        subtitle: Text(
-                          record['value'] == null
-                              ? 'Dati insufficienti'
-                              : '${record['value']} · ${(record['holders'] as List).length} detentori',
-                        ),
-                        children: [
-                          for (final holder in record['holders'] as List)
-                            ListTile(
-                              title: Text('${holder['subject']}'),
-                              subtitle: Text(
-                                '${holder['match']['squadra_casa']} ${holder['match']['gol_casa']}–${holder['match']['gol_ospite']} ${holder['match']['squadra_ospite']}\n${holder['match']['torneo_nome'] ?? holder['match']['torneo']} · ${holder['match']['data_partita']}',
-                              ),
-                              isThreeLine: true,
-                              trailing: holderLinks(holder),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => MatchPage(
-                                    api: widget.api,
-                                    id: '${holder['match']['id']}',
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+                _keeper(entry.value as Map),
               ],
             ],
           ),
@@ -325,32 +297,4 @@ class _RecordsPageState extends State<RecordsPage> {
       ),
     );
   }
-
-  Widget holderLinks(Map holder) => PopupMenuButton<String>(
-    tooltip: 'Profili',
-    itemBuilder: (_) => [
-      if (holder['player_id'] != null)
-        const PopupMenuItem(value: 'player', child: Text('Profilo giocatore')),
-      for (final side in ['squadra_casa', 'squadra_ospite'])
-        PopupMenuItem(value: side, child: Text('${holder['match'][side]}')),
-    ],
-    onSelected: (value) => Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => value == 'player'
-            ? PlayerPage(
-                api: widget.api,
-                player: {
-                  'id': holder['player_id'],
-                  'nome': holder['subject'],
-                  'cognome': '',
-                },
-              )
-            : TeamPage(
-                api: widget.api,
-                slug: '${holder['match']['torneo']}',
-                team: {'nome': holder['match'][value]},
-              ),
-      ),
-    ),
-  );
 }

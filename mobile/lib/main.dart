@@ -6,7 +6,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'api.dart';
-import 'records_page.dart';
 import 'update_gate.dart';
 import 'auth.dart';
 import 'login_page.dart';
@@ -380,15 +379,6 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         actions: [
-          IconButton(
-            tooltip: 'Record',
-            icon: const Icon(Icons.emoji_events_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => RecordsPage(api: widget.api),
-              ),
-            ),
-          ),
           const AdsPrivacyButton(),
           IconButton(
             tooltip: 'Aspetto chiaro o scuro',

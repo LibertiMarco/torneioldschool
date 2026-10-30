@@ -102,61 +102,6 @@ void main() {
       expect(find.text('Riprova'), findsNothing);
     },
   );
-  testWidgets('record espanso leggibile a 320px con testo ingrandito', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(320, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final api = TosApi(baseUrl: Uri.parse('https://example.com'));
-    api.authenticatedRead = (_, _) async => {
-      'coverage': 'Solo dati verificati',
-      'tournaments': ['Coppa'],
-      'formats': ['Calcio a 5'],
-      'groups': {
-        'Calcio a 5': {
-          'records': {
-            'total': {
-              'label': 'Partita con più gol',
-              'value': 12,
-              'holders': [
-                {
-                  'subject': 'Squadra Old School Campionato',
-                  'player_id': null,
-                  'match': {
-                    'id': 1,
-                    'torneo': 'Coppa Old School Campionato',
-                    'squadra_casa': 'Squadra di casa Old School',
-                    'squadra_ospite': 'Squadra ospite Old School',
-                    'gol_casa': 7,
-                    'gol_ospite': 5,
-                    'data_partita': '2026-10-01',
-                  },
-                },
-              ],
-            },
-          },
-        },
-      },
-    };
-    await tester.pumpWidget(
-      MaterialApp(
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(textScaler: const TextScaler.linear(1.6)),
-          child: child!,
-        ),
-        home: RecordsPage(api: api),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Partita con più gol'));
-    await tester.tap(find.text('Partita con più gol'));
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-    expect(find.text('Squadra Old School Campionato'), findsOneWidget);
-  });
   testWidgets(
     'record e statistiche usano valori del servizio condiviso e filtri',
     (tester) async {
@@ -193,7 +138,7 @@ void main() {
       };
       await tester.pumpWidget(
         MaterialApp(
-          home: RecordsPage(api: api, playerId: '7'),
+          home: GoalkeeperStatsPage(api: api, playerId: '7'),
         ),
       );
       await tester.pumpAndSettle();
@@ -205,14 +150,6 @@ void main() {
       await tester.tap(find.text('Coppa').last);
       await tester.pumpAndSettle();
       expect(queries.last!['torneo'], 'Coppa');
-      await tester.pumpWidget(
-        MaterialApp(
-          home: RecordsPage(key: UniqueKey(), api: api),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Partita con più gol'), findsOneWidget);
-      expect(find.text('9 · 0 detentori'), findsOneWidget);
     },
   );
   testWidgets('nessun dato mostra stato vuoto', (tester) async {
@@ -223,7 +160,11 @@ void main() {
       'tournaments': [],
       'formats': [],
     };
-    await tester.pumpWidget(MaterialApp(home: RecordsPage(api: api)));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GoalkeeperStatsPage(api: api, playerId: '7'),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(
       find.text('Nessun dato verificato disponibile per questi filtri.'),

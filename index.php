@@ -153,6 +153,8 @@ if ($homeNewsStmt = $conn->prepare($homeNewsSql)) {
         </div>
       </section>
 
+      <?php include __DIR__ . '/includi/records_table.php'; ?>
+
       <!-- ALBO D'ORO -->
       <section class="home-hof">
         <div class="hof-header">

@@ -23,7 +23,7 @@ function records_ensure_schema(mysqli $db): void {
     if (!$db->query($sql)) throw new RuntimeException('Impossibile preparare la tabella Record.');
 }
 function records_hash(array $match, array $rows = []): string {
-    unset($match['torneo_nome']);
+    unset($match['torneo_nome'], $match['record_esclusa']);
     return hash('sha256', json_encode([$match, $rows], JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION));
 }
 function records_format(string $value): string {
@@ -31,21 +31,30 @@ function records_format(string $value): string {
     if(preg_match('/^(?:calcio\s*(?:a\s*)?|c)?(5|6|7|8|9|11)$/i',$value,$m)) return 'Calcio a '.$m[1];
     return ucfirst(strtolower($value));
 }
-function records_source(mysqli $db): array {
-    records_ensure_schema($db);
-    $matches = $db->query("SELECT p.id, p.torneo, p.squadra_casa, p.squadra_ospite, p.gol_casa, p.gol_ospite, p.data_partita, p.ora_partita, p.giocata,
+function records_source(mysqli $db, bool $prepareSchema = true): array {
+    if ($prepareSchema) records_ensure_schema($db);
+    $matchColumns=[];
+    foreach($db->query('SHOW COLUMNS FROM partite')->fetch_all(MYSQLI_ASSOC) as $column) $matchColumns[$column['Field']]=true;
+    $excluded=[];
+    foreach(['annullata','annullato','tavolino','a_tavolino','risultato_tavolino'] as $column) if(isset($matchColumns[$column])) $excluded[]="COALESCE(p.{$column},0)=1";
+    foreach(['stato','stato_partita','stato_risultato'] as $column) if(isset($matchColumns[$column])) $excluded[]="LOWER(TRIM(p.{$column})) IN ('annullata','annullato','cancellata','cancellato','tavolino','a tavolino','a_tavolino','cancelled','canceled','forfeit')";
+    $excludedExpr=$excluded ? '('.implode(' OR ',$excluded).')' : '0';
+    $matches = $db->query("SELECT p.id, p.torneo, p.squadra_casa, p.squadra_ospite, p.gol_casa, p.gol_ospite, p.data_partita, p.ora_partita, p.giocata, {$excludedExpr} AS record_esclusa,
         (SELECT t.nome FROM tornei t WHERE t.filetorneo=p.torneo OR t.filetorneo=CONCAT(p.torneo,'.php') OR t.nome=p.torneo ORDER BY t.id LIMIT 1) AS torneo_nome
         FROM partite p WHERE NOT EXISTS (SELECT 1 FROM tornei t WHERE t.sezione='esport' AND (t.filetorneo=p.torneo OR t.filetorneo=CONCAT(p.torneo,'.php') OR t.nome=p.torneo)) ORDER BY p.id")->fetch_all(MYSQLI_ASSOC);
     $rows = [];
     $columns=[];
     foreach ($db->query('SHOW COLUMNS FROM partita_giocatore')->fetch_all(MYSQLI_ASSOC) as $column) $columns[$column['Field']]=true;
     $team=isset($columns['squadra_id']) ? 'pg.squadra_id' : 'NULL';
+    // Nei vecchi tabellini risolvi solo appartenenze univoche, mai scegliendo
+    // arbitrariamente tra entrambe le squadre della partita.
+    $membership=$db->query("SHOW TABLES LIKE 'squadre_giocatori'");
+    if ($membership && $membership->num_rows) $team="COALESCE({$team},(SELECT CASE WHEN COUNT(DISTINCT s2.id)=1 THEN MIN(s2.id) ELSE NULL END FROM squadre_giocatori sg2 JOIN squadre s2 ON s2.id=sg2.squadra_id JOIN partite p2 ON p2.id=pg.partita_id WHERE sg2.giocatore_id=pg.giocatore_id AND s2.torneo=p2.torneo AND s2.nome IN(p2.squadra_casa,p2.squadra_ospite)))";
     $ownGoal=isset($columns['autogol']) ? 'pg.autogol' : 'NULL';
     foreach ($db->query("SELECT pg.id, pg.partita_id, pg.giocatore_id, {$team} AS squadra_id, pg.presenza, pg.goal, {$ownGoal} AS autogol, g.nome, g.cognome, s.nome AS squadra, s.torneo AS squadra_torneo FROM partita_giocatore pg JOIN giocatori g ON g.id=pg.giocatore_id LEFT JOIN squadre s ON s.id={$team} ORDER BY pg.id")->fetch_all(MYSQLI_ASSOC) as $r) $rows[$r['partita_id']][] = $r;
     $verifications = [];
-    $result = $db->query('SELECT * FROM match_record_verification');
-    if (!$result) throw new RuntimeException('Applicare la migrazione records_goalkeepers.sql.');
-    foreach ($result->fetch_all(MYSQLI_ASSOC) as $v) $verifications[$v['partita_id']] = $v;
+    $exists=$db->query("SHOW TABLES LIKE 'match_record_verification'");
+    if ($exists && $exists->num_rows) foreach ($db->query('SELECT * FROM match_record_verification')->fetch_all(MYSQLI_ASSOC) as $v) $verifications[$v['partita_id']] = $v;
     return [$matches, $rows, $verifications];
 }
 function records_scoring_complete(array $p, array $rows): bool {
@@ -86,7 +95,7 @@ function records_compute(array $matches, array $rows, array $verified, string $t
         if (!$v || ($tournament !== '' && $p['torneo'] !== $tournament) || ($format !== '' && $v['formato'] !== $format)) continue;
         $f = $v['formato'];
         if (!isset($groups[$f])) $groups[$f] = ['records'=>array_map(static fn($label)=>['label'=>$label,'value'=>null,'holders'=>[]], $labels), 'goalkeeper'=>['appearances'=>0,'goals_conceded'=>0,'clean_sheets'=>0,'average'=>null,'clean_sheet_percentage'=>null], 'eligible_matches'=>0, 'verified_keeper_matches'=>0];
-        if ($v['esito'] !== 'confermato' || (int)$p['giocata'] !== 1 || $p['gol_casa'] === null || $p['gol_ospite'] === null || $v['risultato_hash'] !== records_hash($p)) continue;
+        if ($v['esito'] !== 'confermato' || (int)$p['giocata'] !== 1 || !empty($p['record_esclusa']) || $p['gol_casa'] === null || $p['gol_ospite'] === null || (int)$p['gol_casa']<0 || (int)$p['gol_ospite']<0 || $v['risultato_hash'] !== records_hash($p)) continue;
         $g = &$groups[$f]; $g['eligible_matches']++;
         $rs = $rows[$p['id']] ?? []; $h = records_hash($p, $rs);
         $add = static function(string $key, int $value, string $subject, ?int $pid = null) use (&$g, $p): void {

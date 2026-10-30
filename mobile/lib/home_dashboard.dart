@@ -15,6 +15,7 @@ import 'article_content.dart';
 import 'player_history.dart';
 import 'ranking_mode_selector.dart';
 import 'ranking_surface.dart';
+import 'records_table.dart';
 import 'details.dart' show DataPage;
 import 'main.dart' show ErrorPanel, TournamentPage;
 import 'theme.dart' show siteBlue, siteRed;
@@ -374,6 +375,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               );
             },
           ),
+          if (!esport) RecordsTable(key: ValueKey('records-$reload'), api: api),
           if (!api.preview) const AdaptiveAdBanner(),
           const HomeSectionTitle(
             title: 'Ultime notizie',
@@ -887,6 +889,7 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
                         ),
                       ],
                     ),
+                  if (!widget.esport) RecordsTable(api: widget.api),
                 ],
               );
             },
