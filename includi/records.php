@@ -1,5 +1,27 @@
 <?php
 /** Unico motore per sito e app. Le impronte invalidano attestazioni dopo correzioni. */
+function records_ensure_schema(mysqli $db): void {
+    // Come gli altri moduli del sito, prepara la sola tabella aggiuntiva.
+    // Il tipo deve coincidere con partite.id anche sui database storici signed.
+    $exists=$db->query("SHOW TABLES LIKE 'match_record_verification'");
+    if ($exists && $exists->num_rows > 0) return;
+    $column=$db->query("SHOW COLUMNS FROM partite LIKE 'id'");
+    $type=$column ? ($column->fetch_assoc()['Type']??'') : '';
+    if (!preg_match('/^(?:int|bigint|mediumint)(?:\(\d+\))?(?: unsigned)?$/i',$type)) throw new RuntimeException('Tipo identificativo partita non supportato.');
+    $sql="CREATE TABLE IF NOT EXISTS match_record_verification (
+        partita_id {$type} PRIMARY KEY,
+        formato VARCHAR(80) NOT NULL,
+        esito ENUM('confermato','annullata','tavolino') NOT NULL,
+        risultato_hash CHAR(64) NOT NULL,
+        marcature_hash CHAR(64) DEFAULT NULL,
+        portieri_hash CHAR(64) DEFAULT NULL,
+        portieri_json LONGTEXT NOT NULL,
+        verified_by INT UNSIGNED NOT NULL,
+        verified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (partita_id) REFERENCES partite(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    if (!$db->query($sql)) throw new RuntimeException('Impossibile preparare la tabella Record.');
+}
 function records_hash(array $match, array $rows = []): string {
     unset($match['torneo_nome']);
     return hash('sha256', json_encode([$match, $rows], JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION));
@@ -10,11 +32,16 @@ function records_format(string $value): string {
     return ucfirst(strtolower($value));
 }
 function records_source(mysqli $db): array {
+    records_ensure_schema($db);
     $matches = $db->query("SELECT p.id, p.torneo, p.squadra_casa, p.squadra_ospite, p.gol_casa, p.gol_ospite, p.data_partita, p.ora_partita, p.giocata,
         (SELECT t.nome FROM tornei t WHERE t.filetorneo=p.torneo OR t.filetorneo=CONCAT(p.torneo,'.php') OR t.nome=p.torneo ORDER BY t.id LIMIT 1) AS torneo_nome
         FROM partite p WHERE NOT EXISTS (SELECT 1 FROM tornei t WHERE t.sezione='esport' AND (t.filetorneo=p.torneo OR t.filetorneo=CONCAT(p.torneo,'.php') OR t.nome=p.torneo)) ORDER BY p.id")->fetch_all(MYSQLI_ASSOC);
     $rows = [];
-    foreach ($db->query('SELECT pg.id, pg.partita_id, pg.giocatore_id, pg.squadra_id, pg.presenza, pg.goal, pg.autogol, g.nome, g.cognome, s.nome AS squadra, s.torneo AS squadra_torneo FROM partita_giocatore pg JOIN giocatori g ON g.id=pg.giocatore_id LEFT JOIN squadre s ON s.id=pg.squadra_id ORDER BY pg.id')->fetch_all(MYSQLI_ASSOC) as $r) $rows[$r['partita_id']][] = $r;
+    $columns=[];
+    foreach ($db->query('SHOW COLUMNS FROM partita_giocatore')->fetch_all(MYSQLI_ASSOC) as $column) $columns[$column['Field']]=true;
+    $team=isset($columns['squadra_id']) ? 'pg.squadra_id' : 'NULL';
+    $ownGoal=isset($columns['autogol']) ? 'pg.autogol' : 'NULL';
+    foreach ($db->query("SELECT pg.id, pg.partita_id, pg.giocatore_id, {$team} AS squadra_id, pg.presenza, pg.goal, {$ownGoal} AS autogol, g.nome, g.cognome, s.nome AS squadra, s.torneo AS squadra_torneo FROM partita_giocatore pg JOIN giocatori g ON g.id=pg.giocatore_id LEFT JOIN squadre s ON s.id={$team} ORDER BY pg.id")->fetch_all(MYSQLI_ASSOC) as $r) $rows[$r['partita_id']][] = $r;
     $verifications = [];
     $result = $db->query('SELECT * FROM match_record_verification');
     if (!$result) throw new RuntimeException('Applicare la migrazione records_goalkeepers.sql.');
@@ -24,6 +51,7 @@ function records_source(mysqli $db): array {
 function records_scoring_complete(array $p, array $rows): bool {
     $totals = [$p['squadra_casa'] => 0, $p['squadra_ospite'] => 0];
     foreach ($rows as $r) {
+        if ($r['goal'] === null || $r['autogol'] === null) return false;
         if ($r['squadra_torneo'] !== $p['torneo'] || !array_key_exists($r['squadra'], $totals)) return false;
         $other = $r['squadra'] === $p['squadra_casa'] ? $p['squadra_ospite'] : $p['squadra_casa'];
         $totals[$r['squadra']] += (int)$r['goal'];

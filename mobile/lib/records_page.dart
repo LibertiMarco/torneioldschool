@@ -42,7 +42,21 @@ class _GoalkeeperSummaryState extends State<GoalkeeperSummary> {
             future: data,
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return const Text('Dati portieri non disponibili.');
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _metrics(null),
+                    const Text(
+                      'Caricamento non riuscito. I dati non sono stati sostituiti con degli zeri.',
+                    ),
+                    TextButton(
+                      onPressed: () => setState(() {
+                        data = load();
+                      }),
+                      child: const Text('Riprova'),
+                    ),
+                  ],
+                );
               }
               if (!snapshot.hasData) {
                 return const LinearProgressIndicator();
@@ -51,7 +65,15 @@ class _GoalkeeperSummaryState extends State<GoalkeeperSummary> {
                 snapshot.data['groups'] as Map,
               );
               if (groups.isEmpty) {
-                return const Text('Nessuna presenza in porta verificabile.');
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _metrics(null),
+                    const Text(
+                      'Nessun tabellino con dati portieri completi e verificati. Le statistiche saranno disponibili dopo la verifica dello staff.',
+                    ),
+                  ],
+                );
               }
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,8 +81,21 @@ class _GoalkeeperSummaryState extends State<GoalkeeperSummary> {
                   for (final entry in groups.entries)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        '${entry.key}\nPresenze: ${entry.value['goalkeeper']['appearances']} · Gol subiti: ${entry.value['goalkeeper']['goals_conceded']}\nMedia: ${entry.value['goalkeeper']['average'] ?? '—'} · Porte inviolate: ${entry.value['goalkeeper']['clean_sheets']} · ${entry.value['goalkeeper']['clean_sheet_percentage'] == null ? '—' : '${entry.value['goalkeeper']['clean_sheet_percentage']}%'}',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            entry.key,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          _metrics(
+                            entry.value['verified_keeper_matches'] == 0
+                                ? null
+                                : Map<String, dynamic>.from(
+                                    entry.value['goalkeeper'] as Map,
+                                  ),
+                          ),
+                        ],
                       ),
                     ),
                   const Text(
@@ -71,17 +106,51 @@ class _GoalkeeperSummaryState extends State<GoalkeeperSummary> {
             },
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) =>
-                    RecordsPage(api: widget.api, playerId: widget.playerId),
-              ),
-            ),
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      RecordsPage(api: widget.api, playerId: widget.playerId),
+                ),
+              );
+              if (mounted) {
+                setState(() {
+                  data = load();
+                });
+              }
+            },
             child: const Text('Storico, tornei e formati'),
           ),
         ],
       ),
     ),
+  );
+  Widget _metrics(Map<String, dynamic>? stats) => Column(
+    children: [
+      for (final entry in {
+        'Presenze in porta': stats?['appearances'],
+        'Gol subiti': stats?['goals_conceded'],
+        'Media gol subiti': stats?['average'],
+        'Porte inviolate': stats?['clean_sheets'],
+        'Percentuale porte inviolate': stats?['clean_sheet_percentage'] == null
+            ? null
+            : '${stats!['clean_sheet_percentage']}%',
+      }.entries)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: Text(entry.key)),
+              const SizedBox(width: 12),
+              Text(
+                '${entry.value ?? '—'}',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
+    ],
   );
 }
 

@@ -83,15 +83,16 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                 child: _athlete(),
               ),
               const SizedBox(height: 24),
-              GoalkeeperSummary(
-                api: widget.api,
-                playerId: '${widget.player['id']}',
-              ),
               _upcomingMatches(),
               const SizedBox(height: 24),
               _title('Le mie statistiche', 'IL TUO PERCORSO'),
               const SizedBox(height: 12),
               _summary(),
+              const SizedBox(height: 12),
+              GoalkeeperSummary(
+                api: widget.api,
+                playerId: '${widget.player['id']}',
+              ),
               if (widget.player['rankings'] is Map) ...[
                 const SizedBox(height: 12),
                 Card(

@@ -7,6 +7,7 @@ $recordsMessage = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['records_save'])) {
     try {
         if (!tos_request_is_same_origin() || !hash_equals($_SESSION['records_csrf'], (string)($_POST['records_csrf'] ?? ''))) throw new RuntimeException('Richiesta non autorizzata.');
+        records_ensure_schema($conn);
         $conn->begin_transaction();
         $lock=$conn->prepare('SELECT id FROM partite WHERE id=? FOR UPDATE'); $lock->bind_param('i',$partita_id); $lock->execute();
         [$ms,$rs,$vs]=records_source($conn); $match=null;

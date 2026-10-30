@@ -8,4 +8,8 @@ try {
     $data=records_compute($matches,$rows,$verified,(string)($_GET['torneo']??''),(string)($_GET['formato']??''),max(0,(int)($_GET['player_id']??0)));
     $data['groups']=(object)$data['groups'];
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
-} catch (Throwable $e) { http_response_code(503); echo json_encode(['error'=>'Statistiche non disponibili. Verificare la migrazione Record.']); }
+} catch (Throwable $e) {
+    error_log('Record API: '.$e->getMessage());
+    http_response_code(503);
+    echo json_encode(['error'=>['code'=>'records_unavailable','message'=>'Impossibile caricare le statistiche. Riprova tra poco.']]);
+}

@@ -8,16 +8,22 @@ nella barra dell'app. Il bridge staff include anche il nuovo modulo.
 
 ## Database e rilascio
 
-Applicare **una volta** `migrations/records_goalkeepers.sql` sul database
-configurato. Non eseguire `database_schema.sql` su un database esistente:
+Il backend ora prepara automaticamente `match_record_verification` se manca,
+come gli altri moduli del progetto. Adatta il tipo dell'identificativo al
+database esistente, anche con `partite.id` signed. Non modifica le tabelle
+storiche. L'utente MySQL deve poter creare la nuova tabella; in alternativa
+è disponibile `migrations/records_goalkeepers.sql` per lo schema unsigned.
+Non eseguire `database_schema.sql` su un database esistente:
 è lo schema completo per nuove installazioni e contiene DROP.
 La migrazione crea soltanto `match_record_verification`, con cancellazione
 in cascata dalla partita. Non modifica risultati, presenze o marcature storiche.
 
-Il database configurato non era raggiungibile durante questa implementazione
-(connessione rifiutata). L'analisi si è basata sullo schema SQL versionato e
-sui controller; migrazione e persistenza reale restano da verificare sul server.
-Non è stato eseguito alcun backfill o accesso di scrittura al database.
+Il database configurato non era raggiungibile. La preparazione automatica,
+la persistenza, i calcoli e il cascade sono stati verificati con un'istanza
+MariaDB isolata sulla porta 3319, usando sia identificativi signed sia unsigned.
+Il test `tests/records_database_test.php` crea e rimuove un database temporaneo;
+non usa la configurazione o i dati del sito. È verificato anche lo schema
+storico senza `squadra_id`/`autogol`: i campi restano sconosciuti, senza deduzioni.
 
 Distribuire i file PHP/JS e ricompilare Flutter per Android/iOS. Per aggiornare
 la preview compilare il web con `TOS_WEB_PREVIEW=true` e base href
@@ -51,6 +57,12 @@ riutilizzare attribuzioni subite non più coerenti. I nomi dei giocatori
 fanno parte dell'impronta del tabellino: rinominarli richiede una nuova verifica.
 
 ## Limiti e significato degli zeri
+
+Nel profilo personale le statistiche portieri sono sempre sotto «Le mie
+statistiche», dopo il riepilogo generale, anche per chi non ha tabellini
+verificabili. In questo caso tutte e cinque le voci mostrano «—» e la causa
+dei dati mancanti. Un errore di connessione ha un pulsante «Riprova» e non
+viene confuso con l'assenza di dati. Lo stesso comportamento vale sul sito.
 
 Le vecchie partite senza attestazione non entrano nei record. Quelle con
 risultato verificato possono contribuire ai record di squadra anche senza
@@ -87,6 +99,10 @@ test JS superati con il runtime Node del workspace.
 Build web release completata e copiata in `app-preview/build`.
 Nessuna distribuzione remota o build firmata Android/iOS eseguita.
 
-Da verificare su ambiente con MySQL disponibile: import della migrazione,
+Da verificare sul server di produzione dopo il rilascio: preparazione dello schema,
 salvataggio e nuova attestazione dopo correzione, lettura degli stessi valori
 da sito e dispositivo fisico, eliminazione partita e relativo cascade.
+
+Correzione della scheda personale: superati 15 test Flutter su statistiche e
+profilo, inclusi ordine sotto «Le mie statistiche», cinque voci sempre presenti,
+recupero dopo errore, valori reali del servizio e layout a 320/390/430px.

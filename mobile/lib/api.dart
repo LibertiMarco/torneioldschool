@@ -130,6 +130,7 @@ class TosApi {
         final message =
             error is Map &&
                 (path.startsWith('api/mobile/v1/') ||
+                    path == 'api/records.php' ||
                     path == 'app-preview/api.php')
             ? error['message']?.toString() ?? 'Richiesta non riuscita.'
             : error is String && path == 'api/mobile/v1/comments.php'

@@ -9,7 +9,7 @@
     root.replaceChildren(el('p', 'Caricamento…'));
     try {
       const response = await fetch('/api/records.php?' + new URLSearchParams({torneo:tournament,formato:format,player_id:player}), {cache:'no-store'});
-      const data = await response.json(); if (!response.ok) throw Error(data.error);
+      const data = await response.json(); if (!response.ok) throw Error(typeof data.error === 'object' ? data.error.message : data.error);
       root.replaceChildren();
       el('p', data.coverage, root);
       const filters = el('div', null, root); filters.className = 'record-filters';
@@ -20,7 +20,13 @@
         select.onchange=()=>{change(select.value);load();};
       }
       const groups=Object.entries(data.groups);
-      if (!groups.length) el('p','Nessun dato verificato disponibile per questi filtri.',root);
+      if (!groups.length) {
+        if (root.dataset.keepersOnly === '1') {
+          const stats=el('dl',null,root);
+          for (const label of ['Presenze in porta','Gol subiti','Media gol subiti','Porte inviolate','Percentuale porte inviolate']) { el('dt',label,stats);el('dd','—',stats); }
+          el('p','Nessun tabellino con dati portieri completi e verificati. Le statistiche saranno disponibili dopo la verifica dello staff.',root);
+        } else el('p','Nessun dato verificato disponibile per questi filtri.',root);
+      }
       for (const [name,group] of groups) {
         el('h2',name,root);
         if (Number(player)>0) {
@@ -43,7 +49,10 @@
           if(record.holders.length>3){const more=el('details',null,card);el('summary',`Altri ${record.holders.length-3} detentori`,more);const l=el('ul',null,more);record.holders.slice(3).forEach(h=>addHolder(h,l));}
         });
       }
-    } catch(e) {root.replaceChildren(el('p',e.message||'Impossibile caricare i record.'));}
+    } catch(e) {
+      root.replaceChildren(el('p',typeof e.message === 'string' ? e.message : 'Impossibile caricare le statistiche.'));
+      const retry=el('button','Riprova',root);retry.type='button';retry.onclick=load;
+    }
   }
   load();
 })();

@@ -162,6 +162,14 @@ class DemoApi extends TosApi {
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 150));
     switch (path) {
+      case 'api/records.php':
+        return {
+          'groups': <String, dynamic>{},
+          'tournaments': <String>[],
+          'formats': <String>[],
+          'coverage':
+              'Nessun tabellino portieri verificato nei dati dimostrativi.',
+        };
       case 'api/mobile/v1/account.php':
         final user = users.first;
         if (body != null && body['nome'] != null) {
