@@ -22,13 +22,11 @@ class _RecordsTableState extends State<RecordsTable> {
     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
     foregroundColor: colors.onSurface,
   );
-  String tournament = '', format = '';
+
   final expanded = <String>{};
   late Future<dynamic> data = load();
-  Future<dynamic> load() => widget.api.request(
-    'api/records.php',
-    query: {'scope': 'records', 'torneo': tournament, 'formato': format},
-  );
+  Future<dynamic> load() =>
+      widget.api.request('api/records.php', query: {'scope': 'records'});
   void reload() {
     setState(() {
       data = load();
@@ -36,44 +34,6 @@ class _RecordsTableState extends State<RecordsTable> {
     });
   }
 
-  Widget filter(
-    String label,
-    List values,
-    String value,
-    ValueChanged<String> change,
-  ) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: DropdownButtonFormField<String>(
-      key: ValueKey('$label-$value'),
-      initialValue: value,
-      isExpanded: true,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(
-          label == 'Torneo'
-              ? Icons.emoji_events_outlined
-              : Icons.sports_soccer_outlined,
-          size: 19,
-        ),
-      ),
-      items: [
-        DropdownMenuItem(
-          value: '',
-          child: Text(label == 'Torneo' ? 'Storico TOS' : 'Tutti (separati)'),
-        ),
-        ...values.map(
-          (v) => DropdownMenuItem(
-            value: '$v',
-            child: Text('$v', overflow: TextOverflow.ellipsis),
-          ),
-        ),
-      ],
-      onChanged: (v) {
-        change(v ?? '');
-        reload();
-      },
-    ),
-  );
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 24),
@@ -85,7 +45,7 @@ class _RecordsTableState extends State<RecordsTable> {
           eyebrow: 'LE MIGLIORI PRESTAZIONI',
         ),
         Text(
-          'I risultati e i protagonisti che hanno lasciato il segno.',
+          'I risultati e i protagonisti di tutti i tornei, in una classifica generale.',
           style: TextStyle(
             color: colors.onSurfaceVariant,
             fontSize: 12,
@@ -112,34 +72,9 @@ class _RecordsTableState extends State<RecordsTable> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final tournamentFilter = filter(
-                      'Torneo',
-                      result['tournaments'] as List,
-                      tournament,
-                      (v) => tournament = v,
-                    );
-                    final formatFilter = filter(
-                      'Formato',
-                      result['formats'] as List,
-                      format,
-                      (v) => format = v,
-                    );
-                    return constraints.maxWidth < 560
-                        ? Column(children: [tournamentFilter, formatFilter])
-                        : Row(
-                            children: [
-                              Expanded(flex: 2, child: tournamentFilter),
-                              const SizedBox(width: 14),
-                              Expanded(child: formatFilter),
-                            ],
-                          );
-                  },
-                ),
                 if (groups.isEmpty)
                   const Text(
-                    'Nessuna partita conclusa con risultato e formato disponibili per questi filtri.',
+                    'Nessuna partita conclusa con risultato disponibile.',
                   ),
                 for (final entry in groups.entries) ...[
                   Container(

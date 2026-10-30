@@ -31,7 +31,7 @@ try {
         $db->query('INSERT INTO partita_giocatore VALUES(1,1,1,1,1,0,0),(2,1,2,1,1,2,0),(3,1,3,2,1,0,0)');
         $db->query('INSERT INTO squadre_giocatori VALUES(1,1),(2,1),(3,2)');
         $automatic=records_automatic_fetch($db);
-        db_check($automatic['groups']['Calcio a 5']['records']['player']['value']===2,'Record storico calcolato senza nuova attestazione');
+        db_check($automatic['groups']['Generali']['records']['player']['value']===2,'Record storico calcolato senza nuova attestazione');
         [$matches,$rows]=records_source($db);$p=$matches[0];
         $keepers=[['player_id'=>1,'goals'=>0,'full'=>true],['player_id'=>3,'goals'=>2,'full'=>true]];
         records_validate_keepers($p,$rows[1],$keepers);

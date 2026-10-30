@@ -6,7 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 try {
     if(($_GET['scope']??'')==='records') {
-        $data=records_automatic_fetch($conn,(string)($_GET['torneo']??''),(string)($_GET['formato']??''));
+        $data=records_automatic_fetch($conn);
     } else {
         [$matches,$rows,$verified]=records_source($conn);
         $data=records_compute($matches,$rows,$verified,(string)($_GET['torneo']??''),(string)($_GET['formato']??''),max(0,(int)($_GET['player_id']??0)));

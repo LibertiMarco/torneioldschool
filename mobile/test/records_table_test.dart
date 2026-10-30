@@ -4,7 +4,7 @@ import 'package:tornei_old_school/api.dart';
 import 'package:tornei_old_school/records_table.dart';
 
 void main() {
-  testWidgets('tabella inline con sette record, pari merito e filtri a 320px', (
+  testWidgets('tabella generale con sette record e pari merito a 320px', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(320, 900));
@@ -51,7 +51,7 @@ void main() {
       queries.add(query);
       return {
         'groups': {
-          'Calcio a 5': {'records': records},
+          'Generali': {'records': records},
         },
         'tournaments': ['Coppa'],
         'formats': ['Calcio a 5'],
@@ -82,12 +82,9 @@ void main() {
     await tester.tap(find.text('Mostra altri 1 pari merito'));
     await tester.pumpAndSettle();
     expect(find.text('Detentore 4'), findsOneWidget);
-    await tester.ensureVisible(find.text('Storico TOS'));
-    await tester.tap(find.text('Storico TOS'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Coppa').last);
-    await tester.pumpAndSettle();
-    expect(queries.last!['torneo'], 'Coppa');
+    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    expect(queries.single!.containsKey('formato'), isFalse);
+    expect(queries.single!.containsKey('torneo'), isFalse);
     expect(tester.takeException(), isNull);
   });
 }

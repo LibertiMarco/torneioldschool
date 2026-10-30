@@ -3,7 +3,7 @@
     <div>
       <p class="leaders-eyebrow">Le migliori prestazioni</p>
       <h2 id="tos-records-title">Record TOS</h2>
-      <p class="records-intro">I risultati e i protagonisti che hanno lasciato il segno.</p>
+      <p class="records-intro">I risultati e i protagonisti di tutti i tornei, in una classifica generale.</p>
     </div>
   </div>
   <div id="tos-records-table" aria-live="polite"><p>Calcolo dei record in corso…</p></div>

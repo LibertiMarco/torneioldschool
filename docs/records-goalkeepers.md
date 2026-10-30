@@ -1,5 +1,11 @@
 # Record e statistiche portieri
 
+I record sono ora **generali**: tutti i tornei e formati calcistici vengono
+confrontati in un'unica tabella, senza filtri e senza divisioni per categoria.
+Anche i risultati senza categoria esplicita partecipano al confronto.
+Esport, partite non concluse, annullate e tavolino restano esclusi.
+Le statistiche dei portieri mantengono i propri criteri e filtri.
+
 Record TOS è una **tabella sotto le classifiche totali di marcatori e presenze**,
 nella home e nella classifica completa del sito e dell'app. Non è una pagina,
 una voce di navigazione o un tab aggiuntivo. Il componente web è
@@ -7,8 +13,8 @@ una voce di navigazione o un tab aggiuntivo. Il componente web è
 
 Il servizio `api/records.php?scope=records` calcola automaticamente i sette record
 con `includi/records_automatic.php`, riutilizzando il motore condiviso. Le partite
-devono avere `giocata=1` e punteggi disponibili. Il formato proviene dalla categoria
-del torneo. Le marcature vengono riscontrate con il punteggio di entrambe le
+devono avere `giocata=1` e punteggi disponibili. Il confronto unisce tutti i tornei
+e formati. Le marcature vengono riscontrate con il punteggio di entrambe le
 squadre, inclusi gli autogol; tabellini incoerenti o con squadre ambigue non entrano
 nei record individuali. Nessuna attestazione nuova, backfill o migrazione richiesta
 per i record: il percorso è in sola lettura, anche senza la tabella verifiche.
