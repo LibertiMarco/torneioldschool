@@ -193,7 +193,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
           <label>Logo casa (facoltativo)<input id="ftHomeLogo" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label>Logo ospite (facoltativo)<input id="ftAwayLogo" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label class="wide">Foto pre-match dei capitani<input id="ftCaptains" type="file" accept="image/png,image/jpeg,image/webp"></label>
-          <div id="ftPhotoActions" class="wide remove-bg-actions" hidden><label>Persone da mantenere<select id="ftCutoutSubjects"><option value="main">Soggetti più grandi</option><option value="all">Tutte le persone (foto di gruppo)</option></select></label><button id="ftRemoveBg" type="button">Rimuovi sfondo</button><button id="ftRestorePhoto" class="secondary" type="button" hidden>Ripristina originale</button></div>
+          <div id="ftPhotoActions" class="wide remove-bg-actions" hidden><button id="ftRemoveBg" type="button">Rimuovi sfondo</button><button id="ftRestorePhoto" class="secondary" type="button" hidden>Ripristina originale</button></div>
           <p class="wide hint" style="margin:0">La foto viene elaborata sul dispositivo. Il primo utilizzo scarica il modello di segmentazione.</p>
           <label>Zoom foto <span class="range-value" id="ftZoomValue">100%</span><input id="ftZoom" type="range" min="10" max="250" value="100"></label>
           <label>Posizione orizzontale <span class="range-value" id="ftXValue">50%</span><input id="ftX" type="range" min="0" max="100" value="50"></label>
@@ -214,7 +214,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
           <label class="wide">Selezione<input id="mvpNames" value="" readonly></label>
           <label class="wide">Squadra<input id="mvpTeam" value="" readonly></label>
           <label class="wide">Foto MVP<input id="mvpPhoto" type="file" accept="image/png,image/jpeg,image/webp"></label>
-          <div id="mvpPhotoActions" class="wide remove-bg-actions" hidden><label>Persone da mantenere<select id="mvpCutoutSubjects"><option value="main">Soggetti più grandi</option><option value="all">Tutte le persone (foto di gruppo)</option></select></label><button id="mvpRemoveBg" type="button">Rimuovi sfondo</button><button id="mvpRestorePhoto" class="secondary" type="button" hidden>Ripristina originale</button></div>
+          <div id="mvpPhotoActions" class="wide remove-bg-actions" hidden><button id="mvpRemoveBg" type="button">Rimuovi sfondo</button><button id="mvpRestorePhoto" class="secondary" type="button" hidden>Ripristina originale</button></div>
           <p class="wide hint" style="margin:0">La foto viene elaborata sul dispositivo. Il primo utilizzo scarica il modello di segmentazione.</p>
           <label>Zoom foto <span class="range-value" id="mvpZoomValue">100%</span><input id="mvpZoom" type="range" min="10" max="250" value="100"></label>
           <label>Posizione orizzontale <span class="range-value" id="mvpXValue">50%</span><input id="mvpX" type="range" min="0" max="100" value="50"></label>
@@ -231,7 +231,6 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
       </div>
       <p class="hint">Riduci lo zoom sotto il 100% per rimpicciolire la foto, anche se è già senza sfondo. Usa i controlli di posizione per sistemarla nella grafica.</p>
       </div>
-      <p id="cutoutRecovery" class="status" role="status" hidden></p>
       <div id="status" class="status" aria-live="polite"></div>
       <?php if ($canPublishInstagram): ?><p class="hint">Per attivare la pubblicazione, <a href="/instagram/login.php" target="_blank" rel="noopener">collega direttamente Instagram</a>, poi configura <code>INSTAGRAM_ACCESS_TOKEN</code> e <code>INSTAGRAM_USER_ID</code> sul server.</p><?php endif; ?>
     </section>
@@ -253,13 +252,12 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="grafiche_basi.js?v=20261007-mvp-shared-logo"></script>
 <script src="grafiche_foto_touch.js?v=20261007-aspect-ratio"></script>
-<script src="grafiche_scontorno.js?v=20261020-mobilesam-12"></script>
-<script src="grafiche_scontorno_editor.js?v=20261020-mobilesam-12"></script>
 <script>
 const $ = id => document.getElementById(id);
 const instagramPublishCsrf = <?= json_encode($canPublishInstagram ? csrf_get_token('instagram_publish') : '') ?>;
 const W=1080,H=1350;
 const templateEditor=<?= json_encode($templateEditor) ?>;
+const graphicsCutoutCsrf=<?= json_encode(csrf_get_token('graphics_cutout')) ?>;
 const graphicsTemplatesCsrf=<?= json_encode(csrf_get_token('graphics_templates')) ?>;
 const tournaments=<?= json_encode($torneiGrafiche, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 let GOLD='#e8bd45',BG='#07131f',PANEL='#102438',MUTED='#aebdca';
@@ -279,8 +277,6 @@ const matchPlayers=<?= json_encode($giocatoriGrafiche, JSON_UNESCAPED_UNICODE | 
 const imageState={ftHomeLogo:null,ftAwayLogo:null,ftCaptains:null,mvpPhoto:null,brand:null,ftCaptainsOriginal:null,mvpPhotoOriginal:null};
 const imageFields=['ftCaptains','mvpPhoto','ftHomeLogo','ftAwayLogo'];
 let matchLoadVersion=0;
-const interruptedCutout=GraphicsCutout.interruptedPhase();
-if(interruptedCutout){$('cutoutRecovery').hidden=false;$('cutoutRecovery').textContent='Lo scontorno precedente si \u00e8 interrotto durante: '+interruptedCutout;}
 const safeName=value=>String(value||'grafica').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
 const upper=(value,fallback='')=>String(value||fallback).trim().toUpperCase();
 
@@ -409,43 +405,31 @@ async function removePhotoBackground(id) {
   if(!original||backgroundRemovalBusy)return;
   const version=matchLoadVersion,button=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg'),restore=$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto');
   const isCurrent=()=>version===matchLoadVersion&&imageState[id+'Original']===original;
-  let mask=null,canvas=null;
-  const previousButtonText=button.textContent;
+  let canvas=null;
   backgroundRemovalBusy=true;
-  button.textContent='Preparazione della foto...';
-  GraphicsCutout.markPhase?.('Avvio dello scontorno');
   ['ftRemoveBg','mvpRemoveBg'].forEach(key=>$(key).disabled=true);
-  $('status').textContent='Rimozione sfondo e rifinitura dei bordi in corso… Al primo utilizzo vengono scaricati i modelli necessari.';
   try {
-    mask=await GraphicsCutout.createMask(original,{subjects:$(id==='ftCaptains'?'ftCutoutSubjects':'mvpCutoutSubjects').value,onProgress:message=>{if(isCurrent()){$('status').textContent=message;button.textContent=message;}} });
-    if(!isCurrent())return;
-    $('status').textContent='Controlla i bordi: usa Gomma per i residui e Recupera per eventuali dettagli mancanti.';
-    GraphicsCutout.markPhase?.('Apertura e uso editor');
-    if(!await GraphicsCutoutEditor.refine(original,mask)){
-      if(isCurrent())$('status').textContent='Scontorno annullato: foto precedente conservata.';
-      return;
-    }
-    if(!isCurrent())return;
-    GraphicsCutout.markPhase?.('Creazione foto trasparente');
-    const w=original.naturalWidth,h=original.naturalHeight;
-    canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
-    const ctx=canvas.getContext('2d');
-    ctx.drawImage(original,0,0,w,h);
-    ctx.globalCompositeOperation='destination-in';
-    ctx.drawImage(mask,0,0,w,h);
-    const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('Impossibile creare la foto trasparente.')),'image/png'));
-    const cutout=await loadImage(await readImageData(blob));
-    if(!cutout)throw new Error('Impossibile leggere la foto senza sfondo.');
-    if(!isCurrent())return;
-    imageState[id]=cutout;button.hidden=false;button.textContent='Rifai scontorno';restore.hidden=false;drawAll();
-    $('status').textContent='Sfondo rimosso e bordi rifiniti. La foto è stata elaborata sul dispositivo.';
+  $('status').textContent='OpenAI: rimozione sfondo, aloni e scie luminose in corso. Attendi qualche minuto.';
+  button.textContent='Elaborazione OpenAI...';
+  canvas=document.createElement('canvas');canvas.width=original.naturalWidth;canvas.height=original.naturalHeight;
+  canvas.getContext('2d').drawImage(original,0,0);
+  const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('Impossibile preparare la foto.')),'image/png'));
+  const form=new FormData();form.append('image',blob,'photo.png');form.append('_csrf',graphicsCutoutCsrf);
+  form.append('subjects',id==='ftCaptains'?'all':'main');
+  const response=await fetch('graphics_remove_background.php',{method:'POST',body:form,credentials:'same-origin'});
+  let result;try{result=await response.json();}catch{throw new Error('Risposta del server non valida: controlla i limiti upload e timeout del server.');}
+  if(!response.ok||!result.image)throw new Error(result.error||'Elaborazione OpenAI non riuscita.');
+  if(!isCurrent())return;
+  const cutout=await loadImage(result.image);
+  if(!cutout)throw new Error('Impossibile leggere la foto elaborata.');
+  if(!isCurrent())return;
+  imageState[id]=cutout;button.textContent='Rimuovi sfondo';restore.hidden=false;drawAll();
+  $('status').textContent="Foto elaborata con OpenAI: controlla visi, maglie e bordi. Puoi ripristinare l'originale.";
   } catch(error) {
     if(isCurrent())$('status').textContent=error.message||'Rimozione sfondo non riuscita.';
   } finally {
-    if(mask)mask.width=mask.height=1;
     if(canvas)canvas.width=canvas.height=1;
-    GraphicsCutout.clearPhase?.();
-    if(button.textContent!=='Rifai scontorno')button.textContent=previousButtonText;
+    button.textContent='Rimuovi sfondo';
     backgroundRemovalBusy=false;
     ['ftRemoveBg','mvpRemoveBg'].forEach(key=>$(key).disabled=false);
   }
