@@ -61,7 +61,7 @@ vm.createContext(sandbox);vm.runInContext(fileImageSource,sandbox);
   assert.strictEqual(drawCalls[1].image,refinedMask,'Refined mask was not applied');
   assert.strictEqual(drawCalls[1].operation,'destination-in','Soft mask alpha must be preserved at the photo edge');
   assert.strictEqual(backgroundSandbox.imageState.ftCaptains,cutout,'Cutout was not applied');
-  assert.strictEqual(backgroundFields.ftRemoveBg.hidden,true,'Remove button should hide after processing');
+  assert.strictEqual(backgroundFields.ftRemoveBg.hidden,false,'Remove button should remain available after processing');
   assert.strictEqual(backgroundFields.ftRestorePhoto.hidden,false,'Restore button should appear after processing');
   assert.strictEqual(refinedMask.width,1,'Mask memory was not released');
   assert.strictEqual(outputCanvas.height,1,'Output canvas memory was not released');
