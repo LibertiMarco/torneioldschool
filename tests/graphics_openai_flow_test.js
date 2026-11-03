@@ -9,7 +9,7 @@ async function scenario(mode) {
   const $ = id => {if (!fields.has(id)) fields.set(id,{disabled:false});return fields.get(id);};
   let calls=0, draws=0;
   const canvas={getContext:()=>({drawImage(){}}),toBlob:done=>done({})};
-  const sandbox={$,imageState:{mvpPhotoOriginal:original,mvpPhoto:previous},matchLoadVersion:1,
+  const sandbox={$,setTimeout,clearTimeout,AbortController:class{constructor(){this.signal={};}abort(){}},imageState:{mvpPhotoOriginal:original,mvpPhoto:previous},matchLoadVersion:1,
     graphicsCutoutCsrf:'test-token',document:{createElement:()=>canvas},
     FormData:class{constructor(){this.fields={};}append(k,v){this.fields[k]=v;}},
     drawAll(){draws++;},loadImage:async()=>cutout,

@@ -161,7 +161,6 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
     }
   </style>
   <link rel="stylesheet" href="/api/grafiche_file_inputs.css?v=20261007">
-  <link rel="stylesheet" href="grafiche_scontorno_editor.css?v=20261019">
 </head>
 <body class="<?= $embedded ? 'is-embedded' : 'with-site-header' ?>">
 <?php if (!$embedded): ?><?php include __DIR__ . '/../includi/header.php'; ?><?php endif; ?>
@@ -190,14 +189,9 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
           <label>Squadra ospite<input id="ftAway" value="" readonly></label>
           <label>Gol casa<input id="ftHomeScore" type="number" min="0" value="0" readonly></label>
           <label>Gol ospite<input id="ftAwayScore" type="number" min="0" value="0" readonly></label>
-          <label>Logo casa (facoltativo)<input id="ftHomeLogo" type="file" accept="image/png,image/jpeg,image/webp"></label>
-          <label>Logo ospite (facoltativo)<input id="ftAwayLogo" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label class="wide">Foto pre-match dei capitani<input id="ftCaptains" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <div id="ftPhotoActions" class="wide remove-bg-actions" hidden><button id="ftRemoveBg" type="button">Rimuovi sfondo</button><button id="ftRestorePhoto" class="secondary" type="button" hidden>Ripristina originale</button></div>
-          <p class="wide hint" style="margin:0">La foto viene elaborata sul dispositivo. Il primo utilizzo scarica il modello di segmentazione.</p>
-          <label>Zoom foto <span class="range-value" id="ftZoomValue">100%</span><input id="ftZoom" type="range" min="10" max="250" value="100"></label>
-          <label>Posizione orizzontale <span class="range-value" id="ftXValue">50%</span><input id="ftX" type="range" min="0" max="100" value="50"></label>
-          <label class="wide">Posizione verticale <span class="range-value" id="ftYValue">0%</span><input id="ftY" type="range" min="0" max="100" value="0"></label>
+          <p id="ftPhotoStatus" class="status wide" role="status" aria-live="polite" hidden></p>
           <label class="wide">Giornata / fase<input id="ftRound" value="" readonly></label>
         </div>
         </div>
@@ -215,10 +209,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
           <label class="wide">Squadra<input id="mvpTeam" value="" readonly></label>
           <label class="wide">Foto MVP<input id="mvpPhoto" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <div id="mvpPhotoActions" class="wide remove-bg-actions" hidden><button id="mvpRemoveBg" type="button">Rimuovi sfondo</button><button id="mvpRestorePhoto" class="secondary" type="button" hidden>Ripristina originale</button></div>
-          <p class="wide hint" style="margin:0">La foto viene elaborata sul dispositivo. Il primo utilizzo scarica il modello di segmentazione.</p>
-          <label>Zoom foto <span class="range-value" id="mvpZoomValue">100%</span><input id="mvpZoom" type="range" min="10" max="250" value="100"></label>
-          <label>Posizione orizzontale <span class="range-value" id="mvpXValue">50%</span><input id="mvpX" type="range" min="0" max="100" value="50"></label>
-          <label class="wide">Posizione verticale <span class="range-value" id="mvpYValue">0%</span><input id="mvpY" type="range" min="0" max="100" value="0"></label>
+          <p id="mvpPhotoStatus" class="status wide" role="status" aria-live="polite" hidden></p>
           <label>Dettaglio (facoltativo)<input id="mvpDetails" value="MAN OF THE MATCH"></label>
         </div>
         </div>
@@ -227,9 +218,8 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
       <div <?= $templateEditor ? 'hidden' : '' ?>>
       <div class="actions">
         <button id="generate" type="button">Aggiorna entrambe</button>
-        <button id="reset" class="secondary" type="button">Rimuovi foto e loghi caricati</button>
+        <button id="reset" class="secondary" type="button">Rimuovi foto</button>
       </div>
-      <p class="hint">Riduci lo zoom sotto il 100% per rimpicciolire la foto, anche se è già senza sfondo. Usa i controlli di posizione per sistemarla nella grafica.</p>
       </div>
       <div id="status" class="status" aria-live="polite"></div>
       <?php if ($canPublishInstagram): ?><p class="hint">Per attivare la pubblicazione, <a href="/instagram/login.php" target="_blank" rel="noopener">collega direttamente Instagram</a>, poi configura <code>INSTAGRAM_ACCESS_TOKEN</code> e <code>INSTAGRAM_USER_ID</code> sul server.</p><?php endif; ?>
@@ -251,9 +241,17 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="grafiche_basi.js?v=20261007-mvp-shared-logo"></script>
-<script src="grafiche_foto_touch.js?v=20261007-aspect-ratio"></script>
 <script>
 const $ = id => document.getElementById(id);
+// Keep initialization and unexpected errors visible even if event binding stops.
+window.addEventListener('error',event=>{
+  const status=$('status');
+  if(status)status.textContent='Errore nella pagina: '+(event.message||'ricarica la pagina e riprova.');
+});
+window.addEventListener('unhandledrejection',event=>{
+  const status=$('status');
+  if(status)status.textContent='Operazione non riuscita: '+(event.reason?.message||'controlla la connessione e riprova.');
+});
 const instagramPublishCsrf = <?= json_encode($canPublishInstagram ? csrf_get_token('instagram_publish') : '') ?>;
 const W=1080,H=1350;
 const templateEditor=<?= json_encode($templateEditor) ?>;
@@ -275,7 +273,7 @@ const tournamentThemes=[
 const matches=<?= json_encode($partiteGrafiche, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const matchPlayers=<?= json_encode($giocatoriGrafiche, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const imageState={ftHomeLogo:null,ftAwayLogo:null,ftCaptains:null,mvpPhoto:null,brand:null,ftCaptainsOriginal:null,mvpPhotoOriginal:null};
-const imageFields=['ftCaptains','mvpPhoto','ftHomeLogo','ftAwayLogo'];
+const imageFields=['ftCaptains','mvpPhoto'];
 let matchLoadVersion=0;
 const safeName=value=>String(value||'grafica').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
 const upper=(value,fallback='')=>String(value||fallback).trim().toUpperCase();
@@ -318,7 +316,7 @@ function cover(ctx,img,x,y,w,h,crop={}) {
   const px=Math.max(0,Math.min(100,Number(crop.x??50)))/100;
   const py=Math.max(0,Math.min(100,Number(crop.y??0)))/100;
   ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
-  const box=crop.prefix?PhotoTouchEditor.transform(crop.prefix,img,{x,y,w,h},{x:x+(w-dw)*px,y:y+(h-dh)*py,w:dw,h:dh}):{x:x+(w-dw)*px,y:y+(h-dh)*py,w:dw,h:dh};
+  const box={x:x+(w-dw)*px,y:y+(h-dh)*py,w:dw,h:dh};
   ctx.drawImage(img,box.x,box.y,box.w,box.h);
   ctx.restore();
 }
@@ -330,8 +328,7 @@ function fitText(ctx,text,maxWidth,startSize,minSize=22,weight=800){let size=sta
 function tournamentConcept(name){const value=String(name||'').toLowerCase();if(/formula|racing|motorsport|f1/.test(value))return'speed';if(/esport|gaming|ea fc|playstation|fifa open/.test(value))return'esport';if(/christmas|natale|xmas/.test(value))return'festive';if(/africa|african/.test(value))return'africa';if(/saudi|arabia|riyadh/.test(value))return'desert';if(/bundes|german|tedesc/.test(value))return'german';if(/premier|english|inghilterra/.test(value))return'premier';if(/champions|europe|europa/.test(value))return'champions';if(/mondial|world|intercontinental|intercontinentale|nazioni/.test(value))return'international';if(/serie\s*[abc]|italia|italian|calcio/.test(value))return'italian';if(/supercup|supercoppa|coppa|cup/.test(value))return'cup';if(/weekend|short|night/.test(value))return'urban';return'modern';}
 function applyTournamentTheme(value,name=''){let hash=2166136261;const key=String(value||name||'torneo');for(let i=0;i<key.length;i++){hash^=key.charCodeAt(i);hash=Math.imul(hash,16777619);}const seed=Math.abs(hash),theme=tournamentThemes[seed%tournamentThemes.length];BG=theme.bg;GOLD=theme.accent;PANEL=theme.panel;MUTED=theme.muted;const words=upper(name,'OS').split(/\s+/).filter(word=>word.length>2&&!['DEL','DELLA','DI'].includes(word));TOURNAMENT_STYLE={motif:Math.floor(seed/8)%6,variant:Math.floor(seed/48)%4,monogram:(words.slice(0,3).map(word=>word[0]).join('')||'OS').slice(0,3),concept:tournamentConcept(name)};}
 function photoRadius(){return({international:72,champions:10,italian:26,premier:4,german:0,desert:42,africa:34,festive:55,speed:28,esport:6,cup:46,urban:18,modern:22})[TOURNAMENT_STYLE.concept]??22;}
-function cropValues(prefix){return{prefix,zoom:$(prefix+'Zoom').value,x:$(prefix+'X').value,y:$(prefix+'Y').value};}
-function updateCropLabels(){['ft','mvp'].forEach(prefix=>{$(prefix+'ZoomValue').textContent=$(prefix+'Zoom').value+'%';$(prefix+'XValue').textContent=$(prefix+'X').value+'%';$(prefix+'YValue').textContent=$(prefix+'Y').value+'%';});}
+function cropValues(){return {zoom:100,x:50,y:0};}
 function background(ctx){const gradient=ctx.createLinearGradient(0,0,W,H);gradient.addColorStop(0,'#10263a');gradient.addColorStop(.5,BG);gradient.addColorStop(1,'#050d15');ctx.fillStyle=gradient;ctx.fillRect(0,0,W,H);ctx.fillStyle=GOLD;ctx.fillRect(0,0,14,H);drawTournamentPattern(ctx);}
 function drawTournamentPattern(ctx){const style=TOURNAMENT_STYLE;ctx.save();ctx.globalAlpha=.075;ctx.strokeStyle='#fff';ctx.fillStyle='#fff';ctx.lineWidth=2;
   if(style.concept==='champions'){ctx.globalAlpha=.12;for(let i=0;i<32;i++){const x=(i*197+style.variant*43)%W,y=(i*113+47)%H;ctx.beginPath();ctx.arc(x,y,i%5===0?4:2,0,Math.PI*2);ctx.fill();}}
@@ -397,37 +394,45 @@ function drawMvpRoyal(){const match=currentMatch(),name=$('mvpTournament').value
 function drawMvpTech(){const match=currentMatch(),name=$('mvpTournament').value,c=$('mvpCanvas'),ctx=c.getContext('2d');prepareTheme(name,match);background(ctx);ctx.fillStyle='#f3f5f7';ctx.beginPath();ctx.moveTo(0,90);ctx.lineTo(875,0);ctx.lineTo(1040,1180);ctx.lineTo(130,1270);ctx.closePath();ctx.fill();ctx.globalAlpha=.12;ctx.fillStyle=GOLD;for(let i=0;i<7;i++)slash(ctx,-120+i*210,100,85,1120);ctx.globalAlpha=1;ctx.fillStyle='#09121d';ctx.textAlign='center';ctx.font='italic 900 310px Impact, Arial';ctx.fillText('MVP',W/2,340);if(imageState.mvpPhoto)cover(ctx,imageState.mvpPhoto,120,260,840,790,cropValues('mvp'));else placeholder(ctx,120,260,840,790,'CARICA LA FOTO MVP');contain(ctx,imageState.brand,35,30,105,105);ctx.fillStyle='#09121d';ctx.textAlign='right';ctx.font='900 21px Arial';ctx.fillText(upper(name,'TORNEO'),1030,66,650);slash(ctx,20,945,1040,155,'#07111c');ctx.fillStyle='#fff';ctx.textAlign='center';drawMvpNameBlock(ctx,W/2,1035,890,'center');ctx.fillStyle=GOLD;fitText(ctx,upper($('mvpTeam').value,'SQUADRA'),760,28,16,900);ctx.fillText(upper($('mvpTeam').value,'SQUADRA'),W/2,1100,760);ctx.fillStyle='#07111c';ctx.font='italic 900 28px Arial';ctx.fillText('MAN OF THE MATCH',W/2,1175);footer(ctx,name)}
 function drawMvp(){if(customTemplates.draw('mvp'))return;prepareTheme($('mvpTournament').value,currentMatch());const {concept,motif,variant}=TOURNAMENT_STYLE;if(['italian','desert','africa','festive'].includes(concept))return (motif+variant)%2?drawMvpEditorial():drawMvpRoyal();if(['champions','cup'].includes(concept))return (motif+variant)%2?drawMvpCinematic():drawMvpPoster();if(['speed','esport','urban','german','premier'].includes(concept))return (motif+variant)%2?drawMvpDynamic():drawMvpTech();return [drawMvpPoster,drawMvpEditorial,drawMvpCinematic][(motif+variant)%3]();}
 function footer(ctx,tournament){ctx.fillStyle=GOLD;ctx.fillRect(48,1258,W-96,2);ctx.fillStyle=MUTED;ctx.font='600 18px Arial';ctx.textAlign='left';ctx.fillText(upper(tournament,'TORNEO'),48,1300,650);ctx.textAlign='right';ctx.fillText('torneioldschool.it',W-48,1300);}
-function drawAll(){updateCropLabels();drawFulltime();drawMvp();PhotoTouchEditor.sync('ft',imageState.ftCaptains);PhotoTouchEditor.sync('mvp',imageState.mvpPhoto);$('status').textContent='Anteprime aggiornate.';}
+function drawAll(){drawFulltime();drawMvp();}
 async function updateImage(id){const file=$(id).files?.[0],version=matchLoadVersion;if(!file)return;$('status').textContent='Preparazione immagine…';const img=await fileImage(file,2048);if(!img)throw new Error('Formato della foto non leggibile. Usa una foto JPG, PNG o WebP.');if(version!==matchLoadVersion)return;imageState[id]=img;if(id==='ftCaptains'||id==='mvpPhoto'){imageState[id+'Original']=img;$(id==='ftCaptains'?'ftPhotoActions':'mvpPhotoActions').hidden=false;$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto').hidden=true;const removeButton=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg');removeButton.hidden=false;removeButton.textContent='Rimuovi sfondo';removeButton.disabled=false;}drawAll();}
 let backgroundRemovalBusy=false;
 async function removePhotoBackground(id) {
   const original=imageState[id+'Original'];
-  if(!original||backgroundRemovalBusy)return;
+  const status=$(id==='ftCaptains'?'ftPhotoStatus':'mvpPhotoStatus');
+  const report=message=>{if(status){status.hidden=false;status.textContent=message;}$('status').textContent=message;};
+  if(backgroundRemovalBusy){report('Una foto e gia in elaborazione. Attendi il completamento.');return;}
+  if(!original){report('Carica una foto prima di rimuovere lo sfondo.');return;}
   const version=matchLoadVersion,button=$(id==='ftCaptains'?'ftRemoveBg':'mvpRemoveBg'),restore=$(id==='ftCaptains'?'ftRestorePhoto':'mvpRestorePhoto');
   const isCurrent=()=>version===matchLoadVersion&&imageState[id+'Original']===original;
   let canvas=null;
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),225000);
   backgroundRemovalBusy=true;
   ['ftRemoveBg','mvpRemoveBg'].forEach(key=>$(key).disabled=true);
   try {
-  $('status').textContent='OpenAI: rimozione sfondo, aloni e scie luminose in corso. Attendi qualche minuto.';
+  report('Rimozione sfondo e scie luminose in corso. Attendi qualche minuto.');
   button.textContent='Elaborazione OpenAI...';
   canvas=document.createElement('canvas');canvas.width=original.naturalWidth;canvas.height=original.naturalHeight;
   canvas.getContext('2d').drawImage(original,0,0);
   const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('Impossibile preparare la foto.')),'image/png'));
   const form=new FormData();form.append('image',blob,'photo.png');form.append('_csrf',graphicsCutoutCsrf);
   form.append('subjects',id==='ftCaptains'?'all':'main');
-  const response=await fetch('graphics_remove_background.php',{method:'POST',body:form,credentials:'same-origin'});
-  let result;try{result=await response.json();}catch{throw new Error('Risposta del server non valida: controlla i limiti upload e timeout del server.');}
+  const response=await fetch('graphics_remove_background.php',{method:'POST',body:form,credentials:'same-origin',signal:controller.signal});
+  let result;try{result=await response.json();}catch{
+    throw new Error('Il server non ha restituito una risposta valida (HTTP '+response.status+'). Verifica che graphics_remove_background.php sia caricato e controlla i log PHP e i limiti del server.');
+  }
   if(!response.ok||!result.image)throw new Error(result.error||'Elaborazione OpenAI non riuscita.');
   if(!isCurrent())return;
   const cutout=await loadImage(result.image);
   if(!cutout)throw new Error('Impossibile leggere la foto elaborata.');
   if(!isCurrent())return;
   imageState[id]=cutout;button.textContent='Rimuovi sfondo';restore.hidden=false;drawAll();
-  $('status').textContent="Foto elaborata con OpenAI: controlla visi, maglie e bordi. Puoi ripristinare l'originale.";
+  report("Sfondo rimosso. Controlla visi, maglie e bordi. Puoi ripristinare l'originale.");
   } catch(error) {
-    if(isCurrent())$('status').textContent=error.message||'Rimozione sfondo non riuscita.';
+    if(isCurrent())report(error.name==='AbortError'?'Tempo di attesa scaduto. Foto originale conservata: controlla utilizzo OpenAI e log del server prima di riprovare.':error.message||'Rimozione sfondo non riuscita.');
   } finally {
+    clearTimeout(timeout);
     if(canvas)canvas.width=canvas.height=1;
     button.textContent='Rimuovi sfondo';
     backgroundRemovalBusy=false;
@@ -618,7 +623,7 @@ function queueInputDraw(){
 }
 document.querySelectorAll('input:not([type=file])').forEach(input=>input.addEventListener('input',queueInputDraw));
 $('generate').addEventListener('click',drawAll);
-$('reset').addEventListener('click',async()=>{const version=++matchLoadVersion;imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});imageState.ftCaptainsOriginal=imageState.mvpPhotoOriginal=null;['ft','mvp'].forEach(prefix=>{$(prefix+'PhotoActions').hidden=true;$(prefix+'RemoveBg').hidden=false;$(prefix+'RemoveBg').textContent='Rimuovi sfondo';$(prefix+'RemoveBg').disabled=false;$(prefix+'RestorePhoto').hidden=true;});drawAll();const match=currentMatch();if(match){const logos=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);if(version!==matchLoadVersion)return;[imageState.ftHomeLogo,imageState.ftAwayLogo]=logos;}drawAll();$('status').textContent='Foto rimosse e loghi originali ripristinati. Basi conservate.';});
+$('reset').addEventListener('click',async()=>{['ftPhotoStatus','mvpPhotoStatus'].forEach(id=>{$(id).hidden=true;$(id).textContent='';});const version=++matchLoadVersion;imageFields.forEach(id=>{imageState[id]=null;$(id).value='';});imageState.ftCaptainsOriginal=imageState.mvpPhotoOriginal=null;['ft','mvp'].forEach(prefix=>{$(prefix+'PhotoActions').hidden=true;$(prefix+'RemoveBg').hidden=false;$(prefix+'RemoveBg').textContent='Rimuovi sfondo';$(prefix+'RemoveBg').disabled=false;$(prefix+'RestorePhoto').hidden=true;});drawAll();const match=currentMatch();if(match){const logos=await Promise.all([loadImage(match.logo_casa),loadImage(match.logo_ospite)]);if(version!==matchLoadVersion)return;[imageState.ftHomeLogo,imageState.ftAwayLogo]=logos;}drawAll();$('status').textContent='Foto rimosse e loghi originali ripristinati. Basi conservate.';});
 document.querySelector('[data-download=fulltime]').addEventListener('click',()=>{if(customTemplates.ready('ft'))download('fulltimeCanvas',`fulltime-${safeName($('ftHome').value)}-${safeName($('ftAway').value)}.png`);});
 document.querySelector('[data-download=mvp]').addEventListener('click',()=>{if(customTemplates.ready('mvp'))download('mvpCanvas',`mvp-${safeName($('mvpNames').value)}.png`);});
 document.querySelectorAll('[data-publish]').forEach(button=>button.addEventListener('click',()=>{
@@ -631,7 +636,6 @@ document.querySelectorAll('[data-publish]').forEach(button=>button.addEventListe
   publishInstagram(type==='fulltime'?'fulltimeCanvas':'mvpCanvas',type==='fulltime'?'instagramCaptionFulltime':'instagramCaptionMvp',button);
 }));
 customTemplates.init({editor:templateEditor});
-PhotoTouchEditor.init({autoEnable:!templateEditor});
 if(templateEditor)setTemplatePreview();
 window.addEventListener('message',event=>{
   if(!templateEditor&&event.origin===window.location.origin&&event.source===window.parent&&event.data?.type==='graphics-templates-refresh')customTemplates.reload(event.data.torneoId);

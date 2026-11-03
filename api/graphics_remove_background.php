@@ -73,10 +73,16 @@ curl_setopt_array($curl, [
 ]);
 $raw = curl_exec($curl);
 $status = (int)curl_getinfo($curl, CURLINFO_HTTP_CODE);
+$connectionError = curl_errno($curl);
 curl_close($curl);
-if ($raw === false) cutout_reply(['error' => 'Connessione OpenAI interrotta o scaduta. La foto originale è conservata; verifica l’utilizzo API prima di riprovare.'], 502);
+if ($raw === false) {
+    error_log('graphics_remove_background: cURL error ' . $connectionError);
+    cutout_reply(['error' => 'Connessione OpenAI non riuscita (cURL ' . $connectionError . '). Controlla certificati SSL e connessione del server. Foto originale conservata; verifica l’utilizzo API prima di riprovare.'], 502);
+}
 $result = json_decode($raw, true);
 if ($status < 200 || $status >= 300) {
+    $detail = substr(str_replace($key, '[chiave nascosta]', (string)($result['error']['message'] ?? '')), 0, 600);
+    error_log('graphics_remove_background: HTTP ' . $status . ' ' . $detail);
     $message = match ($status) {
         401 => 'Chiave OpenAI non valida: controlla OPENAI_API_KEY sul server.',
         403 => 'Il progetto OpenAI non ha accesso al modello immagini. Controlla permessi e verifica organizzazione.',
@@ -84,7 +90,8 @@ if ($status < 200 || $status >= 300) {
         400 => 'OpenAI non può elaborare questa foto o configurazione. Controlla il modello e prova un’altra foto.',
         default => 'Elaborazione OpenAI non riuscita. Riprova più tardi.',
     };
-    cutout_reply(['error' => $message], 502);
+    if ($status === 400 && $detail !== '') $message .= ' Dettaglio: ' . $detail;
+    cutout_reply(['error' => $message . ' (HTTP OpenAI ' . $status . ')'], 502);
 }
 $image = $result['data'][0]['b64_json'] ?? null;
 $bytes = is_string($image) ? base64_decode($image, true) : false;
