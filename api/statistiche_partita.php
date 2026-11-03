@@ -11,7 +11,6 @@ if (!$partita_id) {
   die("ID partita mancante.");
 }
 
-require_once __DIR__ . '/../includi/records_staff.php';
 $assetVersion = '20260520b';
 ?>
 <!DOCTYPE html>
@@ -442,7 +441,7 @@ body.stats-admin-page .admin-container {
 
 <div id="msgBox" class="msg-box"></div>
 
-<main class="admin-wrapper"><?php records_staff_form($conn, $partita_id, $recordsMessage); ?>
+<main class="admin-wrapper">
 <section class="admin-container">
 
 <!-- HEADER FINALE -->
