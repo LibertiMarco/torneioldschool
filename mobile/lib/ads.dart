@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 /// Production units are used only in release builds with monetization enabled.
@@ -108,8 +109,19 @@ class GoogleAdsPrivacy implements AdsPrivacyBackend {
   }
 }
 
-class AdsController extends ChangeNotifier {
-  AdsController({required this.enabled, required this.backend});
+Future<bool> requestAdsTrackingAuthorization() async {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return true;
+  return await const MethodChannel('tos/tracking')
+          .invokeMethod<bool>('requestAuthorization') ==
+      true;
+}
+
+class AdsController extends ChangeNotifier with WidgetsBindingObserver {
+  AdsController({
+    required this.enabled,
+    required this.backend,
+    this.authorizeTracking = requestAdsTrackingAuthorization,
+  });
   static final instance = AdsController(
     // Both mobile platforms use their own official sample IDs by default.
     enabled:
@@ -119,6 +131,7 @@ class AdsController extends ChangeNotifier {
   );
   final bool enabled;
   final AdsPrivacyBackend backend;
+  final Future<bool> Function() authorizeTracking;
   bool ready = false, privacyRequired = false, busy = false;
   bool _started = false, _initialized = false;
   String? error;
@@ -126,10 +139,27 @@ class AdsController extends ChangeNotifier {
   Future<void> start() async {
     if (!enabled || _started) return;
     _started = true;
+    WidgetsBinding.instance.addObserver(this);
     await _run(() async {
       await backend.update();
       await backend.collect();
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      ready = false;
+      notifyListeners();
+    } else if (!busy && _started) {
+      unawaited(_run(() async {}));
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_started) WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   Future<void> showPrivacyOptions() async {
@@ -149,12 +179,16 @@ class AdsController extends ChangeNotifier {
     }
     try {
       privacyRequired = await backend.optionsRequired();
-      if (await backend.canRequest()) {
+      // UMP consent does not replace Apple's system tracking permission.
+      // Fail closed: no ad SDK initialization or ad requests without ATT.
+      if (await authorizeTracking() && await backend.canRequest()) {
         if (!_initialized) {
           await backend.initialize();
           _initialized = true;
         }
-        ready = true;
+        ready =
+            WidgetsBinding.instance.lifecycleState == null ||
+            WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
       }
     } catch (_) {
       ready = false;

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/src/ad_instance_manager.dart';
 import 'package:tornei_old_school/ads.dart';
 import 'package:tornei_old_school/native_ad_card.dart';
@@ -37,6 +38,73 @@ class PrivacyFake implements AdsPrivacyBackend {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('tos/tracking'),
+          (_) async => true,
+        );
+  });
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('tos/tracking'), null);
+  });
+
+  test('ATT refusal blocks SDK even when UMP allows ads', () async {
+    final backend = PrivacyFake()..allowed = true;
+    final ads = AdsController(
+      enabled: true,
+      backend: backend,
+      authorizeTracking: () async => false,
+    );
+    await ads.start();
+    expect(backend.events, ['update', 'collect']);
+    expect(backend.initializations, 0);
+    expect(ads.ready, isFalse);
+    expect(ads.busy, isFalse);
+    ads.dispose();
+  });
+
+  test(
+    'ATT is completed before initializing ads; revocation stops ads',
+    () async {
+      final backend = PrivacyFake()..allowed = true;
+      var authorized = true;
+      final ads = AdsController(
+        enabled: true,
+        backend: backend,
+        authorizeTracking: () async {
+          backend.events.add('att');
+          return authorized;
+        },
+      );
+      await ads.start();
+      expect(backend.events, ['update', 'collect', 'att', 'initialize']);
+      ads.didChangeAppLifecycleState(AppLifecycleState.inactive);
+      expect(ads.ready, isFalse);
+      authorized = false;
+      ads.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await Future<void>.delayed(Duration.zero);
+      expect(ads.ready, isFalse);
+      expect(backend.initializations, 1);
+      ads.dispose();
+    },
+  );
+
+  test('ATT channel failure does not initialize the SDK', () async {
+    final backend = PrivacyFake()..allowed = true;
+    final ads = AdsController(
+      enabled: true,
+      backend: backend,
+      authorizeTracking: () async => throw StateError('channel unavailable'),
+    );
+    await ads.start();
+    expect(ads.ready, isFalse);
+    expect(backend.initializations, 0);
+    ads.dispose();
+  });
+
   testWidgets(
     'no consent means no banner requests or empty advertising space',
     (tester) async {

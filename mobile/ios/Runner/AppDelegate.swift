@@ -2,10 +2,47 @@ import Flutter
 import UIKit
 import UserNotifications
 import firebase_messaging
+import AppTrackingTransparency
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var pushRegistrationError: String?
+  private var trackingResults: [FlutterResult] = []
+  private var trackingRequestInFlight = false
+  private var trackingActiveObserver: NSObjectProtocol?
+
+  private func requestTrackingWhenActive() {
+    guard !trackingResults.isEmpty, !trackingRequestInFlight else { return }
+    guard UIApplication.shared.applicationState == .active else {
+      if trackingActiveObserver == nil {
+        trackingActiveObserver = NotificationCenter.default.addObserver(
+          forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in self?.requestTrackingWhenActive() }
+      }
+      return
+    }
+    if let observer = trackingActiveObserver {
+      NotificationCenter.default.removeObserver(observer)
+      trackingActiveObserver = nil
+    }
+    if ATTrackingManager.trackingAuthorizationStatus != .notDetermined {
+      finishTracking(ATTrackingManager.trackingAuthorizationStatus == .authorized)
+      return
+    }
+    trackingRequestInFlight = true
+    ATTrackingManager.requestTrackingAuthorization { [weak self] status in
+      DispatchQueue.main.async {
+        self?.trackingRequestInFlight = false
+        self?.finishTracking(status == .authorized)
+      }
+    }
+  }
+
+  private func finishTracking(_ authorized: Bool) {
+    let callbacks = trackingResults
+    trackingResults.removeAll()
+    callbacks.forEach { $0(authorized) }
+  }
 
   override func application(
     _ application: UIApplication,
@@ -27,6 +64,20 @@ import firebase_messaging
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    let trackingRegistrar = engineBridge.pluginRegistry.registrar(forPlugin: "TosTracking")!
+    let trackingChannel = FlutterMethodChannel(name: "tos/tracking", binaryMessenger: trackingRegistrar.messenger())
+    trackingChannel.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "requestAuthorization" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      guard let self = self else {
+        result(false)
+        return
+      }
+      self.trackingResults.append(result)
+      self.requestTrackingWhenActive()
+    }
     let pushRegistrar = engineBridge.pluginRegistry.registrar(forPlugin: "TosPushRegistration")!
     let pushChannel = FlutterMethodChannel(name: "tos/push_registration", binaryMessenger: pushRegistrar.messenger())
     pushChannel.setMethodCallHandler { [weak self] call, result in

@@ -17,6 +17,8 @@
 	<string>$(TOS_ADMOB_APP_ID)</string>
 	<key>GADDelayAppMeasurementInit</key>
 	<true/>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Con il tuo consenso, utilizziamo i dati sulle tue attività in app e siti di altre aziende per mostrarti annunci personalizzati e misurarne l'efficacia.</string>
 	<!-- Google AdMob iOS quick-start list, reviewed 2026-10-15. -->
 	<key>SKAdNetworkItems</key>
 	<array>
