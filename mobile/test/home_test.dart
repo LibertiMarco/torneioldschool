@@ -49,6 +49,9 @@ void main() {
           if (request.url.path.endsWith('app_version.php')) {
             return http.Response(currentVersionResponse, 200);
           }
+          if (request.url.path.endsWith('records.php')) {
+            return http.Response(jsonEncode({'groups': {}}), 200);
+          }
           if (request.url.path.endsWith('tournaments.php')) {
             return http.Response(
               jsonEncode({

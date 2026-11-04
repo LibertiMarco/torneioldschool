@@ -23,7 +23,9 @@ class _GoalkeeperSummaryState extends State<GoalkeeperSummary> {
   @override
   void didUpdateWidget(covariant GoalkeeperSummary oldWidget) {
     super.didUpdateWidget(oldWidget);
-    data = load();
+    if (oldWidget.api != widget.api || oldWidget.playerId != widget.playerId) {
+      data = load();
+    }
   }
 
   @override
