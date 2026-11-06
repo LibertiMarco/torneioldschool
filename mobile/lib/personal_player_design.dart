@@ -3,6 +3,7 @@ import 'records_page.dart';
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'ads.dart';
 import 'home_dashboard.dart' show SiteImage, openPage;
 import 'details.dart' show MatchPage;
 import 'theme.dart';
@@ -69,6 +70,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
             children: [
+              const AdaptiveAdBanner(),
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0, end: 1),
                 duration: motion,
@@ -84,6 +86,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
               ),
               const SizedBox(height: 24),
               _upcomingMatches(),
+              const AdaptiveAdBanner(),
               const SizedBox(height: 24),
               _title('Le mie statistiche', 'IL TUO PERCORSO'),
               const SizedBox(height: 12),
@@ -141,6 +144,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
                 const SizedBox(height: 26),
                 _chart(),
               ],
+              const AdaptiveAdBanner(),
               const SizedBox(height: 28),
               _title('Le mie squadre', 'APPARTENENZA'),
               const SizedBox(height: 16),
@@ -271,6 +275,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         children: [
+          const AdaptiveAdBanner(),
           Text(
             '${widget.player['nome'] ?? ''} ${widget.player['cognome'] ?? ''}'
                 .trim(),
@@ -291,6 +296,7 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
               ),
             ),
           const SizedBox(height: 28),
+          const AdaptiveAdBanner(),
           PlayerAwardsSection(api: widget.api, awards: widget.awards),
         ],
       ),

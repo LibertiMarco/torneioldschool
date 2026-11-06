@@ -6,6 +6,7 @@ import 'package:tornei_old_school/access_gate.dart';
 import 'package:tornei_old_school/demo.dart';
 import 'package:tornei_old_school/details.dart';
 import 'package:tornei_old_school/notification_navigation.dart';
+import 'package:tornei_old_school/staff_dashboard.dart';
 
 class NotificationApi extends DemoApi {
   final opened = <String>[];
@@ -53,6 +54,36 @@ class RestoringNotificationAuth extends DemoAuth {
 }
 
 void main() {
+  testWidgets('Association notification opens the request management tool', (
+    tester,
+  ) async {
+    final api = NotificationApi();
+    final auth = DemoAuth(api);
+    await auth.login();
+    final key = GlobalKey<NavigatorState>();
+    final routing = NotificationNavigator(
+      api: api,
+      auth: auth,
+      navigatorKey: key,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: key,
+        navigatorObservers: [routing],
+        builder: (_, child) => AppAuthScope(auth: auth, child: child!),
+        home: const Scaffold(body: Text('Home app')),
+      ),
+    );
+    routing.open(
+      'https://torneioldschool.it/api/gestione_account_giocatore.php',
+    );
+    await tester.pumpAndSettle();
+    final page = tester.widget<StaffToolPage>(find.byType(StaffToolPage));
+    expect(page.tool.path, 'api/gestione_account_giocatore.php');
+    expect(page.tool.title, 'Account giocatore');
+    routing.dispose();
+  });
+
   testWidgets('Notification waits for saved session without asking for login', (
     tester,
   ) async {
@@ -93,6 +124,12 @@ void main() {
     );
     expect(target!.screen, PushScreen.match);
     expect(target.id, '42');
+    expect(
+      pushDestination(
+        'https://torneioldschool.it/api/gestione_account_giocatore.php',
+      )!.screen,
+      PushScreen.playerLinkRequests,
+    );
     expect(
       pushDestination('https://torneioldschool.it/articolo.php?id=7#commenti')!
           .screen,

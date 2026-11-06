@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'api.dart';
+import 'ads.dart';
 import 'auth.dart';
 import 'delete_account_page.dart';
 import 'push.dart';
@@ -320,6 +321,7 @@ class _AccountPageState extends State<AccountPage> {
         controller: _scroll,
         padding: const EdgeInsets.all(16),
         children: [
+          const AdaptiveAdBanner(),
           _section('Il mio account', Icons.account_circle_outlined, [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -449,6 +451,7 @@ class _AccountPageState extends State<AccountPage> {
               ],
             ),
           ]),
+          const AdaptiveAdBanner(),
           _section('Consensi e preferenze', Icons.tune_rounded, [
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -527,6 +530,7 @@ class _AccountPageState extends State<AccountPage> {
               ],
             ],
           ]),
+          const AdaptiveAdBanner(),
           _section(
             'Notifiche push sul telefono',
             Icons.notifications_outlined,

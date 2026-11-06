@@ -7,8 +7,9 @@ import 'auth.dart';
 import 'details.dart' show MatchPage;
 import 'home_dashboard.dart' show ArticlePage;
 import 'push.dart' show pushLink;
+import 'staff_dashboard.dart' show StaffToolPage, adminTools;
 
-enum PushScreen { match, article, account }
+enum PushScreen { match, article, account, playerLinkRequests }
 
 class PushDestination {
   const PushDestination(this.screen, {this.id, this.section = 'calcio'});
@@ -37,6 +38,9 @@ PushDestination? pushDestination(String? value) {
       id: id,
       section: section,
     );
+  }
+  if (url.path == '/api/gestione_account_giocatore.php') {
+    return PushDestination(PushScreen.playerLinkRequests, section: section);
   }
   // Unknown website destinations remain in the app; never launch a browser.
   return PushDestination(PushScreen.account, section: section);
@@ -107,6 +111,12 @@ class NotificationNavigator extends NavigatorObserver {
             builder: (_) => switch (target.screen) {
               PushScreen.match => MatchPage(api: api, id: target.id!),
               PushScreen.article => ArticlePage(api: api, id: target.id!),
+              PushScreen.playerLinkRequests => StaffToolPage(
+                auth: auth,
+                tool: adminTools.firstWhere(
+                  (tool) => tool.path == 'api/gestione_account_giocatore.php',
+                ),
+              ),
               PushScreen.account => AccountPage(
                 auth: auth,
                 section: target.section,

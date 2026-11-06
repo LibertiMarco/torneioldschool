@@ -6,6 +6,9 @@ con le vecchie build. Il client lo traduce in destinazioni Flutter native:
 - `/tornei/partita_eventi.php?id=...`: dettaglio partita e referto/statistiche.
   Si applica a risultati, promemoria e cambi di calendario.
 - `/articolo.php?id=...`: articolo con commenti per le notifiche di risposta.
+- `/api/gestione_account_giocatore.php`: strumento staff Account giocatore,
+  dove gli amministratori possono accettare o rifiutare le richieste di associazione.
+  Questa destinazione richiede una nuova build dell'app con la correzione.
 - Altri percorsi del sito: Profilo dentro l'app, senza aprire un browser.
 
 Restano validi solo URL HTTPS dell'host esatto torneioldschool.it, senza credenziali
