@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -17,6 +19,40 @@ class _NativeLoginPageState extends State<NativeLoginPage> {
   final _email = TextEditingController(), _password = TextEditingController();
   bool _hidden = true, _pending = false, _recovery = false;
   String? _message;
+  String? _captcha;
+  Timer? _captchaExpiry;
+  bool _verifying = false;
+
+  Future<void> _verifyCaptcha() async {
+    if (_pending || _verifying) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _verifying = true);
+    try {
+      final token = await Navigator.of(context).push<String>(
+        MaterialPageRoute(
+          builder: (_) => _CaptchaPage(
+            uri: widget.auth.api.uri('api/mobile/v1/captcha.php'),
+          ),
+        ),
+      );
+      if (!mounted || token == null || token.isEmpty) return;
+      _captchaExpiry?.cancel();
+      setState(() {
+        _captcha = token;
+        _message = null;
+      });
+      _captchaExpiry = Timer(const Duration(seconds: 110), () {
+        if (mounted) setState(() => _captcha = null);
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _message = 'Verifica non disponibile. Riprova.');
+      }
+    } finally {
+      if (mounted) setState(() => _verifying = false);
+    }
+  }
+
   Future<void> _openEmailLink() async {
     var input = '';
     final value = await showDialog<String>(
@@ -60,6 +96,7 @@ class _NativeLoginPageState extends State<NativeLoginPage> {
 
   @override
   void dispose() {
+    _captchaExpiry?.cancel();
     _email.dispose();
     _password.clear();
     _password.dispose();
@@ -67,21 +104,22 @@ class _NativeLoginPageState extends State<NativeLoginPage> {
   }
 
   Future<void> _submit() async {
-    if (_pending || !_form.currentState!.validate()) return;
+    if (_pending || _verifying || !_form.currentState!.validate()) return;
+    final captcha = _captcha;
+    if (captcha == null) {
+      setState(
+        () => _message = 'Completa prima la verifica Non sono un robot.',
+      );
+      return;
+    }
+    _captchaExpiry?.cancel();
     FocusScope.of(context).unfocus();
     setState(() {
       _pending = true;
+      _captcha = null;
       _message = null;
     });
     try {
-      final captcha = await Navigator.of(context).push<String>(
-        MaterialPageRoute(
-          builder: (_) => _CaptchaPage(
-            uri: widget.auth.api.uri('api/mobile/v1/captcha.php'),
-          ),
-        ),
-      );
-      if (!mounted || captcha == null || captcha.isEmpty) return;
       if (_recovery) {
         final response = await widget.auth.api.request(
           'api/mobile/v1/password_reset.php',
@@ -135,6 +173,24 @@ class _NativeLoginPageState extends State<NativeLoginPage> {
                     color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(height: 20),
+                  OutlinedButton.icon(
+                    onPressed: _pending || _verifying || _captcha != null
+                        ? null
+                        : _verifyCaptcha,
+                    icon: Icon(
+                      _captcha != null
+                          ? Icons.check_circle_outline
+                          : Icons.check_box_outline_blank,
+                    ),
+                    label: Text(
+                      _verifying
+                          ? 'Verifica in corso…'
+                          : _captcha != null
+                          ? 'Verifica completata'
+                          : 'Non sono un robot',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Text(
                     _recovery
                         ? 'Ritrova il tuo account'
@@ -208,7 +264,9 @@ class _NativeLoginPageState extends State<NativeLoginPage> {
                       ),
                     ),
                   FilledButton(
-                    onPressed: _pending ? null : _submit,
+                    onPressed: _pending || _verifying || _captcha == null
+                        ? null
+                        : _submit,
                     child: Text(
                       _pending
                           ? 'Attendi…'
@@ -224,6 +282,8 @@ class _NativeLoginPageState extends State<NativeLoginPage> {
                             _recovery = !_recovery;
                             _message = null;
                             _password.clear();
+                            _captcha = null;
+                            _captchaExpiry?.cancel();
                           }),
                     child: Text(
                       _recovery ? 'Torna al login' : 'Password dimenticata?',

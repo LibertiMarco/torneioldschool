@@ -323,8 +323,8 @@ class _TournamentPageState extends State<TournamentPage> {
                   );
                 },
               ),
+              if (!widget.api.preview) const AdaptiveAdBanner(),
               if (tab == 'Classifica') ...[
-                if (!widget.api.preview) const AdaptiveAdBanner(),
                 title('Classifica'),
                 phaseSelect(
                   result,
@@ -555,8 +555,7 @@ class _TournamentPageState extends State<TournamentPage> {
                   ),
             ],
           ),
-      if (visible.length >= 3 && !widget.api.preview)
-        const AdaptiveAdBanner(),
+      if (visible.length >= 3 && !widget.api.preview) const AdaptiveAdBanner(),
     ];
   }
 }
