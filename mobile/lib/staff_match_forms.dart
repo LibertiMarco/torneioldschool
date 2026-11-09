@@ -427,6 +427,28 @@ class _LineupPlayer extends StatelessWidget {
     final fields = (player['fields'] as List? ?? []).whereType<Map>().toList();
     final presence = fields.where((f) => f['stat'] == 'presenza').firstOrNull;
     final present = presence?['checked'] == true;
+    final badges = player['badges'] as List? ?? [];
+    final roleBadges = badges
+        .where((badge) => badge == 'GK' || badge == 'C')
+        .toList();
+    final otherBadges = badges
+        .where((badge) => badge != 'GK' && badge != 'C')
+        .toList();
+    Widget badgeChip(dynamic badge) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: badge == 'DIFFIDATO'
+            ? (Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xff574725)
+                  : const Color(0xffffefbe))
+            : Theme.of(context).colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        '$badge',
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+      ),
+    );
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
@@ -448,45 +470,32 @@ class _LineupPlayer extends StatelessWidget {
                 visualDensity: VisualDensity.compact,
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
-                title: Text(
-                  '${player['name']}',
-                  style: TextStyle(fontWeight: FontWeight.w800),
+                title: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        '${player['name']}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    for (final badge in roleBadges) ...[
+                      const SizedBox(width: 6),
+                      badgeChip(badge),
+                    ],
+                  ],
                 ),
                 value: present,
                 onChanged: presence['disabled'] == true
                     ? null
                     : (value) => onChanged(presence, {'checked': value}),
               ),
-            if ((player['badges'] as List? ?? []).isNotEmpty)
+            if (otherBadges.isNotEmpty)
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: [
-                  for (final badge in player['badges'])
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: badge == 'DIFFIDATO'
-                            ? (Theme.of(context).brightness == Brightness.dark
-                                  ? const Color(0xff574725)
-                                  : const Color(0xffffefbe))
-                            : Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '$badge',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                ],
+                children: [for (final badge in otherBadges) badgeChip(badge)],
               ),
             const SizedBox(height: 6),
             LayoutBuilder(
