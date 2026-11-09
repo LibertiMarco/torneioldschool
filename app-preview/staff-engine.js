@@ -108,7 +108,7 @@
     const info = doc.querySelector('#partitaInfo')?.cloneNode(true);
     info?.querySelectorAll('br').forEach(br => br.replaceWith(doc.createTextNode(' · ')));
     const teams = Array.from(form.querySelectorAll('.team-lineup')).filter(visible).map(team => ({
-      id:id(team), name:clean(team.querySelector('h2')?.textContent),
+      id:id(team), side:team.dataset.teamSide, name:clean(team.querySelector('h2')?.textContent),
       actions:Array.from(team.querySelectorAll('[data-select-team]')).map(action).filter(Boolean),
       players:Array.from(team.querySelectorAll('.player-row')).filter(visible).map(row => ({
         id:id(row), name:clean(row.querySelector('.player-name > span')?.textContent),

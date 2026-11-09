@@ -52,6 +52,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
   String _section = 'calcio';
   String? _error;
   List<dynamic> _blocks = [];
+  final _pendingLineup = <String, StaffMessage>{};
   bool _loading = true,
       _modal = false,
       _confirming = false,
@@ -89,6 +90,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
 
   Future<void> _start() async {
     if (!_allowed) return;
+    _pendingLineup.clear();
     final run = ++_run;
     _timeout?.cancel();
     _engine?.dispose();
@@ -147,8 +149,10 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
       case 'snapshot':
         _timeout?.cancel();
         setState(() {
+          if (_document != '${message['document']}') _pendingLineup.clear();
           _document = '${message['document']}';
           _blocks = message['blocks'] as List? ?? [];
+          _applyPendingLineup();
           _loading = false;
           _error = null;
           _modal = message['modal'] == true;
@@ -217,6 +221,80 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
       return;
     }
     _engine?.send({'document': _document, ...message});
+  }
+
+  Iterable<Map> _lineupFields(Map lineup) sync* {
+    if (lineup['finalize'] is Map) yield lineup['finalize'] as Map;
+    for (final team in (lineup['teams'] as List? ?? []).whereType<Map>()) {
+      for (final player in (team['players'] as List? ?? []).whereType<Map>()) {
+        yield* (player['fields'] as List? ?? []).whereType<Map>();
+      }
+    }
+  }
+
+  void _applyPendingLineup() {
+    final lineup = _lineup;
+    if (lineup == null) return;
+    for (final field in _lineupFields(lineup)) {
+      final id = '${field['id']}';
+      final pending = _pendingLineup[id];
+      if (pending == null) continue;
+      if (pending.entries.every(
+        (entry) => '${field[entry.key]}' == '${entry.value}',
+      )) {
+        _pendingLineup.remove(id);
+      } else {
+        field.addAll(pending);
+      }
+    }
+    if (_pendingLineup.isNotEmpty) _updateLineupScore(lineup);
+  }
+
+  void _updateLineupScore(Map lineup) {
+    var home = 0, away = 0;
+    final teams = (lineup['teams'] as List? ?? []).whereType<Map>().toList();
+    for (var index = 0; index < teams.length; index++) {
+      final team = teams[index];
+      final isHome =
+          team['side'] == 'casa' || (team['side'] == null && index == 0);
+      for (final player in (team['players'] as List? ?? []).whereType<Map>()) {
+        final fields = (player['fields'] as List? ?? []).whereType<Map>();
+        if (fields
+                .where((field) => field['stat'] == 'presenza')
+                .firstOrNull?['checked'] !=
+            true) {
+          continue;
+        }
+        int count(String stat) {
+          final value =
+              int.tryParse(
+                '${fields.where((field) => field['stat'] == stat).firstOrNull?['value'] ?? 0}',
+              ) ??
+              0;
+          return value < 0 ? 0 : value;
+        }
+
+        if (isHome) {
+          home += count('goal');
+          away += count('autogol');
+        } else {
+          away += count('goal');
+          home += count('autogol');
+        }
+      }
+    }
+    lineup['score'] = '$home - $away';
+  }
+
+  void _changeLineup(Map field, StaffMessage value) {
+    if (!_allowed || field['disabled'] == true) return;
+    setState(() {
+      _pendingLineup['${field['id']}'] = value;
+      field.addAll(value);
+      final lineup = _lineup;
+      if (lineup != null) _updateLineupScore(lineup);
+    });
+    _send({'type': 'change', 'id': field['id'], ...value});
   }
 
   Future<void> _click(Map block) async {
@@ -426,8 +504,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
           key: key,
           model: block,
           render: _block,
-          onChanged: (field, value) =>
-              _send({'type': 'change', 'id': field['id'], ...value}),
+          onChanged: _changeLineup,
           onAction: _click,
         );
       case 'match-calendar':
@@ -688,18 +765,14 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         if (_lineup!['finalize'] is Map)
-                          _block(_lineup!['finalize'] as Map),
-                        Text(
-                          _lineup!['played'] == true
-                              ? 'Modifica presenze ed eventi senza inviare nuove notifiche.'
-                              : 'La finalizzazione segna la partita come giocata e invia le notifiche.',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
+                          StaffFinalizeControl(
+                            field: _lineup!['finalize'] as Map,
+                            played: _lineup!['played'] == true,
+                            onChanged: (value) => _changeLineup(
+                              _lineup!['finalize'] as Map,
+                              {'checked': value},
+                            ),
                           ),
-                        ),
                         if (_lineup!['save'] is Map)
                           _block(_lineup!['save'] as Map),
                       ],

@@ -288,16 +288,20 @@ class StaffMatchLineup extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Flexible(
-                  flex: 2,
+                SizedBox(
+                  width: 80,
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: Text(
-                      '${model['score']}',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 26,
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        '${model['score']}',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 26,
+                        ),
                       ),
                     ),
                   ),
@@ -333,7 +337,8 @@ class StaffMatchLineup extends StatelessWidget {
       Padding(
         padding: EdgeInsets.symmetric(vertical: 10),
         child: Text(
-          'Seleziona i presenti. Gol e autogol aggiornano il risultato.',
+          'Il risultato include i presenti. Gli autogol vanno agli avversari.',
+          textAlign: TextAlign.center,
           style: TextStyle(fontSize: 12),
         ),
       ),
@@ -409,6 +414,51 @@ class StaffMatchLineup extends StatelessWidget {
         ),
     ],
   );
+}
+
+class StaffFinalizeControl extends StatelessWidget {
+  const StaffFinalizeControl({
+    super.key,
+    required this.field,
+    required this.played,
+    required this.onChanged,
+  });
+  final Map field;
+  final bool played;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final selected = field['checked'] == true;
+    return Material(
+      animationDuration: const Duration(milliseconds: 180),
+      color: selected ? colors.primaryContainer : colors.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: selected ? colors.primary : colors.outlineVariant,
+        ),
+      ),
+      child: SwitchListTile.adaptive(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        title: const Text(
+          'Finalizza partita',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+        ),
+        subtitle: Text(
+          played
+              ? 'Partita finalizzata. Le modifiche non inviano nuove notifiche.'
+              : selected
+              ? 'Al salvataggio: partita giocata e notifiche inviate.'
+              : 'Attiva per segnare la partita come giocata al salvataggio.',
+          style: const TextStyle(fontSize: 11),
+        ),
+        value: selected,
+        onChanged: field['disabled'] == true ? null : onChanged,
+      ),
+    );
+  }
 }
 
 class _LineupPlayer extends StatelessWidget {

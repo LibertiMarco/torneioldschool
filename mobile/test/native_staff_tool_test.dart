@@ -265,6 +265,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.byType(StaffMatchLineup), findsOneWidget);
+        expect(tester.getCenter(find.text('0 - 0')).dx, closeTo(160, 1));
         expect(find.byType(SegmentedButton<String>), findsNothing);
         expect(
           find.text('Salva tutta la distinta').hitTestable(),
@@ -296,12 +297,14 @@ void main() {
         await tester.pump();
         expect(engine.commands.last['value'], '2');
         expect(engine.commands.last['id'], 'player-goal');
+        expect(find.text('2 - 0'), findsOneWidget);
         final intermediate =
             jsonDecode(jsonEncode(snapshot)) as Map<String, dynamic>;
         intermediate['blocks'][0]['teams'][0]['players'][0]['fields'][1]['value'] =
             '1';
         engine.receive(intermediate);
         await tester.pumpAndSettle();
+        expect(find.text('2 - 0'), findsOneWidget);
         expect(
           tester
               .widget<TextField>(
@@ -324,6 +327,37 @@ void main() {
         await tester.tap(decrement);
         await tester.pump();
         expect(engine.commands.last['value'], '2');
+        final ownGoal = find.byWidgetPredicate(
+          (widget) =>
+              widget is StaffStatCounter && widget.field['stat'] == 'autogol',
+        );
+        final ownIncrement = find.descendant(
+          of: ownGoal,
+          matching: find.byTooltip('Aumenta Autogol'),
+        );
+        await tester.ensureVisible(ownIncrement);
+        await tester.tap(ownIncrement);
+        await tester.pump();
+        expect(find.text('2 - 1'), findsOneWidget);
+        final assist = find.byWidgetPredicate(
+          (widget) =>
+              widget is StaffStatCounter && widget.field['stat'] == 'assist',
+        );
+        await tester.tap(
+          find.descendant(
+            of: assist,
+            matching: find.byTooltip('Aumenta Assist'),
+          ),
+        );
+        await tester.pump();
+        expect(find.text('2 - 1'), findsOneWidget);
+        await tester.ensureVisible(find.text('Rossi Marco'));
+        await tester.tap(find.text('Rossi Marco'));
+        await tester.pump();
+        expect(find.text('0 - 0'), findsOneWidget);
+        await tester.tap(find.text('Rossi Marco'));
+        await tester.pump();
+        expect(find.text('2 - 1'), findsOneWidget);
         await tester.ensureVisible(find.text('Giallo'));
         await tester.tap(find.text('Giallo'));
         expect(engine.commands.last['id'], 'player-cartellino_giallo');
@@ -332,6 +366,8 @@ void main() {
         await tester.tap(find.text('Rosso'));
         expect(engine.commands.last['id'], 'player-cartellino_rosso');
         await tester.tap(find.text('Finalizza partita'));
+        await tester.pump();
+        expect(find.byType(StaffFinalizeControl), findsOneWidget);
         expect(engine.commands.last['id'], 'finalize');
         expect(engine.commands.last['checked'], true);
         await tester.tap(find.text('Salva tutta la distinta'));
