@@ -1,5 +1,24 @@
 # Anteprima dell'app con dati reali
 
+## Creazione multipla partite
+
+In Gestione → Calendario e risultati → Crea, sito e app condividono torneo,
+fase, campo, giornata/turno e data. Ogni riga contiene casa, ospite e ora:
+si possono aggiungere/rimuovere fino a 50 partite e salvarle insieme.
+La transazione comprende anche i ritorni automatici: un errore annulla
+l'intero lotto. Squadre estranee al torneo, squadre ripetute e orari di inizio
+coincidenti sul campo vengono rifiutati. Online consente incontri simultanei.
+
+Il calendario giorno/settimana mostra anche gli altri tornei del campo scelto,
+con partite presenti e bozze distinte. Mostra gli orari di inizio, senza
+calcolare le durate o le sovrapposizioni parziali. L'app mantiene i moduli
+Flutter e riceve eventi e comandi del calendario dal bridge protetto.
+
+Verifiche dedicate: `tests/match_batch_test.php`, `tests/match_batch_test.js`,
+`tests/match_batch_browser_test.js` (fixture senza database del sito, jsdom 26
+e playwright-core), `tests/staff_engine_test.js` e
+`mobile/test/staff_match_calendar_test.dart`.
+
 L'anteprima principale è `https://torneioldschool.it/app-preview/`, accessibile da PC e Safari su iPhone. Richiede il login del sito come admin, sysadmin o grafico. Usa il database esistente tramite PHP: non contiene credenziali DB, dati dimostrativi o una copia del database.
 
 La palette deriva da `style.css`: blu `#15293e`, rosso `#d80000`, sfondo `#f4f4f4`. Il logo è quello del sito. Le schermate sono condivise con l'app nativa; la build web usa `TOS_WEB_PREVIEW=true`. La sessione browser usa il cookie HTTP-only esistente, senza salvare token mobile nel browser. Tutte le scritture richiedono CSRF; le operazioni sugli account altrui richiedono il ruolo admin attuale; le modifiche confermate alle abilitazioni vengono salvate anche sul sito. Non sono state eseguite scritture di prova sui dati reali.

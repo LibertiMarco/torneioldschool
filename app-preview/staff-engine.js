@@ -79,7 +79,7 @@
       if (!['https:','http:'].includes(url.protocol)) return null;
     }
     return {kind: 'action', id: id(element), label: text, disabled: element.matches(':disabled'),
-      selected: element.classList.contains('active') || element.getAttribute('aria-selected') === 'true',
+      selected: element.classList.contains('active') || element.getAttribute('aria-selected') === 'true' || element.getAttribute('aria-pressed') === 'true',
       tab: !!element.closest('.tab-buttons,.tabs,.admin-btn-group,.action-selector,.action-switch,.action-toggles') || element.classList.contains('action-toggle'),
       danger: /elimina|rimuovi|cancella|disattiva|rifiuta/i.test(text)};
   }
@@ -152,6 +152,10 @@
       if (visible(element.parentElement)) return control(element);
     }
     if (!visible(element)) return null;
+    if (element.matches('#matchCalendar') && element.tosCalendarModel) {
+      return {kind: 'match-calendar', id: id(element), ...element.tosCalendarModel,
+        actions: Array.from(element.querySelectorAll('button')).map(action).filter(Boolean)};
+    }
     if (doc.location.pathname === '/api/gestione_partite.php' && element.matches('form#formModifica')) return matchForm(element);
     if (tag === 'INPUT' && ['submit','button','reset'].includes(element.type)) return action(element);
     if (['INPUT','SELECT','TEXTAREA'].includes(tag) || editable(element)) return control(element);
@@ -197,7 +201,7 @@
     if (['P','SMALL','LI','DT','DD'].includes(tag) && !element.querySelector('input,select,textarea,button,a,canvas,[contenteditable="true"]')) return textNode('text', clean(element.textContent));
     const blocks = children(element, inTable);
     if (!blocks.length) return null;
-    return {kind: tag === 'FORM' ? 'form' : element.matches('.tab-buttons,.tabs,.admin-btn-group,.action-selector,.action-switch,.action-toggles') ? 'tabs' : element.matches('.player-row,.work-card,.result,.auto-team-availability') ? 'panel' : 'group', id: id(element), blocks};
+    return {kind: tag === 'FORM' ? 'form' : element.matches('.tab-buttons,.tabs,.admin-btn-group,.action-selector,.action-switch,.action-toggles') ? 'tabs' : element.matches('.player-row,.work-card,.result,.auto-team-availability,.batch-match-row') ? 'panel' : 'group', id: id(element), blocks};
   }
   const children = (element, inTable) => Array.from(element.childNodes).map(node => walk(node, inTable)).filter(Boolean);
   function snapshot() {

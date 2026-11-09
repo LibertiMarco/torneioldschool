@@ -1,0 +1,22 @@
+.batch-match-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)) auto; gap:12px; padding:16px; margin:12px 0; border:1px solid #dce2ea; border-radius:16px; background:#f8fafc; align-items:end; }
+.batch-match-row h4 { grid-column:1/-1; margin:0; }
+.batch-match-row label { display:block; }
+.batch-match-row select,.batch-match-row input { width:100%; box-sizing:border-box; }
+.batch-match-row button,#batchAdd { padding:10px 14px; border:1px solid #cbd5e1; border-radius:10px; background:#ecf1f7; color:#15293e; font-weight:600; cursor:pointer; }
+.batch-match-row button:disabled,#batchAdd:disabled { opacity:.45; cursor:default; }
+.match-calendar { margin-top:28px; padding:20px; border:1px solid #dce2ea; border-radius:20px; background:#fff; color:#1c2a3a; }
+.match-calendar h3 { margin-top:0; }
+.calendar-toolbar { display:flex; flex-wrap:wrap; gap:8px; }
+.calendar-toolbar button { background:#f1f3f7; color:#15293e; border:1px solid #dce2ea; padding:9px 14px; border-radius:10px; cursor:pointer; }
+.calendar-toolbar button[aria-pressed=true] { background:#15293e; color:#fff; }
+.match-calendar p { font-size:13px; color:#526174; line-height:1.5; }
+.calendar-scroll { overflow:auto; max-height:650px; border:1px solid #e5e7eb; border-radius:12px; }
+.calendar-grid { display:grid; }
+.calendar-day { position:sticky; top:0; z-index:1; background:#fafbfc; padding:12px 6px; text-align:center; font-weight:700; border-bottom:1px solid #dce2ea; font-size:13px; }
+.calendar-day.is-today { color:#d80000; background:#fff3f3; }
+.calendar-hour { padding:10px 4px; color:#697586; font-size:11px; border-bottom:1px solid #e8edf3; }
+.calendar-cell { min-height:70px; padding:4px; border-left:1px solid #e8edf3; border-bottom:1px solid #e8edf3; }
+.calendar-event { display:flex; flex-direction:column; gap:4px; margin-bottom:4px; padding:8px; background:#e8f0ff; color:#173c74; border-left:3px solid #3979d7; border-radius:7px; font-size:12px; overflow-wrap:anywhere; }
+.calendar-event small { font-size:10px; }
+.calendar-event.is-draft { background:#fff1df; color:#804100; border-color:#cf7200; }
+@media(max-width:650px) { .batch-match-row { grid-template-columns:1fr; } .match-calendar { padding:12px; } }

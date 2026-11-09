@@ -430,6 +430,8 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
               _send({'type': 'change', 'id': field['id'], ...value}),
           onAction: _click,
         );
+      case 'match-calendar':
+        return StaffMatchCalendar(key: key, model: block, render: _block);
       case 'field':
         return Padding(
           key: key,

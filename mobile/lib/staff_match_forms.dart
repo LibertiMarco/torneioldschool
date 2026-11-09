@@ -6,6 +6,189 @@ import 'theme.dart';
 
 typedef StaffBlockRenderer = Widget Function(Map block);
 
+/// Calendar data and navigation come from the same controller as the website.
+class StaffMatchCalendar extends StatelessWidget {
+  const StaffMatchCalendar({
+    super.key,
+    required this.model,
+    required this.render,
+  });
+  final Map model;
+  final StaffBlockRenderer render;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final days = (model['days'] as List? ?? []).whereType<Map>().toList();
+    final first = (model['firstHour'] as num?)?.toInt() ?? 16;
+    final last = (model['lastHour'] as num?)?.toInt() ?? 22;
+    Widget cell(Widget child) =>
+        Padding(padding: const EdgeInsets.all(6), child: child);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '${model['title'] ?? 'Calendario del campo'}',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final action
+                    in (model['actions'] as List? ?? []).whereType<Map>())
+                  render(action),
+              ],
+            ),
+            Text(
+              '${model['note'] ?? ''}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            if (days.isNotEmpty)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 520),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: 52 + days.length * 160.0,
+                    child: SingleChildScrollView(
+                      child: Table(
+                        columnWidths: {0: const FixedColumnWidth(52)},
+                        border: TableBorder.all(
+                          color: colors.outlineVariant,
+                          width: 0.5,
+                        ),
+                        defaultVerticalAlignment:
+                            TableCellVerticalAlignment.top,
+                        children: [
+                          TableRow(
+                            decoration: BoxDecoration(
+                              color: colors.surfaceContainerLow,
+                            ),
+                            children: [
+                              const SizedBox(),
+                              for (final day in days)
+                                cell(
+                                  Text(
+                                    '${day['label']}',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: day['today'] == true
+                                          ? siteRed
+                                          : colors.onSurface,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          for (var hour = first; hour <= last; hour++)
+                            TableRow(
+                              children: [
+                                cell(
+                                  Text(
+                                    '${hour.toString().padLeft(2, '0')}:00',
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                ),
+                                for (final day in days)
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      minHeight: 70,
+                                    ),
+                                    child: cell(
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          for (final event
+                                              in (day['events'] as List? ?? [])
+                                                  .whereType<Map>()
+                                                  .where(
+                                                    (event) =>
+                                                        int.tryParse(
+                                                          '${event['time']}'
+                                                              .split(':')
+                                                              .first,
+                                                        ) ==
+                                                        hour,
+                                                  ))
+                                            Container(
+                                              margin: const EdgeInsets.only(
+                                                bottom: 4,
+                                              ),
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: event['draft'] == true
+                                                    ? const Color(0xfffff1df)
+                                                    : colors.primaryContainer,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                border: Border(
+                                                  left: BorderSide(
+                                                    width: 3,
+                                                    color:
+                                                        event['draft'] == true
+                                                        ? const Color(
+                                                            0xffcf7200,
+                                                          )
+                                                        : colors.primary,
+                                                  ),
+                                                ),
+                                              ),
+                                              child: DefaultTextStyle(
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: event['draft'] == true
+                                                      ? colors
+                                                            .onTertiaryContainer
+                                                      : colors
+                                                            .onPrimaryContainer,
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      '${event['time']}',
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                      ),
+                                                    ),
+                                                    Text('${event['title']}'),
+                                                    Text(
+                                                      '${event['subtitle']}',
+                                                      style: const TextStyle(
+                                                        fontSize: 10,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class StaffMatchForm extends StatelessWidget {
   const StaffMatchForm({super.key, required this.model, required this.render});
   final Map model;

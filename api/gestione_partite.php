@@ -7,6 +7,7 @@ require_once __DIR__ . '/../includi/push_notifications.php';
 require_once __DIR__ . '/../includi/torneo_phase_rules.php';
 require_once __DIR__ . '/../includi/api_cache.php';
 require_once __DIR__ . '/../includi/all_in_one_semifinals.php';
+require_once __DIR__ . '/../includi/match_batch.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   csrf_or_same_origin_require('admin_partite');
@@ -734,147 +735,208 @@ function partitaRegularGiaInseritaInAltraGiornata(
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($azione === 'crea') {
-    $torneo = sanitize_text($_POST['torneo'] ?? '');
-    $fase = sanitize_fase($_POST['fase'] ?? '', $fasiAmmesseConSpareggio);
-    $casa = sanitize_text($_POST['squadra_casa'] ?? '');
-    $ospite = sanitize_text($_POST['squadra_ospite'] ?? '');
-    $data = sanitize_text($_POST['data_partita'] ?? '');
-    $ora = sanitize_text($_POST['ora_partita'] ?? '');
-    $campo = sanitize_text($_POST['campo'] ?? '');
-    $roundSelezionato = sanitize_text($_POST['round_eliminazione'] ?? '');
-    $giornata = sanitize_int($_POST['giornata'] ?? '');
-    $faseUsesRound = phase_uses_round($fase);
-    $isSpareggio = is_spareggio_phase($fase);
-    $faseRound = $faseUsesRound ? strtoupper($roundSelezionato) : null;
-    $faseRound = ($faseRound && in_array($faseRound, ['TRENTADUESIMI','SEDICESIMI','OTTAVI','QUARTI','SEMIFINALE','FINALE'], true)) ? $faseRound : null;
-    $faseLegInput = $faseUsesRound ? sanitize_leg($_POST['fase_leg'] ?? '') : null;
-    $faseLeg = $faseUsesRound
-      ? ($faseLegInput ?: (round_supports_two_legs($faseRound) ? 'ANDATA' : 'UNICA'))
-      : ($isSpareggio ? 'UNICA' : null);
-    $giocata = 0; // sempre non giocata alla creazione
-    $gol_casa = sanitize_int($_POST['gol_casa'] ?? '0');
-    $gol_ospite = sanitize_int($_POST['gol_ospite'] ?? '0');
-    $link_youtube = sanitize_text($_POST['link_youtube'] ?? '');
-    $link_instagram = sanitize_text($_POST['link_instagram'] ?? '');
-    $arbitro = sanitize_text($_POST['arbitro'] ?? '');
-    $decisa_rigori = isset($_POST['decisa_rigori']) ? 1 : 0;
-    $rigori_casa = $decisa_rigori ? sanitize_int($_POST['rigori_casa'] ?? '') : null;
-    $rigori_ospite = $decisa_rigori ? sanitize_int($_POST['rigori_ospite'] ?? '') : null;
+    $createMatch = function (array $input) use ($conn, $fasiAmmesseConSpareggio, $roundMap, &$errore, &$successo): string {
+      $errore = $successo = '';
+      $torneo = sanitize_text($input['torneo'] ?? '');
+      $fase = sanitize_fase($input['fase'] ?? '', $fasiAmmesseConSpareggio);
+      $casa = sanitize_text($input['squadra_casa'] ?? '');
+      $ospite = sanitize_text($input['squadra_ospite'] ?? '');
+      $data = sanitize_text($input['data_partita'] ?? '');
+      $ora = sanitize_text($input['ora_partita'] ?? '');
+      $campo = sanitize_text($input['campo'] ?? '');
+      $roundSelezionato = sanitize_text($input['round_eliminazione'] ?? '');
+      $giornata = sanitize_int($input['giornata'] ?? '');
+      $faseUsesRound = phase_uses_round($fase);
+      $isSpareggio = is_spareggio_phase($fase);
+      $faseRound = $faseUsesRound ? strtoupper($roundSelezionato) : null;
+      $faseRound = ($faseRound && in_array($faseRound, ['TRENTADUESIMI','SEDICESIMI','OTTAVI','QUARTI','SEMIFINALE','FINALE'], true)) ? $faseRound : null;
+      $faseLegInput = $faseUsesRound ? sanitize_leg($input['fase_leg'] ?? '') : null;
+      $faseLeg = $faseUsesRound
+        ? ($faseLegInput ?: (round_supports_two_legs($faseRound) ? 'ANDATA' : 'UNICA'))
+        : ($isSpareggio ? 'UNICA' : null);
+      $giocata = 0; // sempre non giocata alla creazione
+      $gol_casa = sanitize_int($input['gol_casa'] ?? '0');
+      $gol_ospite = sanitize_int($input['gol_ospite'] ?? '0');
+      $link_youtube = sanitize_text($input['link_youtube'] ?? '');
+      $link_instagram = sanitize_text($input['link_instagram'] ?? '');
+      $arbitro = sanitize_text($input['arbitro'] ?? '');
+      $decisa_rigori = isset($input['decisa_rigori']) ? 1 : 0;
+      $rigori_casa = $decisa_rigori ? sanitize_int($input['rigori_casa'] ?? '') : null;
+      $rigori_ospite = $decisa_rigori ? sanitize_int($input['rigori_ospite'] ?? '') : null;
 
-    if ($isSpareggio) {
-      $giornata = 1;
-    }
-
-    if ($torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($faseUsesRound && $roundSelezionato === '')) {
-      $errore = 'Compila tutti i campi obbligatori.';
-    } elseif ($casa === $ospite) {
-      $errore = 'Le due squadre non possono coincidere.';
-    } elseif ($faseUsesRound && !$faseLeg) {
-      $errore = 'Seleziona il tipo di gara (andata/ritorno/unica).';
-    } else {
-      if ($faseUsesRound) {
-        $giornata = round_to_giornata($roundSelezionato, $roundMap) ?? 0;
-      } elseif ($isSpareggio) {
+      if ($isSpareggio) {
         $giornata = 1;
       }
-      // controllo: una squadra non può avere due partite nella stessa giornata della stessa fase
-      if (squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, null, $faseRound, $faseLeg)) {
-        $errore = 'Una delle squadre ha già una partita in questa giornata per questa fase.';
-      } elseif (partitaRegularGiaInseritaInAltraGiornata($conn, $torneo, $fase, $giornata, $casa, $ospite)) {
-        $errore = 'Questa partita è già stata inserita in un\'altra giornata della fase REGULAR.';
-      }
 
-      if (!empty($errore)) {
-        // non procedere oltre
+      if ($torneo === '' || $fase === '' || $casa === '' || $ospite === '' || $data === '' || $ora === '' || $campo === '' || ($fase === 'REGULAR' && $giornata <= 0) || ($faseUsesRound && $roundSelezionato === '')) {
+        $errore = 'Compila tutti i campi obbligatori.';
+      } elseif ($casa === $ospite) {
+        $errore = 'Le due squadre non possono coincidere.';
+      } elseif ($faseUsesRound && !$faseLeg) {
+        $errore = 'Seleziona il tipo di gara (andata/ritorno/unica).';
       } else {
-        $stmt = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, decisa_rigori, rigori_casa, rigori_ospite, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
-        if ($stmt) {
-          $stmt->bind_param(
-            'ssssssiisssiiiiisss',
-            $torneo,
-            $fase,
-            $faseRound,
-            $faseLeg,
-            $casa,
-            $ospite,
-            $gol_casa,
-            $gol_ospite,
-            $data,
-            $ora,
-            $campo,
-            $decisa_rigori,
-            $rigori_casa,
-            $rigori_ospite,
-            $giornata,
-            $giocata,
-            $arbitro,
-            $link_youtube,
-            $link_instagram
-          );
-          if ($stmt->execute()) {
-            $successo = 'Partita creata correttamente.';
-            // crea automaticamente il ritorno per i turni a doppia sfida impostati come andata
-            if (round_supports_two_legs($faseRound, $torneo, $fase) && strtoupper($faseLeg) === 'ANDATA') {
-              if (!squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $ospite, $casa, null, $faseRound, 'RITORNO')) {
-                $stmtR = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, decisa_rigori, rigori_casa, rigori_ospite, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
-                if ($stmtR) {
-                  // usa segnaposto evidente per il ritorno (poi modificabile)
-                  $defaultDate = '2000-01-01';
-                  $defaultOra = '00:00:00';
-                  $defaultCampo = 'Da definire';
-                  $golZero = 0;
-                  $giocataZero = 0;
-                  $decisaRigoriZero = 0;
-                  $rigoriNull = null;
-                  $ytEmpty = '';
-                  $igEmpty = '';
-                  $giornataInt = (int)$giornata;
-                  $faseLegRitorno = 'RITORNO';
-                  $stmtR->bind_param(
-                    'ssssssiisssiiiiisss',
-                    $torneo,      // s
-                    $fase,        // s
-                    $faseRound,   // s
-                    $faseLegRitorno, // s
-                    $ospite,      // s
-                    $casa,        // s
-                    $golZero,     // i gol_casa
-                    $golZero,     // i gol_ospite
-                    $defaultDate, // s data
-                    $defaultOra,  // s ora
-                    $defaultCampo,// s campo
-                    $decisaRigoriZero, // i
-                    $rigoriNull,  // i
-                    $rigoriNull,  // i
-                    $giornataInt, // i giornata
-                    $giocataZero, // i giocata
-                    $arbitro,     // s
-                    $ytEmpty,     // s youtube
-                    $igEmpty      // s instagram
-                  );
-                  if ($stmtR->execute()) {
-                    $successo .= ' Creato automaticamente il ritorno (data/ora/campo da definire).';
+        if ($faseUsesRound) {
+          $giornata = round_to_giornata($roundSelezionato, $roundMap) ?? 0;
+        } elseif ($isSpareggio) {
+          $giornata = 1;
+        }
+        // controllo: una squadra non può avere due partite nella stessa giornata della stessa fase
+        if (squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $casa, $ospite, null, $faseRound, $faseLeg)) {
+          $errore = 'Una delle squadre ha già una partita in questa giornata per questa fase.';
+        } elseif (partitaRegularGiaInseritaInAltraGiornata($conn, $torneo, $fase, $giornata, $casa, $ospite)) {
+          $errore = 'Questa partita è già stata inserita in un\'altra giornata della fase REGULAR.';
+        }
+
+        if (!empty($errore)) {
+          // non procedere oltre
+        } else {
+          $stmt = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, decisa_rigori, rigori_casa, rigori_ospite, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
+          if ($stmt) {
+            $stmt->bind_param(
+              'ssssssiisssiiiiisss',
+              $torneo,
+              $fase,
+              $faseRound,
+              $faseLeg,
+              $casa,
+              $ospite,
+              $gol_casa,
+              $gol_ospite,
+              $data,
+              $ora,
+              $campo,
+              $decisa_rigori,
+              $rigori_casa,
+              $rigori_ospite,
+              $giornata,
+              $giocata,
+              $arbitro,
+              $link_youtube,
+              $link_instagram
+            );
+            if ($stmt->execute()) {
+              $successo = 'Partita creata correttamente.';
+              // crea automaticamente il ritorno per i turni a doppia sfida impostati come andata
+              if (round_supports_two_legs($faseRound, $torneo, $fase) && strtoupper($faseLeg) === 'ANDATA') {
+                if (!squadraHaGiaPartita($conn, $torneo, $fase, $giornata, $ospite, $casa, null, $faseRound, 'RITORNO')) {
+                  $stmtR = $conn->prepare("INSERT INTO partite (torneo, fase, fase_round, fase_leg, squadra_casa, squadra_ospite, gol_casa, gol_ospite, data_partita, ora_partita, campo, decisa_rigori, rigori_casa, rigori_ospite, giornata, giocata, arbitro, link_youtube, link_instagram, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())");
+                  if ($stmtR) {
+                    // usa segnaposto evidente per il ritorno (poi modificabile)
+                    $defaultDate = '2000-01-01';
+                    $defaultOra = '00:00:00';
+                    $defaultCampo = 'Da definire';
+                    $golZero = 0;
+                    $giocataZero = 0;
+                    $decisaRigoriZero = 0;
+                    $rigoriNull = null;
+                    $ytEmpty = '';
+                    $igEmpty = '';
+                    $giornataInt = (int)$giornata;
+                    $faseLegRitorno = 'RITORNO';
+                    $stmtR->bind_param(
+                      'ssssssiisssiiiiisss',
+                      $torneo,      // s
+                      $fase,        // s
+                      $faseRound,   // s
+                      $faseLegRitorno, // s
+                      $ospite,      // s
+                      $casa,        // s
+                      $golZero,     // i gol_casa
+                      $golZero,     // i gol_ospite
+                      $defaultDate, // s data
+                      $defaultOra,  // s ora
+                      $defaultCampo,// s campo
+                      $decisaRigoriZero, // i
+                      $rigoriNull,  // i
+                      $rigoriNull,  // i
+                      $giornataInt, // i giornata
+                      $giocataZero, // i giocata
+                      $arbitro,     // s
+                      $ytEmpty,     // s youtube
+                      $igEmpty      // s instagram
+                    );
+                    if ($stmtR->execute()) {
+                      $successo .= ' Creato automaticamente il ritorno (data/ora/campo da definire).';
+                    } else {
+                      $errore = 'Ritorno non creato: controlla duplicati o dati mancanti.';
+                    }
+                    $stmtR->close();
                   } else {
-                    $successo .= ' (Ritorno non creato: controlla duplicati o dati mancanti)';
+                    $errore = 'Impossibile creare il ritorno.';
                   }
-                  $stmtR->close();
+                } else {
+                  $successo .= ' (Ritorno già presente, non duplicato).';
                 }
+              }
+            } else {
+              if ((int)$stmt->errno === 1062) {
+                $errore = 'Esiste già una partita per questo turno con una delle squadre selezionate.';
               } else {
-                $successo .= ' (Ritorno già presente, non duplicato).';
+                $errore = 'Inserimento non riuscito.';
               }
             }
+            $stmt->close();
           } else {
-            if ((int)$stmt->errno === 1062) {
-              $errore = 'Esiste già una partita per questo turno con una delle squadre selezionate.';
-            } else {
-              $errore = 'Inserimento non riuscito.';
-            }
+            $errore = 'Errore interno durante la creazione.';
           }
-          $stmt->close();
-        } else {
-          $errore = 'Errore interno durante la creazione.';
         }
       }
+      return $errore;
+    };
+    if (isset($_POST['partite'])) {
+      $locked = false;
+      $lockName = '';
+      try {
+        $rows = match_batch_inputs($_POST, $torneiDisponibili, $squadrePerTorneo, get_match_fields($conn));
+        foreach (['giornata', 'round_eliminazione', 'fase_leg', 'arbitro'] as $key) {
+          if (isset($_POST[$key]) && !is_string($_POST[$key])) throw new InvalidArgumentException('Formato dei campi non valido.');
+        }
+        $phase = $rows[0]['fase'];
+        $maxDays = $maxGiornateRegularOverrides[$rows[0]['torneo']] ?? $maxGiornateRegular;
+        if ($phase === 'REGULAR' && (!ctype_digit($_POST['giornata'] ?? '') || (int)$_POST['giornata'] < 1 || (int)$_POST['giornata'] > $maxDays)) {
+          throw new InvalidArgumentException('Seleziona una giornata valida.');
+        }
+        if (phase_uses_round($phase) && !isset($roundMap[$_POST['round_eliminazione'] ?? ''])) {
+          throw new InvalidArgumentException('Seleziona il turno di eliminazione.');
+        }
+        // Serialize batch writers for this field, including different tournaments.
+        $lockName = 'tos-match-' . sha1($rows[0]['campo']);
+        $lock = $conn->prepare('SELECT GET_LOCK(?, 5) AS acquired');
+        $lock->bind_param('s', $lockName);
+        $lock->execute();
+        $locked = (int)($lock->get_result()->fetch_assoc()['acquired'] ?? 0) === 1;
+        $lock->close();
+        if (!$locked) throw new RuntimeException('Campo occupato da un altro salvataggio. Riprova.');
+        match_batch_save($conn, $rows, function (array $row) use ($conn, $createMatch): string {
+          if ($row['campo'] !== 'Online') {
+            $check = $conn->prepare('SELECT id FROM partite WHERE campo = ? AND data_partita = ? AND ora_partita = ? LIMIT 1');
+            $check->bind_param('sss', $row['campo'], $row['data_partita'], $row['ora_partita']);
+            $check->execute();
+            $occupied = $check->get_result()->num_rows > 0;
+            $check->close();
+            if ($occupied) return 'il campo ha gia una partita a questo orario. Scegli un altro orario.';
+          }
+          return $createMatch($row);
+        });
+        $errore = '';
+        $successo = count($rows) . ' partite create correttamente. Eventuali ritorni sono stati generati secondo le regole del torneo.';
+      } catch (InvalidArgumentException $error) {
+        $errore = $error->getMessage();
+        $successo = '';
+      } catch (Throwable $error) {
+        error_log('Creazione multipla partite: ' . $error->getMessage());
+        $errore = 'Salvataggio non completato. Nessuna partita inserita. Controlla i dati e riprova.';
+        $successo = '';
+      } finally {
+        if ($locked) {
+          $release = $conn->prepare('SELECT RELEASE_LOCK(?)');
+          $release->bind_param('s', $lockName);
+          $release->execute();
+          $release->close();
+        }
+      }
+    } else {
+      $createMatch($_POST); // Compatibility with older clients.
     }
   }
 
@@ -1434,7 +1496,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
       .stats-button-row { justify-content: flex-start; }
     }
 
-    .form-message { margin-top: 10px; padding: 10px 12px; border-radius: 10px; font-weight: 600; }
+    .form-message { display: block; grid-column: 1 / -1; margin-top: 10px; padding: 10px 12px; border-radius: 10px; font-weight: 600; }
     .form-message.success { background: #e6f6ec; border: 1px solid #3ba776; color: #1f6a44; }
     .form-message.error { background: #fdecec; border: 1px solid #d72638; color: #8f1a27; }
     .section-note { margin: -4px 0 16px; color: #5b6b7d; }
@@ -1507,7 +1569,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     <!-- CREA -->
     <section class="tab-section <?= $tabAttiva === 'crea' ? 'active' : '' ?>" data-tab="crea">
       <div class="form-card">
-        <h3>Crea partita</h3>
+        <h3>Crea partite</h3>
         <form class="admin-form inline" method="POST" id="formCrea">
         <input type="hidden" name="azione" value="crea">
         <div>
@@ -1525,6 +1587,12 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
             <?php foreach ($fasiAmmesse as $f): ?>
               <option value="<?= htmlspecialchars($f) ?>"><?= htmlspecialchars($f) ?></option>
             <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label class="required-label">Campo</label>
+          <select name="campo" id="campoCrea" required>
+            <?= render_match_field_options($campiPartita) ?>
           </select>
         </div>
         <div id="giornataWrapper">
@@ -1557,32 +1625,14 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
           </select>
         </div>
         <div>
-          <label class="required-label">Squadra casa</label>
-          <select name="squadra_casa" id="squadraCasaCrea" required>
-            <option value="">-- Seleziona torneo/giornata --</option>
-          </select>
+          <label class="required-label" for="batchDate">Data delle partite</label>
+          <input type="date" name="data_partita" id="batchDate" required>
         </div>
-        <div>
-          <label class="required-label">Squadra ospite</label>
-          <select name="squadra_ospite" id="squadraOspiteCrea" required>
-            <option value="">-- Seleziona torneo/giornata --</option>
-          </select>
-        </div>
-        <input type="hidden" name="gol_casa" value="0">
-        <input type="hidden" name="gol_ospite" value="0">
-        <div>
-          <label class="required-label">Data</label>
-          <input type="date" name="data_partita" required>
-        </div>
-        <div>
-          <label class="required-label">Ora</label>
-          <input type="time" name="ora_partita" required>
-        </div>
-        <div>
-          <label class="required-label">Campo</label>
-          <select name="campo" id="campoCrea" required>
-            <?= render_match_field_options($campiPartita) ?>
-          </select>
+        <div class="full" id="batchMatches">
+          <h4>Partite da creare</h4>
+          <p>Stesso torneo, fase, giornata, campo e data. Aggiungi le partite e salvale insieme (massimo 50).</p>
+          <div id="batchRows"></div>
+          <button type="button" id="batchAdd">Aggiungi partita</button>
         </div>
         <div>
           <label>Arbitro</label>
@@ -1592,14 +1642,16 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
         <input type="hidden" name="link_youtube" value="">
         <input type="hidden" name="link_instagram" value="">
         <div class="full">
-          <button type="submit" class="btn-primary">Crea partita</button>
+          <button type="submit" class="btn-primary" id="batchSave">Crea tutte le partite</button>
         </div>
+        <input type="hidden" name="partite_count" id="batchCount" value="1">
         <?php if (($successo && ($azione ?? '') === 'crea')): ?>
           <div class="form-message success"><?= htmlspecialchars($successo) ?></div>
         <?php elseif (($errore && ($azione ?? '') === 'crea')): ?>
           <div class="form-message error"><?= htmlspecialchars($errore) ?></div>
         <?php endif; ?>
         </form>
+        <section id="matchCalendar" class="match-calendar" aria-label="Calendario del campo"></section>
       </div>
     </section>
 
@@ -1996,6 +2048,8 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   </div>
 </div>
 
+<link rel="stylesheet" href="/api/match-batch.css?v=1">
+<script src="/api/match-batch.js?v=1"></script>
 <script>
   let partiteData = <?php echo json_encode($partite, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
   let partiteModData = <?php echo json_encode($partiteNonGiocate, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
@@ -2196,6 +2250,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
   };
 
   const populateSquadreFiltrate = () => {
+    if (window.tosMatchBatch) { window.tosMatchBatch.refresh(); return; }
     const torneoVal = torneoCrea?.value || '';
     const faseVal = (faseCrea?.value || '').toUpperCase();
     const giornataVal = getGiornataTarget();
@@ -2840,7 +2895,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
         if (data && data.success) {
           renderFormMessage(formId, 'success', data.message || 'Operazione completata');
           if (formId === 'formCrea') {
-            form.reset();
+            window.tosMatchBatch?.saved();
             refreshCreateLayout();
             populateSquadreFiltrate();
           } else if (formId === 'formModifica') {
@@ -2863,6 +2918,22 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     });
   };
 
+  window.tosMatchBatch = window.TosMatchBatch.mount({
+    document, matches: () => partiteData,
+    availableTeams: () => {
+      const tournament = torneoCrea?.value || '';
+      const phase = (faseCrea?.value || '').toUpperCase();
+      const day = getGiornataTarget();
+      if (!tournament || !phase || !day) return [];
+      const returning = isTwoLegRound(roundCrea?.value, tournament, phase) && faseLegCrea?.value === 'RITORNO';
+      const busy = new Set();
+      partiteData.filter(p => p.torneo === tournament && (p.fase || 'REGULAR').toUpperCase() === phase && Number(p.giornata) === Number(day))
+        .filter(p => !(returning && p.fase_leg === 'ANDATA' && p.fase_round === roundCrea?.value))
+        .forEach(p => { busy.add(p.squadra_casa); busy.add(p.squadra_ospite); });
+      return (squadreMap[tournament] || []).filter(team => !busy.has(team));
+    },
+    initial: <?= json_encode($azione === 'crea' && $errore !== '' ? $_POST : null, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
+  });
   attachAjaxForm('formCrea');
   attachAjaxForm('formModifica');
   attachAjaxForm('formRipristinaGiocata');

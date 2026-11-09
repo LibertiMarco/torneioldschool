@@ -121,6 +121,17 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
   command({type:'click',id:find('action','Salva verifica Record e portieri').id}); await delay();
   assert.equal(keeperWrite.csrf,'records-secret');
   assert.equal(keeperWrite.goals,'2');
+  child.reconfigure({url:'https://example.test/api/gestione_partite.php'});
+  document.body.innerHTML = '<main><section id="matchCalendar"><button type="button">Successivo</button></section></main>';
+  const calendar = document.getElementById('matchCalendar');
+  calendar.tosCalendarModel = {title:'Campo 1', days:[{date:'2026-11-09',label:'lun 9 nov',events:[{time:'19:30',title:'A – B',draft:false}]}],firstHour:16,lastHour:22};
+  let calendarClicks = 0;
+  calendar.querySelector('button').onclick = () => calendarClicks++;
+  frame.dispatchEvent(new window.Event('load')); await delay();
+  const calendarBlock = flat(snapshot().blocks).find(block=>block.kind==='match-calendar');
+  assert.equal(calendarBlock.days[0].events[0].title,'A – B');
+  command({type:'click',id:calendarBlock.actions[0].id}); await delay();
+  assert.equal(calendarClicks,1,'Native calendar navigation uses the website controller');
   child.window.close(); window.close();
   console.log('Staff engine: native snapshots, dependent controls, protected submit, confirmation, modal, export and stale commands passed.');
 })().catch(error => {console.error(error); process.exit(1);});
