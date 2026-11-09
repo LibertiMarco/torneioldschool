@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/demo.dart';
 import 'package:tornei_old_school/external_link_button.dart';
 import 'package:tornei_old_school/native_staff_tool.dart';
+import 'package:tornei_old_school/lineup_ad_slot.dart';
 import 'package:tornei_old_school/staff_dashboard.dart';
 import 'package:tornei_old_school/staff_engine.dart';
 import 'package:tornei_old_school/staff_rich_editor.dart';
@@ -329,6 +330,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.byType(StaffMatchLineup), findsOneWidget);
+        expect(find.byType(LineupAdSlot), findsOneWidget);
         expect(tester.getCenter(find.text('0 - 0')).dx, closeTo(160, 1));
         expect(find.byType(SegmentedButton<String>), findsNothing);
         expect(

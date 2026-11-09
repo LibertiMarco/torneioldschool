@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/src/ad_instance_manager.dart';
 import 'package:tornei_old_school/ads.dart';
 import 'package:tornei_old_school/native_ad_card.dart';
+import 'package:tornei_old_school/lineup_ad_slot.dart';
 
 class PrivacyFake implements AdsPrivacyBackend {
   bool allowed = false, required = true, fail = false;
@@ -38,6 +39,77 @@ class PrivacyFake implements AdsPrivacyBackend {
 }
 
 void main() {
+  for (final width in [360.0, 280.0]) {
+    testWidgets(
+      'Lineup ad at $width pixels survives score rebuilds and respects consent',
+      (tester) async {
+        final controller = AdsController(
+          enabled: true,
+          backend: PrivacyFake()..allowed = true,
+        );
+        final calls = <String>[];
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          instanceManager.channel,
+          (call) async {
+            calls.add(call.method);
+            return null;
+          },
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            instanceManager.channel,
+            null,
+          ),
+        );
+        Widget page(int score, {bool preview = false}) => MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                Text('$score'),
+                SizedBox(
+                  width: width,
+                  child: LineupAdSlot(
+                    key: const ValueKey('between-teams'),
+                    controller: controller,
+                    preview: preview,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        await tester.pumpWidget(page(0));
+        await tester.pumpAndSettle();
+        expect(calls, isEmpty, reason: 'No request before consent');
+        await controller.start();
+        await tester.pumpAndSettle();
+        final load = width >= 320 ? 'loadNativeAd' : 'loadBannerAd';
+        expect(calls.where((method) => method == load).length, 1);
+        await tester.pumpWidget(page(1));
+        await tester.pumpAndSettle();
+        expect(
+          calls.where((method) => method == load).length,
+          1,
+          reason: 'Editing a score must not reload an ad',
+        );
+        await controller.showPrivacyOptions();
+        await tester.pumpAndSettle();
+        expect(calls.where((method) => method == 'disposeAd').length, 1);
+        calls.clear();
+        await tester.pumpWidget(page(2, preview: true));
+        await tester.pumpAndSettle();
+        expect(find.text('Anteprima annuncio'), findsOneWidget);
+        expect(
+          calls,
+          isEmpty,
+          reason: 'Web preview never requests a mobile ad',
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+        controller.dispose();
+      },
+    );
+  }
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

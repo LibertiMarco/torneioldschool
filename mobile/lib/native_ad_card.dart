@@ -4,7 +4,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'ads.dart';
 
-/// One compact native template in the news feed, replacing the Home banner.
+/// Compact native template shared by the news feed and inline app placements.
 class HomeNativeAdCard extends StatelessWidget {
   const HomeNativeAdCard({super.key, this.controller});
   final AdsController? controller;

@@ -1,5 +1,16 @@
 # Anteprima dell'app con dati reali
 
+## Annuncio tra le distinte
+
+Le statistiche partita dell'app hanno un solo spazio pubblicitario tra la
+squadra di casa e quella ospite. Riutilizza il native AdMob compatto della Home
+quando ci sono almeno 320 px disponibili; su larghezze inferiori usa il banner
+adattivo esistente. Restano attivi i controlli UMP/ATT e gli ID di test nelle
+build prive dell'abilitazione alla monetizzazione. Le modifiche ai contatori
+non ricaricano l'annuncio. La preview web mostra un segnaposto esplicito e non
+richiede annunci AdMob. Per gli annunci reali occorre installare la nuova
+build mobile; il formato non garantisce un rendimento superiore.
+
 ## Creazione multipla partite
 
 In Gestione → Calendario e risultati → Crea, sito e app condividono torneo,

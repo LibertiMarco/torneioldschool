@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'staff_engine.dart';
+import 'lineup_ad_slot.dart';
 import 'theme.dart';
 
 typedef StaffBlockRenderer = Widget Function(Map block);
@@ -358,7 +359,10 @@ class StaffMatchLineup extends StatelessWidget {
           ),
         ),
       if ('${model['loading'] ?? ''}'.isNotEmpty) Text('${model['loading']}'),
-      for (final team in (model['teams'] as List? ?? []).whereType<Map>())
+      for (final (teamIndex, team)
+          in (model['teams'] as List? ?? []).whereType<Map>().indexed) ...[
+        if (teamIndex == 1)
+          const LineupAdSlot(key: ValueKey('lineup-between-teams')),
         Card(
           key: ValueKey(team['id']),
           margin: const EdgeInsets.only(bottom: 10),
@@ -413,6 +417,7 @@ class StaffMatchLineup extends StatelessWidget {
             ],
           ),
         ),
+      ],
     ],
   );
 }
