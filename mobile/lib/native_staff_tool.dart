@@ -921,6 +921,73 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
   );
 }
 
+class _StaffMatchOption extends StatelessWidget {
+  const _StaffMatchOption({
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+  final Map option;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      child: Material(
+        color: selected ? colors.primaryContainer : colors.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: selected ? colors.primary : colors.outlineVariant,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.sports_soccer_outlined,
+                  size: 22,
+                  color: colors.primary,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '${option['label']}',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: onTap == null
+                          ? colors.onSurfaceVariant
+                          : selected
+                          ? colors.onPrimaryContainer
+                          : colors.onSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  selected
+                      ? Icons.check_circle_rounded
+                      : Icons.chevron_right_rounded,
+                  color: selected ? colors.primary : colors.onSurfaceVariant,
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class StaffNativeField extends StatefulWidget {
   const StaffNativeField({
     super.key,
@@ -985,6 +1052,7 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
         .whereType<Map>()
         .toList();
     final multiple = widget.field['multiple'] == true;
+    final matchPicker = widget.field['appearance'] == 'match' && !multiple;
     final voteIndex = widget.field['stat'] == 'voto' && !multiple
         ? options.indexWhere(
             (option) =>
@@ -998,6 +1066,7 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      showDragHandle: matchPicker,
       builder: (context) => StaffTheme(
         child: StatefulBuilder(
           builder: (context, refresh) => Padding(
@@ -1008,20 +1077,41 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
               height: MediaQuery.sizeOf(context).height * .75,
               child: Column(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      '${widget.field['label']}',
-                      style: Theme.of(context).textTheme.titleLarge,
+                  if (matchPicker)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 12, 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Scegli la partita',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Chiudi selezione partita',
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close_rounded),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        '${widget.field['label']}',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
                     ),
-                  ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: TextField(
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.search),
-                        hintText: 'Cerca…',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search),
+                        hintText: matchPicker ? 'Cerca squadra' : 'Cerca…',
+                        border: const OutlineInputBorder(),
                       ),
                       onChanged: (value) => refresh(() {
                         if (voteScroll?.hasClients == true) {
@@ -1054,12 +1144,40 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
                           controller: voteScroll,
                           itemExtent: voteIndex >= 0 ? rowHeight : null,
                           children: [
-                            for (final option in options.where(
-                              (o) => '${o['label']}'.toLowerCase().contains(
-                                search,
+                            if (matchPicker &&
+                                !options.any(
+                                  (option) =>
+                                      '${option['label']}'
+                                          .toLowerCase()
+                                          .contains(search) &&
+                                      '${option['value']}'.isNotEmpty,
+                                ))
+                              const Padding(
+                                padding: EdgeInsets.all(24),
+                                child: Text(
+                                  'Nessuna partita trovata',
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
+                            for (final option in options.where(
+                              (o) =>
+                                  (!matchPicker ||
+                                      '${o['value']}'.isNotEmpty) &&
+                                  '${o['label']}'.toLowerCase().contains(
+                                    search,
+                                  ),
                             ))
-                              multiple
+                              matchPicker
+                                  ? _StaffMatchOption(
+                                      option: option,
+                                      selected: '${option['value']}' == _value,
+                                      onTap: option['disabled'] == true
+                                          ? null
+                                          : () => Navigator.pop(context, [
+                                              '${option['value']}',
+                                            ]),
+                                    )
+                                  : multiple
                                   ? CheckboxListTile(
                                       title: Text('${option['label']}'),
                                       value: chosen.contains(option['value']),

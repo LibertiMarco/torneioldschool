@@ -53,6 +53,73 @@ class FixtureEngine implements StaffEngine {
 
 void main() {
   testWidgets(
+    'Match picker shows searchable cards and keeps the match identifier',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final changes = <StaffMessage>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: siteTheme(),
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 280,
+                child: StaffNativeField(
+                  field: {
+                    'type': 'select',
+                    'appearance': 'match',
+                    'label': 'Partita',
+                    'value': '42',
+                    'options': [
+                      {'value': '', 'label': 'Seleziona partita'},
+                      {'value': '42', 'label': 'Napoli - Roma'},
+                      {'value': '43', 'label': 'Inter - Lazio'},
+                    ],
+                  },
+                  onChanged: changes.add,
+                  onPick: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.byType(StaffNativeField));
+      await tester.pumpAndSettle();
+      final sheet = find.byType(BottomSheet);
+      expect(find.text('Scegli la partita'), findsOneWidget);
+      expect(
+        find.descendant(of: sheet, matching: find.text('Napoli - Roma')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: sheet, matching: find.text('Seleziona partita')),
+        findsNothing,
+      );
+      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+      final search = find.descendant(
+        of: sheet,
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(search, 'nessuna');
+      await tester.pumpAndSettle();
+      expect(find.text('Nessuna partita trovata'), findsOneWidget);
+      await tester.enterText(search, 'Inter');
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: sheet, matching: find.text('Napoli - Roma')),
+        findsNothing,
+      );
+      await tester.tap(
+        find.descendant(of: sheet, matching: find.text('Inter - Lazio')),
+      );
+      await tester.pumpAndSettle();
+      expect(changes.single['value'], '43');
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
     'Vote picker opens around six without changing the selected vote',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 800));

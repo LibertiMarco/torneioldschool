@@ -58,6 +58,11 @@ const server = http.createServer((req,res)=>{
       assert.equal(await rows.count(),1);
       assert.equal(await page.inputValue('#torneoCrea'),'coppa');
       assert.equal(await page.inputValue('#batchDate'),'2026-11-09');
+      await page.click('.tab-buttons [data-tab="modifica"]');
+      await page.selectOption('#selTorneoMod','coppa');
+      await page.selectOption('#selFaseMod','REGULAR');
+      await page.selectOption('#selGiornataMod','1');
+      assert.equal(await page.locator('#selPartitaMod option[value="2"]').textContent(),'A - B','Match picker contains only the two teams');
       assert.deepEqual(errors,[],'Real page scripts run without exceptions');
       await page.close();
     }

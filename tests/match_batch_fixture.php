@@ -4,12 +4,16 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 $source = file_get_contents(__DIR__ . '/../api/gestione_partite.php');
 $view = substr($source, strpos($source, '<!DOCTYPE html>'));
 $view = str_replace("<?php include __DIR__ . '/../includi/header.php'; ?>", '', $view);
+$view = str_replace("__DIR__ . '/match-batch.js'", var_export(__DIR__ . '/../api/match-batch.js', true), $view);
 $torneiDisponibili = [['slug' => 'coppa', 'nome' => 'Coppa Old School', 'sezione' => 'calcio']];
 $squadrePerTorneo = ['coppa' => ['A', 'B', 'C', 'D']];
 $campiPartita = [['id' => 1, 'nome' => 'Campo 1', 'uso_totale' => 1]];
 $partite = [['id' => 1, 'torneo' => 'Altro torneo', 'fase' => 'REGULAR', 'giornata' => 1,
     'squadra_casa' => 'Napoli', 'squadra_ospite' => 'Roma', 'data_partita' => '2026-11-09',
-    'ora_partita' => '18:30:00', 'campo' => 'Campo 1', 'giocata' => 0]];
+    'ora_partita' => '19:00:00', 'campo' => 'Campo 1', 'giocata' => 0]];
+$partite[] = ['id' => 2, 'torneo' => 'coppa', 'fase' => 'REGULAR', 'giornata' => 1,
+    'squadra_casa' => 'A', 'squadra_ospite' => 'B', 'data_partita' => '2026-11-09',
+    'ora_partita' => '20:30:00', 'campo' => 'Campo 2', 'giocata' => 0];
 $partiteNonGiocate = $partite; $partiteGiocate = [];
 $fasiAmmesse = $fasiAmmesseConBronzo = ['REGULAR', 'GOLD', 'SILVER', 'BRONZO'];
 $maxGiornateRegular = 10; $maxGiornateRegularOverrides = []; $tabAttiva = 'crea';
