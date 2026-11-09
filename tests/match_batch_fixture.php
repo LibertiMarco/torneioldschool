@@ -14,7 +14,11 @@ $partite = [['id' => 1, 'torneo' => 'Altro torneo', 'fase' => 'REGULAR', 'giorna
 $partite[] = ['id' => 2, 'torneo' => 'coppa', 'fase' => 'REGULAR', 'giornata' => 1,
     'squadra_casa' => 'A', 'squadra_ospite' => 'B', 'data_partita' => '2026-11-09',
     'ora_partita' => '20:30:00', 'campo' => 'Campo 2', 'giocata' => 0];
-$partiteNonGiocate = $partite; $partiteGiocate = [];
+$partiteGiocate = [['id' => 3, 'torneo' => 'coppa', 'fase' => 'REGULAR', 'giornata' => 1,
+    'squadra_casa' => 'C', 'squadra_ospite' => 'D', 'data_partita' => '2026-11-08',
+    'ora_partita' => '21:00:00', 'campo' => 'Campo 2', 'giocata' => 1]];
+$partiteNonGiocate = $partite;
+$partite = array_merge($partite, $partiteGiocate);
 $fasiAmmesse = $fasiAmmesseConBronzo = ['REGULAR', 'GOLD', 'SILVER', 'BRONZO'];
 $maxGiornateRegular = 10; $maxGiornateRegularOverrides = []; $tabAttiva = 'crea';
 $successo = $errore = $azione = '';

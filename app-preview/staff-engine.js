@@ -60,7 +60,7 @@
     if (type === 'hidden') return null;
     // Passwords are editable, but their existing value must never cross the bridge.
     return {kind: 'field', id: id(element), type, label: label(element),
-      appearance: element.id === 'selPartitaMod' ? 'match' : null,
+      appearance: ['selPartitaMod', 'selPartitaGioc'].includes(element.id) ? 'match' : null,
       value: type === 'password' ? '' : type === 'rich' ? element.innerHTML : element.value || '',
       checked: !!element.checked, required: !!element.required, disabled: element.matches(':disabled') || !!element.readOnly,
       min: element.min || '', max: element.max || '', step: element.step || '',

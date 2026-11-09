@@ -1436,7 +1436,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     .admin-form.inline select { border-radius: 10px; border: 1px solid #d5dbe4; background: #fafbff; transition: border-color .2s, box-shadow .2s; width: 100%; display: block; }
     .admin-form.inline input:focus,
     .admin-form.inline select:focus { border-color: #15293e; box-shadow: 0 0 0 3px rgba(21,41,62,0.15); outline: none; }
-    #selPartitaMod { min-height: 50px; font-size: 15px; font-weight: 600; }
+    #selPartitaMod, #selPartitaGioc { min-height: 50px; font-size: 15px; font-weight: 600; }
     .required-label::after { content: " *"; color: #d72638; margin-left: 4px; font-weight: 700; }
     .checkbox-inline { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: #15293e; }
 
@@ -1842,7 +1842,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
             <option value="">-- Seleziona fase --</option>
           </select>
         </div>
-        <div>
+        <div class="full">
           <label class="required-label">Partita giocata</label>
           <select name="partita_id" id="selPartitaGioc" required disabled>
             <option value="">-- Seleziona giornata/turno --</option>
@@ -2593,7 +2593,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
         String(p.giornata ?? '') === gVal
       );
       filtrate.forEach(p => {
-        const label = partitaId === 'selPartitaMod' ? `${p.squadra_casa} - ${p.squadra_ospite}` : `${p.data_partita} ${(p.ora_partita ?? '').slice(0,5)} · ${p.squadra_casa} - ${p.squadra_ospite} · ${Number(p.giocata) === 1 ? `${p.gol_casa}-${p.gol_ospite}` : 'Da giocare'} · ${p.torneo} · ${p.giornata == null ? (p.fase_round || p.fase) : `Giornata ${p.giornata}`}`;
+        const label = ['selPartitaMod', 'selPartitaGioc'].includes(partitaId) ? `${p.squadra_casa} - ${p.squadra_ospite}` : `${p.data_partita} ${(p.ora_partita ?? '').slice(0,5)} · ${p.squadra_casa} - ${p.squadra_ospite} · ${Number(p.giocata) === 1 ? `${p.gol_casa}-${p.gol_ospite}` : 'Da giocare'} · ${p.torneo} · ${p.giornata == null ? (p.fase_round || p.fase) : `Giornata ${p.giornata}`}`;
         const opt = new Option(label, p.id);
         partSel.add(opt);
       });
