@@ -62,3 +62,7 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+## Calendario e risultati nell'app
+
+Calendario e risultati incorpora ora la pagina originale del sito, compresa la navigazione verso le statistiche partita e ritorno. Moduli, stile, dialoghi e salvataggi sono quelli PHP; il banner pubblicitario Flutter resta sopra la pagina. Il controller verifica ancora sessione e permessi staff. Gli altri strumenti e le fixture demo mantengono la vista Flutter.

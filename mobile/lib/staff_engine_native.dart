@@ -17,15 +17,19 @@ class _MobileEngine implements StaffEngine {
   final void Function(StaffMessage) receive;
   WebViewController? _controller;
   bool _disposed = false;
+  bool _visible = false;
   Future<void> _commands = Future<void>.value();
   @override
   Widget get host => _controller == null
       ? const SizedBox.shrink()
+      : _visible
+      ? WebViewWidget(controller: _controller!)
       : ExcludeSemantics(
           child: IgnorePointer(child: WebViewWidget(controller: _controller!)),
         );
   @override
   Future<void> start(Uri uri, Map<String, String> headers) async {
+    _visible = uri.queryParameters['presentation'] == 'website';
     await WebViewCookieManager().clearCookies();
     if (_disposed) return;
     final controller = WebViewController();

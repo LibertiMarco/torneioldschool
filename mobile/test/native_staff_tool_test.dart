@@ -10,6 +10,12 @@ import 'package:tornei_old_school/staff_engine.dart';
 import 'package:tornei_old_school/staff_rich_editor.dart';
 import 'package:tornei_old_school/staff_match_forms.dart';
 import 'package:tornei_old_school/theme.dart';
+import 'package:tornei_old_school/staff_controls.dart';
+
+class WebsiteFixtureApi extends DemoApi {
+  @override
+  bool get preview => false;
+}
 
 class FixtureAuth extends DemoAuth {
   FixtureAuth(super.api);
@@ -51,6 +57,37 @@ class FixtureEngine implements StaffEngine {
 }
 
 void main() {
+  testWidgets('Calendar embeds the original website with an app banner', (
+    tester,
+  ) async {
+    final auth = FixtureAuth(WebsiteFixtureApi());
+    auth.user = DemoApi().users.first;
+    late FixtureEngine engine;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NativeStaffTool(
+          auth: auth,
+          title: 'Calendario e risultati',
+          description: '',
+          path: 'api/gestione_partite.php',
+          icon: Icons.calendar_month,
+          graphicsOnly: false,
+          engineFactory: (_, receive) => engine = FixtureEngine(receive, {
+            'type': 'snapshot',
+            'blocks': [],
+          }),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(engine.uri!.queryParameters['presentation'], 'website');
+    expect(find.byType(StaffNativeField), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    expect(engine.disposed, isTrue);
+  });
+
   testWidgets(
     'Grouped result form keeps both scores editable at 320px with large text',
     (tester) async {
