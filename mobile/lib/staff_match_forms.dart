@@ -417,6 +417,8 @@ class StaffMatchLineup extends StatelessWidget {
             ],
           ),
         ),
+        if (teamIndex == 1)
+          const LineupAdSlot(key: ValueKey('lineup-after-away')),
       ],
     ],
   );

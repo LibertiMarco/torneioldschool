@@ -330,7 +330,12 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.byType(StaffMatchLineup), findsOneWidget);
-        expect(find.byType(LineupAdSlot), findsOneWidget);
+        expect(find.byType(LineupAdSlot), findsNWidgets(2));
+        expect(
+          find.byKey(const ValueKey('lineup-between-teams')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('lineup-after-away')), findsOneWidget);
         expect(tester.getCenter(find.text('0 - 0')).dx, closeTo(160, 1));
         expect(find.byType(SegmentedButton<String>), findsNothing);
         expect(

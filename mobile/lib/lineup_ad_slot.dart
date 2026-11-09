@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'ads.dart';
 import 'native_ad_card.dart';
 
-/// A single inline placement between the home and away lineups.
+/// An inline placement between or after the home and away lineups.
 class LineupAdSlot extends StatelessWidget {
   const LineupAdSlot({super.key, this.controller, this.preview = kIsWeb});
   final AdsController? controller;

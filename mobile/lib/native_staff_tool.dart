@@ -897,7 +897,8 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                                           ),
                                         ),
                                       _column(_blocks),
-                                      const AdaptiveAdBanner(),
+                                      if (_lineup == null)
+                                        const AdaptiveAdBanner(),
                                     ],
                                   ),
                                 ),
