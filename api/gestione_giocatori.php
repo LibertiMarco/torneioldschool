@@ -1264,7 +1264,7 @@ $goalExtraTeamMapJson = htmlspecialchars(
 
       <div class="form-group">
           <label><input type="checkbox" name="mod_assoc_capitano" id="mod_assoc_capitano" value="1"> Capitano della squadra</label>
-          <small>Un solo capitano per squadra; un giocatore puÃƒÆ’Ã‚Â² essere capitano di squadre diverse.</small>
+          <small>Un solo capitano per squadra; un giocatore pu&ograve; essere capitano di squadre diverse.</small>
       </div>
 
       <div class="form-row">
