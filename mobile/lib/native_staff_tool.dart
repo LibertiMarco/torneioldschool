@@ -1387,7 +1387,8 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
     final f = widget.field, type = f['type'], disabled = f['disabled'] == true;
     final label = '${f['label']}${f['required'] == true ? ' *' : ''}';
     if (type == 'checkbox' || type == 'radio') {
-      if (f['appearance'] == 'captain') {
+      if (f['appearance'] == 'captain' ||
+          f['appearance'] == 'selection-switch') {
         final colors = Theme.of(context).colorScheme;
         return Material(
           color: _checked
@@ -1404,9 +1405,11 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
               label,
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
             ),
-            subtitle: const Text(
-              'Capitano per questa squadra. Si applica al salvataggio.',
-              style: TextStyle(fontSize: 11),
+            subtitle: Text(
+              f['appearance'] == 'selection-switch'
+                  ? 'Seleziona o deseleziona tutti i giocatori della squadra.'
+                  : 'Capitano per questa squadra. Si applica al salvataggio.',
+              style: const TextStyle(fontSize: 11),
             ),
             value: _checked,
             onChanged: disabled

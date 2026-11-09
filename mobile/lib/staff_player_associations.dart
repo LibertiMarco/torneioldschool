@@ -116,9 +116,11 @@ class _StaffPlayerListState extends State<StaffPlayerList> {
                     child: Material(
                       color: checked
                           ? colors.primaryContainer
+                          : removal
+                          ? colors.surfaceContainerHigh
                           : colors.surfaceContainerLow,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(removal ? 16 : 12),
                         side: BorderSide(
                           color: checked
                               ? colors.primary
@@ -127,7 +129,7 @@ class _StaffPlayerListState extends State<StaffPlayerList> {
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: removal && field != null
-                          ? CheckboxListTile(
+                          ? SwitchListTile.adaptive(
                               value: checked,
                               title: Text(
                                 '${field['label']}',

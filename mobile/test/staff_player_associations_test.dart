@@ -104,7 +104,8 @@ void main() {
     );
     await tester.enterText(find.byType(TextField), 'Giocatore 9');
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(CheckboxListTile, 'Giocatore 9'));
+    expect(find.byType(CheckboxListTile), findsNothing);
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Giocatore 9'));
     await tester.pumpAndSettle();
     expect(changes.single, {'id': 'player-9', 'checked': true});
     expect(find.text('2 di 10 selezionati'), findsOneWidget);

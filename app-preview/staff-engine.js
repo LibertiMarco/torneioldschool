@@ -65,6 +65,7 @@
         : doc.location.pathname === '/api/gestione_giocatori.php'
           ? element.matches('select.operation-picker') ? 'operation'
           : element.matches('select') ? 'choice'
+          : element.id === 'remSelectAll' ? 'selection-switch'
           : element.matches('[data-player-captain],#mod_assoc_capitano,#capitano_associa') ? 'captain' : null
           : null,
       value: type === 'password' ? '' : type === 'rich' ? element.innerHTML : element.value || '',
