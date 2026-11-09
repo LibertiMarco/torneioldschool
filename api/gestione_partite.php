@@ -1523,10 +1523,10 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
 
     <p><a href="/api/gestione_arbitri.php">Gestione picklist arbitri</a></p>
     <div class="tab-buttons">
-      <button type="button" data-tab="esitate">Presenze partite esitate</button>
       <button type="button" data-tab="crea" class="<?= $tabAttiva === 'crea' ? 'active' : '' ?>">Crea</button>
       <button type="button" data-tab="modifica" class="<?= $tabAttiva === 'modifica' ? 'active' : '' ?>">Modifica</button>
       <button type="button" data-tab="elimina" class="<?= $tabAttiva === 'elimina' ? 'active' : '' ?>">Elimina</button>
+      <button type="button" data-tab="esitate">Presenze partite esitate</button>
       <button type="button" data-tab="campi" class="<?= $tabAttiva === 'campi' ? 'active' : '' ?>">Campi</button>
     </div>
 
