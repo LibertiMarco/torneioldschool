@@ -2,6 +2,14 @@
 
 ## Tabelloni delle coppe
 
+La vista è un albero orizzontale: tutti i turni sono affiancati e ogni incontro
+è collegato al successivo con linee a gomito. I nodi successivi sono centrati
+tra le rispettive partite di provenienza. La finale conduce al trofeo e al
+nome del vincitore quando noto. Su telefono il tabellone scorre in orizzontale;
+i pulsanti dei turni portano alla relativa colonna senza nascondere gli altri.
+Andata e ritorno restano nello stesso nodo. L'altezza si adatta ai contenuti
+nel sito e alla dimensione del testo nell'app, mantenendo gli allineamenti.
+
 In Classifica, Gold/Silver/Bronzo mostrano i turni fino alla finale anche senza
 partite salvate. La testa di serie standard a otto posti è 1–8, 4–5, 2–7, 3–6;
 le vincenti dei primi due incontri si affrontano, così come quelle degli altri due.

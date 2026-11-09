@@ -32,7 +32,7 @@ assert(rows.find(m=>m.bracket_slot==='Q2').squadra_casa.includes('Team 8'));
 
 const script=fs.readFileSync('tornei/cup-bracket.js','utf8');
 async function page(source,config,teams,info={}) {
-  const dom=new JSDOM('<main><div id="playoffContainer"></div></main>',{url:'https://example.test/tornei/test.php',runScripts:'outside-only'});
+  const dom=new JSDOM('<main><div id="playoffContainer"></div></main>',{url:'https://example.test/tornei/test.php',runScripts:'outside-only',pretendToBeVisual:true});
   // Page initialization is unrelated to this fixture; only exercise its real global definitions.
   await new Promise(resolve=>dom.window.addEventListener('load',resolve,{once:true}));
   dom.window.__TORNEO_CONFIG__=config;
@@ -47,8 +47,10 @@ async function page(source,config,teams,info={}) {
   const root=dom.window.document;
   assert.equal(root.querySelectorAll('.cup-game').length,7);
   assert(root.querySelector('.cup-game').textContent.includes('8ª in classifica · Team 8'));
+  root.querySelector('.cup-scroll').scrollTo=()=>{};
   root.querySelectorAll('.cup-rounds button')[1].click();
-  assert.equal([...root.querySelectorAll('.cup-round')].filter(c=>!c.hidden)[0].querySelector('.cup-team').textContent,'Vincente Q1–');
+  assert.equal([...root.querySelectorAll('.cup-round')].filter(c=>!c.hidden).length,3);
+  assert.equal(root.querySelectorAll('.cup-round')[1].querySelector('.cup-team').textContent,'Vincente Q1–');
   await dom.window.caricaPlayoff('silver');
   assert(root.querySelector('.cup-game').textContent.includes('9ª in classifica · Team 9'));
   assert.equal(root.querySelectorAll('.cup-game').length,3);

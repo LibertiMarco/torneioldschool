@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/cup_bracket.dart';
 import 'package:tornei_old_school/tournament_logic.dart';
-import 'package:tornei_old_school/tournament_page.dart';
+import 'package:tornei_old_school/cup_bracket_view.dart';
+import 'package:tornei_old_school/demo.dart';
 import 'package:tornei_old_school/theme.dart';
 
 List<Map<String, dynamic>> seeds(int count) => List.generate(
@@ -207,22 +208,56 @@ void main() {
               data: const MediaQueryData(textScaler: TextScaler.linear(1.6)),
               child: Scaffold(
                 body: SingleChildScrollView(
-                  child: CupTemplateCard(
-                    match: {
-                      'template': true,
-                      'bracket_slot': 'Q1',
-                      'squadra_casa': '1ª girone A · Squadra con un nome lungo',
-                      'squadra_ospite':
-                          '4ª girone B · Altra squadra con nome lungo',
-                    },
+                  child: CupBracketView(
+                    api: DemoApi(),
+                    phase: 'GOLD',
+                    games: buildCupBracket(
+                      List.generate(
+                        8,
+                        (i) => {
+                          'name': 'Squadra con nome lungo numero ${i + 1}',
+                          'label': '${i + 1}ª in classifica',
+                        },
+                      ),
+                      [],
+                      'GOLD',
+                    ),
                   ),
                 ),
               ),
             ),
           ),
         );
-        expect(find.text('Partita da creare'), findsOneWidget);
+        expect(find.text('Da creare'), findsNWidgets(7));
         expect(find.text('Dettaglio e referto'), findsNothing);
+        final painter = tester
+            .widgetList<CustomPaint>(find.byType(CustomPaint))
+            .map((w) => w.painter)
+            .whereType<CupBracketLines>()
+            .single;
+        expect(painter.paths.length, 7);
+        final q1 = tester.getCenter(
+          find.byKey(const ValueKey('cup-node-GOLD-Q1')),
+        );
+        final q2 = tester.getCenter(
+          find.byKey(const ValueKey('cup-node-GOLD-Q2')),
+        );
+        final s1 = tester.getCenter(
+          find.byKey(const ValueKey('cup-node-GOLD-S1')),
+        );
+        expect(s1.dy, closeTo((q1.dy + q2.dy) / 2, .01));
+        final finalBefore = tester.getCenter(
+          find.byKey(const ValueKey('cup-node-GOLD-F1')),
+        );
+        await tester.drag(
+          find.byKey(const ValueKey('cup-tree-GOLD')),
+          const Offset(-650, 0),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester.getCenter(find.byKey(const ValueKey('cup-node-GOLD-F1'))).dx,
+          lessThan(finalBefore.dx),
+        );
         expect(tester.takeException(), isNull);
       }
     },

@@ -10,6 +10,7 @@ import 'theme.dart';
 import 'ranking_surface.dart';
 import 'tournament_logic.dart';
 import 'cup_bracket.dart';
+import 'cup_bracket_view.dart';
 import 'tournament_notifications.dart';
 
 const cupColors = {
@@ -483,33 +484,17 @@ class _TournamentPageState extends State<TournamentPage> {
           padding: EdgeInsets.all(24),
           child: Text('Tabellone non ancora disponibile.'),
         ),
-      ...rounds.expand(
-        (r) => [
-          title(roundLabel(r, phase)),
-          ...rows
-              .where((m) => matchTurn(m, phase) == r)
-              .map(
-                (m) => m['template'] == true
-                    ? CupTemplateCard(match: m)
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (m['bracket_slot'] != null)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: Text(
-                                '${m['bracket_slot']}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          MatchCard(api: widget.api, match: m, phase: phase),
-                        ],
-                      ),
-              ),
-        ],
-      ),
+      if (projected && rows.isNotEmpty)
+        CupBracketView(api: widget.api, games: rows, phase: phase),
+      if (!projected)
+        ...rounds.expand(
+          (r) => [
+            title(roundLabel(r, phase)),
+            ...rows
+                .where((m) => matchTurn(m, phase) == r)
+                .map((m) => MatchCard(api: widget.api, match: m, phase: phase)),
+          ],
+        ),
     ];
   }
 
@@ -793,65 +778,6 @@ class StandingsTable extends StatelessWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class CupTemplateCard extends StatelessWidget {
-  const CupTemplateCard({super.key, required this.match});
-  final Map<String, dynamic> match;
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      color: colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: colors.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  '${match['bracket_slot']}',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    match['bye'] == true
-                        ? 'Accesso diretto'
-                        : 'Partita da creare',
-                    textAlign: TextAlign.end,
-                    style: TextStyle(
-                      color: colors.onSurfaceVariant,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '${match['squadra_casa']}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Divider(height: 1, color: colors.outlineVariant),
-            ),
-            Text(
-              '${match['squadra_ospite']}',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
       ),
     );
   }

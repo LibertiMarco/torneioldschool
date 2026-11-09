@@ -162,7 +162,7 @@
   if (typeof window === 'undefined') return;
   window.TosCupBracket=api;
 
-  let visit=0;
+  let visit=0, stopLayout=()=>{};
   const flatten=data=>Array.isArray(data) ? data.flat() : Object.values(data || {}).flat();
   async function json(url) {
     const response=await fetch(url); if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -173,7 +173,7 @@
     if (!container) return;
     const current=++visit, phase=phaseKey(cup || 'GOLD');
     const slug=typeof TORNEO !== 'undefined' ? TORNEO : decodeURIComponent(location.pathname.split('/').pop()).replace(/\.(php|html?)$/i,'');
-    container.replaceChildren();
+    stopLayout(); container.replaceChildren();
     const message=document.createElement('p'); message.textContent='Caricamento tabellone…'; container.append(message);
     try {
       const [raw,all,teamRows,info]=await Promise.all([
@@ -223,16 +223,23 @@
     container.append(element('p','cup-note','Gli incontri da creare sono indicativi e seguono la classifica attuale. Gli incroci restano fissi fino alla finale.'));
     if (!games.length) { container.append(element('p','','Nessun posto previsto per questa coppa.')); return; }
     const nav=element('div','cup-rounds'); nav.setAttribute('aria-label','Turni della coppa');
+    const hint=element('p','cup-scroll-hint','Scorri il tabellone in orizzontale per seguire il percorso fino alla finale →');
+    const scroll=element('div','cup-scroll'); scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Tabellone a eliminazione diretta, scorribile in orizzontale');
     const columns=element('div','cup-columns');
-    container.append(nav,columns);
+    scroll.append(columns);container.append(nav,hint,scroll);
     [...new Set(games.map(roundKey))].forEach((round,index)=>{
       const roundLabel=labels[round] || (round.startsWith('ROUND_') ? `Turno a ${round.slice(6)} squadre` : round);
       const button=element('button','pill-btn pill-btn--toggle',roundLabel); button.type='button';
       const column=element('section','cup-round');
+      column.dataset.round=round;
       column.append(element('h4','',roundLabel));
-      button.onclick=()=>{ for (const child of columns.children) child.hidden=child!==column; for (const child of nav.children) child.classList.toggle('active',child===button); };
+      button.onclick=()=>{
+        scroll.scrollTo({left:column.offsetLeft,behavior:'smooth'});
+        for (const child of nav.children) { child.classList.toggle('active',child===button);child.setAttribute('aria-pressed',String(child===button)); }
+      };
       nav.append(button); columns.append(column);
-      column.hidden=index!==0; button.classList.toggle('active',index===0);
+      button.classList.toggle('active',index===0);button.setAttribute('aria-pressed',String(index===0));
+      const nodes=new Map();
       for (const game of games.filter(g=>roundKey(g)===round)) {
         const played=Number(game.giocata)===1, template=game.template;
         const card=element('article',`cup-game${template ? ' is-template' : ''}`);
@@ -260,14 +267,89 @@
             const link=element('a','cup-details','Statistiche partita'); link.href=`/tornei/partita_eventi.php?id=${encodeURIComponent(game.id)}&torneo=${encodeURIComponent(slug)}`; card.append(link);
           }
         }
-        column.append(card);
+        const slot=game.bracket_slot || [key(game.squadra_casa),key(game.squadra_ospite)].sort().join('|');
+        if(!nodes.has(slot)) {
+          const node=element('div','cup-node');node.dataset.slot=game.bracket_slot || '';nodes.set(slot,node);column.append(node);
+        }
+        nodes.get(slot).append(card);
       }
     });
+    const champion=element('aside','cup-winner');champion.setAttribute('aria-label','Vincitore della coppa');
+    const finalGames=games.filter(g=>roundKey(g)==='FINALE' && !g.template);
+    const championName=winner(finalGames,'Vincitore')?.name;
+    champion.append(element('span','cup-trophy','🏆'),element('strong','',championName || 'Vincente finale'));
+    columns.append(champion);
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.classList.add('cup-lines');svg.setAttribute('aria-hidden','true');columns.prepend(svg);
+    let frame=0;
+    const layout=()=>{
+      frame=0;
+      if(!columns.isConnected) return;
+      const cols=[...columns.querySelectorAll('.cup-round')], width=260,gap=56,heading=40;
+      let unit=140;
+      cols.forEach((col,depth)=>{
+        col.style.left=`${depth*(width+gap)}px`;
+        for(const node of col.querySelectorAll('.cup-node')) unit=Math.max(unit,(node.offsetHeight+24)/(2**depth));
+      });
+      const firstCount=cols[0].querySelectorAll('.cup-node').length;
+      const height=heading+firstCount*unit+16,fullWidth=cols.length*(width+gap)+220;
+      columns.style.width=`${fullWidth}px`;columns.style.height=`${height}px`;
+      cols.forEach((col,depth)=>{
+        col.style.height=`${height}px`;
+        [...col.querySelectorAll('.cup-node')].forEach((node,index)=>{
+          const center=heading+(index+.5)*(2**depth)*unit;
+          node.dataset.center=String(center);node.style.top=`${center-node.offsetHeight/2}px`;
+        });
+      });
+      svg.setAttribute('width',fullWidth);svg.setAttribute('height',height);svg.replaceChildren();
+      const line=(x1,y1,x2,y2)=>{
+        const path=document.createElementNS(svg.namespaceURI,'path');const middle=(x1+x2)/2;
+        path.setAttribute('d',`M ${x1} ${y1} H ${middle} V ${y2} H ${x2}`);svg.append(path);
+      };
+      cols.slice(0,-1).forEach((col,depth)=>{
+        const parents=[...cols[depth+1].querySelectorAll('.cup-node')];
+        [...col.querySelectorAll('.cup-node')].forEach((node,index)=>{
+          const parent=parents[Math.floor(index/2)];
+          if(parent && node.dataset.slot && parent.dataset.slot) line(depth*(width+gap)+width,Number(node.dataset.center),(depth+1)*(width+gap),Number(parent.dataset.center));
+        });
+      });
+      const finalColumn=cols.find(col=>col.dataset.round==='FINALE'),finalNode=finalColumn?.querySelector('.cup-node');
+      champion.style.left=`${cols.length*(width+gap)}px`;
+      const finalCenter=Number(finalNode?.dataset.center || height/2);
+      champion.style.top=`${finalCenter-champion.offsetHeight/2}px`;
+      if(finalNode) line(finalColumn.offsetLeft+width,finalCenter,champion.offsetLeft,finalCenter);
+    };
+    const queue=()=>{ if(!frame) frame=requestAnimationFrame(layout); };
+    const observer=typeof ResizeObserver==='function' ? new ResizeObserver(queue) : null;
+    columns.querySelectorAll('.cup-node,.cup-winner').forEach(node=>observer?.observe(node));
+    stopLayout=()=>{ observer?.disconnect();if(frame)cancelAnimationFrame(frame); };
+    queue();
   }
   const style=element('style','');
   style.textContent='.cup-projection{color:var(--text-color,#15293e)}.cup-note{font-size:.9rem;line-height:1.5;opacity:.8}.cup-rounds{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.cup-round{max-width:760px}.cup-round[hidden]{display:none}.cup-game{border:1px solid #a8b7c7;border-radius:16px;padding:16px;margin:12px 0;background:var(--card-bg,#fff)}.cup-game.is-template{border-style:dashed;background:var(--card-bg,#f5f7fa)}.cup-game-head,.cup-team{display:flex;justify-content:space-between;gap:16px;align-items:center}.cup-game-head{font-size:.8rem;margin-bottom:12px}.cup-status{border:1px solid #a8b7c7;border-radius:20px;padding:3px 9px}.cup-team{font-weight:650;margin:10px 0;overflow-wrap:anywhere}.cup-team>span{min-width:0}.cup-meta,.cup-details{font-size:.8rem;margin:8px 0 0}.cup-rounds button{cursor:pointer}.cup-rounds button.active{background:#15293e;color:white}';
   document.head.append(style);
   style.textContent+='.cup-team-name{display:flex;align-items:center;gap:8px}.cup-logo{object-fit:contain;flex-shrink:0}.cup-details{color:#1f3d5a;font-weight:650}';
+  style.textContent+=`
+    #playoffContainer.cup-projection{overflow:visible;min-width:0}
+    .cup-scroll-hint{font-size:12px;color:#52677d;margin:0 0 12px}
+    .cup-scroll{width:100%;overflow:auto;padding:4px 0 14px;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#8ba1b6 #edf1f6}
+    .cup-columns{position:relative;isolation:isolate;min-height:160px}
+    .cup-round{position:absolute;top:0;width:260px;max-width:none}
+    .cup-round h4{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:#52677d}
+    .cup-node{position:absolute;left:0;width:260px;z-index:1;border:1px solid #c1ccda;border-radius:12px;background:#fff;box-shadow:0 4px 12px #15293e09;overflow:hidden}
+    .cup-game{margin:0;border:0;border-radius:0;padding:10px 12px;box-shadow:none;background:#fff}
+    .cup-game+.cup-game{border-top:1px solid #c1ccda}
+    .cup-game.is-template{background:#f5f7fa}
+    .cup-game-head{font-size:10px;margin-bottom:6px;color:#52677d}
+    .cup-status{padding:2px 6px;font-size:10px}
+    .cup-team{font-size:12px;line-height:1.35;margin:7px 0;gap:8px}
+    .cup-team-name{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+    .cup-team-name .cup-logo{display:none}
+    .cup-meta,.cup-details{font-size:10px;line-height:1.4;margin:5px 0 0}
+    .cup-lines{position:absolute;top:0;left:0;pointer-events:none;z-index:0;overflow:visible}
+    .cup-lines path{fill:none;stroke:#8ba1b6;stroke-width:1.5;stroke-linejoin:round}
+    .cup-winner{position:absolute;width:220px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:20px;border:1px solid #dac589;border-radius:16px;background:#fffbef;font-size:14px;z-index:1}
+    .cup-trophy{font-size:46px;line-height:1}
+  `;
   // Deferred script runs after the page script, before its DOMContentLoaded listeners.
   window.caricaPlayoff=render;
 })();

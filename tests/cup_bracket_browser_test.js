@@ -5,7 +5,7 @@ const http=require('node:http');
 const {chromium}=require('playwright-core');
 const teams=Array.from({length:16},(_,i)=>({id:i+1,nome:`Squadra ${i+1}`,punti:16-i}));
 const fixture=`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><link rel="stylesheet" href="/style.css"></head><body>
-<main style="max-width:760px;margin:24px auto;padding:16px"><h1>Classifica</h1><label>Coppa <select id="cup"><option value="gold">Coppa Gold</option><option value="silver">Coppa Silver</option><option value="bronze">Coppa Bronzo</option></select></label><div id="playoffContainer"></div></main>
+<main style="width:100%;max-width:1240px;margin:24px auto;padding:16px"><h1>Classifica</h1><label>Coppa <select id="cup"><option value="gold">Coppa Gold</option><option value="silver">Coppa Silver</option><option value="bronze">Coppa Bronzo</option></select></label><div id="playoffContainer"></div></main>
 <!-- Same deferred ordering as the shared PHP header followed by the tournament script. -->
 <script src="/tornei/cup-bracket.js" defer></script>
 <script>const TORNEO='fixture';const CONFIG={};const FORMATO_TORNEO='campionato';
@@ -38,11 +38,18 @@ const server=http.createServer((req,res)=>{
       assert.equal(await page.locator('.cup-game').count(),7);
       assert.equal(await page.locator('a.cup-details').count(),1);
       assert.equal(await page.locator('.cup-game.is-template').count(),6);
+      await page.waitForFunction(()=>document.querySelectorAll('.cup-lines path').length===7);
+      assert.equal(await page.locator('.cup-round:visible').count(),3);
+      const centers=await page.locator('.cup-node').evaluateAll(nodes=>Object.fromEntries(nodes.map(n=>[n.dataset.slot,Number(n.dataset.center)])));
+      assert.equal((centers.Q1+centers.Q2)/2,centers.S1);
+      assert.equal((centers.Q3+centers.Q4)/2,centers.S2);
+      assert.equal((centers.S1+centers.S2)/2,centers.F1);
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`No horizontal overflow at ${width}`);
       await page.screenshot({path:`.mobile-tools/verification/cup-bracket-${width}.png`,fullPage:true});
       await page.getByRole('button',{name:'Semifinali',exact:true}).click();
-      assert.equal(await page.locator('.cup-round:visible .cup-game').count(),2);
-      assert((await page.locator('.cup-round:visible').textContent()).includes('Vincente Q1 · Squadra 1'));
+      assert.equal(await page.locator('.cup-round:visible .cup-game').count(),7);
+      if(width<1000) await page.waitForFunction(()=>document.querySelector('.cup-scroll').scrollLeft>100);
+      assert((await page.locator('.cup-round').nth(1).textContent()).includes('Vincente Q1 · Squadra 1'));
       await page.selectOption('#cup','silver');
       await page.getByRole('heading',{name:'Coppa Silver',exact:true}).waitFor();
       assert.equal(await page.locator('.cup-game').count(),3);

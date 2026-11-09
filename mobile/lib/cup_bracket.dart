@@ -62,6 +62,9 @@ class _CupSide {
 
 String _teamKey(dynamic value) => '${value ?? ''}'.trim().toLowerCase();
 
+String? cupMatchWinner(List<Map<String, dynamic>> games) =>
+    _cupWinner(games, '')?.name;
+
 _CupSide? _cupWinner(List<Map<String, dynamic>> games, String label) {
   if (games.isEmpty ||
       games.any(
