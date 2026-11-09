@@ -401,11 +401,12 @@ class StaffMatchLineup extends StatelessWidget {
                     ],
                   ),
                 ),
-              for (final player
-                  in (team['players'] as List? ?? []).whereType<Map>())
+              for (final (index, player)
+                  in (team['players'] as List? ?? []).whereType<Map>().indexed)
                 _LineupPlayer(
                   key: ValueKey(player['id']),
                   player: player,
+                  alternate: index.isOdd,
                   render: render,
                   onChanged: onChanged,
                 ),
@@ -465,10 +466,12 @@ class _LineupPlayer extends StatelessWidget {
   const _LineupPlayer({
     super.key,
     required this.player,
+    required this.alternate,
     required this.render,
     required this.onChanged,
   });
   final Map player;
+  final bool alternate;
   final StaffBlockRenderer render;
   final void Function(Map field, StaffMessage value) onChanged;
 
@@ -502,9 +505,9 @@ class _LineupPlayer extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: present
-            ? Theme.of(context).colorScheme.surfaceContainerLow
-            : Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? (alternate ? const Color(0xff2a4058) : const Color(0xff203246))
+            : (alternate ? const Color(0xffe8eef5) : const Color(0xfff7f9fc)),
         border: Border(
           top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
         ),
