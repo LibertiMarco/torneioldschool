@@ -53,6 +53,68 @@ class FixtureEngine implements StaffEngine {
 
 void main() {
   testWidgets(
+    'Player operation picker uses descriptive cards and retains operation values',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final changes = <StaffMessage>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: siteDarkTheme(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(1.6)),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 280,
+                child: StaffNativeField(
+                  field: {
+                    'type': 'select',
+                    'appearance': 'operation',
+                    'label': 'Seleziona azione',
+                    'value': 'crea',
+                    'options': [
+                      {'value': 'crea', 'label': 'Aggiungi giocatore'},
+                      {'value': 'import', 'label': 'Importa giocatori'},
+                      {
+                        'value': 'associazioni',
+                        'label': 'Associa giocatore e squadra',
+                      },
+                      {'value': 'gol_extra', 'label': 'Gol extra'},
+                      {'value': 'modifica', 'label': 'Modifica giocatore'},
+                      {'value': 'elimina', 'label': 'Elimina giocatore'},
+                    ],
+                  },
+                  onChanged: changes.add,
+                  onPick: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.byType(StaffNativeField));
+      await tester.pumpAndSettle();
+      expect(find.text('Scegli operazione'), findsOneWidget);
+      expect(find.text('Inserisci un nuovo giocatore'), findsOneWidget);
+      expect(find.byTooltip('Chiudi selezione operazione'), findsOneWidget);
+      final sheet = find.byType(BottomSheet);
+      await tester.enterText(
+        find.descendant(of: sheet, matching: find.byType(TextField)),
+        'Modifica',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Aggiorna i dati esistenti'), findsOneWidget);
+      await tester.tap(find.text('Modifica giocatore'));
+      await tester.pumpAndSettle();
+      expect(changes.single['value'], 'modifica');
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
     'Management ads reload on tab changes and remain stable during editing',
     (tester) async {
       final auth = FixtureAuth(DemoApi())..user = DemoApi().users.first;

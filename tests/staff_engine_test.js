@@ -171,6 +171,14 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
     assert.equal(snapshot().managementTab,tab);
     assert.deepEqual(placements(),expected,`Ad positions for ${tab}`);
   }
+  child.reconfigure({url:'https://example.test/api/gestione_giocatori.php'});
+  document.body.innerHTML = '<main><label>Operazione<select id="azione" class="operation-picker"><option value="crea">Aggiungi giocatore</option><option value="modifica">Modifica giocatore</option></select></label><div id="selectedOperation"></div></main>';
+  let selectedOperation = '';
+  document.getElementById('azione').onchange = event => selectedOperation = event.target.value;
+  frame.dispatchEvent(new window.Event('load')); await delay();
+  assert.equal(find('field','Operazione').appearance,'operation');
+  command({type:'change',id:find('field','Operazione').id,value:'modifica'}); await delay();
+  assert.equal(selectedOperation,'modifica','Operation picker invokes the original change handler');
   child.window.close(); window.close();
   console.log('Staff engine: native snapshots, dependent controls, protected submit, confirmation, modal, export and stale commands passed.');
 })().catch(error => {console.error(error); process.exit(1);});

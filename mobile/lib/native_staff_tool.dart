@@ -935,15 +935,35 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
   );
 }
 
-class _StaffMatchOption extends StatelessWidget {
-  const _StaffMatchOption({
+(IconData, String) _operationDetails(String value) => switch (value) {
+  'crea' => (Icons.person_add_alt_1_outlined, 'Inserisci un nuovo giocatore'),
+  'import' => (Icons.upload_file_outlined, 'Carica più giocatori da un file'),
+  'associazioni' => (Icons.link_rounded, 'Collega i giocatori alle squadre'),
+  'gol_extra' => (Icons.sports_soccer_outlined, 'Gestisci i gol aggiuntivi'),
+  'modifica' => (Icons.edit_outlined, 'Aggiorna i dati esistenti'),
+  'elimina' || 'rimuovi' => (
+    Icons.delete_outline_rounded,
+    'Apri gli strumenti di rimozione',
+  ),
+  'aggiungi' => (Icons.add_link_rounded, 'Crea una nuova associazione'),
+  _ => (Icons.tune_rounded, 'Scegli questa operazione'),
+};
+
+class _StaffPickerOption extends StatelessWidget {
+  const _StaffPickerOption({
     required this.option,
     required this.selected,
     required this.onTap,
+    this.icon = Icons.sports_soccer_outlined,
+    this.description,
+    this.danger = false,
   });
   final Map option;
   final bool selected;
   final VoidCallback? onTap;
+  final IconData icon;
+  final String? description;
+  final bool danger;
 
   @override
   Widget build(BuildContext context) {
@@ -966,23 +986,40 @@ class _StaffMatchOption extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  Icons.sports_soccer_outlined,
+                  icon,
                   size: 22,
-                  color: colors.primary,
+                  color: danger ? colors.error : colors.primary,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    '${option['label']}',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: onTap == null
-                          ? colors.onSurfaceVariant
-                          : selected
-                          ? colors.onPrimaryContainer
-                          : colors.onSurface,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${option['label']}',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: onTap == null
+                              ? colors.onSurfaceVariant
+                              : selected
+                              ? colors.onPrimaryContainer
+                              : colors.onSurface,
+                        ),
+                      ),
+                      if (description != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          description!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: selected
+                                ? colors.onPrimaryContainer
+                                : colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1067,6 +1104,9 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
         .toList();
     final multiple = widget.field['multiple'] == true;
     final matchPicker = widget.field['appearance'] == 'match' && !multiple;
+    final operationPicker =
+        widget.field['appearance'] == 'operation' && !multiple;
+    final cardPicker = matchPicker || operationPicker;
     final voteIndex = widget.field['stat'] == 'voto' && !multiple
         ? options.indexWhere(
             (option) =>
@@ -1080,7 +1120,7 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      showDragHandle: matchPicker,
+      showDragHandle: cardPicker,
       builder: (context) => StaffTheme(
         child: StatefulBuilder(
           builder: (context, refresh) => Padding(
@@ -1091,20 +1131,24 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
               height: MediaQuery.sizeOf(context).height * .75,
               child: Column(
                 children: [
-                  if (matchPicker)
+                  if (cardPicker)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 0, 12, 8),
                       child: Row(
                         children: [
                           Expanded(
                             child: Text(
-                              'Scegli la partita',
+                              operationPicker
+                                  ? 'Scegli operazione'
+                                  : 'Scegli la partita',
                               style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(fontWeight: FontWeight.w800),
                             ),
                           ),
                           IconButton(
-                            tooltip: 'Chiudi selezione partita',
+                            tooltip: operationPicker
+                                ? 'Chiudi selezione operazione'
+                                : 'Chiudi selezione partita',
                             onPressed: () => Navigator.pop(context),
                             icon: const Icon(Icons.close_rounded),
                           ),
@@ -1124,7 +1168,11 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
                     child: TextField(
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.search),
-                        hintText: matchPicker ? 'Cerca squadra' : 'Cerca…',
+                        hintText: operationPicker
+                            ? 'Cerca operazione'
+                            : matchPicker
+                            ? 'Cerca squadra'
+                            : 'Cerca…',
                         border: const OutlineInputBorder(),
                       ),
                       onChanged: (value) => refresh(() {
@@ -1158,7 +1206,7 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
                           controller: voteScroll,
                           itemExtent: voteIndex >= 0 ? rowHeight : null,
                           children: [
-                            if (matchPicker &&
+                            if (cardPicker &&
                                 !options.any(
                                   (option) =>
                                       '${option['label']}'
@@ -1166,24 +1214,41 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
                                           .contains(search) &&
                                       '${option['value']}'.isNotEmpty,
                                 ))
-                              const Padding(
-                                padding: EdgeInsets.all(24),
+                              Padding(
+                                padding: const EdgeInsets.all(24),
                                 child: Text(
-                                  'Nessuna partita trovata',
+                                  operationPicker
+                                      ? 'Nessuna operazione trovata'
+                                      : 'Nessuna partita trovata',
                                   textAlign: TextAlign.center,
                                 ),
                               ),
                             for (final option in options.where(
                               (o) =>
-                                  (!matchPicker ||
-                                      '${o['value']}'.isNotEmpty) &&
+                                  (!cardPicker || '${o['value']}'.isNotEmpty) &&
                                   '${o['label']}'.toLowerCase().contains(
                                     search,
                                   ),
                             ))
-                              matchPicker
-                                  ? _StaffMatchOption(
+                              cardPicker
+                                  ? _StaffPickerOption(
                                       option: option,
+                                      icon: operationPicker
+                                          ? _operationDetails(
+                                              '${option['value']}',
+                                            ).$1
+                                          : Icons.sports_soccer_outlined,
+                                      description: operationPicker
+                                          ? _operationDetails(
+                                              '${option['value']}',
+                                            ).$2
+                                          : null,
+                                      danger:
+                                          operationPicker &&
+                                          [
+                                            'elimina',
+                                            'rimuovi',
+                                          ].contains(option['value']),
                                       selected: '${option['value']}' == _value,
                                       onTap: option['disabled'] == true
                                           ? null
@@ -1357,7 +1422,10 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
             border: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(12)),
             ),
-            suffixIcon: Icon(Icons.expand_more),
+            prefixIcon: f['appearance'] == 'operation'
+                ? Icon(_operationDetails(_value).$1)
+                : null,
+            suffixIcon: const Icon(Icons.expand_more),
           ),
           child: Text(
             selected.isEmpty ? 'Seleziona…' : selected,

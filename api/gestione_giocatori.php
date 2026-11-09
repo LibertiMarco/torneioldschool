@@ -978,12 +978,12 @@ $goalExtraTeamMapJson = htmlspecialchars(
 <div class="admin-select-action">
     <label for="azione">Seleziona azione:</label>
         <select id="azione" class="operation-picker">
-          <option value="crea" <?php if(($currentAction ?? 'crea') === 'crea') echo 'selected'; ?>>Aggiungi Giocatore</option>
-          <option value="import" <?php if(($currentAction ?? '') === 'import') echo 'selected'; ?>>IMPORT GIOCATORI</option>
-          <option value="associazioni" <?php if(($currentAction ?? '') === 'associazioni') echo 'selected'; ?>>Associazione Calciatore-Squadra</option>
-          <option value="gol_extra" <?php if(($currentAction ?? '') === 'gol_extra') echo 'selected'; ?>>Gol Extra Admin</option>
-          <option value="modifica" <?php if(($currentAction ?? '') === 'modifica') echo 'selected'; ?>>Modifica Giocatore</option>
-          <option value="elimina" <?php if(($currentAction ?? '') === 'elimina') echo 'selected'; ?>>Elimina Giocatore</option>
+          <option value="crea" <?php if(($currentAction ?? 'crea') === 'crea') echo 'selected'; ?>>Aggiungi giocatore</option>
+          <option value="import" <?php if(($currentAction ?? '') === 'import') echo 'selected'; ?>>Importa giocatori</option>
+          <option value="associazioni" <?php if(($currentAction ?? '') === 'associazioni') echo 'selected'; ?>>Associa giocatore e squadra</option>
+          <option value="gol_extra" <?php if(($currentAction ?? '') === 'gol_extra') echo 'selected'; ?>>Gol extra</option>
+          <option value="modifica" <?php if(($currentAction ?? '') === 'modifica') echo 'selected'; ?>>Modifica giocatore</option>
+          <option value="elimina" <?php if(($currentAction ?? '') === 'elimina') echo 'selected'; ?>>Elimina giocatore</option>
         </select>
       </div>
 <input type="hidden" id="currentAction" value="<?= htmlspecialchars($currentAction) ?>">
@@ -1157,9 +1157,9 @@ $goalExtraTeamMapJson = htmlspecialchars(
   <div class="admin-select-action">
     <label for="assocOperation">Operazione:</label>
     <select id="assocOperation" class="operation-picker">
-      <option value="aggiungi" selected>Aggiungi Associazione</option>
-      <option value="modifica">Modifica Associazione</option>
-      <option value="rimuovi">Elimina Associazione</option>
+      <option value="aggiungi" selected>Aggiungi associazione</option>
+      <option value="modifica">Modifica associazione</option>
+      <option value="rimuovi">Elimina associazione</option>
     </select>
   </div>
 
