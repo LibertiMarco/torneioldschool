@@ -506,7 +506,9 @@ class _LineupPlayer extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
-            ? (alternate ? const Color(0xff2a4058) : const Color(0xff203246))
+            ? (alternate
+                  ? Theme.of(context).colorScheme.surfaceContainer
+                  : Theme.of(context).colorScheme.surfaceContainerLow)
             : (alternate ? const Color(0xffe8eef5) : const Color(0xfff7f9fc)),
         border: Border(
           top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
