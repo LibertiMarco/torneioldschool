@@ -179,6 +179,23 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
   assert.equal(find('field','Operazione').appearance,'operation');
   command({type:'change',id:find('field','Operazione').id,value:'modifica'}); await delay();
   assert.equal(selectedOperation,'modifica','Operation picker invokes the original change handler');
+  child.reconfigure({url:'https://example.test/api/gestione_tornei.php'});
+  document.body.innerHTML = '<style>.hidden{display:none}</style><main><div class="admin-btn-group">'
+    + ['crea','modifica','elimina'].map(name=>`<button type="button" class="action-toggle ${name==='crea'?'active':''}" data-action="${name}">${name}</button>`).join('')
+    + '</div>' + ['crea','modifica','elimina'].map(name=>`<form class="form-${name} ${name==='crea'?'':'hidden'}"><input type="hidden" name="_csrf" value="private-tournament-csrf"><label>Nome<input></label></form>`).join('') + '</main>';
+  for (const button of document.querySelectorAll('.action-toggle')) button.onclick = () => {
+    document.querySelectorAll('.action-toggle').forEach(node=>node.classList.toggle('active',node===button));
+    for(const name of ['crea','modifica','elimina']) document.querySelector('.form-'+name).classList.toggle('hidden',name!==button.dataset.action);
+  };
+  frame.dispatchEvent(new window.Event('load')); await delay();
+  for(const operation of ['crea','modifica','elimina','crea']) {
+    command({type:'click',id:find('action',operation).id}); await delay();
+    assert.equal(snapshot().managementTab,`tournaments:${operation}`);
+    assert.deepEqual(placements(),[`tournaments-${operation}-before`,`tournaments-${operation}-after`]);
+    assert(!JSON.stringify(snapshot()).includes('private-tournament-csrf'));
+  }
+  command({type:'change',id:find('field','Nome').id,value:'Coppa nuova'}); await delay();
+  assert.deepEqual(placements(),['tournaments-crea-before','tournaments-crea-after']);
   child.window.close(); window.close();
   console.log('Staff engine: native snapshots, dependent controls, protected submit, confirmation, modal, export and stale commands passed.');
 })().catch(error => {console.error(error); process.exit(1);});

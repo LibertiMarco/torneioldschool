@@ -195,6 +195,12 @@
       if (visible(element.parentElement)) return control(element);
     }
     if (!visible(element)) return null;
+    if (doc.location.pathname === '/api/gestione_tornei.php' && element.matches('.form-crea,.form-modifica,.form-elimina')) {
+      const operation = ['crea','modifica','elimina'].find(name=>element.classList.contains(`form-${name}`));
+      return {kind:'group',blocks:[staffAd(`tournaments-${operation}-before`),
+        {kind:tag === 'FORM' ? 'form' : 'group',id:id(element),blocks:children(element,inTable)},
+        staffAd(`tournaments-${operation}-after`)]};
+    }
     if (doc.location.pathname === '/api/gestione_giocatori.php') {
       if (element.matches('.form-crea,.form-modifica,.form-elimina,.form-import,.assoc-form')) {
         const section = playerSection(element,inTable); if (section) return section;
@@ -288,6 +294,10 @@
         const operation = doc.querySelector('#azione')?.value || '';
         data.managementTab = ['crea','modifica','elimina','import','associazioni'].includes(operation)
           ? `players:${operation}${operation === 'associazioni' ? ':' + (doc.querySelector('#assocOperation')?.value || 'aggiungi') : ''}` : '';
+      }
+      if (doc.location.pathname === '/api/gestione_tornei.php') {
+        const operation = doc.querySelector('.action-toggle.active[data-action]')?.dataset.action || '';
+        data.managementTab = ['crea','modifica','elimina'].includes(operation) ? `tournaments:${operation}` : '';
       }
       const serialized = JSON.stringify(data);
       if (serialized !== lastSnapshot) { lastSnapshot = serialized; emit('snapshot', data); }

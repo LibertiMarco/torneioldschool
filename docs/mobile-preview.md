@@ -1,5 +1,14 @@
 # Anteprima dell'app con dati reali
 
+## Annunci in Gestione tornei
+
+Crea, Modifica ed Elimina hanno un annuncio prima e uno dopo il rispettivo
+modulo/elenco. Solo la sezione attiva espone gli spazi pubblicitari: cambiare
+operazione rinnova le istanze, mentre modificare i campi le conserva.
+Il banner generico di fondo viene escluso. Come negli altri gestionali, la
+preview mostra segnaposto e l'app mobile usa native o banner adattivi in base
+alla larghezza disponibile e alle preferenze privacy.
+
 ## Giocatori e associazioni
 
 La voce e il modulo Crea giocatore sostituiscono Aggiungi giocatore. Le sezioni
