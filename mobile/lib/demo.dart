@@ -418,7 +418,38 @@ class DemoApi extends TosApi {
             )
             .toList();
       case 'api/mobile/v1/admin/users.php':
-        return {'users': users, 'has_more': false};
+        final search = (query?['q'] ?? '').trim().toLowerCase();
+        return {
+          'users': users
+              .where(
+                (user) => '${user['nome']} ${user['cognome']} ${user['email']}'
+                    .toLowerCase()
+                    .contains(search),
+              )
+              .map((user) => Map<String, dynamic>.from(user))
+              .toList(),
+          'has_more': false,
+        };
+      case 'api/mobile/v1/admin/user_role.php':
+        final user = users.firstWhere(
+          (row) => '${row['id']}' == '${body?['id']}',
+        );
+        final role = body?['role'];
+        if (!['user', 'grafico', 'admin', 'sysadmin'].contains(role)) {
+          throw const ApiError('Profilo non valido.', status: 422);
+        }
+        if (user['ruolo'] != body?['expected_role']) {
+          throw const ApiError(
+            'Account modificato. Ricarica prima di salvare.',
+            status: 409,
+          );
+        }
+        user['ruolo'] = role;
+        user['permissions'] = {
+          'admin': role == 'admin' || role == 'sysadmin',
+          'graphics': role != 'user',
+        };
+        return {'ok': true};
       case 'api/mobile/v1/logo_settings.php':
         if (body != null) originalLogos.value = body['original_logos'] == true;
         return {'original_logos': originalLogos.value};

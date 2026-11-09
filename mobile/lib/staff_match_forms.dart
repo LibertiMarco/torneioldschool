@@ -565,7 +565,7 @@ class _LineupPlayer extends StatelessWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 final minCounterWidth =
-                    64 + MediaQuery.textScalerOf(context).scale(28);
+                    64 + MediaQuery.textScalerOf(context).scale(20);
                 final columns =
                     ((constraints.maxWidth + 6) / (minCounterWidth + 6))
                         .floor()

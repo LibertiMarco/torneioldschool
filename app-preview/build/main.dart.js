@@ -151859,7 +151859,7 @@ A.b4E.prototype={
 $2(a,b){var s,r,q,p,o,n,m,l=A.b6(a,B.a5)
 l=l==null?null:l.gcg()
 s=b.b
-r=B.f.cU(B.e.iy((s+6)/(64+(l==null?B.W:l).aM(28)+6)),1,3)
+r=B.f.cU(B.e.iy((s+6)/(64+(l==null?B.W:l).aM(20)+6)),1,3)
 l=A.b([],t.p)
 for(q=B.b.ga2(this.b),p=new A.fM(q,new A.b4x()),s=(s-6*(r-1))/r,o=t.Nf,n=this.a;p.t();){m=q.gO()
 l.push(new A.c1(s,null,new A.Oy(m,new A.b4y(n,m),new A.bM(m.h(0,"id"),o)),null))}return A.e2(B.aL,l,B.b0,B.P,6,6)},

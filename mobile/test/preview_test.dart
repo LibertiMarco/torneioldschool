@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/api.dart';
+import 'package:tornei_old_school/admin.dart';
 import 'package:tornei_old_school/demo.dart';
 import 'package:tornei_old_school/main.dart';
 
@@ -68,7 +69,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Admin saves demo flags only after confirmation', (tester) async {
+  testWidgets('Admin searches a demo account and changes only its profile', (
+    tester,
+  ) async {
     final api = DemoApi();
     await tester.pumpWidget(TosApp(api: api, auth: DemoAuth(api)));
     await tester.pumpAndSettle();
@@ -93,7 +96,41 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Gestione account'));
     await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Cerca account per nome o email'),
+      'Luca',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(find.text('Marco Demo'), findsNothing);
+    await tester.ensureVisible(find.text('Luca Demo'));
     await tester.tap(find.text('Luca Demo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Totocalcio'), findsNothing);
+    await tester.ensureVisible(find.byType(DropdownButtonFormField<String>));
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Grafico').last);
+    await tester.pumpAndSettle();
+    expect(api.users[1]['ruolo'], 'user');
+    await tester.ensureVisible(find.text('Salva profilo'));
+    await tester.tap(find.text('Salva profilo'));
+    await tester.pumpAndSettle();
+    expect(api.users[1]['ruolo'], 'grafico');
+    expect(api.users[1]['email'], 'giocatore@example.test');
+    expect((api.users[1]['feature_flags'] as Map)['totocalcio'], false);
+    expect(find.text('Profilo aggiornato.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Legacy demo flags still require confirmation', (tester) async {
+    final api = DemoApi();
+    final auth = DemoAuth(api)..user = api.users.first;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminFeaturesPage(auth: auth, user: api.users[1]),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(SwitchListTile, 'Totocalcio'));
     await tester.pumpAndSettle();
