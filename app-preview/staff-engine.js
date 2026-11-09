@@ -85,6 +85,24 @@
       danger: /elimina|rimuovi|cancella|disattiva|rifiuta/i.test(text)};
   }
   const textNode = (kind, text) => text ? {kind, text} : null;
+  const staffAd = placement => ({kind:'staff-ad', id:placement});
+  function managementCard(element, inTable) {
+    const tab = element.parentElement.dataset.tab;
+    const form = element.querySelector('form')?.id;
+    const positions = tab === 'modifica' ? {
+      formModifica:['modify-before'],
+      formRipristinaGiocata:['played-before'],
+      formLinkArbitro:['links-before','links-after'],
+    }[form] : {
+      crea:['create-before'],
+      elimina:['delete-before','delete-after'],
+      esitate:['attendance-before','attendance-after'],
+      campi:['fields-before','fields-after'],
+    }[tab];
+    if (!positions) return null;
+    return {kind:'group', blocks:[staffAd(positions[0]), ...children(element, inTable),
+      ...(positions[1] ? [staffAd(positions[1])] : [])]};
+  }
   function matchForm(form) {
     const used = new Set();
     const sections = [
@@ -154,9 +172,16 @@
       if (visible(element.parentElement)) return control(element);
     }
     if (!visible(element)) return null;
+    if (doc.location.pathname === '/api/gestione_partite.php' && element.matches('.tab-section > .form-card')) {
+      const card = managementCard(element, inTable);
+      if (card) return card;
+    }
     if (element.matches('#matchCalendar') && element.tosCalendarModel) {
-      return {kind: 'match-calendar', id: id(element), ...element.tosCalendarModel,
+      const calendar = {kind: 'match-calendar', id: id(element), ...element.tosCalendarModel,
         actions: Array.from(element.querySelectorAll('button')).map(action).filter(Boolean)};
+      return doc.location.pathname === '/api/gestione_partite.php' && element.closest('.tab-section')?.dataset.tab === 'crea'
+        ? {kind:'group', blocks:[staffAd('calendar-before'),calendar,staffAd('calendar-after')]}
+        : calendar;
     }
     if (doc.location.pathname === '/api/gestione_partite.php' && element.matches('form#formModifica')) return matchForm(element);
     if (tag === 'INPUT' && ['submit','button','reset'].includes(element.type)) return action(element);
@@ -215,6 +240,9 @@
       const lineup = !modal && doc.location.pathname === '/api/statistiche_partita.php' && doc.querySelector('form#lineupForm');
       const records = lineup && doc.querySelector('#recordsStaff');
       const data = {blocks: lineup ? [matchLineup(lineup), ...(records ? [walk(records, false)].filter(Boolean) : [])] : children(root, false), modal: !!modal};
+      if (doc.location.pathname === '/api/gestione_partite.php') {
+        data.managementTab = Array.from(doc.querySelectorAll('.tab-section[data-tab]')).find(visible)?.dataset.tab || '';
+      }
       const serialized = JSON.stringify(data);
       if (serialized !== lastSnapshot) { lastSnapshot = serialized; emit('snapshot', data); }
     } catch (_) { emit('error', {message: 'Impossibile aggiornare lo strumento. Riprova.'}); }

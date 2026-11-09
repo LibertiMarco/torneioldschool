@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 
 import 'ads.dart';
+import 'lineup_ad_slot.dart';
 import 'staff_photo_canvas.dart';
 
 import 'package:flutter_quill/flutter_quill.dart';
@@ -53,6 +54,8 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
   String? _error;
   List<dynamic> _blocks = [];
   final _pendingLineup = <String, StaffMessage>{};
+  String _managementTab = '';
+  int _managementAdVisit = 0;
   bool _loading = true,
       _modal = false,
       _confirming = false,
@@ -101,6 +104,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
         _error = null;
         _loading = true;
         _blocks = [];
+        _managementTab = '';
       });
     }
     if (widget.auth.api.preview && widget.engineFactory == null) {
@@ -152,6 +156,11 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
           if (_document != '${message['document']}') _pendingLineup.clear();
           _document = '${message['document']}';
           _blocks = message['blocks'] as List? ?? [];
+          final managementTab = '${message['managementTab'] ?? ''}';
+          if (managementTab != _managementTab) {
+            _managementTab = managementTab;
+            _managementAdVisit++;
+          }
           _applyPendingLineup();
           _loading = false;
           _error = null;
@@ -497,6 +506,10 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
       '$_document:${block['id'] ?? block['text'] ?? block['label']}',
     );
     switch (block['kind']) {
+      case 'staff-ad':
+        return LineupAdSlot(
+          key: ValueKey('$_document:$_managementAdVisit:${block['id']}'),
+        );
       case 'match-form':
         return StaffMatchForm(key: key, model: block, render: _block);
       case 'match-lineup':
@@ -897,7 +910,8 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                                           ),
                                         ),
                                       _column(_blocks),
-                                      if (_lineup == null)
+                                      if (_lineup == null &&
+                                          _managementTab.isEmpty)
                                         const AdaptiveAdBanner(),
                                     ],
                                   ),

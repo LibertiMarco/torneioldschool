@@ -140,6 +140,37 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
   assert.equal(calendarBlock.days[0].events[0].title,'A – B');
   command({type:'click',id:calendarBlock.actions[0].id}); await delay();
   assert.equal(calendarClicks,1,'Native calendar navigation uses the website controller');
+  const card = (form, title) => `<div class="form-card"><h3>${title}</h3><form id="${form}"><label>Nome<input value="fixture"></label></form></div>`;
+  const tabs = {
+    crea: card('formCrea','Crea partite').replace('</div>', '<section id="matchCalendar"></section></div>'),
+    modifica: card('formModifica','Modifica partita') + card('formRipristinaGiocata','Modifica partita giocata') + card('formLinkArbitro','Modifica arbitro e link'),
+    elimina: card('formElimina','Elimina partita'),
+    esitate: card('formPresenzeEsitate','Presenze partite esitate'),
+    campi: card('formCampoCrea','Gestione campi'),
+  };
+  document.body.innerHTML = '<main><div class="tab-buttons">' + Object.keys(tabs).map(tab=>`<button type="button">${tab}</button>`).join('') + '</div>'
+    + Object.entries(tabs).map(([tab,html])=>`<section class="tab-section" data-tab="${tab}" style="display:${tab==='crea'?'block':'none'}">${html}</section>`).join('') + '</main>';
+  document.getElementById('matchCalendar').tosCalendarModel = {title:'Campo',days:[],firstHour:19,lastHour:22};
+  for (const button of document.querySelectorAll('.tab-buttons button')) {
+    button.onclick = () => document.querySelectorAll('.tab-section').forEach(section=>section.style.display=section.dataset.tab===button.textContent?'block':'none');
+  }
+  frame.dispatchEvent(new window.Event('load')); await delay();
+  const placements = () => flat(snapshot().blocks).filter(block=>block.kind==='staff-ad').map(block=>block.id);
+  assert.equal(snapshot().managementTab,'crea');
+  assert.deepEqual(placements(),['create-before','calendar-before','calendar-after']);
+  command({type:'change', id:find('field','Nome').id, value:'Updated'}); await delay();
+  assert.deepEqual(placements(),['create-before','calendar-before','calendar-after'],'Field edits preserve placements');
+  for (const [tab,expected] of Object.entries({
+    modifica:['modify-before','played-before','links-before','links-after'],
+    elimina:['delete-before','delete-after'],
+    esitate:['attendance-before','attendance-after'],
+    campi:['fields-before','fields-after'],
+    crea:['create-before','calendar-before','calendar-after'],
+  })) {
+    command({type:'click',id:find('action',tab).id}); await delay();
+    assert.equal(snapshot().managementTab,tab);
+    assert.deepEqual(placements(),expected,`Ad positions for ${tab}`);
+  }
   child.window.close(); window.close();
   console.log('Staff engine: native snapshots, dependent controls, protected submit, confirmation, modal, export and stale commands passed.');
 })().catch(error => {console.error(error); process.exit(1);});

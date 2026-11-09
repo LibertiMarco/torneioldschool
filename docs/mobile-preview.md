@@ -1,5 +1,22 @@
 # Anteprima dell'app con dati reali
 
+## Annunci nelle schede di Calendario e risultati
+
+L'app usa gli stessi spazi nativi/adattivi della distinta anche nelle schede:
+
+- Modifica: prima di Modifica partita, prima di Modifica partita giocata,
+  prima e dopo Modifica arbitro e link (4).
+- Crea: prima di Crea partite, prima e dopo il calendario (3).
+- Elimina e Presenze partite esitate: prima e dopo il rispettivo modulo (2).
+- Campi: prima e dopo Gestione campi (2).
+
+Il bridge emette solo gli spazi della scheda visibile. Cambiare scheda, anche
+tornando a una gia aperta, sostituisce le istanze degli annunci; modificare
+campi o filtri nella stessa scheda conserva invece le istanze. Il banner
+generico di fondo viene escluso per evitare ulteriori annunci. AdMob decide
+la creativita e puo restituire lo stesso annuncio anche a una nuova richiesta.
+La preview web mostra segnaposto; gli annunci reali richiedono la build mobile.
+
 ## Annuncio tra le distinte
 
 Le statistiche partita dell'app hanno tre spazi pubblicitari: uno prima della

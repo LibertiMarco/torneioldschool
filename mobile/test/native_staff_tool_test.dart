@@ -53,6 +53,56 @@ class FixtureEngine implements StaffEngine {
 
 void main() {
   testWidgets(
+    'Management ads reload on tab changes and remain stable during editing',
+    (tester) async {
+      final auth = FixtureAuth(DemoApi())..user = DemoApi().users.first;
+      StaffMessage snapshot(String tab) => {
+        'type': 'snapshot',
+        'document': 'management',
+        'managementTab': tab,
+        'blocks': [
+          {'kind': 'staff-ad', 'id': '$tab-before'},
+          {'kind': 'text', 'text': tab},
+        ],
+      };
+      late FixtureEngine engine;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: siteTheme(),
+          home: NativeStaffTool(
+            auth: auth,
+            title: 'Calendario e risultati',
+            description: '',
+            path: 'api/gestione_partite.php',
+            icon: Icons.calendar_month,
+            graphicsOnly: false,
+            engineFactory: (_, receive) =>
+                engine = FixtureEngine(receive, snapshot('crea')),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      Key? adKey() =>
+          tester.widget<LineupAdSlot>(find.byType(LineupAdSlot)).key;
+      final first = adKey();
+      engine.receive(snapshot('crea'));
+      await tester.pumpAndSettle();
+      expect(adKey(), first);
+      engine.receive(snapshot('modifica'));
+      await tester.pumpAndSettle();
+      expect(adKey(), isNot(first));
+      engine.receive(snapshot('crea'));
+      await tester.pumpAndSettle();
+      expect(
+        adKey(),
+        isNot(first),
+        reason: 'Returning to a tab requests a new ad',
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
     'Match picker shows searchable cards and keeps the match identifier',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 800));
