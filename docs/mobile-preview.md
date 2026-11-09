@@ -1,5 +1,26 @@
 # Anteprima dell'app con dati reali
 
+## Tabelloni delle coppe
+
+In Classifica, Gold/Silver/Bronzo mostrano i turni fino alla finale anche senza
+partite salvate. La testa di serie standard a otto posti è 1–8, 4–5, 2–7, 3–6;
+le vincenti dei primi due incontri si affrontano, così come quelle degli altri due.
+Le posizioni Silver e Bronzo partono dopo i posti riservati alla coppa precedente.
+Nei gironi si selezionano le qualificate di ogni girone e si intercalano per
+posizione: con due gironi, 1ª A–ultima B e 1ª B–ultima A nelle due metà.
+Con un numero dispari di gironi gli avversari si redistribuiscono per evitare
+incontri dello stesso girone al primo turno. Quando il numero di qualificate
+non è una potenza di due, i posti liberi danno accesso diretto al turno successivo.
+
+I segnaposto sono marcati Da creare e dipendono dalla classifica attuale.
+I turni successivi riportano Vincente Q1/Q2 ecc.; una vincente nota sostituisce
+quel testo solo dopo un risultato definitivo (totale andata/ritorno e rigori
+se necessari). Le partite salvate prevalgono sulla proiezione, conservano
+risultati, dettagli e collegamenti; nessuna partita viene creata nel database.
+Il sito carica il renderer comune attraverso l'header anche per le pagine
+storiche. App e preview usano lo stesso ordinamento nel modello Flutter;
+l'app installata richiede una nuova build per il nuovo tabellone.
+
 ## Creazione dei tornei
 
 Il file della pagina viene generato dal server dal nome del torneo con un suffisso

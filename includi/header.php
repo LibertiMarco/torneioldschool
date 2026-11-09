@@ -747,3 +747,6 @@ $headerNavLinks = [
 </script>
 <script src="/includi/consent-sync.js?v=20251220" defer></script>
 <script src="/includi/header-interactions.js?v=20251220" defer></script>
+<?php if ((isset($torneoSlug) && is_string($torneoSlug)) || str_starts_with($_SERVER['SCRIPT_NAME'] ?? '', '/tornei/')): ?>
+<script src="/tornei/cup-bracket.js?v=<?= filemtime(__DIR__ . '/../tornei/cup-bracket.js') ?>" defer></script>
+<?php endif; ?>

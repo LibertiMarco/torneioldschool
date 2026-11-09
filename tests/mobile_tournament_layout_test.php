@@ -16,6 +16,7 @@ layout_expect($brasil['config_overrides'] === ['totale_squadre' => 22, 'qualific
 layout_expect($mc['config_overrides']['totale_squadre'] === 7 && $mc['config_overrides']['qualificati_silver'] === 2, 'McLeague fixed formula overrides');
 layout_expect($champions['config_overrides'] === [], 'Legacy page without overrides remains unchanged');
 $formula = mobile_tournament_layout('Formula1');
+layout_expect(mobile_tournament_layout('MondialeFasciaB')['cup_ranges'] === ['GOLD'=>16,'SILVER'=>8,'BRONZO'=>2], 'Fixed Gold/Silver/Bronzo bands match the public page');
 layout_expect($formula['spareggio'] && $formula['spareggio_default'] === 16, 'Formula 1 play-in');
 foreach (['../env_loader','/tmp/test','Torneo.php'] as $invalid) {
     $rejected = false;

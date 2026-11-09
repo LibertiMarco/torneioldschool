@@ -144,6 +144,14 @@ class TournamentData {
 
   Map<String, int> get cupPlaces {
     if (format == 'eliminazione') return {'GOLD': 0, 'SILVER': 0, 'BRONZO': 0};
+    if (layout['cup_ranges'] is Map &&
+        (layout['cup_ranges'] as Map).isNotEmpty) {
+      final ranges = layout['cup_ranges'] as Map;
+      return {
+        for (final phase in ['GOLD', 'SILVER', 'BRONZO'])
+          phase: stat(ranges[phase]),
+      };
+    }
     if (legacy && !grouped) {
       final gold = stat(layout['legacy_gold'] ?? 16);
       final silver = layout['legacy_silver'] == null
@@ -360,6 +368,9 @@ String matchTurn(Map<String, dynamic> match, String phase) {
 String roundLabel(String turn, String phase) {
   final parts = turn.split('|');
   final round = parts.first;
+  if (round.startsWith('ROUND_')) {
+    return 'Turno a ${round.substring(6)} squadre';
+  }
   final label = phase == 'REGULAR' || phase == 'SPAREGGIO'
       ? (round == '0' ? 'Giornata da definire' : 'Giornata $round')
       : const {
@@ -388,6 +399,11 @@ const knockoutRounds = [
 ];
 int roundOrder(String left, String right) {
   final l = left.split('|'), r = right.split('|');
+  int size(String value) =>
+      value.startsWith('ROUND_') ? stat(value.substring(6)) : 0;
+  if (size(l.first) > 0 || size(r.first) > 0) {
+    return size(r.first).compareTo(size(l.first));
+  }
   final a = knockoutRounds.indexOf(l.first);
   final b = knockoutRounds.indexOf(r.first);
   final order = a >= 0 && b >= 0

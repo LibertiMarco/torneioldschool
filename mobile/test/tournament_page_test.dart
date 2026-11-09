@@ -270,9 +270,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Semifinale · Andata'), findsOneWidget);
     expect(find.text('Semifinale · Ritorno'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Finale'), 250);
     expect(find.text('Finale'), findsOneWidget);
     expect(find.text('Giornata 1'), findsNothing);
     expect(find.text('Giornata 2'), findsNothing);
+    await tester.scrollUntilVisible(find.text('Calendario'), -250);
     await tester.tap(find.text('Calendario'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Regular season'));

@@ -23,6 +23,13 @@ function mobile_tournament_layout(string $slug): array
     preg_match_all('/\bconst\s+([A-Z_0-9]+)\s*=\s*(\d+)\s*;/', $source, $found, PREG_SET_ORDER);
     foreach ($found as $item) { $constants[$item[1]] = (int)$item[2]; }
     $modern = str_contains($source, 'const CONFIG =');
+    $cupRanges = [];
+    if (preg_match('/const\s+CUP_RANGES\s*=\s*\[([\s\S]*?)\];/', $source, $rangeBlock)) {
+        preg_match_all('/key:\s*[\'"](?<key>gold|silver|bronze)[\'"][^}]*start:\s*(?<start>\d+)\s*,\s*end:\s*(?<end>\d+)/', $rangeBlock[1], $rangeRows, PREG_SET_ORDER);
+        foreach ($rangeRows as $range) {
+            $cupRanges[strtoupper($range['key']) === 'BRONZE' ? 'BRONZO' : strtoupper($range['key'])] = max(0, (int)$range['end'] - (int)$range['start'] + 1);
+        }
+    }
     $goldParts = array_intersect_key($constants, array_flip(['GOLD_SEMI_SPOTS','GOLD_QUARTI_SPOTS','GOLD_OTTAVI_SPOTS']));
     $goldSingle = $constants['GOLD_CUTOFF'] ?? $constants['GOLD_SLOTS'] ?? $constants['GOLD_SPOTS'] ?? ($goldParts ? array_sum($goldParts) : 16);
     $goldGrouped = $goldSingle;
@@ -65,6 +72,7 @@ function mobile_tournament_layout(string $slug): array
         libxml_use_internal_errors($previous);
     }
     return [
+        'cup_ranges' => $cupRanges,
         'config_overrides' => $configOverrides,
         'group_mode' => $modern ? 'template' : 'legacy',
         'default_team_count' => $constants['DEFAULT_TEAM_COUNT'] ?? $constants['TEAM_COUNT'] ?? 18,
