@@ -52,6 +52,70 @@ class FixtureEngine implements StaffEngine {
 
 void main() {
   testWidgets(
+    'Vote picker opens around six without changing the selected vote',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final changes = <StaffMessage>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 104,
+                child: StaffNativeField(
+                  field: {
+                    'type': 'select',
+                    'stat': 'voto',
+                    'label': 'Voto',
+                    'value': '7.0',
+                    'options': [
+                      for (var index = 0; index <= 20; index++)
+                        {'value': '${index / 2}', 'label': '${index / 2}'},
+                    ],
+                  },
+                  onChanged: changes.add,
+                  onPick: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.byType(StaffNativeField));
+      await tester.pumpAndSettle();
+      final sheet = find.byType(BottomSheet);
+      expect(
+        find
+            .descendant(
+              of: sheet,
+              matching: find.widgetWithText(ListTile, '6.0'),
+            )
+            .hitTestable(),
+        findsOneWidget,
+      );
+      expect(
+        find
+            .descendant(
+              of: sheet,
+              matching: find.widgetWithText(ListTile, '0.0'),
+            )
+            .hitTestable(),
+        findsNothing,
+      );
+      expect(changes, isEmpty);
+      await tester.tap(
+        find.descendant(
+          of: sheet,
+          matching: find.widgetWithText(ListTile, '6.5'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(changes.single['value'], '6.5');
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
     'Grouped result form keeps both scores editable at 320px with large text',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 1000));

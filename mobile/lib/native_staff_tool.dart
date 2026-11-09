@@ -984,6 +984,13 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
         .whereType<Map>()
         .toList();
     final multiple = widget.field['multiple'] == true;
+    final voteIndex = widget.field['stat'] == 'voto' && !multiple
+        ? options.indexWhere(
+            (option) =>
+                double.tryParse('${option['value']}'.replaceAll(',', '.')) == 6,
+          )
+        : -1;
+    ScrollController? voteScroll;
     var search = '';
     final chosen = {..._values};
     final result = await showModalBottomSheet<List<String>>(
@@ -1016,48 +1023,76 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
                         border: OutlineInputBorder(),
                       ),
                       onChanged: (value) => refresh(() {
+                        if (voteScroll?.hasClients == true) {
+                          voteScroll!.jumpTo(0);
+                        }
                         search = value.toLowerCase();
                       }),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Expanded(
-                    child: ListView(
-                      children: [
-                        for (final option in options.where(
-                          (o) => '${o['label']}'.toLowerCase().contains(search),
-                        ))
-                          multiple
-                              ? CheckboxListTile(
-                                  title: Text('${option['label']}'),
-                                  value: chosen.contains(option['value']),
-                                  onChanged: option['disabled'] == true
-                                      ? null
-                                      : (value) => refresh(() {
-                                          value == true
-                                              ? chosen.add('${option['value']}')
-                                              : chosen.remove(
-                                                  '${option['value']}',
-                                                );
-                                        }),
-                                )
-                              : ListTile(
-                                  title: Text('${option['label']}'),
-                                  selected: option['value'] == _value,
-                                  trailing: option['value'] == _value
-                                      ? Icon(
-                                          Icons.check,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .error,
-                                        )
-                                      : null,
-                                  enabled: option['disabled'] != true,
-                                  onTap: () => Navigator.pop(context, [
-                                    '${option['value']}',
-                                  ]),
-                                ),
-                      ],
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final rowHeight =
+                            (MediaQuery.textScalerOf(context).scale(20) + 24)
+                                .clamp(56.0, double.infinity);
+                        if (voteIndex >= 0) {
+                          final maximum =
+                              (options.length * rowHeight -
+                                      constraints.maxHeight)
+                                  .clamp(0.0, double.infinity);
+                          voteScroll ??= ScrollController(
+                            initialScrollOffset:
+                                (voteIndex * rowHeight -
+                                        (constraints.maxHeight - rowHeight) / 2)
+                                    .clamp(0.0, maximum),
+                          );
+                        }
+                        return ListView(
+                          controller: voteScroll,
+                          itemExtent: voteIndex >= 0 ? rowHeight : null,
+                          children: [
+                            for (final option in options.where(
+                              (o) => '${o['label']}'.toLowerCase().contains(
+                                search,
+                              ),
+                            ))
+                              multiple
+                                  ? CheckboxListTile(
+                                      title: Text('${option['label']}'),
+                                      value: chosen.contains(option['value']),
+                                      onChanged: option['disabled'] == true
+                                          ? null
+                                          : (value) => refresh(() {
+                                              value == true
+                                                  ? chosen.add(
+                                                      '${option['value']}',
+                                                    )
+                                                  : chosen.remove(
+                                                      '${option['value']}',
+                                                    );
+                                            }),
+                                    )
+                                  : ListTile(
+                                      title: Text('${option['label']}'),
+                                      selected: option['value'] == _value,
+                                      trailing: option['value'] == _value
+                                          ? Icon(
+                                              Icons.check,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .error,
+                                            )
+                                          : null,
+                                      enabled: option['disabled'] != true,
+                                      onTap: () => Navigator.pop(context, [
+                                        '${option['value']}',
+                                      ]),
+                                    ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                   if (multiple)
@@ -1077,6 +1112,7 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
         ),
       ),
     );
+    voteScroll?.dispose();
     if (result != null && mounted) {
       setState(() {
         _values = result;
