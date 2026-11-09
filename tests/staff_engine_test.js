@@ -15,6 +15,7 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
       <label>Squadra<select id="team"><option value="">Attendi…</option></select></label>
       <label>Partita<select id="selPartitaMod"><option value="42">Home - Away</option></select></label>
       <label>Partita giocata<select id="selPartitaGioc"><option value="43">Played Home - Played Away</option></select></label>
+      <label>Partita arbitro e link<select id="selPartitaLink"><option value="43">Played Home - Played Away</option></select></label>
       <input type="password" value="never-share-password"><fieldset disabled><label>Disabilitato<input id="disabled" value="read-only"></label></fieldset>
       <label>Immagine<input id="photo" type="file" style="display:none"></label>
       <div id="editor" contenteditable="true" role="textbox"><p>Testo <strong>bold</strong></p></div>
@@ -55,6 +56,7 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
   assert.equal(snapshot().modal, false, 'Cookie dialog is not a staff modal');
   assert.equal(find('field','Partita').appearance, 'match');
   assert.equal(find('field','Partita giocata').appearance, 'match');
+  assert.equal(find('field','Partita arbitro e link').appearance, 'match');
   assert.equal(find('field','Partita').options[0].label, 'Home - Away');
   assert(!JSON.stringify(snapshot()).includes('Privacy e cookie'));
   assert(!JSON.stringify(snapshot()).includes('secret-csrf'));

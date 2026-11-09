@@ -67,6 +67,10 @@ const server = http.createServer((req,res)=>{
       await page.selectOption('#selFaseGioc','REGULAR');
       await page.selectOption('#selGiornataGioc','1');
       assert.equal(await page.locator('#selPartitaGioc option[value="3"]').textContent(),'C - D','Played match picker also contains only the two teams');
+      await page.selectOption('#selTorneoLink','coppa');
+      await page.selectOption('#selFaseLink','REGULAR');
+      await page.selectOption('#selGiornataLink','1');
+      assert.equal(await page.locator('#selPartitaLink option[value="3"]').textContent(),'C - D','Referee and links picker also contains only the two teams');
       assert.deepEqual(errors,[],'Real page scripts run without exceptions');
       await page.close();
     }
