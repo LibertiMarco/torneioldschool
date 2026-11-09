@@ -491,13 +491,12 @@ class _LineupPlayer extends StatelessWidget {
             const SizedBox(height: 6),
             LayoutBuilder(
               builder: (context, constraints) {
+                final minCounterWidth =
+                    64 + MediaQuery.textScalerOf(context).scale(28);
                 final columns =
-                    constraints.maxWidth >= 252 &&
-                        MediaQuery.textScalerOf(context).scale(14) < 21
-                    ? 3
-                    : constraints.maxWidth >= 184
-                    ? 2
-                    : 1;
+                    ((constraints.maxWidth + 6) / (minCounterWidth + 6))
+                        .floor()
+                        .clamp(1, 3);
                 return Wrap(
                   spacing: 6,
                   runSpacing: 6,
@@ -624,60 +623,77 @@ class _StaffStatCounterState extends State<StaffStatCounter> {
   Widget build(BuildContext context) {
     final label = '${widget.field['label']}';
     final disabled = widget.field['disabled'] == true;
+    final buttonStyle = IconButton.styleFrom(
+      minimumSize: const Size(32, 40),
+      maximumSize: const Size(32, double.infinity),
+      padding: const EdgeInsets.all(4),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TextField(
-          controller: _text,
-          focusNode: _focus,
-          enabled: !disabled,
+        Text(
+          label,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: InputDecoration(
-            labelText: label,
-            isDense: true,
-            filled: true,
-            fillColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-            contentPadding: const EdgeInsets.symmetric(vertical: 8),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          onChanged: (value) {
-            setState(() => _pendingValue = value);
-            widget.onChanged(value);
-          },
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            IconButton(
-              tooltip: 'Diminuisci $label',
-              style: IconButton.styleFrom(
-                minimumSize: const Size(40, 40),
-                padding: const EdgeInsets.all(4),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerLowest,
+            border: Border.all(color: Theme.of(context).colorScheme.outline),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              IconButton(
+                tooltip: 'Diminuisci $label',
+                style: buttonStyle,
+                onPressed: disabled || (int.tryParse(_text.text) ?? 0) <= 0
+                    ? null
+                    : () => _step(-1),
+                icon: const Icon(Icons.remove_rounded, size: 18),
               ),
-              onPressed: disabled || (int.tryParse(_text.text) ?? 0) <= 0
-                  ? null
-                  : () => _step(-1),
-              icon: Icon(Icons.remove_rounded, size: 18),
-            ),
-            IconButton(
-              tooltip: 'Aumenta $label',
-              style: IconButton.styleFrom(
-                minimumSize: const Size(40, 40),
-                padding: const EdgeInsets.all(4),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              Expanded(
+                child: Semantics(
+                  label: label,
+                  child: TextField(
+                    controller: _text,
+                    focusNode: _focus,
+                    enabled: !disabled,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      filled: false,
+                      contentPadding: EdgeInsets.symmetric(vertical: 8),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                    ),
+                    onChanged: (value) {
+                      setState(() => _pendingValue = value);
+                      widget.onChanged(value);
+                    },
+                  ),
+                ),
               ),
-              onPressed: disabled ? null : () => _step(1),
-              icon: Icon(Icons.add_rounded, size: 18),
-            ),
-          ],
+              IconButton(
+                tooltip: 'Aumenta $label',
+                style: buttonStyle,
+                onPressed: disabled ? null : () => _step(1),
+                icon: const Icon(Icons.add_rounded, size: 18),
+              ),
+            ],
+          ),
         ),
       ],
     );
