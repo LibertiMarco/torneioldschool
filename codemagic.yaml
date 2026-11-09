@@ -69,7 +69,7 @@ workflows:
             --dart-define=TOS_BASE_URL=https://torneioldschool.it \
             --dart-define=TOS_ADS_MONETIZATION=true \
             --export-options-plist=/Users/builder/export_options.plist
-      - name: Verifica notifiche nella IPA firmata
+      - name: Verifica permessi foto e notifiche nella IPA firmata
         script: |
           set -euo pipefail
           ipa_files=(build/ios/ipa/*.ipa)

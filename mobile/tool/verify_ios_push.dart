@@ -15,6 +15,17 @@ void validateIosPush({
   }
 
   require(info['CFBundleIdentifier'] == iosBundleId, 'Bundle ID IPA errato');
+  for (final key in [
+    'NSCameraUsageDescription',
+    'NSPhotoLibraryUsageDescription',
+    'NSPhotoLibraryAddUsageDescription',
+  ]) {
+    final description = info[key];
+    require(
+      description is String && description.trim().isNotEmpty,
+      '$key assente o vuota nella IPA: accesso alle foto non sicuro',
+    );
+  }
   require(firebase['BUNDLE_ID'] == iosBundleId, 'Bundle ID Firebase errato');
   require(
     firebase['PROJECT_ID'] == 'tornei-old-school-9e11b',
@@ -118,7 +129,7 @@ Future<void> main(List<String> args) async {
       profile: await plist(profileFile.path, key: 'Entitlements'),
     );
     stdout.writeln(
-      'IPA verificata: firma valida, APNs production e Firebase coerenti.',
+      'IPA verificata: descrizioni fotocamera/foto presenti, firma valida, APNs production e Firebase coerenti.',
     );
   } finally {
     await temporary.delete(recursive: true);

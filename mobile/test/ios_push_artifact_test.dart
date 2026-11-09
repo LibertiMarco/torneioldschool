@@ -13,6 +13,9 @@ void main() {
   setUp(() {
     info = {
       'CFBundleIdentifier': iosBundleId,
+      'NSCameraUsageDescription': 'Scatta la foto del profilo.',
+      'NSPhotoLibraryUsageDescription': 'Seleziona le foto.',
+      'NSPhotoLibraryAddUsageDescription': 'Salva le grafiche.',
       'UIBackgroundModes': ['remote-notification'],
     };
     firebase = {
@@ -36,6 +39,20 @@ void main() {
     signed.remove('aps-environment');
     expect(verify, throwsStateError);
   });
+  for (final key in [
+    'NSCameraUsageDescription',
+    'NSPhotoLibraryUsageDescription',
+    'NSPhotoLibraryAddUsageDescription',
+  ]) {
+    test('rejects missing, empty or invalid $key in the IPA', () {
+      info.remove(key);
+      expect(verify, throwsStateError);
+      for (final invalid in ['', '   ', false, 123]) {
+        info[key] = invalid;
+        expect(verify, throwsStateError);
+      }
+    });
+  }
   test('rejects a sandbox provisioning profile', () {
     profile['aps-environment'] = 'development';
     expect(verify, throwsStateError);
