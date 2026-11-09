@@ -2049,7 +2049,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
 </div>
 
 <link rel="stylesheet" href="/api/match-batch.css?v=1">
-<script src="/api/match-batch.js?v=1"></script>
+<script src="/api/match-batch.js?v=<?= substr(hash_file('sha256', __DIR__ . '/match-batch.js'), 0, 16) ?>"></script>
 <script>
   let partiteData = <?php echo json_encode($partite, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
   let partiteModData = <?php echo json_encode($partiteNonGiocate, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;

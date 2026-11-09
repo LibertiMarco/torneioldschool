@@ -91,7 +91,7 @@
       });
       days.forEach(day => { day.events = events.filter(event => event.date === day.date).sort((a, b) => a.time.localeCompare(b.time)); });
       const hours = days.flatMap(day => day.events.map(event => Number(event.time.slice(0, 2)))).filter(Number.isFinite);
-      const firstHour = Math.min(16, ...hours), lastHour = Math.max(22, ...hours);
+      const firstHour = 19, lastHour = Math.max(22, ...hours);
       const heading = mode === 'week'
         ? `${days[0].label} – ${days[6].label} ${start.getFullYear()}`
         : `${days[0].label} ${start.getFullYear()}`;
