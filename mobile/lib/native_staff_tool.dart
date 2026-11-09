@@ -57,8 +57,6 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
       _confirming = false,
       _actionBusy = false;
   int _run = 0;
-  bool get _website =>
-      widget.path == 'api/gestione_partite.php' && !widget.auth.api.preview;
   bool get _allowed =>
       widget.auth.admin || (widget.graphicsOnly && widget.auth.graphics);
   Map? get _lineup => _blocks
@@ -116,7 +114,6 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
         ...source.queryParameters,
         'sezione': _section,
         'channel': _channel,
-        if (_website) 'presentation': 'website',
       });
       final engine = (widget.engineFactory ?? createStaffEngine)(_channel, (
         message,
@@ -626,60 +623,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
   }
 
   @override
-  Widget build(BuildContext context) => _website
-      ? StaffTheme(
-          child: Scaffold(
-            appBar: AppBar(
-              title: Text(widget.title),
-              actions: [
-                IconButton(
-                  tooltip: 'Ricarica',
-                  onPressed: _start,
-                  icon: const Icon(Icons.refresh_rounded),
-                ),
-              ],
-            ),
-            body: SafeArea(
-              child: Column(
-                children: [
-                  const AdaptiveAdBanner(),
-                  Expanded(
-                    child: !_allowed
-                        ? const Center(
-                            child: Text('Area riservata allo staff.'),
-                          )
-                        : _error != null
-                        ? Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(_error!),
-                                TextButton(
-                                  onPressed: _start,
-                                  child: const Text('Riprova'),
-                                ),
-                              ],
-                            ),
-                          )
-                        : Stack(
-                            children: [
-                              if (_engine != null)
-                                Positioned.fill(child: _engine!.host),
-                              if (_loading)
-                                const Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                            ],
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        )
-      : _buildNative(context);
-
-  Widget _buildNative(BuildContext context) => StaffTheme(
+  Widget build(BuildContext context) => StaffTheme(
     child: Localizations(
       locale: const Locale('it'),
       delegates: const [

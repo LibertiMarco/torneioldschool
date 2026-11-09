@@ -26,8 +26,6 @@ try {
         $_SESSION['ruolo'] = $user['ruolo'];
     }
     $source = staff_engine_source($_GET, $user['permissions'] ?? []);
-    $website = ($_GET['presentation'] ?? '') === 'website'
-        && ($_GET['tool'] ?? '') === 'api/gestione_partite.php';
     $nonce = $_GET['channel'] ?? '';
     if (!is_string($nonce) || !preg_match('/^[A-Za-z0-9_-]{24,64}$/D', $nonce)) throw new MobileAuthError('invalid_request', 'Sessione strumento non valida.', 400);
     session_write_close(); // AJAX requests and form submissions can use this session.
@@ -42,17 +40,4 @@ try {
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Strumento staff</title></head>
 <body style="margin:0"><iframe id="staff-source" title="Controller staff" style="border:0;width:100%;height:100vh" src="<?= htmlspecialchars($source, ENT_QUOTES, 'UTF-8') ?>"></iframe>
 <script>window.tosStaffChannel=<?= json_encode($nonce, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
-<?php if ($website): ?>
-<script>
-// Preserve the website forms, dialogs and navigation, including match statistics.
-const frame = document.getElementById('staff-source');
-frame.addEventListener('load', () => {
-    const message = JSON.stringify({type: 'snapshot', channel: window.tosStaffChannel, blocks: []});
-    if (window.TosStaff) window.TosStaff.postMessage(message);
-    else window.parent.postMessage(message, window.location.origin);
-});
-</script>
-<?php else: ?>
-<script src="/app-preview/staff-engine.js?v=<?= substr(hash_file('sha256', __DIR__ . '/staff-engine.js'), 0, 16) ?>"></script>
-<?php endif; ?>
-</body></html>
+<script src="/app-preview/staff-engine.js?v=<?= substr(hash_file('sha256', __DIR__ . '/staff-engine.js'), 0, 16) ?>"></script></body></html>
