@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS mobile_push_devices (
     user_id BIGINT UNSIGNED NOT NULL,
     session_id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     active TINYINT(1) NOT NULL DEFAULT 1,
+    request_actions TINYINT(1) NOT NULL DEFAULT 0,
     updated_at BIGINT NOT NULL,
     last_test_at BIGINT NOT NULL DEFAULT 0,
     KEY idx_mobile_push_user (user_id, active),

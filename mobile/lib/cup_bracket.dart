@@ -26,6 +26,7 @@ List<Map<String, dynamic>> cupSeeds(TournamentData data, String phase) {
       data.teamCount,
       (i) => {
         'name': i < teams.length ? teams[i]['nome'] : '',
+        'logo': i < teams.length ? teams[i]['logo'] ?? '' : '',
         'label': '${i + 1}ª testa di serie',
       },
     );
@@ -42,6 +43,7 @@ List<Map<String, dynamic>> cupSeeds(TournamentData data, String phase) {
       final team = position < table.value.length ? table.value[position] : null;
       result.add({
         'name': team?['nome'] ?? '',
+        'logo': team?['logo'] ?? '',
         'group': data.grouped ? table.key : '',
         'label': data.grouped
             ? '${position + 1}ª ${table.key.replaceFirst('Girone', 'girone')}'
@@ -53,9 +55,16 @@ List<Map<String, dynamic>> cupSeeds(TournamentData data, String phase) {
 }
 
 class _CupSide {
-  _CupSide(this.name, this.label, this.candidates, [this.group = '']);
+  _CupSide(
+    this.name,
+    this.label,
+    this.candidates, [
+    this.group = '',
+    this.logo = '',
+  ]);
   final String name, label;
   final String group;
+  final String logo;
   final Set<String> candidates;
   String get display => name.isEmpty ? label : '$label · $name';
 }
@@ -64,6 +73,8 @@ String _teamKey(dynamic value) => '${value ?? ''}'.trim().toLowerCase();
 
 String? cupMatchWinner(List<Map<String, dynamic>> games) =>
     _cupWinner(games, '')?.name;
+String cupMatchWinnerLogo(List<Map<String, dynamic>> games) =>
+    _cupWinner(games, '')?.logo ?? '';
 
 _CupSide? _cupWinner(List<Map<String, dynamic>> games, String label) {
   if (games.isEmpty ||
@@ -79,11 +90,13 @@ _CupSide? _cupWinner(List<Map<String, dynamic>> games, String label) {
   if (legs.contains('ANDATA') != legs.contains('RITORNO')) return null;
   final totals = <String, int>{};
   final names = <String, String>{};
+  final logos = <String, String>{};
   for (final game in games) {
     for (final side in ['casa', 'ospite']) {
       final name = '${game['squadra_$side'] ?? ''}';
       final key = _teamKey(name);
       names[key] = name;
+      logos[key] = '${game['logo_$side'] ?? ''}';
       totals[key] = (totals[key] ?? 0) + stat(game['gol_$side']);
     }
   }
@@ -111,7 +124,9 @@ _CupSide? _cupWinner(List<Map<String, dynamic>> games, String label) {
       }
     }
   }
-  return winner == null ? null : _CupSide(names[winner]!, label, {winner});
+  return winner == null
+      ? null
+      : _CupSide(names[winner]!, label, {winner}, '', logos[winner] ?? '');
 }
 
 /// Projection only: never inserts matches or changes saved fixtures.
@@ -147,6 +162,7 @@ List<Map<String, dynamic>> buildCupBracket(
       '${seed['label']}',
       name.isEmpty ? {} : {_teamKey(name)},
       '${seed['group'] ?? ''}',
+      '${seed['logo'] ?? ''}',
     );
   });
   var sides = cupSeedOrder(size).map((seed) => participants[seed - 1]).toList();
@@ -290,6 +306,8 @@ List<Map<String, dynamic>> buildCupBracket(
           'bye': bye,
           'squadra_casa': home?.display ?? 'Accesso diretto',
           'squadra_ospite': away?.display ?? 'Accesso diretto',
+          'logo_casa': home?.logo ?? '',
+          'logo_ospite': away?.logo ?? '',
         });
         next.add(bye ? survivor : _CupSide('', label, candidates));
       }

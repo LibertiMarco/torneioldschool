@@ -4,6 +4,8 @@ import 'auth.dart';
 import 'ads.dart';
 import 'staff_controls.dart';
 import 'api.dart';
+import 'admin_role.dart';
+import 'lineup_ad_slot.dart';
 
 class AdminUsersPage extends StatefulWidget {
   const AdminUsersPage({super.key, required this.auth});
@@ -14,6 +16,13 @@ class AdminUsersPage extends StatefulWidget {
 
 class _AdminUsersPageState extends State<AdminUsersPage> {
   int page = 1;
+  final search = TextEditingController();
+  @override
+  void dispose() {
+    search.dispose();
+    super.dispose();
+  }
+
   late Future<dynamic> users;
   @override
   void initState() {
@@ -24,7 +33,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   void _load() {
     users = widget.auth.authorized(
       'api/mobile/v1/admin/users.php',
-      query: {'page': '$page'},
+      query: {'page': '$page', 'q': search.text.trim()},
     );
   }
 
@@ -61,10 +70,29 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  const AdaptiveAdBanner(),
+                  const LineupAdSlot(),
                   const Text(
                     'Utenti',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: search,
+                    decoration: InputDecoration(
+                      labelText: 'Cerca account per nome o email',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.search),
+                        onPressed: () => setState(() {
+                          page = 1;
+                          _load();
+                        }),
+                      ),
+                    ),
+                    onSubmitted: (_) => setState(() {
+                      page = 1;
+                      _load();
+                    }),
                   ),
                   const SizedBox(height: 16),
                   if (rows.isEmpty) const Text('Nessun utente disponibile.'),
@@ -75,10 +103,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                         onTap: () async {
                           await Navigator.of(context).push(
                             MaterialPageRoute<void>(
-                              builder: (_) => AdminFeaturesPage(
-                                auth: widget.auth,
-                                user: user,
-                              ),
+                              builder: (_) =>
+                                  AdminRolePage(auth: widget.auth, user: user),
                             ),
                           );
                           if (mounted) setState(_load);
@@ -133,6 +159,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       ),
                     ],
                   ),
+                  const LineupAdSlot(),
                 ],
               );
             },

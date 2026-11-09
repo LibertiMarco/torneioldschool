@@ -38,3 +38,7 @@ expect_diffida(diffidati_apply_event($labels, $silver, true), [], 'Terzo giallo 
 expect_diffida(diffidati_apply_event($labels, ['cartellino_rosso' => 1], true), [], 'Rosso azzera anche i turni');
 expect_diffida(diffidati_apply_event($labels, [], true), $labels, 'Nessun cartellino conserva i turni');
 echo "Diffidati: tutti i controlli superati\n";
+expect_diffida([diffidati_cup_cycle([['fase'=>'REGULAR','giocata'=>1]],6)],[false],'Una sola giornata non termina la regular season');
+expect_diffida([diffidati_cup_cycle(array_fill(0,6,['fase'=>'REGULAR','giocata'=>1]),6)],[true],'Regular season completa azzera il ciclo');
+expect_diffida([diffidati_cup_cycle([['fase'=>'REGULAR','giocata'=>1],['fase'=>'GOLD','giocata'=>0]],6)],[true],'Transizione alle coppe dopo ultima partita regular');
+expect_diffida([diffidati_cup_cycle([['fase'=>'REGULAR','giocata'=>0],['fase'=>'GOLD','giocata'=>0]],6)],[false],'Partite ancora da giocare mantengono il ciclo regular');

@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'ads.dart';
 import 'lineup_ad_slot.dart';
 import 'staff_player_associations.dart';
+import 'staff_selection_picker.dart';
 import 'staff_photo_canvas.dart';
 
 import 'package:flutter_quill/flutter_quill.dart';
@@ -121,6 +122,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
         ...source.queryParameters,
         'sezione': _section,
         'channel': _channel,
+        'ui': '2',
       });
       final engine = (widget.engineFactory ?? createStaffEngine)(_channel, (
         message,
@@ -507,6 +509,16 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
       '$_document:${block['id'] ?? block['text'] ?? block['label']}',
     );
     switch (block['kind']) {
+      case 'staff-check-picker':
+        return StaffSelectionPicker(
+          key: key,
+          model: block,
+          onChanged: (selected) => _send({
+            'type': 'check-selection',
+            'id': block['id'],
+            'selected': selected,
+          }),
+        );
       case 'staff-player-list':
         return StaffPlayerList(
           key: key,
@@ -1387,7 +1399,8 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
     final f = widget.field, type = f['type'], disabled = f['disabled'] == true;
     final label = '${f['label']}${f['required'] == true ? ' *' : ''}';
     if (type == 'checkbox' || type == 'radio') {
-      if (f['appearance'] == 'captain' ||
+      if (f['appearance'] == 'toggle' ||
+          f['appearance'] == 'captain' ||
           f['appearance'] == 'selection-switch') {
         final colors = Theme.of(context).colorScheme;
         return Material(
@@ -1406,7 +1419,9 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
             ),
             subtitle: Text(
-              f['appearance'] == 'selection-switch'
+              f['appearance'] == 'toggle'
+                  ? 'Attiva o disattiva questa opzione.'
+                  : f['appearance'] == 'selection-switch'
                   ? 'Seleziona o deseleziona tutti i giocatori della squadra.'
                   : 'Capitano per questa squadra. Si applica al salvataggio.',
               style: const TextStyle(fontSize: 11),
@@ -1576,6 +1591,64 @@ class _StaffNativeRecordsState extends State<StaffNativeRecords> {
   String _search = '';
   final _searchController = TextEditingController();
   int _page = 0;
+  Widget _associationCard(Map row, int index) {
+    final cells = (row['cells'] as List? ?? []).whereType<Map>().toList();
+    String text(int i) => i >= cells.length
+        ? ''
+        : (cells[i]['blocks'] as List? ?? [])
+              .whereType<Map>()
+              .map((block) => '${block['text'] ?? ''}')
+              .where((value) => value.isNotEmpty)
+              .join(' ');
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      color: index.isEven
+          ? colors.surfaceContainerLow
+          : colors.surfaceContainerHigh,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.link_rounded, color: colors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    text(0),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 17,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (text(1).isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  text(1),
+                  style: TextStyle(color: colors.onSurfaceVariant),
+                ),
+              ),
+            const Divider(height: 24),
+            Text(text(2), style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(text(3), style: TextStyle(color: colors.onSurfaceVariant)),
+            if (cells.length > 4) ...[
+              const SizedBox(height: 12),
+              for (final block
+                  in (cells[4]['blocks'] as List? ?? []).whereType<Map>())
+                widget.render(block),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -1647,33 +1720,38 @@ class _StaffNativeRecordsState extends State<StaffNativeRecords> {
             child: Text('Nessun elemento da mostrare.'),
           ),
         for (final row in rows.skip(page * 20).take(20))
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 6),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final cell
-                      in (row['cells'] as List? ?? []).whereType<Map>()) ...[
-                    if ('${cell['label'] ?? ''}'.isNotEmpty)
-                      Text(
-                        '${cell['label']}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          if (widget.table['appearance'] == 'associations')
+            _associationCard(row, rows.indexOf(row))
+          else
+            Card(
+              margin: const EdgeInsets.symmetric(vertical: 6),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final cell
+                        in (row['cells'] as List? ?? []).whereType<Map>()) ...[
+                      if ('${cell['label'] ?? ''}'.isNotEmpty)
+                        Text(
+                          '${cell['label']}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                    for (final block
-                        in (cell['blocks'] as List? ?? []).whereType<Map>())
-                      widget.render(block),
-                    const SizedBox(height: 8),
+                      for (final block
+                          in (cell['blocks'] as List? ?? []).whereType<Map>())
+                        widget.render(block),
+                      const SizedBox(height: 8),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
         if (pages > 1)
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

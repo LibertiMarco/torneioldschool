@@ -73,6 +73,8 @@
 		<dict><key>SKAdNetworkIdentifier</key><string>97r2b46745.skadnetwork</string></dict>
 		<dict><key>SKAdNetworkIdentifier</key><string>3qcr597p9d.skadnetwork</string></dict>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Tornei Old School usa la fotocamera per scattare una foto da caricare come immagine del profilo.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Tornei Old School usa le foto selezionate per il profilo, l’importazione dei giocatori e la creazione delle grafiche.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

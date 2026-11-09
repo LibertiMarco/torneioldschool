@@ -12,7 +12,11 @@ dom.DocumentFragment articleFragment(String content) {
         RegExp(r'^==(.+)==[ \t]*$', multiLine: true),
         (match) => '### ${match[1]!.trim()}',
       )
-      .replaceAllMapped(RegExp(r'==(.+?)=='), (match) => '**${match[1]}**');
+      .replaceAllMapped(RegExp(r'==(.+?)=='), (match) => '**${match[1]}**')
+      .replaceAllMapped(
+        RegExp(r'\+\+(.+?)\+\+'),
+        (match) => '<u>${match[1]}</u>',
+      );
   final fragment = parseFragment(
     markdown.markdownToHtml(
       normalized,

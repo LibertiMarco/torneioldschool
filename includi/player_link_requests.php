@@ -29,7 +29,7 @@ function player_link_requests_notify_admins(array $userIds, string $title, strin
     try {
         $conn->set_charset('utf8mb4');
         tos_push_store_notifications_for_users($conn, $userIds, 'player_link_request', $title, $text, $link,
-            ['tag' => 'player-link-request-' . $requestId]);
+            ['tag' => 'player-link-request-' . $requestId,'data'=>['kind'=>'player_link_request','request_id'=>(string)$requestId]]);
     } finally { $conn->close(); }
 }
 
@@ -154,6 +154,11 @@ final class PlayerLinkRequests {
 function player_link_requests_handle(PDO $db, int $userId, array $query, ?array $input): array {
     $service = new PlayerLinkRequests($db);
     if ($input !== null) {
+        if (($input['action'] ?? '') === 'review') {
+            if (array_diff(array_keys($input),['action','request_id','accept','_csrf']) || !is_int($input['request_id'] ?? null) || !is_bool($input['accept'] ?? null)) throw new MobileAuthError('invalid_request','Risposta alla richiesta non valida.',400);
+            $service->review($userId,$input['request_id'],$input['accept']);
+            return ['ok'=>true,'message'=>$input['accept'] ? 'Richiesta accettata.' : 'Richiesta rifiutata.'];
+        }
         if (array_diff(array_keys($input), ['giocatore_id', '_csrf']) || !is_int($input['giocatore_id'] ?? null)) throw new MobileAuthError('invalid_request', 'Richiesta non valida.', 400);
         return $service->submit($userId, $input['giocatore_id']);
     }

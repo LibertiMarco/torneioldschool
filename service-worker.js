@@ -40,15 +40,36 @@ self.addEventListener('push', (event) => {
     renotify: !!data.renotify,
     data: {
       url: data.url || '/account.php',
+      kind: data.data?.kind || '',
+      request_id: data.data?.request_id || '',
     },
     timestamp: Number.isFinite(data.timestamp) ? data.timestamp : Date.now(),
   };
+  if(options.data.kind==='player_link_request' && /^[1-9][0-9]{0,9}$/.test(String(options.data.request_id))) {
+    options.actions=[{action:'accept',title:'Accetta'},{action:'reject',title:'Rifiuta'}];
+  }
 
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  if(['accept','reject'].includes(event.action) && event.notification.data?.kind==='player_link_request') {
+    event.waitUntil((async()=>{
+      const id=Number(event.notification.data.request_id);
+      try {
+        if(!Number.isSafeInteger(id) || id<=0)throw new Error('Richiesta non valida.');
+        const sessionResponse=await fetch('/app-preview/api.php?action=session',{credentials:'include',cache:'no-store'});
+        const session=await sessionResponse.json();
+        if(!sessionResponse.ok || !session.user?.permissions?.admin || !session.csrf)throw new Error('Accedi come amministratore per gestire questa richiesta.');
+        const response=await fetch('/app-preview/api.php?action=player_link_requests',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({_csrf:session.csrf,action:'review',request_id:id,accept:event.action==='accept'})});
+        const result=await response.json();if(!response.ok || !result.ok)throw new Error(result.error?.message || 'Operazione non riuscita. Riprova nella gestione.');
+        await self.registration.showNotification(event.action==='accept'?'Richiesta accettata':'Richiesta rifiutata',{body:result.message,icon:'/img/logo_old_school.png',tag:'player-link-result-'+id,data:{url:'/api/gestione_account_giocatore.php'}});
+      } catch(error) {
+        await self.registration.showNotification('Richiesta non confermata',{body:error.message || 'Connessione non disponibile. Riprova nella gestione.',icon:'/img/logo_old_school.png',tag:'player-link-result-'+id,data:{url:'/api/gestione_account_giocatore.php'}});
+      }
+    })());return;
+  }
   const targetUrl = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href;
 
   event.waitUntil(

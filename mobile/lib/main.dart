@@ -12,6 +12,7 @@ import 'login_page.dart';
 import 'ads.dart';
 import 'push.dart';
 import 'notification_navigation.dart';
+import 'request_notification_actions.dart';
 import 'access_gate.dart';
 import 'staff_dashboard.dart';
 import 'account_page.dart';
@@ -83,6 +84,7 @@ class _TosAppState extends State<TosApp> with WidgetsBindingObserver {
         !widget.api.preview,
   );
   final List<StreamSubscription<RemoteMessage>> _pushListeners = [];
+  RequestNotificationActions? _requestActions;
   late final SessionStore _themeStorage =
       widget.themeStorage ?? const SecureSessionStore();
   ThemeMode _themeMode = ThemeMode.light;
@@ -125,8 +127,19 @@ class _TosAppState extends State<TosApp> with WidgetsBindingObserver {
   Future<void> _startPush() async {
     await _push.start();
     if (!mounted || !_push.ready) return;
+    _requestActions = RequestNotificationActions(
+      auth: widget.auth,
+      openRequests: () => _notificationNavigator.open(
+        'https://torneioldschool.it/api/gestione_account_giocatore.php',
+      ),
+      showMessage: (message) => _messengerKey.currentState?.showSnackBar(
+        SnackBar(content: Text(message)),
+      ),
+    );
+    await _requestActions!.start();
     _pushListeners.add(
       FirebaseMessaging.onMessage.listen((message) {
+        if (message.data['kind'] == 'player_link_request') return;
         if (widget.auth.user == null || !_push.enabled) return;
         final notification = message.notification;
         _messengerKey.currentState?.showSnackBar(
@@ -169,6 +182,7 @@ class _TosAppState extends State<TosApp> with WidgetsBindingObserver {
     for (final listener in _pushListeners) {
       listener.cancel();
     }
+    _requestActions?.dispose();
     widget.auth.presentNativeLogin = null;
     _notificationNavigator.dispose();
     _push.dispose();

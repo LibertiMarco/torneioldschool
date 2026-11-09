@@ -108,24 +108,10 @@ const adminTools = [
     'Sport',
   ),
   StaffTool(
-    'Video partite',
-    'Collega i video alle partite',
-    Icons.play_circle_outline,
-    'api/sincronizza_video_partite.php',
-    'Contenuti',
-  ),
-  StaffTool(
     'Account giocatore',
     'Richieste e associazioni giocatori',
     Icons.link_outlined,
     'api/gestione_account_giocatore.php',
-    'Account',
-  ),
-  StaffTool(
-    'Accesso app',
-    'Abilitazioni per l’app',
-    Icons.phone_iphone_outlined,
-    'admin_mobile.php',
     'Account',
   ),
   StaffTool(
@@ -149,25 +135,11 @@ const adminTools = [
     'api/gestione_albo.php',
     'Contenuti',
   ),
-  StaffTool(
-    'Totocalcio',
-    'Pronostici e concorsi',
-    Icons.confirmation_number_outlined,
-    'api/gestione_totocalcio.php',
-    'Extra',
-  ),
-  StaffTool(
-    'Fantacalcio',
-    'Gestione del fantacalcio',
-    Icons.sports_outlined,
-    'api/gestione_fantacalcio.php',
-    'Extra',
-  ),
 ];
 
 const accountTool = StaffTool(
   'Gestione account',
-  'Utenti e abilitazioni',
+  'Ricerca utenti e modifica del profilo',
   Icons.manage_accounts_outlined,
   'account-users',
   'Account',

@@ -70,7 +70,7 @@ function tos_fcm_message(string $token, array $payload): array
     if (parse_url($url, PHP_URL_SCHEME) !== 'https' || parse_url($url, PHP_URL_HOST) !== 'torneioldschool.it'
         || parse_url($url, PHP_URL_USER) !== null
         || !in_array(parse_url($url, PHP_URL_PORT), [null, 443], true)) { $url = 'https://torneioldschool.it/account.php'; }
-    return ['message' => [
+    $message = ['message' => [
         'token' => $token,
         'notification' => ['title' => (string)($payload['title'] ?? 'Tornei Old School'),
             'body' => (string)($payload['body'] ?? '')],
@@ -82,6 +82,27 @@ function tos_fcm_message(string $token, array $payload): array
             'notification' => ['icon' => 'ic_notification', 'sound' => 'default', 'channel_id' => 'tos_updates',
                 'tag' => (string)($payload['tag'] ?? 'tos-notification')]],
     ]];
+    $data=$payload['data'] ?? [];
+    if (($data['kind'] ?? '')==='player_link_request' && preg_match('/^[1-9][0-9]{0,9}$/D',(string)($data['request_id'] ?? ''))) {
+        $message['message']['data'] += ['kind'=>'player_link_request','request_id'=>(string)$data['request_id'],'recipient_id'=>(string)($payload['recipient_id'] ?? ''),'title'=>(string)($payload['title'] ?? ''),'body'=>(string)($payload['body'] ?? '')];
+        $message['message']['apns']['payload']['aps']['category']='TOS_PLAYER_LINK';
+        if (!empty($payload['actions_supported'])) {
+            // New Android clients render the actionable card themselves. Older apps retain normal alerts.
+            $message['message']['apns']['payload']['aps']['alert']=$message['message']['notification'];
+            unset($message['message']['notification'],$message['message']['android']['notification']);
+        }
+    }
+    return $message;
+}
+
+function tos_fcm_action_schema(PDO|mysqli $db): bool {
+    static $known=[];$key=spl_object_id($db);if(isset($known[$key]))return $known[$key];
+    try {
+        $check=$db->query("SHOW COLUMNS FROM mobile_push_devices LIKE 'request_actions'");
+        $exists=$check instanceof PDOStatement ? $check->fetchColumn()!==false : $check && $check->num_rows>0;
+        if(!$exists && !$db->query('ALTER TABLE mobile_push_devices ADD COLUMN request_actions TINYINT(1) NOT NULL DEFAULT 0')) return $known[$key]=false;
+        return $known[$key]=true;
+    } catch(Throwable $error){return $known[$key]=false;}
 }
 
 function tos_fcm_unregistered(array $response): bool
@@ -108,11 +129,12 @@ function tos_fcm_deliver(string $token, array $payload, array $credentials, stri
 }
 
 // Shared by the mysqli event producers and the PDO mobile API.
-function tos_fcm_recipients_sql(string $placeholders): string
+function tos_fcm_recipients_sql(string $placeholders, bool $actions=false): string
 {
     // Compare exact bytes without mixing the ascii_bin column collation with
     // the connection collation returned by SHA2 (MySQL error 1267).
-    return "SELECT d.token_hash, d.token FROM mobile_push_devices d
+    $capability=$actions ? 'd.request_actions' : '0 AS request_actions';
+    return "SELECT d.token_hash, d.token, d.user_id, {$capability} FROM mobile_push_devices d
         JOIN mobile_sessions s ON s.id = d.session_id AND s.user_id = d.user_id
         JOIN utenti u ON u.id = d.user_id
         WHERE d.active = 1 AND d.user_id IN ($placeholders)
@@ -127,7 +149,7 @@ function tos_fcm_send_to_users(mysqli $conn, array $userIds, array $payload): ar
     $userIds = array_values(array_filter(array_unique(array_map('intval', $userIds)), static fn($id) => $id > 0));
     if (!$credentials || !$userIds) { return $result; }
     try {
-        $stmt = $conn->prepare(tos_fcm_recipients_sql(implode(',', array_fill(0, count($userIds), '?'))));
+        $stmt = $conn->prepare(tos_fcm_recipients_sql(implode(',', array_fill(0, count($userIds), '?')),tos_fcm_action_schema($conn)));
         if (!$stmt) { return $result; }
         $values = [...$userIds, time()];
         $stmt->bind_param(str_repeat('i', count($values)), ...$values);
@@ -144,7 +166,7 @@ function tos_fcm_send_to_users(mysqli $conn, array $userIds, array $payload): ar
             return ['sent' => 0, 'failed' => count($devices), 'subscriptions' => count($devices)];
         }
         foreach ($devices as $device) {
-            $sent = tos_fcm_deliver($device['token'], $payload, $credentials, $access);
+            $sent = tos_fcm_deliver($device['token'], $payload+['actions_supported'=>!empty($device['request_actions']),'recipient_id'=>(string)$device['user_id']], $credentials, $access);
             $result['subscriptions']++;
             $result[$sent['success'] ? 'sent' : 'failed']++;
             if ($sent['unregistered']) {

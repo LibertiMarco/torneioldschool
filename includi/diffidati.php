@@ -26,7 +26,39 @@ function diffidati_apply_event(array $giornate, array $event, bool $labels = fal
     return $giornate;
 }
 
+function diffidati_cup_cycle(array $matches, int $expectedRegular): bool {
+    $regular = 0; $pending = 0; $cups = 0; $pairs=[];
+    foreach ($matches as $match) {
+        $phase = strtoupper(trim((string)($match['fase'] ?? 'REGULAR')));
+        if (in_array($phase, ['GOLD','SILVER','BRONZO'], true)) {
+            $cups++;
+            if ((int)($match['giocata'] ?? 0) === 1) return true;
+        } elseif ($phase === '' || $phase === 'REGULAR' || str_starts_with($phase, 'GIRONE')) {
+            $regular++;
+            if(isset($match['squadra_casa'],$match['squadra_ospite'])) {$pair=[strtolower(trim($match['squadra_casa'])),strtolower(trim($match['squadra_ospite']))];sort($pair);$pairs[implode('|',$pair)]=true;}
+            if ((int)($match['giocata'] ?? 0) !== 1) $pending++;
+        }
+    }
+    return $regular > 0 && $pending === 0 && ($cups > 0 || ($expectedRegular > 0 && (count($pairs) ?: $regular) >= $expectedRegular));
+}
+
 function diffidati_fetch(mysqli $conn, string $torneo, int $giocatoreId = 0, int $squadraId = 0): array {
+    // A new disciplinary cycle for the cups; historical cards stay untouched.
+    $stage = $conn->prepare('SELECT fase, giocata, squadra_casa, squadra_ospite FROM partite WHERE torneo = ?');
+    $stage->bind_param('s', $torneo); $stage->execute();
+    $matches = $stage->get_result()->fetch_all(MYSQLI_ASSOC); $stage->close();
+    $teamsStmt = $conn->prepare('SELECT girone FROM squadre WHERE torneo = ?');
+    if(!$teamsStmt) $teamsStmt=$conn->prepare('SELECT NULL AS girone FROM squadre WHERE torneo = ?');
+    $teamsStmt->bind_param('s', $torneo); $teamsStmt->execute();
+    $groups = [];
+    foreach ($teamsStmt->get_result()->fetch_all(MYSQLI_ASSOC) as $team) {
+        $group = strtoupper(trim((string)($team['girone'] ?? ''))); $groups[$group] = ($groups[$group] ?? 0) + 1;
+    }
+    $teamsStmt->close();
+    $expected = 0;
+    foreach ($groups as $count) $expected += (int)($count * ($count - 1) / 2);
+    $cups = diffidati_cup_cycle($matches, $expected);
+    $phaseFilter = $cups ? " AND UPPER(TRIM(p.fase)) IN ('GOLD','SILVER','BRONZO')" : '';
     $teamExpr = partita_giocatore_team_id_expr($conn, 'pg.squadra_id');
     $resolved = partita_giocatore_resolved_team_expr('pg.giocatore_id', $teamExpr, 'p.torneo', 'p.squadra_casa', 'p.squadra_ospite');
     $sql = "SELECT pg.giocatore_id, s.id AS squadra_id, g.nome, g.cognome,
@@ -36,7 +68,7 @@ function diffidati_fetch(mysqli $conn, string $torneo, int $giocatoreId = 0, int
             JOIN giocatori g ON g.id = pg.giocatore_id
             JOIN squadre s ON s.id = {$resolved}
             JOIN squadre_giocatori sg ON sg.giocatore_id = g.id AND sg.squadra_id = s.id
-            WHERE p.torneo = ? AND (? = 0 OR g.id = ?) AND (? = 0 OR s.id = ?)
+            WHERE p.torneo = ? AND p.giocata = 1 {$phaseFilter} AND (? = 0 OR g.id = ?) AND (? = 0 OR s.id = ?)
             ORDER BY p.data_partita, p.ora_partita, p.id, pg.id";
     $stmt = $conn->prepare($sql);
     if (!$stmt) throw new RuntimeException('Impossibile caricare i diffidati');

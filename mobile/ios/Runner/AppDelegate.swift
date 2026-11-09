@@ -7,6 +7,8 @@ import AppTrackingTransparency
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var pushRegistrationError: String?
+  private var requestActionChannel: FlutterMethodChannel?
+  private var pendingRequestAction: [String: String]?
   private var trackingResults: [FlutterResult] = []
   private var trackingRequestInFlight = false
   private var trackingActiveObserver: NSObjectProtocol?
@@ -58,12 +60,26 @@ import AppTrackingTransparency
   ) -> Bool {
     // Firebase Messaging 16.7 handles late plugin registration with UIScene.
     // Its shared notification delegate must be installed before launch returns.
+    UNUserNotificationCenter.current().delegate = self
     FLTFirebaseMessagingPlugin.configureNotificationCenterDelegate()
+    let accept = UNNotificationAction(identifier: "TOS_ACCEPT_PLAYER_LINK", title: "Accetta", options: [.foreground, .authenticationRequired])
+    let reject = UNNotificationAction(identifier: "TOS_REJECT_PLAYER_LINK", title: "Rifiuta", options: [.foreground, .authenticationRequired, .destructive])
+    let category = UNNotificationCategory(identifier: "TOS_PLAYER_LINK", actions: [accept, reject], intentIdentifiers: [], options: [])
+    UNUserNotificationCenter.current().getNotificationCategories { categories in
+      UNUserNotificationCenter.current().setNotificationCategories(categories.union([category]))
+    }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    let actionRegistrar = engineBridge.pluginRegistry.registrar(forPlugin: "TosRequestActions")!
+    requestActionChannel = FlutterMethodChannel(name: "tos/request_actions", binaryMessenger: actionRegistrar.messenger())
+    requestActionChannel?.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "take" else { result(FlutterMethodNotImplemented); return }
+      result(self?.pendingRequestAction)
+      self?.pendingRequestAction = nil
+    }
     let trackingRegistrar = engineBridge.pluginRegistry.registrar(forPlugin: "TosTracking")!
     let trackingChannel = FlutterMethodChannel(name: "tos/tracking", binaryMessenger: trackingRegistrar.messenger())
     trackingChannel.setMethodCallHandler { [weak self] call, result in
@@ -103,5 +119,24 @@ import AppTrackingTransparency
         result(FlutterMethodNotImplemented)
       }
     }
+  }
+
+  override func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    if notification.request.content.categoryIdentifier == "TOS_PLAYER_LINK" {
+      completionHandler([.banner, .list, .sound]); return
+    }
+    super.userNotificationCenter(center, willPresent: notification, withCompletionHandler: completionHandler)
+  }
+
+  override func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+    if ["TOS_ACCEPT_PLAYER_LINK", "TOS_REJECT_PLAYER_LINK"].contains(response.actionIdentifier) {
+      let data = response.notification.request.content.userInfo
+      if let id = data["request_id"] as? String, let number = Int(id), number > 0 {
+        pendingRequestAction = ["request_id": id, "action": response.actionIdentifier == "TOS_ACCEPT_PLAYER_LINK" ? "accept" : "reject", "recipient_id": data["recipient_id"] as? String ?? ""]
+        requestActionChannel?.invokeMethod("pending", arguments: nil)
+      }
+      completionHandler(); return
+    }
+    super.userNotificationCenter(center, didReceive: response, withCompletionHandler: completionHandler)
   }
 }

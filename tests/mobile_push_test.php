@@ -49,3 +49,9 @@ push_expect(tos_fcm_unregistered(['error' => ['details' => [[
 push_expect(tos_fcm_token_valid(str_repeat('a', 140) . ':token'), 'FCM token accepted');
 push_expect(!tos_fcm_token_valid("bad\nheader") && !tos_fcm_token_valid(str_repeat('a', 4097)), 'Invalid tokens rejected');
 echo "Mobile push: recipient isolation, session revocation, links and FCM failures verified.\n";
+$request=['url'=>'/api/gestione_account_giocatore.php','title'=>'Richiesta','body'=>'Associazione','data'=>['kind'=>'player_link_request','request_id'=>'12'],'recipient_id'=>'1'];
+$legacy=tos_fcm_message('token',$request);push_expect(isset($legacy['message']['notification']),'Old app retains system notification');
+$actionable=tos_fcm_message('token',$request+['actions_supported'=>true]);
+push_expect(!isset($actionable['message']['notification'],$actionable['message']['android']['notification']),'Action-capable Android receives data-only card without duplicate notification');
+push_expect($actionable['message']['data']['request_id']==='12' && $actionable['message']['data']['recipient_id']==='1','Action bound to request and recipient');
+push_expect($actionable['message']['apns']['payload']['aps']['category']==='TOS_PLAYER_LINK' && $actionable['message']['apns']['payload']['aps']['alert']['title']==='Richiesta','Apple receives alert and registered actions category');

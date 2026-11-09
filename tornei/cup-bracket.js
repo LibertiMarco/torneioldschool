@@ -15,7 +15,7 @@
     while (order.length < size) order = order.flatMap(seed => [seed, order.length * 2 + 1 - seed]);
     return order;
   }
-  const side = (name, label, candidates, group='') => ({name, label, group, candidates: candidates || new Set(name ? [key(name)] : [])});
+  const side = (name, label, candidates, group='', logo='') => ({name, label, group, logo, candidates: candidates || new Set(name ? [key(name)] : [])});
   const display = value => value ? (value.name ? `${value.label} · ${value.name}` : value.label) : 'Accesso diretto';
   function winner(games, label) {
     if (!games.length || games.some(g => Number(g.giocata) !== 1 || g.gol_casa == null || g.gol_ospite == null)) return null;
@@ -34,7 +34,9 @@
       const last = penalties.at(-1);
       if (last && Number(last.rigori_casa) !== Number(last.rigori_ospite)) win = key(last[Number(last.rigori_casa) > Number(last.rigori_ospite) ? 'squadra_casa' : 'squadra_ospite']);
     }
-    return win ? side(names.get(win), label) : null;
+    const logoGame=win && games.find(g=>key(g.squadra_casa)===win || key(g.squadra_ospite)===win);
+    const logo=logoGame ? logoGame[key(logoGame.squadra_casa)===win ? 'logo_casa' : 'logo_ospite'] || '' : '';
+    return win ? side(names.get(win), label,undefined,'',logo) : null;
   }
   function build(seeds, matches, phase) {
     const actual = matches.filter(m => phaseKey(m.fase) === phase);
@@ -47,7 +49,7 @@
     }
     if (seeds.length < 2 && !actual.length) return [];
     const participants = Array.from({length:size}, (_,i) => i < seeds.length
-      ? side(seeds[i].name || '',seeds[i].label,undefined,seeds[i].group)
+      ? side(seeds[i].name || '',seeds[i].label,undefined,seeds[i].group,seeds[i].logo)
       : !seeds.length || size>configuredSize ? side('',`${i+1}ª qualificata`) : null);
     let sides = seedOrder(size).map(seed => participants[seed-1]);
     for(let i=0;i<sides.length;i+=2) {
@@ -103,7 +105,7 @@
         } else {
           const bye=!home || !away;
           output.push({fase:phase,fase_round:round,bracket_slot:slot,template:true,bye,
-            squadra_casa:display(home),squadra_ospite:display(away)});
+            squadra_casa:display(home),squadra_ospite:display(away),logo_casa:home?.logo || '',logo_ospite:away?.logo || ''});
           next.push(bye ? home || away : side('',label,candidates));
         }
       }
@@ -119,7 +121,7 @@
     const start=directCount ? 1 : range?.start || 1, count=directCount || range?.spots || (range ? range.end-range.start+1 : 0);
     for (let rank=0;rank<count;rank++) for (const table of tables) {
       const position=start+rank, team=table.teams[position-1];
-      result.push({name:team?.nome || '',group:tables.length>1 ? table.label : '',label:tables.length>1 ? `${position}ª girone ${table.label}` : `${position}ª in classifica`});
+      result.push({name:team?.nome || '',logo:team?.logo || '',group:tables.length>1 ? table.label : '',label:tables.length>1 ? `${position}ª girone ${table.label}` : `${position}ª in classifica`});
     }
     return result;
   }
@@ -157,7 +159,42 @@
     });
     return {tables,ranges};
   }
-  const api={build,seedOrder,selectSeeds,roundKey,labels};
+  function standingsOrder(rows,matches) {
+    const ordered=[];
+    for(const points of [...new Set(rows.map(r=>Number(r.punti)||0))].sort((a,b)=>b-a)) {
+      const tied=rows.filter(r=>(Number(r.punti)||0)===points);
+      if(tied.length===2) {
+        let a=0,b=0;
+        for(const game of matches.filter(m=>Number(m.giocata)===1 && (!m.fase || phaseKey(m.fase)==='REGULAR'))) {
+          const home=game.squadra_casa,away=game.squadra_ospite;
+          if(!((home===tied[0].nome && away===tied[1].nome)||(home===tied[1].nome && away===tied[0].nome)) || game.gol_casa==null || game.gol_ospite==null)continue;
+          if(Number(game.gol_casa)===Number(game.gol_ospite)){a++;b++;}
+          else if((Number(game.gol_casa)>Number(game.gol_ospite))===(home===tied[0].nome))a+=3;else b+=3;
+        }
+        if(a!==b){ordered.push(...(a>b?tied:tied.reverse()));continue;}
+      }
+      ordered.push(...tied.sort((a,b)=>(Number(b.differenza_reti)||0)-(Number(a.differenza_reti)||0) || (Number(b.gol_fatti)||0)-(Number(a.gol_fatti)||0) || String(a.nome).localeCompare(String(b.nome),'it',{sensitivity:'base'})));
+    }
+    return ordered;
+  }
+  async function loadProjection(slug,phase) {
+    const [info,rows,all,mapping]=await Promise.all([json(`/api/get_torneo_by_slug.php?slug=${encodeURIComponent(slug)}`),json(`/api/leggiClassifica.php?torneo=${encodeURIComponent(slug)}`),json(`/api/get_partite.php?torneo=${encodeURIComponent(slug)}`),json(`/api/get_squadre_torneo.php?torneo=${encodeURIComponent(slug)}`)]);
+    const matches=Array.isArray(all)?all.flat():Object.values(all).flat();
+    const teams=rows.map(team=>({...team,girone:mapping.find(r=>String(r.id)===String(team.id))?.girone || team.girone}));
+    const layout=info.mobile_layout || {},config={...info.config,...layout.config_overrides};
+    const modern=layout.group_mode==='template',format=String(config.formato || config.formula_torneo || '').toLowerCase();
+    const setup=legacySetup(teams,matches,info,standingsOrder);
+    const total=Number(config.totale_squadre || config.campionato_squadre || layout.default_team_count || teams.length || 18);
+    if(modern || Object.keys(layout.cup_ranges || {}).length) {
+      const fixed=layout.cup_ranges || {};
+      const gold=Math.min(total,Math.max(0,Number(fixed.GOLD ?? config.qualificati_gold ?? layout.default_gold ?? 16)));
+      const silver=Math.min(total-gold,Math.max(0,Number(fixed.SILVER ?? config.qualificati_silver ?? layout.default_silver ?? 2)));
+      const bronze=Math.min(total-gold-silver,Math.max(0,Number(fixed.BRONZO ?? config.qualificati_bronzo ?? layout.default_bronze ?? 0)));
+      let start=1;setup.ranges=['GOLD','SILVER','BRONZO'].map((key,i)=>{const spots=Math.floor([gold,silver,bronze][i]/setup.tables.length);const range={key,start,spots};start+=spots;return range;});
+    }
+    return {info,games:build(selectSeeds(setup.tables,setup.ranges,phase,format==='eliminazione'?total:0),matches,phase)};
+  }
+  const api={build,seedOrder,selectSeeds,roundKey,labels,loadProjection,winner};
   if (typeof module !== 'undefined') module.exports=api;
   if (typeof window === 'undefined') return;
   window.TosCupBracket=api;
@@ -219,11 +256,12 @@
   }
   function paint(container,games,phase,slug) {
     container.replaceChildren(); container.classList.add('cup-projection');
+    container.dataset.cup=phase;
     container.append(element('h3','',`Coppa ${phase==='BRONZO' ? 'Bronzo' : phase==='SILVER' ? 'Silver' : 'Gold'}`));
     container.append(element('p','cup-note','Gli incontri da creare sono indicativi e seguono la classifica attuale. Gli incroci restano fissi fino alla finale.'));
     if (!games.length) { container.append(element('p','','Nessun posto previsto per questa coppa.')); return; }
     const nav=element('div','cup-rounds'); nav.setAttribute('aria-label','Turni della coppa');
-    const hint=element('p','cup-scroll-hint','Scorri il tabellone in orizzontale per seguire il percorso fino alla finale →');
+    const hint=element('p','cup-scroll-hint','Scorri in orizzontale per seguire il tabellone.');
     const scroll=element('div','cup-scroll'); scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Tabellone a eliminazione diretta, scorribile in orizzontale');
     const columns=element('div','cup-columns');
     scroll.append(columns);container.append(nav,hint,scroll);
@@ -244,18 +282,18 @@
         const played=Number(game.giocata)===1, template=game.template;
         const card=element('article',`cup-game${template ? ' is-template' : ''}`);
         const head=element('div','cup-game-head');
-        head.append(element('strong','',game.bracket_slot || ''),element('span','cup-status',template ? game.bye ? 'Accesso diretto' : 'Da creare' : played ? 'Terminata' : 'In programma'));
+        head.append(element('strong','',round==='FINALE' ? '' : game.bracket_slot || ''),element('span','cup-status',template ? game.bye ? 'Accesso diretto' : 'Da creare' : played ? 'Terminata' : 'In programma'));
         card.append(head);
         for (const end of ['casa','ospite']) {
           const row=element('div','cup-team');
           const team=element('span','cup-team-name');
-          if (!template && game[`logo_${end}`]) {
+          if (game[`logo_${end}`]) {
             const url=new URL(game[`logo_${end}`],location.origin+'/');
             if (['http:','https:'].includes(url.protocol)) {
               const logo=element('img','cup-logo'); logo.src=url.href; logo.alt=''; logo.loading='lazy'; logo.width=32;logo.height=32;logo.onerror=()=>logo.remove();team.append(logo);
             }
           }
-          team.append(document.createTextNode(game[`squadra_${end}`] || 'Da definire'));
+          team.append(element('span','cup-name-text',game[`squadra_${end}`] || 'Da definire'));
           row.append(team,element('strong','',played ? String(game[`gol_${end}`] ?? '–') : '–'));
           card.append(row);
         }
@@ -276,8 +314,9 @@
     });
     const champion=element('aside','cup-winner');champion.setAttribute('aria-label','Vincitore della coppa');
     const finalGames=games.filter(g=>roundKey(g)==='FINALE' && !g.template);
-    const championName=winner(finalGames,'Vincitore')?.name;
-    champion.append(element('span','cup-trophy','🏆'),element('strong','',championName || 'Vincente finale'));
+    const championSide=winner(finalGames,'Vincitore');
+    const championLogo=element('img','cup-champion-logo');championLogo.src=championSide?.logo || '/img/tornei/pallone.png';championLogo.alt='Scudetto squadra vincitrice';championLogo.width=64;championLogo.height=64;
+    champion.append(championLogo,element('strong','',championSide?.name || 'Vincente finale'));
     columns.append(champion);
     const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.classList.add('cup-lines');svg.setAttribute('aria-hidden','true');columns.prepend(svg);
     let frame=0;
@@ -322,6 +361,10 @@
     const observer=typeof ResizeObserver==='function' ? new ResizeObserver(queue) : null;
     columns.querySelectorAll('.cup-node,.cup-winner').forEach(node=>observer?.observe(node));
     stopLayout=()=>{ observer?.disconnect();if(frame)cancelAnimationFrame(frame); };
+    scroll.addEventListener('scroll',()=>{
+      const selected=Math.min(nav.children.length-1,Math.round(scroll.scrollLeft/316));
+      [...nav.children].forEach((button,index)=>{button.classList.toggle('active',index===selected);button.setAttribute('aria-pressed',String(index===selected));});
+    },{passive:true});
     queue();
   }
   const style=element('style','');
@@ -349,6 +392,21 @@
     .cup-lines path{fill:none;stroke:#8ba1b6;stroke-width:1.5;stroke-linejoin:round}
     .cup-winner{position:absolute;width:220px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:20px;border:1px solid #dac589;border-radius:16px;background:#fffbef;font-size:14px;z-index:1}
     .cup-trophy{font-size:46px;line-height:1}
+  `;
+  style.textContent+=`
+    .cup-projection{--cup-fill:#fff6d5;--cup-edge:#c69b3a;--cup-ink:#684900}
+    .cup-projection[data-cup=SILVER]{--cup-fill:#edf0f4;--cup-edge:#9ca6b2;--cup-ink:#3c4653}
+    .cup-projection[data-cup=BRONZO]{--cup-fill:#f5e1d2;--cup-edge:#b37a50;--cup-ink:#72401e}
+    .cup-node,.cup-winner{border-color:var(--cup-edge);background:var(--cup-fill)}
+    .cup-game,.cup-game.is-template{background:var(--cup-fill)}
+    .cup-team-name{display:flex;align-items:center;gap:7px;flex:1}
+    .cup-name-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-width:0}
+    .cup-team-name .cup-logo{display:block;width:24px;height:24px;object-fit:contain}
+    .cup-champion-logo{object-fit:contain}
+    .cup-rounds{padding:5px;background:#eef2f7;border:1px solid #d8e0ea;border-radius:14px;width:max-content;max-width:100%}
+    .cup-rounds button{background:transparent;border:0;border-radius:10px;color:#526176;padding:10px 16px;box-shadow:none;font-size:12px;font-weight:700}
+    .cup-rounds button.active{background:var(--cup-fill);color:var(--cup-ink);box-shadow:0 1px 5px #15293e22;outline:1px solid var(--cup-edge)}
+    .cup-rounds button:focus-visible{outline:2px solid #15293e;outline-offset:2px}
   `;
   // Deferred script runs after the page script, before its DOMContentLoaded listeners.
   window.caricaPlayoff=render;

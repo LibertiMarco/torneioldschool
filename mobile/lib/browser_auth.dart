@@ -73,6 +73,7 @@ class BrowserAuth extends TosAuth {
       'api/records.php' => 'records',
       'api/mobile/v1/logo_settings.php' => 'logo_settings',
       'api/mobile/v1/admin/users.php' => 'users',
+      'api/mobile/v1/admin/user_role.php' => 'user_role',
       'api/mobile/v1/admin/user_features.php' => 'features',
       'api/mobile/v1/account.php' => 'account',
       'api/mobile/v1/comments.php' => 'comments',

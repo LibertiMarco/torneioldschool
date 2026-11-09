@@ -190,7 +190,7 @@ class PushController extends ChangeNotifier with WidgetsBindingObserver {
     _requireUser(userId);
     await auth.authorized(
       'api/mobile/v1/push.php',
-      body: {'action': 'subscribe', 'token': token},
+      body: {'action': 'subscribe', 'token': token, 'request_actions': true},
     );
     _requireUser(userId);
     _token = token;

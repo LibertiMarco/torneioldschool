@@ -3,10 +3,18 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import 'api.dart';
-import 'cup_bracket.dart' show cupMatchWinner;
+import 'cup_bracket.dart' show cupMatchWinner, cupMatchWinnerLogo;
 import 'details.dart';
-import 'home_dashboard.dart' show openPage;
+import 'home_dashboard.dart' show openPage, SiteImage;
 import 'tournament_logic.dart';
+
+Color _cupTone(String phase) =>
+    const {
+      'GOLD': Color(0xffbf9638),
+      'SILVER': Color(0xff9da8b5),
+      'BRONZO': Color(0xffb57b50),
+    }[phase] ??
+    const Color(0xff15293e);
 
 class _BracketNode {
   _BracketNode(this.games, this.slot);
@@ -32,6 +40,21 @@ class CupBracketView extends StatefulWidget {
 
 class _CupBracketViewState extends State<CupBracketView> {
   final _scroll = ScrollController();
+  int _selectedRound = 0;
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(() {
+      final index = (_scroll.offset / (_width + _gap)).round().clamp(
+        0,
+        widget.games.map((m) => matchRound(m, widget.phase)).toSet().length - 1,
+      );
+      if (mounted && index != _selectedRound) {
+        setState(() => _selectedRound = index);
+      }
+    });
+  }
+
   @override
   void didUpdateWidget(CupBracketView oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -70,7 +93,7 @@ class _CupBracketViewState extends State<CupBracketView> {
         textScaler: scaler,
         textDirection: Directionality.of(context),
         maxLines: lines,
-      )..layout(maxWidth: _width - 78);
+      )..layout(maxWidth: _width - 110);
       return painter.height;
     }
 
@@ -163,22 +186,39 @@ class _CupBracketViewState extends State<CupBracketView> {
           runSpacing: 6,
           children: [
             for (var i = 0; i < rounds.length; i++)
-              ActionChip(
+              ChoiceChip(
                 label: Text(roundLabel(rounds[i], widget.phase)),
-                onPressed: () => _scroll.animateTo(
-                  (i * (_width + _gap)).clamp(
-                    0,
-                    _scroll.position.maxScrollExtent,
-                  ),
-                  duration: const Duration(milliseconds: 280),
-                  curve: Curves.easeOut,
+                selected: _selectedRound == i,
+                showCheckmark: true,
+                selectedColor: Color.alphaBlend(
+                  _cupTone(widget.phase).withValues(alpha: .3),
+                  colors.surface,
                 ),
+                labelStyle: TextStyle(
+                  fontWeight: _selectedRound == i
+                      ? FontWeight.w800
+                      : FontWeight.w500,
+                  color: _selectedRound == i
+                      ? colors.onSurface
+                      : colors.onSurfaceVariant,
+                ),
+                onSelected: (_) {
+                  setState(() => _selectedRound = i);
+                  _scroll.animateTo(
+                    (i * (_width + _gap)).clamp(
+                      0,
+                      _scroll.position.maxScrollExtent,
+                    ),
+                    duration: const Duration(milliseconds: 280),
+                    curve: Curves.easeOut,
+                  );
+                },
               ),
           ],
         ),
         const SizedBox(height: 8),
         Text(
-          'Scorri in orizzontale per seguire il tabellone →',
+          'Scorri in orizzontale per seguire il tabellone.',
           style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
         ),
         const SizedBox(height: 12),
@@ -234,28 +274,42 @@ class _CupBracketViewState extends State<CupBracketView> {
                   ],
                   Positioned(
                     left: columns.length * (_width + _gap),
-                    top: finalCenter - 70 * scale,
+                    top: finalCenter - (116 + 36 * scale) / 2,
                     width: 220,
                     child: Container(
+                      height: 116 + 36 * scale,
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: colors.surfaceContainerLow,
+                        color: Color.alphaBlend(
+                          _cupTone(widget.phase).withValues(alpha: .22),
+                          colors.surface,
+                        ),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: colors.primary),
+                        border: Border.all(color: _cupTone(widget.phase)),
                       ),
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.emoji_events_outlined,
-                            size: 48,
-                            color: colors.primary,
+                          SiteImage(
+                            api: widget.api,
+                            path: cupMatchWinnerLogo(finalNode?.games ?? []),
+                            identityName:
+                                cupMatchWinner(finalNode?.games ?? []) ?? '',
+                            width: 64,
+                            height: 64,
+                            fallback: Icons.shield_outlined,
+                            preserveShape: true,
                           ),
                           const SizedBox(height: 10),
                           Text(
                             cupMatchWinner(finalNode?.games ?? []) ??
                                 'Vincente finale',
                             textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
+                              fontSize: 14,
+                              height: 1.25,
                               fontWeight: FontWeight.w800,
                               color: colors.onSurface,
                             ),
@@ -320,6 +374,16 @@ class _BracketCard extends StatelessWidget {
     final played = node.games.every((m) => stat(m['giocata']) == 1);
     Widget team(Map<String, dynamic> game, String side) => Row(
       children: [
+        SiteImage(
+          api: api,
+          path: '${game['logo_$side'] ?? ''}',
+          identityName: '${game['squadra_$side'] ?? ''}',
+          width: 22,
+          height: 22,
+          fallback: Icons.shield_outlined,
+          preserveShape: true,
+        ),
+        const SizedBox(width: 6),
         Expanded(
           child: Text(
             '${game['squadra_$side'] ?? 'Da definire'}',
@@ -351,8 +415,29 @@ class _BracketCard extends StatelessWidget {
     );
     return Container(
       decoration: BoxDecoration(
-        color: template ? colors.surfaceContainerLow : colors.surface,
-        border: Border.all(color: colors.outlineVariant),
+        color: Color.alphaBlend(
+          (const {
+                    'GOLD': Color(0xffdfb94c),
+                    'SILVER': Color(0xffaab5c3),
+                    'BRONZO': Color(0xffb57b50),
+                  }[phase] ??
+                  colors.primary)
+              .withValues(
+                alpha: Theme.of(context).brightness == Brightness.dark
+                    ? .22
+                    : .25,
+              ),
+          colors.surface,
+        ),
+        border: Border.all(
+          color:
+              const {
+                'GOLD': Color(0xffbf9638),
+                'SILVER': Color(0xff9da8b5),
+                'BRONZO': Color(0xffb57b50),
+              }[phase] ??
+              colors.outlineVariant,
+        ),
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(12),
@@ -362,7 +447,7 @@ class _BracketCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                node.slot,
+                node.slot == 'F1' ? '' : node.slot,
                 style: TextStyle(
                   fontSize: 11,
                   height: 1.25,

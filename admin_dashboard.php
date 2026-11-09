@@ -521,11 +521,7 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
         <section id="adminTabStrumenti" class="admin-tab-panel <?= $activeTab === 'strumenti' ? 'is-active' : '' ?>">
         <div class="cards-container">
             <?php if (!$graphicsOnly): ?>
-            <div class="admin-card">
-                  <h3>Video delle partite</h3>
-                  <p>Recupera i link dei Reel Instagram e dei video YouTube e collegali alle gare.</p><br>
-                  <a href="/api/sincronizza_video_partite.php">Sincronizza link</a>
-              </div>
+
               <div class="admin-card">
                 <h3>Gestione Tornei <?= $adminIsEsport ? 'ESPORT' : 'SPORT' ?></h3>
                 <p>Crea, modifica o elimina esclusivamente i tornei <?= $adminIsEsport ? 'esport' : 'sportivi' ?>.</p><br>
@@ -578,28 +574,16 @@ $pendingMailsCount = max(0, $totalReferralLeads - $mailsSentCount);
       </div>
 
       <div class="admin-card">
-        <h3>Funzioni Account</h3>
-        <p>Abilita o disabilita Totocalcio, Fantacalcio e altre funzioni per ogni account.</p><br>
-        <a href="/api/gestione_funzioni_account.php">Configura</a>
+        <h3>Gestione account</h3>
+        <p>Cerca un account e modifica il suo profilo.</p><br>
+        <a href="/api/gestione_profili_account.php">Configura</a>
       </div>
 
-      <div class="admin-card">
-        <h3>Accesso App</h3>
-        <p>Prepara e attiva l’accesso all’app Android e iPhone.</p><br>
-        <a href="/admin_mobile.php">Configura</a>
-      </div>
 
-      <div class="admin-card">
-        <h3>Gestione Totocalcio</h3>
-        <p>Seleziona partite dal calendario e gestisci la classifica del Totocalcio.</p><br>
-        <a href="/api/gestione_totocalcio.php">Apri</a>
-      </div>
 
-      <div class="admin-card">
-        <h3>Gestione Fantacalcio</h3>
-        <p>Prepara l'area admin del Fantacalcio da sviluppare insieme nelle prossime iterazioni.</p><br>
-        <a href="/api/gestione_fantacalcio.php">Apri</a>
-      </div>
+
+
+
 
       <div class="admin-card">
         <h3>Referral Fanta Old School</h3>

@@ -606,7 +606,14 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       .auto-preview-table input, .auto-preview-table select { width:100%; min-width:0; min-height:44px; }
     }
   </style>
-</head>
+<style>
+.staff-switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #d4deeb;border-radius:12px;background:#f3f6fa;color:#15293e}
+.staff-switch input[type=checkbox]{appearance:none;width:40px;height:24px;border-radius:20px;background:#adb8c6;position:relative;flex-shrink:0;cursor:pointer;outline-offset:3px}
+.staff-switch input[type=checkbox]:before{content:"";position:absolute;width:18px;height:18px;background:white;border-radius:50%;top:3px;left:3px;transition:transform .15s}
+.staff-switch input[type=checkbox]:checked{background:#2b678b}.staff-switch input[type=checkbox]:checked:before{transform:translateX(16px)}
+.auto-team-picklist,.auto-slot-picker{border:1px solid #d4deeb;border-radius:14px;padding:14px;background:#fff}.auto-team-picklist summary,.auto-slot-picker summary{cursor:pointer;font-weight:700;padding:6px}
+.auto-slot-choices,.auto-team-list{max-height:290px;overflow:auto;display:grid;gap:8px;margin-top:12px}.auto-availability-row{display:block}
+</style></head>
 <body>
 <?php include __DIR__ . '/../includi/header.php'; ?>
 
@@ -635,7 +642,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
           </div>
           <div class="auto-form-group">
             <label>Opzioni</label>
-            <label class="auto-inline-check">
+            <label class="auto-inline-check staff-switch">
               <input type="checkbox" id="allowReturnInput">
               <span>Consenti partite di ritorno</span>
             </label>
@@ -661,7 +668,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
             <button type="button" class="auto-btn auto-btn-secondary" id="clearTeamsBtn">Deseleziona tutte</button>
           </div>
         </div>
-        <div id="teamsList" class="auto-team-list"></div>
+        <details class="auto-team-picklist"><summary>Seleziona squadre partecipanti</summary><div id="teamsList" class="auto-team-list"></div></details>
       </section>
 
       <section class="auto-card auto-card--half auto-hidden" id="slotsCard">
@@ -701,7 +708,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
         <div class="auto-slot-toolbar">
           <div>
             <h2>Disponibilità delle squadre</h2>
-            <p>Apri solo le squadre con vincoli. Senza selezioni, possono giocare in qualsiasi slot. Giorni e orari selezionati sono obbligatori; gli orari preferiti sono facoltativi.</p>
+            <p>Apri solo le squadre con vincoli. Senza selezioni, possono giocare in qualsiasi slot. Scegli le singole combinazioni di data e ora consentite.</p>
           </div>
         </div>
         <div id="availabilityList" class="auto-availability-list"></div>
@@ -864,25 +871,10 @@ require_once __DIR__ . '/../includi/admin_guard.php';
   }
 
   function snapshotAvailabilityFromDom() {
-    const snapshot = {};
-    document.querySelectorAll('.auto-availability-team').forEach(block => {
-      const teamId = Number(block.dataset.teamId);
-      if (!Number.isFinite(teamId)) {
-        return;
-      }
-      snapshot[teamId] = [];
-      block.querySelectorAll('.auto-availability-row').forEach(row => {
-        const dates = Array.from(row.querySelectorAll('[data-role="availability-date-option"]:checked'))
-          .map(input => input.value || '')
-          .filter(Boolean);
-        const times = Array.from(row.querySelectorAll('[data-role="availability-time-option"]:checked'))
-          .map(input => input.value || '')
-          .filter(Boolean);
-        snapshot[teamId].push({
-          dates,
-          times,
-          preferred_times: Array.from(row.querySelectorAll('[data-role="preferred-time-option"]:checked')).map(input => input.value).filter(Boolean),
-        });
+    const snapshot={};
+    document.querySelectorAll('.auto-availability-team').forEach(block=>{
+      snapshot[Number(block.dataset.teamId)]=Array.from(block.querySelectorAll('[data-role="availability-slot-option"]:checked')).map(input=>{
+        const [date,time]=input.value.split('|');return {dates:[date],times:[time],preferred_times:[]};
       });
     });
     return snapshot;
@@ -1136,22 +1128,16 @@ require_once __DIR__ . '/../includi/admin_guard.php';
       });
   }
 
-  function mergeAvailabilityRules(rules = []) {
-    const mergedDates = new Set();
-    const mergedTimes = new Set();
-    const preferredTimes = new Set();
-
-    (Array.isArray(rules) ? rules : []).forEach(rule => {
-      normalizeAvailabilityDates(rule).forEach(date => mergedDates.add(date));
-      normalizeAvailabilityTimes(rule).forEach(time => mergedTimes.add(time));
-      (rule.preferred_times || []).forEach(time => preferredTimes.add(time));
-    });
-
-    return {
-      dates: Array.from(mergedDates),
-      times: Array.from(mergedTimes),
-      preferred_times: Array.from(preferredTimes),
-    };
+  function mergeAvailabilityRules(rules=[]) {
+    const slots=[];
+    for(const slot of state.slots) {
+      const date=String(slot.data || ''),time=String(slot.ora || '').slice(0,5);
+      if(rules.some(rule=>{
+        const dates=normalizeAvailabilityDates(rule),times=normalizeAvailabilityTimes(rule).map(value=>value.slice(0,5));
+        return (!dates.length || dates.includes(date)) && (!times.length || times.includes(time));
+      })) slots.push(date+'|'+time);
+    }
+    return {slots};
   }
 
   function renderTeams() {
@@ -1159,7 +1145,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     const selected = state.selectedTeams.length ? new Set(state.selectedTeams) : new Set(teams.map(team => Number(team.id)));
     els.teamsList.innerHTML = teams.length
       ? teams.map(team => `
-          <label class="auto-team-item">
+          <label class="auto-team-item staff-switch">
             <input type="checkbox" value="${Number(team.id)}" ${selected.has(Number(team.id)) ? 'checked' : ''}>
             <span>${escapeHtml(team.nome)}<br><small>${team.punti} pt${team.girone ? ` · Girone ${escapeHtml(team.girone)}` : ''}</small></span>
           </label>
@@ -1217,48 +1203,15 @@ require_once __DIR__ . '/../includi/admin_guard.php';
     }
   }
 
-  function addAvailabilityRow(container, rule = {}) {
-    const preferredTimes = new Set(rule.preferred_times || []);
-    const selectedDates = new Set(normalizeAvailabilityDates(rule));
-    const dateOptions = availableSlotDateOptions();
-    const selectedTimes = new Set(normalizeAvailabilityTimes(rule));
-    const timeOptions = availableSlotTimeOptions();
-    const row = document.createElement('div');
-    row.className = 'auto-availability-row';
-    row.innerHTML = `
-      <div class="auto-form-group">
-        <label>Giorni disponibili (obbligatori)</label>
-        <div class="auto-weekday-picker">
-          ${dateOptions.length
-            ? dateOptions.map(option => `
-                <label class="auto-weekday-option">
-                  <input type="checkbox" data-role="availability-date-option" value="${escapeAttr(option.value)}" ${selectedDates.has(option.value) ? 'checked' : ''}>
-                  <span>${escapeHtml(option.label)}</span>
-                </label>
-              `).join('')
-            : '<span class="auto-empty">Aggiungi almeno uno slot per scegliere i giorni disponibili.</span>'}
-        </div>
-      </div>
-      <div class="auto-form-group">
-        <label>Orari disponibili (obbligatori)</label>
-        <div class="auto-weekday-picker">
-          ${timeOptions.length
-            ? timeOptions.map(option => `
-                <label class="auto-weekday-option">
-                  <input type="checkbox" data-role="availability-time-option" value="${escapeAttr(option.value)}" ${selectedTimes.has(option.value) ? 'checked' : ''}>
-                  <span>${escapeHtml(option.label)}</span>
-                </label>
-              `).join('')
-            : '<span class="auto-empty">Aggiungi almeno uno slot per scegliere gli orari disponibili.</span>'}
-        </div>
-      </div>
-    `;
-    const preferences = document.createElement('div');
-    preferences.className = 'auto-form-group';
-    preferences.style.gridColumn = '1 / -1';
-    preferences.innerHTML = `<label>Orari preferiti (facoltativi)</label><div class="auto-weekday-picker">${timeOptions.map(option => `<label class="auto-weekday-option"><input type="checkbox" data-role="preferred-time-option" value="${escapeAttr(option.value)}" ${preferredTimes.has(option.value) ? 'checked' : ''}><span>${escapeHtml(option.label)}</span></label>`).join('')}</div>`;
-    row.appendChild(preferences);
-    container.appendChild(row);
+  function addAvailabilityRow(container, rule={}) {
+    const selected=new Set(rule.slots || []), seen=new Set();
+    const options=state.slots.map(slot=>({value:String(slot.data || '')+'|'+String(slot.ora || '').slice(0,5),label:formatAvailabilityDateLabel(slot.data)+' - '+String(slot.ora || '').slice(0,5)}))
+      .filter(option=>{if(seen.has(option.value))return false;seen.add(option.value);return true;}).sort((a,b)=>a.value.localeCompare(b.value));
+    const row=document.createElement('div');row.className='auto-availability-row';
+    const picker=document.createElement('details');picker.className='auto-slot-picker';
+    picker.innerHTML='<summary>Scegli date e orari disponibili</summary><p>Nessuna selezione: tutti gli orari sono disponibili.</p><div class="auto-slot-choices">'+options.map(option=>
+      '<label class="auto-weekday-option staff-switch"><span>'+escapeHtml(option.label)+'</span><input type="checkbox" data-role="availability-slot-option" value="'+escapeAttr(option.value)+'" '+(selected.has(option.value)?'checked':'')+'></label>').join('')+'</div>';
+    row.append(picker);container.append(row);
   }
 
   function renderAvailability() {
@@ -1299,23 +1252,7 @@ require_once __DIR__ . '/../includi/admin_guard.php';
   }
 
   function updateCompactSummary() {
-    els.availabilityList.querySelectorAll('.auto-availability-team').forEach(block => {
-      const chosen = role => Array.from(block.querySelectorAll('input[data-role="' + role + '"]:checked'));
-      const dates = chosen('availability-date-option');
-      const times = chosen('availability-time-option');
-      const preferred = chosen('preferred-time-option');
-      const parts = [];
-      if (dates.length) parts.push(dates.length + ' giorni');
-      if (times.length) parts.push(times.map(input => input.value.slice(0, 5)).join(', '));
-      if (!parts.length) parts.push('Qualsiasi slot');
-      if (preferred.length) parts.push('Preferisce ' + preferred.map(input => input.value.slice(0, 5)).join(', '));
-      block.querySelector('.auto-availability-summary').textContent = parts.join(' / ');
-    });
-    const count = selectedTeamIds().length;
-    const capacity = state.slots.reduce((sum, slot) => sum + Number(slot.quantita || 1), 0);
-    const matches = Math.floor(count / 2);
-    const hint = count < 2 ? 'Seleziona almeno 2 squadre.' : count % 2 ? 'Seleziona un numero pari di squadre.' : capacity < matches ? 'Aggiungi ancora ' + (matches - capacity) + ' posti partita.' : 'Disponibilità e slot occupati saranno verificati.';
-    document.getElementById('generationSummary').textContent = count + ' squadre / ' + matches + ' partite / ' + capacity + ' posti negli slot inseriti. ' + hint;
+    els.availabilityList.querySelectorAll('.auto-availability-summary').forEach(node=>{node.textContent='';});
   }
 
   function renderClassifica() {

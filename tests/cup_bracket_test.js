@@ -81,7 +81,7 @@ async function page(source,config,teams,info={}) {
   }
   // API text must remain text, never interpreted as markup; latest cup request wins.
   dom=await page('tornei/script-TorneoTemplate.js',{totale_squadre:8,qualificati_gold:8},[{nome:'<img src=x onerror=alert(1)>',punti:1}]);
-  assert.equal(dom.window.document.querySelectorAll('.cup-projection img').length,0);
+  assert.equal(dom.window.document.querySelectorAll('.cup-game img').length,0);
   const pending=[];
   dom.window.fetch=url=>new Promise(resolve=>pending.push(()=>resolve({ok:true,json:async()=>url.includes('leggiClassifica') || url.includes('get_squadre_torneo') ? teams : {}})));
   const gold=dom.window.caricaPlayoff('gold'),silver=dom.window.caricaPlayoff('silver');

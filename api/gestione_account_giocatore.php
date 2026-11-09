@@ -230,7 +230,11 @@ if ($linkService) {
     .small-note { color: #475569; font-size: 0.95rem; margin-top: 6px; }
     @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
   </style>
-</head>
+<style>
+.association-search{display:grid;gap:8px;margin:12px 0 20px;font-weight:700}.association-search input{padding:12px;border:1px solid #bfccdb;border-radius:12px;font:inherit;width:100%}
+.active-associations tbody tr:nth-child(even){background:#f2f5f9}.active-associations td{padding:16px;border-bottom:1px solid #dce4ee}.active-associations [hidden]{display:none}
+@media(max-width:700px){.active-associations,.active-associations tbody{display:block}.active-associations thead{display:none}.active-associations tbody tr{display:grid;gap:4px;margin-bottom:12px;padding:16px;border:1px solid #dce4ee;border-radius:16px;background:#f8fafc}.active-associations td{padding:3px;border:0;overflow-wrap:anywhere}.active-associations td:first-child{font-size:17px;font-weight:800}.active-associations tr[hidden]{display:none}}
+</style></head>
 <body class="admin-page">
   <?php include __DIR__ . '/../includi/header.php'; ?>
 
@@ -344,7 +348,8 @@ if ($linkService) {
           <p>Nessuna associazione presente.</p>
         <?php else: ?>
           <div class="table-wrapper">
-            <table class="assoc-table">
+            <label class="association-search">Cerca nelle associazioni<input type="search" id="associationSearch" placeholder="Nome giocatore, account o email"></label>
+            <table class="assoc-table active-associations" id="activeAssociations">
               <thead>
                 <tr>
                   <th>Giocatore</th>
@@ -382,6 +387,10 @@ if ($linkService) {
   <div id="footer-container"></div>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById('associationSearch')?.addEventListener('input',event=>{
+        const query=event.target.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        document.querySelectorAll('#activeAssociations tbody tr').forEach(row=>{row.hidden=!row.textContent.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(query);});
+      });
       const normalizeSearchValue = (value) => {
         return String(value || "")
           .normalize("NFD")

@@ -1,5 +1,10 @@
 <?php
 require_once __DIR__ . '/../includi/auto_matchday.php';
+// Each selected date/time pair stays exact, rather than allowing its Cartesian product.
+$exact=auto_matchday_normalize_availability_rules([1=>[['dates'=>['2026-11-09'],'times'=>['19:00']],['dates'=>['2026-11-10'],'times'=>['20:00']]]]);
+foreach([['2026-11-09','19:00',true],['2026-11-10','20:00',true],['2026-11-09','20:00',false],['2026-11-10','19:00',false]] as [$date,$time,$allowed]) {
+    if(auto_matchday_slot_matches_team_rules(['data'=>$date,'ora'=>$time.':00'], $exact[1])['matched']!==$allowed)throw new RuntimeException('Availability pair changed');
+}
 function schedule_expect($ok, string $message): void { if (!$ok) throw new RuntimeException($message); }
 function schedule_teams(int $n): array {
     $teams = [];

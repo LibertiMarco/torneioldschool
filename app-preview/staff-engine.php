@@ -40,4 +40,5 @@ try {
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Strumento staff</title></head>
 <body style="margin:0"><iframe id="staff-source" title="Controller staff" style="border:0;width:100%;height:100vh" src="<?= htmlspecialchars($source, ENT_QUOTES, 'UTF-8') ?>"></iframe>
 <script>window.tosStaffChannel=<?= json_encode($nonce, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;</script>
+<script>window.tosStaffCapabilities={checkPicker:<?= ($_GET['ui'] ?? '') === '2' ? 'true' : 'false' ?>};</script>
 <script src="/app-preview/staff-engine.js?v=<?= substr(hash_file('sha256', __DIR__ . '/staff-engine.js'), 0, 16) ?>"></script></body></html>

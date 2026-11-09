@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../api/mobile/v1/_bootstrap.php';
 require_once __DIR__ . '/../includi/security.php';
 require_once __DIR__ . '/../includi/mobile_account_features.php';
+require_once __DIR__ . '/../includi/account_roles.php';
 require_once __DIR__ . '/../includi/app_preview.php';
 require_once __DIR__ . '/../includi/mobile_profile.php';
 require_once __DIR__ . '/../includi/mobile_player_stats.php';
@@ -60,6 +61,10 @@ try {
     if ($action === 'player_link_requests') {
         mobile_json(player_link_requests_handle(player_link_requests_db(), (int)$user['id'], $_GET, $body));
     }
+    if ($action === 'user_role') {
+        mobile_method('POST');preview_admin($db,$_SESSION);
+        mobile_json(account_role_save($db,(int)$user['id'],$body));
+    }
     if ($action === 'features') {
         $service = new MobileAccountFeatures($db, static fn() => preview_admin($db, $_SESSION));
         if ($method === 'GET') {
@@ -88,13 +93,7 @@ try {
     }
     if ($action === 'users') {
         preview_admin($db, $_SESSION);
-        $page = filter_var($_GET['page'] ?? '1', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100000]]);
-        if ($page === false) { throw new MobileAuthError('invalid_request', 'Pagina non valida.', 400); }
-        $stmt = $db->prepare('SELECT id, email, nome, cognome, ruolo, avatar, feature_flags FROM utenti ORDER BY id DESC LIMIT 51 OFFSET ?');
-        $stmt->bindValue(1, ($page - 1) * 50, PDO::PARAM_INT);
-        $stmt->execute();
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        mobile_json(['users' => array_map([MobileAuth::class, 'publicUser'], array_slice($rows, 0, 50)), 'page' => $page, 'has_more' => count($rows) > 50]);
+        mobile_json(account_users_list($db,$_GET));
     }
     throw new MobileAuthError('not_found', 'Funzione non disponibile.', 404);
 } catch (MobileAuthError $error) {

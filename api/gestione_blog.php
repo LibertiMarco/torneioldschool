@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../includi/admin_guard.php';
 
 require_once __DIR__ . '/../includi/db.php';
@@ -15,6 +15,9 @@ $successo = '';
 $titolo = '';
 $contenuto = '';
 $sezioneCreate = $adminSection;
+$blogStagedMedia = [];
+$blogTransaction = ($_SERVER['REQUEST_METHOD'] === 'POST') && in_array($_POST['azione'] ?? 'crea', ['crea','modifica'], true);
+if ($blogTransaction) $conn->begin_transaction();
 
 $mediaDir = __DIR__ . '/../img/blog_media/';
 $allowedImages = ['jpg', 'jpeg', 'png', 'webp'];
@@ -79,7 +82,10 @@ function detectMediaType(string $filename, array $allowedImages, array $allowedV
 function saveMediaFile(array $file, string $uploadDir, array $allowedImages, array $allowedVideos, string &$errore): ?array {
   global $maxUploadBytes;
   if (empty($file) || !isset($file['error']) || $file['error'] === UPLOAD_ERR_NO_FILE) return null;
-  if ($file['error'] !== UPLOAD_ERR_OK) { $errore = 'Errore nel caricamento dei file multimediali.'; return null; }
+  if ($file['error'] !== UPLOAD_ERR_OK) {
+    $errore = [UPLOAD_ERR_INI_SIZE=>'Il file supera il limite di caricamento del server.',UPLOAD_ERR_FORM_SIZE=>'Il file supera il limite del modulo.',UPLOAD_ERR_PARTIAL=>'Caricamento interrotto: il file è arrivato solo in parte.',UPLOAD_ERR_NO_TMP_DIR=>'Il server non ha una cartella temporanea disponibile.',UPLOAD_ERR_CANT_WRITE=>'Il server non riesce a scrivere il file su disco.',UPLOAD_ERR_EXTENSION=>'Una configurazione del server ha bloccato il file.'][$file['error']] ?? 'Caricamento multimediale non riuscito.';
+    return null;
+  }
   $tipo = detectMediaType($file['name'] ?? '', $allowedImages, $allowedVideos);
   if (!$tipo) { $errore = 'Formato non supportato. Carica immagini JPG/PNG/WEBP o video MP4/WEBM/OGG.'; return null; }
   if ($tipo === 'image' && ($file['size'] ?? 0) > $maxUploadBytes) {
@@ -92,6 +98,7 @@ function saveMediaFile(array $file, string $uploadDir, array $allowedImages, arr
   $nomeFile = 'media_' . date('Ymd_His') . '_' . $random . '.' . $ext;
   $dest = rtrim($uploadDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $nomeFile;
   if (!move_uploaded_file($file['tmp_name'], $dest)) { $errore = 'Salvataggio del file non riuscito.'; return null; }
+  $GLOBALS['blogStagedMedia'][] = $dest;
   if ($tipo === 'image') {
     optimize_image_file($dest, [
       'maxWidth' => 1920,
@@ -151,6 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $errore = $limitError;
   } else {
     $azioneForm = $_POST['azione'] ?? 'crea';
+    if (!in_array($azioneForm,['crea','modifica','elimina','elimina_media'],true)) $errore='Azione non valida.';
 
     if ($azioneForm === 'crea') {
       $titolo = sanitizeText($_POST['titolo'] ?? '');
@@ -300,6 +308,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
+if ($blogTransaction) {
+  if ($errore !== '') {
+    $conn->rollback(); $successo = '';
+    foreach ($blogStagedMedia as $staged) if (is_file($staged)) @unlink($staged);
+  } elseif (!$conn->commit()) {
+    $conn->rollback(); $successo = ''; $errore = 'Il database non ha confermato il salvataggio. I dati del modulo sono conservati.';
+  }
+}
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($_SERVER['HTTP_X_TOS_ARTICLE_FORM'] ?? '') === '1') {
+  header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
+  if ($errore !== '') http_response_code(422);
+  $saved = null; $savedId = (int)($postId ?? $id ?? 0);
+  if ($errore === '' && $savedId > 0 && in_array($azioneForm ?? '', ['crea','modifica'], true)) {
+    $sectionColumn=$blogSectionReady ? 'sezione' : "'calcio' AS sezione";
+    $read = $conn->prepare("SELECT id,titolo,contenuto,{$sectionColumn} FROM blog_post WHERE id=?");$read->bind_param('i',$savedId);$read->execute();$saved=$read->get_result()->fetch_assoc();$read->close();
+    $read=$conn->prepare('SELECT id,tipo,file_path,ordine FROM blog_media WHERE post_id=? ORDER BY ordine,id');$read->bind_param('i',$savedId);$read->execute();$saved['media']=$read->get_result()->fetch_all(MYSQLI_ASSOC);$read->close();
+  }
+  echo json_encode(['ok'=>$errore==='','message'=>$successo,'error'=>$errore,'article'=>$saved],JSON_UNESCAPED_UNICODE);exit;
+}
 $articoli = [];
 $articoliSelect = $blogSectionReady ? 'sezione' : "'calcio' AS sezione";
 $articoliSql = "SELECT id, titolo, contenuto, {$articoliSelect}, data_pubblicazione AS data_iso, DATE_FORMAT(data_pubblicazione, '%d/%m/%Y %H:%i') AS data_pubblicazione FROM blog_post"
@@ -597,7 +624,7 @@ function mostraSezione(nome) {
   sezioni.forEach(section => { section.classList.toggle('hidden', section.dataset.section !== nome); });
   tabButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === nome));
 }
-function clearAlerts() { document.querySelectorAll('.admin-alert').forEach(el => el.remove()); }
+function clearAlerts() { document.querySelectorAll('.admin-alert:not([data-persistent-notice])').forEach(el => el.remove()); }
 tabButtons.forEach(btn => btn.addEventListener('click', () => { clearAlerts(); mostraSezione(btn.dataset.tab); }));
 mostraSezione('crea');
 
@@ -630,10 +657,17 @@ function escapeHtml(value = '') {
 
 function storageTextToEditorHtml(text = '') {
   const escaped = escapeHtml(String(text || '').replace(/\r\n?/g, '\n'));
-  return escaped
+  const rich = escaped
     .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')
     .replace(/==([\s\S]+?)==/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br>');
+    .replace(/_(.+?)_/g, '<em>$1</em>')
+    .replace(/\+\+(.+?)\+\+/g, '<u>$1</u>');
+  let list=false,out='';
+  for(const line of rich.split('\n')) {
+    if(line.startsWith('- ')){if(!list){out+='<ul>';list=true;}out+='<li>'+line.slice(2)+'</li>';}
+    else{if(list){out+='</ul>';list=false;}out+=line+'<br>';}
+  }
+  return out+(list?'</ul>':'');
 }
 
 function editorNodeToStorage(node) {
@@ -655,7 +689,11 @@ function editorNodeToStorage(node) {
       .map(part => part ? `**${part}**` : '')
       .join('\n');
   }
-  if (['div', 'p', 'li'].includes(tag)) {
+  if (tag === 'em' || tag === 'i') return '_' + inner + '_';
+  if (tag === 'u') return '++' + inner + '++';
+  if (tag === 'li') return '- ' + inner + '\n';
+  if (['script','style'].includes(tag)) return '';
+  if (['div', 'p'].includes(tag)) {
     return inner + '\n';
   }
   return inner;
@@ -703,7 +741,11 @@ function attachRichEditor(editor, boldButton) {
   editor.addEventListener('paste', event => {
     event.preventDefault();
     const text = event.clipboardData?.getData('text/plain') || '';
-    document.execCommand('insertText', false, text);
+    const html=event.clipboardData?.getData('text/html') || '';
+    if(html) {
+      const fragment=new DOMParser().parseFromString(html,'text/html');
+      document.execCommand('insertHTML',false,storageTextToEditorHtml(editorToStorageText(fragment.body)));
+    } else document.execCommand('insertText', false, text);
     syncEditorEmptyState(editor);
   });
   editor.addEventListener('keydown', event => {
@@ -737,9 +779,11 @@ function createSectionElement(scope, data = {}) {
       <button type="button" class="upload-remove" data-remove-section aria-label="Rimuovi sezione">&times;</button>
     </div>
     <div class="section-editor-shell">
-      <div class="section-toolbar">
+      <div class="section-toolbar editor-toolbar">
         <button type="button" class="editor-tool-btn" data-editor-bold aria-label="Grassetto" title="Grassetto (Ctrl+B)"><strong>B</strong></button>
-      </div>
+      <button type="button" class="editor-tool-btn" data-editor-command="italic" aria-label="Corsivo"><em>I</em></button>
+        <button type="button" class="editor-tool-btn" data-editor-command="underline" aria-label="Sottolineato"><u>U</u></button>
+        <button type="button" class="editor-tool-btn" data-editor-command="insertUnorderedList" aria-label="Elenco puntato">Elenco</button></div>
       <div class="section-body-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Paragrafo"></div>
     </div>
   `;
@@ -749,6 +793,10 @@ function createSectionElement(scope, data = {}) {
   if (subtitleInput) subtitleInput.value = data.subtitle || '';
   if (bodyArea) bodyArea.innerHTML = storageTextToEditorHtml(data.body || '');
   attachRichEditor(bodyArea, boldButton);
+  wrapper.querySelectorAll('[data-editor-command]').forEach(button=>{
+    button.addEventListener('mousedown',event=>event.preventDefault());
+    button.addEventListener('click',()=>{bodyArea.focus();document.execCommand(button.dataset.editorCommand,false,null);bodyArea.dispatchEvent(new Event('input',{bubbles:true}));});
+  });
   const removeBtn = wrapper.querySelector('[data-remove-section]');
   removeBtn.addEventListener('click', () => {
     const container = wrapper.parentElement;
@@ -1092,6 +1140,7 @@ document.querySelectorAll('form').forEach(f => {
   });
 });
 </script>
+<script src="/api/article-form.js?v=20261109"></script>
 </body>
 </html>
 

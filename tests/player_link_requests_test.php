@@ -86,3 +86,9 @@ $failingNotifications = new PlayerLinkRequests($db, function () { throw new Runt
 $saved = $failingNotifications->submit(4,13);
 link_expect($saved['request']['status'] === 'pending', 'Delivery failure preserves successful submission');
 echo "Player link requests: authentication, roles, search, pending state, approval, rejection, history and conflicts passed.\n";
+$requestId=(int)$saved['request']['id'];
+link_reject(fn()=>player_link_requests_handle($db,7,[],['action'=>'review','request_id'=>$requestId,'accept'=>true]),'forbidden');
+link_reject(fn()=>player_link_requests_handle($db,6,[],['action'=>'review','request_id'=>$requestId,'accept'=>'true']),'invalid_request');
+$review=player_link_requests_handle($db,6,[],['action'=>'review','request_id'=>$requestId,'accept'=>false]);
+link_expect($review['ok']===true,'Notification action uses the same guarded review service');
+link_reject(fn()=>player_link_requests_handle($db,6,[],['action'=>'review','request_id'=>$requestId,'accept'=>true]),'conflict');

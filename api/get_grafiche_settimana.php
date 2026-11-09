@@ -350,6 +350,7 @@ try {
                 'id' => $tournamentId,
                 'nome' => (string)$row['torneo_nome'],
                 'codice' => (string)$row['torneo_codice'],
+                'coppe' => [],
                 'ha_partite_nel_giorno' => false,
                 'gruppi' => [],
                 'ordine_gruppi' => [],
@@ -357,6 +358,7 @@ try {
         }
 
         $fase = strtoupper(trim((string)$row['fase']));
+        if (in_array($fase,['GOLD','SILVER','BRONZO'],true)) $tournaments[$tournamentKey]['coppe'][$fase]=true;
         $isRegularSeason = $fase === '' || $fase === 'REGULAR' || $fase === 'SPAREGGIO';
         $type = $isRegularSeason ? 'regular_season' : 'coppa';
         $phaseName = get_grafiche_settimana_fase_nome(
@@ -481,6 +483,8 @@ try {
                 'id' => $tournament['id'],
                 'nome' => $tournament['nome'],
                 'grafiche' => $graphics,
+                'codice' => $tournament['codice'],
+                'coppe' => array_keys($tournament['coppe']),
             ];
         }
     }

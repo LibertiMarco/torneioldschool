@@ -34,6 +34,10 @@ mobile_run(static function (): array {
             VALUES (?, ?, ?, ?, 1, ?) ON DUPLICATE KEY UPDATE
             token = VALUES(token), user_id = VALUES(user_id), session_id = VALUES(session_id), active = 1, updated_at = VALUES(updated_at)');
         $stmt->execute([$hash, $token, $user['id'], $session, time()]);
+        if (tos_fcm_action_schema($db)) {
+            $stmt=$db->prepare('UPDATE mobile_push_devices SET request_actions=? WHERE token_hash=? AND user_id=?');
+            $stmt->execute([($input['request_actions'] ?? false)===true ? 1 : 0,$hash,$user['id']]);
+        }
         return ['success' => true];
     }
     // Test only the current device, never every device belonging to the user.

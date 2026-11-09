@@ -40,6 +40,8 @@
     return ids.get(element);
   };
   const label = element => {
+    if (element.matches('.section-body-editor')) return 'Testo della sezione';
+    if (doc.location.pathname === '/api/gestione_squadre.php' && element.id === 'logo_esistente') return 'Riutilizza squadra';
     if (element.classList.contains('assoc-player-role')) return 'Ruolo in squadra';
     const labels = Array.from(element.labels || []);
     let text = labels.map(node => {
@@ -67,7 +69,8 @@
           : element.matches('select') ? 'choice'
           : element.id === 'remSelectAll' ? 'selection-switch'
           : element.matches('[data-player-captain],#mod_assoc_capitano,#capitano_associa') ? 'captain' : null
-          : null,
+          : element.type === 'checkbox' && doc.location.pathname === '/api/crea_giornata_automatica.php' ? 'toggle'
+          : element.tagName === 'SELECT' ? 'choice' : null,
       value: type === 'password' ? '' : type === 'rich' ? element.innerHTML : element.value || '',
       checked: !!element.checked, required: !!element.required, disabled: element.matches(':disabled') || !!element.readOnly,
       min: element.min || '', max: element.max || '', step: element.step || '',
@@ -195,6 +198,28 @@
       if (visible(element.parentElement)) return control(element);
     }
     if (!visible(element)) return null;
+    if(doc.location.pathname==='/api/gestione_account_giocatore.php' && element.id==='associationSearch') return null;
+    if (doc.location.pathname === '/api/gestione_squadre.php') {
+      if (element.matches('#logo_esistente_search,#logo_esistente_feedback') || element.matches('label') && clean(element.textContent).startsWith('Riutilizza scudetto esistente')) return null;
+      if (element.matches('.panel-card[data-section]')) {
+        const operation=element.dataset.section;
+        return {kind:'group',blocks:[staffAd(`teams-${operation}-before`),...children(element,inTable),staffAd(`teams-${operation}-after`)]};
+      }
+    }
+    if (doc.location.pathname === '/api/crea_giornata_automatica.php') {
+      if (element.matches('.auto-team-picklist')) return walk(element.querySelector('#teamsList'),inTable);
+      if (element.matches('#selectAllTeamsBtn,#clearTeamsBtn,.auto-availability-summary')) return null;
+      if (element.id==='teamsList' || element.matches('.auto-availability-row')) {
+        if(!window.tosStaffCapabilities?.checkPicker) return {kind:'expansion',id:id(element),title:element.id==='teamsList' ? 'Squadre che giocano' : 'Date e orari disponibili',blocks:Array.from(element.querySelectorAll('input[type="checkbox"]')).map(control)};
+        return {kind:'staff-check-picker',id:id(element),title:element.id==='teamsList' ? 'Squadre che giocano' : 'Date e orari disponibili',
+          emptyLabel:element.id==='teamsList' ? 'Nessuna squadra selezionata' : 'Tutti gli orari disponibili',
+          hint:element.id==='teamsList' ? '' : 'Nessuna selezione significa che tutti gli orari sono disponibili.',
+          options:Array.from(element.querySelectorAll('input[type="checkbox"]')).map(input=>({id:id(input),label:label(input),checked:input.checked,disabled:input.disabled}))};
+      }
+    }
+    if (doc.location.pathname === '/api/grafiche_settimana.php' && element.matches('#grid > .card') && Array.from(element.parentElement.querySelectorAll(':scope > .card')).indexOf(element)>0) {
+      return {kind:'group',blocks:[staffAd(`matchday-${id(element)}-before`),...children(element,inTable)]};
+    }
     if (doc.location.pathname === '/api/gestione_tornei.php' && element.matches('.form-crea,.form-modifica,.form-elimina')) {
       const operation = ['crea','modifica','elimina'].find(name=>element.classList.contains(`form-${name}`));
       return {kind:'group',blocks:[staffAd(`tournaments-${operation}-before`),
@@ -259,6 +284,7 @@
       const headers = headerCells.map(cell => clean(cell.textContent));
       const rows = Array.from(element.querySelectorAll('tbody > tr')).filter(visible);
       return {kind: 'table', id: id(element), headers, total: rows.length,
+        appearance:element.id==='activeAssociations' ? 'associations' : null,
         sorting: headerCells.filter(cell => cell.matches('[data-sort],[data-col],.sortable')).map(cell => ({...action(cell), label: `Ordina per ${clean(cell.textContent)}`})),
         rows: rows.map(row => ({id: id(row), search: clean(row.textContent), cells: Array.from(row.children).map((cell, index) => ({label: headers[index] || '', blocks: children(cell, true)}))}))};
     }
@@ -275,7 +301,7 @@
     if (['P','SMALL','LI','DT','DD'].includes(tag) && !element.querySelector('input,select,textarea,button,a,canvas,[contenteditable="true"]')) return textNode('text', clean(element.textContent));
     const blocks = children(element, inTable);
     if (!blocks.length) return null;
-    return {kind: tag === 'FORM' ? 'form' : element.matches('.tab-buttons,.tabs,.admin-btn-group,.action-selector,.action-switch,.action-toggles') ? 'tabs' : element.matches('.player-row,.work-card,.result,.auto-team-availability,.batch-match-row,.assoc-selected-player') ? 'panel' : 'group', id: id(element), blocks};
+    return {kind: tag === 'FORM' ? 'form' : element.matches('.tab-buttons,.tabs,.admin-btn-group,.action-selector,.action-switch,.action-toggles') ? 'tabs' : element.matches('.player-row,.work-card,.result,.auto-team-availability,.batch-match-row,.assoc-selected-player,.section-block') ? 'panel' : 'group', id: id(element), blocks};
   }
   const children = (element, inTable) => Array.from(element.childNodes).map(node => walk(node, inTable)).filter(Boolean);
   function snapshot() {
@@ -298,6 +324,12 @@
       if (doc.location.pathname === '/api/gestione_tornei.php') {
         const operation = doc.querySelector('.action-toggle.active[data-action]')?.dataset.action || '';
         data.managementTab = ['crea','modifica','elimina'].includes(operation) ? `tournaments:${operation}` : '';
+      }
+      if (doc.location.pathname === '/api/gestione_squadre.php') data.managementTab='teams:'+(doc.querySelector('.panel-card[data-section]:not(.hidden)')?.dataset.section || 'crea');
+      if (!modal && ['/api/crea_giornata_automatica.php','/api/gestione_account_giocatore.php','/api/gestione_blog.php','/api/grafiche_settimana.php'].includes(doc.location.pathname)) {
+        const placement=doc.location.pathname.split('/').pop().replace('.php','');
+        data.managementTab=placement+':'+(doc.querySelector('.action-toggle.active,.tab-button.active,[data-tab].active')?.dataset.tab || 'main');
+        data.blocks=[staffAd(`${placement}-before`),...data.blocks,...(placement==='grafiche_settimana' ? [] : [staffAd(`${placement}-after`)])];
       }
       const serialized = JSON.stringify(data);
       if (serialized !== lastSnapshot) { lastSnapshot = serialized; emit('snapshot', data); }
@@ -382,7 +414,13 @@
     if (!element || !element.isConnected) return;
     if (element.matches(':disabled') && message.type !== 'export') return;
     try {
-      if (message.type === 'change') {
+      if (message.type === 'check-selection') {
+        const selected=new Set(message.selected || []);
+        const inputs=Array.from(element.querySelectorAll('input[type="checkbox"]')).filter(input=>!input.disabled);
+        const changed=inputs.filter(input=>input.checked!==selected.has(id(input)));
+        for (const input of inputs) input.checked=selected.has(id(input));
+        if(changed.length) changed[0].dispatchEvent(new doc.defaultView.Event('change',{bubbles:true}));
+      } else if (message.type === 'change') {
         if (element.matches(':disabled') || element.readOnly) return;
         if (editable(element)) element.innerHTML = message.value;
         else if (element.type === 'checkbox' || element.type === 'radio') element.checked = !!message.checked;

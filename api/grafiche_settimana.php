@@ -44,6 +44,8 @@ $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="/api/matchday-renderer.js?v=20261007-date-range"></script>
+<script src="/tornei/cup-bracket.js?v=<?= filemtime(__DIR__.'/../tornei/cup-bracket.js') ?>"></script>
+<script src="/api/cup-bracket-renderer.js?v=<?= filemtime(__DIR__.'/cup-bracket-renderer.js') ?>"></script>
 <script src="/api/grafiche_downloads.js?v=20261007"></script>
 <script src="/api/grafiche_frame_height.js?v=20261006"></script>
 <script>
@@ -60,6 +62,7 @@ const safeName = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').
 
 const {isIPhoneSafari, saveImage} = GraphicsDownloads;
 async function generate() {
+  const generateButton=document.getElementById('generate');if(generateButton.disabled)return;generateButton.disabled=true;
   statusEl.textContent='Recupero partite e generazione immagini…'; grid.innerHTML=''; generated=[]; downloadAll.hidden=true;
   try {
     const res=await fetch(`/api/get_grafiche_settimana.php?data=${encodeURIComponent(dateInput.value)}`);
@@ -68,17 +71,28 @@ async function generate() {
       const canvas=await drawTournament(tournament,data.settimana);
       const item={canvas,name:`matchday-${safeName(tournament.nome)}-${data.settimana.dal}.png`}; generated.push(item);
       const card=document.createElement('section'); card.className='card';
-      const head=document.createElement('div'); head.className='card-head'; head.innerHTML=`<h2>${tournament.nome}</h2>`;
+      const head=document.createElement('div'); head.className='card-head'; const name=document.createElement('h2');name.textContent=tournament.nome;head.append(name);
       const btn=document.createElement('button'); btn.textContent=isIPhoneSafari?'Salva immagine':'Scarica PNG';
       btn.onclick=async()=>{try{await saveImage(item)}catch(error){statusEl.textContent=error.message}};
       head.appendChild(btn); card.append(head,canvas); grid.appendChild(card);
     }
+    for(const tournament of data.tornei) for(const phase of tournament.coppe || []) {
+      try {
+        const canvas=await CupBracketRenderer.draw(tournament.codice,phase);
+        const item={canvas,name:`bracket-${safeName(tournament.nome)}-${phase.toLowerCase()}.png`};generated.push(item);
+        const card=document.createElement('section');card.className='card';
+        const head=document.createElement('div');head.className='card-head';const title=document.createElement('h2');title.textContent=`${tournament.nome} - Bracket ${phase}`;
+        const button=document.createElement('button');button.textContent=isIPhoneSafari?'Salva immagine':'Scarica PNG';button.onclick=()=>saveImage(item).catch(error=>{statusEl.textContent=error.message;});
+        head.append(title,button);card.append(head,canvas);grid.append(card);
+      } catch(error){const warning=document.createElement('p');warning.className='status';warning.textContent=`Bracket ${phase}: ${error.message}`;grid.append(warning);}
+    }
     statusEl.textContent=isIPhoneSafari
       ? `Create ${generated.length} immagini. Tocca “Salva immagine” e scegli “Salva immagine” nel pannello iOS.`
-      : `Create ${generated.length} immagini: una per ciascun torneo.`;
+      : `Create ${generated.length} immagini: programma partite e tabelloni delle coppe.`;
     downloadAll.textContent=isIPhoneSafari?'Salva tutte':'Scarica tutte';
     downloadAll.hidden=generated.length<2;
   } catch(error) { statusEl.textContent=error.message; }
+  finally {generateButton.disabled=false;}
 }
 document.getElementById('generate').onclick=generate;
 downloadAll.onclick=async()=>{try{await GraphicsDownloads.saveAllImages(generated,error=>{statusEl.textContent=error.message})}catch(error){if(error?.name!=='AbortError')statusEl.textContent=error.message}};

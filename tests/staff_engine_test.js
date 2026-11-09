@@ -30,6 +30,7 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
   document.body.insertAdjacentHTML('beforeend', '<div id="tos-consent-banner"><div role="dialog">Privacy e cookie<button>Accetta</button></div></div>');
   const messages = [], writes = [];
   window.tosStaffChannel = 'fixture-channel-012345678901234567890';
+  window.tosStaffCapabilities={checkPicker:true};
   window.TosStaff = {postMessage: raw => messages.push(JSON.parse(raw))};
   window.HTMLCanvasElement.prototype.getContext = () => ({drawImage(){}});
   child.window.HTMLCanvasElement.prototype.getContext = () => ({drawImage(){}});
@@ -196,6 +197,28 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
   }
   command({type:'change',id:find('field','Nome').id,value:'Coppa nuova'}); await delay();
   assert.deepEqual(placements(),['tournaments-crea-before','tournaments-crea-after']);
+  child.reconfigure({url:'https://example.test/api/gestione_squadre.php'});
+  document.body.innerHTML='<main><div class="panel-card" data-section="crea"><label>Riutilizza scudetto esistente (opzionale)</label><input id="logo_esistente_search" placeholder="Cerca squadra"><small id="logo_esistente_feedback">Filtro</small><select id="logo_esistente"><option value="">Nessuno</option><option value="8">Squadra demo</option></select><label>Nome<input id="crea_nome"></label></div></main>';
+  document.querySelector('#logo_esistente').onchange=()=>{document.querySelector('#crea_nome').value='Squadra demo';};
+  frame.dispatchEvent(new window.Event('load'));await delay();
+  assert.deepEqual(placements(),['teams-crea-before','teams-crea-after']);
+  assert(!JSON.stringify(snapshot()).includes('Cerca squadra'));
+  command({type:'change',id:find('field','Riutilizza squadra').id,value:'8'});await delay();
+  assert.equal(find('field','Nome').value,'Squadra demo');
+  child.reconfigure({url:'https://example.test/api/crea_giornata_automatica.php'});
+  document.body.innerHTML='<main><label>Consenti partite di ritorno<input id="allowReturnInput" type="checkbox"></label><div id="teamsList"><label>Squadra A<input type="checkbox" checked value="1"></label><label>Squadra B<input type="checkbox" checked value="2"></label></div><div class="auto-availability-row"><label>09/11 - 19:00<input type="checkbox" checked></label><label>10/11 - 20:00<input type="checkbox"></label></div></main>';
+  let observedSelection;
+  document.querySelector('#teamsList').onchange=()=>{observedSelection=Array.from(document.querySelectorAll('#teamsList input')).map(input=>input.checked);};
+  frame.dispatchEvent(new window.Event('load'));await delay();
+  assert.deepEqual(placements(),['crea_giornata_automatica-before','crea_giornata_automatica-after']);
+  assert.equal(find('field','Consenti partite di ritorno').appearance,'toggle');
+  const picker=flat(snapshot().blocks).find(block=>block.kind==='staff-check-picker' && block.title==='Squadre che giocano');
+  assert.deepEqual(picker.options.map(row=>row.checked),[true,true]);
+  command({type:'check-selection',id:picker.id,selected:[picker.options[1].id]});await delay();
+  assert.deepEqual(observedSelection,[false,true],'One controller event sees the complete selected set');
+  window.tosStaffCapabilities={};frame.dispatchEvent(new window.Event('load'));await delay();
+  assert(!flat(snapshot().blocks).some(block=>block.kind==='staff-check-picker'),'Installed older clients receive supported fields');
+  assert(flat(snapshot().blocks).some(block=>block.kind==='expansion' && block.title==='Squadre che giocano'));
   child.window.close(); window.close();
   console.log('Staff engine: native snapshots, dependent controls, protected submit, confirmation, modal, export and stale commands passed.');
 })().catch(error => {console.error(error); process.exit(1);});

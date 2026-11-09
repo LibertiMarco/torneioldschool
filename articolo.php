@@ -19,6 +19,8 @@ function article_apply_inline_formatting(string $escaped): string
         $formatted = $escaped;
     }
     $formatted = preg_replace('/==(.+?)==/', '<strong>$1</strong>', $formatted);
+    $formatted = preg_replace('/_(.+?)_/', '<em>$1</em>', $formatted ?? $escaped);
+    $formatted = preg_replace('/\+\+(.+?)\+\+/', '<u>$1</u>', $formatted ?? $escaped);
     return $formatted === null ? $escaped : $formatted;
 }
 
@@ -50,9 +52,19 @@ function article_render_content(string $text): string
             continue;
         }
 
-        $escaped = article_escape($line);
-        $escaped = nl2br($escaped, false);
-        $html[] = '<p>' . article_apply_inline_formatting($escaped) . '</p>';
+        $paragraph=[];$list=false;
+        foreach(explode("\n",$line) as $part) {
+            if(preg_match('/^-\s+(.+)$/u',$part,$item)) {
+                if($paragraph){$html[]='<p>'.article_apply_inline_formatting(nl2br(article_escape(implode("\n",$paragraph)),false)).'</p>';$paragraph=[];}
+                if(!$list){$html[]='<ul>';$list=true;}
+                $html[]='<li>'.article_apply_inline_formatting(article_escape($item[1])).'</li>';
+            } else {
+                if($list){$html[]='</ul>';$list=false;}
+                $paragraph[]=$part;
+            }
+        }
+        if($list)$html[]='</ul>';
+        if($paragraph)$html[]='<p>'.article_apply_inline_formatting(nl2br(article_escape(implode("\n",$paragraph)),false)).'</p>';
     }
 
     return $html ? implode("\n", $html) : '<p>Non abbiamo trovato il contenuto di questo articolo.</p>';

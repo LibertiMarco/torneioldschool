@@ -209,6 +209,7 @@ void main() {
       expect(auth.requests[1], {
         'action': 'subscribe',
         'token': 'rotated-token',
+        'request_actions':true,
       });
     },
   );

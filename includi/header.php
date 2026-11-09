@@ -194,6 +194,7 @@ $headerNavLinks = [
 
                       <?php if (!$headerIsEsportMode): ?>
                           <?php foreach ($featureDefinitions as $featureKey => $featureConfig): ?>
+                              <?php if (in_array($featureKey, ['totocalcio', 'fantacalcio'], true)) continue; ?>
                               <?php $isFeatureVisible = $hasAdminAccess || user_can_access_feature($conn, (int)$_SESSION['user_id'], (string)$sessionRole, $featureKey); ?>
                               <?php if ($isFeatureVisible): ?>
                                   <a class="user-menu-item" href="<?= htmlspecialchars(login_with_base_path($featureConfig['path'])) ?>">

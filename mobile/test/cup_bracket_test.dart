@@ -246,6 +246,15 @@ void main() {
           find.byKey(const ValueKey('cup-node-GOLD-S1')),
         );
         expect(s1.dy, closeTo((q1.dy + q2.dy) / 2, .01));
+        expect(find.text('F1'), findsNothing);
+        await tester.tap(find.widgetWithText(ChoiceChip, 'Semifinale'));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Semifinale'))
+              .selected,
+          true,
+        );
         final finalBefore = tester.getCenter(
           find.byKey(const ValueKey('cup-node-GOLD-F1')),
         );
