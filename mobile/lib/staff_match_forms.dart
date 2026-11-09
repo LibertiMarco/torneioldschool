@@ -361,6 +361,8 @@ class StaffMatchLineup extends StatelessWidget {
       if ('${model['loading'] ?? ''}'.isNotEmpty) Text('${model['loading']}'),
       for (final (teamIndex, team)
           in (model['teams'] as List? ?? []).whereType<Map>().indexed) ...[
+        if (teamIndex == 0)
+          const LineupAdSlot(key: ValueKey('lineup-before-home')),
         if (teamIndex == 1)
           const LineupAdSlot(key: ValueKey('lineup-between-teams')),
         Card(

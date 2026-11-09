@@ -246,7 +246,7 @@ void main() {
           'home': 'Go Ahead Eagles',
           'away': 'Napoli',
           'score': '0 - 0',
-          'info': 'Brasilerao · Semifinale Gold',
+          'info': '2026-11-09 | 20:30',
           'back': {'kind': 'action', 'id': 'back', 'label': 'Torna indietro'},
           'finalize': {
             'kind': 'field',
@@ -330,7 +330,12 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.byType(StaffMatchLineup), findsOneWidget);
-        expect(find.byType(LineupAdSlot), findsNWidgets(2));
+        expect(find.byType(LineupAdSlot), findsNWidgets(3));
+        expect(
+          find.byKey(const ValueKey('lineup-before-home')),
+          findsOneWidget,
+        );
+        expect(find.text('2026-11-09 | 20:30'), findsOneWidget);
         expect(
           find.byKey(const ValueKey('lineup-between-teams')),
           findsOneWidget,

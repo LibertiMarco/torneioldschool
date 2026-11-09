@@ -106,7 +106,8 @@
   function matchLineup(form) {
     const field = element => element && visible(element) ? control(element) : null;
     const info = doc.querySelector('#partitaInfo')?.cloneNode(true);
-    info?.querySelectorAll('br').forEach(br => br.replaceWith(doc.createTextNode(' · ')));
+    info?.querySelectorAll('b,strong,span').forEach(element => element.remove());
+    info?.querySelectorAll('br').forEach(br => br.replaceWith(doc.createTextNode(' ')));
     const teams = Array.from(form.querySelectorAll('.team-lineup')).filter(visible).map(team => ({
       id:id(team), side:team.dataset.teamSide, name:clean(team.querySelector('h2')?.textContent),
       actions:Array.from(team.querySelectorAll('[data-select-team]')).map(action).filter(Boolean),

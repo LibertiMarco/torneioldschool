@@ -104,7 +104,7 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
   await child.window.navigator.share({files:[new window.File(['png'],'uno.png',{type:'image/png'}),new window.File(['png'],'due.png',{type:'image/png'})]});
   assert.deepEqual(messages.findLast(message => message.type === 'download').files.map(file=>file.name), ['uno.png','due.png']);
   child.reconfigure({url:'https://example.test/api/statistiche_partita.php?partitaid=1'});
-  document.body.innerHTML = `<main><form id="lineupForm"><div id="lineupRoot"></div></form>
+  document.body.innerHTML = `<main><div id="partitaInfo"><b>Home - Away</b><br>2026-11-09 | 20:30<br><span>Coppa - REGULAR</span></div><form id="lineupForm"><div id="lineupRoot"></div></form>
     <details id="recordsStaff" open><summary>Verifica Record</summary><form id="recordVerification">
       <input type="hidden" name="records_csrf" value="records-secret">
       <label>Gol subiti<input id="keeperGoals" type="number" name="keeper_goals[7]" value="0"></label>
@@ -115,6 +115,7 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
   });
   frame.dispatchEvent(new window.Event('load')); await delay();
   assert(snapshot().blocks.some(block=>block.kind==='match-lineup'));
+  assert.equal(snapshot().blocks.find(block=>block.kind==='match-lineup').info, '2026-11-09 | 20:30');
   assert(find('field','Gol subiti'), 'Portieri disponibili insieme alla distinta nativa');
   assert(!JSON.stringify(snapshot()).includes('records-secret'));
   command({type:'change',id:find('field','Gol subiti').id,value:'2'});

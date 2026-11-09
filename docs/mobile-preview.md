@@ -2,8 +2,8 @@
 
 ## Annuncio tra le distinte
 
-Le statistiche partita dell'app hanno due spazi pubblicitari: uno tra la
-squadra di casa e quella ospite e uno dopo la squadra ospite. Il banner generico
+Le statistiche partita dell'app hanno tre spazi pubblicitari: uno prima della
+squadra di casa, uno tra le due squadre e uno dopo la squadra ospite. Il banner generico
 di fine strumento viene escluso in questa pagina per evitare annunci consecutivi.
 Ogni spazio riutilizza il native AdMob compatto della Home
 quando ci sono almeno 320 px disponibili; su larghezze inferiori usa il banner
