@@ -1,5 +1,14 @@
 # Anteprima dell'app con dati reali
 
+## Creazione dei tornei
+
+Il file della pagina viene generato dal server dal nome del torneo con un suffisso
+casuale, verificando le identità già presenti nel database e i file esistenti.
+Il campo manuale File Torneo è rimosso dalla creazione su sito, app e preview.
+I nomi dei tornei possono ripetersi: alla creazione il modello converte gli indici
+univoci sulla sola colonna `nome` in indici normali. I record e gli altri indici
+rimangono invariati; i tornei esistenti conservano i propri file.
+
 ## Annunci in Gestione tornei
 
 Crea, Modifica ed Elimina hanno un annuncio prima e uno dopo il rispettivo

@@ -455,9 +455,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     $stato = $_POST['stato'];
     $data_inizio = $_POST['data_inizio'];
     $data_fine = $_POST['data_fine'];
-    $rawFileInput = cleanUtf8Text($_POST['filetorneo'] ?? '');
-    $rawFile = preg_replace('/\.(html?|php)$/i', '', trim($rawFileInput));
-    $slug = sanitizeTorneoSlug($rawFile);
+    $slug = tournament_generate_slug($nome, __DIR__ . '/../tornei', [$torneo, 'fileSlugExists']);
     $filetorneo = $slug . '.php';
     $categoria = cleanUtf8Text($_POST['categoria'] ?? '');
     $sezione = $adminSection;
@@ -893,7 +891,6 @@ if ($lista instanceof mysqli_result) {
                     </div>
                     <small>Se non carichi un file verrà usata l'immagine predefinita.</small>
                 </div>
-                <div class="form-group"><label>File Torneo</label><input type="text" name="filetorneo" required></div>
                 <div class="form-group"><label>Categoria</label><input type="text" name="categoria" required></div>
                 <div class="form-group checkbox-group">
                     <label>

@@ -197,7 +197,7 @@ CREATE TABLE IF NOT EXISTS tornei (
     squadre_complete TINYINT(1) NOT NULL DEFAULT 0,
     config LONGTEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_tornei_nome (nome)
+    KEY idx_tornei_nome (nome)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Squadre (api/crud/Squadra.php, api/leggiClassifica.php, api/gestione_squadre.php)

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includi/tournament_identity.php';
 class torneo {
     private $conn;
     private $table = "tornei";
@@ -97,6 +98,7 @@ class torneo {
      * Crea un nuovo torneo
      */
     public function crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $sezione = 'calcio', $img = null, $squadre_complete = 0, $config = null) {
+        tournament_allow_duplicate_names($this->conn);
         if (empty($img)) {
             $img = "/img/tornei/pallone.png";
         }
@@ -134,6 +136,18 @@ class torneo {
         ");
         $stmt->bind_param($types, ...$params);
         return $stmt->execute();
+    }
+
+    public function fileSlugExists(string $slug): bool {
+        $php = $slug . '.php';
+        $html = $slug . '.html';
+        $htm = $slug . '.htm';
+        $stmt = $this->conn->prepare('SELECT id FROM tornei WHERE filetorneo IN (?, ?, ?, ?) LIMIT 1');
+        $stmt->bind_param('ssss', $php, $html, $htm, $slug);
+        $stmt->execute();
+        $found = $stmt->get_result()->num_rows > 0;
+        $stmt->close();
+        return $found;
     }
 
     /**
