@@ -40,6 +40,7 @@
     return ids.get(element);
   };
   const label = element => {
+    if (element.classList.contains('assoc-player-role')) return 'Ruolo in squadra';
     const labels = Array.from(element.labels || []);
     let text = labels.map(node => {
       const clone = node.cloneNode(true);
@@ -61,7 +62,11 @@
     // Passwords are editable, but their existing value must never cross the bridge.
     return {kind: 'field', id: id(element), type, label: label(element),
       appearance: ['selPartitaMod', 'selPartitaGioc', 'selPartitaLink'].includes(element.id) ? 'match'
-        : doc.location.pathname === '/api/gestione_giocatori.php' && element.matches('select.operation-picker') ? 'operation' : null,
+        : doc.location.pathname === '/api/gestione_giocatori.php'
+          ? element.matches('select.operation-picker') ? 'operation'
+          : element.matches('select') ? 'choice'
+          : element.matches('[data-player-captain],#mod_assoc_capitano,#capitano_associa') ? 'captain' : null
+          : null,
       value: type === 'password' ? '' : type === 'rich' ? element.innerHTML : element.value || '',
       checked: !!element.checked, required: !!element.required, disabled: element.matches(':disabled') || !!element.readOnly,
       min: element.min || '', max: element.max || '', step: element.step || '',
@@ -87,6 +92,22 @@
   }
   const textNode = (kind, text) => text ? {kind, text} : null;
   const staffAd = placement => ({kind:'staff-ad', id:placement});
+  function playerSection(element, inTable) {
+    const name = ['crea','modifica','elimina','import'].find(name=>element.classList.contains(`form-${name}`))
+      || ['add','edit','remove'].find(name=>element.classList.contains(`assoc-form-${name}`));
+    if (!name) return null;
+    if (name === 'elimina') {
+      const blocks = [];
+      for (const node of element.childNodes) {
+        if (node.nodeType === 1 && node.id === 'search') blocks.push(staffAd('players-elimina-before'));
+        const block = walk(node, inTable); if (block) blocks.push(block);
+      }
+      return {kind:'group', blocks:[...blocks,staffAd('players-elimina-after')]};
+    }
+    return {kind:'group', blocks:[staffAd(`players-${name}-before`),
+      {kind:element.tagName === 'FORM' ? 'form' : 'group',id:id(element),blocks:children(element,inTable)},
+      staffAd(`players-${name}-after`)]};
+  }
   function managementCard(element, inTable) {
     const tab = element.parentElement.dataset.tab;
     const form = element.querySelector('form')?.id;
@@ -173,6 +194,24 @@
       if (visible(element.parentElement)) return control(element);
     }
     if (!visible(element)) return null;
+    if (doc.location.pathname === '/api/gestione_giocatori.php') {
+      if (element.matches('.form-crea,.form-modifica,.form-elimina,.form-import,.assoc-form')) {
+        const section = playerSection(element,inTable); if (section) return section;
+      }
+      if (element.id === 'remCount') return null;
+      if (element.id === 'assocSearchResults' || element.id === 'remPlayers') {
+        const removal = element.id === 'remPlayers';
+        return {kind:'staff-player-list',id:id(element),removal,
+          context: removal ? doc.querySelector('#remSquadra')?.value : `${doc.querySelector('#assocSquadra')?.value}:${doc.querySelector('#assocGiocatoreSearch')?.value}`,
+          empty: clean(element.textContent),
+          rows: removal ? Array.from(element.querySelectorAll('input[type="checkbox"]')).map(input=>({field:{...control(input),label:input.dataset.label || label(input)}}))
+            : Array.from(element.querySelectorAll('.assoc-player-result')).map(row=>({
+              name:clean(row.querySelector('.assoc-player-name')?.textContent),
+              detail:clean(row.querySelector('.assoc-player-meta')?.textContent),
+              action: row.querySelector('button') ? action(row.querySelector('button')) : null,
+            }))};
+      }
+    }
     if (doc.location.pathname === '/api/gestione_partite.php' && element.matches('.tab-section > .form-card')) {
       const card = managementCard(element, inTable);
       if (card) return card;
@@ -229,7 +268,7 @@
     if (['P','SMALL','LI','DT','DD'].includes(tag) && !element.querySelector('input,select,textarea,button,a,canvas,[contenteditable="true"]')) return textNode('text', clean(element.textContent));
     const blocks = children(element, inTable);
     if (!blocks.length) return null;
-    return {kind: tag === 'FORM' ? 'form' : element.matches('.tab-buttons,.tabs,.admin-btn-group,.action-selector,.action-switch,.action-toggles') ? 'tabs' : element.matches('.player-row,.work-card,.result,.auto-team-availability,.batch-match-row') ? 'panel' : 'group', id: id(element), blocks};
+    return {kind: tag === 'FORM' ? 'form' : element.matches('.tab-buttons,.tabs,.admin-btn-group,.action-selector,.action-switch,.action-toggles') ? 'tabs' : element.matches('.player-row,.work-card,.result,.auto-team-availability,.batch-match-row,.assoc-selected-player') ? 'panel' : 'group', id: id(element), blocks};
   }
   const children = (element, inTable) => Array.from(element.childNodes).map(node => walk(node, inTable)).filter(Boolean);
   function snapshot() {
@@ -243,6 +282,11 @@
       const data = {blocks: lineup ? [matchLineup(lineup), ...(records ? [walk(records, false)].filter(Boolean) : [])] : children(root, false), modal: !!modal};
       if (doc.location.pathname === '/api/gestione_partite.php') {
         data.managementTab = Array.from(doc.querySelectorAll('.tab-section[data-tab]')).find(visible)?.dataset.tab || '';
+      }
+      if (doc.location.pathname === '/api/gestione_giocatori.php') {
+        const operation = doc.querySelector('#azione')?.value || '';
+        data.managementTab = ['crea','modifica','elimina','import','associazioni'].includes(operation)
+          ? `players:${operation}${operation === 'associazioni' ? ':' + (doc.querySelector('#assocOperation')?.value || 'aggiungi') : ''}` : '';
       }
       const serialized = JSON.stringify(data);
       if (serialized !== lastSnapshot) { lastSnapshot = serialized; emit('snapshot', data); }

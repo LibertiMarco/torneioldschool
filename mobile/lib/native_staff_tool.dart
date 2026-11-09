@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import 'ads.dart';
 import 'lineup_ad_slot.dart';
+import 'staff_player_associations.dart';
 import 'staff_photo_canvas.dart';
 
 import 'package:flutter_quill/flutter_quill.dart';
@@ -506,6 +507,14 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
       '$_document:${block['id'] ?? block['text'] ?? block['label']}',
     );
     switch (block['kind']) {
+      case 'staff-player-list':
+        return StaffPlayerList(
+          key: key,
+          model: block,
+          onChanged: (field, value) =>
+              _send({'type': 'change', 'id': field['id'], ...value}),
+          onAction: _click,
+        );
       case 'staff-ad':
         return LineupAdSlot(
           key: ValueKey('$_document:$_managementAdVisit:${block['id']}'),
@@ -949,6 +958,14 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
   _ => (Icons.tune_rounded, 'Scegli questa operazione'),
 };
 
+IconData _choiceIcon(String label) {
+  final text = label.toLowerCase();
+  if (text.contains('torneo')) return Icons.emoji_events_outlined;
+  if (text.contains('ruolo')) return Icons.badge_outlined;
+  if (text.contains('squadra')) return Icons.shield_outlined;
+  return Icons.person_outline_rounded;
+}
+
 class _StaffPickerOption extends StatelessWidget {
   const _StaffPickerOption({
     required this.option,
@@ -1106,7 +1123,8 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
     final matchPicker = widget.field['appearance'] == 'match' && !multiple;
     final operationPicker =
         widget.field['appearance'] == 'operation' && !multiple;
-    final cardPicker = matchPicker || operationPicker;
+    final choicePicker = widget.field['appearance'] == 'choice' && !multiple;
+    final cardPicker = matchPicker || operationPicker || choicePicker;
     final voteIndex = widget.field['stat'] == 'voto' && !multiple
         ? options.indexWhere(
             (option) =>
@@ -1140,6 +1158,8 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
                             child: Text(
                               operationPicker
                                   ? 'Scegli operazione'
+                                  : choicePicker
+                                  ? '${widget.field['label']}'
                                   : 'Scegli la partita',
                               style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(fontWeight: FontWeight.w800),
@@ -1148,6 +1168,8 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
                           IconButton(
                             tooltip: operationPicker
                                 ? 'Chiudi selezione operazione'
+                                : choicePicker
+                                ? 'Chiudi selezione'
                                 : 'Chiudi selezione partita',
                             onPressed: () => Navigator.pop(context),
                             icon: const Icon(Icons.close_rounded),
@@ -1202,34 +1224,33 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
                                     .clamp(0.0, maximum),
                           );
                         }
+                        final filteredOptions = options
+                            .where(
+                              (option) =>
+                                  (!(matchPicker || operationPicker) ||
+                                      '${option['value']}'.isNotEmpty) &&
+                                  '${option['label']}'.toLowerCase().contains(
+                                    search,
+                                  ),
+                            )
+                            .toList();
                         return ListView(
                           controller: voteScroll,
                           itemExtent: voteIndex >= 0 ? rowHeight : null,
                           children: [
-                            if (cardPicker &&
-                                !options.any(
-                                  (option) =>
-                                      '${option['label']}'
-                                          .toLowerCase()
-                                          .contains(search) &&
-                                      '${option['value']}'.isNotEmpty,
-                                ))
+                            if (cardPicker && filteredOptions.isEmpty)
                               Padding(
                                 padding: const EdgeInsets.all(24),
                                 child: Text(
                                   operationPicker
                                       ? 'Nessuna operazione trovata'
+                                      : choicePicker
+                                      ? 'Nessun risultato'
                                       : 'Nessuna partita trovata',
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-                            for (final option in options.where(
-                              (o) =>
-                                  (!cardPicker || '${o['value']}'.isNotEmpty) &&
-                                  '${o['label']}'.toLowerCase().contains(
-                                    search,
-                                  ),
-                            ))
+                            for (final option in filteredOptions)
                               cardPicker
                                   ? _StaffPickerOption(
                                       option: option,
@@ -1237,6 +1258,10 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
                                           ? _operationDetails(
                                               '${option['value']}',
                                             ).$1
+                                          : choicePicker
+                                          ? _choiceIcon(
+                                              '${widget.field['label']}',
+                                            )
                                           : Icons.sports_soccer_outlined,
                                       description: operationPicker
                                           ? _operationDetails(
@@ -1362,6 +1387,37 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
     final f = widget.field, type = f['type'], disabled = f['disabled'] == true;
     final label = '${f['label']}${f['required'] == true ? ' *' : ''}';
     if (type == 'checkbox' || type == 'radio') {
+      if (f['appearance'] == 'captain') {
+        final colors = Theme.of(context).colorScheme;
+        return Material(
+          color: _checked
+              ? colors.primaryContainer
+              : colors.surfaceContainerHigh,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: _checked ? colors.primary : colors.outlineVariant,
+            ),
+          ),
+          child: SwitchListTile.adaptive(
+            title: Text(
+              label,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+            ),
+            subtitle: const Text(
+              'Capitano per questa squadra. Si applica al salvataggio.',
+              style: TextStyle(fontSize: 11),
+            ),
+            value: _checked,
+            onChanged: disabled
+                ? null
+                : (value) {
+                    setState(() => _checked = value);
+                    widget.onChanged({'checked': value});
+                  },
+          ),
+        );
+      }
       return CheckboxListTile(
         contentPadding: EdgeInsets.zero,
         title: Text(label),

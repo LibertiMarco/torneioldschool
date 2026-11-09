@@ -1,5 +1,21 @@
 # Anteprima dell'app con dati reali
 
+## Giocatori e associazioni
+
+La voce e il modulo Crea giocatore sostituiscono Aggiungi giocatore. Le sezioni
+Crea, Modifica e Importa hanno un annuncio prima e dopo. Elimina ne ha uno prima
+della ricerca e uno dopo l'elenco. Ciascun modulo Aggiungi, Modifica o Elimina
+associazione ha due annunci; il cambio operazione rinnova le istanze come nel
+gestionale partite e il banner generico viene escluso.
+
+Le picklist del gestionale usano schede ricercabili. Il ruolo per giocatore
+mostra Ruolo in squadra, conservando il nome tecnico nel solo invio del modulo.
+Capitano usa un interruttore sia nell'aggiunta sia nella modifica. I risultati
+di ricerca mostrano al massimo quattro righe, con scorrimento interno. La
+rimozione presenta una lista con ricerca locale, schede selezionabili e
+conteggio complessivo; filtrare non cancella le selezioni. I controller PHP
+mantengono regole sul capitano, validazione, CSRF e conferme di rimozione.
+
 ## Annunci nelle schede di Calendario e risultati
 
 L'app usa gli stessi spazi nativi/adattivi della distinta anche nelle schede:

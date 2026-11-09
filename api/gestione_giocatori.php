@@ -881,7 +881,7 @@ $goalExtraTeamMapJson = htmlspecialchars(
             background: #fff;
             overflow: hidden;
         }
-        .assoc-search-results { max-height: 320px; overflow-y: auto; }
+        .assoc-search-results { max-height: 288px; overflow-y: auto; }
         .assoc-player-result, .assoc-selected-player {
             display: flex;
             align-items: center;
@@ -890,6 +890,7 @@ $goalExtraTeamMapJson = htmlspecialchars(
             padding: 11px 13px;
             border-bottom: 1px solid #edf1f5;
         }
+        .assoc-player-result { min-height: 72px; }
         .assoc-player-result:last-child, .assoc-selected-player:last-child { border-bottom: 0; }
         .assoc-player-copy { min-width: 0; }
         .assoc-player-name { display: block; color: #15293e; font-weight: 750; }
@@ -978,7 +979,7 @@ $goalExtraTeamMapJson = htmlspecialchars(
 <div class="admin-select-action">
     <label for="azione">Seleziona azione:</label>
         <select id="azione" class="operation-picker">
-          <option value="crea" <?php if(($currentAction ?? 'crea') === 'crea') echo 'selected'; ?>>Aggiungi giocatore</option>
+          <option value="crea" <?php if(($currentAction ?? 'crea') === 'crea') echo 'selected'; ?>>Crea giocatore</option>
           <option value="import" <?php if(($currentAction ?? '') === 'import') echo 'selected'; ?>>Importa giocatori</option>
           <option value="associazioni" <?php if(($currentAction ?? '') === 'associazioni') echo 'selected'; ?>>Associa giocatore e squadra</option>
           <option value="gol_extra" <?php if(($currentAction ?? '') === 'gol_extra') echo 'selected'; ?>>Gol extra</option>
@@ -993,7 +994,7 @@ $goalExtraTeamMapJson = htmlspecialchars(
 <!-- ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FORM CREA -->
 <form method="POST" class="admin-form form-crea" enctype="multipart/form-data">
 <?= csrf_field('admin_giocatori') ?>
-<h2>Aggiungi Giocatore</h2>
+<h2>Crea giocatore</h2>
 
 <div class="form-group">
     <label>Nome</label>
@@ -1015,7 +1016,7 @@ $goalExtraTeamMapJson = htmlspecialchars(
     <small>Se non carichi un'immagine verrà usata <code>unknown.jpg</code>.</small>
 </div>
 
-<button type="submit" name="crea" class="btn-primary">Crea Giocatore</button>
+<button type="submit" name="crea" class="btn-primary">Crea giocatore</button>
 </form>
 
 
@@ -1859,6 +1860,7 @@ function renderAssocSelectedPlayers() {
         settings.className = "assoc-player-settings";
         const role = document.createElement("select");
         role.className = "assoc-player-role";
+        role.setAttribute("aria-label", "Ruolo in squadra");
         role.name = `ruolo_associa_player[${player.id}]`;
         role.dataset.playerRole = player.id;
         ["", "Portiere", "Difensore", "Centrocampista", "Attaccante"].forEach(value => {
