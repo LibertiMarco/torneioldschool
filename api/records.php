@@ -9,7 +9,9 @@ try {
         $data=records_automatic_fetch($conn);
     } else {
         [$matches,$rows,$verified]=records_source($conn);
-        $data=records_compute($matches,$rows,$verified,(string)($_GET['torneo']??''),(string)($_GET['formato']??''),max(0,(int)($_GET['player_id']??0)));
+        $player=max(0,(int)($_GET['player_id']??0));
+        $compute=$player > 0 ? 'records_player_goalkeeper_compute' : 'records_compute';
+        $data=$compute($matches,$rows,$verified,(string)($_GET['torneo']??''),(string)($_GET['formato']??''),$player);
     }
     $data['groups']=(object)$data['groups'];
     echo json_encode($data, JSON_UNESCAPED_UNICODE);

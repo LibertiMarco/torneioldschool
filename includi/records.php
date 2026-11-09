@@ -86,6 +86,21 @@ function records_validate_keepers(array $p, array $rows, array $keepers): void {
         if (count($ks) === 1 && !$ks[0]['full']) throw new InvalidArgumentException('Indicare il portiere che ha completato la partita.');
     }
 }
+function records_player_goalkeeper_compute(array $matches, array $rows, array $verified, string $tournament = '', string $format = '', int $player = 0): array {
+    // Restrict both statistics and filter options to actual verified keeper appearances.
+    $eligible = [];
+    foreach ($matches as $match) {
+        if ($player <= 0) continue;
+        $data = records_compute([$match], $rows, $verified, '', '', $player);
+        foreach ($data['groups'] as $group) {
+            if ($group['goalkeeper']['appearances'] > 0) {
+                $eligible[] = $match;
+                break;
+            }
+        }
+    }
+    return records_compute($eligible, $rows, $verified, $tournament, $format, $player);
+}
 function records_compute(array $matches, array $rows, array $verified, string $tournament = '', string $format = '', int $player = 0): array {
     $labels = ['total'=>'Partita con più gol','margin'=>'Vittoria più larga','team'=>'Squadra con più gol in una partita','player'=>'Giocatore con più gol in una partita','scorers'=>'Più marcatori diversi nella stessa squadra','draw'=>'Pareggio con più gol','shutout'=>'Vittoria più larga senza subire gol'];
     $groups = []; $options = []; $formats = [];

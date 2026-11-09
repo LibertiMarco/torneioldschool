@@ -5,9 +5,10 @@ import 'package:tornei_old_school/records_page.dart';
 import 'package:tornei_old_school/personal_player_design.dart';
 
 void main() {
-  testWidgets(
-    'statistiche portieri sempre sotto Le mie statistiche anche senza tabellini',
-    (tester) async {
+  for (final role in ['Portiere', 'Attaccante']) {
+    testWidgets('statistiche portieri visibili solo per portiere: $role', (
+      tester,
+    ) async {
       await tester.binding.setSurfaceSize(const Size(390, 1400));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final api = TosApi(baseUrl: Uri.parse('https://example.com'));
@@ -24,7 +25,12 @@ void main() {
           home: Scaffold(
             body: PlayerDashboard(
               api: api,
-              player: {'id': 7, 'nome': 'Mario', 'cognome': 'Cava'},
+              player: {
+                'id': 7,
+                'nome': 'Mario',
+                'cognome': 'Cava',
+                'ruolo': role,
+              },
               teams: [],
               section: 'calcio',
               refresh: () async {},
@@ -35,6 +41,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      if (role != 'Portiere') {
+        expect(find.byType(GoalkeeperSummary), findsNothing);
+        expect(find.text('Statistiche portiere'), findsNothing);
+        expect(tester.takeException(), isNull);
+        return;
+      }
       await tester.ensureVisible(find.byType(GoalkeeperSummary));
       expect(
         tester.getTopLeft(find.text('Statistiche portiere')).dy,
@@ -58,8 +70,8 @@ void main() {
       );
       expect(find.textContaining('Nessun tabellino'), findsOneWidget);
       expect(tester.takeException(), isNull);
-    },
-  );
+    });
+  }
   testWidgets(
     'portieri riprova dopo errore e visualizza i valori del backend',
     (tester) async {

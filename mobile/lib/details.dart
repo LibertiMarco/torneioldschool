@@ -129,10 +129,11 @@ class PlayerPage extends StatelessWidget {
               trailing: Text('${player[entry.value]}'),
             ),
         if (api != null) ...[
-          GoalkeeperSummary(
-            api: api!,
-            playerId: '${player['id'] ?? player['giocatore_id'] ?? ''}',
-          ),
+          if (isGoalkeeper(player))
+            GoalkeeperSummary(
+              api: api!,
+              playerId: '${player['id'] ?? player['giocatore_id'] ?? ''}',
+            ),
           const SizedBox(height: 28),
           PlayerAwardsSection(
             api: api!,

@@ -1,4 +1,5 @@
 import 'records_page.dart';
+import 'player_role_badges.dart';
 
 import 'package:flutter/material.dart';
 
@@ -92,10 +93,11 @@ class _PlayerDashboardState extends State<PlayerDashboard> {
               const SizedBox(height: 12),
               _summary(),
               const SizedBox(height: 12),
-              GoalkeeperSummary(
-                api: widget.api,
-                playerId: '${widget.player['id']}',
-              ),
+              if (isGoalkeeper(widget.player))
+                GoalkeeperSummary(
+                  api: widget.api,
+                  playerId: '${widget.player['id']}',
+                ),
               if (widget.player['rankings'] is Map) ...[
                 const SizedBox(height: 12),
                 Card(
