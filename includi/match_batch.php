@@ -51,10 +51,11 @@ function match_batch_inputs(array $input, array $tournaments, array $teams, arra
         if (!preg_match('/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/D', $time)) {
             throw new InvalidArgumentException($prefix . 'inserisci un orario valido.');
         }
-        if ($field !== 'Online' && isset($usedTimes[$time])) {
-            throw new InvalidArgumentException($prefix . 'due partite iniziano alla stessa ora sullo stesso campo.');
+        if ($field !== 'Online' && ($usedTimes[$time] ?? 0) >= 2) {
+            throw new InvalidArgumentException($prefix . 'sono consentite al massimo due partite nello stesso giorno, orario e campo.');
         }
-        $usedTeams[$home] = $usedTeams[$away] = $usedTimes[$time] = true;
+        $usedTeams[$home] = $usedTeams[$away] = true;
+        $usedTimes[$time] = ($usedTimes[$time] ?? 0) + 1;
         $result[] = array_merge($input, [
             'torneo' => $tournament, 'fase' => $phase, 'campo' => $field, 'data_partita' => $date,
             'squadra_casa' => $home, 'squadra_ospite' => $away, 'ora_partita' => $time,

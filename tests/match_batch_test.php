@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includi/match_batch.php';
 function check_batch(bool $ok, string $message): void { if (!$ok) throw new RuntimeException($message); }
 $tournaments = [['slug' => 'coppa', 'sezione' => 'calcio'], ['slug' => 'esport', 'sezione' => 'esport']];
-$teams = ['coppa' => ['A', 'B', 'C', 'D'], 'esport' => ['A', 'B', 'C', 'D']];
+$teams = ['coppa' => ['A', 'B', 'C', 'D', 'E', 'F'], 'esport' => ['A', 'B', 'C', 'D', 'E', 'F']];
 $fields = [['nome' => 'Campo 1']];
 $input = ['torneo' => 'coppa', 'fase' => 'REGULAR', 'campo' => 'Campo 1', 'data_partita' => '2026-11-09', 'giornata' => '1', 'partite_count' => '2', 'partite' => [
     ['squadra_casa' => 'A', 'squadra_ospite' => 'B', 'ora_partita' => '18:30'],
@@ -15,7 +15,11 @@ $invalid = [];
 $value = $input; $value['partite'][1]['squadra_casa'] = 'A'; $invalid[] = $value;
 $value = $input; $value['partite'][1]['squadra_casa'] = 'X'; $invalid[] = $value;
 $value = $input; $value['partite'][1]['squadra_casa'] = 'D'; $invalid[] = $value;
-$value = $input; $value['partite'][1]['ora_partita'] = '18:30'; $invalid[] = $value;
+$simultaneous = $input; $simultaneous['partite'][1]['ora_partita'] = '18:30';
+check_batch(count($validate($simultaneous)) === 2, 'Two simultaneous matches on the same field are allowed');
+$value = $simultaneous; $value['partite_count'] = '3';
+$value['partite'][] = ['squadra_casa' => 'E', 'squadra_ospite' => 'F', 'ora_partita' => '18:30'];
+$invalid[] = $value;
 $value = $input; $value['partite'][1]['ora_partita'] = '25:99'; $invalid[] = $value;
 $value = $input; $value['data_partita'] = '2026-02-30'; $invalid[] = $value;
 $value = $input; $value['torneo'] = 'archiviato'; $invalid[] = $value;
@@ -30,7 +34,9 @@ foreach ($invalid as $index => $value) {
     catch (InvalidArgumentException $expected) { }
 }
 $online = $input; $online['torneo'] = 'esport'; $online['campo'] = 'Online'; $online['partite'][1]['ora_partita'] = '18:30';
-check_batch(count($validate($online)) === 2, 'Online tournaments permit simultaneous starts');
+$online['partite_count'] = '3';
+$online['partite'][] = ['squadra_casa' => 'E', 'squadra_ospite' => 'F', 'ora_partita' => '18:30'];
+check_batch(count($validate($online)) === 3, 'Online tournaments permit unlimited simultaneous starts');
 
 // Actual database transactions in an isolated in-memory database; no website data.
 $db = new class {

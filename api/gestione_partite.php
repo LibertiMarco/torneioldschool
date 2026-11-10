@@ -909,12 +909,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$locked) throw new RuntimeException('Campo occupato da un altro salvataggio. Riprova.');
         match_batch_save($conn, $rows, function (array $row) use ($conn, $createMatch): string {
           if ($row['campo'] !== 'Online') {
-            $check = $conn->prepare('SELECT id FROM partite WHERE campo = ? AND data_partita = ? AND ora_partita = ? LIMIT 1');
+            $check = $conn->prepare('SELECT id FROM partite WHERE campo = ? AND data_partita = ? AND ora_partita = ? LIMIT 2');
             $check->bind_param('sss', $row['campo'], $row['data_partita'], $row['ora_partita']);
             $check->execute();
-            $occupied = $check->get_result()->num_rows > 0;
+            $occupied = $check->get_result()->num_rows >= 2;
             $check->close();
-            if ($occupied) return 'il campo ha gia una partita a questo orario. Scegli un altro orario.';
+            if ($occupied) return 'il campo ha gia due partite in questo giorno e orario. Sono consentite al massimo due partite contemporanee.';
           }
           return $createMatch($row);
         });
