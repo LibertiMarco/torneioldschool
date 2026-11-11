@@ -59,8 +59,9 @@ class _LogoSettingsCardState extends State<LogoSettingsCard> {
             builder: (context, enabled, _) => SwitchListTile(
               title: const Text('Loghi originali di squadre e tornei'),
               subtitle: const Text(
-                'Attivo: mostra i loghi originali. Disattivo: mostra gli emblemi '
-                'con iniziali. Vale nell’app e nella preview; '
+                'Attivo: mostra i loghi originali a tutti. Disattivo: mostra le '
+                'iniziali solo a chi non ha fatto l’accesso. Gli altri utenti '
+                'autenticati vedono sempre i loghi originali. '
                 'oldschooltornei@gmail.com usa sempre le iniziali.',
               ),
               value: enabled,

@@ -46,7 +46,8 @@ class SiteImage extends StatelessWidget {
       listenable: Listenable.merge([api.originalLogos, auth]),
       builder: (context, _) => _buildImage(
         context,
-        api.originalLogos.value && !(auth?.alwaysUseOriginalEmblems ?? false),
+        (api.originalLogos.value || auth?.user != null) &&
+            !(auth?.alwaysUseOriginalEmblems ?? false),
       ),
     );
   }
