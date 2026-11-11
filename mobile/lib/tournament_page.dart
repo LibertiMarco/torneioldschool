@@ -798,7 +798,15 @@ class MatchCard extends StatelessWidget {
     final value = '${match['data_partita'] ?? ''}'.trim();
     final date = DateTime.tryParse(value);
     if (date == null) return value.isEmpty ? 'Data da definire' : value;
-    const weekdays = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
+    const weekdays = [
+      'Lunedì',
+      'Martedì',
+      'Mercoledì',
+      'Giovedì',
+      'Venerdì',
+      'Sabato',
+      'Domenica',
+    ];
     final day = '${date.day}'.padLeft(2, '0');
     final month = '${date.month}'.padLeft(2, '0');
     return '${weekdays[date.weekday - 1]}-$day/$month/${date.year}';
