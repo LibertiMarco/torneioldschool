@@ -21,6 +21,7 @@ import 'main.dart' show ErrorPanel, TournamentPage;
 import 'theme.dart' show siteBlue, siteRed;
 import 'home_design.dart';
 import 'original_emblem.dart';
+import 'home_cache.dart';
 
 class SiteImage extends StatelessWidget {
   const SiteImage({
@@ -100,42 +101,62 @@ class SiteImage extends StatelessWidget {
 
 // Each homepage block handles its own loading and errors.
 class HomeBlock extends StatefulWidget {
-  const HomeBlock({super.key, required this.load, required this.render});
+  const HomeBlock({
+    super.key,
+    required this.load,
+    required this.render,
+    this.cache,
+    this.cacheKey,
+  });
   final Future<dynamic> Function() load;
   final Widget Function(dynamic) render;
+  final HomeCache? cache;
+  final String? cacheKey;
   @override
   State<HomeBlock> createState() => _HomeBlockState();
 }
 
 class _HomeBlockState extends State<HomeBlock> {
   late Future<dynamic> data;
+  int _revision = 0;
   @override
   void initState() {
     super.initState();
-    data = widget.load();
+    if (widget.cache == null) data = widget.load();
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<dynamic>(
-    future: data,
-    builder: (context, snapshot) {
-      if (snapshot.connectionState != ConnectionState.done) {
-        return const Padding(
-          padding: EdgeInsets.all(24),
-          child: Center(child: CircularProgressIndicator()),
-        );
-      }
-      if (snapshot.hasError) {
-        return ErrorPanel(
-          error: snapshot.error!,
-          retry: () => setState(() {
+  Widget build(BuildContext context) => widget.cache != null
+      ? CachedHomeData(
+          cache: widget.cache!,
+          cacheKey: widget.cacheKey!,
+          load: widget.load,
+          revision: _revision,
+          builder: _render,
+        )
+      : FutureBuilder<dynamic>(future: data, builder: _render);
+
+  Widget _render(BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+    if (snapshot.connectionState != ConnectionState.done && !snapshot.hasData) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (snapshot.hasError) {
+      return ErrorPanel(
+        error: snapshot.error!,
+        retry: () => setState(() {
+          if (widget.cache == null) {
             data = widget.load();
-          }),
-        );
-      }
-      return widget.render(snapshot.data);
-    },
-  );
+          } else {
+            _revision++;
+          }
+        }),
+      );
+    }
+    return widget.render(snapshot.data);
+  }
 }
 
 void openPage(BuildContext context, Widget page) => Navigator.of(context).push(
@@ -323,6 +344,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
           if (!esport) ...[_rankingSelector(), const SizedBox(height: 14)],
           HomeBlock(
             key: ValueKey('ranking-${widget.section}-$reload-$order'),
+            cache: widget.auth?.homeCache ?? api.homeCache,
+            cacheKey: 'ranking:${widget.section}:$order',
             load: () =>
                 esport ? api.esportRanking() : api.playerRanking(order: order),
             render: (value) {
@@ -750,7 +773,7 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
   String search = '';
   final searchController = TextEditingController();
   int page = 1;
-  late Future<Map<String, dynamic>> data;
+  int _revision = 0;
   @override
   void initState() {
     super.initState();
@@ -771,15 +794,17 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
   });
 
   void load() {
-    data = widget.esport
-        ? widget.api.esportRanking(limit: 50)
-        : widget.api.playerRanking(
-            order: order,
-            page: page,
-            perPage: 10,
-            search: search,
-          );
+    _revision++;
   }
+
+  Future<dynamic> _loadRanking() => widget.esport
+      ? widget.api.esportRanking(limit: 50)
+      : widget.api.playerRanking(
+          order: order,
+          page: page,
+          perPage: 10,
+          search: search,
+        );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -822,10 +847,13 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
           ),
         ],
         Expanded(
-          child: FutureBuilder<Map<String, dynamic>>(
-            future: data,
+          child: CachedHomeData(
+            cache: AppAuthScope.of(context)?.homeCache ?? widget.api.homeCache,
+            cacheKey: 'ranking-full:${widget.esport}:$order:$page:$search',
+            revision: _revision,
+            load: _loadRanking,
             builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
+              if (!snapshot.hasData && !snapshot.hasError) {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {

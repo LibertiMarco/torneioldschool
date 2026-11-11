@@ -13,5 +13,12 @@ foreach ([['giocatore_id' => 9], ['user_id' => 3], ['section' => 'invalid'], ['t
     } catch (MobileAuthError $error) { player_expect($error->status === 400, 'Reject identity overrides and malformed filters'); }
 }
 player_expect(mobile_player_stats_query([]) === ['calcio', null, 1], 'Defaults');
+player_expect(mobile_player_stats_query(['section' => 'calcio', 'view' => 'upcoming']) === ['calcio', null, 1], 'Lightweight authenticated calendar');
+foreach ([['view' => 'invalid'], ['view' => 'upcoming', 'section' => 'esport'], ['view' => 'upcoming', 'type' => 'gol']] as $input) {
+    try {
+        mobile_player_stats_query($input);
+        throw new RuntimeException('Invalid calendar view accepted');
+    } catch (MobileAuthError $error) { player_expect($error->status === 400, 'Reject incompatible calendar filters'); }
+}
 player_expect(mobile_player_stats_query(['section' => 'esport', 'type' => 'presenze', 'page' => '2', 'action' => 'player_stats']) === ['esport', 'presenze', 2], 'Preview pagination and section');
 echo "Personal player stats input and identity: all checks passed.\n";

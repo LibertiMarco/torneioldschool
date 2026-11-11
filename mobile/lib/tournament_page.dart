@@ -793,6 +793,23 @@ class MatchCard extends StatelessWidget {
   final TosApi api;
   final Map<String, dynamic> match;
   final String phase;
+
+  String get dateLabel {
+    final value = '${match['data_partita'] ?? ''}'.trim();
+    final date = DateTime.tryParse(value);
+    if (date == null) return value.isEmpty ? 'Data da definire' : value;
+    const weekdays = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
+    final day = '${date.day}'.padLeft(2, '0');
+    final month = '${date.month}'.padLeft(2, '0');
+    return '${weekdays[date.weekday - 1]}-$day/$month/${date.year}';
+  }
+
+  String get timeLabel {
+    final value = '${match['ora_partita'] ?? ''}'.trim();
+    final time = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(value);
+    return time == null ? value : '${time[1]!.padLeft(2, '0')}:${time[2]}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final played = stat(match['giocata']) == 1;
@@ -828,7 +845,7 @@ class MatchCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${match['data_partita'] ?? 'Data da definire'} · ${match['ora_partita'] ?? ''}',
+                      '$dateLabel${timeLabel.isEmpty ? '' : ' · $timeLabel'}',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,

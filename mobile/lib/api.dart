@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import 'home_cache.dart';
+
 class ApiError implements Exception {
   const ApiError(this.message, {this.status = 0});
   final String message;
@@ -39,6 +41,7 @@ class TosApi {
   }
   final Uri baseUrl;
   final http.Client client;
+  final homeCache = HomeCache();
   Future<dynamic> Function(String path, Map<String, String>? query)?
   authenticatedRead;
   bool get preview => false;

@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'api.dart';
 import 'auth.dart';
+import 'home_cache.dart';
 import 'home_dashboard.dart' show SiteImage, openPage;
 import 'personal_match_order.dart';
 import 'tournament_page.dart';
@@ -44,7 +45,7 @@ class _NextMatch extends StatefulWidget {
 }
 
 class _NextMatchState extends State<_NextMatch> {
-  late Future<dynamic> _data = _load();
+  int _revision = 0;
   bool get _dark => Theme.of(context).brightness == Brightness.dark;
   Color get _foreground => _dark
       ? Theme.of(context).colorScheme.onSurface
@@ -52,7 +53,7 @@ class _NextMatchState extends State<_NextMatch> {
 
   Future<dynamic> _load() async => widget.auth.authorized(
     'api/mobile/v1/player_stats.php',
-    query: {'section': widget.section},
+    query: {'section': widget.section, 'view': 'upcoming'},
   );
 
   String _schedule(Map<String, dynamic> match) {
@@ -183,10 +184,13 @@ class _NextMatchState extends State<_NextMatch> {
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<dynamic>(
-    future: _data,
+  Widget build(BuildContext context) => CachedHomeData(
+    cache: widget.auth.homeCache,
+    cacheKey: 'next-match:${widget.section}',
+    revision: _revision,
+    load: _load,
     builder: (context, snapshot) {
-      if (snapshot.connectionState != ConnectionState.done) {
+      if (!snapshot.hasData && !snapshot.hasError) {
         return _card([
           const Text('Il tuo calendario'),
           const SizedBox(height: 12),
@@ -202,7 +206,7 @@ class _NextMatchState extends State<_NextMatch> {
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               onPressed: () => setState(() {
-                _data = _load();
+                _revision++;
               }),
               icon: const Icon(Icons.refresh),
               label: const Text('Riprova'),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'access_gate.dart';
 import 'api.dart';
 import 'auth.dart';
+import 'home_cache.dart';
 import 'home_dashboard.dart' show SiteImage;
 import 'team_page.dart';
 import 'tournament_page.dart';
@@ -89,7 +90,7 @@ class _FavoritesContent extends StatefulWidget {
 }
 
 class _FavoritesContentState extends State<_FavoritesContent> {
-  late Future<Map<String, dynamic>> _data = _load();
+  int _revision = 0;
   String _search = '';
   int _visibleTournaments = 20;
 
@@ -110,7 +111,7 @@ class _FavoritesContentState extends State<_FavoritesContent> {
   void _reload() {
     if (mounted) {
       setState(() {
-        _data = _load();
+        _revision++;
       });
     }
   }
@@ -200,10 +201,12 @@ class _FavoritesContentState extends State<_FavoritesContent> {
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>>(
-    future: _data,
+  Widget build(BuildContext context) => CachedHomeData(
+    cache: widget.auth.homeCache,
+    cacheKey: 'favorites:${widget.section}:${widget.fullPage}',
+    revision: _revision,
+    load: _load,
     builder: (context, snapshot) {
-      final loading = snapshot.connectionState != ConnectionState.done;
       if (snapshot.hasError) {
         final error = Column(
           mainAxisSize: MainAxisSize.min,
@@ -255,7 +258,6 @@ class _FavoritesContentState extends State<_FavoritesContent> {
       );
       final content = <Widget>[
         if (!widget.fullPage) header,
-        if (loading) const LinearProgressIndicator(),
         if (items.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),

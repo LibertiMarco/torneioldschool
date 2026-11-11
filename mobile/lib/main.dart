@@ -23,6 +23,7 @@ import 'theme.dart';
 import 'section_selector.dart';
 import 'tournament_list.dart';
 import 'home_dashboard.dart';
+import 'home_cache.dart';
 import 'browser_runtime_stub.dart'
     if (dart.library.js_interop) 'browser_runtime_web.dart';
 
@@ -269,7 +270,7 @@ class _TosAppState extends State<TosApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) => MaterialApp(
     navigatorKey: _navigatorKey,
-    navigatorObservers: [_notificationNavigator],
+    navigatorObservers: [_notificationNavigator, homeRouteObserver],
     scaffoldMessengerKey: _messengerKey,
     title: 'Tornei Old School',
     debugShowCheckedModeBanner: false,

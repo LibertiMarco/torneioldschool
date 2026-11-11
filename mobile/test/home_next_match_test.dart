@@ -45,7 +45,7 @@ class NextApi extends DemoApi {
   }) async {
     if (path == 'api/mobile/v1/player_stats.php') {
       calls++;
-      expect(query, {'section': 'calcio'});
+      expect(query, {'section': 'calcio', 'view': 'upcoming'});
       if (fail) throw const ApiError('Errore di rete');
       if (pending != null) return pending!.future;
       return {

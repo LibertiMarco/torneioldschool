@@ -1,0 +1,46 @@
+[Sat Oct 10 15:30:56 2026] PHP 8.2.12 Development Server (http://127.0.0.1:8088) started
+[Sat Oct 10 15:31:25 2026] 127.0.0.1:55512 Accepted
+[Sat Oct 10 15:31:25 2026] 127.0.0.1:55512 [200]: GET /
+[Sat Oct 10 15:31:25 2026] 127.0.0.1:55512 Closing
+[Sat Oct 10 15:31:25 2026] 127.0.0.1:55514 Accepted
+[Sat Oct 10 15:31:25 2026] 127.0.0.1:55514 [200]: GET /main.dart.js
+[Sat Oct 10 15:31:27 2026] 127.0.0.1:55514 Closing
+[Sat Oct 10 15:31:35 2026] 127.0.0.1:55517 Accepted
+[Sat Oct 10 15:31:35 2026] 127.0.0.1:55517 [200]: GET /main.dart.js
+[Sat Oct 10 15:31:37 2026] 127.0.0.1:55517 Closing
+[Sat Oct 10 15:41:21 2026] 127.0.0.1:62981 Accepted
+[Sat Oct 10 15:41:21 2026] 127.0.0.1:62981 [200]: GET /
+[Sat Oct 10 15:41:21 2026] 127.0.0.1:62981 Closing
+[Sat Oct 10 15:41:21 2026] 127.0.0.1:59028 Accepted
+[Sat Oct 10 15:41:21 2026] 127.0.0.1:59028 [200]: GET /flutter_bootstrap.js
+[Sat Oct 10 15:41:21 2026] 127.0.0.1:59028 Closing
+[Sat Oct 10 15:41:21 2026] 127.0.0.1:63674 Accepted
+[Sat Oct 10 15:41:21 2026] 127.0.0.1:63674 [200]: GET /canvaskit/chromium/canvaskit.wasm
+[Sat Oct 10 15:41:21 2026] 127.0.0.1:52557 Accepted
+[Sat Oct 10 15:41:21 2026] 127.0.0.1:52557 [200]: GET /manifest.json
+[Sat Oct 10 15:41:21 2026] 127.0.0.1:52557 Closing
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:63674 Closing
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:52017 Accepted
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:64971 Accepted
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:61465 Accepted
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:53644 Accepted
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:58141 Accepted
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:52017 [200]: GET /canvaskit/chromium/canvaskit.js
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:64971 [200]: GET /main.dart.js
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:53644 [200]: GET /favicon.png
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:52017 Closing
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:53644 Closing
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:64971 Closing
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:58141 [200]: GET /assets/FontManifest.json
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:58141 Closing
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:53891 Accepted
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:50061 Accepted
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:53891 [200]: GET /assets/fonts/MaterialIcons-Regular.otf
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:50061 [200]: GET /assets/fonts/fallback/Roboto-Regular.ttf
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:53891 Closing
+[Sat Oct 10 15:41:22 2026] 127.0.0.1:50061 Closing
+[Sat Oct 10 15:41:23 2026] 127.0.0.1:53907 Accepted
+[Sat Oct 10 18:58:37 2026] 127.0.0.1:53907 Closed without sending a request; it was probably just an unused speculative preconnection
+[Sat Oct 10 18:58:37 2026] 127.0.0.1:53907 Closing
+[Sat Oct 10 18:58:37 2026] 127.0.0.1:61465 Closed without sending a request; it was probably just an unused speculative preconnection
+[Sat Oct 10 18:58:37 2026] 127.0.0.1:61465 Closing

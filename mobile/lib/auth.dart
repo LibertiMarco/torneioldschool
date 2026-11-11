@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 
 import 'api.dart';
+import 'home_cache.dart';
 
 abstract class SessionStore {
   Future<String?> read(String key);
@@ -32,6 +33,21 @@ class TosAuth extends ChangeNotifier {
   static const callback = 'tosoldschool://auth/callback';
   final TosApi api;
   final SessionStore storage;
+  final _homeCaches = <String, HomeCache>{};
+  HomeCache get homeCache {
+    final identity = '${user?['id'] ?? ''}:${user?['email'] ?? ''}';
+    return _homeCaches.putIfAbsent(identity, () {
+      if (api.preview) return HomeCache();
+      final key =
+          'tos.home.${sha256.convert(utf8.encode('$identity@${api.baseUrl}'))}';
+      return HomeCache(
+        read: () => storage.read(key),
+        write: (value) => storage.write(key, value),
+        remove: () => storage.delete(key),
+      );
+    });
+  }
+
   Map<String, dynamic>? user;
   String? _access;
   String? _refresh;
@@ -257,12 +273,16 @@ class TosAuth extends ChangeNotifier {
   }
 
   Future<void> _clear() async {
+    final caches = {..._homeCaches.values, if (user != null) homeCache};
     api.authenticatedRead = null;
     _access = null;
     _refresh = null;
     user = null;
-    await storage.delete(_storageKey);
+    _homeCaches.clear();
     notifyListeners();
+    await Future.wait(caches.map((cache) => cache.clear()));
+    await api.homeCache.clear();
+    await storage.delete(_storageKey);
   }
 
   Future<void> logout() async {
