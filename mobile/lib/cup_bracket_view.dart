@@ -290,16 +290,24 @@ class _CupBracketViewState extends State<CupBracketView> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          SiteImage(
-                            api: widget.api,
-                            path: cupMatchWinnerLogo(finalNode?.games ?? []),
-                            identityName:
-                                cupMatchWinner(finalNode?.games ?? []) ?? '',
-                            width: 64,
-                            height: 64,
-                            fallback: Icons.shield_outlined,
-                            preserveShape: true,
-                          ),
+                          if (cupMatchWinnerLogo(finalNode?.games ?? [])
+                              .isEmpty)
+                            Icon(
+                              Icons.emoji_events,
+                              size: 64,
+                              color: _cupTone(widget.phase),
+                            )
+                          else
+                            SiteImage(
+                              api: widget.api,
+                              path: cupMatchWinnerLogo(finalNode?.games ?? []),
+                              identityName:
+                                  cupMatchWinner(finalNode?.games ?? []) ?? '',
+                              width: 64,
+                              height: 64,
+                              fallback: Icons.emoji_events,
+                              preserveShape: true,
+                            ),
                           const SizedBox(height: 10),
                           Text(
                             cupMatchWinner(finalNode?.games ?? []) ??

@@ -125,14 +125,23 @@ _CupSide? _cupWinner(List<Map<String, dynamic>> games, String label) {
       }
     }
   }
-  if (winner == null && games.length == 1 &&
-      !legs.contains('ANDATA') && !legs.contains('RITORNO') &&
+  if (winner == null &&
+      games.length == 1 &&
+      !legs.contains('ANDATA') &&
+      !legs.contains('RITORNO') &&
       stat(games.first['decisa_rigori']) != 1) {
     final game = games.first;
-    final positions = ordered.map((name) => stat(game[
-      _teamKey(game['squadra_casa']) == name
-          ? 'regular_position_casa' : 'regular_position_ospite'])).toList();
-    if (positions.every((position) => position > 0) && positions[0] != positions[1]) {
+    final positions = ordered
+        .map(
+          (name) => stat(
+            game[_teamKey(game['squadra_casa']) == name
+                ? 'regular_position_casa'
+                : 'regular_position_ospite'],
+          ),
+        )
+        .toList();
+    if (positions.every((position) => position > 0) &&
+        positions[0] != positions[1]) {
       winner = ordered[positions[0] < positions[1] ? 0 : 1];
     }
   }
@@ -149,14 +158,22 @@ List<Map<String, dynamic>> buildCupBracket(
 ) {
   final regularPositions = <String, int>{
     for (final seed in seeds)
-      if ('${seed['name'] ?? ''}'.isNotEmpty && stat(seed['regularPosition']) > 0)
+      if ('${seed['name'] ?? ''}'.isNotEmpty &&
+          stat(seed['regularPosition']) > 0)
         _teamKey(seed['name']): stat(seed['regularPosition']),
   };
-  final actual = matches.where((m) => phaseKey(m['fase']) == phase).map((game) => <String, dynamic>{
-    ...game,
-    'regular_position_casa': regularPositions[_teamKey(game['squadra_casa'])],
-    'regular_position_ospite': regularPositions[_teamKey(game['squadra_ospite'])],
-  }).toList();
+  final actual = matches
+      .where((m) => phaseKey(m['fase']) == phase)
+      .map(
+        (game) => <String, dynamic>{
+          ...game,
+          'regular_position_casa':
+              regularPositions[_teamKey(game['squadra_casa'])],
+          'regular_position_ospite':
+              regularPositions[_teamKey(game['squadra_ospite'])],
+        },
+      )
+      .toList();
   var size = 2;
   while (size < seeds.length) {
     size *= 2;

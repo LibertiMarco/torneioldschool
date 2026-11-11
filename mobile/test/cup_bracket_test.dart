@@ -30,6 +30,39 @@ Map<String, dynamic> game(
   'fase_leg': leg,
 };
 void main() {
+  test(
+    'Single-leg ties use regular-season position throughout the bracket',
+    () {
+      final ranked = seeds(8);
+      for (var i = 0; i < ranked.length; i++) {
+        ranked[i]['regularPosition'] = i + 1;
+      }
+      final tied = game('Team 8', 'Team 1', h: 2, a: 2, leg: 'UNICA');
+      final rows = buildCupBracket(ranked, [tied], 'GOLD');
+      expect(
+        rows.firstWhere((row) => row['bracket_slot'] == 'S1')['squadra_casa'],
+        contains('Team 1'),
+      );
+      expect(cupMatchWinner([rows.first]), 'Team 1');
+      expect(cupMatchWinner([tied]), isNull);
+      final penalties = buildCupBracket(ranked, [
+        {...tied, 'decisa_rigori': 1, 'rigori_casa': 5, 'rigori_ospite': 4},
+      ], 'GOLD');
+      expect(cupMatchWinner([penalties.first]), 'Team 8');
+      expect(
+        cupMatchWinner([
+          {...rows.first, 'giocata': 0},
+        ]),
+        isNull,
+      );
+      expect(
+        cupMatchWinner([
+          {...rows.first, 'fase_leg': 'ANDATA'},
+        ]),
+        isNull,
+      );
+    },
+  );
   test('Fixed seeds, semifinal paths, final and all common bracket sizes', () {
     expect(cupSeedOrder(8), [1, 8, 4, 5, 2, 7, 3, 6]);
     for (final size in [2, 4, 8, 16, 32, 64, 128]) {

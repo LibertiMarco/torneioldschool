@@ -2,6 +2,7 @@
   const api = window.TosCupBracket, {info, games} = await api.loadProjection(slug, phase);
   if (!games.length) throw new Error('Nessun tabellone disponibile per ' + phase);
   const rounds = [...new Set(games.map(api.roundKey))];
+  const onlyFinal = rounds.length === 1 && rounds[0] === 'FINALE';
   const columns = rounds.map(round => {
     const groups = new Map();
     for (const game of games.filter(game => api.roundKey(game) === round)) {
@@ -65,6 +66,44 @@
     box(x, 610, width, 48, 10);
     label(String(api.labels[rounds[depth]] || rounds[depth]).toUpperCase(), x + width / 2, 634, width - 16, 27, accentInk, 'center');
     nodes.forEach((group, index) => {
+      if (onlyFinal) {
+        const cardTop = 710, cardHeight = Math.min(840, 840 / group.length);
+        group.forEach((game, leg) => {
+          const y = cardTop + leg * cardHeight;
+          const compact = group.length > 1;
+          const logoSize = compact ? 135 : 220;
+          const logoY = y + (compact ? 46 : 125);
+          const resultY = logoY + logoSize / 2;
+          box(x, y, width, cardHeight - 24, 28);
+          ['casa', 'ospite'].forEach((side, teamIndex) => {
+            const cx = teamIndex === 0 ? 290 : 790;
+            if (!MatchdayRenderer.contained(ctx, logos.get(game['logo_' + side]), cx - logoSize / 2, logoY, logoSize, logoSize)) {
+              label('DA DEFINIRE', cx, resultY, logoSize + 100, compact ? 30 : 42, '#536273', 'center');
+            }
+            const name = game['squadra_' + side] || 'Da definire';
+            ctx.save(); ctx.translate(cx, logoY + logoSize + (compact ? 45 : 90));
+            // Wrap long finalist names instead of stretching the standard bracket row.
+            const words = String(name).split(/\s+/), nameLines = [''];
+            ctx.font = `400 ${compact ? 34 : 48}px Impact, "Arial Narrow", sans-serif`;
+            words.forEach(word => {
+              const last = nameLines.length - 1, candidate = `${nameLines[last]} ${word}`.trim();
+              if (nameLines[last] && ctx.measureText(candidate).width > 390 && nameLines.length < 2) nameLines.push(word);
+              else nameLines[last] = candidate;
+            });
+            nameLines.forEach((line, i) => label(line, 0, i * (compact ? 40 : 58), 390, compact ? 34 : 48, '#172b40', 'center'));
+            ctx.restore();
+          });
+          const played = Number(game.giocata) === 1;
+          label(played ? `${game.gol_casa} – ${game.gol_ospite}` : 'VS', 540, resultY, 230, compact ? 60 : 88, accentInk, 'center');
+          if (compact) label(game.fase_leg || '', 540, y + 28, 850, 26, accentInk, 'center');
+          const details = [game.data_partita || game.data, game.ora_partita || game.ora, game.campo].filter(Boolean).join('  •  ');
+          if (details) label(details, 540, y + cardHeight - (compact ? 62 : 130), 880, compact ? 24 : 32, '#536273', 'center');
+          if (played && Number(game.decisa_rigori) === 1 && game.rigori_casa != null && game.rigori_ospite != null) {
+            label(`RIGORI ${game.rigori_casa} – ${game.rigori_ospite}`, 540, y + cardHeight - 65, 880, 30, accentInk, 'center');
+          }
+        });
+        return;
+      }
       const height = Math.min(unit - 20, 36 + group.length * 102), y = centers[depth][index] - height / 2;
       // Scale unusually dense draws locally without changing export dimensions.
       ctx.save(); ctx.translate(x, y); ctx.scale(1, height / (36 + group.length * 102));
@@ -88,11 +127,11 @@
   const finalIndex = rounds.indexOf('FINALE');
   if (finalIndex >= 0) {
     const winner = api.winner(columns[finalIndex][0], 'Vincente finale');
-    box(240, 1700, 600, 108);
+    box(onlyFinal ? 120 : 240, onlyFinal ? 1590 : 1700, onlyFinal ? 840 : 600, onlyFinal ? 218 : 108);
     const trophy = await MatchdayRenderer.loadImage('/img/tornei/coppa-' + ({GOLD:'gold', SILVER:'silver', BRONZO:'bronzo'}[String(phase).toUpperCase()] || 'gold') + '.svg');
-    MatchdayRenderer.contained(ctx, logos.get(winner?.logo) || trophy, 262, 1722, 64, 64);
-    label('VINCITRICE', 350, 1728, 460, 20, accentInk);
-    label(winner?.name || 'Vincente finale', 350, 1770, 460, 37);
+    MatchdayRenderer.contained(ctx, logos.get(winner?.logo) || trophy, onlyFinal ? 155 : 262, onlyFinal ? 1632 : 1722, onlyFinal ? 128 : 64, onlyFinal ? 128 : 64);
+    label('VINCITRICE', onlyFinal ? 325 : 350, onlyFinal ? 1650 : 1728, onlyFinal ? 590 : 460, onlyFinal ? 28 : 20, accentInk);
+    label(winner?.name || 'Vincente finale', onlyFinal ? 325 : 350, onlyFinal ? 1720 : 1770, onlyFinal ? 590 : 460, onlyFinal ? 50 : 37);
   }
   ctx.fillStyle = theme.primary; ctx.fillRect(0, 1870, 540, 12);
   ctx.fillStyle = theme.secondary; ctx.fillRect(540, 1870, 540, 12);

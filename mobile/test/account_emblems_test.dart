@@ -46,8 +46,10 @@ void main() {
       await tester.pump();
       expect(find.byType(OriginalEmblem), findsNWidgets(2));
       auth.select('other@example.com');
+      api.originalLogos.value = false;
       await tester.pump();
       expect(find.byType(OriginalEmblem), findsNothing);
+      api.originalLogos.value = true;
       auth.select('oldschooltornei@gmail.com');
       await tester.pump();
       expect(find.byType(OriginalEmblem), findsNWidgets(2));
