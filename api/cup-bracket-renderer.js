@@ -14,6 +14,8 @@
   });
   const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1920;
   const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   const theme = MatchdayRenderer.tournamentTheme(info);
   const metal = {GOLD: ['#ffe5a0', '#dba632'], SILVER: ['#e9f3ff', '#92a9c5'], BRONZO: ['#ffdbc0', '#bc794b']}[String(phase).toUpperCase()] || ['#e9f3ff', '#92a9c5'];
   const accentInk = {GOLD: '#805b10', SILVER: '#465b73', BRONZO: '#854c28'}[String(phase).toUpperCase()] || '#465b73';
@@ -107,22 +109,26 @@
         });
         return;
       }
-      const height = Math.min(unit - 20, 36 + group.length * 102), y = centers[depth][index] - height / 2;
-      // Scale unusually dense draws locally without changing export dimensions.
-      ctx.save(); ctx.translate(x, y); ctx.scale(1, height / (36 + group.length * 102));
-      box(0, 0, width, 36 + group.length * 102, 14);
-      label(group[0].bracket_slot || rounds[depth], 12, 18, width - 24, 19, accentInk);
+      const height = Math.min(unit - 14, 28 + group.length * 156), y = centers[depth][index] - height / 2;
+      const legHeight = (height - 28) / group.length;
+      const metaHeight = group.length > 1 ? 20 : 0;
+      const rowHeight = (legHeight - metaHeight) / 2;
+      const logoSize = Math.max(16, Math.min(60, rowHeight - 4, width * .21));
+      // Draw at final coordinates: never squash crests with a vertical canvas scale.
+      ctx.save(); ctx.translate(x, y);
+      box(0, 0, width, height, 14);
+      label(group[0].bracket_slot || rounds[depth], 12, 15, width - 24, 18, accentInk);
       group.forEach((game, leg) => {
-        const base = 56 + leg * 102, played = Number(game.giocata) === 1;
+        const base = 28 + leg * legHeight, played = Number(game.giocata) === 1;
         ['casa', 'ospite'].forEach((side, teamIndex) => {
-          const cy = base + teamIndex * 38;
-          if (!MatchdayRenderer.contained(ctx, logos.get(game['logo_' + side]), 10, cy - 16, 32, 32)) {
-            ctx.strokeStyle = '#8ba0ba'; ctx.strokeRect(17, cy - 10, 18, 20);
+          const cy = base + (teamIndex + .5) * rowHeight;
+          if (!MatchdayRenderer.contained(ctx, logos.get(game['logo_' + side]), 10, cy - logoSize / 2, logoSize, logoSize)) {
+            ctx.strokeStyle = '#8ba0ba'; ctx.strokeRect(10 + logoSize * .2, cy - logoSize * .3, logoSize * .6, logoSize * .6);
           }
-          label(game['squadra_' + side] || 'Da definire', 49, cy, width - 92, 25);
+          label(game['squadra_' + side] || 'Da definire', 20 + logoSize, cy, width - logoSize - 62, Math.min(25, rowHeight * .68));
           label(played ? game['gol_' + side] : '–', width - 14, cy, 32, 29, accentInk, 'right');
         });
-        if (group.length > 1) label(game.fase_leg || '', 12, base + 65, width - 24, 17, '#536273');
+        if (group.length > 1) label(game.fase_leg || '', 12, base + legHeight - 10, width - 24, 17, '#536273');
       });
       ctx.restore();
     });
