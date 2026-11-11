@@ -63,8 +63,8 @@
   }));
   columns.forEach((nodes, depth) => {
     const x = left + depth * (width + gap);
-    box(x, 610, width, 48, 10);
-    label(String(api.labels[rounds[depth]] || rounds[depth]).toUpperCase(), x + width / 2, 634, width - 16, 27, accentInk, 'center');
+    box(x, 610, width, onlyFinal ? 76 : 48, onlyFinal ? 16 : 10);
+    label(String(api.labels[rounds[depth]] || rounds[depth]).toUpperCase(), x + width / 2, onlyFinal ? 648 : 634, width - 16, onlyFinal ? 54 : 27, accentInk, 'center');
     nodes.forEach((group, index) => {
       if (onlyFinal) {
         const cardTop = 710, cardHeight = Math.min(840, 840 / group.length);
