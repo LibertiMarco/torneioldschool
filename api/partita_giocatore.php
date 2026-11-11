@@ -57,6 +57,7 @@ function ensure_autogol_column(mysqli $conn): void {
     }
 }
 ensure_autogol_column($conn);
+ensure_partita_giocatore_team_schema($conn);
 if (!function_exists('partita_giocatore_resolved_team_expr')) {
     partita_giocatore_json_error("Helper squadra partita non disponibile", 500);
 }
@@ -491,7 +492,10 @@ if ($azione === 'list_giocatori') {
             JOIN giocatori g ON g.id = sg.giocatore_id
             WHERE s.torneo = ?
               AND s.nome IN (?, ?)
-              AND g.id NOT IN (SELECT giocatore_id FROM partita_giocatore WHERE partita_id = ?)
+              AND NOT EXISTS (
+                  SELECT 1 FROM partita_giocatore pg
+                  WHERE pg.partita_id = ? AND pg.giocatore_id = g.id AND pg.squadra_id = s.id
+              )
             ORDER BY g.cognome, g.nome";
 
     $stmt = $conn->prepare($sql);
@@ -542,6 +546,7 @@ if ($azione === 'lineup') {
         LEFT JOIN partita_giocatore pg
           ON pg.partita_id = p.id
          AND pg.giocatore_id = g.id
+         AND pg.squadra_id = s.id
         WHERE p.id = ?
         ORDER BY lato, s.nome, g.cognome, g.nome
     ");
@@ -593,7 +598,7 @@ if ($azione === 'save_bulk') {
             cartellino_giallo = VALUES(cartellino_giallo),
             cartellino_rosso = VALUES(cartellino_rosso), voto = VALUES(voto)
     ");
-    $delete = $conn->prepare('DELETE FROM partita_giocatore WHERE partita_id = ? AND giocatore_id = ?');
+    $delete = $conn->prepare('DELETE FROM partita_giocatore WHERE partita_id = ? AND giocatore_id = ? AND squadra_id = ?');
     if (!$upsert || !$delete) { partita_giocatore_json_error('Errore preparazione salvataggio', 500); }
 
     $conn->begin_transaction();
@@ -604,14 +609,14 @@ if ($azione === 'save_bulk') {
             if ($giocatoreId <= 0) { throw new RuntimeException('Giocatore non valido'); }
             $coinvolti[$giocatoreId] = true;
 
+            $squadraId = resolveSquadraIdForPartitaGiocatore($conn, $partitaId, $giocatoreId, $squadraRichiesta);
+            if ($squadraId === null) { throw new RuntimeException('Squadra non valida per un giocatore'); }
+
             if (empty($riga['presenza'])) {
-                $delete->bind_param('ii', $partitaId, $giocatoreId);
+                $delete->bind_param('iii', $partitaId, $giocatoreId, $squadraId);
                 if (!$delete->execute()) { throw new RuntimeException($delete->error); }
                 continue;
             }
-
-            $squadraId = resolveSquadraIdForPartitaGiocatore($conn, $partitaId, $giocatoreId, $squadraRichiesta);
-            if ($squadraId === null) { throw new RuntimeException('Squadra non valida per un giocatore'); }
 
             $goal = max(0, (int)($riga['goal'] ?? 0));
             $autogol = max(0, (int)($riga['autogol'] ?? 0));
@@ -673,8 +678,8 @@ if ($azione === 'add') {
     }
 
     /* ðŸ”¥ CONTROLLO DUPLICATO */
-    $check = $conn->prepare("SELECT id FROM partita_giocatore WHERE partita_id = ? AND giocatore_id = ?");
-    $check->bind_param("ii", $partita_id, $giocatore);
+    $check = $conn->prepare("SELECT id FROM partita_giocatore WHERE partita_id = ? AND giocatore_id = ? AND squadra_id = ?");
+    $check->bind_param("iii", $partita_id, $giocatore, $squadraId);
     $check->execute();
     $exists = $check->get_result()->fetch_assoc();
 
@@ -797,3 +802,4 @@ if ($azione === 'delete') {
 
 /* ========================================================== */
 echo json_encode(["error" => "Azione non valida"]);
+

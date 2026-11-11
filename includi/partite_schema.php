@@ -161,6 +161,35 @@ if (!function_exists('ensure_partita_giocatore_team_schema')) {
             $conn->query("ALTER TABLE partita_giocatore ADD KEY idx_pg_squadra (squadra_id)");
         }
 
+        // Una riga per giocatore E squadra: lo stesso ID può figurare su entrambe le rose.
+        // Sostituisci anche gli indici legacy con nomi diversi da quello del dump.
+        $indexes = [];
+        $uniqueRes = $conn->query('SHOW INDEX FROM partita_giocatore WHERE Non_unique = 0');
+        if (!$uniqueRes) {
+            throw new RuntimeException('Impossibile verificare gli indici della distinta');
+        }
+        while ($index = $uniqueRes->fetch_assoc()) {
+            $indexes[$index['Key_name']][(int)$index['Seq_in_index']] = $index['Column_name'];
+        }
+        $uniqueRes->free();
+        $alter = [];
+        $hasTeamUnique = false;
+        foreach ($indexes as $name => $columns) {
+            sort($columns);
+            if ($columns === ['giocatore_id', 'partita_id', 'squadra_id']) {
+                $hasTeamUnique = true;
+            }
+            if ($columns === ['giocatore_id', 'partita_id']) {
+                $alter[] = 'DROP INDEX `' . str_replace('`', '``', $name) . '`';
+            }
+        }
+        if (!$hasTeamUnique) {
+            $alter[] = 'ADD UNIQUE KEY uq_partita_giocatore_squadra (partita_id, giocatore_id, squadra_id)';
+        }
+        if ($alter && !$conn->query('ALTER TABLE partita_giocatore ' . implode(', ', $alter))) {
+            throw new RuntimeException('Impossibile aggiornare gli indici della distinta');
+        }
+
         if (function_exists('partita_giocatore_has_squadra_column')) {
             partita_giocatore_has_squadra_column($conn, true);
         }
@@ -222,3 +251,4 @@ if (!function_exists('partita_giocatore_resolved_team_expr')) {
         )";
     }
 }
+
