@@ -1,50 +1,99 @@
-window.CupBracketRenderer={async draw(slug,phase) {
-  const api=window.TosCupBracket,{info,games}=await api.loadProjection(slug,phase);
-  if(!games.length)throw new Error('Nessun tabellone disponibile per '+phase);
-  const rounds=[...new Set(games.map(api.roundKey))],columns=rounds.map(round=>{
-    const groups=new Map();
-    for(const game of games.filter(m=>api.roundKey(m)===round)) {
-      const key=game.bracket_slot || [game.squadra_casa,game.squadra_ospite].sort().join('|');
-      if(!groups.has(key))groups.set(key,[]);groups.get(key).push(game);
+﻿window.CupBracketRenderer = {async draw(slug, phase) {
+  const api = window.TosCupBracket, {info, games} = await api.loadProjection(slug, phase);
+  if (!games.length) throw new Error('Nessun tabellone disponibile per ' + phase);
+  const rounds = [...new Set(games.map(api.roundKey))];
+  const columns = rounds.map(round => {
+    const groups = new Map();
+    for (const game of games.filter(game => api.roundKey(game) === round)) {
+      const key = game.bracket_slot || [game.squadra_casa, game.squadra_ospite].sort().join('|');
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(game);
     }
     return [...groups.values()];
   });
-  const width=320,gap=52,margin=60,top=200;
-  const unit=Math.max(148,...columns.flatMap((nodes,depth)=>nodes.map(group=>(40+group.length*90+24)/2**depth)));
-  const canvas=document.createElement('canvas');canvas.width=Math.max(1080,margin*2+columns.length*(width+gap)+220);canvas.height=Math.max(900,top+columns[0].length*unit+100);
-  const ctx=canvas.getContext('2d'),color={GOLD:'#b89232',SILVER:'#8a98aa',BRONZO:'#b0774f'}[phase] || '#15293e';
-  const fill={GOLD:'#fff4ce',SILVER:'#edf1f6',BRONZO:'#f4dfd0'}[phase] || '#f3f6fa';
-  const logos=new Map();
-  const urls=[...new Set(games.flatMap(g=>[g.logo_casa,g.logo_ospite]).filter(Boolean))];
-  await Promise.all(urls.map(async url=>logos.set(url,await MatchdayRenderer.loadImage(new URL(url,location.origin+'/').href))));
-  const text=(value,x,y,maxWidth=220,size=16,weight=600)=>{
-    ctx.fillStyle='#15293e';ctx.font=`${weight} ${size}px Arial`;let label=String(value || '');
-    while(ctx.measureText(label).width>maxWidth && label.length>1)label=label.slice(0,-2)+'…';
-    ctx.fillText(label,x,y);
+  const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1920;
+  const ctx = canvas.getContext('2d');
+  const theme = MatchdayRenderer.tournamentTheme(info);
+  const metal = {GOLD: ['#ffe5a0', '#dba632'], SILVER: ['#e9f3ff', '#92a9c5'], BRONZO: ['#ffdbc0', '#bc794b']}[String(phase).toUpperCase()] || ['#e9f3ff', '#92a9c5'];
+  const urls = [...new Set(games.flatMap(game => [game.logo_casa, game.logo_ospite]).filter(Boolean))];
+  const logos = new Map();
+  const [brand] = await Promise.all([
+    MatchdayRenderer.loadImage('/img/logo_old_school.png'),
+    ...urls.map(async url => logos.set(url, await MatchdayRenderer.loadImage(new URL(url, location.origin + '/').href)))
+  ]);
+  const label = (value, x, y, width, size, color = '#f5f8ff', align = 'left') =>
+    MatchdayRenderer.text(ctx, value, x, y, width, size, color, align);
+  const box = (x, y, w, h, radius = 18) => {
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, radius);
+    ctx.fillStyle = '#0b2039'; ctx.fill(); ctx.strokeStyle = metal[1]; ctx.lineWidth = 2; ctx.stroke();
   };
-  function box(x,y,w,h){ctx.fillStyle=fill;ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y,w,h,12);else{const r=12;ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}ctx.fill();ctx.stroke();}
-  function shield(url,x,y,size){const image=logos.get(url);if(MatchdayRenderer.contained(ctx,image,x,y,size,size))return;ctx.strokeStyle=color;ctx.lineWidth=2;ctx.strokeRect(x+4,y+2,size-8,size-6);}
-  const centers=columns.map((nodes,depth)=>nodes.map((_,i)=>top+(i+.5)*2**depth*unit));
-  ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=color;ctx.fillRect(0,0,canvas.width,12);
-  text(info.nome,margin,68,canvas.width-120,30,800);text(`COPPA ${phase} · TABELLONE`,margin,110,canvas.width-120,22,700);
-  text('TORNEI OLD SCHOOL',margin,canvas.height-35,canvas.width-120,14,700);
-  const connector=(x1,y1,x2,y2)=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo((x1+x2)/2,y1);ctx.lineTo((x1+x2)/2,y2);ctx.lineTo(x2,y2);ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();};
-  columns.slice(0,-1).forEach((nodes,depth)=>nodes.forEach((group,index)=>{if(centers[depth+1][Math.floor(index/2)]!=null)connector(margin+depth*(width+gap)+width,centers[depth][index],margin+(depth+1)*(width+gap),centers[depth+1][Math.floor(index/2)]);}));
-  columns.forEach((nodes,depth)=>{
-    text(api.labels[rounds[depth]] || rounds[depth],margin+depth*(width+gap),top-42,width,17,800);
-    nodes.forEach((group,index)=>{
-      const x=margin+depth*(width+gap),height=40+group.length*90,y=centers[depth][index]-height/2;
-      box(x,y,width,height);text(rounds[depth]==='FINALE'?'':group[0].bracket_slot,x+12,y+22,60,12,700);
-      group.forEach((game,legIndex)=>{
-        const base=y+36+legIndex*90,played=Number(game.giocata)===1;
-        ['casa','ospite'].forEach((side,teamIndex)=>{const rowY=base+teamIndex*32;shield(game['logo_'+side],x+10,rowY-12,24);text(game['squadra_'+side],x+42,rowY+6,width-88,14,700);text(played?game['gol_'+side]:'–',x+width-28,rowY+6,24,16,800);});
-        if(group.length>1)text(game.fase_leg || '',x+12,base+73,width-24,11,500);
+  const background = ctx.createLinearGradient(0, 0, 1080, 1920);
+  background.addColorStop(0, '#071224'); background.addColorStop(.55, '#102d4b'); background.addColorStop(1, '#040d1b');
+  ctx.fillStyle = background; ctx.fillRect(0, 0, 1080, 1920);
+  ctx.save(); ctx.globalAlpha = .17; ctx.strokeStyle = theme.primary; ctx.lineWidth = 3;
+  for (let x = -1920; x < 1080; x += 110) {ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 1920, 1920); ctx.stroke();}
+  ctx.restore();
+  for (const [y, color] of [[96, theme.primary], [119, '#ffffff'], [142, theme.secondary]]) {
+    ctx.fillStyle = color; ctx.fillRect(0, y, 1080, 16);
+  }
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(540, 130, 102, 0, Math.PI * 2); ctx.fill();
+  if (!MatchdayRenderer.contained(ctx, brand, 455, 45, 170, 170)) label('TOS', 540, 130, 160, 68, '#10263a', 'center');
+  label('T O R N E I   O L D   S C H O O L', 540, 267, 960, 24, '#dbe8fa', 'center');
+  label(String(info.nome || slug).toUpperCase(), 540, 345, 960, 75, '#ffffff', 'center');
+  const ribbon = ctx.createLinearGradient(260, 0, 820, 0);
+  ribbon.addColorStop(0, metal[1]); ribbon.addColorStop(.5, metal[0]); ribbon.addColorStop(1, metal[1]);
+  ctx.fillStyle = ribbon; ctx.beginPath(); ctx.roundRect(240, 405, 600, 98, 18); ctx.fill();
+  label('COPPA ' + phase, 540, 454, 550, 64, '#102039', 'center');
+  label('T A B E L L O N E', 540, 550, 960, 30, '#c7d8ef', 'center');
+
+  // Fit the complete bracket inside the same 9:16 frame for every cup and draw size.
+  const left = 42, top = 680, areaH = 960, gap = 30;
+  const width = (996 - gap * (columns.length - 1)) / columns.length;
+  const unit = areaH / columns[0].length;
+  const centers = columns.map((nodes, depth) => nodes.map((_, i) => top + (i + .5) * 2 ** depth * unit));
+  const connector = (x1, y1, x2, y2) => {
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo((x1 + x2) / 2, y1); ctx.lineTo((x1 + x2) / 2, y2); ctx.lineTo(x2, y2);
+    ctx.strokeStyle = metal[1]; ctx.lineWidth = 3; ctx.stroke();
+  };
+  columns.slice(0, -1).forEach((nodes, depth) => nodes.forEach((group, i) => {
+    const next = centers[depth + 1][Math.floor(i / 2)];
+    if (next != null) connector(left + depth * (width + gap) + width, centers[depth][i], left + (depth + 1) * (width + gap), next);
+  }));
+  columns.forEach((nodes, depth) => {
+    const x = left + depth * (width + gap);
+    box(x, 610, width, 48, 10);
+    label(String(api.labels[rounds[depth]] || rounds[depth]).toUpperCase(), x + width / 2, 634, width - 16, 27, metal[0], 'center');
+    nodes.forEach((group, index) => {
+      const height = Math.min(unit - 20, 36 + group.length * 102), y = centers[depth][index] - height / 2;
+      // Scale unusually dense draws locally without changing export dimensions.
+      ctx.save(); ctx.translate(x, y); ctx.scale(1, height / (36 + group.length * 102));
+      box(0, 0, width, 36 + group.length * 102, 14);
+      label(group[0].bracket_slot || rounds[depth], 12, 18, width - 24, 19, metal[0]);
+      group.forEach((game, leg) => {
+        const base = 56 + leg * 102, played = Number(game.giocata) === 1;
+        ['casa', 'ospite'].forEach((side, teamIndex) => {
+          const cy = base + teamIndex * 38;
+          if (!MatchdayRenderer.contained(ctx, logos.get(game['logo_' + side]), 10, cy - 16, 32, 32)) {
+            ctx.strokeStyle = '#8ba0ba'; ctx.strokeRect(17, cy - 10, 18, 20);
+          }
+          label(game['squadra_' + side] || 'Da definire', 49, cy, width - 92, 25);
+          label(played ? game['gol_' + side] : '–', width - 14, cy, 32, 29, metal[0], 'right');
+        });
+        if (group.length > 1) label(game.fase_leg || '', 12, base + 65, width - 24, 17, '#aebfd5');
       });
+      ctx.restore();
     });
   });
-  const finalIndex=rounds.indexOf('FINALE'),finalGames=finalIndex>=0?columns[finalIndex][0]:[],winner=api.winner(finalGames,'Vincente finale');
-  const center=finalIndex>=0?centers[finalIndex][0]:canvas.height/2,x=margin+columns.length*(width+gap);
-  if(finalIndex>=0)connector(margin+finalIndex*(width+gap)+width,center,x,center);
-  box(x,center-80,220,160);shield(winner?.logo,x+78,center-60,64);text(winner?.name || 'Vincente finale',x+14,center+42,192,17,800);
+  const finalIndex = rounds.indexOf('FINALE');
+  if (finalIndex >= 0) {
+    const winner = api.winner(columns[finalIndex][0], 'Vincente finale');
+    box(240, 1700, 600, 108);
+    MatchdayRenderer.contained(ctx, logos.get(winner?.logo), 262, 1722, 64, 64);
+    label('VINCITRICE', 350, 1728, 460, 20, metal[0]);
+    label(winner?.name || 'Vincente finale', 350, 1770, 460, 37);
+  }
+  ctx.fillStyle = theme.primary; ctx.fillRect(0, 1870, 540, 12);
+  ctx.fillStyle = theme.secondary; ctx.fillRect(540, 1870, 540, 12);
+  label('TORNEIOLDSCHOOL.IT', 540, 1846, 960, 22, '#b7c9e0', 'center');
   return canvas;
 }};
