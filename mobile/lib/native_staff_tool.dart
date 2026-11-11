@@ -695,6 +695,7 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                 else if (block['pointerEditor'] == true)
                   StaffPointerCanvas(
                     image: image,
+                    photo: block['photo'] is Map ? block['photo'] as Map : null,
                     width: (block['canvasWidth'] as num).toDouble(),
                     height: (block['canvasHeight'] as num).toDouble(),
                     send: (value) => _send({

@@ -3,75 +3,105 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/staff_photo_canvas.dart';
 
 void main() {
-  for (final format in ['reel', 'youtube']) {
-    testWidgets(
-      '$format cover supports immediate touch drag, pinch and reset',
-      (tester) async {
-        final transforms = <Map<String, dynamic>>[];
-        final width = format == 'reel' ? 1080.0 : 1280.0;
-        final height = format == 'reel' ? 1920.0 : 720.0;
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: SingleChildScrollView(
-                child: StaffPhotoCanvas(
+  testWidgets('One finger moves the photo without scrolling the page', (
+    tester,
+  ) async {
+    final scroll = ScrollController();
+    final events = <Map<String, dynamic>>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            controller: scroll,
+            child: Column(
+              children: [
+                StaffPointerCanvas(
                   image: const ColoredBox(color: Colors.blue),
-                  photo: {
-                    'width': width,
-                    'height': height,
-                    'sx': 1,
-                    'sy': 1,
-                    'dx': 0,
-                    'dy': 0,
-                    'autoEnable': true,
+                  width: 1080,
+                  height: 1920,
+                  photo: const {
+                    'active': true,
+                    'selection': {'x': .1, 'y': .2, 'width': .8, 'height': .5},
                   },
-                  onTransform: transforms.add,
+                  send: events.add,
                 ),
+                const SizedBox(height: 1000),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.drag(find.byType(StaffPointerCanvas), const Offset(0, -100));
+    await tester.pumpAndSettle();
+    expect(scroll.offset, 0);
+    expect(events.where((e) => e['event'] == 'pointermove'), isNotEmpty);
+    expect(events.last['event'], 'pointerup');
+    await tester.pumpWidget(const SizedBox());
+    scroll.dispose();
+  });
+  testWidgets(
+    'Website photo editor receives drag, resize handles and both fingers',
+    (tester) async {
+      final events = <Map<String, dynamic>>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 360,
+              child: StaffPointerCanvas(
+                image: const ColoredBox(color: Colors.blue),
+                width: 1080,
+                height: 1920,
+                photo: const {
+                  'active': true,
+                  'selection': {'x': .1, 'y': .2, 'width': .8, 'height': .5},
+                },
+                send: events.add,
               ),
             ),
           ),
-        );
-        expect(
-          tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
-          isTrue,
-        );
-        final canvas = find.byKey(const ValueKey('staff-photo-gesture'));
-        await tester.drag(canvas, const Offset(30, 20));
-        await tester.pump(const Duration(milliseconds: 60));
-        expect(transforms, isNotEmpty);
-        expect(transforms.last['dx'], greaterThan(0));
-        expect(transforms.last['dy'], greaterThan(0));
-        expect(transforms.last['sx'], 1);
-
-        final center = tester.getCenter(canvas);
-        final first = await tester.startGesture(center - const Offset(35, 0));
-        final second = await tester.startGesture(
-          center + const Offset(35, 0),
-          pointer: 2,
-        );
-        await tester.pump();
-        await first.moveBy(const Offset(-35, 0));
-        await second.moveBy(const Offset(35, 0));
-        await tester.pump(const Duration(milliseconds: 60));
-        await first.up();
-        await second.up();
-        expect(transforms.last['sx'], greaterThan(1));
-        expect(transforms.last['sx'], transforms.last['sy']);
-
-        await tester.ensureVisible(find.text('Ripristina foto'));
-        await tester.tap(find.text('Ripristina foto'));
-        expect(transforms.last, {'reset': true});
-        await tester.tap(find.byType(SwitchListTile));
-        await tester.pump();
-        final count = transforms.length;
-        await tester.drag(canvas, const Offset(20, 30));
-        await tester.pump(const Duration(milliseconds: 60));
-        expect(
-          transforms.length,
-          count,
-          reason: 'Disabled editor allows page scrolling',
-        );
-      },
-    );
-  }
+        ),
+      );
+      expect(
+        find.byKey(const ValueKey('staff-photo-handle-se')),
+        findsOneWidget,
+      );
+      final resize = await tester.startGesture(
+        tester.getCenter(find.byKey(const ValueKey('staff-photo-handle-se'))),
+      );
+      await resize.moveBy(const Offset(15, 10));
+      await resize.up();
+      expect(events.first['handle'], 'se');
+      expect(
+        events.map((e) => e['event']),
+        containsAllInOrder(['pointerdown', 'pointermove', 'pointerup']),
+      );
+      expect(events[1]['x'], greaterThan(events[0]['x'] as double));
+      events.clear();
+      final origin = tester.getTopLeft(find.byType(StaffPointerCanvas));
+      final first = await tester.startGesture(
+        origin + const Offset(120, 200),
+        pointer: 3,
+      );
+      final second = await tester.startGesture(
+        origin + const Offset(180, 200),
+        pointer: 4,
+      );
+      await first.moveBy(const Offset(-20, 10));
+      await second.moveBy(const Offset(20, 10));
+      await first.up();
+      await second.up();
+      expect(events.where((e) => e['event'] == 'pointerdown').length, 2);
+      expect(
+        events
+            .where((e) => e['event'] == 'pointermove')
+            .map((e) => e['pointer'])
+            .toSet()
+            .length,
+        2,
+      );
+      expect(events.first['handle'], '');
+    },
+  );
 }

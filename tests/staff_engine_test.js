@@ -42,10 +42,11 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
   document.getElementById('tournament').addEventListener('change', () => { document.getElementById('team').innerHTML = '<option value="25">Go Ahead Eagles</option>'; });
   document.getElementById('delete').onclick = () => { if (child.window.confirm('Eliminare il torneo?')) writes.push('delete'); };
   document.getElementById('edit').onclick = () => { document.getElementById('edit').classList.add('active'); document.getElementById('create').classList.remove('active'); };
-  let photoTransform;
+  let photoTransform, photoPointer;
   child.window.PhotoTouchEditor = {
     describe: () => ({type:'ft',width:1080,height:1350,sx:1,sy:1,dx:0,dy:0}),
     apply: (id,values) => {photoTransform=values;return true;},
+    pointer: (id,values) => {photoPointer=values;return true;},
   };
   window.eval(bridge);
   frame.dispatchEvent(new window.Event('load'));
@@ -105,6 +106,9 @@ const bridge = fs.readFileSync(path.join(__dirname, '../app-preview/staff-engine
   await delay();
   const image = flat(snapshot().blocks).find(block => block.kind === 'image');
   assert.equal(image.photo.type,'ft','Photo editing metadata crosses the existing channel');
+  assert.equal(image.pointerEditor,true,'Native covers reuse the website pointer editor');
+  command({type:'canvasPointer',id:image.id,event:'pointerdown',pointer:9,x:0.5,y:0.5,handle:'se'});
+  assert.equal(photoPointer.handle,'se','Native resize handle reaches the website editor');
   command({type:'photoTransform',id:image.id,values:{sx:1.5,sy:1.5,dx:40,dy:50}});
   assert.equal(photoTransform.dx,40,'Native transforms reach the original compositor');
   command({type:'export', id:image.id, name:'coppa.png'});

@@ -243,7 +243,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="grafiche_scontorno.js?v=20261103-automatic-browser"></script>
-<script src="grafiche_foto_touch.js?v=20261103-touch-restored"></script>
+<script src="grafiche_foto_touch.js?v=20261112-native-handles"></script>
 <script src="grafiche_basi.js?v=20261007-mvp-shared-logo"></script>
 <script>
 const $ = id => document.getElementById(id);

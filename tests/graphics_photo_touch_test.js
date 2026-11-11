@@ -1,7 +1,8 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 class Element {
   constructor(){this.style={};this.dataset={};this.children=[];this.listeners={};this.captures=new Set();}
-  append(...items){this.children.push(...items);}
+  append(...items){this.children.push(...items);items.forEach(item=>item.parent=this);}
+  dispatchEvent(event){if(!event.target)event.target=this;this.listeners[event.type]?.(event);if(event.bubbles&&!event.stopped)this.parent?.dispatchEvent(event);}
   before(...items){this.beforeItems=items;}
   setAttribute(){}
   addEventListener(key,fn){this.listeners[key]=fn;}
@@ -11,7 +12,7 @@ class Element {
   getBoundingClientRect(){return{left:0,top:0,width:540,height:675};}
 }
 const canvases={fulltimeCanvas:new Element(),mvpCanvas:new Element()};
-const sandbox={window:{},document:{getElementById:id=>canvases[id],createElement:()=>new Element()}};
+const sandbox={window:{},PointerEvent:class{constructor(type,values){this.type=type;Object.assign(this,values);}preventDefault(){}stopPropagation(){this.stopped=true;}},document:{getElementById:id=>canvases[id],createElement:()=>new Element()}};
 vm.createContext(sandbox);vm.runInContext(fs.readFileSync(require('path').join(__dirname,'../api/grafiche_foto_touch.js'),'utf8'),sandbox);
 const editor=sandbox.window.PhotoTouchEditor;
 const frame={x:50,y:200,w:900,h:900},base={x:50,y:200,w:800,h:700};
@@ -62,5 +63,22 @@ for(const [type,id] of [['ft','fulltimeCanvas'],['mvp','mvpCanvas']]){
   assert.equal(editor.apply(id,{sx:Infinity,sy:1,dx:0,dy:0}),false,'Reject non-finite bridge transforms');
   assert.equal(editor.apply(id,{reset:true}),true);
   assert.equal(rendered.x,50);assert.equal(rendered.w,800);
+  const native=(event,x,y,handle='')=>editor.pointer(id,{event,x:x/1080,y:y/1350,pointer:7,handle});
+  native('pointerdown',300,400);native('pointermove',380,520);native('pointerup',380,520);
+  assert.equal(rendered.x,130,'Native drag uses website positioning');
+  assert.equal(rendered.y,320);
+  native('pointerdown',600,600,'e');native('pointermove',700,600);native('pointerup',700,600);
+  assert.equal(rendered.w,900,'Native handle uses website resizing');
+  assert.equal(rendered.h,787.5,'Native resizing preserves photo ratio');
+  sandbox.drawAll();assert.equal(rendered.x,130,'Native edit survives export redraw');
+  const beforeNativePinch=rendered.w;
+  native('pointerdown',200,400);
+  editor.pointer(id,{event:'pointerdown',x:400/1080,y:400/1350,pointer:8});
+  editor.pointer(id,{event:'pointermove',x:600/1080,y:400/1350,pointer:8});
+  native('pointerup',200,400);
+  assert.equal(rendered.w,beforeNativePinch*2,'Native pinch uses the website zoom');
+  assert.equal(editor.pointer(id,{event:'pointermove',x:NaN,y:0,pointer:8}),false);
+  button.listeners.click();
+  assert.equal(editor.pointer(id,{event:'pointerdown',x:.5,y:.5,pointer:8}),false,'Disabled photo editor ignores touches');
 }
 console.log('PASS: Full Time and MVP photo drag, all eight proportional handles, limits, pinch, cancellation, reset and export redraw.');

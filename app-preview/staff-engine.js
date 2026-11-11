@@ -268,7 +268,8 @@
         preview.getContext('2d').drawImage(element, 0, 0, preview.width, preview.height);
         return {kind: 'image', id: id(element), data: preview.toDataURL('image/png'),
           photo: doc.defaultView.PhotoTouchEditor?.describe?.(element.id) || null,
-          pointerEditor: element.classList.contains('editing') || element.dataset.tosPointerEditor === 'true',
+          pointerEditor: element.classList.contains('editing') || element.dataset.tosPointerEditor === 'true' ||
+            !!(doc.defaultView.PhotoTouchEditor?.pointer && doc.defaultView.PhotoTouchEditor.describe(element.id)),
           canvasWidth: element.width, canvasHeight: element.height,
           label: clean(element.closest('.card,article,section')?.querySelector('h2,h3')?.textContent) || 'Anteprima grafica', export: true};
       } catch (_) { return textNode('notice', 'Anteprima non disponibile. Puoi usare il pulsante di esportazione.'); }
@@ -456,6 +457,10 @@
         if (!doc.defaultView.PhotoTouchEditor?.apply?.(element.id, message.values || {})) {
           emit('error', {message: 'Foto non disponibile. Ricarica l’anteprima.'});
         }
+        previewChanged();
+      } else if (message.type === 'canvasPointer' && element.tagName === 'CANVAS' &&
+          doc.defaultView.PhotoTouchEditor?.pointer && doc.defaultView.PhotoTouchEditor.describe(element.id)) {
+        doc.defaultView.PhotoTouchEditor.pointer(element.id,message);
         previewChanged();
       } else if (message.type === 'canvasPointer' && element.tagName === 'CANVAS' &&
           (element.classList.contains('editing') || element.dataset.tosPointerEditor === 'true')) {

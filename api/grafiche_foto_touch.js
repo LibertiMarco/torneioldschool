@@ -52,11 +52,11 @@ window.PhotoTouchEditor = (() => {
         resetButton.addEventListener('click',()=>{reset(type);redraw();});
       }
       const layer=document.createElement('div');layer.style.cssText='position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:10;touch-action:none;';layer.hidden=true;
-      const selection=document.createElement('div');selection.style.pointerEvents='auto';layer.append(selection);wrap.append(layer);Object.assign(s,{layer,selection,button,wrap});
+      const selection=document.createElement('div');selection.style.pointerEvents='auto';layer.append(selection);wrap.append(layer);Object.assign(s,{layer,selection,button,wrap,canvas,handles:new Map()});
       for (const [key,x,y] of [['nw',0,0],['n',50,0],['ne',100,0],['e',100,50],['se',100,100],['s',50,100],['sw',0,100],['w',0,50]]) {
         const handle=document.createElement('span');handle.dataset.handle=key;handle.style.cssText=`position:absolute;left:${x}%;top:${y}%;width:36px;height:36px;transform:translate(${x===0?0:x===100?-100:-50}%,${y===0?0:y===100?-100:-50}%);touch-action:none;cursor:${key}-resize;pointer-events:auto;`;
         const marker=document.createElement('span');marker.style.cssText=`position:absolute;left:${x===0?0:x===100?26:13}px;top:${y===0?0:y===100?26:13}px;width:10px;height:10px;background:#55dfff;border:1px solid #08243b;border-radius:2px;box-sizing:border-box;pointer-events:none;`;
-        handle.append(marker);selection.append(handle);
+        handle.append(marker);selection.append(handle);s.handles.set(key,handle);
       }
       const pointers=new Map();let gesture=null;
       const point=e=>{const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*s.width/r.width,y:(e.clientY-r.top)*s.height/r.height};};
@@ -111,7 +111,13 @@ window.PhotoTouchEditor = (() => {
     for (const [type,s] of states) {
       if(s.canvasId===canvasId && s.image && s.box) return {
         type,width:s.width,height:s.height,sx:s.sx,sy:s.sy,dx:s.dx,dy:s.dy,
-        autoEnable:s.autoEnable===true
+        autoEnable:s.autoEnable===true,active:s.active===true,
+        selection:{
+          x:Math.max(s.frame.x,s.box.x)/s.width,
+          y:Math.max(s.frame.y,s.box.y)/s.height,
+          width:Math.max(0,Math.min(s.frame.x+s.frame.w,s.box.x+s.box.w)-Math.max(s.frame.x,s.box.x))/s.width,
+          height:Math.max(0,Math.min(s.frame.y+s.frame.h,s.box.y+s.box.h)-Math.max(s.frame.y,s.box.y))/s.height
+        }
       };
     }
     return null;
@@ -133,5 +139,26 @@ window.PhotoTouchEditor = (() => {
     }
     return false;
   }
-  return {init,transform,sync,reset,describe,apply};
+  // Reuse the website's drag, handles and pinch logic for native touch input.
+  function pointer(canvasId,values) {
+    const {event,x,y,pointer:identifier,handle=''}=values;
+    if(!['pointerdown','pointermove','pointerup','pointercancel'].includes(event) ||
+       ![x,y,identifier].every(Number.isFinite) || Math.abs(x)>10 || Math.abs(y)>10) return false;
+    for(const s of states.values()) {
+      if(s.canvasId!==canvasId || !s.image || !s.box || !s.active) continue;
+      const rect=s.canvas.getBoundingClientRect();
+      const target=s.handles.get(handle)||s.selection;
+      const capture=s.selection.setPointerCapture;
+      // Flutter owns capture; synthetic browser pointers cannot be captured.
+      s.selection.setPointerCapture=()=>{};
+      try {
+        target.dispatchEvent(new PointerEvent(event,{bubbles:true,cancelable:true,
+          pointerId:identifier,pointerType:'touch',button:0,
+          clientX:rect.left+x*rect.width,clientY:rect.top+y*rect.height}));
+      } finally {s.selection.setPointerCapture=capture;}
+      return true;
+    }
+    return false;
+  }
+  return {init,transform,sync,reset,describe,apply,pointer};
 })();
