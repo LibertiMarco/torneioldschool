@@ -88,7 +88,8 @@
   if (finalIndex >= 0) {
     const winner = api.winner(columns[finalIndex][0], 'Vincente finale');
     box(240, 1700, 600, 108);
-    MatchdayRenderer.contained(ctx, logos.get(winner?.logo), 262, 1722, 64, 64);
+    const trophy = await MatchdayRenderer.loadImage('/img/tornei/coppa-' + ({GOLD:'gold', SILVER:'silver', BRONZO:'bronzo'}[String(phase).toUpperCase()] || 'gold') + '.svg');
+    MatchdayRenderer.contained(ctx, logos.get(winner?.logo) || trophy, 262, 1722, 64, 64);
     label('VINCITRICE', 350, 1728, 460, 20, metal[0]);
     label(winner?.name || 'Vincente finale', 350, 1770, 460, 37);
   }

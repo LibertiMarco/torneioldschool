@@ -327,7 +327,9 @@
     const champion=element('aside','cup-winner');champion.setAttribute('aria-label','Vincitore della coppa');
     const finalGames=games.filter(g=>roundKey(g)==='FINALE' && !g.template);
     const championSide=winner(finalGames,'Vincitore');
-    const championLogo=element('img','cup-champion-logo');championLogo.src=championSide?.logo || '/img/tornei/pallone.png';championLogo.alt='Scudetto squadra vincitrice';championLogo.width=64;championLogo.height=64;
+    const trophy='/img/tornei/coppa-'+({GOLD:'gold',SILVER:'silver',BRONZO:'bronzo'}[phaseKey(phase)] || 'gold')+'.svg';
+    const championLogo=element('img','cup-champion-logo');championLogo.src=championSide?.logo || trophy;championLogo.alt=championSide?.logo ? 'Scudetto squadra vincitrice' : 'Coppa '+phase;championLogo.width=64;championLogo.height=64;
+    championLogo.onerror=()=>{championLogo.onerror=null;championLogo.src=trophy;};
     champion.append(championLogo,element('strong','',championSide?.name || 'Vincente finale'));
     columns.append(champion);
     const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.classList.add('cup-lines');svg.setAttribute('aria-hidden','true');columns.prepend(svg);
