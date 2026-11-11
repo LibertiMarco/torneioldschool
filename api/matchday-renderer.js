@@ -94,7 +94,7 @@ window.MatchdayRenderer = (() => {
     if (!value) return 'Data da definire';
     const date = new Date(`${value}T12:00:00`);
     if (Number.isNaN(date.getTime())) return 'Data da definire';
-    return new Intl.DateTimeFormat('it-IT', {weekday: short ? 'short' : 'long', day: '2-digit', month: '2-digit'}).format(date).toUpperCase();
+    return new Intl.DateTimeFormat('it-IT', {weekday: short ? 'short' : 'long', day: '2-digit', month: '2-digit', year: 'numeric'}).format(date).toUpperCase();
   }
   function groupDays(tournament) {
     const days = new Map();

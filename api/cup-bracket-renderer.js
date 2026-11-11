@@ -96,7 +96,9 @@
           const played = Number(game.giocata) === 1;
           label(played ? `${game.gol_casa} – ${game.gol_ospite}` : 'VS', 540, resultY, 230, compact ? 60 : 88, accentInk, 'center');
           if (compact) label(game.fase_leg || '', 540, y + 28, 850, 26, accentInk, 'center');
-          const details = [game.data_partita || game.data, game.ora_partita || game.ora, game.campo].filter(Boolean);
+          const rawDate = String(game.data_partita || game.data || '');
+          const date = rawDate.replace(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/, '$3/$2/$1');
+          const details = [date, game.ora_partita || game.ora, game.campo].filter(Boolean);
           const detailsTop = y + cardHeight - (compact ? 130 : 190);
           details.forEach((detail, i) => label(detail, 540, detailsTop + i * (compact ? 30 : 42), 880, compact ? 24 : 32, '#536273', 'center'));
           if (played && Number(game.decisa_rigori) === 1 && game.rigori_casa != null && game.rigori_ospite != null) {
