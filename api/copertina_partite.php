@@ -106,7 +106,7 @@ if ($stmt && $stmt->execute()) {
 <script src="/api/matchday-renderer.js?v=20261007-date-range"></script>
 <script src="/api/copertine-colori.js?v=20261010"></script>
 <script src="/api/grafiche_frame_height.js?v=20261006"></script>
-<script src="/api/grafiche_foto_touch.js?v=20261009-covers"></script>
+<script src="/api/grafiche_foto_touch.js?v=20261112-native-touch"></script>
 <script id="coverTournaments" type="application/json"><?= json_encode($coverTournaments,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?></script>
 <script>
 const matches=<?= json_encode($partite,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;

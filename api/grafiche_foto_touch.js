@@ -110,7 +110,8 @@ window.PhotoTouchEditor = (() => {
   function describe(canvasId) {
     for (const [type,s] of states) {
       if(s.canvasId===canvasId && s.image && s.box) return {
-        type,width:s.width,height:s.height,sx:s.sx,sy:s.sy,dx:s.dx,dy:s.dy
+        type,width:s.width,height:s.height,sx:s.sx,sy:s.sy,dx:s.dx,dy:s.dy,
+        autoEnable:s.autoEnable===true
       };
     }
     return null;

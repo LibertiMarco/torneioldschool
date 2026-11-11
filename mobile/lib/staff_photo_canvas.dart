@@ -26,6 +26,12 @@ class _StaffPhotoCanvasState extends State<StaffPhotoCanvas> {
   double number(String key) =>
       num.tryParse('${widget.photo[key]}')?.toDouble() ?? 0;
   @override
+  void initState() {
+    super.initState();
+    _editing = widget.photo['autoEnable'] == true;
+  }
+
+  @override
   void dispose() {
     _throttle?.cancel();
     super.dispose();
