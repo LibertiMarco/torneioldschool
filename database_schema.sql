@@ -301,7 +301,7 @@ CREATE TABLE IF NOT EXISTS partita_giocatore (
     cartellino_rosso TINYINT UNSIGNED NOT NULL DEFAULT 0,
     voto DECIMAL(4,2) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_partita_giocatore (partita_id, giocatore_id),
+    UNIQUE KEY uq_partita_giocatore_squadra (partita_id, giocatore_id, squadra_id),
     KEY idx_pg_giocatore (giocatore_id),
     KEY idx_pg_squadra (squadra_id),
     CONSTRAINT fk_pg_partita FOREIGN KEY (partita_id) REFERENCES partite(id) ON DELETE CASCADE,
@@ -508,3 +508,4 @@ CREATE TABLE IF NOT EXISTS match_record_verification (
  verified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  FOREIGN KEY (partita_id) REFERENCES partite(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
