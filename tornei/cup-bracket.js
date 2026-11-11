@@ -17,7 +17,7 @@
   }
   const side = (name, label, candidates, group='', logo='') => ({name, label, group, logo, candidates: candidates || new Set(name ? [key(name)] : [])});
   const display = value => value ? (value.name ? `${value.label} · ${value.name}` : value.label) : 'Accesso diretto';
-  function winner(games, label) {
+  function winner(games, label, regularPositions) {
     if (!games.length || games.some(g => Number(g.giocata) !== 1 || g.gol_casa == null || g.gol_ospite == null)) return null;
     const legs = new Set(games.map(leg));
     if (legs.has('ANDATA') !== legs.has('RITORNO')) return null;
@@ -34,12 +34,24 @@
       const last = penalties.at(-1);
       if (last && Number(last.rigori_casa) !== Number(last.rigori_ospite)) win = key(last[Number(last.rigori_casa) > Number(last.rigori_ospite) ? 'squadra_casa' : 'squadra_ospite']);
     }
+    if (!win && games.length === 1 && !legs.has('ANDATA') && !legs.has('RITORNO')
+      && Number(games[0].decisa_rigori) !== 1) {
+      const positions = sorted.map(name => regularPositions?.get(name)
+        ?? games[0][key(games[0].squadra_casa) === name ? 'regular_position_casa' : 'regular_position_ospite']);
+      if (positions.every(position => Number.isFinite(position) && position > 0) && positions[0] !== positions[1]) {
+        win = sorted[positions[0] < positions[1] ? 0 : 1];
+      }
+    }
     const logoGame=win && games.find(g=>key(g.squadra_casa)===win || key(g.squadra_ospite)===win);
     const logo=logoGame ? logoGame[key(logoGame.squadra_casa)===win ? 'logo_casa' : 'logo_ospite'] || '' : '';
     return win ? side(names.get(win), label,undefined,'',logo) : null;
   }
   function build(seeds, matches, phase) {
-    const actual = matches.filter(m => phaseKey(m.fase) === phase);
+    const regularPositions = new Map(seeds.filter(seed => seed.name && seed.regularPosition > 0)
+      .map(seed => [key(seed.name), seed.regularPosition]));
+    const actual = matches.filter(m => phaseKey(m.fase) === phase).map(game => ({...game,
+      regular_position_casa: regularPositions.get(key(game.squadra_casa)),
+      regular_position_ospite: regularPositions.get(key(game.squadra_ospite))}));
     let size = 2;
     while (size < seeds.length) size *= 2;
     const configuredSize=size;
@@ -101,7 +113,7 @@
           games.sort((a,b)=>Number(leg(a)==='RITORNO')-Number(leg(b)==='RITORNO'));
           output.push(...games.map(g=>({...g,bracket_slot:slot})));
           const possible=new Set([...candidates,...games.flatMap(g=>[key(g.squadra_casa),key(g.squadra_ospite)])]);
-          next.push(winner(games,label) || side('',label,possible));
+          next.push(winner(games,label,regularPositions) || side('',label,possible));
         } else {
           const bye=!home || !away;
           output.push({fase:phase,fase_round:round,bracket_slot:slot,template:true,bye,
@@ -121,7 +133,7 @@
     const start=directCount ? 1 : range?.start || 1, count=directCount || range?.spots || (range ? range.end-range.start+1 : 0);
     for (let rank=0;rank<count;rank++) for (const table of tables) {
       const position=start+rank, team=table.teams[position-1];
-      result.push({name:team?.nome || '',logo:team?.logo || '',group:tables.length>1 ? table.label : '',label:tables.length>1 ? `${position}ª girone ${table.label}` : `${position}ª in classifica`});
+      result.push({regularPosition:directCount ? null : position,name:team?.nome || '',logo:team?.logo || '',group:tables.length>1 ? table.label : '',label:tables.length>1 ? `${position}ª girone ${table.label}` : `${position}ª in classifica`});
     }
     return result;
   }
