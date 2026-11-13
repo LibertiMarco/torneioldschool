@@ -2593,7 +2593,10 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
         String(p.giornata ?? '') === gVal
       );
       filtrate.forEach(p => {
-        const label = ['selPartitaMod', 'selPartitaGioc', 'selPartitaLink'].includes(partitaId) ? `${p.squadra_casa} - ${p.squadra_ospite}` : `${p.data_partita} ${(p.ora_partita ?? '').slice(0,5)} · ${p.squadra_casa} - ${p.squadra_ospite} · ${Number(p.giocata) === 1 ? `${p.gol_casa}-${p.gol_ospite}` : 'Da giocare'} · ${p.torneo} · ${p.giornata == null ? (p.fase_round || p.fase) : `Giornata ${p.giornata}`}`;
+        const leg = String(p.fase_leg || '').trim().toUpperCase();
+        const legLabel = leg === 'ANDATA' ? ' · Andata' : leg === 'RITORNO' ? ' · Ritorno' : '';
+        const teamsLabel = `${p.squadra_casa} - ${p.squadra_ospite}${legLabel}`;
+        const label = ['selPartitaMod', 'selPartitaGioc', 'selPartitaLink'].includes(partitaId) ? teamsLabel : `${p.data_partita} ${(p.ora_partita ?? '').slice(0,5)} · ${teamsLabel} · ${Number(p.giocata) === 1 ? `${p.gol_casa}-${p.gol_ospite}` : 'Da giocare'} · ${p.torneo} · ${p.giornata == null ? (p.fase_round || p.fase) : `Giornata ${p.giornata}`}`;
         const opt = new Option(label, p.id);
         partSel.add(opt);
       });
