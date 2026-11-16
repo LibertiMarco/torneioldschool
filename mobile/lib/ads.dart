@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import 'ad_load_retry.dart';
+
 /// Production units are used only in release builds with monetization enabled.
 const iosProductionAdIds = (
   app: 'ca-app-pub-8390787841690316~9044628723',
@@ -152,7 +154,16 @@ class AdsController extends ChangeNotifier with WidgetsBindingObserver {
       ready = false;
       notifyListeners();
     } else if (!busy && _started) {
-      unawaited(_run(() async {}));
+      // Recover a first launch that could not fetch UMP while offline.
+      final retryConsent = error != null || !_initialized;
+      unawaited(
+        _run(() async {
+          if (retryConsent) {
+            await backend.update();
+            await backend.collect();
+          }
+        }),
+      );
     }
   }
 
@@ -179,9 +190,10 @@ class AdsController extends ChangeNotifier with WidgetsBindingObserver {
     }
     try {
       privacyRequired = await backend.optionsRequired();
-      // UMP consent does not replace Apple's system tracking permission.
-      // Fail closed: no ad SDK initialization or ad requests without ATT.
-      if (await authorizeTracking() && await backend.canRequest()) {
+      // UMP decides whether ads may be requested. ATT only controls tracking:
+      // the iOS SDK omits IDFA when permission is denied or restricted.
+      if (await backend.canRequest()) {
+        await authorizeTracking();
         if (!_initialized) {
           await backend.initialize();
           _initialized = true;
@@ -250,6 +262,7 @@ class _AdaptiveBannerState extends State<_AdaptiveBanner> {
   bool _loaded = false;
   int _generation = 0;
   String? _layout;
+  final _retry = AdLoadRetry();
   Future<void> _load(int width, String layout) async {
     if (!mounted || layout != _layout) return;
     final generation = ++_generation;
@@ -278,40 +291,56 @@ class _AdaptiveBannerState extends State<_AdaptiveBanner> {
             try {
               actualSize = await (ad as BannerAd).getPlatformAdSize();
             } catch (_) {
-              // Leave the slot hidden if the native view cannot be measured.
+              if (mounted && generation == _generation) {
+                _failed(ad, generation, width, layout);
+              }
               return;
             }
             if (!mounted || generation != _generation) {
               ad.dispose();
               return;
             }
-            if (actualSize == null || actualSize.height <= 0) return;
+            if (actualSize == null || actualSize.height <= 0) {
+              _failed(ad, generation, width, layout);
+              return;
+            }
+            _retry.reset();
             setState(() {
               _size = actualSize;
               _loaded = true;
             });
           },
           onAdFailedToLoad: (ad, error) {
-            ad.dispose();
-            if (mounted && generation == _generation) {
-              setState(() {
-                _ad = null;
-                _loaded = false;
-              });
-            }
+            debugPrint('Banner ad load failed: $error');
+            _failed(ad, generation, width, layout);
           },
         ),
       );
       _ad = ad;
       await ad.load();
-    } catch (_) {
-      /* Ads must never interrupt tournament functionality. */
+    } catch (error) {
+      debugPrint('Banner ad load failed: $error');
+      if (mounted && generation == _generation) {
+        _failed(_ad, generation, width, layout);
+      }
     }
+  }
+
+  void _failed(Ad? ad, int generation, int width, String layout) {
+    ad?.dispose();
+    if (!mounted || generation != _generation || layout != _layout) return;
+    setState(() {
+      _ad = null;
+      _loaded = false;
+      _size = null;
+    });
+    _retry.schedule(() => _load(width, layout));
   }
 
   @override
   void dispose() {
     ++_generation;
+    _retry.dispose();
     _ad?.dispose();
     super.dispose();
   }
@@ -322,6 +351,7 @@ class _AdaptiveBannerState extends State<_AdaptiveBanner> {
       final width = constraints.maxWidth.floor();
       final layout = '$width-${MediaQuery.orientationOf(context)}';
       if (width > 0 && layout != _layout) {
+        _retry.reset();
         _layout = layout;
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _load(width, layout),

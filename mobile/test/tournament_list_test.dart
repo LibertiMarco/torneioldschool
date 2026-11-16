@@ -132,6 +132,18 @@ void main() {
       await tester.ensureVisible(find.text('Tornei terminati (15)'));
       await tester.tap(find.text('Tornei terminati (15)'));
       await tester.pumpAndSettle();
+      final ad = find.byKey(const ValueKey('tournament-list-ad'));
+      expect(ad, findsOneWidget);
+      final content = tester.widget<Column>(
+        find.ancestor(of: ad, matching: find.byType(Column)).first,
+      );
+      final adIndex = content.children.indexWhere(
+        (w) => w.key == const ValueKey('tournament-list-ad'),
+      );
+      expect(
+        content.children.take(adIndex).whereType<TournamentCard>(),
+        hasLength(4),
+      );
       final list = find.byType(ListView);
       await tester.scrollUntilVisible(
         find.text('Carica altri tornei'),

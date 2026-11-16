@@ -161,14 +161,16 @@ void main() {
   });
 
   testWidgets(
-    'Unlinked profile hides card; undated match has honest schedule',
+    'Unlinked profile invites linking; undated match has honest schedule',
     (tester) async {
       final api = NextApi()..linked = false;
       final auth = DemoAuth(api);
       await auth.login();
       await show(tester, auth);
       await tester.pumpAndSettle();
-      expect(find.byType(Card), findsNothing);
+      await tester.pump();
+      await tester.pumpAndSettle();
+      expect(find.text('Collega il tuo giocatore'), findsOneWidget);
       api.linked = true;
       api.upcoming.first.remove('data_partita');
       api.upcoming.first.remove('ora_partita');

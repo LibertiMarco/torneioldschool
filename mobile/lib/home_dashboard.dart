@@ -14,6 +14,7 @@ import 'about_page.dart';
 import 'article_content.dart';
 import 'player_history.dart';
 import 'ranking_mode_selector.dart';
+import 'ranking_pagination.dart';
 import 'ranking_surface.dart';
 import 'records_table.dart';
 import 'details.dart' show DataPage;
@@ -174,11 +175,13 @@ class HomeDashboard extends StatefulWidget {
     required this.section,
     required this.onTournaments,
     this.auth,
+    this.onProfile,
   });
   final TosApi api;
   final String section;
   final VoidCallback onTournaments;
   final TosAuth? auth;
+  final VoidCallback? onProfile;
   @override
   State<HomeDashboard> createState() => _HomeDashboardState();
 }
@@ -305,6 +308,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               auth: widget.auth!,
               section: widget.section,
               revision: reload,
+              onProfile: widget.onProfile,
             ),
           if (widget.auth != null)
             HomeFavorites(
@@ -399,7 +403,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
               );
             },
           ),
-          if (!esport) RecordsTable(key: ValueKey('records-$reload'), api: api),
+          if (!esport)
+            RecordsTosEntry(
+              onTap: () => openPage(context, RecordsTosPage(api: api)),
+            ),
           if (!api.preview) const AdaptiveAdBanner(),
           const HomeSectionTitle(
             title: 'Ultime notizie',
@@ -425,18 +432,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       DataPage(
                         title: 'Notizie',
                         load: () => api.news(widget.section, all: true),
-                        render: (data) => ListView(
-                          padding: const EdgeInsets.all(20),
-                          children: [
-                            for (final entry in TosApi.rows(
-                              data,
-                            ).asMap().entries) ...[
-                              NewsCard(api: api, row: entry.value),
-                              if (!api.preview && (entry.key + 1) % 6 == 0)
-                                const HomeNativeAdCard(),
-                            ],
-                          ],
-                        ),
+                        render: (data) =>
+                            NewsFeed(api: api, rows: TosApi.rows(data)),
                       ),
                     ),
                   ),
@@ -772,6 +769,7 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
   late String order;
   String search = '';
   final searchController = TextEditingController();
+  final rankingScroll = ScrollController();
   int page = 1;
   int _revision = 0;
   @override
@@ -784,6 +782,7 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
   @override
   void dispose() {
     searchController.dispose();
+    rankingScroll.dispose();
     super.dispose();
   }
 
@@ -867,6 +866,7 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
               final pagination = result['pagination'] as Map? ?? {};
               final total = int.tryParse('${pagination['total_pages']}') ?? 1;
               return ListView(
+                controller: rankingScroll,
                 padding: const EdgeInsets.all(16),
                 children: [
                   if (rows.isEmpty) const Text('Nessun giocatore trovato.'),
@@ -884,41 +884,18 @@ class _GlobalRankingPageState extends State<GlobalRankingPage> {
                     Text(
                       'Il servizio mostra i primi ${rows.length} giocatori del ranking.',
                     ),
-                  if (!widget.esport)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          tooltip: 'Pagina precedente',
-                          onPressed: page > 1
-                              ? () => setState(() {
-                                  page--;
-                                  load();
-                                })
-                              : null,
-                          icon: const Icon(Icons.chevron_left),
-                        ),
-                        Flexible(
-                          child: Text(
-                            rows.isEmpty
-                                ? 'Nessun giocatore trovato'
-                                : 'Pagina $page di $total · ${pagination['total'] ?? rows.length} giocatori',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Pagina successiva',
-                          onPressed: page < total
-                              ? () => setState(() {
-                                  page++;
-                                  load();
-                                })
-                              : null,
-                          icon: const Icon(Icons.chevron_right),
-                        ),
-                      ],
+                  if (!widget.esport && rows.isNotEmpty)
+                    RankingPagination(
+                      page: page,
+                      totalPages: total < 1 ? 1 : total,
+                      players:
+                          int.tryParse('${pagination['total']}') ?? rows.length,
+                      onChanged: (value) => setState(() {
+                        if (rankingScroll.hasClients) rankingScroll.jumpTo(0);
+                        page = value;
+                        load();
+                      }),
                     ),
-                  if (!widget.esport) RecordsTable(api: widget.api),
                 ],
               );
             },
@@ -1211,6 +1188,29 @@ class _HallAward extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Build only nearby news and ad slots, with six articles between ads.
+class NewsFeed extends StatelessWidget {
+  const NewsFeed({super.key, required this.api, required this.rows});
+  final TosApi api;
+  final List<Map<String, dynamic>> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final adCount = api.preview || rows.isEmpty ? 0 : (rows.length - 1) ~/ 6;
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: rows.length + adCount,
+      itemBuilder: (context, index) {
+        if (!api.preview && index % 7 == 6) {
+          return HomeNativeAdCard(key: ValueKey('news-ad-${index ~/ 7}'));
+        }
+        final newsIndex = api.preview ? index : index - index ~/ 7;
+        return NewsCard(api: api, row: rows[newsIndex]);
+      },
     );
   }
 }

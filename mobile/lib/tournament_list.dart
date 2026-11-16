@@ -503,25 +503,33 @@ class _TournamentListState extends State<TournamentList> {
                         'Nessun torneo disponibile con questi filtri.',
                       ),
                     ),
-                  ...filtered
-                      .take(limit)
-                      .map(
-                        (row) => TournamentCard(
+                  for (final entry
+                      in filtered.take(limit).toList().asMap().entries) ...[
+                    TournamentCard(
+                      api: widget.api,
+                      tournament: entry.value,
+                      onTap: () => openPage(
+                        context,
+                        TournamentPage(
                           api: widget.api,
-                          tournament: row,
-                          onTap: () => openPage(
-                            context,
-                            TournamentPage(api: widget.api, tournament: row),
-                          ),
+                          tournament: entry.value,
                         ),
                       ),
+                    ),
+                    if (entry.key == 3 && !widget.api.preview)
+                      const AdaptiveAdBanner(
+                        key: ValueKey('tournament-list-ad'),
+                      ),
+                  ],
+                  if (filtered.isNotEmpty &&
+                      filtered.length < 4 &&
+                      !widget.api.preview)
+                    const AdaptiveAdBanner(key: ValueKey('tournament-list-ad')),
                   if (filtered.length > limit)
                     OutlinedButton(
                       onPressed: () => setState(() => archiveLimit += 12),
                       child: const Text('Carica altri tornei'),
                     ),
-                  if (filtered.isNotEmpty && !widget.api.preview)
-                    const AdaptiveAdBanner(),
                 ],
               ),
             ),

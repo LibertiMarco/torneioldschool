@@ -4,7 +4,53 @@ import 'api.dart';
 import 'details.dart' show MatchPage, PlayerPage, TeamPage;
 import 'home_dashboard.dart' show SiteImage;
 
-/// Un unico prospetto generale, sotto le classifiche dei giocatori.
+/// Dedicated records section, independent from goals/appearances rankings.
+class RecordsTosPage extends StatelessWidget {
+  const RecordsTosPage({super.key, required this.api});
+  final TosApi api;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Record TOS')),
+    body: ListView(
+      padding: const EdgeInsets.all(16),
+      children: [RecordsTable(api: api)],
+    ),
+  );
+}
+
+class RecordsTosEntry extends StatelessWidget {
+  const RecordsTosEntry({super.key, required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 20),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        leading: CircleAvatar(
+          backgroundColor: colors.primaryContainer,
+          foregroundColor: colors.onPrimaryContainer,
+          child: const Icon(Icons.emoji_events_outlined),
+        ),
+        title: const Text(
+          'Record TOS',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        subtitle: const Text('I primati di giocatori, squadre e partite'),
+        trailing: const Icon(Icons.arrow_forward_rounded),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
 class RecordsTable extends StatefulWidget {
   const RecordsTable({super.key, required this.api});
   final TosApi api;

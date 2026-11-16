@@ -421,6 +421,7 @@ class _HomePageState extends State<HomePage> {
                           auth: auth,
                           section: section,
                           onTournaments: () => setState(() => page = 1),
+                          onProfile: () => setState(() => page = 2),
                         )
                       : selectedPage == 1
                       ? AccessGate(

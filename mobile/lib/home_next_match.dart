@@ -8,6 +8,7 @@ import 'home_dashboard.dart' show SiteImage, openPage;
 import 'personal_match_order.dart';
 import 'tournament_page.dart';
 import 'venue_navigation.dart';
+import 'home_player_link_invite.dart';
 
 /// Uses only the player resolved by the authenticated server, never a client ID.
 class HomeNextMatch extends StatelessWidget {
@@ -16,11 +17,13 @@ class HomeNextMatch extends StatelessWidget {
     required this.auth,
     required this.section,
     required this.revision,
+    this.onProfile,
   });
 
   final TosAuth auth;
   final String section;
   final int revision;
+  final VoidCallback? onProfile;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -31,14 +34,21 @@ class HomeNextMatch extends StatelessWidget {
             key: ValueKey((auth, auth.user?['id'], section, revision)),
             auth: auth,
             section: section,
+            onProfile: onProfile,
           ),
   );
 }
 
 class _NextMatch extends StatefulWidget {
-  const _NextMatch({super.key, required this.auth, required this.section});
+  const _NextMatch({
+    super.key,
+    required this.auth,
+    required this.section,
+    this.onProfile,
+  });
   final TosAuth auth;
   final String section;
+  final VoidCallback? onProfile;
 
   @override
   State<_NextMatch> createState() => _NextMatchState();
@@ -215,7 +225,12 @@ class _NextMatchState extends State<_NextMatch> {
         ]);
       }
       final data = snapshot.data as Map;
-      if (data['player'] == null) return const SizedBox.shrink();
+      if (data['player'] == null) {
+        return HomePlayerLinkInvite(
+          auth: widget.auth,
+          onProfile: widget.onProfile,
+        );
+      }
       final matches = orderPersonalMatches(
         TosApi.rows(data['upcoming_matches']),
       );

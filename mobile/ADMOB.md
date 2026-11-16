@@ -1,5 +1,66 @@
 # AdMob e consenso
 
+## Posizionamenti e resa senza interruzioni (16 novembre 2026)
+
+- Elenco tornei: un solo banner dopo le prime quattro schede; con meno di
+  quattro risultati si trova dopo l'ultima. Caricare altri tornei non aggiunge
+  altri annunci. Nessun annuncio se l'elenco e vuoto o in anteprima.
+- Spazi nativi: quando la larghezza utile e inferiore a 320 dp, si usa un
+  banner adattivo invece di perdere lo spazio o ritagliare il template.
+- Tutte le notizie: lista costruita progressivamente, con un annuncio dopo
+  ogni sei articoli soltanto quando segue altro contenuto. Gli spazi lontani
+  dal viewport non vengono costruiti tutti all'apertura della pagina.
+- Consenso, etichette, margini, audio disattivato per i video nativi e
+  rilascio degli annunci restano applicati. Nessun formato a schermo intero.
+
+Verifica: 43 test mirati superati (annunci, feed, Home, elenco e dettaglio
+tornei), analisi statica senza problemi. Sono prove Flutter: prima del
+rilascio servono nuove build e verifiche Android/iPhone con annunci di test.
+Non e stato misurato un incremento dei ricavi.
+
+Passaggio AdMob ancora da verificare nell'account: refresh banner
+**Google optimized**, senza aggiungere timer di refresh nell'app.
+Eventuale mediazione richiede configurazione delle reti, adapter e verifica
+delle scelte privacy; non e stata attivata automaticamente. Per valutare
+l'effetto confrontare ricavi per utente attivo, impressioni, match rate,
+show rate ed eCPM per piattaforma e formato, insieme a stabilita e utilizzo
+dell'app. Non aumentare la densita sulla sola base dei clic.
+
+Riferimenti:
+- https://support.google.com/admob/answer/7311346
+- https://support.google.com/admob/answer/6128877
+
+## Recupero caricamenti intermittenti (16 novembre 2026)
+
+Banner e schede native ritentano i caricamenti falliti dopo 5, 15 e 45
+secondi, al massimo tre volte per slot. Un annuncio caricato non viene
+aggiornato da questi timer. Uscita dalla schermata, revoca del consenso e
+passaggio in background rimuovono lo slot e annullano i tentativi pendenti.
+Anche una misura banner assente o non valida viene gestita come errore,
+rilasciando l'istanza invece di lasciare lo slot nascosto definitivamente.
+Gli errori di caricamento sono riportati nei log Flutter.
+
+Se il primo aggiornamento UMP fallisce senza rete, al ritorno in primo piano
+si ripetono aggiornamento e raccolta del consenso prima di rivalutare
+l'idoneita. UMP resta necessario per autorizzare le richieste pubblicitarie.
+Non sono stati cambiati gli identificativi o abilitata la
+monetizzazione.
+
+Su iOS il rifiuto o la limitazione ATT non blocca piu gli annunci: la
+richiesta ATT viene completata prima dell'inizializzazione, ma il suo esito
+non sostituisce `canRequestAds()`. Senza ATT il SDK iOS non invia IDFA;
+il formato di erogazione resta determinato dalle scelte UMP. Se UMP non
+permette richieste, non si inizializza il SDK e non si richiede ATT.
+Un errore del canale ATT resta bloccante. La modifica richiede una nuova
+build iOS e verifica su iPhone prima della distribuzione.
+Riferimento: https://developers.google.com/admob/ios/privacy/idfa
+
+Verifica: test Flutter per banner e nativi su piattaforme Android/iOS
+simulate, intervalli e limite dei tentativi, annullamento alla revoca e
+recupero UMP dopo avvio offline. Il comportamento reale richiede anche una
+prova su dispositivi con le nuove build; la disponibilita degli annunci
+dipende comunque dal servizio AdMob.
+
 ## Consenso italiano nelle tracce di test Play (16 ottobre 2026)
 
 Le build Android con `tosStoreRelease=true` usano l'App ID AdMob di Tornei
@@ -97,8 +158,8 @@ In assenza di annuncio non viene riservato uno spazio vuoto.
 La Home usa il template nativo ufficiale `TemplateType.small`, con badge,
 CTA e AdChoices gestiti dal SDK, colori chiari/scuri del tema ed etichetta
 Pubblicità esterna. Dimensioni: larghezza tra 320 e 400 dp, altezza 160 dp
-più etichetta e margini. Con meno di 320 dp effettivi lo slot resta nascosto
-e non richiede annunci. Il nativo viene rilasciato in caso di revoca,
+più etichetta e margini. Con meno di 320 dp effettivi si usa un banner
+adattivo al posto del nativo. Il nativo viene rilasciato in caso di revoca,
 uscita dalla schermata, cambio tema o route coperta; un errore di caricamento
 lascia lo slot vuoto senza bloccare il contenuto. Video richiesti muti.
 Non sono stati aggiunti nuovi plugin o factory native personalizzate.

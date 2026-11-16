@@ -4,8 +4,28 @@ import 'package:tornei_old_school/api.dart';
 import 'package:tornei_old_school/demo.dart';
 import 'package:tornei_old_school/home_dashboard.dart';
 import 'package:tornei_old_school/main.dart';
+import 'package:tornei_old_school/records_table.dart';
 
 class HomeApi extends DemoApi {
+  int recordsRequests = 0;
+  @override
+  Future<dynamic> request(
+    String path, {
+    Map<String, String>? query,
+    Map<String, dynamic>? body,
+    String? accessToken,
+    List<ApiUpload>? uploads,
+  }) {
+    if (path == 'api/records.php') recordsRequests++;
+    return super.request(
+      path,
+      query: query,
+      body: body,
+      accessToken: accessToken,
+      uploads: uploads,
+    );
+  }
+
   final orders = <String>[];
   final newsSections = <String>[];
   final hallSections = <String>[];
@@ -67,6 +87,69 @@ class HomeApi extends DemoApi {
 }
 
 void main() {
+  testWidgets('Records have their own page and load only when opened', (
+    tester,
+  ) async {
+    final api = HomeApi();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: HomeDashboard(
+            api: api,
+            section: 'calcio',
+            onTournaments: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byType(RecordsTosEntry), 150);
+    expect(find.byType(RecordsTable), findsNothing);
+    expect(api.recordsRequests, 0);
+    await tester.tap(find.byType(RecordsTosEntry));
+    await tester.pumpAndSettle();
+    expect(find.byType(RecordsTosPage), findsOneWidget);
+    expect(find.byType(RecordsTable), findsOneWidget);
+    expect(find.byType(GlobalRankingPage), findsNothing);
+    expect(api.recordsRequests, 1);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.byType(RecordsTosPage), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final order in ['gol', 'presenze']) {
+    testWidgets(
+      '$order ranking is separate from records and supports direct page selection',
+      (tester) async {
+        final api = HomeApi();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: GlobalRankingPage(api: api, initialOrder: order),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(RecordsTable), findsNothing);
+        expect(api.orders.last, order);
+        await tester.scrollUntilVisible(
+          find.byTooltip('Seleziona pagina'),
+          150,
+          scrollable: find.descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        await tester.tap(find.byTooltip('Seleziona pagina'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Pagina 2'));
+        await tester.pumpAndSettle();
+        expect(api.pages.last, 2);
+        expect(api.orders.last, order);
+        expect(find.text('Scegli la pagina'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
   testWidgets(
     'Homepage reads all-time ranking with server tie positions and switches order',
     (tester) async {
@@ -98,6 +181,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.orders.last, 'presenze');
       expect(api.pageSizes.last, 10);
+      expect(find.byType(RecordsTable), findsNothing);
       expect(find.text('Marcatori'), findsOneWidget);
       expect(find.text('Presenze'), findsOneWidget);
       expect(find.text('250'), findsOneWidget);

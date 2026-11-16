@@ -4,6 +4,7 @@ import 'api.dart';
 import 'records_page.dart';
 import 'sport_controls.dart';
 import 'match_report_logic.dart';
+import 'match_share.dart';
 import 'venue_navigation.dart';
 
 import 'package:url_launcher/url_launcher.dart';
@@ -518,6 +519,23 @@ class _MatchPageState extends State<MatchPage> {
             ),
           ),
           const SizedBox(height: 16),
+          if (played) ...[
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => MatchSharePage(
+                    api: api,
+                    id: id,
+                    match: match,
+                    events: events,
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.share_outlined),
+              label: const Text('Condividi risultato'),
+            ),
+            const SizedBox(height: 16),
+          ],
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'ads.dart';
+import 'ad_load_retry.dart';
 
 /// Compact native template shared by the news feed and inline app placements.
 class HomeNativeAdCard extends StatelessWidget {
@@ -23,8 +24,10 @@ class HomeNativeAdCard extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             // The SDK's small template recommends at least 320 logical pixels.
-            // Do not crop assets, shrink the CTA or overlay AdChoices to fit it.
-            if (constraints.maxWidth < 320) return const SizedBox.shrink();
+            // Use the smaller format instead of cropping native assets/CTA.
+            if (constraints.maxWidth < 320) {
+              return AdaptiveAdBanner(controller: controller);
+            }
             final colors = Theme.of(context).colorScheme;
             return Center(
               child: ConstrainedBox(
@@ -49,6 +52,7 @@ class _NativeCard extends StatefulWidget {
 class _NativeCardState extends State<_NativeCard> {
   NativeAd? _ad;
   bool _loaded = false;
+  final _retry = AdLoadRetry();
 
   @override
   void initState() {
@@ -57,6 +61,7 @@ class _NativeCardState extends State<_NativeCard> {
   }
 
   Future<void> _load() async {
+    if (!mounted) return;
     final colors = widget.colors;
     final background = colors.surfaceContainerLow;
     final ad = NativeAd(
@@ -103,6 +108,7 @@ class _NativeCardState extends State<_NativeCard> {
             return;
           }
           setState(() => _loaded = true);
+          _retry.reset();
         },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
@@ -111,6 +117,8 @@ class _NativeCardState extends State<_NativeCard> {
               _ad = null;
               _loaded = false;
             });
+            debugPrint('Native ad load failed: $error');
+            _retry.schedule(() => _load());
           }
         },
       ),
@@ -118,19 +126,22 @@ class _NativeCardState extends State<_NativeCard> {
     _ad = ad;
     try {
       await ad.load();
-    } catch (_) {
+    } catch (error) {
       ad.dispose();
       if (mounted && identical(_ad, ad)) {
         setState(() {
           _ad = null;
           _loaded = false;
         });
+        debugPrint('Native ad load failed: $error');
+        _retry.schedule(() => _load());
       }
     }
   }
 
   @override
   void dispose() {
+    _retry.dispose();
     _ad?.dispose();
     super.dispose();
   }

@@ -141,7 +141,7 @@ void main() {
       expect(find.byType(PersonalPlayerPage), findsOneWidget);
       // Home and Profile both resolve the player through the authenticated API.
       expect(api.queries, [
-        {'section': 'calcio'},
+        {'section': 'calcio', 'view': 'upcoming'},
         {'section': 'calcio'},
       ]);
       expect(find.text('Luca Rossi'), findsOneWidget);

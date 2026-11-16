@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:google_mobile_ads/src/ad_instance_manager.dart';
 import 'package:tornei_old_school/ads.dart';
 import 'package:tornei_old_school/native_ad_card.dart';
@@ -39,6 +40,102 @@ class PrivacyFake implements AdsPrivacyBackend {
 }
 
 void main() {
+  for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+    for (final native in [false, true]) {
+      testWidgets(
+        'failed $native ad retries with backoff on $platform and stops on revocation',
+        (tester) async {
+          final backend = PrivacyFake()..allowed = true;
+          final controller = AdsController(
+            enabled: true,
+            backend: backend,
+            authorizeTracking: () async => platform != TargetPlatform.iOS,
+          );
+          await controller.start();
+          final ids = <int>[];
+          tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            instanceManager.channel,
+            (call) async {
+              if (call.method == (native ? 'loadNativeAd' : 'loadBannerAd')) {
+                ids.add((call.arguments as Map)['adId'] as int);
+              }
+              return null;
+            },
+          );
+          addTearDown(
+            () => tester.binding.defaultBinaryMessenger
+                .setMockMethodCallHandler(instanceManager.channel, null),
+          );
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: native
+                    ? HomeNativeAdCard(controller: controller)
+                    : AdaptiveAdBanner(controller: controller),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          void fail() {
+            final ad = instanceManager.adFor(ids.last)!;
+            final error = LoadAdError(2, 'test', 'offline', null);
+            if (ad is NativeAd) {
+              ad.listener.onAdFailedToLoad!(ad, error);
+            } else if (ad is BannerAd) {
+              ad.listener.onAdFailedToLoad!(ad, error);
+            }
+          }
+
+          expect(ids.length, 1);
+          for (final delay in [5, 15, 45]) {
+            fail();
+            await tester.pump(Duration(seconds: delay - 1));
+            final before = ids.length;
+            await tester.pump(const Duration(seconds: 1));
+            expect(ids.length, before + 1);
+          }
+          fail();
+          await tester.pump(const Duration(minutes: 2));
+          expect(ids.length, 4, reason: 'Retries must be bounded');
+          // Recreate the slot, then revoke while a retry is still pending.
+          await tester.pumpWidget(const SizedBox());
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: native
+                    ? HomeNativeAdCard(controller: controller)
+                    : AdaptiveAdBanner(controller: controller),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(ids.length, 5);
+          fail();
+          await controller.showPrivacyOptions();
+          await tester.pumpAndSettle();
+          await tester.pump(const Duration(minutes: 2));
+          expect(ids.length, 5);
+          await tester.pumpWidget(const SizedBox());
+          controller.dispose();
+        },
+        variant: TargetPlatformVariant({platform}),
+      );
+    }
+  }
+  test('offline consent is fetched again on resume', () async {
+    final backend = PrivacyFake()..fail = true;
+    final controller = AdsController(enabled: true, backend: backend);
+    await controller.start();
+    expect(controller.ready, isFalse);
+    backend
+      ..fail = false
+      ..allowed = true;
+    controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    await Future<void>.delayed(Duration.zero);
+    expect(backend.updates, 2);
+    expect(controller.ready, isTrue);
+    controller.dispose();
+  });
   for (final width in [360.0, 280.0]) {
     testWidgets(
       'Lineup ad at $width pixels survives score rebuilds and respects consent',
@@ -123,7 +220,7 @@ void main() {
         .setMockMethodCallHandler(const MethodChannel('tos/tracking'), null);
   });
 
-  test('ATT refusal blocks SDK even when UMP allows ads', () async {
+  test('ATT refusal allows ads when UMP allows requests', () async {
     final backend = PrivacyFake()..allowed = true;
     final ads = AdsController(
       enabled: true,
@@ -131,36 +228,58 @@ void main() {
       authorizeTracking: () async => false,
     );
     await ads.start();
-    expect(backend.events, ['update', 'collect']);
-    expect(backend.initializations, 0);
-    expect(ads.ready, isFalse);
+    expect(backend.events, ['update', 'collect', 'initialize']);
+    expect(backend.initializations, 1);
+    expect(ads.ready, isTrue);
     expect(ads.busy, isFalse);
     ads.dispose();
   });
 
+  test('ATT completes before initialization; ATT revocation allows ads, UMP revocation stops them', () async {
+    final backend = PrivacyFake()..allowed = true;
+    var authorized = true;
+    final ads = AdsController(
+      enabled: true,
+      backend: backend,
+      authorizeTracking: () async {
+        backend.events.add('att');
+        return authorized;
+      },
+    );
+    await ads.start();
+    expect(backend.events, ['update', 'collect', 'att', 'initialize']);
+    ads.didChangeAppLifecycleState(AppLifecycleState.inactive);
+    expect(ads.ready, isFalse);
+    authorized = false;
+    ads.didChangeAppLifecycleState(AppLifecycleState.resumed);
+    await Future<void>.delayed(Duration.zero);
+    expect(ads.ready, isTrue);
+    expect(backend.initializations, 1);
+    await ads.showPrivacyOptions();
+    expect(ads.ready, isFalse);
+    ads.dispose();
+  });
+
   test(
-    'ATT is completed before initializing ads; revocation stops ads',
+    'UMP blocks ads and ATT prompt regardless of tracking permission',
     () async {
-      final backend = PrivacyFake()..allowed = true;
-      var authorized = true;
-      final ads = AdsController(
-        enabled: true,
-        backend: backend,
-        authorizeTracking: () async {
-          backend.events.add('att');
-          return authorized;
-        },
-      );
-      await ads.start();
-      expect(backend.events, ['update', 'collect', 'att', 'initialize']);
-      ads.didChangeAppLifecycleState(AppLifecycleState.inactive);
-      expect(ads.ready, isFalse);
-      authorized = false;
-      ads.didChangeAppLifecycleState(AppLifecycleState.resumed);
-      await Future<void>.delayed(Duration.zero);
-      expect(ads.ready, isFalse);
-      expect(backend.initializations, 1);
-      ads.dispose();
+      for (final authorized in [false, true]) {
+        final backend = PrivacyFake();
+        var prompts = 0;
+        final ads = AdsController(
+          enabled: true,
+          backend: backend,
+          authorizeTracking: () async {
+            prompts++;
+            return authorized;
+          },
+        );
+        await ads.start();
+        expect(ads.ready, isFalse);
+        expect(prompts, 0);
+        expect(backend.initializations, 0);
+        ads.dispose();
+      }
     },
   );
 
@@ -319,7 +438,7 @@ void main() {
   });
 
   testWidgets(
-    'native template does not request ads when available width is below 320',
+    'narrow native slot requests one adaptive banner without cropping',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -353,7 +472,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(calls, isEmpty);
+      expect(calls.where((call) => call == 'loadNativeAd'), isEmpty);
+      expect(calls.where((call) => call == 'loadBannerAd'), hasLength(1));
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       controller.dispose();
