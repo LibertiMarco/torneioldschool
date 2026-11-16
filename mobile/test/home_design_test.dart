@@ -107,10 +107,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Classifica completa'), 100);
-    await tester.ensureVisible(find.text('Classifica completa'));
+    await tester.scrollUntilVisible(find.text('Vedi tutta la classifica'), 100);
+    await tester.ensureVisible(find.text('Vedi tutta la classifica'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Classifica completa'));
+    await tester.tap(find.text('Vedi tutta la classifica'));
     await tester.pumpAndSettle();
     expect(find.byType(GlobalRankingPage), findsOneWidget);
     expect(tester.takeException(), isNull);

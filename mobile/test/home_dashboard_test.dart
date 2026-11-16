@@ -172,8 +172,18 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.orders.last, 'presenze');
       expect(find.text('250'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Classifica completa'), 100);
-      await tester.tap(find.text('Classifica completa'));
+      await tester.scrollUntilVisible(
+        find.text('Vedi tutta la classifica'),
+        100,
+      );
+      expect(
+        find.ancestor(
+          of: find.text('Vedi tutta la classifica'),
+          matching: find.byType(FilledButton),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Vedi tutta la classifica'));
       await tester.pumpAndSettle();
       expect(api.orders.last, 'presenze');
       expect(api.pageSizes.last, 10);
