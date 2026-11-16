@@ -87,36 +87,32 @@ class HomeApi extends DemoApi {
 }
 
 void main() {
-  testWidgets('Records have their own page and load only when opened', (
-    tester,
-  ) async {
-    final api = HomeApi();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: HomeDashboard(
-            api: api,
-            section: 'calcio',
-            onTournaments: () {},
+  testWidgets(
+    'Home shows the complete records table separately from rankings',
+    (tester) async {
+      final api = HomeApi();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: HomeDashboard(
+              api: api,
+              section: 'calcio',
+              onTournaments: () {},
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.byType(RecordsTosEntry), 150);
-    expect(find.byType(RecordsTable), findsNothing);
-    expect(api.recordsRequests, 0);
-    await tester.tap(find.byType(RecordsTosEntry));
-    await tester.pumpAndSettle();
-    expect(find.byType(RecordsTosPage), findsOneWidget);
-    expect(find.byType(RecordsTable), findsOneWidget);
-    expect(find.byType(GlobalRankingPage), findsNothing);
-    expect(api.recordsRequests, 1);
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    expect(find.byType(RecordsTosPage), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.byType(RecordsTable), 150);
+      await tester.pumpAndSettle();
+      expect(find.text('Record TOS'), findsOneWidget);
+      expect(find.byType(RecordsTable), findsOneWidget);
+      expect(find.byType(RecordsTosEntry), findsNothing);
+      expect(find.byType(GlobalRankingPage), findsNothing);
+      expect(api.recordsRequests, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final order in ['gol', 'presenze']) {
     testWidgets(

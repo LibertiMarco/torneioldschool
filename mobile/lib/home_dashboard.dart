@@ -404,9 +404,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             },
           ),
           if (!esport)
-            RecordsTosEntry(
-              onTap: () => openPage(context, RecordsTosPage(api: api)),
-            ),
+            RecordsTable(key: ValueKey('home-records-$reload'), api: api),
           if (!api.preview) const AdaptiveAdBanner(),
           const HomeSectionTitle(
             title: 'Ultime notizie',
