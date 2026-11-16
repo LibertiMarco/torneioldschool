@@ -216,10 +216,10 @@ void main() {
           find.text('Condividi risultato').hitTestable(),
           150,
         );
-        await tester.tap(find.text('Condividi risultato'));
-        await tester.pumpAndSettle();
-        expect(api.eventCalls, 1);
         if (fail) {
+          await tester.tap(find.text('Condividi risultato'));
+          await tester.pumpAndSettle();
+          expect(api.eventCalls, 1);
           expect(find.byType(MatchSharePage), findsNothing);
           expect(
             find.text('Impossibile preparare la condivisione. Riprova.'),
@@ -227,12 +227,14 @@ void main() {
           );
         } else {
           expect(find.byType(MatchPage), findsNothing);
-          final page = tester.widget<MatchSharePage>(
-            find.byType(MatchSharePage),
+          final button = tester.widget<MatchShareButton>(
+            find.byType(MatchShareButton),
           );
-          expect(page.id, '7');
-          expect(page.match['gol_ospite'], 10);
-          expect(page.events, isNotEmpty);
+          expect(button.id, '7');
+          expect(button.match['gol_ospite'], 10);
+          expect(await tester.runAsync(button.loadEvents!), isNotEmpty);
+          expect(api.eventCalls, 1);
+          expect(find.byType(MatchSharePage), findsNothing);
         }
         expect(tester.takeException(), isNull);
       },

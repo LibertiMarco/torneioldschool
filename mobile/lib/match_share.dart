@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'api.dart';
+import 'access_gate.dart' show AppAuthScope;
 import 'home_dashboard.dart' show SiteImage;
 import 'theme.dart';
 import 'player_role_badges.dart' show isGoalkeeper;
@@ -26,6 +27,184 @@ typedef MatchImageSender = Future<void> Function(
   String text,
   Rect origin,
 );
+
+/// Paint the export behind a loading mask without adding a navigation route.
+Future<Uint8List?> renderMatchShareImage(
+  BuildContext context,
+  TosApi api,
+  Map<String, dynamic> match,
+  List<Map<String, dynamic>> events,
+) async {
+  final key = GlobalKey();
+  final auth = AppAuthScope.of(context);
+  final media = MediaQuery.of(context)
+      .copyWith(textScaler: TextScaler.noScaling);
+  final background = Theme.of(context).scaffoldBackgroundColor;
+  Widget artwork = MatchShareArtwork(api: api, match: match, events: events);
+  if (auth != null) artwork = AppAuthScope(auth: auth, child: artwork);
+  final entry = OverlayEntry(
+    builder: (_) => Stack(
+      children: [
+        Positioned(
+          left: 0,
+          top: 0,
+          width: 360,
+          height: 640,
+          child: RepaintBoundary(
+            key: key,
+            child: MediaQuery(data: media, child: artwork),
+          ),
+        ),
+        Positioned.fill(
+          child: AbsorbPointer(
+            child: Material(
+              color: background,
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Preparazione immagine…'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+  Overlay.of(context, rootOverlay: true).insert(entry);
+  try {
+    final images = <ImageProvider>[
+      const AssetImage('assets/logo_old_school.png'),
+    ];
+    if ((api.originalLogos.value || auth?.user != null) &&
+        !(auth?.alwaysUseOriginalEmblems ?? false)) {
+      for (final field in ['logo_casa', 'logo_ospite']) {
+        final path = '${match[field] ?? ''}'.trim();
+        final uri = api.baseUrl.resolve(path);
+        if (path.isNotEmpty && uri.scheme == 'https' && uri.userInfo.isEmpty) {
+          images.add(NetworkImage('$uri'));
+        }
+      }
+    }
+    await Future.wait(
+      images.map((image) => precacheImage(image, context, onError: (_, _) {})),
+    ).timeout(const Duration(seconds: 5), onTimeout: () => <void>[]);
+    if (!context.mounted) return null;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!context.mounted) return null;
+    final boundary =
+        key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    final image = await boundary.toImage(pixelRatio: 3);
+    try {
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (bytes == null) throw StateError('PNG unavailable');
+      return bytes.buffer.asUint8List();
+    } finally {
+      image.dispose();
+    }
+  } finally {
+    entry.remove();
+    entry.dispose();
+  }
+}
+
+class MatchShareButton extends StatefulWidget {
+  const MatchShareButton({
+    super.key,
+    required this.api,
+    required this.id,
+    required this.match,
+    this.events = const [],
+    this.loadEvents,
+    this.sender,
+    this.outlined = false,
+  });
+  final TosApi api;
+  final String id;
+  final Map<String, dynamic> match;
+  final List<Map<String, dynamic>> events;
+  final Future<List<Map<String, dynamic>>> Function()? loadEvents;
+  final MatchImageSender? sender;
+  final bool outlined;
+  @override
+  State<MatchShareButton> createState() => _MatchShareButtonState();
+}
+
+class _MatchShareButtonState extends State<MatchShareButton> {
+  bool _busy = false;
+  Future<void> _share() async {
+    if (_busy) return;
+    final auth = AppAuthScope.of(context);
+    final userId = auth?.user?['id'];
+    final box = context.findRenderObject()! as RenderBox;
+    final origin = box.localToGlobal(Offset.zero) & box.size;
+    setState(() => _busy = true);
+    try {
+      final events = widget.loadEvents == null
+          ? widget.events
+          : await widget.loadEvents!();
+      if (!mounted ||
+          auth?.user?['id'] != userId ||
+          !(ModalRoute.of(context)?.isCurrent ?? true)) {
+        return;
+      }
+      final bytes = await renderMatchShareImage(
+        context,
+        widget.api,
+        widget.match,
+        events,
+      );
+      if (!mounted || bytes == null || auth?.user?['id'] != userId) return;
+      final match = widget.match;
+      final text =
+          '${match['squadra_casa']} ${match['gol_casa']}–${match['gol_ospite']} ${match['squadra_ospite']}\n${sharedMatchUrl(widget.api, widget.id, match)}';
+      if (widget.sender != null) {
+        await widget.sender!(bytes, text, origin);
+      } else {
+        final name = 'tos-risultato-${widget.id}-storia.png';
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile.fromData(bytes, mimeType: 'image/png', name: name)],
+            fileNameOverrides: [name],
+            text: text,
+            sharePositionOrigin: origin,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Impossibile preparare la condivisione. Riprova.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final callback = _busy || (int.tryParse(widget.id) ?? 0) <= 0
+        ? null
+        : _share;
+    final icon = _busy
+        ? const SizedBox.square(
+            dimension: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : const Icon(Icons.share_outlined);
+    final label = Text(_busy ? 'Preparazione…' : 'Condividi risultato');
+    return widget.outlined
+        ? OutlinedButton.icon(onPressed: callback, icon: icon, label: label)
+        : FilledButton.icon(onPressed: callback, icon: icon, label: label);
+  }
+}
 
 class MatchSharePage extends StatefulWidget {
   const MatchSharePage({

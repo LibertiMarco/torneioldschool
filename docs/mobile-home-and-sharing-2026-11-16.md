@@ -9,7 +9,10 @@ La scheda non invia richieste e non viene mostrata in caso di errore della
 verifica. Il pulsante apre la scheda Profilo esistente.
 
 Le partite giocate e la scheda Ultima partita in Home mostrano Condividi
-risultato. Viene generata una sola immagine PNG di 1080x1920 pixel, usando
+risultato. Il pulsante prepara l'immagine e apre direttamente la condivisione
+di sistema, senza navigare a una pagina intermedia. Un indicatore segnala
+la preparazione e viene rimosso anche in caso di errore.
+Viene generata una sola immagine PNG di 1080x1920 pixel, usando
 gli stemmi consentiti dalle impostazioni esistenti. Le due meta affiancate
 contengono tutte le presenze, casa a sinistra e ospiti a destra, senza tagli
 o conteggi sostitutivi. Il tabellino si ridimensiona per restare nel formato

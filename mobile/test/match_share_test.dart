@@ -93,13 +93,11 @@ void main() {
       await tester.pumpAndSettle();
       if (played) {
         await tester.scrollUntilVisible(find.text('Condividi risultato'), 150);
-        await tester.tap(find.text('Condividi risultato'));
-        await tester.pumpAndSettle();
-        expect(find.byType(MatchSharePage), findsOneWidget);
         expect(
-          tester.widget<MatchSharePage>(find.byType(MatchSharePage)).id,
+          tester.widget<MatchShareButton>(find.byType(MatchShareButton)).id,
           '1',
         );
+        expect(find.byType(MatchSharePage), findsNothing);
       } else {
         expect(find.text('Condividi risultato'), findsNothing);
       }
@@ -253,25 +251,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('share action exports a PNG with match link and iPad anchor', (
+  testWidgets('direct share exports the story without opening another page', (
     tester,
   ) async {
     var sent = false;
     await tester.pumpWidget(
       MaterialApp(
-        home: MatchSharePage(
-          api: TosApi(baseUrl: Uri.parse('https://example.test/')),
-          id: '12',
-          match: match,
-          events: events,
-          sender: (bytes, text, origin) async {
-            expect(bytes.take(8), [137, 80, 78, 71, 13, 10, 26, 10]);
-            expect(text, contains('id=12'));
-            expect(text, contains('12–12'));
-            expect(origin.width, greaterThan(0));
-            expect(origin.height, greaterThan(0));
-            sent = true;
-          },
+        home: Scaffold(
+          body: MatchShareButton(
+            api: TosApi(baseUrl: Uri.parse('https://example.test/')),
+            id: '12',
+            match: match,
+            events: events,
+            sender: (bytes, text, origin) async {
+              expect(bytes.take(8), [137, 80, 78, 71, 13, 10, 26, 10]);
+              expect(ByteData.sublistView(bytes).getUint32(16), 1080);
+              expect(ByteData.sublistView(bytes).getUint32(20), 1920);
+              expect(text, contains('id=12'));
+              expect(text, contains('12–12'));
+              expect(origin.width, greaterThan(0));
+              expect(origin.height, greaterThan(0));
+              if (const bool.fromEnvironment('CAPTURE_SHARE')) {
+                await Directory('build/share-review').create(recursive: true);
+                await File('build/share-review/direct.png').writeAsBytes(bytes);
+              }
+              sent = true;
+            },
+          ),
         ),
       ),
     );
@@ -279,11 +285,11 @@ void main() {
     await tester.runAsync(
       () => precacheImage(
         const AssetImage('assets/logo_old_school.png'),
-        tester.element(find.byType(MatchShareArtwork)),
+        tester.element(find.byType(MatchShareButton)),
       ),
     );
     await tester.runAsync(() async {
-      await tester.tap(find.text('Condividi immagine'));
+      await tester.tap(find.text('Condividi risultato'));
       for (var frame = 0; frame < 30 && !sent; frame++) {
         await tester.pump();
         await Future<void>.delayed(const Duration(milliseconds: 30));
@@ -291,6 +297,8 @@ void main() {
     });
     await tester.pumpAndSettle();
     expect(sent, isTrue);
+    expect(find.byType(MatchSharePage), findsNothing);
+    expect(find.text('Preparazione immagine…'), findsNothing);
     expect(find.text('Preparazione…'), findsNothing);
     expect(tester.takeException(), isNull);
   });

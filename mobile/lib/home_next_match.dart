@@ -58,42 +58,6 @@ class _NextMatch extends StatefulWidget {
 
 class _NextMatchState extends State<_NextMatch> {
   int _revision = 0;
-  bool _preparingShare = false;
-
-  Future<void> _shareLastMatch(Map<String, dynamic> match) async {
-    if (_preparingShare) return;
-    final identity = widget.auth.user?['id'];
-    setState(() => _preparingShare = true);
-    try {
-      final events = await widget.auth.api.events('${match['id']}');
-      if (!mounted ||
-          identity != widget.auth.user?['id'] ||
-          widget.auth.user == null ||
-          !(ModalRoute.of(context)?.isCurrent ?? true)) {
-        return;
-      }
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => MatchSharePage(
-            api: widget.auth.api,
-            id: '${match['id']}',
-            match: Map<String, dynamic>.from(match),
-            events: events,
-          ),
-        ),
-      );
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Impossibile preparare la condivisione. Riprova.'),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _preparingShare = false);
-    }
-  }
 
   bool get _dark => Theme.of(context).brightness == Brightness.dark;
   Color get _foreground => _dark
@@ -365,17 +329,11 @@ class _NextMatchState extends State<_NextMatch> {
         _info(Icons.assistant_rounded, '${match['assist']} assist'),
       ],
       const SizedBox(height: 16),
-      FilledButton.icon(
-        onPressed: _preparingShare || (int.tryParse('${match['id']}') ?? 0) <= 0
-            ? null
-            : () => _shareLastMatch(match),
-        icon: _preparingShare
-            ? const SizedBox.square(
-                dimension: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.share_outlined),
-        label: Text(_preparingShare ? 'Preparazione…' : 'Condividi risultato'),
+      MatchShareButton(
+        api: widget.auth.api,
+        id: '${match['id']}',
+        match: match,
+        loadEvents: () => widget.auth.api.events('${match['id']}'),
       ),
       const SizedBox(height: 8),
       OutlinedButton.icon(

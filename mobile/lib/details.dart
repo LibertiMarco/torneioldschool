@@ -520,19 +520,12 @@ class _MatchPageState extends State<MatchPage> {
           ),
           const SizedBox(height: 16),
           if (played) ...[
-            OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => MatchSharePage(
-                    api: api,
-                    id: id,
-                    match: match,
-                    events: events,
-                  ),
-                ),
-              ),
-              icon: const Icon(Icons.share_outlined),
-              label: const Text('Condividi risultato'),
+            MatchShareButton(
+              api: api,
+              id: id,
+              match: match,
+              events: events,
+              outlined: true,
             ),
             const SizedBox(height: 16),
           ],
