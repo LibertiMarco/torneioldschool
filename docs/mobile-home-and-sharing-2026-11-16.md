@@ -9,16 +9,18 @@ La scheda non invia richieste e non viene mostrata in caso di errore della
 verifica. Il pulsante apre la scheda Profilo esistente.
 
 Le partite giocate e la scheda Ultima partita in Home mostrano Condividi
-risultato. Le immagini PNG sono generate sul dispositivo a 1080 pixel di
-larghezza e altezza variabile, usando gli stemmi consentiti dalle impostazioni
-esistenti. Le opzioni Completa e Storia mantengono tutte le presenze, senza
-tagli o conteggi sostitutivi. Sono inclusi risultato, torneo, data/giornata,
-rigori e tabelle per squadra con nome completo, gol e voto di tutti i presenti.
+risultato. Viene generata una sola immagine PNG di 1080x1920 pixel, usando
+gli stemmi consentiti dalle impostazioni esistenti. Le due meta affiancate
+contengono tutte le presenze, casa a sinistra e ospiti a destra, senza tagli
+o conteggi sostitutivi. Il tabellino si ridimensiona per restare nel formato
+storia. Sono inclusi risultato, torneo, data/giornata, rigori, gol e voto.
+I badge POR e C identificano portiere e capitano (anche contemporaneamente),
+usando ruolo in squadra e dati del referto gia esposti dall'API.
 I voti assenti/zero sono indicati con un trattino; gli autogol restano separati.
 Le righe senza squadra riconoscibile sono mostrate in Altri presenti.
 L'API eventi espone ora anche presenza, per escludere gli assenti espliciti.
 Gli eventi legacy privi del campo rimangono compatibili. L'anteprima scorre
-con l'immagine intera e l'esportazione mantiene tutte le righe.
+con l'immagine intera e l'esportazione mantiene tutte le righe in un solo file.
 Il menu di sistema riceve immagine e link alla pagina esistente della partita;
 la destinazione puo gestire il testo separatamente. Non e stata modificata
 la richiesta di accesso della pagina web, ne configurati universal/app links.

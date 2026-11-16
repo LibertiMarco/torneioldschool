@@ -52,6 +52,8 @@ void main() {
       'goal': i == 0 ? 0 : 1,
       'presenza': 1,
       'voto': i.isEven ? 7.5 : null,
+      'ruolo_squadra': i == 0 ? 'POR' : 'DIF',
+      'is_captain': i == 0 || i == 1 ? 1 : 0,
       'autogol': i == 0 ? 1 : 0,
       'squadra': match[i.isEven ? 'squadra_casa' : 'squadra_ospite'],
     },
@@ -142,6 +144,8 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Rigori 4 – 3'), findsOneWidget);
         expect(find.text('Autogol: 1'), findsOneWidget);
+        expect(find.text('POR'), findsOneWidget);
+        expect(find.text('C'), findsNWidgets(2));
         for (var i = 0; i < events.length; i++) {
           expect(find.text('Giocatore Numero $i'), findsOneWidget);
         }
@@ -149,6 +153,10 @@ void main() {
         expect(find.text('—'), findsNWidgets(6));
         expect(find.text('Gol'), findsNWidgets(2));
         expect(find.text('Voto'), findsNWidgets(2));
+        expect(
+          tester.getTopLeft(find.text('Giocatore Numero 0')).dx,
+          lessThan(tester.getTopLeft(find.text('Giocatore Numero 1')).dx),
+        );
         expect(find.textContaining('nel referto'), findsNothing);
         expect(tester.takeException(), isNull);
         await tester.runAsync(() async {
@@ -157,11 +165,7 @@ void main() {
           final image = await boundary.toImage(pixelRatio: 3);
           try {
             expect(image.width, 1080);
-            expect(
-              image.height,
-              greaterThan(1920),
-              reason: 'The full roster must grow beyond the old fixed canvas.',
-            );
+            expect(image.height, 1920);
             if (const bool.fromEnvironment('CAPTURE_SHARE')) {
               final data = await image.toByteData(
                 format: ui.ImageByteFormat.png,
@@ -179,7 +183,7 @@ void main() {
   }
 
   testWidgets(
-    'share screen at 320px supports large text and format switching',
+    'share screen at 320px supports large text and a single story format',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(320, 800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -199,8 +203,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Storia'));
-      await tester.pumpAndSettle();
+      expect(find.text('Formato storia Instagram'), findsOneWidget);
       expect(
         tester.widget<MatchShareArtwork>(find.byType(MatchShareArtwork)).story,
         isTrue,
@@ -209,6 +212,46 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('large rosters keep every player in one fixed story', (
+    tester,
+  ) async {
+    final players = List.generate(
+      40,
+      (i) => <String, dynamic>{
+        'nome': 'Nome molto lungo',
+        'cognome': 'Giocatore $i',
+        'presenza': 1,
+        'squadra': match[i.isEven ? 'squadra_casa' : 'squadra_ospite'],
+        'goal': 0,
+        'voto': 6,
+      },
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: Center(
+              child: MatchShareArtwork(
+                api: TosApi(baseUrl: Uri.parse('https://example.test/')),
+                match: match,
+                events: players,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byType(MatchShareArtwork)),
+      const Size(360, 640),
+    );
+    for (var i = 0; i < 40; i++) {
+      expect(find.text('Nome molto lungo Giocatore $i'), findsOneWidget);
+    }
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('share action exports a PNG with match link and iPad anchor', (
     tester,

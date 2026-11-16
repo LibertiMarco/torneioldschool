@@ -8,7 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'api.dart';
 import 'home_dashboard.dart' show SiteImage;
 import 'theme.dart';
-import 'sport_controls.dart';
+import 'player_role_badges.dart' show isGoalkeeper;
 
 Uri sharedMatchUrl(TosApi api, String id, Map<String, dynamic> match) => api
     .baseUrl
@@ -48,7 +48,7 @@ class MatchSharePage extends StatefulWidget {
 
 class _MatchSharePageState extends State<MatchSharePage> {
   final _artwork = GlobalKey();
-  bool _story = false, _busy = false;
+  bool _busy = false;
 
   Future<void> _share(BuildContext buttonContext) async {
     if (_busy) return;
@@ -81,8 +81,7 @@ class _MatchSharePageState extends State<MatchSharePage> {
       if (widget.sender != null) {
         await widget.sender!(bytes, text, origin);
       } else {
-        final name =
-            'tos-risultato-${widget.id}-${_story ? 'storia' : 'completa'}.png';
+        final name = 'tos-risultato-${widget.id}-storia.png';
         await SharePlus.instance.share(
           ShareParams(
             files: [XFile.fromData(bytes, mimeType: 'image/png', name: name)],
@@ -128,13 +127,9 @@ class _MatchSharePageState extends State<MatchSharePage> {
               ?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -.7),
         ),
         const SizedBox(height: 18),
-        AbsorbPointer(
-          absorbing: _busy,
-          child: SportSegments<bool>(
-            value: _story,
-            options: const {false: 'Completa', true: 'Storia'},
-            onChanged: (value) => setState(() => _story = value),
-          ),
+        const Text(
+          'Formato storia Instagram',
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 20),
         Center(
@@ -153,7 +148,6 @@ class _MatchSharePageState extends State<MatchSharePage> {
                       api: widget.api,
                       match: widget.match,
                       events: widget.events,
-                      story: _story,
                     ),
                   ),
                 ),
@@ -163,7 +157,7 @@ class _MatchSharePageState extends State<MatchSharePage> {
         ),
         const SizedBox(height: 16),
         Text(
-          'La grafica si allunga per includere tutte le presenze, i gol e i voti.',
+          'Un’unica immagine con tutte le presenze, i gol e i voti. Casa a sinistra, ospiti a destra.',
           style: Theme.of(context).textTheme.bodyMedium
               ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
@@ -200,13 +194,14 @@ List<Map<String, dynamic>> shareParticipants(
     .where((e) => e['presenza'] == true || '${e['presenza'] ?? 1}' == '1')
     .toList();
 
+/// One Instagram story, including both teams in parallel columns.
 class MatchShareArtwork extends StatelessWidget {
   const MatchShareArtwork({
     super.key,
     required this.api,
     required this.match,
     required this.events,
-    this.story = false,
+    this.story = true,
   });
   final TosApi api;
   final Map<String, dynamic> match;
@@ -226,7 +221,7 @@ class MatchShareArtwork extends StatelessWidget {
     final awayPlayers = participants
         .where((e) => normalized('${e['squadra'] ?? ''}') == normalized(away))
         .toList();
-    final otherPlayers = participants
+    final others = participants
         .where(
           (e) => ![
             normalized(home),
@@ -245,8 +240,8 @@ class MatchShareArtwork extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            width: story ? 76 : 60,
-            height: story ? 76 : 60,
+            width: 60,
+            height: 60,
             padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -256,8 +251,8 @@ class MatchShareArtwork extends StatelessWidget {
               api: api,
               identityName: name,
               path: logo,
-              width: story ? 62 : 46,
-              height: story ? 62 : 46,
+              width: 46,
+              height: 46,
               preserveShape: true,
               fallback: Icons.shield_outlined,
             ),
@@ -265,12 +260,12 @@ class MatchShareArtwork extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             name,
-            maxLines: story ? 3 : 2,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
-              fontSize: story ? 16 : 14,
+              fontSize: 14,
               height: 1.15,
               fontWeight: FontWeight.w800,
             ),
@@ -279,181 +274,169 @@ class MatchShareArtwork extends StatelessWidget {
       ),
     );
 
+    Widget badge(String label, Color color, Color foreground) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(3),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: foreground,
+          fontSize: 8,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+
     Widget playerTable(
-      String name,
-      String logo,
-      List<Map<String, dynamic>> rows,
+      String label,
+      List<Map<String, dynamic>> players,
       Color accent,
-    ) => Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+    ) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(height: 3, color: accent),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            color: accent,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          color: accent,
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+          child: const Row(
             children: [
-              SiteImage(
-                api: api,
-                path: logo,
-                identityName: name,
-                width: 32,
-                height: 32,
-                preserveShape: true,
-                fallback: Icons.shield_outlined,
-              ),
-              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  name,
+                  'Giocatore',
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    color: accent,
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 22,
+                child: Text(
+                  'Gol',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 30,
+                child: Text(
+                  'Voto',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 5),
-          Text(
-            '${rows.length} presenti',
-            style: const TextStyle(fontSize: 11, color: muted),
-          ),
-          const SizedBox(height: 9),
+        ),
+        for (final entry in players.asMap().entries)
           Container(
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xffdbe3eb)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+            color: entry.key.isEven ? const Color(0xffeef2f6) : Colors.white,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  color: accent,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 9,
-                  ),
-                  child: const Row(
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          'Giocatore',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      Text(
+                        '${entry.value['nome'] ?? ''} ${entry.value['cognome'] ?? ''}'
+                            .trim(),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          height: 1.15,
                         ),
                       ),
-                      SizedBox(
-                        width: 34,
-                        child: Text(
-                          'Gol',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 48,
-                        child: Text(
-                          'Voto',
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                for (final entry in rows.asMap().entries)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    color: entry.key.isEven
-                        ? const Color(0xfff1f4f7)
-                        : Colors.white,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      if (isGoalkeeper(entry.value) ||
+                          entry.value['is_captain'] == true ||
+                          '${entry.value['is_captain'] ?? entry.value['captain']}' ==
+                              '1')
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Wrap(
+                            spacing: 3,
+                            runSpacing: 3,
                             children: [
-                              Text(
-                                '${entry.value['nome'] ?? ''} ${entry.value['cognome'] ?? ''}'
-                                    .trim(),
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.25,
-                                ),
-                              ),
-                              if ((int.tryParse('${entry.value['autogol']}') ??
-                                      0) >
-                                  0)
-                                Text(
-                                  'Autogol: ${entry.value['autogol']}',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: muted,
-                                  ),
-                                ),
+                              if (isGoalkeeper(entry.value))
+                                badge('POR', const Color(0xffffd43b), siteBlue),
+                              if (entry.value['is_captain'] == true ||
+                                  '${entry.value['is_captain'] ?? entry.value['captain']}' ==
+                                      '1')
+                                badge('C', siteRed, Colors.white),
                             ],
                           ),
                         ),
-                        SizedBox(
-                          width: 34,
-                          child: Text(
-                            '${entry.value['goal'] ?? 0}',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
+                      if ((int.tryParse('${entry.value['autogol']}') ?? 0) > 0)
+                        Text(
+                          'Autogol: ${entry.value['autogol']}',
+                          style: const TextStyle(fontSize: 8, color: muted),
                         ),
-                        SizedBox(
-                          width: 48,
-                          child: Text(
-                            (num.tryParse('${entry.value['voto']}') ?? 0) > 0
-                                ? num.parse('${entry.value['voto']}')
-                                      .toStringAsFixed(1)
-                                      .replaceAll('.', ',')
-                                : '—',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
-                              color: accent,
-                            ),
-                          ),
-                        ),
-                      ],
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  width: 22,
+                  child: Text(
+                    '${entry.value['goal'] ?? 0}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                if (rows.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Text(
-                      'Nessuna presenza registrata.',
-                      style: TextStyle(fontSize: 12, color: muted),
+                ),
+                SizedBox(
+                  width: 30,
+                  child: Text(
+                    (num.tryParse('${entry.value['voto']}') ?? 0) > 0
+                        ? num.parse('${entry.value['voto']}')
+                              .toStringAsFixed(1)
+                              .replaceAll('.', ',')
+                        : '—',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: accent,
                     ),
                   ),
+                ),
               ],
             ),
           ),
-        ],
-      ),
+        if (players.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(7),
+            child: Text(
+              'Nessuna presenza.',
+              style: TextStyle(fontSize: 10, color: muted),
+            ),
+          ),
+      ],
     );
 
     return DefaultTextStyle(
@@ -464,20 +447,15 @@ class MatchShareArtwork extends StatelessWidget {
       ),
       child: SizedBox(
         width: 360,
+        height: 640,
         child: ColoredBox(
           color: Colors.white,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                height: story ? 330 : 222,
-                padding: EdgeInsets.fromLTRB(
-                  18,
-                  story ? 28 : 12,
-                  18,
-                  story ? 22 : 10,
-                ),
+                height: 222,
+                padding: EdgeInsets.fromLTRB(18, 12, 18, 10),
                 decoration: const BoxDecoration(
                   color: siteBlue,
                   border: Border(bottom: BorderSide(color: siteRed, width: 4)),
@@ -524,7 +502,7 @@ class MatchShareArtwork extends StatelessWidget {
                         ),
                       ],
                     ),
-                    SizedBox(height: story ? 22 : 9),
+                    SizedBox(height: 9),
                     Text(
                       '${match['torneo_nome'] ?? match['torneo'] ?? 'Tornei Old School'}',
                       maxLines: 1,
@@ -532,7 +510,7 @@ class MatchShareArtwork extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: story ? 26 : 20,
+                        fontSize: 20,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -.6,
                       ),
@@ -555,14 +533,14 @@ class MatchShareArtwork extends StatelessWidget {
                         team(home, '${match['logo_casa'] ?? ''}'),
                         SizedBox(
                           width: 114,
-                          height: story ? 76 : 60,
+                          height: 60,
                           child: Center(
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
                                 '${match['gol_casa']} – ${match['gol_ospite']}',
                                 style: TextStyle(
-                                  fontSize: story ? 68 : 54,
+                                  fontSize: 54,
                                   color: Colors.white,
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: -2,
@@ -590,45 +568,69 @@ class MatchShareArtwork extends StatelessWidget {
                 ),
               ),
 
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Presenze e voti',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -.6,
+              const Padding(
+                padding: EdgeInsets.fromLTRB(18, 14, 18, 10),
+                child: Text(
+                  'Presenze e voti',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -.6,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        width: constraints.maxWidth,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: playerTable(
+                                    home,
+                                    homePlayers,
+                                    siteBlue,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: playerTable(
+                                    away,
+                                    awayPlayers,
+                                    siteRed,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (others.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              playerTable('Altri presenti', others, siteBlue),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    playerTable(
-                      home,
-                      '${match['logo_casa'] ?? ''}',
-                      homePlayers,
-                      siteBlue,
-                    ),
-                    playerTable(
-                      away,
-                      '${match['logo_ospite'] ?? ''}',
-                      awayPlayers,
-                      siteRed,
-                    ),
-                    if (otherPlayers.isNotEmpty)
-                      playerTable('Altri presenti', '', otherPlayers, siteBlue),
-                    const Text(
-                      '— voto non assegnato',
-                      style: TextStyle(fontSize: 10, color: muted),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                  ),
                 ),
               ),
               const Padding(
-                padding: EdgeInsets.fromLTRB(18, 0, 18, 16),
+                padding: EdgeInsets.fromLTRB(18, 10, 18, 4),
+                child: Text(
+                  'POR: portiere · C: capitano · —: voto non assegnato',
+                  style: TextStyle(fontSize: 9, color: muted),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(18, 0, 18, 14),
                 child: Text(
                   'torneioldschool.it',
                   textAlign: TextAlign.right,
