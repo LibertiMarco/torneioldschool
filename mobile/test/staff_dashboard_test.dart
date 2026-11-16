@@ -121,6 +121,18 @@ void main() {
         expect(api.userRequests, 0);
       } else {
         expect(find.text('Dashboard amministratore'), findsOneWidget);
+        // The logo settings card can push the lazy search field below the
+        // viewport on a narrow phone. Build and reveal its editable child
+        // before typing, just as a user scrolls to reach the search box.
+        await tester.scrollUntilVisible(
+          find.byType(EditableText),
+          150,
+          scrollable: find.descendant(
+            of: find.byType(StaffDashboard),
+            matching: find.byType(Scrollable),
+          ).first,
+        );
+        await tester.pumpAndSettle();
         await tester.enterText(find.byType(TextField), 'Utenti');
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(
