@@ -51,7 +51,7 @@ void main() {
       'cognome': 'Numero $i',
       'goal': i == 0 ? 0 : 1,
       'autogol': i == 0 ? 1 : 0,
-      'squadra': 'Old School FC',
+      'squadra': match[i.isEven ? 'squadra_casa' : 'squadra_ospite'],
     },
   );
 
@@ -125,10 +125,11 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text('Rigori 4 – 3'), findsOneWidget);
-        expect(find.textContaining('1 autogol'), findsOneWidget);
+        expect(find.text('1 AG'), findsOneWidget);
+        expect(find.text('AG: autogol'), findsOneWidget);
         expect(
-          find.textContaining('+ ${story ? 3 : 9} nel dettaglio'),
-          findsOneWidget,
+          find.text('+ 2 nel referto'),
+          story ? findsNothing : findsNWidgets(2),
         );
         expect(tester.takeException(), isNull);
         await tester.runAsync(() async {

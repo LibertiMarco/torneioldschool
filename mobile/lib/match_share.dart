@@ -196,7 +196,7 @@ class _MatchSharePageState extends State<MatchSharePage> {
   );
 }
 
-/// Fixed dimensions keep the exported post independent of the device size.
+/// Fixed poster sizes: 1080 square or 1080x1920 at the export's 3x scale.
 class MatchShareArtwork extends StatelessWidget {
   const MatchShareArtwork({
     super.key,
@@ -213,6 +213,9 @@ class MatchShareArtwork extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const muted = Color(0xff627386);
+    final home = '${match['squadra_casa'] ?? ''}';
+    final away = '${match['squadra_ospite'] ?? ''}';
+    String normalized(String name) => name.trim().toLowerCase();
     final scorers = events
         .where(
           (e) =>
@@ -220,7 +223,14 @@ class MatchShareArtwork extends StatelessWidget {
               (int.tryParse('${e['autogol']}') ?? 0) > 0,
         )
         .toList();
-    final limit = story ? 9 : 3;
+    final homeScorers = scorers
+        .where((e) => normalized('${e['squadra'] ?? ''}') == normalized(home))
+        .toList();
+    final awayScorers = scorers
+        .where((e) => normalized('${e['squadra'] ?? ''}') == normalized(away))
+        .toList();
+    final unmatched = scorers.length - homeScorers.length - awayScorers.length;
+    final limit = story ? 8 : 4;
     final date = DateTime.tryParse('${match['data_partita']}');
     final meta = [
       if (date != null)
@@ -228,23 +238,27 @@ class MatchShareArtwork extends StatelessWidget {
       if ((int.tryParse('${match['giornata']}') ?? 0) > 0)
         'Giornata ${match['giornata']}',
     ].join(' · ');
+    final ownGoals = scorers.any(
+      (e) => (int.tryParse('${e['autogol']}') ?? 0) > 0,
+    );
+
     Widget team(String name, String logo) => Expanded(
       child: Column(
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: story ? 76 : 60,
+            height: story ? 76 : 60,
             padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: SiteImage(
               api: api,
               identityName: name,
               path: logo,
-              width: 38,
-              height: 38,
+              width: story ? 62 : 46,
+              height: story ? 62 : 46,
               preserveShape: true,
               fallback: Icons.shield_outlined,
             ),
@@ -255,205 +269,283 @@ class MatchShareArtwork extends StatelessWidget {
             maxLines: story ? 3 : 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 12,
-              height: 1.2,
-              fontWeight: FontWeight.w700,
+              fontSize: story ? 16 : 14,
+              height: 1.15,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
       ),
     );
+
+    Widget scorerColumn(
+      String label,
+      List<Map<String, dynamic>> rows,
+      Color accent,
+    ) => Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(height: 3, color: accent),
+          const SizedBox(height: 5),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: story ? 13 : 11,
+              fontWeight: FontWeight.w800,
+              color: muted,
+            ),
+          ),
+          const SizedBox(height: 5),
+          for (final e in rows.take(limit))
+            Padding(
+              padding: EdgeInsets.only(bottom: story ? 7 : 2),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${e['nome'] ?? ''} ${e['cognome'] ?? ''}'.trim(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: story ? 14 : 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    [
+                      if ((int.tryParse('${e['goal']}') ?? 0) > 0)
+                        '${e['goal']}',
+                      if ((int.tryParse('${e['autogol']}') ?? 0) > 0)
+                        '${e['autogol']} AG',
+                    ].join(' + '),
+                    style: TextStyle(
+                      fontSize: story ? 13 : 11,
+                      fontWeight: FontWeight.w900,
+                      color: accent,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (rows.isEmpty)
+            Text(
+              '—',
+              style: TextStyle(fontSize: story ? 14 : 12, color: muted),
+            ),
+          if (rows.length > limit)
+            Text(
+              '+ ${rows.length - limit} nel referto',
+              style: const TextStyle(fontSize: 10, color: muted),
+            ),
+        ],
+      ),
+    );
+
     return DefaultTextStyle(
       style: const TextStyle(
         fontFamily: 'Roboto',
         color: siteBlue,
         fontSize: 12,
       ),
-      child: Container(
+      child: SizedBox(
         width: 360,
         height: story ? 640 : 360,
-        color: siteBackground,
-        padding: EdgeInsets.fromLTRB(20, story ? 40 : 16, 20, story ? 34 : 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Image.asset(
-                  'assets/logo_old_school.png',
-                  width: 32,
-                  height: 32,
-                ),
-                const SizedBox(width: 9),
-                const Expanded(
-                  child: Text(
-                    'Tornei Old School',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -.4,
-                    ),
-                  ),
-                ),
-                Container(width: 22, height: 3, color: siteRed),
-              ],
-            ),
-            SizedBox(height: story ? 24 : 10),
-            const Text(
-              'RISULTATO FINALE',
-              style: TextStyle(
-                color: siteRed,
-                fontSize: 9,
-                letterSpacing: 1.6,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${match['torneo_nome'] ?? match['torneo'] ?? 'Tornei Old School'}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -.6,
-              ),
-            ),
-            if (meta.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(meta, style: const TextStyle(fontSize: 10, color: muted)),
-            ],
-            SizedBox(height: story ? 22 : 10),
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: story ? 16 : 10,
-              ),
-              decoration: BoxDecoration(
-                color: siteBlue,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      team(
-                        '${match['squadra_casa'] ?? ''}',
-                        '${match['logo_casa'] ?? ''}',
-                      ),
-                      SizedBox(
-                        width: 92,
-                        height: 52,
-                        child: Center(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              '${match['gol_casa']} – ${match['gol_ospite']}',
-                              style: const TextStyle(
-                                fontSize: 36,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -1.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      team(
-                        '${match['squadra_ospite'] ?? ''}',
-                        '${match['logo_ospite'] ?? ''}',
-                      ),
-                    ],
-                  ),
-                  if ('${match['decisa_rigori']}' == '1') ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'Rigori ${match['rigori_casa']} – ${match['rigori_ospite']}',
-                      style: const TextStyle(
-                        color: Color(0xffcbd6e2),
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (scorers.isNotEmpty) ...[
-              SizedBox(height: story ? 22 : 8),
-              if (story) ...[
-                const Text(
-                  'Il tabellino',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -.5,
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
+        child: ColoredBox(
+          color: Colors.white,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: story ? 12 : 7,
+                height: story ? 330 : 222,
+                padding: EdgeInsets.fromLTRB(
+                  18,
+                  story ? 28 : 12,
+                  18,
+                  story ? 22 : 10,
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xffdbe3eb)),
+                decoration: const BoxDecoration(
+                  color: siteBlue,
+                  border: Border(bottom: BorderSide(color: siteRed, width: 4)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    for (final event in scorers.take(limit))
-                      Padding(
-                        padding: EdgeInsets.symmetric(vertical: story ? 3 : 1),
-                        child: Text(
-                          [
-                            '${event['nome'] ?? ''} ${event['cognome'] ?? ''}'
-                                .trim(),
-                            if ((int.tryParse('${event['goal']}') ?? 0) > 0)
-                              '${event['goal']} gol',
-                            if ((int.tryParse('${event['autogol']}') ?? 0) > 0)
-                              '${event['autogol']} autogol',
-                            if ('${event['squadra'] ?? ''}'.isNotEmpty)
-                              '${event['squadra']}',
-                          ].join(' · '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
+                    Row(
+                      children: [
+                        Image.asset(
+                          'assets/logo_old_school.png',
+                          width: 26,
+                          height: 26,
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'TORNEI OLD SCHOOL',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              letterSpacing: .6,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
                         ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: siteRed,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'FINALE',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: story ? 22 : 9),
+                    Text(
+                      '${match['torneo_nome'] ?? match['torneo'] ?? 'Tornei Old School'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: story ? 26 : 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -.6,
                       ),
-                    if (scorers.length > limit)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          '+ ${scorers.length - limit} nel dettaglio partita',
-                          style: const TextStyle(fontSize: 9, color: muted),
+                    ),
+                    if (meta.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        meta,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xffc3d0df),
+                          fontSize: 11,
                         ),
                       ),
+                    ],
+                    const Spacer(),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        team(home, '${match['logo_casa'] ?? ''}'),
+                        SizedBox(
+                          width: 114,
+                          height: story ? 76 : 60,
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                '${match['gol_casa']} – ${match['gol_ospite']}',
+                                style: TextStyle(
+                                  fontSize: story ? 68 : 54,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        team(away, '${match['logo_ospite'] ?? ''}'),
+                      ],
+                    ),
+                    if ('${match['decisa_rigori']}' == '1') ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Rigori ${match['rigori_casa']} – ${match['rigori_ospite']}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xffc3d0df),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(18, story ? 22 : 7, 18, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (story) ...[
+                        const Text(
+                          'Il tabellino',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -.6,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                      if (scorers.isEmpty)
+                        const Text(
+                          'Risultato ufficiale · Tornei Old School',
+                          style: TextStyle(fontSize: 13, color: muted),
+                        )
+                      else
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            scorerColumn(home, homeScorers, siteBlue),
+                            const SizedBox(width: 18),
+                            scorerColumn(away, awayScorers, siteRed),
+                          ],
+                        ),
+                      if (unmatched > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 5),
+                          child: Text(
+                            '$unmatched marcatori nel referto completo',
+                            style: const TextStyle(fontSize: 10, color: muted),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(18, 4, 18, story ? 24 : 10),
+                child: Row(
+                  children: [
+                    if (ownGoals)
+                      const Text(
+                        'AG: autogol',
+                        style: TextStyle(fontSize: 9, color: muted),
+                      ),
+                    const Spacer(),
+                    const Text(
+                      'torneioldschool.it',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
-            const Spacer(),
-            const Text(
-              'torneioldschool.it',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                color: muted,
-                letterSpacing: .3,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

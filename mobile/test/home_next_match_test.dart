@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/api.dart';
 import 'package:tornei_old_school/demo.dart';
 import 'package:tornei_old_school/details.dart' show MatchPage;
+import 'package:tornei_old_school/match_share.dart';
 import 'package:tornei_old_school/tournament_page.dart';
 import 'package:tornei_old_school/access_gate.dart';
 import 'package:tornei_old_school/home_dashboard.dart';
@@ -20,6 +21,8 @@ class NextApi extends DemoApi {
   bool fail = false, linked = true;
   Completer<dynamic>? pending;
   bool includeLast = false;
+  bool failEvents = false;
+  int eventCalls = 0;
   Map<String, dynamic>? lastMatch;
   List<Map<String, dynamic>> upcoming = [
     {
@@ -46,6 +49,10 @@ class NextApi extends DemoApi {
     String? accessToken,
     List<ApiUpload>? uploads,
   }) async {
+    if (path == 'api/get_eventi_partita.php') {
+      eventCalls++;
+      if (failEvents) throw const ApiError('offline');
+    }
     if (path == 'api/mobile/v1/player_stats.php') {
       calls++;
       expect(query, {'section': 'calcio', 'view': 'upcoming'});
@@ -178,6 +185,55 @@ void main() {
         expect(find.text('—'), findsOneWidget);
         expect(find.text('Assist'), findsNothing);
         expect(find.byType(SiteImage), findsNWidgets(2));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final fail in [false, true]) {
+    testWidgets(
+      'Last match shares directly from Home with load failure=$fail',
+      (tester) async {
+        final api = NextApi()
+          ..includeLast = true
+          ..failEvents = fail;
+        api.lastMatch = {
+          ...api.upcoming.first,
+          'id': 7,
+          'giocata': 1,
+          'gol_casa': 5,
+          'gol_ospite': 10,
+          'goal': 2,
+          'voto': 7,
+        };
+        api.upcoming = [];
+        final auth = DemoAuth(api);
+        await auth.login();
+        await show(tester, auth);
+        await tester.pumpAndSettle();
+        expect(api.eventCalls, 0);
+        await tester.scrollUntilVisible(
+          find.text('Condividi risultato').hitTestable(),
+          150,
+        );
+        await tester.tap(find.text('Condividi risultato'));
+        await tester.pumpAndSettle();
+        expect(api.eventCalls, 1);
+        if (fail) {
+          expect(find.byType(MatchSharePage), findsNothing);
+          expect(
+            find.text('Impossibile preparare la condivisione. Riprova.'),
+            findsOneWidget,
+          );
+        } else {
+          expect(find.byType(MatchPage), findsNothing);
+          final page = tester.widget<MatchSharePage>(
+            find.byType(MatchSharePage),
+          );
+          expect(page.id, '7');
+          expect(page.match['gol_ospite'], 10);
+          expect(page.events, isNotEmpty);
+        }
         expect(tester.takeException(), isNull);
       },
     );
