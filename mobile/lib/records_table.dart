@@ -52,8 +52,9 @@ class RecordsTosEntry extends StatelessWidget {
 }
 
 class RecordsTable extends StatefulWidget {
-  const RecordsTable({super.key, required this.api});
+  const RecordsTable({super.key, required this.api, this.showTitle = true});
   final TosApi api;
+  final bool showTitle;
   @override
   State<RecordsTable> createState() => _RecordsTableState();
 }
@@ -92,26 +93,27 @@ class _RecordsTableState extends State<RecordsTable> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: colors.outlineVariant.withValues(alpha: .6),
+          if (widget.showTitle)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: colors.outlineVariant.withValues(alpha: .6),
+                  ),
+                ),
+              ),
+              child: Text(
+                'Record TOS',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: colors.onSurface,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -.4,
                 ),
               ),
             ),
-            child: Text(
-              'Record TOS',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: colors.onSurface,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -.4,
-              ),
-            ),
-          ),
           FutureBuilder<dynamic>(
             future: data,
             builder: (context, snapshot) {

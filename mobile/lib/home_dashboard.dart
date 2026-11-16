@@ -376,50 +376,50 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             order: order,
                             open: () => _ranking(entry.value, esport),
                           ),
+                        if (!esport ||
+                            (result['meta'] as Map?)?['can_view_full'] == true)
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 16,
+                                ),
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.zero,
+                                ),
+                              ),
+                              onPressed: () => openPage(
+                                context,
+                                GlobalRankingPage(
+                                  api: api,
+                                  esport: esport,
+                                  initialOrder: order,
+                                ),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.leaderboard_outlined),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      'Vedi tutta la classifica',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Icon(Icons.arrow_forward_rounded),
+                                ],
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
-                  if (!esport ||
-                      (result['meta'] as Map?)?['can_view_full'] == true)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        onPressed: () => openPage(
-                          context,
-                          GlobalRankingPage(
-                            api: api,
-                            esport: esport,
-                            initialOrder: order,
-                          ),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.leaderboard_outlined),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Vedi tutta la classifica',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Icon(Icons.arrow_forward_rounded),
-                          ],
-                        ),
-                      ),
-                    ),
                   if (esport &&
                       (result['meta'] as Map?)?['has_more'] == true &&
                       (result['meta'] as Map?)?['can_view_full'] != true)
@@ -431,8 +431,17 @@ class _HomeDashboardState extends State<HomeDashboard> {
               );
             },
           ),
-          if (!esport)
-            RecordsTable(key: ValueKey('home-records-$reload'), api: api),
+          if (!esport) ...[
+            const HomeSectionTitle(
+              title: 'Record TOS',
+              eyebrow: 'I PRIMATI OLD SCHOOL',
+            ),
+            RecordsTable(
+              key: ValueKey('home-records-$reload'),
+              api: api,
+              showTitle: false,
+            ),
+          ],
           if (!api.preview) const AdaptiveAdBanner(),
           const HomeSectionTitle(
             title: 'Ultime notizie',

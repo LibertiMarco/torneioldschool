@@ -103,10 +103,17 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(find.byType(RecordsTable), 150);
+      await tester.scrollUntilVisible(find.text('Record TOS'), 150);
       await tester.pumpAndSettle();
       expect(find.text('Record TOS'), findsOneWidget);
       expect(find.byType(RecordsTable), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(RecordsTable),
+          matching: find.text('Record TOS'),
+        ),
+        findsNothing,
+      );
       expect(find.byType(RecordsTosEntry), findsNothing);
       expect(find.byType(GlobalRankingPage), findsNothing);
       expect(api.recordsRequests, 1);
