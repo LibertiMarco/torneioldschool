@@ -153,6 +153,90 @@ class _NextMatchState extends State<_NextMatch> {
     ],
   );
 
+  Widget _lastTeam(Map<String, dynamic> match, {required bool home}) {
+    final name = '${match[home ? 'squadra_casa' : 'squadra_ospite'] ?? ''}';
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: SiteImage(
+            api: widget.auth.api,
+            identityName: name,
+            path: '${match[home ? 'logo_casa' : 'logo_ospite'] ?? ''}',
+            width: 34,
+            height: 34,
+            preserveShape: true,
+            fallback: Icons.shield_outlined,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            name,
+            style: TextStyle(
+              color: colors.onSurface,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          '${match[home ? 'gol_casa' : 'gol_ospite'] ?? 0}',
+          style: TextStyle(
+            color: colors.onSurface,
+            fontSize: 28,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _performance(String label, String value, IconData icon) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: colors.secondary, size: 22),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              color: colors.onSurface,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: colors.onSurfaceVariant,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _lastMatch(Map<String, dynamic>? match) => _card([
     const Text(
       'LA TUA ULTIMA PARTITA',
@@ -166,29 +250,83 @@ class _NextMatchState extends State<_NextMatch> {
     if (match == null)
       const Text('Non risultano ancora partite giocate con una tua presenza.')
     else ...[
-      Text('${match['torneo_nome'] ?? match['torneo'] ?? ''}'),
-      const SizedBox(height: 12),
       Text(
-        '${match['squadra_casa']}  ${match['gol_casa']} – ${match['gol_ospite']}  ${match['squadra_ospite']}',
-        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+        '${match['torneo_nome'] ?? match['torneo'] ?? ''}',
+        style: const TextStyle(fontWeight: FontWeight.w600),
       ),
-      if ('${match['decisa_rigori']}' == '1')
-        Text('Rigori ${match['rigori_casa']} – ${match['rigori_ospite']}'),
-      const SizedBox(height: 12),
+      const SizedBox(height: 16),
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          children: [
+            _lastTeam(match, home: true),
+            Divider(
+              height: 24,
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+            _lastTeam(match, home: false),
+            if ('${match['decisa_rigori']}' == '1') ...[
+              const SizedBox(height: 12),
+              Text(
+                'Rigori ${match['rigori_casa']} – ${match['rigori_ospite']}',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      const SizedBox(height: 14),
       _info(Icons.event_outlined, _schedule(match)),
-      const SizedBox(height: 12),
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          Chip(label: Text('${match['goal'] ?? 0} gol')),
-          if ((num.tryParse('${match['assist']}') ?? 0) > 0)
-            Chip(label: Text('${match['assist']} assist')),
-          if ((num.tryParse('${match['voto']}') ?? 0) > 0)
-            Chip(label: Text('Voto ${match['voto']}')),
-        ],
+      const SizedBox(height: 20),
+      const Text(
+        'La tua prestazione',
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
       ),
-      const SizedBox(height: 8),
+      const SizedBox(height: 12),
+      LayoutBuilder(
+        builder: (context, constraints) {
+          final vote = num.tryParse('${match['voto']}');
+          final stats = [
+            _performance(
+              'Gol',
+              '${match['goal'] ?? 0}',
+              Icons.sports_soccer_rounded,
+            ),
+            _performance(
+              'Voto',
+              vote != null && vote > 0
+                  ? vote.toStringAsFixed(1).replaceAll('.', ',')
+                  : '—',
+              Icons.star_rounded,
+            ),
+          ];
+          final columns = MediaQuery.textScalerOf(context).scale(16) > 24
+              ? 1
+              : 2;
+          return Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final stat in stats)
+                SizedBox(
+                  width: (constraints.maxWidth - 10 * (columns - 1)) / columns,
+                  child: stat,
+                ),
+            ],
+          );
+        },
+      ),
+      if ((num.tryParse('${match['assist']}') ?? 0) > 0) ...[
+        const SizedBox(height: 12),
+        _info(Icons.assistant_rounded, '${match['assist']} assist'),
+      ],
+      const SizedBox(height: 16),
       OutlinedButton.icon(
         onPressed: (int.tryParse('${match['id']}') ?? 0) <= 0
             ? null

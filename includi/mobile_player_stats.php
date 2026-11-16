@@ -25,7 +25,9 @@ function mobile_player_stats_query(array $query): array {
 
 function mobile_player_last_match_sql(): string {
     return "SELECT p.*, pg.goal, pg.assist, pg.voto,
-        COALESCE(t.nome, p.torneo) AS torneo_nome
+        COALESCE(t.nome, p.torneo) AS torneo_nome,
+        (SELECT s.logo FROM squadre s WHERE s.nome = p.squadra_casa AND s.torneo = p.torneo ORDER BY s.id LIMIT 1) AS logo_casa,
+        (SELECT s.logo FROM squadre s WHERE s.nome = p.squadra_ospite AND s.torneo = p.torneo ORDER BY s.id LIMIT 1) AS logo_ospite
         FROM partita_giocatore pg JOIN partite p ON p.id = pg.partita_id
         LEFT JOIN tornei t ON (t.filetorneo = p.torneo OR t.filetorneo = CONCAT(p.torneo, '.php') OR t.nome = p.torneo)
         WHERE pg.giocatore_id = ? AND pg.presenza = 1 AND p.giocata = 1

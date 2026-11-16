@@ -103,18 +103,28 @@ void main() {
         'goal': 2,
         'assist': 1,
         'voto': '7.5',
+        'logo_casa': '/img/last-home.png',
+        'logo_ospite': '/img/last-away.png',
       };
       final auth = DemoAuth(api);
       await auth.login();
       await show(tester, auth);
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.text('LA TUA ULTIMA PARTITA'), 150);
-      expect(find.text('Ultima Casa  3 – 2  Ultima Ospite'), findsOneWidget);
-      expect(find.text('2 gol'), findsOneWidget);
+      expect(find.text('Ultima Casa'), findsOneWidget);
+      expect(find.text('Ultima Ospite'), findsOneWidget);
+      expect(find.text('Gol'), findsOneWidget);
       expect(find.text('1 assist'), findsOneWidget);
-      expect(find.text('Voto 7.5'), findsOneWidget);
+      expect(find.text('Voto'), findsOneWidget);
+      expect(find.text('7,5'), findsOneWidget);
+      expect(
+        tester
+            .widgetList<SiteImage>(find.byType(SiteImage))
+            .map((image) => image.path),
+        containsAll(['/img/last-home.png', '/img/last-away.png']),
+      );
       await tester.scrollUntilVisible(
-        find.text('Vedi risultato e prestazione'),
+        find.text('Vedi risultato e prestazione').hitTestable(),
         100,
       );
       await tester.tap(find.text('Vedi risultato e prestazione'));
@@ -123,6 +133,55 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  for (final dark in [false, true]) {
+    testWidgets(
+      'Last match keeps crests and performance readable with large text dark=$dark',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(320, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final api = NextApi()..includeLast = true;
+        api.lastMatch = {
+          ...api.upcoming.first,
+          'squadra_casa': 'Squadra di casa con nome molto lungo',
+          'squadra_ospite': 'Squadra ospite con nome molto lungo',
+          'gol_casa': 0,
+          'gol_ospite': 0,
+          'goal': 0,
+          'voto': null,
+        };
+        api.upcoming = [];
+        final auth = DemoAuth(api);
+        await auth.login();
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: dark ? siteDarkTheme() : siteTheme(),
+            builder: (context, child) => AppAuthScope(
+              auth: auth,
+              child: MediaQuery(
+                data: MediaQuery.of(context)
+                    .copyWith(textScaler: const TextScaler.linear(2)),
+                child: child!,
+              ),
+            ),
+            home: Scaffold(
+              body: ListView(
+                children: [
+                  HomeNextMatch(auth: auth, section: 'calcio', revision: 0),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(find.text('Voto'), 150);
+        expect(find.text('—'), findsOneWidget);
+        expect(find.text('Assist'), findsNothing);
+        expect(find.byType(SiteImage), findsNWidgets(2));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets(
     'Linked player without past appearances gets an honest empty state',
@@ -321,6 +380,18 @@ void main() {
     final auth = DemoAuth(api);
     await auth.login();
     final key = GlobalKey();
+    if (const bool.fromEnvironment('CAPTURE_LAST_MATCH')) {
+      api.includeLast = true;
+      api.lastMatch = {
+        ...api.upcoming.first,
+        'giocata': 1,
+        'gol_casa': 3,
+        'gol_ospite': 2,
+        'goal': 2,
+        'voto': 7.5,
+        'assist': 1,
+      };
+    }
     await tester.pumpWidget(
       RepaintBoundary(
         key: key,
@@ -341,24 +412,40 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(
-      tester.getTopLeft(find.text('LA TUA PROSSIMA PARTITA')).dy,
-      lessThan(tester.getTopLeft(find.text('Classifica giocatori totale')).dy),
-    );
-    if (const bool.fromEnvironment('CAPTURE_HOME')) {
+    if (const bool.fromEnvironment('CAPTURE_LAST_MATCH')) {
+      await tester.scrollUntilVisible(
+        find.text('LA TUA ULTIMA PARTITA').hitTestable(),
+        150,
+      );
+      await tester.ensureVisible(find.text('LA TUA ULTIMA PARTITA'));
+      await tester.pumpAndSettle();
+    } else {
+      expect(
+        tester.getTopLeft(find.text('LA TUA PROSSIMA PARTITA')).dy,
+        lessThan(
+          tester.getTopLeft(find.text('Classifica giocatori totale')).dy,
+        ),
+      );
+    }
+    if (const bool.fromEnvironment('CAPTURE_HOME') ||
+        const bool.fromEnvironment('CAPTURE_LAST_MATCH')) {
       await tester.runAsync(() async {
         final boundary =
             key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
         final image = await boundary.toImage(pixelRatio: 2);
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
         await Directory('build/home-review').create(recursive: true);
-        final name = const bool.fromEnvironment('CAPTURE_HOME_DARK')
+        final name = const bool.fromEnvironment('CAPTURE_LAST_MATCH')
+            ? 'last-match'
+            : const bool.fromEnvironment('CAPTURE_HOME_DARK')
             ? 'next-match-dark'
             : 'next-match';
         await File('build/home-review/$name.png')
             .writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
       });
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
     }
     expect(tester.takeException(), isNull);
   });
