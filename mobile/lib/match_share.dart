@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'api.dart';
 import 'home_dashboard.dart' show SiteImage;
 import 'theme.dart';
+import 'sport_controls.dart';
 
 Uri sharedMatchUrl(TosApi api, String id, Map<String, dynamic> match) => api
     .baseUrl
@@ -111,47 +112,63 @@ class _MatchSharePageState extends State<MatchSharePage> {
     body: ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        SegmentedButton<bool>(
-          segments: const [
-            ButtonSegment(
-              value: false,
-              label: Text('Quadrato'),
-              icon: Icon(Icons.crop_square),
-            ),
-            ButtonSegment(
-              value: true,
-              label: Text('Storia'),
-              icon: Icon(Icons.crop_portrait),
-            ),
-          ],
-          selected: {_story},
-          onSelectionChanged: _busy
-              ? null
-              : (selection) => setState(() => _story = selection.single),
+        const Text(
+          'IL TUO MATCH, DA CONDIVIDERE',
+          style: TextStyle(
+            color: siteRed,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.4,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Porta il risultato con te',
+          style: Theme.of(context).textTheme.headlineSmall
+              ?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -.7),
+        ),
+        const SizedBox(height: 18),
+        AbsorbPointer(
+          absorbing: _busy,
+          child: SportSegments<bool>(
+            value: _story,
+            options: const {false: 'Quadrato', true: 'Storia'},
+            onChanged: (value) => setState(() => _story = value),
+          ),
         ),
         const SizedBox(height: 20),
-        AspectRatio(
-          aspectRatio: _story ? 9 / 16 : 1,
-          child: FittedBox(
-            fit: BoxFit.contain,
-            child: RepaintBoundary(
-              key: _artwork,
-              child: MediaQuery(
-                data: MediaQuery.of(context)
-                    .copyWith(textScaler: TextScaler.noScaling),
-                child: MatchShareArtwork(
-                  api: widget.api,
-                  match: widget.match,
-                  events: widget.events,
-                  story: _story,
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: AspectRatio(
+                aspectRatio: _story ? 9 / 16 : 1,
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: RepaintBoundary(
+                    key: _artwork,
+                    child: MediaQuery(
+                      data: MediaQuery.of(context)
+                          .copyWith(textScaler: TextScaler.noScaling),
+                      child: MatchShareArtwork(
+                        api: widget.api,
+                        match: widget.match,
+                        events: widget.events,
+                        story: _story,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
         ),
         const SizedBox(height: 16),
-        const Text(
-          'Condividi l’immagine su WhatsApp o nelle tue storie. Il collegamento alla partita viene allegato dove supportato.',
+        Text(
+          'Scegli il formato e condividi su WhatsApp o nelle tue storie.',
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
       ],
     ),
@@ -159,6 +176,12 @@ class _MatchSharePageState extends State<MatchSharePage> {
       minimum: const EdgeInsets.all(16),
       child: Builder(
         builder: (context) => FilledButton.icon(
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
           onPressed: _busy ? null : () => _share(context),
           icon: _busy
               ? const SizedBox.square(
@@ -173,7 +196,7 @@ class _MatchSharePageState extends State<MatchSharePage> {
   );
 }
 
-/// Fixed canvas dimensions produce 1080x1080 / 1080x1920 PNGs at 3x.
+/// Fixed dimensions keep the exported post independent of the device size.
 class MatchShareArtwork extends StatelessWidget {
   const MatchShareArtwork({
     super.key,
@@ -189,6 +212,7 @@ class MatchShareArtwork extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const muted = Color(0xff627386);
     final scorers = events
         .where(
           (e) =>
@@ -208,31 +232,34 @@ class MatchShareArtwork extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 52,
+            height: 52,
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: SiteImage(
               api: api,
               identityName: name,
               path: logo,
-              width: 46,
-              height: 46,
+              width: 38,
+              height: 38,
               preserveShape: true,
               fallback: Icons.shield_outlined,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             name,
-            maxLines: 2,
+            maxLines: story ? 3 : 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              height: 1.15,
+              color: Colors.white,
+              fontSize: 12,
+              height: 1.2,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -241,20 +268,14 @@ class MatchShareArtwork extends StatelessWidget {
     return DefaultTextStyle(
       style: const TextStyle(
         fontFamily: 'Roboto',
-        color: Colors.white,
+        color: siteBlue,
         fontSize: 12,
       ),
       child: Container(
         width: 360,
         height: story ? 640 : 360,
-        padding: EdgeInsets.fromLTRB(22, story ? 40 : 18, 22, story ? 36 : 16),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [siteBlue, Color(0xff254b69), siteBlue],
-          ),
-        ),
+        color: siteBackground,
+        padding: EdgeInsets.fromLTRB(20, story ? 40 : 16, 20, story ? 34 : 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -262,130 +283,174 @@ class MatchShareArtwork extends StatelessWidget {
               children: [
                 Image.asset(
                   'assets/logo_old_school.png',
-                  width: 30,
-                  height: 30,
+                  width: 32,
+                  height: 32,
                 ),
                 const SizedBox(width: 9),
                 const Expanded(
                   child: Text(
-                    'TORNEI OLD SCHOOL',
+                    'Tornei Old School',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 15,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 1,
+                      letterSpacing: -.4,
                     ),
                   ),
                 ),
-                Container(width: 24, height: 4, color: siteRed),
+                Container(width: 22, height: 3, color: siteRed),
               ],
             ),
-            SizedBox(height: story ? 28 : 10),
+            SizedBox(height: story ? 24 : 10),
+            const Text(
+              'RISULTATO FINALE',
+              style: TextStyle(
+                color: siteRed,
+                fontSize: 9,
+                letterSpacing: 1.6,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 4),
             Text(
               '${match['torneo_nome'] ?? match['torneo'] ?? 'Tornei Old School'}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13, color: Color(0xffbdd7e8)),
+              style: const TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -.6,
+              ),
             ),
             if (meta.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(
-                meta,
-                style: const TextStyle(fontSize: 10, color: Color(0xffbdd7e8)),
-              ),
+              Text(meta, style: const TextStyle(fontSize: 10, color: muted)),
             ],
-            SizedBox(height: story ? 24 : 12),
-            const Text(
-              'RISULTATO FINALE',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 2,
-                color: Color(0xffbdd7e8),
+            SizedBox(height: story ? 22 : 10),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: story ? 16 : 10,
               ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                team(
-                  '${match['squadra_casa'] ?? ''}',
-                  '${match['logo_casa'] ?? ''}',
-                ),
-                SizedBox(
-                  width: 94,
-                  height: 66,
-                  child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        '${match['gol_casa']} – ${match['gol_ospite']}',
-                        style: const TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w900,
+              decoration: BoxDecoration(
+                color: siteBlue,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      team(
+                        '${match['squadra_casa'] ?? ''}',
+                        '${match['logo_casa'] ?? ''}',
+                      ),
+                      SizedBox(
+                        width: 92,
+                        height: 52,
+                        child: Center(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '${match['gol_casa']} – ${match['gol_ospite']}',
+                              style: const TextStyle(
+                                fontSize: 36,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -1.5,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
+                      team(
+                        '${match['squadra_ospite'] ?? ''}',
+                        '${match['logo_ospite'] ?? ''}',
+                      ),
+                    ],
+                  ),
+                  if ('${match['decisa_rigori']}' == '1') ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Rigori ${match['rigori_casa']} – ${match['rigori_ospite']}',
+                      style: const TextStyle(
+                        color: Color(0xffcbd6e2),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
+                  ],
+                ],
+              ),
+            ),
+            if (scorers.isNotEmpty) ...[
+              SizedBox(height: story ? 22 : 8),
+              if (story) ...[
+                const Text(
+                  'Il tabellino',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -.5,
                   ),
                 ),
-                team(
-                  '${match['squadra_ospite'] ?? ''}',
-                  '${match['logo_ospite'] ?? ''}',
-                ),
+                const SizedBox(height: 10),
               ],
-            ),
-            if ('${match['decisa_rigori']}' == '1') ...[
-              const SizedBox(height: 6),
-              Text(
-                'Rigori ${match['rigori_casa']} – ${match['rigori_ospite']}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: story ? 12 : 7,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xffdbe3eb)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final event in scorers.take(limit))
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: story ? 3 : 1),
+                        child: Text(
+                          [
+                            '${event['nome'] ?? ''} ${event['cognome'] ?? ''}'
+                                .trim(),
+                            if ((int.tryParse('${event['goal']}') ?? 0) > 0)
+                              '${event['goal']} gol',
+                            if ((int.tryParse('${event['autogol']}') ?? 0) > 0)
+                              '${event['autogol']} autogol',
+                            if ('${event['squadra'] ?? ''}'.isNotEmpty)
+                              '${event['squadra']}',
+                          ].join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    if (scorers.length > limit)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '+ ${scorers.length - limit} nel dettaglio partita',
+                          style: const TextStyle(fontSize: 9, color: muted),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-            ],
-            SizedBox(height: story ? 24 : 8),
-            if (scorers.isNotEmpty) ...[
-              const Divider(color: Color(0xff5d7b92), height: 12),
-              for (final event in scorers.take(limit))
-                Padding(
-                  padding: const EdgeInsets.only(top: 3),
-                  child: Text(
-                    [
-                      '${event['nome'] ?? ''} ${event['cognome'] ?? ''}'.trim(),
-                      if ((int.tryParse('${event['goal']}') ?? 0) > 0)
-                        '${event['goal']} gol',
-                      if ((int.tryParse('${event['autogol']}') ?? 0) > 0)
-                        '${event['autogol']} autogol',
-                      if ('${event['squadra'] ?? ''}'.isNotEmpty)
-                        '${event['squadra']}',
-                    ].join(' · '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 10),
-                  ),
-                ),
-              if (scorers.length > limit)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    '+ ${scorers.length - limit} nel dettaglio partita',
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: Color(0xffbdd7e8),
-                    ),
-                  ),
-                ),
             ],
             const Spacer(),
             const Text(
-              'Risultati e classifiche su torneioldschool.it',
+              'torneioldschool.it',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
-                color: Color(0xffbdd7e8),
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: muted,
+                letterSpacing: .3,
               ),
             ),
           ],
