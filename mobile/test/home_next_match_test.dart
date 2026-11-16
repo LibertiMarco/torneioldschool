@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/api.dart';
 import 'package:tornei_old_school/demo.dart';
+import 'package:tornei_old_school/details.dart' show MatchPage;
 import 'package:tornei_old_school/tournament_page.dart';
 import 'package:tornei_old_school/access_gate.dart';
 import 'package:tornei_old_school/home_dashboard.dart';
@@ -18,6 +19,8 @@ class NextApi extends DemoApi {
   int calls = 0;
   bool fail = false, linked = true;
   Completer<dynamic>? pending;
+  bool includeLast = false;
+  Map<String, dynamic>? lastMatch;
   List<Map<String, dynamic>> upcoming = [
     {
       'id': 12,
@@ -51,6 +54,7 @@ class NextApi extends DemoApi {
       return {
         'player': linked ? {'id': 10} : null,
         'upcoming_matches': upcoming,
+        if (includeLast) 'last_match': lastMatch,
       };
     }
     return super.request(
@@ -81,6 +85,63 @@ void main() {
           ),
         ),
       );
+
+  testWidgets(
+    'Last played match shows personal performance and opens the report',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final api = NextApi()..includeLast = true;
+      api.lastMatch = {
+        ...api.upcoming.first,
+        'id': 7,
+        'giocata': 1,
+        'squadra_casa': 'Ultima Casa',
+        'squadra_ospite': 'Ultima Ospite',
+        'gol_casa': 3,
+        'gol_ospite': 2,
+        'goal': 2,
+        'assist': 1,
+        'voto': '7.5',
+      };
+      final auth = DemoAuth(api);
+      await auth.login();
+      await show(tester, auth);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('LA TUA ULTIMA PARTITA'), 150);
+      expect(find.text('Ultima Casa  3 – 2  Ultima Ospite'), findsOneWidget);
+      expect(find.text('2 gol'), findsOneWidget);
+      expect(find.text('1 assist'), findsOneWidget);
+      expect(find.text('Voto 7.5'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Vedi risultato e prestazione'),
+        100,
+      );
+      await tester.tap(find.text('Vedi risultato e prestazione'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<MatchPage>(find.byType(MatchPage)).id, '7');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Linked player without past appearances gets an honest empty state',
+    (tester) async {
+      final api = NextApi()
+        ..includeLast = true
+        ..upcoming = [];
+      final auth = DemoAuth(api);
+      await auth.login();
+      await show(tester, auth);
+      await tester.pumpAndSettle();
+      expect(find.text('LA TUA ULTIMA PARTITA'), findsOneWidget);
+      expect(
+        find.text('Non risultano ancora partite giocate con una tua presenza.'),
+        findsOneWidget,
+      );
+      expect(find.text('Vedi risultato e prestazione'), findsNothing);
+    },
+  );
 
   testWidgets(
     'Guest makes no personal request; login loads and logout clears it',

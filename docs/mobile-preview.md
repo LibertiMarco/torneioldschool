@@ -1,5 +1,16 @@
 # Anteprima dell'app con dati reali
 
+## Ultima partita personale
+
+La Home mostra, sotto la prossima partita, l'ultima partita giocata con una
+presenza registrata del giocatore collegato all'account. Include risultato,
+data, torneo, gol personali ed eventuali assist/voto, con apertura del referto.
+Senza presenze pregresse compare un messaggio esplicito; senza giocatore
+collegato rimane l'invito al collegamento. Il Profilo conserva lo storico
+completo. La risposta autenticata `view=upcoming` include ora `last_match`;
+la selezione avviene sul server, senza accettare un ID giocatore dal client.
+I test della query usano un database SQLite di fixture, non il database reale.
+
 ## Tabelloni delle coppe
 
 La vista è un albero orizzontale: tutti i turni sono affiancati e ogni incontro

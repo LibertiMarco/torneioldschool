@@ -9,6 +9,7 @@ import 'personal_match_order.dart';
 import 'tournament_page.dart';
 import 'venue_navigation.dart';
 import 'home_player_link_invite.dart';
+import 'details.dart' show MatchPage;
 
 /// Uses only the player resolved by the authenticated server, never a client ID.
 class HomeNextMatch extends StatelessWidget {
@@ -152,6 +153,59 @@ class _NextMatchState extends State<_NextMatch> {
     ],
   );
 
+  Widget _lastMatch(Map<String, dynamic>? match) => _card([
+    const Text(
+      'LA TUA ULTIMA PARTITA',
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.2,
+      ),
+    ),
+    const SizedBox(height: 12),
+    if (match == null)
+      const Text('Non risultano ancora partite giocate con una tua presenza.')
+    else ...[
+      Text('${match['torneo_nome'] ?? match['torneo'] ?? ''}'),
+      const SizedBox(height: 12),
+      Text(
+        '${match['squadra_casa']}  ${match['gol_casa']} – ${match['gol_ospite']}  ${match['squadra_ospite']}',
+        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+      ),
+      if ('${match['decisa_rigori']}' == '1')
+        Text('Rigori ${match['rigori_casa']} – ${match['rigori_ospite']}'),
+      const SizedBox(height: 12),
+      _info(Icons.event_outlined, _schedule(match)),
+      const SizedBox(height: 12),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          Chip(label: Text('${match['goal'] ?? 0} gol')),
+          if ((num.tryParse('${match['assist']}') ?? 0) > 0)
+            Chip(label: Text('${match['assist']} assist')),
+          if ((num.tryParse('${match['voto']}') ?? 0) > 0)
+            Chip(label: Text('Voto ${match['voto']}')),
+        ],
+      ),
+      const SizedBox(height: 8),
+      OutlinedButton.icon(
+        onPressed: (int.tryParse('${match['id']}') ?? 0) <= 0
+            ? null
+            : () => openPage(
+                context,
+                MatchPage(
+                  api: widget.auth.api,
+                  id: '${match['id']}',
+                  previewMatch: match,
+                ),
+              ),
+        icon: const Icon(Icons.arrow_forward_rounded),
+        label: const Text('Vedi risultato e prestazione'),
+      ),
+    ],
+  ]);
+
   Widget _venue(Map<String, dynamic> match, String field) {
     final uri = venueNavigationUri(match);
     if (uri == null) return _info(Icons.location_on_outlined, field);
@@ -231,22 +285,36 @@ class _NextMatchState extends State<_NextMatch> {
           onProfile: widget.onProfile,
         );
       }
+      Widget withLastMatch(Widget next) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          next,
+          if (data.containsKey('last_match'))
+            _lastMatch(
+              data['last_match'] == null
+                  ? null
+                  : Map<String, dynamic>.from(data['last_match'] as Map),
+            ),
+        ],
+      );
       final matches = orderPersonalMatches(
         TosApi.rows(data['upcoming_matches']),
       );
       if (matches.isEmpty) {
-        return _card([
-          const Text(
-            'IL TUO CALENDARIO',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
+        return withLastMatch(
+          _card([
+            const Text(
+              'IL TUO CALENDARIO',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          const Text('Non ci sono partite da disputare per le tue squadre.'),
-        ]);
+            const SizedBox(height: 12),
+            const Text('Non ci sono partite da disputare per le tue squadre.'),
+          ]),
+        );
       }
       final match = matches.first;
       final tournament = '${match['torneo_nome'] ?? match['torneo'] ?? ''}'
@@ -254,91 +322,93 @@ class _NextMatchState extends State<_NextMatch> {
       final field = '${match['campo'] ?? ''}'.trim();
       final tournamentFile = '${match['torneo_file'] ?? match['torneo'] ?? ''}'
           .trim();
-      return _card([
-        const Text(
-          'LA TUA PROSSIMA PARTITA',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
+      return withLastMatch(
+        _card([
+          const Text(
+            'LA TUA PROSSIMA PARTITA',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
           ),
-        ),
-        if (tournament.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(tournament),
-        ],
-        const SizedBox(height: 24),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = MediaQuery.textScalerOf(context).scale(16) > 24;
-            final home = _team(
-              '${match['squadra_casa']}',
-              '${match['logo_casa'] ?? ''}',
-              compact: compact,
-            );
-            final away = _team(
-              '${match['squadra_ospite']}',
-              '${match['logo_ospite'] ?? ''}',
-              compact: compact,
-            );
-            final vs = Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(
-                'VS',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  color: _foreground,
-                ),
-              ),
-            );
-            return compact
-                ? Column(children: [home, vs, away])
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: home),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16),
-                        child: vs,
-                      ),
-                      Expanded(child: away),
-                    ],
-                  );
-          },
-        ),
-        const SizedBox(height: 20),
-        const Divider(height: 1),
-        const SizedBox(height: 10),
-        _info(Icons.event_outlined, _schedule(match)),
-        if (field.isNotEmpty) ...[
-          const SizedBox(height: 2),
-          _venue(match, field),
-        ],
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: tournamentFile.isEmpty
-                ? null
-                : () => openPage(
-                    context,
-                    TournamentPage(
-                      api: widget.auth.api,
-                      tournament: {
-                        'id': match['torneo_id'],
-                        'nome': tournament,
-                        'filetorneo': tournamentFile,
-                        'sezione': widget.section,
-                      },
-                      initialTab: 'Calendario',
-                    ),
+          if (tournament.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(tournament),
+          ],
+          const SizedBox(height: 24),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = MediaQuery.textScalerOf(context).scale(16) > 24;
+              final home = _team(
+                '${match['squadra_casa']}',
+                '${match['logo_casa'] ?? ''}',
+                compact: compact,
+              );
+              final away = _team(
+                '${match['squadra_ospite']}',
+                '${match['logo_ospite'] ?? ''}',
+                compact: compact,
+              );
+              final vs = Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  'VS',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: _foreground,
                   ),
-            icon: const Icon(Icons.arrow_forward),
-            label: const Text('Vai al torneo'),
+                ),
+              );
+              return compact
+                  ? Column(children: [home, vs, away])
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: home),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: vs,
+                        ),
+                        Expanded(child: away),
+                      ],
+                    );
+            },
           ),
-        ),
-      ]);
+          const SizedBox(height: 20),
+          const Divider(height: 1),
+          const SizedBox(height: 10),
+          _info(Icons.event_outlined, _schedule(match)),
+          if (field.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            _venue(match, field),
+          ],
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: tournamentFile.isEmpty
+                  ? null
+                  : () => openPage(
+                      context,
+                      TournamentPage(
+                        api: widget.auth.api,
+                        tournament: {
+                          'id': match['torneo_id'],
+                          'nome': tournament,
+                          'filetorneo': tournamentFile,
+                          'sezione': widget.section,
+                        },
+                        initialTab: 'Calendario',
+                      ),
+                    ),
+              icon: const Icon(Icons.arrow_forward),
+              label: const Text('Vai al torneo'),
+            ),
+          ),
+        ]),
+      );
     },
   );
 }

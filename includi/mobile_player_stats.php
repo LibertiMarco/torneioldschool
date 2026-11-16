@@ -23,6 +23,16 @@ function mobile_player_stats_query(array $query): array {
     return [$section, $type, $page];
 }
 
+function mobile_player_last_match_sql(): string {
+    return "SELECT p.*, pg.goal, pg.assist, pg.voto,
+        COALESCE(t.nome, p.torneo) AS torneo_nome
+        FROM partita_giocatore pg JOIN partite p ON p.id = pg.partita_id
+        LEFT JOIN tornei t ON (t.filetorneo = p.torneo OR t.filetorneo = CONCAT(p.torneo, '.php') OR t.nome = p.torneo)
+        WHERE pg.giocatore_id = ? AND pg.presenza = 1 AND p.giocata = 1
+          AND COALESCE(t.sezione, 'calcio') = ?
+        ORDER BY p.data_partita IS NULL, p.data_partita DESC, p.ora_partita DESC, p.id DESC, pg.id DESC LIMIT 1";
+}
+
 function mobile_player_stats_handle(int $userId, array $query): array {
     if ($userId <= 0) throw new MobileAuthError('invalid_session', 'Accesso richiesto.', 401);
     [$section, $type, $page] = mobile_player_stats_query($query);
@@ -107,7 +117,16 @@ function mobile_player_stats_handle(int $userId, array $query): array {
         $stmt->execute();
         $upcoming = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
-        if ($upcomingOnly) return ['player' => $player, 'upcoming_matches' => $upcoming];
+        if ($upcomingOnly) {
+            // Resolve participation from the authenticated player, including
+            // former teams. Being on a current roster is not an appearance.
+            $stmt = $conn->prepare(mobile_player_last_match_sql());
+            $stmt->bind_param('is', $id, $section);
+            $stmt->execute();
+            $lastMatch = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            return ['player' => $player, 'upcoming_matches' => $upcoming, 'last_match' => $lastMatch ?: null];
+        }
         return ['player' => $player, 'teams' => $teams, 'upcoming_matches' => $upcoming, 'awards' => player_awards_fetch_all($conn, $player, $teams, $section)];
     } finally {
         $conn->close();
