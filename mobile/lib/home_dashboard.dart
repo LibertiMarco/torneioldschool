@@ -963,14 +963,14 @@ class _HallOfFamePanelState extends State<HallOfFamePanel> {
   Map<String, dynamic> latestTournament(List<Map<String, dynamic>> rows) {
     var latest = rows.first;
     for (final row in rows.skip(1)) {
-      final time = number(
+      final insertion = number(
         row,
-        'latest_sort_time',
-      ).compareTo(number(latest, 'latest_sort_time'));
-      if (time > 0 ||
-          (time == 0 &&
-              number(row, 'latest_record_id') >
-                  number(latest, 'latest_record_id'))) {
+        'latest_record_id',
+      ).compareTo(number(latest, 'latest_record_id'));
+      if (insertion > 0 ||
+          (insertion == 0 &&
+              number(row, 'latest_sort_time') >
+                  number(latest, 'latest_sort_time'))) {
         latest = row;
       }
     }

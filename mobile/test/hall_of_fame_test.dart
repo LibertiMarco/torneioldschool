@@ -14,7 +14,7 @@ class HallApi extends DemoApi {
         'competizione': 'Coppa storica',
         'sezione': section,
         'anno': 2024,
-        'latest_sort_time': 10,
+        'latest_sort_time': 20,
         'latest_record_id': 1,
         'premi': [
           {'premio': 'Vincitore', 'vincitrice': 'Squadra storica'},
@@ -83,35 +83,36 @@ void main() {
     expect(find.text('Coppa unica · 2025'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
   });
-  testWidgets('Selects the latest entry and switches awards at phone width', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(320, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    final api = HallApi();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              HallOfFamePanel(api: api, rows: await api.hallOfFame('calcio')),
-            ],
+  testWidgets(
+    'Selects the last inserted entry regardless of tournament date and allows switching',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final api = HallApi();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                HallOfFamePanel(api: api, rows: await api.hallOfFame('calcio')),
+              ],
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Squadra recente'), findsOneWidget);
-    expect(find.text('Squadra storica'), findsNothing);
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Coppa storica').last);
-    await tester.pumpAndSettle();
-    expect(find.text('Squadra storica'), findsOneWidget);
-    expect(find.text('Squadra recente'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Squadra recente'), findsOneWidget);
+      expect(find.text('Squadra storica'), findsNothing);
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Coppa storica').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Squadra storica'), findsOneWidget);
+      expect(find.text('Squadra recente'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('Both homepage and full hall offer tournaments for the section', (
     tester,
