@@ -4,6 +4,7 @@ import 'package:html/parser.dart' show parseFragment;
 
 import 'api.dart';
 import 'ads.dart';
+import 'news_interstitial.dart';
 import 'auth.dart';
 import 'home_next_match.dart';
 import 'home_favorites.dart';
@@ -462,13 +463,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   ],
                   _link(
                     'Tutte le notizie',
-                    () => openPage(
+                    () => NewsInterstitial.instance.open(
                       context,
-                      DataPage(
-                        title: 'Notizie',
-                        load: () => api.news(widget.section, all: true),
-                        render: (data) =>
-                            NewsFeed(api: api, rows: TosApi.rows(data)),
+                      () => openPage(
+                        context,
+                        DataPage(
+                          title: 'Notizie',
+                          load: () => api.news(widget.section, all: true),
+                          render: (data) =>
+                              NewsFeed(api: api, rows: TosApi.rows(data)),
+                        ),
                       ),
                     ),
                   ),
@@ -1265,7 +1269,10 @@ class NewsCard extends StatelessWidget {
     api: api,
     row: row,
     featured: featured,
-    open: () => openPage(context, ArticlePage(api: api, id: '${row['id']}')),
+    open: () => NewsInterstitial.instance.open(
+      context,
+      () => openPage(context, ArticlePage(api: api, id: '${row['id']}')),
+    ),
   );
 }
 
@@ -1297,7 +1304,10 @@ class ArticlePage extends StatelessWidget {
               height: 200,
             ),
           const SizedBox(height: 16),
-          ArticleContent(content: '${article['contenuto'] ?? ''}'),
+          ArticleContent(
+            content: '${article['contenuto'] ?? ''}',
+            ads: !api.preview,
+          ),
           ...TosApi.rows(article['media'])
               .where(
                 (m) => m['tipo'] == 'image' && m['url'] != article['cover'],

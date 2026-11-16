@@ -4,6 +4,7 @@ import 'package:html/parser.dart' show parseFragment;
 import 'package:markdown/markdown.dart' as markdown;
 
 import 'theme.dart';
+import 'ads.dart';
 
 dom.DocumentFragment articleFragment(String content) {
   final normalized = content
@@ -32,8 +33,9 @@ dom.DocumentFragment articleFragment(String content) {
 }
 
 class ArticleContent extends StatelessWidget {
-  const ArticleContent({super.key, required this.content});
+  const ArticleContent({super.key, required this.content, this.ads = false});
   final String content;
+  final bool ads;
 
   List<InlineSpan> inline(dom.Node node) {
     if (node is dom.Text) {
@@ -170,9 +172,25 @@ class ArticleContent extends StatelessWidget {
     }
 
     final fragment = articleFragment(content);
+    final children = <Widget>[];
+    var paragraphs = 0;
+    var placements = 0;
+    for (final node in fragment.nodes) {
+      children.addAll(blocks(node));
+      if (node is dom.Element &&
+          node.localName == 'p' &&
+          node.text.trim().length >= 80) {
+        paragraphs++;
+        if (ads && paragraphs % 4 == 0 && placements < 2) {
+          children.add(const AdaptiveAdBanner());
+          placements++;
+        }
+      }
+    }
+    if (ads && placements == 0) children.add(const AdaptiveAdBanner());
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: fragment.nodes.expand(blocks).toList(),
+      children: children,
     );
   }
 }

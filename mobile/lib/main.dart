@@ -1,3 +1,5 @@
+import 'news_interstitial.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -119,6 +121,7 @@ class _TosAppState extends State<TosApp> with WidgetsBindingObserver {
   }
 
   Future<void> _startServices() async {
+    NewsInterstitial.instance;
     await AdsController.instance.start();
     if (!mounted) return;
     await _startPush();
