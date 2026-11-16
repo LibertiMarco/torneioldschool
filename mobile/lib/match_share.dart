@@ -82,7 +82,7 @@ class _MatchSharePageState extends State<MatchSharePage> {
         await widget.sender!(bytes, text, origin);
       } else {
         final name =
-            'tos-risultato-${widget.id}-${_story ? 'storia' : 'quadrato'}.png';
+            'tos-risultato-${widget.id}-${_story ? 'storia' : 'completa'}.png';
         await SharePlus.instance.share(
           ShareParams(
             files: [XFile.fromData(bytes, mimeType: 'image/png', name: name)],
@@ -132,7 +132,7 @@ class _MatchSharePageState extends State<MatchSharePage> {
           absorbing: _busy,
           child: SportSegments<bool>(
             value: _story,
-            options: const {false: 'Quadrato', true: 'Storia'},
+            options: const {false: 'Completa', true: 'Storia'},
             onChanged: (value) => setState(() => _story = value),
           ),
         ),
@@ -142,21 +142,18 @@ class _MatchSharePageState extends State<MatchSharePage> {
             constraints: const BoxConstraints(maxWidth: 420),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: AspectRatio(
-                aspectRatio: _story ? 9 / 16 : 1,
-                child: FittedBox(
-                  fit: BoxFit.contain,
-                  child: RepaintBoundary(
-                    key: _artwork,
-                    child: MediaQuery(
-                      data: MediaQuery.of(context)
-                          .copyWith(textScaler: TextScaler.noScaling),
-                      child: MatchShareArtwork(
-                        api: widget.api,
-                        match: widget.match,
-                        events: widget.events,
-                        story: _story,
-                      ),
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: RepaintBoundary(
+                  key: _artwork,
+                  child: MediaQuery(
+                    data: MediaQuery.of(context)
+                        .copyWith(textScaler: TextScaler.noScaling),
+                    child: MatchShareArtwork(
+                      api: widget.api,
+                      match: widget.match,
+                      events: widget.events,
+                      story: _story,
                     ),
                   ),
                 ),
@@ -166,7 +163,7 @@ class _MatchSharePageState extends State<MatchSharePage> {
         ),
         const SizedBox(height: 16),
         Text(
-          'Scegli il formato e condividi su WhatsApp o nelle tue storie.',
+          'La grafica si allunga per includere tutte le presenze, i gol e i voti.',
           style: Theme.of(context).textTheme.bodyMedium
               ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
@@ -196,7 +193,13 @@ class _MatchSharePageState extends State<MatchSharePage> {
   );
 }
 
-/// Fixed poster sizes: 1080 square or 1080x1920 at the export's 3x scale.
+/// Complete report: height grows with the number and names of participants.
+List<Map<String, dynamic>> shareParticipants(
+  List<Map<String, dynamic>> events,
+) => events
+    .where((e) => e['presenza'] == true || '${e['presenza'] ?? 1}' == '1')
+    .toList();
+
 class MatchShareArtwork extends StatelessWidget {
   const MatchShareArtwork({
     super.key,
@@ -215,22 +218,22 @@ class MatchShareArtwork extends StatelessWidget {
     const muted = Color(0xff627386);
     final home = '${match['squadra_casa'] ?? ''}';
     final away = '${match['squadra_ospite'] ?? ''}';
-    String normalized(String name) => name.trim().toLowerCase();
-    final scorers = events
-        .where(
-          (e) =>
-              (int.tryParse('${e['goal']}') ?? 0) > 0 ||
-              (int.tryParse('${e['autogol']}') ?? 0) > 0,
-        )
-        .toList();
-    final homeScorers = scorers
+    String normalized(String value) => value.trim().toLowerCase();
+    final participants = shareParticipants(events);
+    final homePlayers = participants
         .where((e) => normalized('${e['squadra'] ?? ''}') == normalized(home))
         .toList();
-    final awayScorers = scorers
+    final awayPlayers = participants
         .where((e) => normalized('${e['squadra'] ?? ''}') == normalized(away))
         .toList();
-    final unmatched = scorers.length - homeScorers.length - awayScorers.length;
-    final limit = story ? 8 : 4;
+    final otherPlayers = participants
+        .where(
+          (e) => ![
+            normalized(home),
+            normalized(away),
+          ].contains(normalized('${e['squadra'] ?? ''}')),
+        )
+        .toList();
     final date = DateTime.tryParse('${match['data_partita']}');
     final meta = [
       if (date != null)
@@ -238,10 +241,6 @@ class MatchShareArtwork extends StatelessWidget {
       if ((int.tryParse('${match['giornata']}') ?? 0) > 0)
         'Giornata ${match['giornata']}',
     ].join(' · ');
-    final ownGoals = scorers.any(
-      (e) => (int.tryParse('${e['autogol']}') ?? 0) > 0,
-    );
-
     Widget team(String name, String logo) => Expanded(
       child: Column(
         children: [
@@ -280,70 +279,179 @@ class MatchShareArtwork extends StatelessWidget {
       ),
     );
 
-    Widget scorerColumn(
-      String label,
+    Widget playerTable(
+      String name,
+      String logo,
       List<Map<String, dynamic>> rows,
       Color accent,
-    ) => Expanded(
+    ) => Padding(
+      padding: const EdgeInsets.only(bottom: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(height: 3, color: accent),
-          const SizedBox(height: 5),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: story ? 13 : 11,
-              fontWeight: FontWeight.w800,
-              color: muted,
-            ),
+          Row(
+            children: [
+              SiteImage(
+                api: api,
+                path: logo,
+                identityName: name,
+                width: 32,
+                height: 32,
+                preserveShape: true,
+                fallback: Icons.shield_outlined,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  name,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: accent,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 5),
-          for (final e in rows.take(limit))
-            Padding(
-              padding: EdgeInsets.only(bottom: story ? 7 : 2),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${e['nome'] ?? ''} ${e['cognome'] ?? ''}'.trim(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: story ? 14 : 12,
-                        fontWeight: FontWeight.w700,
+          Text(
+            '${rows.length} presenti',
+            style: const TextStyle(fontSize: 11, color: muted),
+          ),
+          const SizedBox(height: 9),
+          Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xffdbe3eb)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  color: accent,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 9,
+                  ),
+                  child: const Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Giocatore',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
+                      SizedBox(
+                        width: 34,
+                        child: Text(
+                          'Gol',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 48,
+                        child: Text(
+                          'Voto',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                for (final entry in rows.asMap().entries)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    color: entry.key.isEven
+                        ? const Color(0xfff1f4f7)
+                        : Colors.white,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${entry.value['nome'] ?? ''} ${entry.value['cognome'] ?? ''}'
+                                    .trim(),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.25,
+                                ),
+                              ),
+                              if ((int.tryParse('${entry.value['autogol']}') ??
+                                      0) >
+                                  0)
+                                Text(
+                                  'Autogol: ${entry.value['autogol']}',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: muted,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          width: 34,
+                          child: Text(
+                            '${entry.value['goal'] ?? 0}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 48,
+                          child: Text(
+                            (num.tryParse('${entry.value['voto']}') ?? 0) > 0
+                                ? num.parse('${entry.value['voto']}')
+                                      .toStringAsFixed(1)
+                                      .replaceAll('.', ',')
+                                : '—',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              color: accent,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    [
-                      if ((int.tryParse('${e['goal']}') ?? 0) > 0)
-                        '${e['goal']}',
-                      if ((int.tryParse('${e['autogol']}') ?? 0) > 0)
-                        '${e['autogol']} AG',
-                    ].join(' + '),
-                    style: TextStyle(
-                      fontSize: story ? 13 : 11,
-                      fontWeight: FontWeight.w900,
-                      color: accent,
+                if (rows.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Text(
+                      'Nessuna presenza registrata.',
+                      style: TextStyle(fontSize: 12, color: muted),
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
-          if (rows.isEmpty)
-            Text(
-              '—',
-              style: TextStyle(fontSize: story ? 14 : 12, color: muted),
-            ),
-          if (rows.length > limit)
-            Text(
-              '+ ${rows.length - limit} nel referto',
-              style: const TextStyle(fontSize: 10, color: muted),
-            ),
+          ),
         ],
       ),
     );
@@ -356,10 +464,10 @@ class MatchShareArtwork extends StatelessWidget {
       ),
       child: SizedBox(
         width: 360,
-        height: story ? 640 : 360,
         child: ColoredBox(
           color: Colors.white,
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
@@ -481,67 +589,50 @@ class MatchShareArtwork extends StatelessWidget {
                   ],
                 ),
               ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(18, story ? 22 : 7, 18, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (story) ...[
-                        const Text(
-                          'Il tabellino',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -.6,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                      ],
-                      if (scorers.isEmpty)
-                        const Text(
-                          'Risultato ufficiale · Tornei Old School',
-                          style: TextStyle(fontSize: 13, color: muted),
-                        )
-                      else
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            scorerColumn(home, homeScorers, siteBlue),
-                            const SizedBox(width: 18),
-                            scorerColumn(away, awayScorers, siteRed),
-                          ],
-                        ),
-                      if (unmatched > 0)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 5),
-                          child: Text(
-                            '$unmatched marcatori nel referto completo',
-                            style: const TextStyle(fontSize: 10, color: muted),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
+
               Padding(
-                padding: EdgeInsets.fromLTRB(18, 4, 18, story ? 24 : 10),
-                child: Row(
+                padding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (ownGoals)
-                      const Text(
-                        'AG: autogol',
-                        style: TextStyle(fontSize: 9, color: muted),
-                      ),
-                    const Spacer(),
                     const Text(
-                      'torneioldschool.it',
+                      'Presenze e voti',
                       style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -.6,
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    playerTable(
+                      home,
+                      '${match['logo_casa'] ?? ''}',
+                      homePlayers,
+                      siteBlue,
+                    ),
+                    playerTable(
+                      away,
+                      '${match['logo_ospite'] ?? ''}',
+                      awayPlayers,
+                      siteRed,
+                    ),
+                    if (otherPlayers.isNotEmpty)
+                      playerTable('Altri presenti', '', otherPlayers, siteBlue),
+                    const Text(
+                      '— voto non assegnato',
+                      style: TextStyle(fontSize: 10, color: muted),
+                    ),
+                    const SizedBox(height: 16),
                   ],
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(18, 0, 18, 16),
+                child: Text(
+                  'torneioldschool.it',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
                 ),
               ),
             ],

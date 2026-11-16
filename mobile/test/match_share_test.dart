@@ -50,6 +50,8 @@ void main() {
       'nome': 'Giocatore',
       'cognome': 'Numero $i',
       'goal': i == 0 ? 0 : 1,
+      'presenza': 1,
+      'voto': i.isEven ? 7.5 : null,
       'autogol': i == 0 ? 1 : 0,
       'squadra': match[i.isEven ? 'squadra_casa' : 'squadra_ospite'],
     },
@@ -63,6 +65,18 @@ void main() {
     );
     expect(url.path, '/tornei/partita_eventi.php');
     expect(url.queryParameters, {'id': '12', 'torneo': 'Coppa Estate & Amici'});
+  });
+
+  test('share includes non-scorers and excludes explicitly absent players', () {
+    final rows = [
+      {'nome': 'Presente senza gol', 'presenza': 1, 'goal': 0},
+      {'nome': 'Assente', 'presenza': 0, 'goal': 2},
+      {'nome': 'Legacy row', 'goal': 0},
+    ];
+    expect(shareParticipants(rows).map((row) => row['nome']), [
+      'Presente senza gol',
+      'Legacy row',
+    ]);
   });
 
   for (final played in [false, true]) {
@@ -102,14 +116,16 @@ void main() {
           MaterialApp(
             theme: siteTheme(),
             home: Scaffold(
-              body: Center(
-                child: RepaintBoundary(
-                  key: key,
-                  child: MatchShareArtwork(
-                    api: TosApi(baseUrl: Uri.parse('https://example.test/')),
-                    match: match,
-                    events: events,
-                    story: story,
+              body: SingleChildScrollView(
+                child: Center(
+                  child: RepaintBoundary(
+                    key: key,
+                    child: MatchShareArtwork(
+                      api: TosApi(baseUrl: Uri.parse('https://example.test/')),
+                      match: match,
+                      events: events,
+                      story: story,
+                    ),
                   ),
                 ),
               ),
@@ -125,12 +141,15 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text('Rigori 4 – 3'), findsOneWidget);
-        expect(find.text('1 AG'), findsOneWidget);
-        expect(find.text('AG: autogol'), findsOneWidget);
-        expect(
-          find.text('+ 2 nel referto'),
-          story ? findsNothing : findsNWidgets(2),
-        );
+        expect(find.text('Autogol: 1'), findsOneWidget);
+        for (var i = 0; i < events.length; i++) {
+          expect(find.text('Giocatore Numero $i'), findsOneWidget);
+        }
+        expect(find.text('7,5'), findsNWidgets(6));
+        expect(find.text('—'), findsNWidgets(6));
+        expect(find.text('Gol'), findsNWidgets(2));
+        expect(find.text('Voto'), findsNWidgets(2));
+        expect(find.textContaining('nel referto'), findsNothing);
         expect(tester.takeException(), isNull);
         await tester.runAsync(() async {
           final boundary =
@@ -138,7 +157,11 @@ void main() {
           final image = await boundary.toImage(pixelRatio: 3);
           try {
             expect(image.width, 1080);
-            expect(image.height, story ? 1920 : 1080);
+            expect(
+              image.height,
+              greaterThan(1920),
+              reason: 'The full roster must grow beyond the old fixed canvas.',
+            );
             if (const bool.fromEnvironment('CAPTURE_SHARE')) {
               final data = await image.toByteData(
                 format: ui.ImageByteFormat.png,

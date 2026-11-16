@@ -8,11 +8,17 @@ servizio richieste distingue richieste pendenti e collegamenti gia esistenti.
 La scheda non invia richieste e non viene mostrata in caso di errore della
 verifica. Il pulsante apre la scheda Profilo esistente.
 
-Le partite giocate mostrano Condividi risultato, con anteprima quadrata o
-verticale. Le immagini PNG sono generate sul dispositivo a 1080x1080 o
-1080x1920, usando gli stemmi consentiti dalle impostazioni esistenti. Sono
-inclusi risultato, torneo, data/giornata quando disponibili, rigori e
-marcatori/autogol distinti. I dettagli eccedenti sono indicati con un conteggio.
+Le partite giocate e la scheda Ultima partita in Home mostrano Condividi
+risultato. Le immagini PNG sono generate sul dispositivo a 1080 pixel di
+larghezza e altezza variabile, usando gli stemmi consentiti dalle impostazioni
+esistenti. Le opzioni Completa e Storia mantengono tutte le presenze, senza
+tagli o conteggi sostitutivi. Sono inclusi risultato, torneo, data/giornata,
+rigori e tabelle per squadra con nome completo, gol e voto di tutti i presenti.
+I voti assenti/zero sono indicati con un trattino; gli autogol restano separati.
+Le righe senza squadra riconoscibile sono mostrate in Altri presenti.
+L'API eventi espone ora anche presenza, per escludere gli assenti espliciti.
+Gli eventi legacy privi del campo rimangono compatibili. L'anteprima scorre
+con l'immagine intera e l'esportazione mantiene tutte le righe.
 Il menu di sistema riceve immagine e link alla pagina esistente della partita;
 la destinazione puo gestire il testo separatamente. Non e stata modificata
 la richiesta di accesso della pagina web, ne configurati universal/app links.

@@ -24,6 +24,7 @@ $resolvedTeamExpr = partita_giocatore_resolved_team_expr('pg.giocatore_id', $tea
 
 $stmt2 = $conn->prepare("
     SELECT 
+        pg.presenza,
         pg.goal,
         pg.autogol,
         pg.assist,
