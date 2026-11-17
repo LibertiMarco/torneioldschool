@@ -67,6 +67,7 @@ if ($stmt && $stmt->execute()) {
     body.with-site-header>main{margin-top:110px}
     html,body{height:auto}body{display:block}
     body.is-embedded{display:flow-root;min-height:0}
+    .controls [hidden]{display:none!important}
     .hint{color:var(--muted);font-size:12px;line-height:1.5}.card>button{margin-bottom:8px}
     @media(max-width:760px){.workspace{grid-template-columns:1fr}.controls{position:static}.previews{grid-template-columns:1fr}}
     html,body{height:auto}body{display:block}
@@ -82,10 +83,18 @@ if ($stmt && $stmt->execute()) {
   <p class="intro">Crea una copertina Reel e una miniatura YouTube dalla stessa partita e foto dei capitani. Modifica ogni foto direttamente nell’anteprima con mouse o touch.</p>
   <div class="workspace">
     <section class="controls"><div class="fields">
+      <label class="wide">Tipo copertina<select id="coverMode"><option value="tournament">Partita di torneo</option><option value="friendly">Amichevole</option></select></label>
+      <div id="competitionFields" class="wide fields">
       <label class="wide">Torneo<select id="tournament"><option value="">Seleziona il torneo</option></select></label>
       <label>Fase<select id="phase" disabled><option value="">Seleziona la fase</option></select></label>
       <label>Giornata / turno<select id="round" disabled><option value="">Seleziona la giornata</option></select></label>
       <label class="wide">Partita<select id="match" disabled><option value="">Seleziona la partita</option></select></label>
+      </div>
+      <div id="friendlyFields" class="wide fields" hidden>
+        <label>Colore prima squadra<select id="friendlyHomeColor"></select></label>
+        <label>Colore seconda squadra<select id="friendlyAwayColor"></select></label>
+        <p class="wide hint">Nella grafica compaiono soltanto i pallini dei due colori e il punteggio, senza i nomi delle squadre.</p>
+      </div>
       <div id="scoreFields" class="wide fields" hidden>
         <label>Gol casa<input id="scoreHome" type="number" min="0" value="0"></label>
         <label>Gol ospite<input id="scoreAway" type="number" min="0" value="0"></label>
@@ -117,24 +126,58 @@ const coverColors=CoverColors.assign([
 ]);
 const upper=(v,f='')=>String(v||f).trim().toUpperCase();const safe=v=>String(v||'copertina').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
 function loadImage(src){return new Promise(resolve=>{if(!src)return resolve(null);const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src=src})}function fileImage(file){return new Promise((resolve,reject)=>{if(!file)return resolve(null);const r=new FileReader();r.onload=async()=>resolve(await loadImage(r.result));r.onerror=reject;r.readAsDataURL(file)})}
-function coverCompetitionTheme(){return window.MatchdayRenderer.tournamentTheme({nome:selected?.torneo_nome||selected?.torneo||matches.find(m=>String(m.torneo)===$('tournament').value)?.torneo_nome||$('tournament').value})}
+function coverCompetitionTheme(){if(isFriendly())return {competition:'friendly',primary:'#08243b',secondary:'#fff'};return window.MatchdayRenderer.tournamentTheme({nome:selected?.torneo_nome||selected?.torneo||matches.find(m=>String(m.torneo)===$('tournament').value)?.torneo_nome||$('tournament').value})}
 function coverAccent(){const palette=coverCompetitionTheme();return ['brasileirao','mcleague'].includes(palette.competition)?palette.secondary:'#fff'}
-function theme(){const match=selected||matches.find(m=>String(m.torneo)===$('tournament').value);return coverColors.get({id:match?.torneo_id,nome:match?.torneo_nome||match?.torneo,filetorneo:match?.torneo})||'#08243b'}
+function theme(){if(isFriendly())return '#08243b';const match=selected||matches.find(m=>String(m.torneo)===$('tournament').value);return coverColors.get({id:match?.torneo_id,nome:match?.torneo_nome||match?.torneo,filetorneo:match?.torneo})||'#08243b'}
 function contain(ctx,img,x,y,w,h){if(!img?.naturalWidth)return;const s=Math.min(w/img.naturalWidth,h/img.naturalHeight),dw=img.naturalWidth*s,dh=img.naturalHeight*s;ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh)}
 function cover(ctx,img,x,y,w,h,type){if(!img?.naturalWidth)return;const zoom=Number($('zoom').value)/100,s=Math.max(w/img.naturalWidth,h/img.naturalHeight)*zoom,px=Number($('posX').value)/100,py=Number($('posY').value)/100;const base={x:x-(img.naturalWidth*s-w)*px,y:y-(img.naturalHeight*s-h)*py,w:img.naturalWidth*s,h:img.naturalHeight*s};const box=PhotoTouchEditor.transform(type,img,{x,y,w,h},base);ctx.drawImage(img,box.x,box.y,box.w,box.h)}
 function fit(ctx,text,max,start,min=18,weight=800,font='Arial'){let size=start;do{ctx.font=`${weight} ${size}px ${font}`;if(ctx.measureText(text).width<=max)break;size-=2}while(size>min)}
 function score(side){const input=side==='home'?$('scoreHome'):$('scoreAway');return Math.max(0,Number.parseInt(input.value||'0',10)||0)}
-function tournamentImageBox(ctx,x,y,size){contain(ctx,tournamentLogo||brand,x,y,size,size)}
+function tournamentImageBox(ctx,x,y,size){if(!isFriendly())contain(ctx,tournamentLogo||brand,x,y,size,size)}
 function base(ctx,w,h){ctx.fillStyle=theme();ctx.fillRect(0,0,w,h)}
 function placeholder(ctx,x,y,w,h){ctx.fillStyle='#15283a';ctx.fillRect(x,y,w,h);ctx.fillStyle='#aebdca';ctx.textAlign='center';ctx.font='700 24px Arial';ctx.fillText('CARICA LA FOTO DEI CAPITANI',x+w/2,y+h/2)}
-function drawReel(){const c=$('reelCanvas'),ctx=c.getContext('2d');base(ctx,c.width,c.height);ctx.fillStyle=coverAccent();ctx.textAlign='center';ctx.font='900 108px Georgia';ctx.fillText('HIGHLIGHTS',540,185);contain(ctx,homeLogo||brand,55,245,245,280);contain(ctx,awayLogo||brand,780,245,245,280);ctx.font='400 174px Arial';ctx.strokeStyle=coverCompetitionTheme().competition==='mcleague'?coverAccent():'#fff';ctx.lineWidth=5;ctx.strokeText(`${score('home')} - ${score('away')}`,540,455);ctx.save();ctx.beginPath();ctx.roundRect(38,620,1004,845,48);ctx.clip();photo?cover(ctx,photo,38,620,1004,845,'reel'):placeholder(ctx,38,620,1004,845);ctx.restore();ctx.strokeStyle=coverAccent();ctx.lineWidth=7;ctx.beginPath();ctx.roundRect(38,620,1004,845,48);ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(310,1605,98,0,Math.PI*2);ctx.fill();contain(ctx,brand,222,1517,176,176);tournamentImageBox(ctx,675,1510,195);ctx.fillStyle=coverAccent();ctx.textAlign='center';ctx.font='900 82px Arial';fit(ctx,upper(selected?.torneo_categoria,'CALCIO'),900,82,44,900);ctx.fillText(upper(selected?.torneo_categoria,'CALCIO'),540,1850,900)}
-function drawYoutube(){const c=$('youtubeCanvas'),ctx=c.getContext('2d');base(ctx,c.width,c.height);ctx.save();ctx.beginPath();ctx.rect(690,0,590,720);ctx.clip();photo?cover(ctx,photo,690,0,590,720,'youtube'):placeholder(ctx,690,0,590,720);ctx.restore();ctx.fillStyle=coverAccent();ctx.textAlign='left';ctx.font='900 72px Georgia';ctx.fillText('HIGHLIGHTS',55,95);contain(ctx,homeLogo||brand,45,175,185,185);contain(ctx,awayLogo||brand,45,385,185,185);ctx.font='400 170px Arial';ctx.strokeStyle=coverCompetitionTheme().competition==='mcleague'?coverAccent():'#fff';ctx.lineWidth=5;ctx.strokeText(String(score('home')),275,335);ctx.strokeText(String(score('away')),275,555);tournamentImageBox(ctx,1145,10,125);ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(690,370,75,0,Math.PI*2);ctx.fill();contain(ctx,brand,624,304,132,132);ctx.fillStyle=coverAccent();ctx.textAlign='left';ctx.font='900 48px Arial';fit(ctx,upper(selected?.torneo_categoria,'CALCIO'),500,48,28,900);ctx.fillText(upper(selected?.torneo_categoria,'CALCIO'),70,675,500)}
+const friendlyColors=[['#151515','Nero','Neri'],['#ffffff','Bianco','Bianchi'],['#e53935','Rosso','Rossi'],['#1976d2','Blu','Blu'],['#40c4ff','Azzurro','Azzurri'],['#20a454','Verde','Verdi'],['#ffdc32','Giallo','Gialli'],['#ff8b24','Arancione','Arancioni'],['#8e44cc','Viola','Viola'],['#f48fb1','Rosa','Rosa'],['#929ba6','Grigio','Grigi']];
+function isFriendly(){return $('coverMode').value==='friendly'}
+function friendlyColor(side){const value=$(side==='home'?'friendlyHomeColor':'friendlyAwayColor').value;return friendlyColors.find(color=>color[0]===value)||friendlyColors[side==='home'?0:1]}
+function teamSymbol(ctx,side,x,y,w,h){
+  if(!isFriendly()){contain(ctx,side==='home'?homeLogo||brand:awayLogo||brand,x,y,w,h);return}
+  const radius=Math.min(w,h)*.37;ctx.save();ctx.beginPath();ctx.arc(x+w/2,y+h/2,radius,0,Math.PI*2);
+  ctx.fillStyle=friendlyColor(side)[0];ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=8;ctx.stroke();
+  ctx.beginPath();ctx.arc(x+w/2,y+h/2,radius-5,0,Math.PI*2);ctx.strokeStyle='#64748b';ctx.lineWidth=2;ctx.stroke();ctx.restore();
+}
+function updateFriendly(){
+  selected={squadra_casa:friendlyColor('home')[2],squadra_ospite:friendlyColor('away')[2],torneo_nome:'Amichevole',torneo_categoria:'AMICHEVOLE',giocata:0};
+  homeLogo=awayLogo=tournamentLogo=null;$('scoreFields').hidden=false;$('scoreHome').readOnly=$('scoreAway').readOnly=false;
+  $('scoreNote').textContent='Il risultato serve soltanto alla copertina e non viene salvato nelle partite.';
+  $('status').textContent='Amichevole: scegli i colori, inserisci il risultato e carica la foto.';draw();
+}
+function chooseCoverMode(){
+  $('competitionFields').hidden=isFriendly();$('friendlyFields').hidden=!isFriendly();
+  if(isFriendly()){$('scoreHome').value=$('scoreAway').value='0';updateFriendly()}else{chooseMatch().catch(()=>{$('status').textContent='Errore durante il caricamento della partita.'})}
+}
+for(const [id,initial] of [['friendlyHomeColor',0],['friendlyAwayColor',1]]){
+  for(const [value,label] of friendlyColors)$(id).append(new Option(label,value));
+  $(id).value=friendlyColors[initial][0];$(id).onchange=updateFriendly;
+}
+$('coverMode').onchange=chooseCoverMode;
+function drawReel(){const c=$('reelCanvas'),ctx=c.getContext('2d');base(ctx,c.width,c.height);ctx.fillStyle=coverAccent();ctx.textAlign='center';ctx.font='900 108px Georgia';ctx.fillText('HIGHLIGHTS',540,185);teamSymbol(ctx,'home',55,245,245,280);teamSymbol(ctx,'away',780,245,245,280);ctx.font='400 174px Arial';ctx.strokeStyle=coverCompetitionTheme().competition==='mcleague'?coverAccent():'#fff';ctx.lineWidth=5;ctx.strokeText(`${score('home')} - ${score('away')}`,540,455);ctx.save();ctx.beginPath();ctx.roundRect(38,620,1004,845,48);ctx.clip();photo?cover(ctx,photo,38,620,1004,845,'reel'):placeholder(ctx,38,620,1004,845);ctx.restore();ctx.strokeStyle=coverAccent();ctx.lineWidth=7;ctx.beginPath();ctx.roundRect(38,620,1004,845,48);ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(isFriendly()?540:310,1605,98,0,Math.PI*2);ctx.fill();contain(ctx,brand,isFriendly()?452:222,1517,176,176);tournamentImageBox(ctx,675,1510,195);ctx.fillStyle=coverAccent();ctx.textAlign='center';ctx.font='900 82px Arial';fit(ctx,upper(selected?.torneo_categoria,'CALCIO'),900,82,44,900);ctx.fillText(upper(selected?.torneo_categoria,'CALCIO'),540,1850,900)}
+function drawYoutube(){const c=$('youtubeCanvas'),ctx=c.getContext('2d');base(ctx,c.width,c.height);ctx.save();ctx.beginPath();ctx.rect(690,0,590,720);ctx.clip();photo?cover(ctx,photo,690,0,590,720,'youtube'):placeholder(ctx,690,0,590,720);ctx.restore();ctx.fillStyle=coverAccent();ctx.textAlign='left';ctx.font='900 72px Georgia';ctx.fillText('HIGHLIGHTS',55,95);teamSymbol(ctx,'home',45,175,185,185);teamSymbol(ctx,'away',45,385,185,185);ctx.font='400 170px Arial';ctx.strokeStyle=coverCompetitionTheme().competition==='mcleague'?coverAccent():'#fff';ctx.lineWidth=5;ctx.strokeText(String(score('home')),275,335);ctx.strokeText(String(score('away')),275,555);tournamentImageBox(ctx,1145,10,125);ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(690,370,75,0,Math.PI*2);ctx.fill();contain(ctx,brand,624,304,132,132);ctx.fillStyle=coverAccent();ctx.textAlign='left';ctx.font='900 48px Arial';fit(ctx,upper(selected?.torneo_categoria,'CALCIO'),500,48,28,900);ctx.fillText(upper(selected?.torneo_categoria,'CALCIO'),70,675,500)}
 function draw(){[$('zoomValue').textContent,$('xValue').textContent,$('yValue').textContent]=[$('zoom').value+'%',$('posX').value+'%',$('posY').value+'%'];PhotoTouchEditor.sync('reel',photo);PhotoTouchEditor.sync('youtube',photo);drawReel();drawYoutube()}
 function unique(items,key){const m=new Map;items.forEach(i=>{const k=key(i);if(k&&!m.has(k))m.set(k,i)});return[...m.entries()]}function options(el,label,items){el.innerHTML='';el.append(new Option(label,''));items.forEach(([v,l])=>el.append(new Option(l,v)));el.disabled=!items.length}
 function roundKey(m){return m.fase_round?`r:${m.fase_round}`:`g:${m.giornata??''}`}function roundLabel(m){return m.fase_round?String(m.fase_round).replaceAll('_',' '):(m.giornata?`GIORNATA ${m.giornata}`:'TURNO UNICO')}
 function clearSelected(){selected=null;$('scoreFields').hidden=true;homeLogo=null;awayLogo=null;tournamentLogo=null;draw()}
 function tournaments(){options($('tournament'),'Seleziona il torneo',unique(matches,m=>String(m.torneo)).map(([k,m])=>[k,m.torneo_nome||m.torneo]))}function chooseTournament(){const rows=matches.filter(m=>String(m.torneo)===$('tournament').value);options($('phase'),'Seleziona la fase',unique(rows,m=>String(m.fase)).map(([k])=>[k,k.replaceAll('_',' ')]));options($('round'),'Seleziona la giornata',[]);options($('match'),'Seleziona la partita',[]);clearSelected()}function choosePhase(){const rows=matches.filter(m=>String(m.torneo)===$('tournament').value&&String(m.fase)===$('phase').value);options($('round'),'Seleziona la giornata',unique(rows,roundKey).map(([k,m])=>[k,roundLabel(m)]));options($('match'),'Seleziona la partita',[]);clearSelected()}function chooseRound(){const rows=matches.filter(m=>String(m.torneo)===$('tournament').value&&String(m.fase)===$('phase').value&&roundKey(m)===$('round').value);options($('match'),'Seleziona la partita',rows.map(m=>[String(m.id),`${m.squadra_casa} ${m.gol_casa??0}-${m.gol_ospite??0} ${m.squadra_ospite}${Number(m.giocata)===1?'':' (non terminata)'}`]));clearSelected()}
-async function chooseMatch(){selected=matches.find(m=>String(m.id)===$('match').value)||null;[homeLogo,awayLogo,tournamentLogo]=await Promise.all([loadImage(selected?.logo_casa),loadImage(selected?.logo_ospite),loadImage(selected?.torneo_img)]);$('scoreFields').hidden=!selected;if(selected){const finished=Number(selected.giocata)===1;$('scoreHome').value=selected.gol_casa??0;$('scoreAway').value=selected.gol_ospite??0;$('scoreHome').readOnly=finished;$('scoreAway').readOnly=finished;$('scoreNote').textContent=finished?'Partita terminata: il risultato è bloccato.':'Partita non terminata: puoi modificare i gol solamente per questa copertina.'}$('status').textContent=selected?'Partita, scudetti e torneo caricati. Ora inserisci la foto dei capitani.':'';draw()}
+let matchLoadVersion=0;
+async function chooseMatch(){
+  const version=++matchLoadVersion;
+  const match=matches.find(m=>String(m.id)===$('match').value)||null;
+  const images=await Promise.all([loadImage(match?.logo_casa),loadImage(match?.logo_ospite),loadImage(match?.torneo_img)]);
+  if(version!==matchLoadVersion||isFriendly())return;
+  selected=match;[homeLogo,awayLogo,tournamentLogo]=images;
+  $('scoreFields').hidden=!selected;
+  if(selected){const finished=Number(selected.giocata)===1;$('scoreHome').value=selected.gol_casa??0;$('scoreAway').value=selected.gol_ospite??0;$('scoreHome').readOnly=finished;$('scoreAway').readOnly=finished;$('scoreNote').textContent=finished?'Partita terminata: il risultato è bloccato.':'Partita non terminata: puoi modificare i gol solamente per questa copertina.'}
+  $('status').textContent=selected?'Partita, scudetti e torneo caricati. Ora inserisci la foto dei capitani.':'';draw();
+}
 const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const canvasBlob=canvas=>new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Impossibile creare il PNG.')),'image/png'));
 async function download(id,name){const canvas=$(id),fallbackWindow=isIOS&&!navigator.share?window.open('about:blank','_blank'):null;try{const blob=await canvasBlob(canvas),file=new File([blob],name,{type:'image/png'});if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){await navigator.share({files:[file],title:name});$('status').textContent='Nel pannello Condividi scegli “Salva immagine”.';return}const url=URL.createObjectURL(blob);if(fallbackWindow){fallbackWindow.location.href=url;$('status').textContent='Tieni premuta l’immagine e scegli “Salva in Foto”.';setTimeout(()=>URL.revokeObjectURL(url),60000);return}const a=document.createElement('a');a.download=name;a.href=url;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}catch(error){if(fallbackWindow)fallbackWindow.close();if(error?.name!=='AbortError')$('status').textContent=error.message}}

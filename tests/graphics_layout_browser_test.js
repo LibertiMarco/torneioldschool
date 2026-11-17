@@ -13,6 +13,7 @@ const $=id=>document.getElementById(id),selected={torneo_categoria:'CALCIO'},hom
 let photo=null;
 const base=(ctx,w,h)=>{ctx.fillStyle='#08243b';ctx.fillRect(0,0,w,h)},coverAccent=()=> '#d5b65a',coverCompetitionTheme=()=>({}),score=()=>2;
 const upper=(v,f)=>v||f,fit=()=>{},contain=()=>{},tournamentImageBox=()=>{};
+const teamSymbol=()=>{};
 const placeholder=(ctx,x,y,w,h)=>{ctx.fillStyle='#ff00ff';ctx.fillRect(x,y,w,h)},cover=placeholder;
 ${youtube}
 $('run').onclick=async()=>{
