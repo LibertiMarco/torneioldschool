@@ -137,6 +137,24 @@
     }
     return result;
   }
+  function spareggioSeeds(matches, phase, count) {
+    const ties=new Map();
+    for(const game of matches.filter(m=>phaseKey(m.fase)==='SPAREGGIO')) {
+      const pair=[key(game.squadra_casa),key(game.squadra_ospite)].sort().join('|');
+      if(!ties.has(pair)) ties.set(pair,[]);
+      ties.get(pair).push(game);
+    }
+    const groups=[...ties.values()];
+    return Array.from({length:count},(_,i)=>{
+      const games=groups[i] || [], win=winner(games,''), game=games[0];
+      let name='',logo='';
+      if(win && game) {
+        name=phase==='GOLD' ? win.name : key(win.name)===key(game.squadra_casa) ? game.squadra_ospite : game.squadra_casa;
+        logo=game[key(name)===key(game.squadra_casa) ? 'logo_casa' : 'logo_ospite'] || '';
+      }
+      return {name,logo,label:`${phase==='GOLD' ? 'Vincente' : 'Perdente'} spareggio ${i+1}`};
+    });
+  }
   function legacySetup(teams, regular, info, order) {
     const layout=info.mobile_layout || {}, config={...info.config,...layout.config_overrides};
     const format=String(config.formato || config.formula_torneo || '').toLowerCase();
@@ -204,9 +222,14 @@
       const bronze=Math.min(total-gold-silver,Math.max(0,Number(fixed.BRONZO ?? config.qualificati_bronzo ?? layout.default_bronze ?? 0)));
       let start=1;setup.ranges=['GOLD','SILVER','BRONZO'].map((key,i)=>{const spots=Math.floor([gold,silver,bronze][i]/setup.tables.length);const range={key,start,spots};start+=spots;return range;});
     }
-    return {info,games:build(selectSeeds(setup.tables,setup.ranges,phase,format==='eliminazione'?total:0),matches,phase)};
+    const playIn=layout.spareggio===true || Number(config.spareggio_qualificati)>0;
+    const range=setup.ranges.find(r=>phaseKey(r.key)===phase);
+    const seeds=playIn && ['GOLD','SILVER'].includes(phase)
+      ? spareggioSeeds(matches,phase,range?.spots || Math.floor(Number(config.spareggio_qualificati || 16)/2))
+      : selectSeeds(setup.tables,setup.ranges,phase,format==='eliminazione'?total:0);
+    return {info,games:build(seeds,matches,phase)};
   }
-  const api={build,seedOrder,selectSeeds,roundKey,labels,loadProjection,winner};
+  const api={build,seedOrder,selectSeeds,spareggioSeeds,roundKey,labels,loadProjection,winner};
   if (typeof module !== 'undefined') module.exports=api;
   if (typeof window === 'undefined') return;
   window.TosCupBracket=api;
@@ -255,8 +278,13 @@
         ranges=[{key:'GOLD',start:1,spots:gold},{key:'SILVER',start:gold+1,spots:silver}];
       }
       const direct=typeof FORMATO_TORNEO!=='undefined' && FORMATO_TORNEO==='eliminazione';
-      const seeds=selectSeeds(tables,ranges,phase,direct ? (typeof TEAM_COUNT!=='undefined' ? TEAM_COUNT : teams.length) : 0);
-      paint(container,build(seeds,matches,phase),phase,slug);
+      const playIn=info.mobile_layout?.spareggio===true || Number(info.config?.spareggio_qualificati)>0
+        || (typeof USE_SPAREGGIO_SEEDING!=='undefined' && USE_SPAREGGIO_SEEDING);
+      const range=ranges.find(r=>phaseKey(r.key)===phase);
+      const seeds=playIn && ['GOLD','SILVER'].includes(phase)
+        ? spareggioSeeds(matches,phase,range?.spots || 8)
+        : selectSeeds(tables,ranges,phase,direct ? (typeof TEAM_COUNT!=='undefined' ? TEAM_COUNT : teams.length) : 0);
+      paint(container,build(seeds,matches,phase),phase,slug,playIn);
     } catch(error) {
       if (current!==visit) return;
       container.replaceChildren(); message.textContent='Impossibile caricare il tabellone. Riprova selezionando la coppa.'; container.append(message);
@@ -266,11 +294,13 @@
   function element(tag,className,text) {
     const node=document.createElement(tag); node.className=className; if (text!=null) node.textContent=text; return node;
   }
-  function paint(container,games,phase,slug) {
+  function paint(container,games,phase,slug,playIn=false) {
     container.replaceChildren(); container.classList.add('cup-projection');
     container.dataset.cup=phase;
     container.append(element('h3','',`Coppa ${phase==='BRONZO' ? 'Bronzo' : phase==='SILVER' ? 'Silver' : 'Gold'}`));
-    container.append(element('p','cup-note','Gli incontri da creare sono indicativi e seguono la classifica attuale. Gli incroci restano fissi fino alla finale.'));
+    container.append(element('p','cup-note',playIn
+      ? 'Le vincenti degli spareggi accedono alla Coppa Gold; le perdenti alla Coppa Silver. I posti in attesa di esito sono indicati nel tabellone.'
+      : 'Gli incontri da creare sono indicativi e seguono la classifica attuale. Gli incroci restano fissi fino alla finale.'));
     if (!games.length) { container.append(element('p','','Nessun posto previsto per questa coppa.')); return; }
     const nav=element('div','cup-rounds'); nav.setAttribute('aria-label','Turni della coppa');
     const hint=element('p','cup-scroll-hint','Scorri in orizzontale per seguire il tabellone.');

@@ -22,6 +22,12 @@ usano gli esiti degli spareggi, inclusi i rigori, invece delle qualificazioni
 dirette per posizione. Gli esiti non risolti rimangono segnaposto.
 Gli incontri già programmati hanno precedenza sulle proiezioni.
 
+Il renderer condiviso del sito `tornei/cup-bracket.js` usa lo stesso criterio:
+Gold e Silver mostrano rispettivamente «Vincente spareggio 1–8» e «Perdente
+spareggio 1–8», con quarti, semifinali e finale. I risultati degli spareggi
+sostituiscono i segnaposto. La lettura per proiezioni e la visualizzazione delle
+pagine usano entrambe questa selezione, senza assegnare posti per classifica.
+
 Nessuna partita viene creata e nessun risultato viene modificato da queste
 proiezioni. Per applicare le formule online occorre pubblicare il backend
 PHP insieme alla preview aggiornata; per l'app installata serve la nuova build.

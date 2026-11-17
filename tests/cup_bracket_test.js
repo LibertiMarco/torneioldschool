@@ -4,6 +4,15 @@ const {JSDOM}=require('jsdom');
 const bracket=require('../tornei/cup-bracket.js');
 const seeds=n=>Array.from({length:n},(_,i)=>({name:`Team ${i+1}`,label:`${i+1}ª`}));
 const game=(home,away,extra={})=>({id:1,fase:'GOLD',fase_round:'QUARTI',squadra_casa:home,squadra_ospite:away,gol_casa:2,gol_ospite:0,giocata:1,...extra});
+const emptyGold=bracket.spareggioSeeds([],'GOLD',8);
+const emptySilver=bracket.spareggioSeeds([],'SILVER',8);
+assert.equal(emptyGold[0].label,'Vincente spareggio 1');
+assert.equal(emptySilver[7].label,'Perdente spareggio 8');
+assert(emptyGold.every(seed=>seed.name===''));
+const playIn=[game('Team 1','Team 16',{fase:'SPAREGGIO',gol_casa:0,gol_ospite:2})];
+assert.equal(bracket.spareggioSeeds(playIn,'GOLD',8)[0].name,'Team 16');
+assert.equal(bracket.spareggioSeeds(playIn,'SILVER',8)[0].name,'Team 1');
+assert.equal(bracket.build(emptyGold,[],'GOLD').filter(m=>m.fase_round==='QUARTI').length,4);
 assert.deepEqual(bracket.seedOrder(8),[1,8,4,5,2,7,3,6]);
 for (const size of [2,4,8,16,32,64,128]) {
   const rows=bracket.build(seeds(size),[],'GOLD');
@@ -43,6 +52,14 @@ async function page(source,config,teams,info={}) {
 }
 (async()=>{
   const teams=Array.from({length:16},(_,i)=>({id:i+1,nome:`Team ${i+1}`,punti:16-i}));
+  const ligaConfig={formato:'campionato',totale_squadre:16,qualificati_gold:8,qualificati_silver:8,spareggio_qualificati:16};
+  const liga=await page('tornei/script-Formula1.js',ligaConfig,teams,{config:ligaConfig,mobile_layout:{group_mode:'template',spareggio:true}});
+  assert(liga.window.document.querySelector('.cup-game').textContent.includes('Vincente spareggio'));
+  assert(!liga.window.document.querySelector('.cup-game').textContent.includes('in classifica'));
+  await liga.window.caricaPlayoff('silver');
+  assert(liga.window.document.querySelector('.cup-game').textContent.includes('Perdente spareggio'));
+  assert.equal(liga.window.document.querySelectorAll('.cup-game').length,7);
+  liga.window.close();
   let dom=await page('tornei/script-TorneoTemplate.js',{totale_squadre:16,qualificati_gold:8,qualificati_silver:4,qualificati_bronzo:4},teams);
   const root=dom.window.document;
   assert.equal(root.querySelectorAll('.cup-game').length,7);
