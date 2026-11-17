@@ -237,23 +237,62 @@ class _PlayerLinkRequestPageState extends State<PlayerLinkRequestPage> {
                 ),
                 onTap: sending
                     ? null
-                    : () => setState(() {
-                        selected = player;
-                        confirmed = false;
-                      }),
+                    : () {
+                        FocusScope.of(context).unfocus();
+                        setState(() {
+                          selected = player;
+                          confirmed = false;
+                        });
+                      },
               ),
             ),
           if (selected != null) ...[
-            CheckboxListTile(
-              value: confirmed,
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-              title: Text('Confermo che ${name(selected!)} sono io'),
-              onChanged: sending
-                  ? null
-                  : (value) => setState(() => confirmed = value == true),
+            const SizedBox(height: 12),
+            Material(
+              color: confirmed
+                  ? colors.primaryContainer
+                  : colors.surfaceContainerLow,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: confirmed ? colors.primary : colors.outlineVariant,
+                  width: 2,
+                ),
+              ),
+              child: CheckboxListTile(
+                value: confirmed,
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                title: const Text(
+                  'Sono io questo giocatore',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(name(selected!)),
+                ),
+                onChanged: sending
+                    ? null
+                    : (value) => setState(() => confirmed = value == true),
+              ),
             ),
+            const SizedBox(height: 12),
             FilledButton.icon(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(56),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                textStyle: Theme.of(context).textTheme.labelLarge
+                    ?.copyWith(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
               onPressed: confirmed && !sending ? submit : null,
               icon: const Icon(Icons.send_outlined),
               label: Text(
@@ -261,6 +300,14 @@ class _PlayerLinkRequestPageState extends State<PlayerLinkRequestPage> {
               ),
             ),
           ],
+        ],
+        if (selected != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Il collegamento sarà attivo dopo la verifica dello staff.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: colors.onSurfaceVariant),
+          ),
         ],
         if (error != null)
           Padding(

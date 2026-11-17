@@ -23,33 +23,23 @@ class _NativeLoginPageState extends State<NativeLoginPage> {
   Timer? _captchaExpiry;
   bool _verifying = false;
 
-  Future<void> _verifyCaptcha() async {
+  void _verifyCaptcha() {
     if (_pending || _verifying) return;
     FocusScope.of(context).unfocus();
     setState(() => _verifying = true);
-    try {
-      final token = await Navigator.of(context).push<String>(
-        MaterialPageRoute(
-          builder: (_) => _CaptchaPage(
-            uri: widget.auth.api.uri('api/mobile/v1/captcha.php'),
-          ),
-        ),
-      );
-      if (!mounted || token == null || token.isEmpty) return;
-      _captchaExpiry?.cancel();
-      setState(() {
-        _captcha = token;
-        _message = null;
-      });
+  }
+
+  void _captchaCompleted(String token) {
+    _captchaExpiry?.cancel();
+    setState(() {
+      _captcha = token.isEmpty ? null : token;
+      _message = null;
+      if (token.isNotEmpty) _verifying = false;
+    });
+    if (token.isNotEmpty) {
       _captchaExpiry = Timer(const Duration(seconds: 110), () {
         if (mounted) setState(() => _captcha = null);
       });
-    } catch (_) {
-      if (mounted) {
-        setState(() => _message = 'Verifica non disponibile. Riprova.');
-      }
-    } finally {
-      if (mounted) setState(() => _verifying = false);
     }
   }
 
@@ -173,24 +163,6 @@ class _NativeLoginPageState extends State<NativeLoginPage> {
                     color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(height: 20),
-                  OutlinedButton.icon(
-                    onPressed: _pending || _verifying || _captcha != null
-                        ? null
-                        : _verifyCaptcha,
-                    icon: Icon(
-                      _captcha != null
-                          ? Icons.check_circle_outline
-                          : Icons.check_box_outline_blank,
-                    ),
-                    label: Text(
-                      _verifying
-                          ? 'Verifica in corso…'
-                          : _captcha != null
-                          ? 'Verifica completata'
-                          : 'Non sono un robot',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
                   Text(
                     _recovery
                         ? 'Ritrova il tuo account'
@@ -255,6 +227,30 @@ class _NativeLoginPageState extends State<NativeLoginPage> {
                     ),
                   ],
                   const SizedBox(height: 20),
+                  if (_verifying)
+                    _InlineCaptcha(
+                      uri: widget.auth.api.uri('api/mobile/v1/captcha.php'),
+                      onToken: _captchaCompleted,
+                    )
+                  else
+                    OutlinedButton.icon(
+                      onPressed: _pending || _verifying || _captcha != null
+                          ? null
+                          : _verifyCaptcha,
+                      icon: Icon(
+                        _captcha != null
+                            ? Icons.check_circle_outline
+                            : Icons.check_box_outline_blank,
+                      ),
+                      label: Text(
+                        _verifying
+                            ? 'Verifica in corso…'
+                            : _captcha != null
+                            ? 'Verifica completata'
+                            : 'Non sono un robot',
+                      ),
+                    ),
+                  const SizedBox(height: 12),
                   if (_message != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
@@ -280,6 +276,7 @@ class _NativeLoginPageState extends State<NativeLoginPage> {
                         ? null
                         : () => setState(() {
                             _recovery = !_recovery;
+                            _verifying = false;
                             _message = null;
                             _password.clear();
                             _captcha = null;
@@ -318,17 +315,19 @@ class _NativeLoginPageState extends State<NativeLoginPage> {
   );
 }
 
-/// Only the anti-abuse challenge is a web surface; credentials stay in Flutter.
-class _CaptchaPage extends StatefulWidget {
-  const _CaptchaPage({required this.uri});
+/// The security challenge stays inside the credential form.
+class _InlineCaptcha extends StatefulWidget {
+  const _InlineCaptcha({required this.uri, required this.onToken});
+  final ValueChanged<String> onToken;
   final Uri uri;
   @override
-  State<_CaptchaPage> createState() => _CaptchaPageState();
+  State<_InlineCaptcha> createState() => _InlineCaptchaState();
 }
 
-class _CaptchaPageState extends State<_CaptchaPage> {
+class _InlineCaptchaState extends State<_InlineCaptcha> {
   late final WebViewController _controller;
   String? error;
+  double _height = 166;
   @override
   void initState() {
     super.initState();
@@ -337,10 +336,25 @@ class _CaptchaPageState extends State<_CaptchaPage> {
       ..addJavaScriptChannel(
         'TosCaptcha',
         onMessageReceived: (message) {
-          if (mounted &&
-              message.message.isNotEmpty &&
-              message.message.length < 8192) {
-            Navigator.pop(context, message.message);
+          if (mounted && message.message.length < 8192) {
+            widget.onToken(message.message);
+          }
+        },
+      )
+      ..addJavaScriptChannel(
+        'TosCaptchaStatus',
+        onMessageReceived: (_) {
+          if (mounted) {
+            setState(() => error = 'Verifica non disponibile. Tocca Riprova.');
+          }
+        },
+      )
+      ..addJavaScriptChannel(
+        'TosCaptchaLayout',
+        onMessageReceived: (message) {
+          final height = double.tryParse(message.message);
+          if (mounted && height != null && height.isFinite) {
+            setState(() => _height = height.clamp(166, 700));
           }
         },
       )
@@ -349,6 +363,7 @@ class _CaptchaPageState extends State<_CaptchaPage> {
           onNavigationRequest: (request) {
             final uri = Uri.tryParse(request.url);
             return uri != null &&
+                    (uri.scheme == 'https' || uri.scheme == 'http') &&
                     (uri.origin == widget.uri.origin ||
                         (uri.scheme == 'https' &&
                             [
@@ -361,8 +376,7 @@ class _CaptchaPageState extends State<_CaptchaPage> {
           onWebResourceError: (failure) {
             if (mounted && failure.isForMainFrame == true) {
               setState(
-                () => error =
-                    'Verifica non disponibile. Torna indietro e riprova.',
+                () => error = 'Verifica non disponibile. Tocca Riprova.',
               );
             }
           },
@@ -372,15 +386,22 @@ class _CaptchaPageState extends State<_CaptchaPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Verifica di sicurezza')),
-    body: error == null
-        ? WebViewWidget(controller: _controller)
-        : Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(error!),
+  Widget build(BuildContext context) => error == null
+      ? SizedBox(
+          height: _height,
+          child: WebViewWidget(controller: _controller),
+        )
+      : Column(
+          children: [
+            Text(error!),
+            TextButton.icon(
+              onPressed: () {
+                setState(() => error = null);
+                _controller.loadRequest(widget.uri);
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Riprova verifica'),
             ),
-          ),
-  );
+          ],
+        );
 }
