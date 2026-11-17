@@ -18,7 +18,7 @@ function mobile_tournament_layout(string $slug): array
         }
     }
     if ($source === '') {
-        $source = (string)file_get_contents(__DIR__ . '/../tornei/script-TorneoTemplate.js');
+        $source = (string)file_get_contents(__DIR__ . '/../tornei/' . (strtolower($slug) === 'laliga' ? 'script-Spareggi.js' : 'script-TorneoTemplate.js'));
     }
     $constants = [];
     preg_match_all('/\bconst\s+([A-Z_0-9]+)\s*=\s*(\d+)\s*;/', $source, $found, PREG_SET_ORDER);

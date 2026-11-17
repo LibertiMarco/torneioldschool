@@ -209,7 +209,7 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $fase
 
     $nomePulito = cleanUtf8Text($nomeTorneo);
     if (strcasecmp($slug, 'LaLiga') === 0) {
-        file_put_contents($baseDir . '/LaLiga.php', "<?php\n\$torneoSlug = 'LaLiga';\n\$torneoName = 'La Liga';\nrequire __DIR__ . '/Formula1.php';\n");
+        file_put_contents($baseDir . '/LaLiga.php', "<?php\n\$torneoSlug = 'LaLiga';\n\$torneoName = 'La Liga';\nrequire __DIR__ . '/TorneoSpareggi.php';\n");
         return;
     }
     $formulaTorneo = strtolower(trim((string)($formulaTorneo ?? '')));

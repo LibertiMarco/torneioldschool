@@ -155,6 +155,18 @@
       return {name,logo,label:`${phase==='GOLD' ? 'Vincente' : 'Perdente'} spareggio ${i+1}`};
     });
   }
+  function spareggioPairs(teams,matches,spots=16) {
+    const groups=new Map();
+    for(const game of matches.filter(m=>phaseKey(m.fase)==='SPAREGGIO')) {
+      const pair=[key(game.squadra_casa),key(game.squadra_ospite)].sort().join('|');
+      if(!groups.has(pair)) groups.set(pair,[]);
+      groups.get(pair).push(game);
+    }
+    if(groups.size) return [...groups.values()].map(games=>({games,home:games[0].squadra_casa,away:games[0].squadra_ospite,projected:false}));
+    return Array.from({length:Math.floor(spots/2)},(_,i)=>({games:[],
+      home:teams[i]?.nome || `${i+1}ª in classifica`,
+      away:teams[spots-i-1]?.nome || `${spots-i}ª in classifica`,projected:true}));
+  }
   function legacySetup(teams, regular, info, order) {
     const layout=info.mobile_layout || {}, config={...info.config,...layout.config_overrides};
     const format=String(config.formato || config.formula_torneo || '').toLowerCase();
@@ -229,7 +241,7 @@
       : selectSeeds(setup.tables,setup.ranges,phase,format==='eliminazione'?total:0);
     return {info,games:build(seeds,matches,phase)};
   }
-  const api={build,seedOrder,selectSeeds,spareggioSeeds,roundKey,labels,loadProjection,winner};
+  const api={build,seedOrder,selectSeeds,spareggioSeeds,spareggioPairs,roundKey,labels,loadProjection,winner};
   if (typeof module !== 'undefined') module.exports=api;
   if (typeof window === 'undefined') return;
   window.TosCupBracket=api;
@@ -293,6 +305,55 @@
   }
   function element(tag,className,text) {
     const node=document.createElement(tag); node.className=className; if (text!=null) node.textContent=text; return node;
+  }
+  async function renderSpareggi() {
+    const container=document.getElementById('playoffContainer');
+    if(!container) return;
+    const current=++visit;
+    const slug=typeof TORNEO!=='undefined' ? TORNEO : window.__TEMPLATE_TORNEO_SLUG__;
+    stopLayout();container.replaceChildren(element('p','','Caricamento spareggi…'));
+    try {
+      const [teams,all,info]=await Promise.all([
+        json(`/api/leggiClassifica.php?torneo=${encodeURIComponent(slug)}`),
+        json(`/api/get_partite.php?torneo=${encodeURIComponent(slug)}`),
+        json(`/api/get_torneo_by_slug.php?slug=${encodeURIComponent(slug)}`)
+      ]);
+      if(current!==visit)return;
+      const matches=flatten(all),config={...info.config,...info.mobile_layout?.config_overrides};
+      const spots=Number(config.spareggio_qualificati || 16);
+      const pairs=spareggioPairs(standingsOrder(teams,matches),matches,spots);
+      container.replaceChildren(element('h3','bracket-titolo','Spareggi · Accesso a Gold e Silver'));
+      container.append(element('p','cup-note',pairs.some(p=>p.projected)
+        ? 'Accoppiamenti provvisori secondo la classifica attuale. Date e orari da programmare.'
+        : 'Accoppiamenti programmati. Le vincenti accedono alla Gold e le perdenti alla Silver.'));
+      const grid=element('div','spareggi-grid');
+      pairs.forEach((pair,index)=>{
+        const card=element('section','spareggio-card');
+        card.append(element('h4','',`Spareggio ${index+1}`));
+        card.append(element('strong','spareggio-team',pair.home),element('span','spareggio-vs','vs'),element('strong','spareggio-team',pair.away));
+        for(const game of pair.games) {
+          const played=Number(game.giocata)===1 && game.gol_casa!=null && game.gol_ospite!=null;
+          const score=played ? `${game.gol_casa} – ${game.gol_ospite}` : 'Da disputare';
+          card.append(element('p','',`${game.fase_leg || 'Gara unica'} · ${score}`));
+        }
+        const win=winner(pair.games,'');
+        const loss=win ? key(win.name)===key(pair.home) ? pair.away : pair.home : '';
+        card.append(element('p','spareggio-gold',win ? `${win.name} → Coppa Gold` : `Vincente spareggio ${index+1} → Coppa Gold`));
+        card.append(element('p','spareggio-silver',loss ? `${loss} → Coppa Silver` : `Perdente spareggio ${index+1} → Coppa Silver`));
+        grid.append(card);
+      });
+      container.append(grid);
+      const actions=element('div','spareggi-actions');
+      for(const cup of ['gold','silver']) {
+        const button=element('button','',`Apri Coppa ${cup==='gold'?'Gold':'Silver'}`);
+        button.type='button';button.onclick=()=>render(cup);actions.append(button);
+      }
+      container.append(actions);
+    } catch(error) {
+      if(current!==visit)return;
+      container.replaceChildren(element('p','','Impossibile caricare gli spareggi. Riprova selezionando la fase.'));
+      console.error('Spareggi:',error);
+    }
   }
   function paint(container,games,phase,slug,playIn=false) {
     container.replaceChildren(); container.classList.add('cup-projection');
@@ -416,6 +477,12 @@
   document.head.append(style);
   style.textContent+='.cup-team-name{display:flex;align-items:center;gap:8px}.cup-logo{object-fit:contain;flex-shrink:0}.cup-details{color:#1f3d5a;font-weight:650}';
   style.textContent+=`
+    .spareggi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:16px;margin:20px 0}
+    .spareggio-card{background:#fff;border:1px solid #ccd6e3;border-radius:20px;padding:20px;box-shadow:0 5px 18px #15293e0c;color:#15293e}
+    .spareggio-card h4{margin:0 0 16px;font-size:16px}.spareggio-team{display:block;font-size:18px;overflow-wrap:anywhere}
+    .spareggio-vs{display:block;margin:8px 0;color:#526176;font-size:12px}.spareggio-gold,.spareggio-silver{padding:10px;border-radius:10px;font-size:13px}
+    .spareggio-gold{background:#fff6d5;color:#684900}.spareggio-silver{background:#edf0f4;color:#3c4653}
+    .spareggi-actions{display:flex;flex-wrap:wrap;gap:12px}.spareggi-actions button{padding:12px 18px;border-radius:12px;border:1px solid #ccd6e3;background:#15293e;color:#fff;cursor:pointer}
     #playoffContainer.cup-projection{overflow:visible;min-width:0}
     .cup-scroll-hint{font-size:12px;color:#52677d;margin:0 0 12px}
     .cup-scroll{width:100%;overflow:auto;padding:4px 0 14px;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#8ba1b6 #edf1f6}
@@ -454,4 +521,5 @@
   `;
   // Deferred script runs after the page script, before its DOMContentLoaded listeners.
   window.caricaPlayoff=render;
+  window.caricaSpareggio=renderSpareggi;
 })();

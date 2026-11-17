@@ -12,7 +12,9 @@ scrivere dati durante la consultazione. Il salvataggio staff del torneo
 conserva la formula corretta. Le regole della fase 2 vengono aggiornate,
 preservando durata, premi e calendario nelle altre sezioni.
 
-La pagina La Liga riutilizza la pagina con spareggi di Formula 1. Anche
+La pagina La Liga usa il template dedicato `tornei/TorneoSpareggi.php`,
+con lo script `tornei/script-Spareggi.js`. Le otto schede mostrano gli incroci,
+i percorsi verso Gold/Silver e gli esiti quando disponibili. Anche
 la rigenerazione staff mantiene questo collegamento e la selezione della
 fase SPAREGGIO è disponibile nella gestione partite per entrambi i tornei.
 
