@@ -1,5 +1,17 @@
 # Provare l'app su iPhone da Windows
 
+## Aggiornamento del 17 novembre 2026
+
+La versione locale è `0.1.1+19`. Il workflow `ios-testflight` imposta il numero
+build a `PROJECT_BUILD_NUMBER + 19`, usando il contatore di progetto Codemagic
+per evitare di riutilizzare lo stesso numero nei successivi caricamenti.
+Non azzerare il contatore del progetto. Il numero effettivo della IPA sarà
+quindi superiore a quello del pubspec.
+
+Il messaggio di caricamento «attribute with a value that has already been used»
+è compatibile con una build duplicata; l'estratto disponibile non identifica
+l'attributo, quindi la conferma richiede il log completo di App Store Connect.
+
 ## Aggiornamento AdMob del 21 ottobre 2026
 
 Il workflow `ios-testflight` compila la versione **0.1.1, build 13**, con

@@ -742,6 +742,9 @@ class _StaffStatCounterState extends State<StaffStatCounter> {
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                     keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _focus.unfocus(),
+                    onTapOutside: (_) => _focus.unfocus(),
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: const InputDecoration(
                       isDense: true,

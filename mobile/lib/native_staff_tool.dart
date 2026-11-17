@@ -767,6 +767,12 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
           actions: [
             if (_allowed)
               IconButton(
+                tooltip: 'Chiudi tastiera',
+                icon: const Icon(Icons.keyboard_hide_outlined),
+                onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
+              ),
+            if (_allowed)
+              IconButton(
                 tooltip: 'Ricarica',
                 style: IconButton.styleFrom(
                   backgroundColor: const Color(0xff29445d),
@@ -859,6 +865,8 @@ class _NativeStaffToolState extends State<NativeStaffTool> {
                           : _blocks.isEmpty && _loading
                           ? const Center(child: CircularProgressIndicator())
                           : SingleChildScrollView(
+                              keyboardDismissBehavior:
+                                  ScrollViewKeyboardDismissBehavior.onDrag,
                               key: ValueKey('$_document:$_modal'),
                               padding: const EdgeInsets.fromLTRB(
                                 16,
@@ -1535,6 +1543,11 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
       focusNode: _focus,
       enabled: !disabled,
       readOnly: date,
+      onTapOutside: (_) => _focus.unfocus(),
+      textInputAction: type == 'textarea'
+          ? TextInputAction.newline
+          : TextInputAction.done,
+      onSubmitted: (_) => _focus.unfocus(),
       obscureText: type == 'password',
       maxLines: type == 'textarea' ? 5 : 1,
       textAlign: f['score'] == true ? TextAlign.center : TextAlign.start,
@@ -1545,7 +1558,9 @@ class _StaffNativeFieldState extends State<StaffNativeField> {
               color: Theme.of(context).colorScheme.onSurface,
             )
           : null,
-      keyboardType: type == 'number'
+      keyboardType: type == 'textarea'
+          ? TextInputType.multiline
+          : type == 'number'
           ? const TextInputType.numberWithOptions(decimal: true, signed: true)
           : type == 'email'
           ? TextInputType.emailAddress

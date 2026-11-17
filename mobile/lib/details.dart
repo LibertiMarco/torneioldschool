@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'ads.dart';
 import 'records_page.dart';
 import 'sport_controls.dart';
 import 'match_report_logic.dart';
@@ -92,30 +93,86 @@ class PlayerPage extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Giocatore')),
     body: ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       children: [
-        if (api != null)
-          Center(
-            child: SiteImage(
-              api: api!,
-              path: '${player['foto'] ?? ''}',
-              width: 80,
-              height: 80,
-              fallback: Icons.person_outline,
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).colorScheme.primaryContainer,
+                Theme.of(context).colorScheme.surfaceContainerLow,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          )
-        else
-          const Icon(Icons.person_outline, size: 80),
-        const SizedBox(height: 24),
-        Text(
-          '${player['nome']} ${player['cognome']}',
-          style: Theme.of(context).textTheme.headlineSmall,
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Column(
+            children: [
+              if (api != null)
+                Center(
+                  child: SiteImage(
+                    api: api!,
+                    path: '${player['foto'] ?? ''}',
+                    width: 96,
+                    height: 96,
+                    fallback: Icons.person_outline,
+                  ),
+                )
+              else
+                const Icon(Icons.person_outline, size: 80),
+              const SizedBox(height: 24),
+              Text(
+                '${player['nome'] ?? ''} ${player['cognome'] ?? ''}'.trim(),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              if ('${player['squadra'] ?? ''}'.trim().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('${player['squadra']}', textAlign: TextAlign.center),
+              ],
+              if ('${player['ruolo_squadra'] ?? player['ruolo'] ?? ''}'
+                  .trim()
+                  .isNotEmpty)
+                Chip(
+                  label: Text('${player['ruolo_squadra'] ?? player['ruolo']}'),
+                ),
+            ],
+          ),
         ),
-        Text('${player['ruolo_squadra'] ?? player['ruolo'] ?? ''}'),
         const SizedBox(height: 24),
+        Text('Statistiche', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 12),
+        Card.filled(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.sports_soccer,
+                  size: 32,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    'Gol',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                Text(
+                  '${player['reti'] ?? player['gol'] ?? 0}',
+                  style: Theme.of(context).textTheme.headlineMedium
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+          ),
+        ),
         PlayerEventMarks(
           stats: {
-            'goal': player['reti'] ?? player['gol'] ?? 0,
             'cartellino_giallo': player['gialli'] ?? 0,
             'cartellino_rosso': player['rossi'] ?? 0,
           },
@@ -626,6 +683,7 @@ class _MatchPageState extends State<MatchPage> {
             ),
           ),
           MatchLinks(match: match),
+          if (!api.preview) const AdaptiveAdBanner(),
           if (played)
             Padding(
               padding: EdgeInsets.only(top: 20, bottom: 8),

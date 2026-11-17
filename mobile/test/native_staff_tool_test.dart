@@ -545,6 +545,24 @@ void main() {
           of: goalCounter,
           matching: find.byTooltip('Aumenta Gol'),
         );
+        final goalInput = find.descendant(
+          of: goalCounter,
+          matching: find.byType(TextField),
+        );
+        await tester.ensureVisible(goalInput);
+        await tester.tap(goalInput);
+        await tester.pump();
+        expect(tester.widget<TextField>(goalInput).focusNode!.hasFocus, isTrue);
+        await tester.tap(find.byTooltip('Chiudi tastiera'));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<TextField>(goalInput).focusNode!.hasFocus,
+          isFalse,
+        );
+        expect(
+          find.text('Salva tutta la distinta').hitTestable(),
+          findsOneWidget,
+        );
         await tester.ensureVisible(increment);
         await tester.tap(increment);
         await tester.pump();
