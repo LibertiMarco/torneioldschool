@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tornei_old_school/api.dart';
 import 'package:tornei_old_school/admin.dart';
 import 'package:tornei_old_school/demo.dart';
+import 'package:tornei_old_school/details.dart' show PlayerPage;
 import 'package:tornei_old_school/main.dart';
 
 void main() {
@@ -33,6 +34,20 @@ void main() {
     await tester.ensureVisible(find.text('Luca Rossi'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Luca Rossi'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlayerPage), findsOneWidget);
+    // The redesigned player header pushes statistics below the first viewport.
+    // Exercise the scroll, rather than relying on eagerly built list children.
+    await tester.scrollUntilVisible(
+      find.text('Media voti'),
+      150,
+      scrollable: find
+          .descendant(
+            of: find.byType(PlayerPage),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.pumpAndSettle();
     expect(find.text('Media voti'), findsOneWidget);
     await tester.pageBack();
