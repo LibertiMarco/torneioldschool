@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includi/require_login.php';
 require_once __DIR__ . '/../includi/tournament_rules_render.php';
+require_once __DIR__ . '/../includi/tournament_fixed_formulas.php';
 
 // Template base per creare un nuovo torneo calcio:
 // 1) Duplica questo file e rinominalo (es. NuovoTorneo.php)
@@ -59,6 +60,7 @@ try {
     // ignora eventuali errori di lettura config
 }
 
+$torneoConfig = tournament_apply_fixed_formula($torneoConfig, $torneoSlug);
 if ($torneoSection !== content_current_section()) {
     $targetPath = '/tornei/' . basename((string)($_SERVER['SCRIPT_NAME'] ?? ($torneoSlug . '.php')));
     header('Location: ' . content_url_for_section($torneoSection, $targetPath), true, 301);

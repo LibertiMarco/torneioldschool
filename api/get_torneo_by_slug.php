@@ -47,7 +47,7 @@ if ($row = $result->fetch_assoc()) {
         'img' => $row['img'],
         'categoria' => $row['categoria'],
         'sezione' => $row['sezione'] ?? 'calcio',
-        'config' => $config,
+        'config' => tournament_apply_fixed_formula($config, $slug),
         'mobile_layout' => mobile_tournament_layout($slug)
     ]);
 } else {

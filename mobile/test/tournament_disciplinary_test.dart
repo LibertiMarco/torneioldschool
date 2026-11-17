@@ -38,7 +38,8 @@ class BrasilApi extends DemoApi {
       'config_overrides': {
         'totale_squadre': 22,
         'qualificati_gold': 16,
-        'qualificati_silver': 6,
+        'qualificati_silver': 4,
+        'qualificati_bronzo': 2,
       },
     },
   };
@@ -158,11 +159,12 @@ void main() {
     await tester.pumpWidget(tournament(BrasilApi(), slug: 'Brasilerao'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('6 posti · Coppa Silver'),
+      find.text('4 posti · Coppa Silver'),
       150,
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('16 posti · Coppa Gold'), findsOneWidget);
+    expect(find.text('2 posti · Coppa Bronzo'), findsOneWidget);
     await tester.ensureVisible(find.text('Regular season'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Regular season'));

@@ -31,6 +31,61 @@ Map<String, dynamic> game(
 };
 void main() {
   test(
+    'La Liga play-ins pair 1-16 through 8-9 and feed winners and losers',
+    () {
+      final teams = List.generate(
+        16,
+        (i) => <String, dynamic>{'nome': 'Team ${i + 1}', 'punti': 100 - i},
+      );
+      final info = <String, dynamic>{
+        'config': {
+          'totale_squadre': 16,
+          'qualificati_gold': 8,
+          'qualificati_silver': 8,
+        },
+        'mobile_layout': {'spareggio': true, 'spareggio_default': 16},
+      };
+      final data = TournamentData(info, teams, []);
+      final fixtures = spareggioFixtures(data);
+      expect(fixtures.length, 8);
+      expect(fixtures.first['squadra_casa'], 'Team 1');
+      expect(fixtures.first['squadra_ospite'], 'Team 16');
+      expect(fixtures.last['squadra_casa'], 'Team 8');
+      expect(fixtures.last['squadra_ospite'], 'Team 9');
+      expect(cupSeeds(data, 'GOLD').every((s) => s['name'] == ''), isTrue);
+      expect(cupSeeds(data, 'SILVER').first['label'], 'Perdente spareggio 1');
+      expect(data.cupForPosition(16), 'SPAREGGIO');
+      final actual = [
+        {
+          ...fixtures.first,
+          'id': 99,
+          'giocata': 1,
+          'gol_casa': 0,
+          'gol_ospite': 2,
+        },
+      ];
+      final played = TournamentData(info, teams, actual);
+      expect(cupSeeds(played, 'GOLD').first['name'], 'Team 16');
+      expect(cupSeeds(played, 'SILVER').first['name'], 'Team 1');
+      expect(spareggioFixtures(played), actual);
+      final tied = TournamentData(info, teams, [
+        {...actual.first, 'gol_casa': 2},
+      ]);
+      expect(cupSeeds(tied, 'GOLD').first['name'], '');
+      final penalties = TournamentData(info, teams, [
+        {
+          ...actual.first,
+          'gol_casa': 2,
+          'decisa_rigori': 1,
+          'rigori_casa': 4,
+          'rigori_ospite': 3,
+        },
+      ]);
+      expect(cupSeeds(penalties, 'GOLD').first['name'], 'Team 1');
+      expect(cupSeeds(penalties, 'SILVER').first['name'], 'Team 16');
+    },
+  );
+  test(
     'Single-leg ties use regular-season position throughout the bracket',
     () {
       final ranked = seeds(8);

@@ -11,8 +11,8 @@ header('Expires: 0');
 // 3) Duplica anche script-Formula1.js rinominandolo in script-NuovoTorneo.js
 // 4) Nel nuovo JS sostituisci TORNEO con lo stesso slug usato nel DB/API
 // 5) (Opzionale) Aggiorna assetVersion per forzare la cache
-$torneoSlug = 'Formula1';
-$torneoName = 'Formula 1';
+$torneoSlug = $torneoSlug ?? 'Formula1';
+$torneoName = $torneoName ?? 'Formula 1';
 $assetVersion = '20260603a';
 
 require_once __DIR__ . '/../includi/db.php';
@@ -39,6 +39,9 @@ try {
 } catch (Throwable $e) {
     // ignora eventuali errori di lettura config
 }
+
+require_once __DIR__ . '/../includi/tournament_fixed_formulas.php';
+$torneoConfig = tournament_apply_fixed_formula($torneoConfig, $torneoSlug);
 
 function buildFormula1SpareggioPairingsText(int $spots): string
 {

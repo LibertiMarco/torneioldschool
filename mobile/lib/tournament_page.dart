@@ -366,6 +366,12 @@ class _TournamentPageState extends State<TournamentPage> {
                         .toList(),
                   ),
                   const SizedBox(height: 12),
+                  if (result.spareggioPlaces >= 2)
+                    Text(
+                      'Tutte le ${result.spareggioPlaces} squadre disputano lo spareggio: '
+                      '${List.generate(result.spareggioPlaces ~/ 2, (i) => '${i + 1} vs ${result.spareggioPlaces - i}').join(', ')}. '
+                      'Le vincenti vanno in Coppa Gold, le perdenti in Coppa Silver.',
+                    ),
                   const Text(
                     'Pti punti · G giocate · V vinte · N pareggi · P perse\nGF gol fatti · GS gol subiti · DR differenza reti',
                     style: TextStyle(fontSize: 12, color: Color(0xff526176)),
@@ -466,17 +472,29 @@ class _TournamentPageState extends State<TournamentPage> {
     final projected = ['GOLD', 'SILVER', 'BRONZO'].contains(phase);
     final rows = projected
         ? buildCupBracket(cupSeeds(result, phase), result.matches, phase)
+        : phase == 'SPAREGGIO'
+        ? spareggioFixtures(result)
         : result.matches.where((m) => phaseKey(m['fase']) == phase).toList();
     final rounds = rows.map((r) => matchTurn(r, phase)).toSet().toList()
       ..sort(roundOrder);
     return [
-      if (projected && rows.isNotEmpty)
+      if (phase == 'SPAREGGIO' && rows.any((row) => row['projected'] == true))
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 12),
           child: Text(
-            'Gli incontri da creare seguono la classifica attuale. '
-            'Gli incroci restano fissi fino alla finale; nei tornei a gironi '
-            'si incrociano le qualificate dei diversi gironi.',
+            'Accoppiamenti provvisori secondo la classifica attuale. Date e orari sono da programmare.',
+          ),
+        ),
+      if (projected && rows.isNotEmpty)
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: Text(
+            result.spareggioPlaces >= 2
+                ? 'Le partecipanti alla Coppa Gold sono le vincenti degli spareggi; '
+                      'le perdenti partecipano alla Coppa Silver. Gli esiti ancora da definire restano indicati nel tabellone.'
+                : 'Gli incontri da creare seguono la classifica attuale. '
+                      'Gli incroci restano fissi fino alla finale; nei tornei a gironi '
+                      'si incrociano le qualificate dei diversi gironi.',
           ),
         ),
       if (rows.isEmpty)

@@ -12,7 +12,15 @@ layout_expect($weekend['legacy_gold'] === 6 && $weekend['legacy_silver'] === 4, 
 $mc = mobile_tournament_layout('McLeague');
 layout_expect($mc['default_team_count'] === 7 && $mc['default_gold'] === 4 && $mc['eliminated_color'], 'McLeague defaults');
 $brasil = mobile_tournament_layout('Brasilerao');
-layout_expect($brasil['config_overrides'] === ['totale_squadre' => 22, 'qualificati_gold' => 16, 'qualificati_silver' => 6], 'Brasilerao public page overrides');
+layout_expect($brasil['config_overrides']['totale_squadre'] === 22 && $brasil['config_overrides']['qualificati_gold'] === 16 && $brasil['config_overrides']['qualificati_silver'] === 4 && $brasil['config_overrides']['qualificati_bronzo'] === 2, 'Brasilerao Gold/Silver/Bronzo bands');
+$liga = mobile_tournament_layout('LaLiga');
+layout_expect($liga['spareggio'] && $liga['config_overrides']['spareggio_qualificati'] === 16 && $liga['config_overrides']['qualificati_gold'] === 8 && $liga['config_overrides']['qualificati_silver'] === 8, 'La Liga all teams play in');
+$old = ['regole_html' => "Fase 1 - Regular Season: 10 giornate.\n\nFase 2 - Coppe: Dal 1 al 8 in Gold.\nDal 9 al 16 in Silver.\n\nRegole di gioco: 2 tempi da 25 minuti."];
+$new = tournament_apply_fixed_formula($old, 'LaLiga');
+layout_expect(str_contains($new['regole_html'], '1 vs 16') && str_contains($new['regole_html'], '8 vs 9') && str_contains($new['regole_html'], '8 perdenti') && !str_contains($new['regole_html'], 'Dal 1 al 8'), 'Rules replace direct qualifications with play-ins');
+layout_expect(str_contains($new['regole_html'], '2 tempi da 25 minuti') && str_contains($new['regole_html'], '10 giornate'), 'Other rules preserved');
+layout_expect(tournament_apply_fixed_formula($new, 'LaLiga') === $new, 'Formula normalization is idempotent');
+layout_expect(tournament_apply_fixed_formula($old, 'Other') === $old, 'Other tournaments unchanged');
 layout_expect($mc['config_overrides']['totale_squadre'] === 7 && $mc['config_overrides']['qualificati_silver'] === 2, 'McLeague fixed formula overrides');
 layout_expect($champions['config_overrides'] === [], 'Legacy page without overrides remains unchanged');
 $formula = mobile_tournament_layout('Formula1');

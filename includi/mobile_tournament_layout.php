@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/tournament_fixed_formulas.php';
 
 /** Read only the public presentation settings from the tournament's own files.
  * Never execute a page or JavaScript while answering the mobile metadata API.
@@ -58,6 +59,7 @@ function mobile_tournament_layout(string $slug): array
     }
     // Partial formulas with computed fields cannot be reconstructed this way.
     if (!isset($configOverrides['totale_squadre'])) { $configOverrides = []; }
+    $configOverrides = array_replace($configOverrides, tournament_fixed_formula($slug));
     if ($pageSource !== '' && class_exists('DOMDocument')) {
         $html = preg_replace('/<\?php[\s\S]*?\?>|<\?=[\s\S]*?\?>/', '', $pageSource);
         $doc = new DOMDocument();
@@ -85,7 +87,7 @@ function mobile_tournament_layout(string $slug): array
         'legacy_silver_at_end' => str_contains($source, 'posizione > teamCount - SILVER_SPOTS'),
         'gold_per_group_override' => $constants['GOLD_POSITIONS_PER_GROUP'] ?? null,
         'gold_bands' => $goldParts,
-        'spareggio' => str_contains($source, 'USE_SPAREGGIO_SEEDING'),
+        'spareggio' => strtolower($slug) === 'laliga' || str_contains($source, 'USE_SPAREGGIO_SEEDING'),
         'spareggio_default' => $constants['DEFAULT_SPAREGGIO_SPOTS'] ?? 16,
         'eliminated_color' => str_contains($source, 'eliminated-row'),
         'rules_html' => trim($rules),

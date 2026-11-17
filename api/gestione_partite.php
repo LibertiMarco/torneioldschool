@@ -2080,7 +2080,7 @@ if (in_array($azione, ['modifica', 'riapri_giocata', 'aggiorna_link'], true)) {
     String(item?.sezione || 'calcio').trim().toLowerCase() === 'esport' ? 'esport' : 'calcio'
   ]));
   const ONLINE_MATCH_FIELD = 'Online';
-  const isFormula1Tournament = (torneoSlug = '') => String(torneoSlug || '').trim().toLowerCase() === 'formula1';
+  const isFormula1Tournament = (torneoSlug = '') => ['formula1', 'laliga'].includes(String(torneoSlug || '').trim().toLowerCase());
   const isEsportTournament = (torneoSlug = '') => torneoSectionMap[String(torneoSlug || '').trim()] === 'esport';
   const isRegularPhase = (phase = '') => String(phase || '').trim().toUpperCase() === 'REGULAR';
   const isSpareggioPhase = (phase = '') => String(phase || '').trim().toUpperCase() === 'SPAREGGIO';

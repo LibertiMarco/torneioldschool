@@ -208,7 +208,8 @@ void main() {
           'config_overrides': {
             'totale_squadre': 22,
             'qualificati_gold': 16,
-            'qualificati_silver': 6,
+            'qualificati_silver': 4,
+            'qualificati_bronzo': 2,
           },
         },
       },
@@ -216,10 +217,13 @@ void main() {
       [],
     );
     expect(data.teamCount, 22);
-    expect(data.tableCupPlaces, {'GOLD': 16, 'SILVER': 6, 'BRONZO': 0});
+    expect(data.tableCupPlaces, {'GOLD': 16, 'SILVER': 4, 'BRONZO': 2});
     expect(data.cupForPosition(16), 'GOLD');
     expect(data.cupForPosition(17), 'SILVER');
-    expect(data.cupForPosition(22), 'SILVER');
+    expect(data.cupForPosition(20), 'SILVER');
+    expect(data.cupForPosition(21), 'BRONZO');
+    expect(data.cupForPosition(22), 'BRONZO');
+    expect(data.phases, contains('BRONZO'));
     expect(data.phases, contains('SILVER'));
   });
   test('Legacy group inference and Serie C qualification override match site helper', () {

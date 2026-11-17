@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includi/admin_guard.php';
 require_once __DIR__ . '/../includi/tournament_format_config.php';
+require_once __DIR__ . '/../includi/tournament_fixed_formulas.php';
 
 require_once __DIR__ . '/crud/torneo.php';
 $torneo = new Torneo();
@@ -117,18 +118,8 @@ function buildTorneoConfigFromRequest(array $src): array {
     return tournament_format_config($config, $src);
 }
 
-function applyBrasileraoCupConfig(array $config, string $slug): array {
-    if (strcasecmp($slug, 'Brasilerao') !== 0) {
-        return $config;
-    }
-
-    // Questi valori devono essere salvati nel DB perché il file pagina viene
-    // rigenerato dal template ogni volta che si modifica il torneo.
-    $config['campionato_squadre'] = 22;
-    $config['totale_squadre'] = 22;
-    $config['qualificati_gold'] = 16;
-    $config['qualificati_silver'] = 6;
-    return $config;
+function applyFixedTournamentConfig(array $config, string $slug): array {
+    return tournament_apply_fixed_formula($config, $slug);
 }
 
 function aggiornaGironiSquadreTorneo(?mysqli $dbConn, string $torneoSlug, array $gironiMap): void {
@@ -217,6 +208,10 @@ function creaFileTorneoDaTemplate($nomeTorneo, $slug, $formulaTorneo = '', $fase
     }
 
     $nomePulito = cleanUtf8Text($nomeTorneo);
+    if (strcasecmp($slug, 'LaLiga') === 0) {
+        file_put_contents($baseDir . '/LaLiga.php', "<?php\n\$torneoSlug = 'LaLiga';\n\$torneoName = 'La Liga';\nrequire __DIR__ . '/Formula1.php';\n");
+        return;
+    }
     $formulaTorneo = strtolower(trim((string)($formulaTorneo ?? '')));
     $faseFinale = strtolower(trim((string)($faseFinale ?? '')));
     $sezione = normalizeTorneoSezioneValue($sezione);
@@ -463,7 +458,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crea'])) {
     $formulaTorneo = $_POST['formula_torneo'] ?? '';
     $faseFinale = $_POST['fase_finale'] ?? '';
     $config = buildTorneoConfigFromRequest($_POST);
-    $config = applyBrasileraoCupConfig($config, $slug);
+    $config = applyFixedTournamentConfig($config, $slug);
 
     $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
     if ($torneo->crea($nome, $stato, $data_inizio, $data_fine, $filetorneo, $categoria, $sezione, $img, $squadre_complete, $config)) {
@@ -499,7 +494,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aggiorna'])) {
     $faseFinale = (string)($_POST['fase_finale'] ?? '');
     $squadre_complete = isset($_POST['squadre_complete']) ? 1 : 0;
     $config = buildTorneoConfigFromRequest($_POST);
-    $config = applyBrasileraoCupConfig($config, $slug);
+    $config = applyFixedTournamentConfig($config, $slug);
     $torneo->aggiorna($id, $nome, $stato, $data_inizio, $data_fine, $img, $filetorneo, $categoria, $sezione, $squadre_complete, $config);
     creaFileTorneoDaTemplate($nome, $slug, $formulaTorneo, $faseFinale, $sezione);
 

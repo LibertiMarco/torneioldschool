@@ -11,6 +11,39 @@ List<int> cupSeedOrder(int size) {
 }
 
 List<Map<String, dynamic>> cupSeeds(TournamentData data, String phase) {
+  if (!data.grouped &&
+      data.spareggioPlaces >= 2 &&
+      ['GOLD', 'SILVER'].contains(phase)) {
+    final fixtures = spareggioFixtures(data);
+    final ties = <String, List<Map<String, dynamic>>>{};
+    for (final match in fixtures) {
+      final names = ['${match['squadra_casa']}', '${match['squadra_ospite']}']
+        ..sort();
+      ties.putIfAbsent(names.join('|'), () => []).add(match);
+    }
+    final games = ties.values.toList();
+    return List.generate(data.cupPlaces[phase] ?? 0, (index) {
+      final tie = index < games.length
+          ? games[index]
+          : <Map<String, dynamic>>[];
+      final winner = cupMatchWinner(tie);
+      String name = '', logo = '';
+      if (winner != null) {
+        final game = tie.first;
+        final home = '${game['squadra_casa']}';
+        name = phase == 'GOLD'
+            ? winner
+            : (winner == home ? '${game['squadra_ospite']}' : home);
+        logo = '${game[name == home ? 'logo_casa' : 'logo_ospite'] ?? ''}';
+      }
+      return {
+        'name': name,
+        'logo': logo,
+        'label':
+            '${phase == 'GOLD' ? 'Vincente' : 'Perdente'} spareggio ${index + 1}',
+      };
+    });
+  }
   final count = data.cupPlaces[phase] ?? 0;
   final places = data.tableCupPlaces[phase] ?? 0;
   final result = <Map<String, dynamic>>[];
@@ -53,6 +86,31 @@ List<Map<String, dynamic>> cupSeeds(TournamentData data, String phase) {
     }
   }
   return result;
+}
+
+/// Project pairings only when no fixtures have been scheduled; never write data.
+List<Map<String, dynamic>> spareggioFixtures(TournamentData data) {
+  final actual = data.matches
+      .where((m) => phaseKey(m['fase']) == 'SPAREGGIO')
+      .toList();
+  if (actual.isNotEmpty || data.spareggioPlaces < 2) return actual;
+  final table = data.tables.values.expand((rows) => rows).toList();
+  final count = data.spareggioPlaces;
+  return List.generate(count ~/ 2, (index) {
+    Map<String, dynamic> team(int position) =>
+        position < table.length ? table[position] : {};
+    final home = team(index), away = team(count - index - 1);
+    return {
+      'fase': 'SPAREGGIO',
+      'giornata': 1,
+      'giocata': 0,
+      'squadra_casa': home['nome'] ?? '${index + 1}ª in classifica',
+      'squadra_ospite': away['nome'] ?? '${count - index}ª in classifica',
+      'logo_casa': home['logo'] ?? '',
+      'logo_ospite': away['logo'] ?? '',
+      'projected': true,
+    };
+  });
 }
 
 class _CupSide {
