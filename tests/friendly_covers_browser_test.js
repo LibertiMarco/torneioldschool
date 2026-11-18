@@ -38,7 +38,7 @@ const server=http.createServer((req,res)=>{
       const proto=CanvasRenderingContext2D.prototype;
       const {fillText,strokeText,drawImage}=proto;
       function record(ctx,value){(calls[ctx.canvas.id]??=[]).push(value)}
-      proto.fillText=function(value,x,y,...args){record(this,[value,x,y]);return fillText.call(this,value,x,y,...args)};
+      proto.fillText=function(value,x,y,...args){record(this,[value,x,y,this.fillStyle]);return fillText.call(this,value,x,y,...args)};
       proto.strokeText=function(value,...args){record(this,[value]);return strokeText.call(this,value,...args)};
       proto.drawImage=function(img,x,y,w,h){
         record(this,[img===photo?'photo':img===brand?'brand':'other',x+w/2,y,h]);
@@ -47,14 +47,14 @@ const server=http.createServer((req,res)=>{
       try{draw()}finally{Object.assign(proto,{fillText,strokeText,drawImage})}
       return calls;
     });
-    for(const [id,center] of [['reelCanvas',540],['youtubeCanvas',640]]){
-      const [title,photo,logo]=rendered[id];
-      assert.equal(rendered[id].length,3);
-      assert.deepEqual(title.slice(0,2),['MATCH AMICHEVOLE',center]);
-      assert.deepEqual(photo.slice(0,2),['photo',center]);
-      assert.deepEqual(logo.slice(0,2),['brand',center]);
-      assert(title[2]<photo[2] && photo[2]<logo[2]);
-    }
+    assert.deepEqual(rendered.reelCanvas.map(call=>call[0]),['MATCH AMICHEVOLE','photo','brand']);
+    assert.deepEqual(rendered.reelCanvas[0],['MATCH AMICHEVOLE',540,390,'#ffffff']);
+    assert.deepEqual(rendered.reelCanvas[1].slice(0,3),['photo',540,620]);
+    assert.equal(rendered.reelCanvas[2][1],540);
+    assert.deepEqual(rendered.youtubeCanvas.map(call=>call[0]),['photo','AMICHEVOLE','brand']);
+    assert.deepEqual(rendered.youtubeCanvas[0],['photo',985,0,720]);
+    assert.deepEqual(rendered.youtubeCanvas[1],['AMICHEVOLE',55,95,'#ffffff']);
+    assert.equal(rendered.youtubeCanvas[2][1],690);
     fs.mkdirSync('.mobile-tools/verification',{recursive:true});
     for(const id of ['reelCanvas','youtubeCanvas']) {
       const encoded=await page.evaluate(id=>document.getElementById(id).toDataURL('image/png').split(',')[1],id);
@@ -74,6 +74,6 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.inputValue('#scoreHome'),'3');
     assert.equal(await page.inputValue('#scoreAway'),'1');
     assert.deepEqual(errors,[]);
-    console.log('Friendly covers: centered title, photo and Old School logo, both PNG sizes, mobile layout and locked tournament results passed.');
+    console.log('Friendly covers: white titles, Reel and shared YouTube layouts, both PNG sizes, mobile layout and locked tournament results passed.');
   } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>server.close());

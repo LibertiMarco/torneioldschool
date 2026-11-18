@@ -122,7 +122,7 @@ const coverColors=CoverColors.assign([
 const upper=(v,f='')=>String(v||f).trim().toUpperCase();const safe=v=>String(v||'copertina').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();
 function loadImage(src){return new Promise(resolve=>{if(!src)return resolve(null);const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src=src})}function fileImage(file){return new Promise((resolve,reject)=>{if(!file)return resolve(null);const r=new FileReader();r.onload=async()=>resolve(await loadImage(r.result));r.onerror=reject;r.readAsDataURL(file)})}
 function coverCompetitionTheme(){return window.MatchdayRenderer.tournamentTheme({nome:selected?.torneo_nome||selected?.torneo||matches.find(m=>String(m.torneo)===$('tournament').value)?.torneo_nome||$('tournament').value})}
-function coverAccent(){const palette=coverCompetitionTheme();return ['brasileirao','mcleague'].includes(palette.competition)?palette.secondary:'#fff'}
+function coverAccent(){if(isFriendly())return '#fff';const palette=coverCompetitionTheme();return ['brasileirao','mcleague'].includes(palette.competition)?palette.secondary:'#fff'}
 function theme(){if(isFriendly())return '#08243b';const match=selected||matches.find(m=>String(m.torneo)===$('tournament').value);return coverColors.get({id:match?.torneo_id,nome:match?.torneo_nome||match?.torneo,filetorneo:match?.torneo})||'#08243b'}
 function contain(ctx,img,x,y,w,h){if(!img?.naturalWidth)return;const s=Math.min(w/img.naturalWidth,h/img.naturalHeight),dw=img.naturalWidth*s,dh=img.naturalHeight*s;ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh)}
 function cover(ctx,img,x,y,w,h,type){if(!img?.naturalWidth)return;const zoom=Number($('zoom').value)/100,s=Math.max(w/img.naturalWidth,h/img.naturalHeight)*zoom,px=Number($('posX').value)/100,py=Number($('posY').value)/100;const base={x:x-(img.naturalWidth*s-w)*px,y:y-(img.naturalHeight*s-h)*py,w:img.naturalWidth*s,h:img.naturalHeight*s};const box=PhotoTouchEditor.transform(type,img,{x,y,w,h},base);ctx.drawImage(img,box.x,box.y,box.w,box.h)}
@@ -147,25 +147,24 @@ function chooseCoverMode(){
     chooseMatch().catch(()=>{$('status').textContent='Errore durante il caricamento della partita.'});
   }
 }
-function drawFriendly(canvas,type){
-  const ctx=canvas.getContext('2d'),center=canvas.width/2;
-  const reel=type==='reel';
-  const [x,y,w,h,radius]=reel?[38,620,1004,845,48]:[170,121,940,448,24];
-  const logoY=reel?1605:644,logoRadius=reel?98:52,logoSize=reel?176:94;
+function drawFriendlyReel(){
+  const canvas=$('reelCanvas'),ctx=canvas.getContext('2d'),center=canvas.width/2;
+  const [x,y,w,h,radius]=[38,620,1004,845,48];
+  const logoY=1605,logoRadius=98,logoSize=176;
   base(ctx,canvas.width,canvas.height);
   ctx.fillStyle='#fff';
   ctx.textAlign='center';
-  fit(ctx,'MATCH AMICHEVOLE',canvas.width-80,reel?96:68,36,900,'Georgia');
-  ctx.fillText('MATCH AMICHEVOLE',center,reel?390:87);
+  fit(ctx,'MATCH AMICHEVOLE',canvas.width-80,96,36,900,'Georgia');
+  ctx.fillText('MATCH AMICHEVOLE',center,390);
 
   ctx.beginPath();
   ctx.roundRect(x,y,w,h,radius);
   ctx.save();
   ctx.clip();
-  photo?cover(ctx,photo,x,y,w,h,type):placeholder(ctx,x,y,w,h);
+  photo?cover(ctx,photo,x,y,w,h,'reel'):placeholder(ctx,x,y,w,h);
   ctx.restore();
   ctx.strokeStyle='#fff';
-  ctx.lineWidth=reel?7:4;
+  ctx.lineWidth=7;
   ctx.stroke();
 
   ctx.fillStyle='#fff';
@@ -176,8 +175,43 @@ function drawFriendly(canvas,type){
 }
 $('coverMode').onchange=chooseCoverMode;
 function drawReel(){const c=$('reelCanvas'),ctx=c.getContext('2d');base(ctx,c.width,c.height);ctx.fillStyle=coverAccent();ctx.textAlign='center';ctx.font='900 108px Georgia';ctx.fillText('HIGHLIGHTS',540,185);teamSymbol(ctx,'home',55,245,245,280);teamSymbol(ctx,'away',780,245,245,280);ctx.font='400 174px Arial';ctx.strokeStyle=coverCompetitionTheme().competition==='mcleague'?coverAccent():'#fff';ctx.lineWidth=5;ctx.strokeText(`${score('home')} - ${score('away')}`,540,455);ctx.save();ctx.beginPath();ctx.roundRect(38,620,1004,845,48);ctx.clip();photo?cover(ctx,photo,38,620,1004,845,'reel'):placeholder(ctx,38,620,1004,845);ctx.restore();ctx.strokeStyle=coverAccent();ctx.lineWidth=7;ctx.beginPath();ctx.roundRect(38,620,1004,845,48);ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(310,1605,98,0,Math.PI*2);ctx.fill();contain(ctx,brand,222,1517,176,176);tournamentImageBox(ctx,675,1510,195);ctx.fillStyle=coverAccent();ctx.textAlign='center';ctx.font='900 82px Arial';fit(ctx,upper(selected?.torneo_categoria,'CALCIO'),900,82,44,900);ctx.fillText(upper(selected?.torneo_categoria,'CALCIO'),540,1850,900)}
-function drawYoutube(){const c=$('youtubeCanvas'),ctx=c.getContext('2d');base(ctx,c.width,c.height);ctx.save();ctx.beginPath();ctx.rect(690,0,590,720);ctx.clip();photo?cover(ctx,photo,690,0,590,720,'youtube'):placeholder(ctx,690,0,590,720);ctx.restore();ctx.fillStyle=coverAccent();ctx.textAlign='left';ctx.font='900 72px Georgia';ctx.fillText('HIGHLIGHTS',55,95);teamSymbol(ctx,'home',45,175,185,185);teamSymbol(ctx,'away',45,385,185,185);ctx.font='400 170px Arial';ctx.strokeStyle=coverCompetitionTheme().competition==='mcleague'?coverAccent():'#fff';ctx.lineWidth=5;ctx.strokeText(String(score('home')),275,335);ctx.strokeText(String(score('away')),275,555);tournamentImageBox(ctx,1145,10,125);ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(690,370,75,0,Math.PI*2);ctx.fill();contain(ctx,brand,624,304,132,132);ctx.fillStyle=coverAccent();ctx.textAlign='left';ctx.font='900 48px Arial';fit(ctx,upper(selected?.torneo_categoria,'CALCIO'),500,48,28,900);ctx.fillText(upper(selected?.torneo_categoria,'CALCIO'),70,675,500)}
-function draw(){[$('zoomValue').textContent,$('xValue').textContent,$('yValue').textContent]=[$('zoom').value+'%',$('posX').value+'%',$('posY').value+'%'];PhotoTouchEditor.sync('reel',photo);PhotoTouchEditor.sync('youtube',photo);if(isFriendly()){drawFriendly($('reelCanvas'),'reel');drawFriendly($('youtubeCanvas'),'youtube')}else{drawReel();drawYoutube()}}
+function drawYoutube(){
+  const canvas=$('youtubeCanvas'),ctx=canvas.getContext('2d'),friendly=isFriendly();
+  base(ctx,canvas.width,canvas.height);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(690,0,590,720);
+  ctx.clip();
+  photo?cover(ctx,photo,690,0,590,720,'youtube'):placeholder(ctx,690,0,590,720);
+  ctx.restore();
+  ctx.fillStyle=coverAccent();
+  ctx.textAlign='left';
+  ctx.font='900 72px Georgia';
+  ctx.fillText(friendly?'AMICHEVOLE':'HIGHLIGHTS',55,95);
+  if(!friendly){
+    teamSymbol(ctx,'home',45,175,185,185);
+    teamSymbol(ctx,'away',45,385,185,185);
+    ctx.font='400 170px Arial';
+    ctx.strokeStyle=coverCompetitionTheme().competition==='mcleague'?coverAccent():'#fff';
+    ctx.lineWidth=5;
+    ctx.strokeText(String(score('home')),275,335);
+    ctx.strokeText(String(score('away')),275,555);
+    tournamentImageBox(ctx,1145,10,125);
+  }
+  ctx.fillStyle='#fff';
+  ctx.beginPath();
+  ctx.arc(690,370,75,0,Math.PI*2);
+  ctx.fill();
+  contain(ctx,brand,624,304,132,132);
+  if(!friendly){
+    const category=upper(selected?.torneo_categoria,'CALCIO');
+    ctx.fillStyle=coverAccent();
+    ctx.textAlign='left';
+    fit(ctx,category,500,48,28,900);
+    ctx.fillText(category,70,675,500);
+  }
+}
+function draw(){[$('zoomValue').textContent,$('xValue').textContent,$('yValue').textContent]=[$('zoom').value+'%',$('posX').value+'%',$('posY').value+'%'];PhotoTouchEditor.sync('reel',photo);PhotoTouchEditor.sync('youtube',photo);if(isFriendly()){drawFriendlyReel()}else{drawReel()}drawYoutube()}
 function unique(items,key){const m=new Map;items.forEach(i=>{const k=key(i);if(k&&!m.has(k))m.set(k,i)});return[...m.entries()]}function options(el,label,items){el.innerHTML='';el.append(new Option(label,''));items.forEach(([v,l])=>el.append(new Option(l,v)));el.disabled=!items.length}
 function roundKey(m){return m.fase_round?`r:${m.fase_round}`:`g:${m.giornata??''}`}function roundLabel(m){return m.fase_round?String(m.fase_round).replaceAll('_',' '):(m.giornata?`GIORNATA ${m.giornata}`:'TURNO UNICO')}
 function clearSelected(){selected=null;$('scoreFields').hidden=true;homeLogo=null;awayLogo=null;tournamentLogo=null;draw()}
