@@ -19,29 +19,42 @@ const server=http.createServer((req,res)=>{
     const page=await browser.newPage(),errors=[];
     page.on('pageerror',error=>errors.push(error.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/`);
-    await page.waitForFunction(()=>document.getElementById('friendlyHomeColor').options.length===11);
+    await page.waitForFunction(()=>brand?.naturalWidth);
     await page.selectOption('#coverMode','friendly');
     assert.equal(await page.locator('#competitionFields').isVisible(),false);
-    assert.equal(await page.locator('#friendlyFields').isVisible(),true);
-    await page.fill('#scoreHome','4');await page.fill('#scoreAway','2');
-    const pixels=await page.evaluate(()=>{
-      function pixel(id,x,y){return Array.from(document.getElementById(id).getContext('2d').getImageData(x,y,1,1).data).slice(0,3)}
-      return [pixel('reelCanvas',177,385),pixel('reelCanvas',902,385),pixel('youtubeCanvas',137,267),pixel('youtubeCanvas',137,477)];
+    assert.equal(await page.locator('#scoreFields').isVisible(),false);
+    assert.equal(await page.locator('#friendlyHomeColor, #friendlyAwayColor').count(),0);
+    const imageData=await page.evaluate(()=>{
+      const canvas=document.createElement('canvas');
+      canvas.width=canvas.height=20;
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle='#e53935';ctx.fillRect(0,0,20,20);
+      return canvas.toDataURL('image/png').split(',')[1];
     });
-    assert.deepEqual(pixels,[[21,21,21],[255,255,255],[21,21,21],[255,255,255]]);
-    const text=await page.evaluate(()=>{
-      const calls=[],fill=CanvasRenderingContext2D.prototype.fillText,stroke=CanvasRenderingContext2D.prototype.strokeText;
-      CanvasRenderingContext2D.prototype.fillText=function(value,...args){calls.push(value);return fill.call(this,value,...args)};
-      CanvasRenderingContext2D.prototype.strokeText=function(value,...args){calls.push(value);return stroke.call(this,value,...args)};
-      try{draw()}finally{CanvasRenderingContext2D.prototype.fillText=fill;CanvasRenderingContext2D.prototype.strokeText=stroke}
+    await page.locator('#photo').setInputFiles({name:'capitani.png',mimeType:'image/png',buffer:Buffer.from(imageData,'base64')});
+    await page.waitForFunction(()=>photo?.naturalWidth);
+    const rendered=await page.evaluate(()=>{
+      const calls={};
+      const proto=CanvasRenderingContext2D.prototype;
+      const {fillText,strokeText,drawImage}=proto;
+      function record(ctx,value){(calls[ctx.canvas.id]??=[]).push(value)}
+      proto.fillText=function(value,x,y,...args){record(this,[value,x,y]);return fillText.call(this,value,x,y,...args)};
+      proto.strokeText=function(value,...args){record(this,[value]);return strokeText.call(this,value,...args)};
+      proto.drawImage=function(img,x,y,w,h){
+        record(this,[img===photo?'photo':img===brand?'brand':'other',x+w/2,y,h]);
+        return drawImage.call(this,img,x,y,w,h);
+      };
+      try{draw()}finally{Object.assign(proto,{fillText,strokeText,drawImage})}
       return calls;
     });
-    assert(text.includes('4 - 2'));assert(text.includes('AMICHEVOLE'));
-    assert(!text.some(value=>/neri|bianchi|nero|bianco/i.test(value)));
-    await page.selectOption('#friendlyHomeColor','#e53935');
-    assert.equal(await page.inputValue('#scoreHome'),'4');
-    assert.deepEqual(await page.evaluate(()=>Array.from(document.getElementById('reelCanvas').getContext('2d').getImageData(177,385,1,1).data).slice(0,3)),[229,57,53]);
-    await page.selectOption('#friendlyHomeColor','#151515');
+    for(const [id,center] of [['reelCanvas',540],['youtubeCanvas',640]]){
+      const [title,photo,logo]=rendered[id];
+      assert.equal(rendered[id].length,3);
+      assert.deepEqual(title.slice(0,2),['MATCH AMICHEVOLE',center]);
+      assert.deepEqual(photo.slice(0,2),['photo',center]);
+      assert.deepEqual(logo.slice(0,2),['brand',center]);
+      assert(title[2]<photo[2] && photo[2]<logo[2]);
+    }
     fs.mkdirSync('.mobile-tools/verification',{recursive:true});
     for(const id of ['reelCanvas','youtubeCanvas']) {
       const encoded=await page.evaluate(id=>document.getElementById(id).toDataURL('image/png').split(',')[1],id);
@@ -57,9 +70,10 @@ const server=http.createServer((req,res)=>{
     await page.selectOption('#coverMode','tournament');
     await page.selectOption('#tournament','demo');await page.selectOption('#phase','REGULAR');await page.selectOption('#round','g:1');await page.selectOption('#match','1');
     await page.waitForFunction(()=>document.getElementById('scoreHome').readOnly);
+    assert.equal(await page.locator('#scoreFields').isVisible(),true);
     assert.equal(await page.inputValue('#scoreHome'),'3');
     assert.equal(await page.inputValue('#scoreAway'),'1');
     assert.deepEqual(errors,[]);
-    console.log('Friendly covers: colors, score, no team text, both PNG sizes, mobile layout and locked tournament results passed.');
+    console.log('Friendly covers: centered title, photo and Old School logo, both PNG sizes, mobile layout and locked tournament results passed.');
   } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>server.close());

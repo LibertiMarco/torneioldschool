@@ -1,20 +1,10 @@
 # Copertine amichevoli
 
-In Grafiche → Copertine, il selettore «Tipo copertina» offre «Amichevole».
-Questa modalità non richiede un torneo o una partita salvata. Si scelgono due
-colori e il punteggio, poi si usa la foto dei capitani con gli stessi controlli
-di spostamento e zoom delle altre copertine.
+In Grafiche ? Copertine, seleziona ?Amichevole? e carica la foto dei capitani.
+Puoi regolare posizione e zoom direttamente nell?anteprima.
 
-Sono disponibili nero, bianco, rosso, blu, azzurro, verde, giallo, arancione,
-viola, rosa e grigio. I colori appaiono come pallini con bordo visibile,
-senza nomi scritti né scudetti, su entrambe le esportazioni:
-Reel 1080×1920 e YouTube 1280×720. La dicitura è «AMICHEVOLE».
+La copertina mostra ?MATCH AMICHEVOLE? in alto, la foto al centro e il logo
+Old School sotto. Puoi scaricare il PNG per Reel (1080?1920) e YouTube (1280?720).
 
-I valori sono solo locali alla grafica. Non vengono create partite o salvati
-risultati nel database. Tornando alla modalità torneo, i risultati delle
-partite terminate restano bloccati. L'app staff legge i nuovi selettori dal
-controller condiviso; non occorre modificare il bundle Flutter.
-
-Verifica con `tests/friendly_covers_browser_test.js`: pagina di produzione
-con dati simulati, pixel dei colori nei due canvas, assenza di nomi disegnati,
-dimensioni PNG, cambio modalità e leggibilità mobile.
+Il test `tests/friendly_covers_browser_test.js` controlla il contenuto delle due
+copertine, le dimensioni dei PNG, il layout mobile e il ritorno alla modalit? torneo.
