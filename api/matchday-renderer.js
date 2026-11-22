@@ -53,11 +53,27 @@ window.MatchdayRenderer = (() => {
     }));
     return imageCache.get(src);
   }
-  function contained(ctx, img, x, y, w, h) {
+  function contained(ctx, img, x, y, w, h, outline = false) {
     if (!img?.naturalWidth || !img?.naturalHeight) return false;
     const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight);
     const iw = img.naturalWidth * scale, ih = img.naturalHeight * scale;
-    ctx.drawImage(img, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih);
+    const left = x + (w - iw) / 2, top = y + (h - ih) / 2;
+    if (outline) {
+      // Trace the image's opaque silhouette, including flags with transparent padding.
+      const mask = document.createElement('canvas');
+      mask.width = Math.ceil(iw); mask.height = Math.ceil(ih);
+      const maskCtx = mask.getContext('2d');
+      maskCtx.drawImage(img, 0, 0, iw, ih);
+      maskCtx.globalCompositeOperation = 'source-in';
+      maskCtx.fillStyle = '#000000';
+      maskCtx.fillRect(0, 0, mask.width, mask.height);
+      const border = Math.max(2, Math.min(4, Math.min(w, h) * .025));
+      for (let i = 0; i < 16; i++) {
+        const angle = i * Math.PI / 8;
+        ctx.drawImage(mask, left + Math.cos(angle) * border, top + Math.sin(angle) * border, iw, ih);
+      }
+    }
+    ctx.drawImage(img, left, top, iw, ih);
     return true;
   }
   function text(ctx, value, x, y, maxWidth, size, color = ink, align = 'center', family = display) {
@@ -79,15 +95,15 @@ window.MatchdayRenderer = (() => {
     }
     return result;
   }
-  function crest(ctx, squad, logo, x, cy, size) {
-    if (!contained(ctx, logo, x, cy - size / 2, size, size)) {
+  function crest(ctx, squad, logo, x, cy, size, outline = false) {
+    if (!contained(ctx, logo, x, cy - size / 2, size, size, outline)) {
       ctx.fillStyle = '#e6ecef'; ctx.beginPath(); ctx.arc(x + size / 2, cy, size * .43, 0, Math.PI * 2); ctx.fill();
       const initials = String(squad.nome || '?').split(/\s+/).slice(0, 2).map(s => s[0]).join('').toUpperCase();
       text(ctx, initials, x + size / 2, cy, size * .7, size * .34);
     }
   }
-  function team(ctx, squad, logo, x, cy, size, align, nameX, nameWidth, fontSize) {
-    crest(ctx, squad, logo, x, cy, size);
+  function team(ctx, squad, logo, x, cy, size, align, nameX, nameWidth, fontSize, outline = false) {
+    crest(ctx, squad, logo, x, cy, size, outline);
     const nameLines = lines(ctx, squad.nome || 'Da definire', nameWidth, fontSize);
     nameLines.forEach((line, i) => text(ctx, line, nameX, cy + (i - (nameLines.length - 1) / 2) * fontSize * 1.12, nameWidth, fontSize, ink, align));
   }
@@ -118,6 +134,7 @@ window.MatchdayRenderer = (() => {
   }
   async function drawTournament(tournament, week) {
     const theme = tournamentTheme(tournament);
+    const outlineCrests = theme.competition === 'nationsleague';
     const days = groupDays(tournament), matches = days.flatMap(day => day.matches);
     const count = matches.length;
     const width = 1080, height = 1920, headerH = count >= 10 ? 330 : 450;
@@ -189,8 +206,8 @@ window.MatchdayRenderer = (() => {
         ctx.strokeRect(38, y, 1004, rowH);
         if (count === 1) {
           const cy = y + 350, result = match.risultato;
-          crest(ctx, match.squadra_casa, homeLogo, 120, cy, 260);
-          crest(ctx, match.squadra_ospite, awayLogo, 700, cy, 260);
+          crest(ctx, match.squadra_casa, homeLogo, 120, cy, 260, outlineCrests);
+          crest(ctx, match.squadra_ospite, awayLogo, 700, cy, 260, outlineCrests);
           text(ctx, result ? `${result.gol_casa} – ${result.gol_ospite}` : 'VS', 540, cy, 230, 84, theme.accent);
           for (const [squad, x] of [[match.squadra_casa, 250], [match.squadra_ospite, 830]]) {
             lines(ctx, squad.nome, 390, 46).forEach((line, i) => text(ctx, line, x, cy + 205 + i * 54, 390, 46));
@@ -206,8 +223,8 @@ window.MatchdayRenderer = (() => {
         const logoSize = Math.min(100, rowH - (details ? 44 : 22));
         const fontSize = rowH < 105 ? 25 : rowH < 125 ? 29 : 34;
         for (const x of [401, 679]) { ctx.beginPath(); ctx.moveTo(x, y + 14); ctx.lineTo(x, y + rowH - (details ? 34 : 14)); ctx.stroke(); }
-        team(ctx, match.squadra_casa, homeLogo, 55, cy, logoSize, 'left', 174, 213, fontSize);
-        team(ctx, match.squadra_ospite, awayLogo, 1025 - logoSize, cy, logoSize, 'right', 906, 213, fontSize);
+        team(ctx, match.squadra_casa, homeLogo, 55, cy, logoSize, 'left', 174, 213, fontSize, outlineCrests);
+        team(ctx, match.squadra_ospite, awayLogo, 1025 - logoSize, cy, logoSize, 'right', 906, 213, fontSize, outlineCrests);
         const result = match.risultato;
         const label = result ? `${result.gol_casa} – ${result.gol_ospite}` : (match.ora || 'DA DEFINIRE');
         const badgeColor = result ? theme.primary : theme.accent;
