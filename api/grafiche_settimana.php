@@ -43,7 +43,7 @@ $embedded = isset($_GET['embed']) && $_GET['embed'] === '1';
   <div class="status" id="status"></div><div class="grid" id="grid"></div>
 </main>
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
-<script src="/api/matchday-renderer.js?v=20261007-date-range"></script>
+<script src="/api/matchday-renderer.js?v=<?= filemtime(__DIR__.'/matchday-renderer.js') ?>"></script>
 <script src="/tornei/cup-bracket.js?v=<?= filemtime(__DIR__.'/../tornei/cup-bracket.js') ?>"></script>
 <script src="/api/cup-bracket-renderer.js?v=<?= filemtime(__DIR__.'/cup-bracket-renderer.js') ?>"></script>
 <script src="/api/grafiche_downloads.js?v=20261007"></script>
