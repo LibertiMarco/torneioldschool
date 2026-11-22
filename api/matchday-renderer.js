@@ -4,6 +4,7 @@ window.MatchdayRenderer = (() => {
   // Competition-inspired accents; the paper and match rows always stay white.
   // Specific aliases precede the generic "Liga" name to avoid collisions.
   const palettes = [
+    {competition: 'nationsleague', aliases: ['nationsleague'], primary: '#112d4e', secondary: '#e52330', accent: '#e52330'},
     {competition: 'mcleague', aliases: ['mcleague'], primary: '#ffd400', secondary: '#171b22', accent: '#171b22', title: '#171b22'},
     {competition: 'brasileirao', aliases: ['brasileirao', 'brasilerao', 'campeonatobrasileiro', 'brasileiro', 'brazilianleague'], primary: '#008447', secondary: '#ffdf00', accent: '#008447'},
     {aliases: ['coppaitalia', 'supercoppaitaliana'], primary: '#008447', secondary: '#e30724', accent: '#e30724'},
