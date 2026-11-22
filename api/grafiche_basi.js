@@ -32,7 +32,7 @@ const customTemplates = (() => {
       const box = document.createElement('details');
       box.className = 'template-editor'; box.open = true;
       box.innerHTML = `<summary>Base personalizzata ${type==='ft'?'Full Time':'MVP'}</summary>
-        <p class="hint">Carica la tua grafica, poi seleziona un elemento e trascinalo nell?anteprima con il dito o il mouse, oppure usa i campi X e Y. Usa due dita per ingrandire o rimpicciolire l?elemento selezionato. Consigliato: 1080 × 1350 px; PNG, JPG o WebP, massimo 8 MB. Per giocatori scontornati usa foto PNG trasparenti.</p>
+        <p class="hint">Carica la tua grafica, poi seleziona un elemento e trascinalo nell’anteprima con il dito o il mouse, oppure usa i campi X e Y. Usa due dita per ingrandire o rimpicciolire l’elemento selezionato. Per le immagini livello puoi anche trascinare le maniglie agli angoli. Consigliato: 1080 × 1350 px; PNG, JPG o WebP, massimo 8 MB. Per giocatori scontornati usa foto PNG trasparenti.</p>
         <fieldset id="${type}BaseControls"><div class="fields">
           <label class="wide">Immagine di base<input id="${type}Base" type="file" accept="image/png,image/jpeg,image/webp"></label>
           ${type==='ft'?'<label class="wide">Aggiungi immagini livello (selezione multipla)<input id="ftOverlayFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple></label><label class="wide">Immagine selezionata<select id="ftOverlaySelect"></select></label><label class="wide">Livello<select id="ftOverlayLayer"><option value="behind_graphic">Dietro la grafica</option><option value="between_graphic_photo">Tra grafica e foto</option><option value="between_photo_content">Sopra grafica e foto, sotto loghi e testi</option><option value="front">Davanti a tutto</option></select></label><label>Posizione X (px)<input id="ftOverlayX" type="number" step="1"></label><label>Posizione Y (px)<input id="ftOverlayY" type="number" step="1"></label><label>Larghezza (px, proporzionale)<input id="ftOverlayW" type="number" min="0.01" step="any"></label><label>Altezza (px, proporzionale)<input id="ftOverlayH" type="number" min="0.01" step="any"></label><div class="wide actions"><button id="ftRemoveOverlay" type="button" class="secondary">Rimuovi immagine selezionata</button><span id="ftOverlayStatus" class="hint" aria-live="polite">Carica una o più immagini. Le misure iniziali corrispondono ai pixel del file.</span></div>':''}
@@ -62,6 +62,12 @@ const customTemplates = (() => {
       canvas.style.touchAction='none';
       const point=event=>{const rect=canvas.getBoundingClientRect();return{x:(event.clientX-rect.left)*W/rect.width,y:(event.clientY-rect.top)*H/rect.height};};
       const contains=(r,p)=>r&&p.x>=r.x&&p.y>=r.y&&p.x<=r.x+r.w&&p.y<=r.y+r.h;
+      const overlayHandle=(r,p)=>{
+        if(!r)return '';
+        const rect=canvas.getBoundingClientRect(),radius=22*W/rect.width;
+        return [['nw',r.x,r.y],['ne',r.x+r.w,r.y],['sw',r.x,r.y+r.h],['se',r.x+r.w,r.y+r.h]]
+          .find(([,x,y])=>Math.abs(p.x-x)<=radius&&Math.abs(p.y-y)<=radius)?.[0]||'';
+      };
       canvas.addEventListener('pointerdown',event=>{
         const item=pair()?.[type];
         if(event.button>0||!item?.image||item.busy||item.loading||item.error)return;
@@ -75,10 +81,13 @@ const customTemplates = (() => {
         if(event.isPrimary===false)return;
         const p=point(event),selected=item.layout[$(type+'Element').value];
         const overlay=type==='ft'?item.overlays.find(entry=>entry.id===item.selectedOverlayId):null;
-        const isLayout=selected?.visible&&contains(selected,p);
-        const target=isLayout?selected:contains(overlay,p)?overlay:null;
+        const handle=overlayHandle(overlay,p);
+        // The selected image owns touches even where its bounds overlap the photo slot.
+        const isOverlay=!!overlay&&(!!handle||contains(overlay,p));
+        const isLayout=!isOverlay&&selected?.visible&&contains(selected,p);
+        const target=isOverlay?overlay:isLayout?selected:null;
         if(!target)return;
-        drag={pointerId:event.pointerId,torneo:currentId,item,target,isLayout,dx:p.x-target.x,dy:p.y-target.y};
+        drag={pointerId:event.pointerId,torneo:currentId,item,target,isLayout,handle,start:{...target},point:p,dx:p.x-target.x,dy:p.y-target.y};
         pointers.set(event.pointerId,p);canvas.setPointerCapture(event.pointerId);event.preventDefault();
       });
       canvas.addEventListener('pointermove',event=>{
@@ -98,6 +107,13 @@ const customTemplates = (() => {
           if(textElement)target.font=Math.max(12,Math.min(240,Math.round(start.font*scale)));
           target.x=Math.round((a.x+b.x)/2+(start.x-start.cx)*scale);
           target.y=Math.round((a.y+b.y)/2+(start.y-start.cy)*scale);
+        }else if(drag.handle){
+          const start=drag.start,dx=p.x-drag.point.x,dy=p.y-drag.point.y;
+          const dw=drag.handle.includes('w')?-dx:dx,dh=drag.handle.includes('n')?-dy:dy;
+          const scale=Math.max(Math.max(1/start.w,1/start.h),1+(dw*start.w+dh*start.h)/(start.w*start.w+start.h*start.h));
+          target.w=start.w*scale;target.h=start.h*scale;
+          target.x=start.x+(drag.handle.includes('w')?start.w-target.w:0);
+          target.y=start.y+(drag.handle.includes('n')?start.h-target.h:0);
         }else{target.x=Math.round(p.x-drag.dx);target.y=Math.round(p.y-drag.dy);}
         if(drag.isLayout){target.x=Math.max(0,Math.min(W,target.x));target.y=Math.max(0,Math.min(H,target.y));}
         item.dirty=true;refresh(type);drawAll();
@@ -384,7 +400,13 @@ const customTemplates = (() => {
     }
     if(editor&&type==='ft'){
       const selected=pair()?.ft.overlays.find(overlay=>overlay.id===pair()?.ft.selectedOverlayId);
-      if(selected){ctx.save();ctx.strokeStyle='#ffd54a';ctx.lineWidth=5;ctx.setLineDash([16,10]);ctx.strokeRect(selected.x,selected.y,selected.w,selected.h);ctx.restore();}
+      if(selected){
+        ctx.save();ctx.strokeStyle='#ffd54a';ctx.lineWidth=5;ctx.setLineDash([16,10]);ctx.strokeRect(selected.x,selected.y,selected.w,selected.h);
+        ctx.setLineDash([]);ctx.fillStyle='#ffd54a';
+        const size=12*W/(canvas.getBoundingClientRect().width||W);
+        for(const [x,y] of [[selected.x,selected.y],[selected.x+selected.w,selected.y],[selected.x,selected.y+selected.h],[selected.x+selected.w,selected.y+selected.h]])ctx.fillRect(x-size/2,y-size/2,size,size);
+        ctx.restore();
+      }
     }
     ctx.restore();return true;
   }
@@ -405,3 +427,4 @@ const customTemplates = (() => {
   }
   return {init,selectTournament,draw,ready,reload};
 })();
+
