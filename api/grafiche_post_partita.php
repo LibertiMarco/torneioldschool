@@ -244,7 +244,7 @@ if ($giocatoriStmt && $giocatoriStmt->execute()) {
 <?php if (!$embedded): ?><div id="footer-container"></div><?php endif; ?>
 <script src="grafiche_scontorno.js?v=20261103-automatic-browser"></script>
 <script src="grafiche_foto_touch.js?v=20261112-native-handles"></script>
-<script src="grafiche_basi.js?v=20261007-mvp-shared-logo"></script>
+<script src="grafiche_basi.js?v=20261122-touch-overlay-resize"></script>
 <script>
 const $ = id => document.getElementById(id);
 // Keep initialization and unexpected errors visible even if event binding stops.
@@ -668,4 +668,5 @@ if(window.parent!==window){
 </script>
 </body>
 </html>
+
 
