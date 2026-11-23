@@ -317,37 +317,6 @@ const customTemplates = (() => {
     const radius=Math.min(w,h)*0.12;
     ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,radius);ctx.clip();contain(ctx,img,x,y,w,h);ctx.restore();
   }
-  const overlayCache=new WeakMap();
-  function graphicOverlay(img,hole=null,protectedRects=[]) {
-    const signature=[hole?[hole.x,hole.y,hole.w,hole.h].join(','):'none',...protectedRects.map(r=>[r.x,r.y,r.w,r.h,r.visible].join(','))].join('|');
-    let variants=overlayCache.get(img);if(!variants){variants=new Map();overlayCache.set(img,variants);}
-    if(variants.has(signature))return variants.get(signature);
-    const layer=document.createElement('canvas');layer.width=W;layer.height=H;
-    try {
-      const source=document.createElement('canvas');source.width=W;source.height=H;
-      const sourceCtx=source.getContext('2d',{willReadFrequently:true});sourceCtx.drawImage(img,0,0,W,H);
-      const pixels=sourceCtx.getImageData(0,0,W,H),data=pixels.data;
-      const originalAlpha=new Uint8Array(data.length);
-      for(let i=3;i<data.length;i+=4) originalAlpha[i]=data[i];
-      const key=[];
-      for(const [x,y] of [[0,0],[W-1,0],[0,H-1],[W-1,H-1]]){const i=(y*W+x)*4;key.push([data[i],data[i+1],data[i+2]]);}
-      const nearBackground=(i)=>key.some(([r,g,b])=>Math.abs(data[i]-r)+Math.abs(data[i+1]-g)+Math.abs(data[i+2]-b)<54);
-      const seen=new Uint8Array(W*H),queue=new Int32Array(W*H);let head=0,tail=0;
-      for(let x=0;x<W;x++){if(nearBackground(x*4)){seen[x]=1;queue[tail++]=x;}const p=(H-1)*W+x;if(nearBackground(p*4)){seen[p]=1;queue[tail++]=p;}}
-      for(let y=1;y<H-1;y++)for(const x of [0,W-1]){const p=y*W+x;if(nearBackground(p*4)&&!seen[p]){seen[p]=1;queue[tail++]=p;}}
-      while(head<tail){const p=queue[head++],x=p%W,y=(p/W)|0;data[p*4+3]=0;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||nx>=W||ny<0||ny>=H)continue;const q=ny*W+nx;if(!seen[q]&&nearBackground(q*4)){seen[q]=1;queue[tail++]=q;}}}
-      // The photo window can be enclosed by a square/frame, so its white
-      // backing is not connected to the canvas edge. Remove that backing too;
-      // coloured and dark parts of the square remain opaque above the photo.
-      if(hole)for(let y=Math.max(0,Math.floor(hole.y));y<Math.min(H,Math.ceil(hole.y+hole.h));y++)for(let x=Math.max(0,Math.floor(hole.x));x<Math.min(W,Math.ceil(hole.x+hole.w));x++){const p=y*W+x;if(nearBackground(p*4)&&data[p*4+3]>0)data[p*4+3]=0;}
-      // Logo frames are part of the uploaded graphic. Restore their complete
-      // rectangles after removing the photo window backing, so the player
-      // image can never show through the shield squares.
-      for(const rect of protectedRects)if(rect?.visible!==false)for(let y=Math.max(0,Math.floor(rect.y));y<Math.min(H,Math.ceil(rect.y+rect.h));y++)for(let x=Math.max(0,Math.floor(rect.x));x<Math.min(W,Math.ceil(rect.x+rect.w));x++){const p=y*W+x;data[p*4+3]=originalAlpha[p*4+3];}
-      layer.getContext('2d').putImageData(pixels,0,0);
-    }catch(error){layer.width=layer.height=1;variants.set(signature,img);return img;}
-    variants.set(signature,layer);return layer;
-  }
   function draw(type) {
     const item=pair()?.[type];
     if(!item?.image) return false;
@@ -358,10 +327,10 @@ const customTemplates = (() => {
     contain(ctx,item.image,0,0,W,H);
     const photoRect=item.layout.photo;
     const photo=imageState[type==='ft'?'ftCaptains':'mvpPhoto'];
-    // Draw the cutout base first, then place the captain photo over its photo
-    // window. Editable logos and text are drawn afterward and stay in front.
+    // Keep the base at the same aspect ratio with and without a photo.
+    // Re-keying and stretching it here duplicates text and damages its edges.
+    // Editable logos, text and foreground overlays are drawn after the photo.
     if(photo&&photoRect?.visible){
-      ctx.drawImage(graphicOverlay(item.image,photoRect,[item.layout.homeLogo,item.layout.awayLogo]),0,0,W,H);
       drawOverlayLevel('between_graphic_photo');
       cover(ctx,photo,photoRect.x,photoRect.y,photoRect.w,photoRect.h,cropValues(type));
     }else drawOverlayLevel('between_graphic_photo');
