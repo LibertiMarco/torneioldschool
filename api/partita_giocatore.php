@@ -776,27 +776,41 @@ if ($azione === 'edit') {
 ========================================================== */
 if ($azione === 'delete') {
     ensure_partite_phase_schema($conn);
+    $id = (int)($_POST['id'] ?? 0);
+    $requestedPartitaId = (int)($_POST['partita_id'] ?? 0);
+    if ($id <= 0) partita_giocatore_json_error('Statistica non valida');
 
-    $id = (int)$_POST['id'];
-
-    $partita_id_q = $conn->prepare("SELECT partita_id, giocatore_id FROM partita_giocatore WHERE id=?");
-    $partita_id_q->bind_param("i", $id);
-    $partita_id_q->execute();
-    $rPrev = $partita_id_q->get_result()->fetch_assoc();
-
-    $stmt = $conn->prepare("DELETE FROM partita_giocatore WHERE id=?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-
-    if ($rPrev) {
-      ricalcolaStatistiche($conn, (int)$rPrev['partita_id'], (int)$rPrev['giocatore_id']);
-      $infoClassifica = aggiornaGolPartita($conn, (int)$rPrev['partita_id']);
-      aggiornaClassificaDaInfo($conn, $infoClassifica);
-      all_in_one_after_result($conn, (int)$rPrev['partita_id']);
-      inviaNotificaEsito($conn, (int)$rPrev['partita_id'], $infoClassifica);
+    $conn->begin_transaction();
+    try {
+        $query = $conn->prepare("SELECT partita_id, giocatore_id, squadra_id FROM partita_giocatore WHERE id=? FOR UPDATE");
+        $query->bind_param('i', $id);
+        $query->execute();
+        $previous = $query->get_result()->fetch_assoc();
+        $query->close();
+        if (!$previous || ($requestedPartitaId > 0 && $requestedPartitaId !== (int)$previous['partita_id'])) {
+            $conn->rollback();
+            partita_giocatore_json_error('Statistica non trovata in questa partita', 404);
+        }
+        $stmt = $conn->prepare("DELETE FROM partita_giocatore WHERE id=? AND partita_id=?");
+        $partitaId = (int)$previous['partita_id'];
+        $giocatoreId = (int)$previous['giocatore_id'];
+        $stmt->bind_param('ii', $id, $partitaId);
+        if (!$stmt->execute()) throw new RuntimeException('Eliminazione non riuscita');
+        $stmt->close();
+        ricalcolaStatistiche($conn, $partitaId, $giocatoreId);
+        // Ricalcola anche la squadra storica se il giocatore è stato disassociato.
+        if ((int)$previous['squadra_id'] > 0) {
+            aggiornaGiocatoreSquadra($conn, $giocatoreId, (int)$previous['squadra_id']);
+        }
+        $infoClassifica = aggiornaGolPartita($conn, $partitaId);
+        aggiornaClassificaDaInfo($conn, $infoClassifica);
+        all_in_one_after_result($conn, $partitaId);
+        $conn->commit();
+    } catch (Throwable $error) {
+        $conn->rollback();
+        partita_giocatore_json_error('Impossibile eliminare le statistiche della partita', 500);
     }
-
-    echo json_encode(["success" => true, "message" => "Statistica eliminata"]);
+    echo json_encode(["success" => true, "message" => "Statistiche eliminate da questa partita"]);
     exit;
 }
 

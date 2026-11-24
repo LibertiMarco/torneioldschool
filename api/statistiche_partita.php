@@ -477,6 +477,12 @@ body.stats-admin-page .admin-container {
   </div>
 </form>
 
+<details class="team-lineup" id="savedStatsPanel">
+  <summary style="padding:14px;cursor:pointer;font-weight:700">Elimina statistiche della singola partita</summary>
+  <p style="padding:0 14px">Qui trovi anche i giocatori disassociati dalla squadra. Eliminando una riga rimuovi presenza, voto, gol, assist e cartellini solo da questa partita. Il risultato e le classifiche vengono ricalcolati.</p>
+  <div id="savedStatsRoot" style="padding:14px">Caricamento statistiche...</div>
+</details>
+
 </section>
 </main>
 
@@ -558,6 +564,36 @@ function updateLiveScore() {
   document.getElementById("liveScore").textContent = `${home + awayOwn} - ${away + homeOwn}`;
 }
 
+async function loadSavedStats() {
+  const response = await fetch(`${API}?azione=list&partita_id=${ID}`);
+  const stats = await response.json();
+  if (!response.ok || !Array.isArray(stats)) throw new Error(stats?.error || "Statistiche non disponibili");
+  document.getElementById("savedStatsRoot").innerHTML = stats.length ? stats.map(stat => `
+    <div style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid #ddd">
+      <span><b>${escapeHtml(`${stat.cognome || ""} ${stat.nome || ""}`.trim())}</b> · ${escapeHtml(stat.squadra || "Squadra non associata")}<br>
+      Voto: ${escapeHtml(stat.voto ?? "—")} · Gol: ${Number(stat.goal) || 0} · Assist: ${Number(stat.assist) || 0}</span>
+      <button type="button" data-delete-stat="${Number(stat.id)}" data-player-name="${escapeHtml(`${stat.cognome || ""} ${stat.nome || ""}`.trim())}">Elimina statistiche</button>
+    </div>`).join("") : "Nessuna statistica salvata per questa partita.";
+}
+
+document.getElementById("savedStatsRoot").addEventListener("click", async event => {
+  const button = event.target.closest("[data-delete-stat]");
+  if (!button || button.disabled) return;
+  if (!window.confirm(`Eliminare tutte le statistiche di ${button.dataset.playerName} solo da questa partita? Il risultato e le classifiche verranno ricalcolati. Le modifiche non salvate nella distinta andranno perse.`)) return;
+  button.disabled = true;
+  document.getElementById("saveLineup").disabled = true;
+  try {
+    const fd = new FormData();
+    fd.set("azione", "delete"); fd.set("id", button.dataset.deleteStat); fd.set("partita_id", ID);
+    const response = await fetch(API, {method:"POST", body:fd});
+    const output = await response.json();
+    if (!response.ok || !output.success) throw new Error(output.error || "Eliminazione non riuscita");
+    await loadLineup();
+    showLineupMessage("Statistiche eliminate da questa partita");
+  } catch (error) { showLineupMessage(error.message, "error"); }
+  finally { button.disabled = false; document.getElementById("saveLineup").disabled = false; }
+});
+
 async function loadLineup() {
   const [matchResponse, lineupResponse] = await Promise.all([
     fetch(`/api/get_partita.php?id=${ID}`),
@@ -579,6 +615,7 @@ async function loadLineup() {
     : 'Segna la partita come giocata e invia le notifiche.';
   document.getElementById("lineupRoot").innerHTML = ["casa", "ospite"].map(side => renderTeam(side, players.filter(p => p.lato === side))).join("");
   updateLiveScore();
+  await loadSavedStats();
 }
 
 document.getElementById("lineupRoot").addEventListener("click", event => {
