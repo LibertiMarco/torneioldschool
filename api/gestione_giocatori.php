@@ -622,10 +622,13 @@ $giocatoriJson = htmlspecialchars(
 $goalExtraEntries = giocatore_goal_extra_list($conn);
 $goalExtraTeamMap = [];
 $goalExtraAssocSql = "
-    SELECT sg.giocatore_id, s.id AS squadra_id, s.nome AS squadra_nome, s.torneo
+    SELECT sg.giocatore_id, s.id AS squadra_id, s.nome AS squadra_nome, s.torneo,
+           g.nome AS giocatore_nome, g.cognome AS giocatore_cognome,
+           COALESCE(sg.ruolo, g.ruolo) AS ruolo, sg.is_captain
     FROM squadre_giocatori sg
     JOIN squadre s ON s.id = sg.squadra_id
-    ORDER BY s.torneo ASC, s.nome ASC
+    JOIN giocatori g ON g.id = sg.giocatore_id
+    ORDER BY s.torneo ASC, s.nome ASC, g.cognome ASC, g.nome ASC
 ";
 $goalExtraAssocRes = $conn->query($goalExtraAssocSql);
 if ($goalExtraAssocRes instanceof mysqli_result) {
@@ -642,6 +645,11 @@ if ($goalExtraAssocRes instanceof mysqli_result) {
         $goalExtraTeamMap[$playerId][] = [
             'id' => (int)($row['squadra_id'] ?? 0),
             'label' => trim((string)($row['torneo'] ?? '')) . ' | ' . trim((string)($row['squadra_nome'] ?? '')),
+            'torneo' => (string)$row['torneo'],
+            'squadra' => (string)$row['squadra_nome'],
+            'giocatore' => trim($row['giocatore_cognome'] . ' ' . $row['giocatore_nome']),
+            'portiere' => (bool)preg_match('/portiere|\\bgk\\b|^p$/i', (string)$row['ruolo']),
+            'capitano' => (bool)$row['is_captain'],
         ];
     }
     $goalExtraAssocRes->free();
@@ -948,6 +956,17 @@ $goalExtraTeamMapJson = htmlspecialchars(
             .assoc-player-settings { width: 100%; justify-content: space-between; }
             .assoc-player-role { flex: 1 1 170px; min-width: 0; }
         }
+        .replacement-roster-fieldset { min-width: 0; border: 0; padding: 0; margin: 18px 0; }
+        .replacement-roster { max-height: 340px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; border: 1px solid #d1d5db; border-radius: 10px; }
+        .replacement-roster:empty { border: 0; }
+        .replacement-player { display: flex; align-items: center; gap: 10px; padding: 12px; border-bottom: 1px solid #ddd; cursor: pointer; }
+        .replacement-player:last-child { border-bottom: 0; }
+        .replacement-player:has(input:checked) { background: #e8f5e9; color: #152b18; }
+        .replacement-player input[type="radio"] { width: 20px; height: 20px; flex: 0 0 20px; margin: 0; accent-color: #198754; }
+        .replacement-player-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+        .replacement-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+        .replacement-badge { font-size: 12px; font-weight: 700; padding: 3px 7px; border-radius: 5px; background: #fff0b3; color: #604300; }
+        .replacement-badge.goalkeeper { background: #dbeafe; color: #153f78; }
     </style>
 </head>
 
@@ -1020,10 +1039,16 @@ $goalExtraTeamMapJson = htmlspecialchars(
 <input type="hidden" name="action" value="sostituisci">
 <h2>Sostituisci giocatore e statistiche</h2>
 <p>Seleziona la squadra e i due giocatori. Il sostituto prenderà il posto del giocatore in rosa e in tutti i referti già inseriti per questa squadra, mantenendo presenze, gol, autogol, assist, cartellini e voti. Saranno trasferiti anche i gol extra della squadra. Le altre squadre restano invariate.</p>
-<div class="form-group"><label for="replacementTeam">Squadra e torneo</label>
-<select name="squadra_id" id="replacementTeam" required><option value="">-- Seleziona squadra --</option></select></div>
-<div class="form-group"><label for="replacementOld">Giocatore da sostituire</label>
-<select name="uscente_id" id="replacementOld" required disabled><option value="">-- Seleziona prima la squadra --</option></select></div>
+<div class="form-group"><label for="replacementTournament">Torneo</label>
+<select id="replacementTournament" required><option value="">-- Seleziona torneo --</option></select></div>
+<div class="form-group"><label for="replacementTeam">Squadra</label>
+<select name="squadra_id" id="replacementTeam" required disabled><option value="">-- Seleziona squadra --</option></select></div>
+<fieldset class="replacement-roster-fieldset"><legend>Giocatore da sostituire</legend>
+<label for="replacementRosterSearch">Cerca nella rosa</label>
+<input type="search" id="replacementRosterSearch" placeholder="Nome o cognome" disabled>
+<p id="replacementRosterCount" role="status">Seleziona prima torneo e squadra.</p>
+<div id="replacementRoster" class="replacement-roster" role="group" aria-label="Rosa della squadra" tabindex="0"></div>
+</fieldset>
 <div class="form-group"><label for="replacementSearch">Cerca il sostituto</label><input type="search" id="replacementSearch" placeholder="Nome o cognome"></div>
 <div class="form-group"><label for="replacementNew">Giocatore sostituto</label>
 <select name="entrante_id" id="replacementNew" required><option value="">-- Seleziona sostituto --</option>
@@ -1506,12 +1531,61 @@ function mostraSezione(val) {
 }
 
 const replacementTeams = <?= json_encode($goalExtraTeamMap, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const replacementTournament = document.getElementById('replacementTournament');
 const replacementTeam = document.getElementById('replacementTeam');
-const replacementOld = document.getElementById('replacementOld');
 const replacementNew = document.getElementById('replacementNew');
-const replacementTeamLabels = new Map();
-Object.values(replacementTeams).flat().forEach(t => replacementTeamLabels.set(String(t.id), t.label));
-[...replacementTeamLabels].sort((a,b) => a[1].localeCompare(b[1])).forEach(([id,label]) => replacementTeam.add(new Option(label,id)));
+const replacementRoster = document.getElementById('replacementRoster');
+const replacementRosterSearch = document.getElementById('replacementRosterSearch');
+const replacementRosterCount = document.getElementById('replacementRosterCount');
+const replacementTeamCatalog = new Map();
+const replacementMembers = [];
+Object.entries(replacementTeams).forEach(([id, teams]) => teams.forEach(t => {
+    replacementTeamCatalog.set(String(t.id), t);
+    replacementMembers.push({...t, playerId: id});
+}));
+[...new Set([...replacementTeamCatalog.values()].map(t => t.torneo))]
+    .sort((a,b) => a.localeCompare(b)).forEach(t => replacementTournament.add(new Option(t,t)));
+let replacementRosterPlayers = [];
+function renderReplacementRoster() {
+    const query = replacementRosterSearch.value.trim().toLocaleLowerCase();
+    let visible = 0;
+    replacementRoster.querySelectorAll('.replacement-player').forEach(row => {
+        row.hidden = !row.dataset.search.includes(query);
+        row.style.display = row.hidden ? 'none' : '';
+        if (!row.hidden) visible++;
+    });
+    replacementRosterCount.textContent = replacementTeam.value
+        ? visible + ' di ' + replacementRosterPlayers.length + ' giocatori'
+        : 'Seleziona prima torneo e squadra.';
+}
+function refreshReplacementRoster() {
+    replacementRoster.replaceChildren();
+    replacementRosterPlayers = replacementMembers.filter(p => String(p.id) === replacementTeam.value)
+        .sort((a,b) => a.giocatore.localeCompare(b.giocatore));
+    replacementRosterSearch.value = '';
+    replacementRosterSearch.disabled = !replacementTeam.value;
+    replacementRosterPlayers.forEach(p => {
+        const row = document.createElement('label');
+        row.className = 'replacement-player';
+        row.dataset.search = p.giocatore.toLocaleLowerCase();
+        const radio = document.createElement('input');
+        radio.type = 'radio'; radio.name = 'uscente_id'; radio.value = p.playerId; radio.required = true;
+        const name = document.createElement('span');
+        name.className = 'replacement-player-name'; name.textContent = p.giocatore;
+        const badges = document.createElement('span'); badges.className = 'replacement-badges';
+        if (p.capitano) {
+            const badge = document.createElement('span'); badge.className = 'replacement-badge';
+            badge.textContent = 'Capitano'; badges.append(badge);
+        }
+        if (p.portiere) {
+            const badge = document.createElement('span'); badge.className = 'replacement-badge goalkeeper';
+            badge.textContent = 'Portiere'; badges.append(badge);
+        }
+        row.append(radio, name, badges); replacementRoster.append(row);
+    });
+    renderReplacementRoster();
+    filterReplacementPlayers();
+}
 function filterReplacementPlayers() {
     const query = document.getElementById('replacementSearch').value.toLocaleLowerCase();
     [...replacementNew.options].forEach(o => {
@@ -1521,17 +1595,21 @@ function filterReplacementPlayers() {
     });
     if (replacementNew.selectedOptions[0]?.disabled || replacementNew.selectedOptions[0]?.hidden) replacementNew.value = '';
 }
-replacementTeam.addEventListener('change', () => {
-    replacementOld.replaceChildren(new Option('-- Seleziona giocatore --', ''));
-    [...replacementNew.options].forEach(o => {
-        if ((replacementTeams[o.value] || []).some(t => String(t.id) === replacementTeam.value)) replacementOld.add(new Option(o.text, o.value));
-    });
-    replacementOld.disabled = !replacementTeam.value;
-    filterReplacementPlayers();
+replacementTournament.addEventListener('change', () => {
+    replacementTeam.replaceChildren(new Option('-- Seleziona squadra --', ''));
+    [...replacementTeamCatalog].filter(([,t]) => t.torneo === replacementTournament.value)
+        .sort((a,b) => a[1].squadra.localeCompare(b[1].squadra))
+        .forEach(([id,t]) => replacementTeam.add(new Option(t.squadra,id)));
+    replacementTeam.disabled = !replacementTournament.value;
+    refreshReplacementRoster();
 });
+replacementTeam.addEventListener('change', refreshReplacementRoster);
+replacementRosterSearch.addEventListener('input', renderReplacementRoster);
 document.getElementById('replacementSearch').addEventListener('input', filterReplacementPlayers);
 document.getElementById('replacementForm').addEventListener('submit', e => {
-    const oldName = replacementOld.selectedOptions[0]?.text;
+    const selected = replacementRoster.querySelector('input:checked');
+    if (!selected) { e.preventDefault(); replacementRoster.focus(); return; }
+    const oldName = replacementRosterPlayers.find(p => p.playerId === selected.value)?.giocatore;
     const newName = replacementNew.selectedOptions[0]?.text;
     if (!confirm(`Sostituire ${oldName} con ${newName} nella squadra selezionata e in tutti i suoi referti precedenti, mantenendo le statistiche?`)) e.preventDefault();
 });
