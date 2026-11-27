@@ -10,6 +10,7 @@ require_once __DIR__ . '/crud/SquadraGiocatore.php';
 require_once __DIR__ . '/crud/torneo.php';
 require_once __DIR__ . '/../includi/image_optimizer.php';
 require_once __DIR__ . '/../includi/import_giocatori_panel.php';
+require_once __DIR__ . '/../includi/sostituzione_giocatore.php';
 $giocatore = new Giocatore();
 $squadraModel = new Squadra();
 $pivot = new SquadraGiocatore();
@@ -92,6 +93,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // proseguiamo (solo area admin) ma segnaliamo lato UI che Ã¨ stato rigenerato.
         $csrfWarning = true;
         $adminCsrf = csrf_get_token('admin_giocatori'); // rigenera per il prossimo submit
+    }
+}
+
+$replacementError = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $currentAction === 'sostituisci') {
+    // La sostituzione dello storico richiede sempre un token valido.
+    if (!csrf_is_valid($token, 'admin_giocatori')) {
+        http_response_code(400);
+        exit('Sessione scaduta: ricarica la pagina e riprova.');
+    }
+    try {
+        sostituisci_giocatore_squadra($conn, (int)($_POST['squadra_id'] ?? 0),
+            (int)($_POST['uscente_id'] ?? 0), (int)($_POST['entrante_id'] ?? 0));
+        invalidateGoalExtraTeamCache($conn, (int)$_POST['squadra_id']);
+        redirectGestione('sostituisci', ['replacement_saved' => 1]);
+    } catch (InvalidArgumentException $e) {
+        $replacementError = $e->getMessage();
+    } catch (Throwable $e) {
+        error_log('Sostituzione giocatore: ' . $e->getMessage());
+        $replacementError = 'Sostituzione non riuscita. Nessun dato modificato. Riprova.';
     }
 }
 
@@ -982,6 +1003,7 @@ $goalExtraTeamMapJson = htmlspecialchars(
           <option value="crea" <?php if(($currentAction ?? 'crea') === 'crea') echo 'selected'; ?>>Crea giocatore</option>
           <option value="import" <?php if(($currentAction ?? '') === 'import') echo 'selected'; ?>>Importa giocatori</option>
           <option value="associazioni" <?php if(($currentAction ?? '') === 'associazioni') echo 'selected'; ?>>Associa giocatore e squadra</option>
+          <option value="sostituisci" <?= $currentAction === 'sostituisci' ? 'selected' : '' ?>>Sostituisci giocatore e statistiche</option>
           <option value="gol_extra" <?php if(($currentAction ?? '') === 'gol_extra') echo 'selected'; ?>>Gol extra</option>
           <option value="modifica" <?php if(($currentAction ?? '') === 'modifica') echo 'selected'; ?>>Modifica giocatore</option>
           <option value="elimina" <?php if(($currentAction ?? '') === 'elimina') echo 'selected'; ?>>Elimina giocatore</option>
@@ -990,6 +1012,27 @@ $goalExtraTeamMapJson = htmlspecialchars(
 <input type="hidden" id="currentAction" value="<?= htmlspecialchars($currentAction) ?>">
 <input type="hidden" id="assocOpParam" value="<?= htmlspecialchars($currentAssocOp) ?>">
 <?= $importPanelHtml ?>
+<section class="form-sostituisci hidden">
+<?php if ($replacementError): ?><div class="admin-alert error" role="alert"><?= htmlspecialchars($replacementError) ?></div><?php endif; ?>
+<?php if (isset($_GET['replacement_saved'])): ?><div class="admin-alert success" role="status">Giocatore sostituito. Statistiche e partite precedenti trasferite nella squadra selezionata.</div><?php endif; ?>
+<form method="POST" class="admin-form" id="replacementForm">
+<?= csrf_field('admin_giocatori') ?>
+<input type="hidden" name="action" value="sostituisci">
+<h2>Sostituisci giocatore e statistiche</h2>
+<p>Seleziona la squadra e i due giocatori. Il sostituto prenderà il posto del giocatore in rosa e in tutti i referti già inseriti per questa squadra, mantenendo presenze, gol, autogol, assist, cartellini e voti. Saranno trasferiti anche i gol extra della squadra. Le altre squadre restano invariate.</p>
+<div class="form-group"><label for="replacementTeam">Squadra e torneo</label>
+<select name="squadra_id" id="replacementTeam" required><option value="">-- Seleziona squadra --</option></select></div>
+<div class="form-group"><label for="replacementOld">Giocatore da sostituire</label>
+<select name="uscente_id" id="replacementOld" required disabled><option value="">-- Seleziona prima la squadra --</option></select></div>
+<div class="form-group"><label for="replacementSearch">Cerca il sostituto</label><input type="search" id="replacementSearch" placeholder="Nome o cognome"></div>
+<div class="form-group"><label for="replacementNew">Giocatore sostituto</label>
+<select name="entrante_id" id="replacementNew" required><option value="">-- Seleziona sostituto --</option>
+<?php foreach ($giocatori as $g): ?><option value="<?= (int)$g['id'] ?>"><?= htmlspecialchars(trim($g['cognome'] . ' ' . $g['nome'])) ?></option><?php endforeach; ?>
+</select><small>Il sostituto deve essere un giocatore esistente e non deve essere già presente nella squadra.</small></div>
+<button type="submit" class="btn-primary">Sostituisci e trasferisci statistiche</button>
+</form>
+</section>
+
 
 <!-- ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FORM CREA -->
 <form method="POST" class="admin-form form-crea" enctype="multipart/form-data">
@@ -1441,6 +1484,7 @@ const formModifica = document.querySelector('.form-modifica');
 const formElimina = document.querySelector('.form-elimina');
 const formAssociazioni = document.querySelector('.form-associazioni');
 const formGolExtra = document.querySelector('.form-gol-extra');
+const formSostituisci = document.querySelector('.form-sostituisci');
 const formImport = document.querySelector('.form-import');
 const duplicateAlert = document.getElementById('duplicateAlert');
 const assocAlert = document.getElementById('assocAlert');
@@ -1449,7 +1493,8 @@ const goalExtraDeletedAlert = document.getElementById('goalExtraDeletedAlert');
 const goalExtraErrorAlert = document.getElementById('goalExtraErrorAlert');
 
 function mostraSezione(val) {
-    [formCrea, formModifica, formElimina, formAssociazioni, formGolExtra, formImport].forEach(f => f && f.classList.add('hidden'));
+    [formCrea, formModifica, formElimina, formAssociazioni, formGolExtra, formImport, formSostituisci].forEach(f => f && f.classList.add('hidden'));
+    if (val === 'sostituisci' && formSostituisci) formSostituisci.classList.remove('hidden');
     if (val === 'import' && formImport) formImport.classList.remove('hidden');
     if (val === 'crea' && formCrea) formCrea.classList.remove('hidden');
     if (val === 'modifica' && formModifica) formModifica.classList.remove('hidden');
@@ -1459,6 +1504,37 @@ function mostraSezione(val) {
     if (currentActionInput) currentActionInput.value = val;
     if (selectAzione) selectAzione.value = val;
 }
+
+const replacementTeams = <?= json_encode($goalExtraTeamMap, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const replacementTeam = document.getElementById('replacementTeam');
+const replacementOld = document.getElementById('replacementOld');
+const replacementNew = document.getElementById('replacementNew');
+const replacementTeamLabels = new Map();
+Object.values(replacementTeams).flat().forEach(t => replacementTeamLabels.set(String(t.id), t.label));
+[...replacementTeamLabels].sort((a,b) => a[1].localeCompare(b[1])).forEach(([id,label]) => replacementTeam.add(new Option(label,id)));
+function filterReplacementPlayers() {
+    const query = document.getElementById('replacementSearch').value.toLocaleLowerCase();
+    [...replacementNew.options].forEach(o => {
+        const member = (replacementTeams[o.value] || []).some(t => String(t.id) === replacementTeam.value);
+        o.disabled = !!o.value && member;
+        o.hidden = !!o.value && (member || !o.text.toLocaleLowerCase().includes(query));
+    });
+    if (replacementNew.selectedOptions[0]?.disabled || replacementNew.selectedOptions[0]?.hidden) replacementNew.value = '';
+}
+replacementTeam.addEventListener('change', () => {
+    replacementOld.replaceChildren(new Option('-- Seleziona giocatore --', ''));
+    [...replacementNew.options].forEach(o => {
+        if ((replacementTeams[o.value] || []).some(t => String(t.id) === replacementTeam.value)) replacementOld.add(new Option(o.text, o.value));
+    });
+    replacementOld.disabled = !replacementTeam.value;
+    filterReplacementPlayers();
+});
+document.getElementById('replacementSearch').addEventListener('input', filterReplacementPlayers);
+document.getElementById('replacementForm').addEventListener('submit', e => {
+    const oldName = replacementOld.selectedOptions[0]?.text;
+    const newName = replacementNew.selectedOptions[0]?.text;
+    if (!confirm(`Sostituire ${oldName} con ${newName} nella squadra selezionata e in tutti i suoi referti precedenti, mantenendo le statistiche?`)) e.preventDefault();
+});
 
 const initialAction = currentActionInput?.value || selectAzione?.value || 'crea';
 mostraSezione(initialAction);
