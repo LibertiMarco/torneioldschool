@@ -179,7 +179,7 @@ class SquadraGiocatore {
         return $result;
     }
 
-    private function aggiornaTotaliGiocatore($giocatoreId) {
+    public function aggiornaTotaliGiocatore($giocatoreId) {
         $goalExtraGlobal = giocatore_goal_extra_fetch_global_total($this->conn, (int)$giocatoreId);
         $nightTeam = torneo_stats_is_night_expr('s.torneo');
         $globalMediaTournamentCondition = torneo_stats_global_media_tournament_condition($this->conn, 's.torneo');
